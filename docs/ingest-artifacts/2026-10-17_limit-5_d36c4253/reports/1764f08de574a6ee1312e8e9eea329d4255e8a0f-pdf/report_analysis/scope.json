@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "scope": "Activate’s 2022 technology and media outlook covers consumer technology and media behavior, digital finance, cryptocurrency, NFTs, gaming and the metaverse, eCommerce, video, sports and sports technology, sports betting and iGaming, esports, audio, and data solutions and enterprise automation. It discusses the U.S. and global markets, using historical data and forecasts that include projections through 2025.",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "scope",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

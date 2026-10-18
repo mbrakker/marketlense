@@ -486,7 +486,7 @@ def _is_runtime_generated_title(runtime: ReportRuntimeState, value: object) -> b
     if not title or not file_id:
         return False
     aliases = {file_id.casefold(), slugify(file_id).casefold()}
-    for runtime_name in (runtime.file_name, runtime.report_name, runtime.report_title):
+    for runtime_name in (runtime.file_name, runtime.report_name):
         raw_name = str(runtime_name or "").strip().casefold()
         if raw_name:
             aliases.add(raw_name.removesuffix(".pdf"))
@@ -605,6 +605,8 @@ def _resolved_report_title(
 ) -> str:
     source_resolution = source.title_resolution
     source_title = str(getattr(source_resolution, "title", "") or "").strip()
+    if _has_usable_explicit_source_title(source_resolution):
+        return source_title
     citation_title = (
         _source_grounded_citation_title(analysis, source_title)
         if str(getattr(source_resolution, "candidate_source", "") or "") == "filename"
@@ -693,15 +695,32 @@ def _title_identity_error(
     source: ReportSourceState,
     analysis: ReportAnalysisState,
 ) -> str:
+    source_resolution = source.title_resolution
+    explicit = str(
+        getattr(source_resolution, "explicit_source_title", "") or ""
+    ).strip()
+    if _has_usable_explicit_source_title(source_resolution):
+        return ""
     title = _resolved_report_title(runtime, source, analysis)
     if _is_unusable_public_title(runtime, title):
         return "report_title_generic_or_missing"
-    explicit = str(
-        getattr(source.title_resolution, "explicit_source_title", "") or ""
-    ).strip()
     if explicit and _normalized_title(explicit) != _normalized_title(title):
         return "report_title_conflicts_explicit_source"
     return ""
+
+
+def _has_usable_explicit_source_title(source_resolution: object) -> bool:
+    source_title = str(getattr(source_resolution, "title", "") or "").strip()
+    explicit_title = str(
+        getattr(source_resolution, "explicit_source_title", "") or ""
+    ).strip()
+    return bool(
+        source_title
+        and explicit_title
+        and _normalized_title(source_title) == _normalized_title(explicit_title)
+        and not _is_generated_report_title(source_title)
+        and not is_generic_report_title(source_title)
+    )
 
 
 def _normalized_title(value: str) -> str:

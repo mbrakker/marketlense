@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\Programing\\Market lense\\out\\1764f08de574a6ee1312e8e9eea329d4255e8a0f-pdf\\report_analysis\\validation_regen_attempt_1.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[retained_claim.number_value_unit_match|quantity_not_entailed] Retained claim failed a deterministic evidence check.",
+      "severity": "error",
+      "affected_section": "insights:online-delivered-car-purchase-forecast.text",
+      "rule_id": "retained_claim.number_value_unit_match",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:online-delivered-car-purchase-forecast:text",
+      "evidence_ids": [
+        "online-car-purchase-forecast",
+        "online-car-purchase-forecast"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe '2021; prior 12 months' not present in evidence for gamers-non-gaming-activity-in-games",
+      "severity": "warning",
+      "affected_section": "insights:gamers-non-gaming-activity-in-games",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "LLM grounding validation is deferred and must run before final publish.",
+      "severity": "info",
+      "affected_section": "validation",
+      "rule_id": "deferred_grounding_required",
+      "repair_target": "validation_grounding",
+      "entity_id": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB",
+      "evidence_ids": []
+    }
+  ]
+}

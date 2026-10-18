@@ -11,7 +11,10 @@ import re
 from copy import deepcopy
 from pathlib import Path
 import pytest
-from src.contracts.claim_validation import CLAIM_VALIDATION_VALIDATOR_VERSION
+from src.contracts.claim_validation import (
+    CLAIM_GROUNDING_VALIDATOR_VERSION,
+    CLAIM_VALIDATION_VALIDATOR_VERSION,
+)
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.publish_readiness_generator import (
     evaluate_publish_readiness as _evaluate_readiness_core,
@@ -185,7 +188,7 @@ def _retained_claim_package(
                     "prompt_family": "report_vs/validate/grounding",
                     "prompt_content_hash": "prompt-content-hash",
                     "execution_identity": "grounding-execution-1",
-                    "validator_version": "grounding_validation_output:1.5",
+                    "validator_version": CLAIM_GROUNDING_VALIDATOR_VERSION,
                     "model_provider": "openai",
                     "model_name": "gpt-4.1-mini",
                     "configuration_policy_identity": "grounding-policy-hash",
@@ -220,7 +223,7 @@ def _retained_claim_package(
             "source_id": source_id,
             "source_md5": source_md5,
             "claim_validation_validator_version": CLAIM_VALIDATION_VALIDATOR_VERSION,
-            "grounding_validator_version": "grounding_validation_output:1.5",
+            "grounding_validator_version": CLAIM_GROUNDING_VALIDATOR_VERSION,
             "configuration_hash": configuration_hash,
             "policy_hash": policy_hash,
         },
@@ -233,7 +236,7 @@ def _retained_claim_package(
             "source_id": source_id,
             "source_md5": source_md5,
             "claim_validation_validator_version": CLAIM_VALIDATION_VALIDATOR_VERSION,
-            "grounding_validator_version": "grounding_validation_output:1.5",
+            "grounding_validator_version": CLAIM_GROUNDING_VALIDATOR_VERSION,
             "semantic_execution_identities": (
                 ["grounding-execution-1"] if semantic else []
             ),

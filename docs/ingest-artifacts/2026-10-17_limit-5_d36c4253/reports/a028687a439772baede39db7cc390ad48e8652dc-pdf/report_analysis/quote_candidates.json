@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "quote_candidates": [
+    {
+      "id": "quote-1",
+      "text": "Overall, the research findings show that coming out of shelter in place, people’s habits, activities, and expectations are now fundamentally changed.",
+      "source": "Rewire to Restart: The Post-COVID-19 Agenda for Technology and Media Companies",
+      "page": null
+    },
+    {
+      "id": "quote-2",
+      "text": "To serve people’s new needs and expectations and thrive in this post-Covid era, technology and media companies will need to rewire many of the ways they engage their users and consumers, including their value proposition, programming, experience, functionality, pricing, and marketing.",
+      "source": "Rewire to Restart: The Post-COVID-19 Agenda for Technology and Media Companies",
+      "page": null
+    },
+    {
+      "id": "quote-3",
+      "text": "For eCommerce retailers and brands, this is a unique moment to connect directly with consumers who are broadening their shopping and purchasing behavior",
+      "source": "Rewire to Restart: The Post-COVID-19 Agenda for Technology and Media Companies",
+      "page": null
+    },
+    {
+      "id": "quote-4",
+      "text": "Participation in online grocery usage has spiked; to sustain these new customers after shelter in place, online grocery services will need to deliver against key value drivers: free delivery and product assortment",
+      "source": "Rewire to Restart: The Post-COVID-19 Agenda for Technology and Media Companies",
+      "page": null
+    },
+    {
+      "id": "quote-5",
+      "text": "Esports needs to be a priority focus for tech and media companies as 30% of viewers during shelter in place are new which shows an expansion beyond the historical core audience",
+      "source": "Rewire to Restart: The Post-COVID-19 Agenda for Technology and Media Companies",
+      "page": null
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "quote_candidates",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

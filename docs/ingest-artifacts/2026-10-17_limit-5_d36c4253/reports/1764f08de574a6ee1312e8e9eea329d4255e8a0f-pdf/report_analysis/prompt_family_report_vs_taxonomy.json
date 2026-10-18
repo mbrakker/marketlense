@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "technology",
+      "tech_trends",
+      "consumer_behavior",
+      "digital_economy",
+      "ecommerce",
+      "video_gaming",
+      "streaming_video"
+    ],
+    "primary_tags": [
+      "technology",
+      "tech_trends",
+      "consumer_behavior",
+      "digital_economy"
+    ],
+    "secondary_tags": [
+      "ecommerce",
+      "video_gaming",
+      "streaming_video"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "technology",
+        "tier": "primary",
+        "section_label": "Data Solutions, Enterprise Automation, & Efficiency",
+        "evidence": "The report covers technological advances, enterprise automation, and new capabilities across the technology ecosystem."
+      },
+      {
+        "tag": "tech_trends",
+        "tier": "primary",
+        "section_label": "Contents",
+        "evidence": "Its major sections examine technology and media growth, consumer attention, digital finance, cryptocurrency, NFTs, the metaverse, and enterprise automation."
+      },
+      {
+        "tag": "consumer_behavior",
+        "tier": "primary",
+        "section_label": "Consumer Technology and Media Time and Attention",
+        "evidence": "The report analyzes consumer time, attention, and participation across technology and media behaviors."
+      },
+      {
+        "tag": "digital_economy",
+        "tier": "primary",
+        "section_label": "Super Users Will Drive the Digital Economy",
+        "evidence": "A major report section focuses on the digital economy and the consumers driving it."
+      },
+      {
+        "tag": "ecommerce",
+        "tier": "secondary",
+        "section_label": "eCommerce",
+        "evidence": "A dedicated section examines eCommerce growth and technologies, including ultrafast delivery."
+      },
+      {
+        "tag": "video_gaming",
+        "tier": "secondary",
+        "section_label": "Video Gaming and Esports",
+        "evidence": "Dedicated sections address video gaming, the metaverse, and esports audience growth."
+      },
+      {
+        "tag": "streaming_video",
+        "tier": "secondary",
+        "section_label": "Video",
+        "evidence": "A dedicated section considers social and streaming growth and its effects on technology and media strategies."
+      }
+    ],
+    "region": "Global and United States",
+    "time_period": "2021–2025E",
+    "not_found_reason": null
+  }
+}

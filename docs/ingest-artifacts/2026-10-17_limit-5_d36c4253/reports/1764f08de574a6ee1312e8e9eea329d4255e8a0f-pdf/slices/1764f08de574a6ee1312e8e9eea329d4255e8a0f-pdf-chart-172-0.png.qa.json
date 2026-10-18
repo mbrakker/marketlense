@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-172-0",
+  "candidate_type": "chart",
+  "page": 172,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    19.712,
+    47.48,
+    967.288,
+    747.52
+  ],
+  "final_bbox": [
+    11.712,
+    50.516,
+    975.288,
+    755.52
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 46,
+    "bottom": 50,
+    "left": 137,
+    "right": 42
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": false,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.5767,
+    "margin_balance": 0.7289,
+    "neighbor_contamination": 0.2352,
+    "readability": 1.0,
+    "visual_crispness": 0.35,
+    "total_score": 0.7425,
+    "defect_labels": [
+      "edge_clipped_content"
+    ],
+    "edge_density": {
+      "top": 0.4498,
+      "bottom": 0.2186,
+      "left": 0.1792,
+      "right": 0.1393
+    },
+    "edge_leakage": {
+      "top": 0.2352,
+      "bottom": 0.01,
+      "left": 0.0,
+      "right": 0.0
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.5,
+        "strong_edges": [
+          "top",
+          "bottom"
+        ],
+        "edge_density": {
+          "top": 0.4498,
+          "bottom": 0.2186,
+          "left": 0.1792,
+          "right": 0.1393
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.2186,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.4498,
+          "bottom": 0.2186,
+          "left": 0.1792,
+          "right": 0.1393
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.4498,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.4498,
+          "bottom": 0.2186,
+          "left": 0.1792,
+          "right": 0.1393
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": false,
+  "rejection_reason": "edge_clipped_content"
+}

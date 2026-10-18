@@ -28,6 +28,7 @@ from tests._test_report_regeneration_generator._shared import (
 )
 from tests.test_report_regeneration_generator import (
     _ctx,
+    _current_artifacts,
     _evidence_packs,
     _FakePromptClient,
     _settings,
@@ -68,7 +69,9 @@ def _atomic_insight_plan(*, quarantined: list[str] | None = None) -> Regeneratio
                     RegenerationIssue(
                         rule_id="grounding",
                         affected_section="insights:insight-1.text",
-                        message="[grounding|unsupported_factual_claim] Repair one item.",
+                        message=(
+                            "[grounding|unsupported_factual_claim] Repair one item."
+                        ),
                         severity="error",
                         entity_id="insight:insight-1:text",
                         evidence_ids=["f1"],
@@ -151,6 +154,156 @@ def test_model_repair_applies_one_validated_atomic_patch_in_one_call(tmp_path) -
         "insights_final[item=insight-1].text"
     ]
     assert response.repair_decisions[0].diagnosed_failure_class == "grounding"
+
+
+@pytest.mark.parametrize("replacement", ["", "Not available from text"])
+def test_missing_required_insight_text_patch_preserves_original_candidate(
+    tmp_path, replacement: str
+) -> None:
+    current = _source_backed_artifacts()
+    original_text = current["insights_final"][0]["text"]
+    client = _RepairDecisionOpenAIClient(_atomic_insight_decision(value=replacement))
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=3,
+            plan=_atomic_insight_plan(),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    candidate = response.updated_artifacts["insights_final"][0]
+    assert candidate["text"] == original_text
+    assert len(client.calls) == 1
+
+
+def test_safe_removal_replacement_id_does_not_overwrite_sibling_evidence_identity(
+    tmp_path,
+) -> None:
+    current = _current_artifacts()
+    failed, sibling, other, extra_one, extra_two = deepcopy(current["insights_final"])
+    failed.update({"id": "failed-insight", "evidence_id": "f1"})
+    sibling.update(
+        {
+            "id": "sibling-insight",
+            "text": "Retain the original sibling insight.",
+            "evidence_id": "replacement-id",
+        }
+    )
+    other.update(
+        {
+            "id": "other-insight",
+            "text": "Retain the other original insight.",
+            "evidence_id": "f1",
+        }
+    )
+    extra_one.update(
+        {
+            "id": "extra-insight-one",
+            "text": "Retain the first additional insight.",
+            "evidence_id": "f1",
+        }
+    )
+    extra_two.update(
+        {
+            "id": "extra-insight-two",
+            "text": "Retain the second additional insight.",
+            "evidence_id": "f2",
+        }
+    )
+    current["insights_final"] = [failed, sibling, other, extra_one, extra_two]
+    current["insights_candidates"] = [
+        {
+            "id": "replacement-id",
+            "text": "Evidence text 2",
+            "evidence_id": "f2",
+            "evidence": "Evidence text 2",
+            "pages": [],
+            "metric": deepcopy(sibling["metric"]),
+            "score": 10,
+        }
+    ]
+    current["editorial_plan"] = {
+        "report_thesis": "Retain distinct supported insight identities.",
+        "themes": [
+            {"theme": "Second source", "priority": 1, "evidence_ids": ["f2"]},
+            {"theme": "First source", "priority": 2, "evidence_ids": ["f1"]},
+            {"theme": "Second source detail", "priority": 3, "evidence_ids": ["f2"]},
+            {"theme": "First source detail", "priority": 4, "evidence_ids": ["f1"]},
+            {"theme": "Second source context", "priority": 5, "evidence_ids": ["f2"]},
+        ],
+    }
+    issue = RegenerationIssue(
+        rule_id="grounding",
+        affected_section="insights:failed-insight.text",
+        message="The failed insight cannot be grounded.",
+        severity="error",
+        entity_id="insight:failed-insight:text",
+        evidence_ids=["f1"],
+    )
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=2,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="insights_bundle",
+                        regenerate_steps=["insights_candidates", "insights_final"],
+                        prompt_namespaces=[
+                            "report_vs/artifacts/regenerate/insights_candidates",
+                            "report_vs/artifacts/regenerate/insights_final",
+                        ],
+                        issues=[issue],
+                        repair_action="REMOVE_CLAIM",
+                        repair_strategy="safe_removal",
+                        allowed_paths=[
+                            "insights_candidates[item=failed-insight]",
+                            "insights_final[item=failed-insight]",
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=None,
+        prompt_client=_FakePromptClient(),
+    )
+
+    final_by_id = {
+        item["id"]: item for item in response.updated_artifacts["insights_final"]
+    }
+    assert "failed-insight" not in final_by_id
+    assert final_by_id["sibling-insight"] == sibling
+    assert final_by_id["other-insight"] == other
+    assert final_by_id["extra-insight-one"] == extra_one
+    assert final_by_id["extra-insight-two"] == extra_two
+    assert final_by_id["replacement-id"]["evidence_id"] == "f2"
+    assert len(final_by_id) == 5
 
 
 def test_rebound_insight_uses_canonical_evidence_pages_and_spans(tmp_path) -> None:
@@ -565,6 +718,8 @@ def test_invalid_repair_contract_does_not_trigger_a_second_provider_call(
 
 
 __all__ = [
+    "test_missing_required_insight_text_patch_preserves_original_candidate",
+    "test_safe_removal_replacement_id_does_not_overwrite_sibling_evidence_identity",
     "test_rebound_insight_uses_canonical_evidence_pages_and_spans",
     "test_model_repair_applies_one_validated_atomic_patch_in_one_call",
     "test_model_repair_rejects_illegal_sibling_patch_before_candidate_write",

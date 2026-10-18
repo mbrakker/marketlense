@@ -308,7 +308,11 @@ def test_grounding_accepts_evidence_traceable_editorial_interpretation(
     ),
 )
 def test_grounding_advises_on_noncontradictory_editorial_outcomes(
-    tmp_path, section: str, classification: str, violation_type: str, text: str,
+    tmp_path,
+    section: str,
+    classification: str,
+    violation_type: str,
+    text: str,
     expected_severity: str,
 ) -> None:
     issues = _issues(
@@ -344,7 +348,7 @@ def test_grounding_keeps_factual_sentence_in_creative_paragraph_strict(
     )
 
     assert len(issues) == 1
-    assert issues[0].severity == "warning"
+    assert issues[0].severity == "error"
     assert "[factual_claim|not_established]" in issues[0].message
 
 

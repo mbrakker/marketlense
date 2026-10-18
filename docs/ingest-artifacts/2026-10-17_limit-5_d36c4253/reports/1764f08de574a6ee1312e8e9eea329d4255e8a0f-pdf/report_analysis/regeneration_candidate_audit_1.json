@@ -1,0 +1,995 @@
+{
+  "attempt_index": 1,
+  "before_sha256": "5d5aedd7923f8ae87df7286da0060f8d9840eabe491c159143e2e9404a636e29",
+  "after_sha256": "6b897c2ce69981ca3ac683746da2d8b11385cd9f9ee899ce35080b725cfdaabf",
+  "transformation_scope": [
+    "insights_final"
+  ],
+  "unchanged_family_sha256": {
+    "summary": "723d42f3c9293971f256f44d0a672e49b0f7217662553fa93d6f48894f5072f1",
+    "insights_candidates": "7c4c41c1685f7e048455667d13179a0ceae6f6ff8aac33c13a35034c63f43182",
+    "quotes_final": "d5dd071510f1ddc8ab96a802b3544f3631d1b04620ffc556635b96c9db6ae454"
+  },
+  "current_artifacts_path": "C:\\Programing\\Market lense\\out\\1764f08de574a6ee1312e8e9eea329d4255e8a0f-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\Programing\\Market lense\\out\\1764f08de574a6ee1312e8e9eea329d4255e8a0f-pdf\\report_analysis\\artifacts_regen_candidate_1.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "deferred_grounding_required:validation",
+    "metrics:insights:gamers-non-gaming-activity-in-games",
+    "retained_claim.number_value_unit_match:insights:online-delivered-car-purchase-forecast.text"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "cryptocurrency-trading-vs-payment-use",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "esports-global-audience-forecast-series",
+      "original_evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "candidate_evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "original_source_pages": [
+        162
+      ],
+      "candidate_source_pages": [
+        162
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "gamers-non-gaming-activity-in-games",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "original_source_pages": [
+        71
+      ],
+      "candidate_source_pages": [
+        71
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "global-internet-media-revenue-forecast",
+      "original_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "candidate_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "global-revenue-segment-cagr-comparison",
+      "original_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "candidate_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "original_source_pages": [
+        7
+      ],
+      "candidate_source_pages": [
+        7
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "online-delivered-car-purchase-forecast",
+      "original_evidence_ids": [
+        "online-car-purchase-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "online-car-purchase-forecast"
+      ],
+      "original_source_pages": [
+        103
+      ],
+      "candidate_source_pages": [
+        103
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "super-user-early-adoption-comparison",
+      "original_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "candidate_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "cryptocurrency-trading-vs-payment-use",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "esports-global-audience-forecast-series",
+      "original_evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "candidate_evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "original_source_pages": [
+        162
+      ],
+      "candidate_source_pages": [
+        162
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "gamers-non-gaming-activity-in-games",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "original_source_pages": [
+        71
+      ],
+      "candidate_source_pages": [
+        71
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "global-internet-media-revenue-forecast",
+      "original_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "candidate_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "global-revenue-segment-cagr-comparison",
+      "original_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "candidate_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "original_source_pages": [
+        7
+      ],
+      "candidate_source_pages": [
+        7
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "online-delivered-car-purchase-forecast",
+      "original_evidence_ids": [
+        "online-car-purchase-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "online-car-purchase-forecast"
+      ],
+      "original_source_pages": [
+        103
+      ],
+      "candidate_source_pages": [
+        103
+      ],
+      "validation_issues": [
+        "retained_claim.number_value_unit_match"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "super-user-early-adoption-comparison",
+      "original_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "candidate_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "0a5cf84e8e409d05656b6a6dee7179013708aee6c2fbd2f6c81b5bbe0c6d1366",
+      "original_evidence_ids": [
+        "q3"
+      ],
+      "candidate_evidence_ids": [
+        "q3"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "7935352f75fd7fc4edff1020fc00391952b8feef2c8359d343bb3ec982a518b4",
+      "original_evidence_ids": [
+        "q1"
+      ],
+      "candidate_evidence_ids": [
+        "q1"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "9632f95d80d691d23f3c19919dbffc0d393320f0f4b851661d578440b8cc6b34",
+      "original_evidence_ids": [
+        "q2"
+      ],
+      "candidate_evidence_ids": [
+        "q2"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "candidate_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "candidate_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "original_source_pages": [
+        7
+      ],
+      "candidate_source_pages": [
+        7
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "original_source_pages": [
+        71
+      ],
+      "candidate_source_pages": [
+        71
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:24f921a368cb2c55",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "original_source_pages": [
+        71
+      ],
+      "candidate_source_pages": [
+        71
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:86e054c67d485368",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities",
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities",
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        71,
+        41
+      ],
+      "candidate_source_pages": [
+        71,
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:aa51bdba9e345bdd",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:933c7a4a9b9791f7",
+      "original_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "candidate_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:e5736baa0c7fc81c",
+      "original_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "candidate_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:f9c9676f3e62e375",
+      "original_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "candidate_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:0ad2e761c00938e9",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:44463f248f1c17db",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:4a3279ecc953c34c",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:838661998384287a",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "original_source_pages": [
+        71
+      ],
+      "candidate_source_pages": [
+        71
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:872164c20587983c",
+      "original_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "candidate_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "original_source_pages": [
+        7
+      ],
+      "candidate_source_pages": [
+        7
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:de2ec45a29c79d5d",
+      "original_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "candidate_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "1cdbb183bd44e50fc1590bde7d33bd80287d9acdf1e04bef422c05c117488f2a",
+    "3061b8c5026a197bc85c51fb0c44be07b868302e6f5744a46138f602a4f8eb7b",
+    "39d4dbb4b975a92f416b6b9f2d6178c88b7cab48e0f84ff7ca5ece3ea5094c6f"
+  ],
+  "repair_action": "REGENERATE_ITEM",
+  "repair_strategy": "current_evidence",
+  "allowed_paths": [
+    "insights_final[item=online-delivered-car-purchase-forecast].text"
+  ],
+  "verified_dependent_paths": [
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.output_controls.max_output_tokens",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.routing_policy_version",
+    "_cache.prompts.report_vs/artifacts/regenerate/insights_final",
+    "_cache.regeneration_prompt_requirements",
+    "claim_ledgers[9].claim_text"
+  ],
+  "selected_evidence_ids": [
+    "online-car-purchase-forecast"
+  ],
+  "quarantined_evidence_ids": [],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "grounding",
+        "affected_section": "metadata.title",
+        "entity_id": "metadata:title",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [
+      {
+        "rule_id": "retained_claim.number_value_unit_match",
+        "affected_section": "insights:online-delivered-car-purchase-forecast.text",
+        "entity_id": "insight:online-delivered-car-purchase-forecast:text",
+        "evidence_ids": [
+          "online-car-purchase-forecast",
+          "online-car-purchase-forecast"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "metrics",
+        "affected_section": "insights:gamers-non-gaming-activity-in-games",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced": [],
+    "introduced_hard_failures": [],
+    "introduced_hard_failure_count": 0,
+    "introduced_failure_categories": [],
+    "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+    "severity_changes": [
+      {
+        "failure_fingerprint": "3061b8c5026a197bc85c51fb0c44be07b868302e6f5744a46138f602a4f8eb7b",
+        "before": "info",
+        "after": "warning"
+      }
+    ],
+    "mutation_scope_result": "pass",
+    "evidence_lineage_result": "fail",
+    "repair_action": "REGENERATE_ITEM",
+    "repair_strategy": "current_evidence",
+    "evidence_ids_used": [
+      "online-car-purchase-forecast"
+    ],
+    "strategy_fingerprint": "c77aba483cfd647b82b63fd750035aa034d9de26ca87fc8e0e9c2487163874a9",
+    "candidate_sha256": "6b897c2ce69981ca3ac683746da2d8b11385cd9f9ee899ce35080b725cfdaabf",
+    "input_sha256": "5d5aedd7923f8ae87df7286da0060f8d9840eabe491c159143e2e9404a636e29",
+    "validator_identity": "regeneration-candidate-v1:4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa:4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [
+    {
+      "diagnosed_failure_class": "retained_claim.number_value_unit_match",
+      "repair_action": "REGENERATE_ITEM",
+      "repair_strategy": "current_evidence",
+      "evidence_ids_used": [
+        "online-car-purchase-forecast"
+      ],
+      "protected_fields": [
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].coverage_role",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].decision_relevance_score",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].evidence",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].evidence_id",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].evidence_spans[0].evidence_id",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].evidence_spans[0].page",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].evidence_spans[0].source_pack",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].evidence_spans[0].text",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].evidence_spans[1].evidence_id",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].evidence_spans[1].page",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].evidence_spans[1].source_pack",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].evidence_spans[1].text",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].id",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.cohort",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.confidence",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.denominator",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.geography",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.label",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.observation_status",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.sample_size",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.segment",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.subject",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.timeframe",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.trend",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.unit",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric.value",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].metric_strength_score",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].novelty_score",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].now_what",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].pages[0]",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].report_type_lens",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].score",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].so_what",
+        "insights_final[item=cryptocurrency-trading-vs-payment-use].text",
+        "insights_final[item=esports-global-audience-forecast-series].coverage_role",
+        "insights_final[item=esports-global-audience-forecast-series].decision_relevance_score",
+        "insights_final[item=esports-global-audience-forecast-series].evidence",
+        "insights_final[item=esports-global-audience-forecast-series].evidence_id",
+        "insights_final[item=esports-global-audience-forecast-series].evidence_spans[0].evidence_id",
+        "insights_final[item=esports-global-audience-forecast-series].evidence_spans[0].page",
+        "insights_final[item=esports-global-audience-forecast-series].evidence_spans[0].source_pack",
+        "insights_final[item=esports-global-audience-forecast-series].evidence_spans[0].text",
+        "insights_final[item=esports-global-audience-forecast-series].evidence_spans[1].evidence_id",
+        "insights_final[item=esports-global-audience-forecast-series].evidence_spans[1].page",
+        "insights_final[item=esports-global-audience-forecast-series].evidence_spans[1].source_pack",
+        "insights_final[item=esports-global-audience-forecast-series].evidence_spans[1].text",
+        "insights_final[item=esports-global-audience-forecast-series].id",
+        "insights_final[item=esports-global-audience-forecast-series].metric.cohort",
+        "insights_final[item=esports-global-audience-forecast-series].metric.confidence",
+        "insights_final[item=esports-global-audience-forecast-series].metric.denominator",
+        "insights_final[item=esports-global-audience-forecast-series].metric.geography",
+        "insights_final[item=esports-global-audience-forecast-series].metric.label",
+        "insights_final[item=esports-global-audience-forecast-series].metric.observation_status",
+        "insights_final[item=esports-global-audience-forecast-series].metric.sample_size",
+        "insights_final[item=esports-global-audience-forecast-series].metric.segment",
+        "insights_final[item=esports-global-audience-forecast-series].metric.subject",
+        "insights_final[item=esports-global-audience-forecast-series].metric.timeframe",
+        "insights_final[item=esports-global-audience-forecast-series].metric.trend",
+        "insights_final[item=esports-global-audience-forecast-series].metric.unit",
+        "insights_final[item=esports-global-audience-forecast-series].metric.value",
+        "insights_final[item=esports-global-audience-forecast-series].metric_strength_score",
+        "insights_final[item=esports-global-audience-forecast-series].novelty_score",
+        "insights_final[item=esports-global-audience-forecast-series].now_what",
+        "insights_final[item=esports-global-audience-forecast-series].pages[0]",
+        "insights_final[item=esports-global-audience-forecast-series].report_type_lens",
+        "insights_final[item=esports-global-audience-forecast-series].score",
+        "insights_final[item=esports-global-audience-forecast-series].so_what",
+        "insights_final[item=esports-global-audience-forecast-series].text",
+        "insights_final[item=gamers-non-gaming-activity-in-games].coverage_role",
+        "insights_final[item=gamers-non-gaming-activity-in-games].decision_relevance_score",
+        "insights_final[item=gamers-non-gaming-activity-in-games].evidence",
+        "insights_final[item=gamers-non-gaming-activity-in-games].evidence_id",
+        "insights_final[item=gamers-non-gaming-activity-in-games].evidence_spans[0].evidence_id",
+        "insights_final[item=gamers-non-gaming-activity-in-games].evidence_spans[0].page",
+        "insights_final[item=gamers-non-gaming-activity-in-games].evidence_spans[0].source_pack",
+        "insights_final[item=gamers-non-gaming-activity-in-games].evidence_spans[0].text",
+        "insights_final[item=gamers-non-gaming-activity-in-games].evidence_spans[1].evidence_id",
+        "insights_final[item=gamers-non-gaming-activity-in-games].evidence_spans[1].page",
+        "insights_final[item=gamers-non-gaming-activity-in-games].evidence_spans[1].source_pack",
+        "insights_final[item=gamers-non-gaming-activity-in-games].evidence_spans[1].text",
+        "insights_final[item=gamers-non-gaming-activity-in-games].id",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.cohort",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.confidence",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.denominator",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.geography",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.label",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.observation_status",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.sample_size",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.segment",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.subject",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.timeframe",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.trend",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.unit",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric.value",
+        "insights_final[item=gamers-non-gaming-activity-in-games].metric_strength_score",
+        "insights_final[item=gamers-non-gaming-activity-in-games].novelty_score",
+        "insights_final[item=gamers-non-gaming-activity-in-games].now_what",
+        "insights_final[item=gamers-non-gaming-activity-in-games].pages[0]",
+        "insights_final[item=gamers-non-gaming-activity-in-games].report_type_lens",
+        "insights_final[item=gamers-non-gaming-activity-in-games].score",
+        "insights_final[item=gamers-non-gaming-activity-in-games].so_what",
+        "insights_final[item=gamers-non-gaming-activity-in-games].text",
+        "insights_final[item=global-internet-media-revenue-forecast].coverage_role",
+        "insights_final[item=global-internet-media-revenue-forecast].decision_relevance_score",
+        "insights_final[item=global-internet-media-revenue-forecast].evidence",
+        "insights_final[item=global-internet-media-revenue-forecast].evidence_id",
+        "insights_final[item=global-internet-media-revenue-forecast].evidence_spans[0].evidence_id",
+        "insights_final[item=global-internet-media-revenue-forecast].evidence_spans[0].page",
+        "insights_final[item=global-internet-media-revenue-forecast].evidence_spans[0].source_pack",
+        "insights_final[item=global-internet-media-revenue-forecast].evidence_spans[0].text",
+        "insights_final[item=global-internet-media-revenue-forecast].evidence_spans[1].evidence_id",
+        "insights_final[item=global-internet-media-revenue-forecast].evidence_spans[1].page",
+        "insights_final[item=global-internet-media-revenue-forecast].evidence_spans[1].source_pack",
+        "insights_final[item=global-internet-media-revenue-forecast].evidence_spans[1].text",
+        "insights_final[item=global-internet-media-revenue-forecast].id",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.cohort",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.confidence",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.denominator",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.geography",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.label",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.observation_status",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.sample_size",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.segment",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.subject",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.timeframe",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.trend",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.unit",
+        "insights_final[item=global-internet-media-revenue-forecast].metric.value",
+        "insights_final[item=global-internet-media-revenue-forecast].metric_strength_score",
+        "insights_final[item=global-internet-media-revenue-forecast].novelty_score",
+        "insights_final[item=global-internet-media-revenue-forecast].now_what",
+        "insights_final[item=global-internet-media-revenue-forecast].pages[0]",
+        "insights_final[item=global-internet-media-revenue-forecast].report_type_lens",
+        "insights_final[item=global-internet-media-revenue-forecast].score",
+        "insights_final[item=global-internet-media-revenue-forecast].so_what",
+        "insights_final[item=global-internet-media-revenue-forecast].text",
+        "insights_final[item=global-revenue-segment-cagr-comparison].coverage_role",
+        "insights_final[item=global-revenue-segment-cagr-comparison].decision_relevance_score",
+        "insights_final[item=global-revenue-segment-cagr-comparison].evidence",
+        "insights_final[item=global-revenue-segment-cagr-comparison].evidence_id",
+        "insights_final[item=global-revenue-segment-cagr-comparison].evidence_spans[0].evidence_id",
+        "insights_final[item=global-revenue-segment-cagr-comparison].evidence_spans[0].page",
+        "insights_final[item=global-revenue-segment-cagr-comparison].evidence_spans[0].source_pack",
+        "insights_final[item=global-revenue-segment-cagr-comparison].evidence_spans[0].text",
+        "insights_final[item=global-revenue-segment-cagr-comparison].evidence_spans[1].evidence_id",
+        "insights_final[item=global-revenue-segment-cagr-comparison].evidence_spans[1].page",
+        "insights_final[item=global-revenue-segment-cagr-comparison].evidence_spans[1].source_pack",
+        "insights_final[item=global-revenue-segment-cagr-comparison].evidence_spans[1].text",
+        "insights_final[item=global-revenue-segment-cagr-comparison].id",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.cohort",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.confidence",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.denominator",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.geography",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.label",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.observation_status",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.sample_size",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.segment",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.subject",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.timeframe",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.trend",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.unit",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric.value",
+        "insights_final[item=global-revenue-segment-cagr-comparison].metric_strength_score",
+        "insights_final[item=global-revenue-segment-cagr-comparison].novelty_score",
+        "insights_final[item=global-revenue-segment-cagr-comparison].now_what",
+        "insights_final[item=global-revenue-segment-cagr-comparison].pages[0]",
+        "insights_final[item=global-revenue-segment-cagr-comparison].report_type_lens",
+        "insights_final[item=global-revenue-segment-cagr-comparison].score",
+        "insights_final[item=global-revenue-segment-cagr-comparison].so_what",
+        "insights_final[item=global-revenue-segment-cagr-comparison].text",
+        "insights_final[item=online-delivered-car-purchase-forecast].coverage_role",
+        "insights_final[item=online-delivered-car-purchase-forecast].decision_relevance_score",
+        "insights_final[item=online-delivered-car-purchase-forecast].evidence",
+        "insights_final[item=online-delivered-car-purchase-forecast].evidence_id",
+        "insights_final[item=online-delivered-car-purchase-forecast].evidence_spans[0].evidence_id",
+        "insights_final[item=online-delivered-car-purchase-forecast].evidence_spans[0].page",
+        "insights_final[item=online-delivered-car-purchase-forecast].evidence_spans[0].source_pack",
+        "insights_final[item=online-delivered-car-purchase-forecast].evidence_spans[0].text",
+        "insights_final[item=online-delivered-car-purchase-forecast].evidence_spans[1].evidence_id",
+        "insights_final[item=online-delivered-car-purchase-forecast].evidence_spans[1].page",
+        "insights_final[item=online-delivered-car-purchase-forecast].evidence_spans[1].source_pack",
+        "insights_final[item=online-delivered-car-purchase-forecast].evidence_spans[1].text",
+        "insights_final[item=online-delivered-car-purchase-forecast].id",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.cohort",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.confidence",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.denominator",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.geography",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.label",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.observation_status",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.sample_size",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.segment",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.subject",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.timeframe",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.trend",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.unit",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric.value",
+        "insights_final[item=online-delivered-car-purchase-forecast].metric_strength_score",
+        "insights_final[item=online-delivered-car-purchase-forecast].novelty_score",
+        "insights_final[item=online-delivered-car-purchase-forecast].now_what",
+        "insights_final[item=online-delivered-car-purchase-forecast].pages[0]",
+        "insights_final[item=online-delivered-car-purchase-forecast].report_type_lens",
+        "insights_final[item=online-delivered-car-purchase-forecast].score",
+        "insights_final[item=online-delivered-car-purchase-forecast].so_what",
+        "insights_final[item=super-user-early-adoption-comparison].coverage_role",
+        "insights_final[item=super-user-early-adoption-comparison].decision_relevance_score",
+        "insights_final[item=super-user-early-adoption-comparison].evidence",
+        "insights_final[item=super-user-early-adoption-comparison].evidence_id",
+        "insights_final[item=super-user-early-adoption-comparison].evidence_spans[0].evidence_id",
+        "insights_final[item=super-user-early-adoption-comparison].evidence_spans[0].page",
+        "insights_final[item=super-user-early-adoption-comparison].evidence_spans[0].source_pack",
+        "insights_final[item=super-user-early-adoption-comparison].evidence_spans[0].text",
+        "insights_final[item=super-user-early-adoption-comparison].evidence_spans[1].evidence_id",
+        "insights_final[item=super-user-early-adoption-comparison].evidence_spans[1].page",
+        "insights_final[item=super-user-early-adoption-comparison].evidence_spans[1].source_pack",
+        "insights_final[item=super-user-early-adoption-comparison].evidence_spans[1].text",
+        "insights_final[item=super-user-early-adoption-comparison].id",
+        "insights_final[item=super-user-early-adoption-comparison].metric.cohort",
+        "insights_final[item=super-user-early-adoption-comparison].metric.confidence",
+        "insights_final[item=super-user-early-adoption-comparison].metric.denominator",
+        "insights_final[item=super-user-early-adoption-comparison].metric.geography",
+        "insights_final[item=super-user-early-adoption-comparison].metric.label",
+        "insights_final[item=super-user-early-adoption-comparison].metric.observation_status",
+        "insights_final[item=super-user-early-adoption-comparison].metric.sample_size",
+        "insights_final[item=super-user-early-adoption-comparison].metric.segment",
+        "insights_final[item=super-user-early-adoption-comparison].metric.subject",
+        "insights_final[item=super-user-early-adoption-comparison].metric.timeframe",
+        "insights_final[item=super-user-early-adoption-comparison].metric.trend",
+        "insights_final[item=super-user-early-adoption-comparison].metric.unit",
+        "insights_final[item=super-user-early-adoption-comparison].metric.value",
+        "insights_final[item=super-user-early-adoption-comparison].metric_strength_score",
+        "insights_final[item=super-user-early-adoption-comparison].novelty_score",
+        "insights_final[item=super-user-early-adoption-comparison].now_what",
+        "insights_final[item=super-user-early-adoption-comparison].pages[0]",
+        "insights_final[item=super-user-early-adoption-comparison].report_type_lens",
+        "insights_final[item=super-user-early-adoption-comparison].score",
+        "insights_final[item=super-user-early-adoption-comparison].so_what",
+        "insights_final[item=super-user-early-adoption-comparison].text"
+      ],
+      "changed_paths": [
+        "insights_final[item=online-delivered-car-purchase-forecast].text"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "insights_final[item=online-delivered-car-purchase-forecast].text",
+          "value": "Activate forecasts that online car purchases fulfilled via delivery will account for 10%–15% of total U.S. car purchases in 2025E, up from 2% in 2021E."
+        }
+      ],
+      "schema_version": "5"
+    }
+  ],
+  "report_id": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB",
+  "validation_run_id": "",
+  "cohort_id": "",
+  "workflow_run_id": "d36c4253-46d0-498c-9069-553d61010936",
+  "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+  "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "c77aba483cfd647b82b63fd750035aa034d9de26ca87fc8e0e9c2487163874a9",
+  "latency_ms": 10387,
+  "schema_version": "1.0"
+}

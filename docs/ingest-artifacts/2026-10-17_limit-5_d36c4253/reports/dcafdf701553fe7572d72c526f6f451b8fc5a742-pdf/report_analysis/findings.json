@@ -1,0 +1,147 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "consumer-multitasking",
+      "text": "The report states that 92% of consumers multitask across at least two media types.",
+      "evidence": "92% OF CONSUMERS MULTITASK ACROSS AT LEAST TWO MEDIA TYPES",
+      "confidence": "high",
+      "pages": [
+        6
+      ],
+      "section_id": "consumer-time-attention",
+      "section_title": "Consumer Time & Attention"
+    },
+    {
+      "id": "internet-media-segment-cagr",
+      "text": "For global consumer internet and media revenues in 2016E–2021E, the report assigns a 6.3% CAGR to cost of internet access, 4.7% to ad revenue, and 2.6% to paid content.",
+      "evidence": "CONSUMER INTERNET AND MEDIA REVENUE GROWTH BY REVENUE SEGMENT*, GLOBAL, 2016E-2021E, USD\nCAGR 6.3%\nCost of Internet access**\nCAGR 4.7%\nAd revenue\nCAGR 2.6%\nPaid content",
+      "confidence": "high",
+      "pages": [
+        14
+      ],
+      "section_id": "internet-media-spend",
+      "section_title": "Internet & Media Spend"
+    },
+    {
+      "id": "esports-us-forecast",
+      "text": "Activate forecast that by 2020, eSports would account for approximately 10% of all U.S. sports viewing, with 70 million or more people watching an eSports final—more than the finals of the MLB, NHL, or NBA.",
+      "evidence": "By 2020, eSports viewership will exceed 10 percent of all US sports viewing, and attract more viewers than the finals of other major US sports\nACTIVATE’S 2020 FORECAST\nIn the US, there will be\n70 Million+\nWILL WATCH AN ESPORTS FINAL\n(MORE PEOPLE THAN MLB, NHL, NBA FINALS)\n~10% OF ALL SPORTS VIEWING\nESPORTS VS SPORTS",
+      "confidence": "high",
+      "pages": [
+        68
+      ],
+      "section_id": "esports",
+      "section_title": "eSports"
+    },
+    {
+      "id": "esports-in-game-betting-forecast",
+      "text": "The report forecasts that the global amount wagered on in-game activities could reach $12 billion by 2020.",
+      "evidence": "AMOUNT WAGERED FOR IN-GAME ACTIVITIES, GLOBAL, 2016E-2020E, BILLIONS, USD\nIn-game betting could reach $12B by 2020",
+      "confidence": "high",
+      "pages": [
+        81
+      ],
+      "section_id": "esports",
+      "section_title": "eSports"
+    },
+    {
+      "id": "pay-tv-price-limit",
+      "text": "The report says U.S. Pay TV prices had reached the upper bound of consumer willingness to pay.",
+      "evidence": "Pay TV prices have reached the upper bound of consumer willingness to pay",
+      "confidence": "high",
+      "pages": [
+        95
+      ],
+      "section_id": "video",
+      "section_title": "Video"
+    },
+    {
+      "id": "pay-tv-reason-not-subscribing",
+      "text": "In 2016, “Not Worth Money” was listed as the primary reason for not having Pay TV, at 35%.",
+      "evidence": "PRIMARY REASON FOR NOT HAVING PAY TV, 2016\nNot Worth Money 35%",
+      "confidence": "high",
+      "pages": [
+        95
+      ],
+      "section_id": "video",
+      "section_title": "Video"
+    },
+    {
+      "id": "underserved-americans-estimate",
+      "text": "The report estimates that approximately 50 million Americans are underserved by technology and media companies.",
+      "evidence": "~50 Million Americans are under-served by tech and media companies",
+      "confidence": "high",
+      "pages": [
+        164
+      ],
+      "section_id": "post-household-america",
+      "section_title": "Post-Household America"
+    },
+    {
+      "id": "underserved-strategies",
+      "text": "For reaching underserved users, the report recommends basic or low-price packages, alternative models such as ad-supported offerings, subsidies where appropriate, more flexible payment terms, culturally and linguistically diverse content, help gaining connectivity, and flexible authentication.",
+      "evidence": "TECH AND MEDIA STRATEGIES TO REACH THE UNDER-SERVED\nOffer basic / low price packages to bring into adoption\nConsider alternative models (e.g., ad supported)\nSubsidize where appropriate\nOffer more flexible payment terms and methods\nEnsure breadth of content reflecting cultural and language diversity\nHelp gain connections in and out of the home (e.g., sponsored data)\nAllow flexible authentication (possible identification constraints)",
+      "confidence": "high",
+      "pages": [
+        165
+      ],
+      "section_id": "post-household-america",
+      "section_title": "Post-Household America"
+    },
+    {
+      "id": "post-household-sharing-behaviors",
+      "text": "The report describes post-household behaviors including sharing accounts or passwords with a social circle, pooling money for one subscription, and accessing multiple user identities from a single device.",
+      "evidence": "Account sharing (e.g., Prime, iCloud Family Sharing)\nOne subscription paid by multiple people pooling cash\nPassword sharing with social circle — instead of with family members\nMultiple user identities accessed from a single device",
+      "confidence": "high",
+      "pages": [
+        148
+      ],
+      "section_id": "post-household-america",
+      "section_title": "Post-Household America"
+    },
+    {
+      "id": "esports-conditions-for-potential",
+      "text": "The report identifies integration with technology and media platforms, cohesive event scheduling, league consolidation, global television and sponsorship deals, mainstream stars, and gambling growth as conditions for eSports to reach its potential.",
+      "evidence": "What will need to happen for eSports to reach its potential?\nINTEGRATION WITH TECH AND MEDIA PLATFORMS\nCOHESIVE SCHEDULING OF EVENTS\nLEAGUE CONSOLIDATION\nGLOBAL TELEVISION AND SPONSORSHIP DEALS\nSTARS MOVING INTO THE MAINSTREAM\nGROWTH IN GAMBLING",
+      "confidence": "high",
+      "pages": [
+        83
+      ],
+      "section_id": "esports",
+      "section_title": "eSports"
+    },
+    {
+      "id": "us-consumer-media-multitasking",
+      "text": "In the U.S. in 2016, 92% of respondents multitasked across at least two media types.",
+      "evidence": "MULTITASKING FREQUENCY BY MEDIA TYPE, U.S., 2016, PERCENT OF RESPONDENTS ... 92% OF CONSUMERS MULTITASK ACROSS AT LEAST TWO MEDIA TYPES",
+      "confidence": "high",
+      "pages": [
+        6
+      ],
+      "section_id": "consumer-time-attention",
+      "section_title": "Consumer Time & Attention"
+    },
+    {
+      "id": "us-consumer-media-multitasking-targeted-1",
+      "text": "In the U.S. in 2016, 92% of consumers multitasked across at least two media types.",
+      "evidence": "MULTITASKING FREQUENCY BY MEDIA TYPE, U.S., 2016, PERCENT OF RESPONDENTS\n92% OF CONSUMERS MULTITASK ACROSS AT LEAST TWO MEDIA TYPES",
+      "confidence": "high",
+      "pages": [
+        6
+      ],
+      "section_id": "consumer-time-attention",
+      "section_title": "Consumer Time & Attention"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

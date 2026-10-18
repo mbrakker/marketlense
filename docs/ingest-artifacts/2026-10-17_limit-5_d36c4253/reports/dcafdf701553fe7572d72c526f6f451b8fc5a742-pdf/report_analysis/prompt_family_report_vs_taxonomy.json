@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "consumer_internet",
+      "consumer_behavior",
+      "consumer_attention",
+      "messaging_apps",
+      "video",
+      "gaming",
+      "audience_segments",
+      "digital_economy"
+    ],
+    "primary_tags": [
+      "consumer_internet",
+      "consumer_behavior",
+      "consumer_attention",
+      "digital_economy"
+    ],
+    "secondary_tags": [
+      "messaging_apps",
+      "video",
+      "gaming",
+      "audience_segments"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "consumer_internet",
+        "tier": "primary",
+        "section_label": "Internet & Media Spend",
+        "evidence": "Examines consumer internet and media revenues and forecasts growth by revenue segment."
+      },
+      {
+        "tag": "consumer_behavior",
+        "tier": "primary",
+        "section_label": "Post-Household America",
+        "evidence": "Analyzes tech and media needs and opportunities across household, age, and multicultural segments."
+      },
+      {
+        "tag": "consumer_attention",
+        "tier": "primary",
+        "section_label": "Consumer Time & Attention",
+        "evidence": "Tracks daily time spent across media formats and how attention relates to monetization."
+      },
+      {
+        "tag": "digital_economy",
+        "tier": "primary",
+        "section_label": "Internet & Media Spend",
+        "evidence": "Forecasts global consumer internet and media revenue growth for 2016–2021."
+      },
+      {
+        "tag": "messaging_apps",
+        "tier": "secondary",
+        "section_label": "Messaging & Bots",
+        "evidence": "Discusses mobile messaging adoption and the expansion of messaging platforms into services."
+      },
+      {
+        "tag": "video",
+        "tier": "secondary",
+        "section_label": "Video",
+        "evidence": "Covers pay-TV pricing and multicultural video services in the U.S."
+      },
+      {
+        "tag": "gaming",
+        "tier": "secondary",
+        "section_label": "Consumer Time & Attention",
+        "evidence": "Forecasts gaming time growth, including the role of esports."
+      },
+      {
+        "tag": "audience_segments",
+        "tier": "secondary",
+        "section_label": "Post-Household America",
+        "evidence": "Identifies virtual families, Boomers and seniors, Millennials, multicultural consumers, and underserved Americans as distinct opportunities."
+      }
+    ],
+    "region": "Global and United States",
+    "time_period": "2016–2021E",
+    "not_found_reason": null
+  }
+}

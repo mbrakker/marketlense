@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "limitations": [
+    "The 2020 esports title list includes only titles ranked in the top 25 for total esports tournament prize money.",
+    "Projected state counts reflect states that legalized sports betting by year-end, not necessarily states where betting had launched.",
+    "The sports-rights chart covers regular-season deals only, excludes league-owned channels, and reflects information as of October 2021. Turner had an HBO Max option but had not scheduled live games.",
+    "The esports-viewer measure differs by year: 2021 counts adults who watched a competition in the previous 12 months, while 2019–2020 counts adults who had watched at any time.",
+    "The gaming-company presence table reflects information as of October 6, 2021, and excludes areas where the company is a majority stakeholder.",
+    "A reported acquisition value is identified as approximate."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "limitations",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/scope",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "scope": "Examines how consumer technology and media habits, activities, expectations, and shopping behavior changed during COVID-19 shelter-in-place and what may persist after reopening, with an actionable post-COVID-19 agenda for technology and media companies. Research coverage is primarily U.S. consumer data across technology, internet, media, and entertainment; studies cited are from April and May 2020, and the report is dated June 10, 2020.",
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "scope",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

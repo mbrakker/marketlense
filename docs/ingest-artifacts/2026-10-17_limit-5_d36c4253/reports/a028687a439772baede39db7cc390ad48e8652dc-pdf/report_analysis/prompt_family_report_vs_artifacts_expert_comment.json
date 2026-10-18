@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/expert_comment",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "public_output": "In the U.S. in 2020, the share of adults aged 18–64 who purchased online during shelter in place and planned to continue purchasing from a new online retailer in at least one category was 81%; separately, the share of adults aged 18–64 who participated in telemedicine/mobile health and viewed it as the same as or better than its in-person equivalent was 55%. These are distinct decision signals: stated retailer-continuation intent and perceived equivalence for a specific digital activity, not a single measure of durable digital demand. MarketLense would keep retention and digital-experience assessment separate, and treat the continuation figure as an intention to validate against later purchasing rather than an outcome.",
+    "claim_provenance": [
+      {
+        "claim": "In the U.S. in 2020, the share of adults aged 18–64 who purchased online during shelter in place and planned to continue purchasing from a new online retailer in at least one category was 81%; separately, the share of adults aged 18–64 who participated in telemedicine/mobile health and viewed it as the same as or better than its in-person equivalent was 55%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "new-online-retailer-continuation",
+          "digital-activity-preference"
+        ]
+      },
+      {
+        "claim": "These are distinct decision signals: stated retailer-continuation intent and perceived equivalence for a specific digital activity, not a single measure of durable digital demand.",
+        "classification": "interpretive",
+        "evidence_ids": [
+          "new-online-retailer-continuation",
+          "digital-activity-preference"
+        ]
+      },
+      {
+        "claim": "MarketLense would keep retention and digital-experience assessment separate, and treat the continuation figure as an intention to validate against later purchasing rather than an outcome.",
+        "classification": "recommendation",
+        "evidence_ids": [
+          "new-online-retailer-continuation",
+          "digital-activity-preference"
+        ]
+      }
+    ],
+    "producing_prompt_identity": {
+      "schema_version": "1.0",
+      "namespace": "report_vs/artifacts/expert_comment",
+      "family_schema_version": "1.0",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "43f23ce711a9285a7cf31061be4299b218fa740d92afd41cbc711a09f69c0214",
+      "prompt_dependency_manifest": {
+        "schema_version": "1.0",
+        "namespace": "report_vs/artifacts/expert_comment",
+        "system_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/expert_comment/system.yaml",
+          "sha256": "ccf7b67a81e9e009b08ce0720570b4605dc5b5a036967c13c6536391322289bc",
+          "kind": "system_root",
+          "source": ""
+        },
+        "user_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/expert_comment/user.yaml",
+          "sha256": "863011823e522838572c31f90de666673c348651d9dd23ae52c6173a678f1700",
+          "kind": "user_root",
+          "source": ""
+        },
+        "included_partials": [
+          {
+            "schema_version": "1.0",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "kind": "partial",
+            "source": "user:0"
+          }
+        ],
+        "schema_snippets": [],
+        "composition_version": "2.0",
+        "prompt_content_hash": "43f23ce711a9285a7cf31061be4299b218fa740d92afd41cbc711a09f69c0214"
+      },
+      "execution_identity": "8abc983f204de03d23563ae3418242c5a4ca8993a70e3d1ba13e900d8b98465d",
+      "execution_identity_manifest": {
+        "schema_version": "1.0",
+        "prompt_content_hash": "43f23ce711a9285a7cf31061be4299b218fa740d92afd41cbc711a09f69c0214",
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "temperature": null,
+        "seed": null,
+        "reasoning_effort": "high",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "timeout_seconds": 600.0,
+          "provider_retry_count": 0
+        },
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "policy_source": "report_vs/artifacts/expert_comment",
+          "tier": "routine_structured",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "max_input_tokens": 48000,
+          "compaction_enabled": true,
+          "execution_policy_hash": "5d44b48e606f823ca30fd0a4fd9e45d6bc4b9b7b1ac1299b410ed546c154e0c0",
+          "execution_policy_source": "report_vs/artifacts/expert_comment"
+        },
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "output_contract_schema_version": "artifact_json:1.0",
+        "validator_version": "artifacts_schema:3.0",
+        "execution_identity": "8abc983f204de03d23563ae3418242c5a4ca8993a70e3d1ba13e900d8b98465d"
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "routing_policy_version": "5d44b48e606f823ca30fd0a4fd9e45d6bc4b9b7b1ac1299b410ed546c154e0c0",
+      "validator_version": "artifacts_schema:3.0",
+      "relevant_input_hash": "f6552fe38c0ad211d80a3b35fc4d386a8a43ab3e0bbf0b2bb3058e8c551ec2c8",
+      "configuration_policy_hash": "448f00f1e76de493516c576b290b768bf0fd9944b40d636b33d088b0f3d49da0",
+      "decision": "regenerated",
+      "regeneration_reason": "materialization_missing"
+    },
+    "generation_attempt": 1
+  }
+}

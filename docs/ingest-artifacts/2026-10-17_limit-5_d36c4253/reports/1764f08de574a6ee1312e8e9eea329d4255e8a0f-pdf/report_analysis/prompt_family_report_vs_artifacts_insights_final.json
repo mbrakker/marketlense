@@ -1,0 +1,239 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_final",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "cryptocurrency-trading-vs-payment-use",
+      "text": "Among U.S. adults 18+ in 2021, 17% bought/sold cryptocurrency; 4% paid for a product/service with it.",
+      "evidence_id": "crypto-usage-trading-versus-transacting",
+      "evidence": "HOW CONSUMERS USE CRYPTOCURRENCY TODAY\nParticipation in Cryptocurrency, U.S., 2021, % Adults Aged 18+\nBought or sold 17%\nTransacted1 4%\n1. Paid for a product/service with cryptocurrency.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Cryptocurrency participation: buying/selling vs. payment",
+        "value": "17% bought or sold; 4% paid for a product/service with cryptocurrency",
+        "unit": "percent",
+        "trend": "behavior comparison",
+        "timeframe": "2021",
+        "geography": "U.S.",
+        "segment": "Buying or selling vs. paying with cryptocurrency",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Cryptocurrency participation",
+        "cohort": "Adults aged 18+",
+        "denominator": "U.S. adults aged 18+",
+        "observation_status": "observed"
+      },
+      "pages": [
+        41
+      ],
+      "score": 0.89,
+      "decision_relevance_score": 0.91,
+      "metric_strength_score": 0.93,
+      "novelty_score": 0.85,
+      "coverage_role": "counter_signal",
+      "so_what": "Trading and payment-use measures capture separate cryptocurrency behaviors, so a payments assessment should distinguish them.",
+      "now_what": "If evaluating a cryptocurrency payments proposition, track payments for products or services separately from buying or selling.",
+      "report_type_lens": "technology_shift"
+    },
+    {
+      "id": "global-internet-media-revenue-forecast",
+      "text": "Activate forecasts global internet and media revenues at $2.1T in 2021E and $2.5T in 2025E.",
+      "evidence_id": "global-revenue-growth",
+      "evidence": "INTERNET AND MEDIA REVENUES1, GLOBAL, 2021E VS. 2025E, USD\nACTIVATE FORECAST\n$2.1T\n$390B GROWTH DOLLARS\n$2.5T\n2021E-2025E CAGR: 4.3%\n2021E 2025E",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Global internet and media revenues",
+        "value": "$2.1T (2021E) to $2.5T (2025E)",
+        "unit": "USD",
+        "trend": "forecast increase",
+        "timeframe": "2021E–2025E",
+        "geography": "Global",
+        "segment": "Internet and media",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Internet and media revenues",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": "forecast"
+      },
+      "pages": [
+        6
+      ],
+      "score": 0.88,
+      "decision_relevance_score": 0.91,
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.67,
+      "coverage_role": "market_context",
+      "so_what": "The forecast provides market-level context, but individual investment assumptions should be assessed separately.",
+      "now_what": "If setting portfolio assumptions, test segment-level forecasts separately rather than applying the aggregate trajectory to every segment.",
+      "report_type_lens": "market_size"
+    },
+    {
+      "id": "global-revenue-segment-cagr-comparison",
+      "text": "Activate forecasts 2021E–2025E global revenue CAGRs: advertising 6.9%, paid content 2.2%, cost of internet access 3.8%.",
+      "evidence_id": "advertising-growth-rate",
+      "evidence": "INTERNET AND MEDIA REVENUE GROWTH BY SEGMENT1, GLOBAL, 2021E VS. 2025E, USD\nACTIVATE FORECAST\n2021E-2025E CAGR:\nPaid content2 2.2%\nCost of internet access3 3.8%\nAdvertising revenue 6.9%\n2021E 2025E",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Global 2021E–2025E segment revenue CAGR",
+        "value": "Advertising 6.9% vs. paid content 2.2% vs. cost of internet access 3.8%",
+        "unit": "percent",
+        "trend": "forecast comparison",
+        "timeframe": "2021E–2025E",
+        "geography": "Global",
+        "segment": "Advertising revenue, paid content, and cost of internet access",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Revenue growth by segment",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": "forecast"
+      },
+      "pages": [
+        7
+      ],
+      "score": 0.87,
+      "decision_relevance_score": 0.89,
+      "metric_strength_score": 0.94,
+      "novelty_score": 0.77,
+      "coverage_role": "investment_signal",
+      "so_what": "The forecast differentiates growth assumptions across the named revenue categories.",
+      "now_what": "If comparing segment exposure, assess each category’s forecast on its own terms.",
+      "report_type_lens": "investment_outlook"
+    },
+    {
+      "id": "super-user-early-adoption-comparison",
+      "text": "U.S. adults 18+ (2021): Super Users (53%) vs. all other users (7%) tended to buy/use new services/devices first.",
+      "evidence_id": "super-user-early-adoption",
+      "evidence": "TENDENCY TO BUY/USE NEW SERVICES/DEVICES/TECHNOLOGIES BEFORE ANYONE ELSE, U.S., 2021, % ADULTS AGED 18+\nBuying/using new services and devices before anyone else\n53%\nSuper Users\n7%\nAll Other Users",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Tendency to buy or use new services and devices before anyone else",
+        "value": "53% of Super Users vs. 7% of all other users",
+        "unit": "percent",
+        "trend": "group comparison",
+        "timeframe": "2021",
+        "geography": "U.S.",
+        "segment": "Super Users vs. all other users",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Tendency to buy or use new services and devices before anyone else",
+        "cohort": "Super Users and all other users",
+        "denominator": "Adults aged 18+",
+        "observation_status": "observed"
+      },
+      "pages": [
+        21
+      ],
+      "score": 0.83,
+      "decision_relevance_score": 0.84,
+      "metric_strength_score": 0.91,
+      "novelty_score": 0.82,
+      "coverage_role": "behavior_shift",
+      "so_what": "Early-adoption tendency can be tracked as a distinct consumer-research measure.",
+      "now_what": "If planning launch research, measure this tendency separately across relevant user groups.",
+      "report_type_lens": "consumer_behavior"
+    },
+    {
+      "id": "gamers-non-gaming-activity-in-games",
+      "text": "U.S. current gamers aged 18+ (2021): 60% participated in non-gaming activities/events within games in the last 12 months.",
+      "evidence_id": "gamers-non-gaming-activities",
+      "evidence": "PARTICIPATION IN NON-GAMING ACTIVITIES OR EVENTS WITHIN VIDEO GAMES IN THE LAST 12 MONTHS1, U.S., 2021, % GAMERS2\n60% of gamers have participated in non-gaming activities within games in the last 12 months\n2. “Gamers” are defined as adults aged 18+ who currently play video games.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Gamers participating in non-gaming activities within games",
+        "value": "60%",
+        "unit": "share of gamers",
+        "trend": "participation",
+        "timeframe": "2021; prior 12 months",
+        "geography": "U.S.",
+        "segment": "Non-gaming activities or events within video games",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Participation in non-gaming activities or events within games",
+        "cohort": "Adults aged 18+ who currently play video games",
+        "denominator": "Gamers",
+        "observation_status": "observed"
+      },
+      "pages": [
+        71
+      ],
+      "score": 0.86,
+      "decision_relevance_score": 0.88,
+      "metric_strength_score": 0.92,
+      "novelty_score": 0.82,
+      "coverage_role": "behavior_shift",
+      "so_what": "The finding shows participation in activities beyond gameplay within the measured gaming audience.",
+      "now_what": "If considering an in-game activation, validate audience fit for the specific activity first.",
+      "report_type_lens": "technology_shift"
+    },
+    {
+      "id": "online-delivered-car-purchase-forecast",
+      "text": "Activate forecasts online, delivery-fulfilled purchases at 2% of total U.S. car purchases in 2021E and 10%–15% in 2025E.",
+      "evidence_id": "online-car-purchase-forecast",
+      "evidence": "CAR PURCHASES COMPLETED ONLINE AND FULFILLED VIA DELIVERY, U.S., 2021E VS. 2025E, % TOTAL CAR PURCHASES1, 2\nACTIVATE FORECAST\n10%-15%\n2%\n2021E\n2025E",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Online car purchases fulfilled via delivery",
+        "value": "2% (2021E) to 10%–15% (2025E)",
+        "unit": "percent",
+        "trend": "forecast increase",
+        "timeframe": "2021E and 2025E",
+        "geography": "U.S.",
+        "segment": "Online purchases fulfilled via delivery",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Car purchases completed online and fulfilled via delivery",
+        "cohort": "",
+        "denominator": "Total U.S. car purchases",
+        "observation_status": "forecast"
+      },
+      "pages": [
+        103
+      ],
+      "score": 0.84,
+      "decision_relevance_score": 0.87,
+      "metric_strength_score": 0.92,
+      "novelty_score": 0.85,
+      "coverage_role": "operating_implication",
+      "so_what": "The forecast can be treated as a channel scenario for delivery-enabled online auto retail.",
+      "now_what": "If assessing digital auto-retail plans, use the forecast as a scenario for delivery fulfillment.",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "esports-global-audience-forecast-series",
+      "text": "Activate forecasts global esports viewership at 557M in 2021E and 725M in 2025E.",
+      "evidence_id": "esports-global-audience-forecast-series",
+      "evidence": "ESPORTS VIEWERSHIP, GLOBAL, 2021E-2025E, MILLIONS\n2021E 2022E 2023E 2024E 2025E\n725M\n679M\n636M\n595M\n557M\nACTIVATE \nFORECAST",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Global esports viewership",
+        "value": "557M (2021E) to 725M (2025E)",
+        "unit": "viewers",
+        "trend": "forecast increase",
+        "timeframe": "2021E–2025E",
+        "geography": "Global",
+        "segment": "Esports viewers",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Global esports audience",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": "forecast"
+      },
+      "pages": [
+        162
+      ],
+      "score": 0.85,
+      "decision_relevance_score": 0.86,
+      "metric_strength_score": 0.92,
+      "novelty_score": 0.81,
+      "coverage_role": "market_context",
+      "so_what": "The projection offers forecast audience-scale context for global esports planning.",
+      "now_what": "If sizing an esports initiative, treat the projection as forecast audience context rather than realized reach.",
+      "report_type_lens": "investment_outlook"
+    }
+  ]
+}

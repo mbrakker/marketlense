@@ -37,7 +37,10 @@ from src.generators.claim_validation_generator import (
     validate_retained_claims,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.generators.report_title_resolution_generator import is_generic_report_title
+from src.generators.report_title_resolution_generator import (
+    is_generic_report_title,
+    resolve_report_title,
+)
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
@@ -56,7 +59,7 @@ from src.utils.editorial_identity import insight_entity_id
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.quantity import extract_quantities
-from src.utils.text_normalization import normalize_text
+from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 from .evidence import sanitize_citation_tokens
 from .models import EvidenceWindow, ValidationRuntime
@@ -214,6 +217,30 @@ def _deterministic_claim_validation_issues(
                 )
             )
     return issues
+
+
+def _exactly_evidenced_claims(
+    semantic_inputs: Sequence[ClaimSemanticInput],
+) -> set[str]:
+    """Return factual claims explicitly reproduced by their linked evidence.
+
+    The grounding model is still required for paraphrases and attribution, but
+    an exact retained sentence in an authoritative evidence span is already a
+    deterministic entailment. Treating it as unresolved lets OCR/layout noise
+    override the canonical statement and causes unnecessary regeneration.
+    """
+
+    supported: set[str] = set()
+    for semantic_input in semantic_inputs:
+        claim = normalize_for_lookup(semantic_input.candidate.text)
+        if not claim or not semantic_input.evidence_texts:
+            continue
+        if any(
+            claim in normalize_for_lookup(evidence)
+            for evidence in semantic_input.evidence_texts
+        ):
+            supported.add(claim)
+    return supported
 
 
 def run_grounding_check(
@@ -878,7 +905,9 @@ def run_grounding_check(
             )
         )
         failed_check_keys = set()
-        retained_claim_item_ids = set(retained_item_ids.values())
+        exactly_evidenced_claims = _exactly_evidenced_claims(
+            retained_claim_inputs
+        )
         if isinstance(checks, list):
             for entry in checks:
                 if not isinstance(entry, dict):
@@ -898,6 +927,8 @@ def run_grounding_check(
                 ):
                     continue
                 text = s(entry.get("text"))
+                if normalize_for_lookup(text) in exactly_evidenced_claims:
+                    continue
                 section = s(entry.get("section") or "grounding")
                 unresolved = (
                     outcome == "not_established"
@@ -917,9 +948,6 @@ def run_grounding_check(
                     else ""
                 )
                 reason = s(entry.get("reason") or "Unsupported factual claim")
-                retained_claim_not_established = (
-                    unresolved and s(entry.get("item_id")) in retained_claim_item_ids
-                )
                 issues.append(
                     issue(
                         rule_id=RULE_ID,
@@ -927,10 +955,14 @@ def run_grounding_check(
                             f"[factual_claim|{violation_type}]"
                             f" {reason}.{dimension_text}: {text[:200]}"
                         ),
-                        severity=(
-                            "warning"
-                            if unresolved and not retained_claim_not_established
-                            else "error"
+                        severity=grounding_issue_severity(
+                            section_policy_value=section_policy(section),
+                            classification=normalize_claim_classification(
+                                s(entry.get("classification"))
+                            )
+                            or "factual_claim",
+                            violation_type=violation_type,
+                            text=text,
                         ),
                         section=section,
                         violation_type=violation_type,
@@ -948,6 +980,8 @@ def run_grounding_check(
                 if not isinstance(entry, dict):
                     continue
                 text = s(entry.get("text"))
+                if normalize_for_lookup(text) in exactly_evidenced_claims:
+                    continue
                 section = s(entry.get("section") or "grounding")
                 if (section, text) in failed_check_keys:
                     continue
@@ -1270,7 +1304,7 @@ def grounding_payload(
     }
     title_is_canonical = _matches_canonical_doc_map_identity(
         request.report.title, request.evidence_packs.get("doc_map"), field="title"
-    )
+    ) or _matches_explicit_source_title(request.report.title, request)
     publisher_is_canonical = _matches_canonical_doc_map_identity(
         request.report.publisher,
         request.evidence_packs.get("doc_map"),
@@ -1300,6 +1334,7 @@ def grounding_payload(
     public_factual_items = _public_factual_items(
         artifacts=artifacts,
         evidence_packs=request.evidence_packs,
+        source_pages=request.source_pages,
         report_title=("" if title_is_canonical else request.report.title),
         publisher=("" if publisher_is_canonical else request.report.publisher),
         insights=insights,
@@ -1384,8 +1419,16 @@ def _matches_canonical_doc_map_identity(
 ) -> bool:
     """Match only an unambiguous, non-generic DocMap identity value."""
     public_key = _identity_match_key(public_value)
-    if not public_key or not isinstance(doc_map, dict):
-        return False
+    canonical_value = _canonical_doc_map_identity(doc_map, field=field)
+    return bool(public_key and canonical_value) and public_key == _identity_match_key(
+        canonical_value
+    )
+
+
+def _canonical_doc_map_identity(doc_map: object, *, field: str) -> str:
+    """Return the existing unambiguous retained identity comparison value."""
+    if not isinstance(doc_map, dict):
+        return ""
     candidate = doc_map
     for key in ("doc_map", "docmap", "docMap"):
         wrapped = doc_map.get(key)
@@ -1417,11 +1460,40 @@ def _matches_canonical_doc_map_identity(
     values = [value for value in values if value]
     canonical_keys = {_identity_match_key(value) for value in values}
     if len(canonical_keys) != 1:
-        return False
+        return ""
     canonical_value = values[0]
     if field == "title" and is_generic_report_title(canonical_value):
+        return ""
+    return canonical_value
+
+
+def _matches_explicit_source_title(
+    public_value: object, request: ValidationRequest
+) -> bool:
+    """Accept a title only when the resolver found the same visible cover title.
+
+    DocMap is a generated navigation artifact and can mistake a contents-page
+    heading for document identity.  The source-page title resolver is already
+    the canonical deterministic identity boundary, so a matching explicit
+    cover title establishes the public title even when the DocMap is stale or
+    conflicting.
+    """
+
+    public_key = _identity_match_key(public_value)
+    if not public_key or not request.source_pages:
         return False
-    return public_key == next(iter(canonical_keys))
+    resolution = resolve_report_title(
+        file_name="",
+        source_report_name="",
+        pdf_metadata={},
+        pages=[
+            (page.page_number, page.text)
+            for page in request.source_pages
+            if page.page_number > 0 and page.text.strip()
+        ],
+    )
+    explicit_title = str(resolution.explicit_source_title or "").strip()
+    return bool(explicit_title) and public_key == _identity_match_key(explicit_title)
 
 
 def _identity_match_key(value: object) -> str:
@@ -1433,6 +1505,7 @@ def _public_factual_items(
     *,
     artifacts: dict,
     evidence_packs: dict,
+    source_pages: Sequence[EvidenceWindow] = (),
     report_title: str,
     publisher: str,
     insights: Sequence[dict],
@@ -1440,6 +1513,29 @@ def _public_factual_items(
 ) -> List[dict]:
     """Material public claims with their exact retained evidence payloads."""
     items: List[dict] = []
+    source_page_texts = {
+        int(page.page_number): s(page.text)
+        for page in source_pages
+        if getattr(page, "page_number", 0) and s(getattr(page, "text", ""))
+    }
+    doc_map = ensure_dict(evidence_packs.get("doc_map"))
+    roles = ensure_dict(doc_map.get("provenance_roles"))
+    publisher_name = s(roles.get("publisher_name"))
+    publisher_proof = [
+        entry
+        for entry in roles.get("evidence", [])
+        if isinstance(entry, dict)
+        and entry.get("role") in {"publisher", "report_owner"}
+        and _identity_match_key(entry.get("name"))
+        == _identity_match_key(publisher_name)
+        and s(entry.get("evidence_locator"))
+        and s(entry.get("evidence_hash"))
+    ]
+    source_identity = (
+        {"publisher_name": publisher_name, "provenance_evidence": publisher_proof}
+        if roles.get("status") == "resolved" and publisher_name and publisher_proof
+        else {}
+    )
     try:
         soft_copy_claims = soft_copy_claim_provenance_from_payload(
             artifacts.get("soft_copy_claim_provenance")
@@ -1466,6 +1562,8 @@ def _public_factual_items(
             }
             if declared_classification:
                 item["declared_classification"] = declared_classification
+            if source_identity:
+                item["source_identity"] = source_identity
             items.append(item)
 
     def add_soft_copy_sentences(
@@ -1521,6 +1619,44 @@ def _public_factual_items(
             fallback_evidence_text,
         )
 
+    evidence_spans = artifact_evidence_span_index(
+        doc_map=ensure_dict(evidence_packs.get("doc_map")),
+        evidence_packs=evidence_packs,
+    )
+
+    def retained_evidence_text_for_id(
+        evidence_id: str,
+        *,
+        statement: str = "",
+        fallback: str = "",
+    ) -> str:
+        """Combine concise retained copy with authoritative source spans."""
+
+        spans = evidence_spans.get(evidence_id.casefold(), [])
+        ordered_packs = (
+            "findings_statement",
+            "source_pdf",
+            "findings",
+            "doc_map",
+        )
+        texts: list[str] = []
+        for source_pack in ordered_packs:
+            texts.extend(
+                s(span.get("text"))
+                for span in spans
+                if s(span.get("source_pack")) == source_pack
+                and s(span.get("text"))
+            )
+        for span in spans:
+            page = span.get("page")
+            if isinstance(page, int) and page in source_page_texts:
+                texts.append(source_page_texts[page])
+        if statement:
+            texts.append(statement)
+        if fallback:
+            texts.append(fallback)
+        return "\n".join(dict.fromkeys(texts))
+
     summary_evidence = [
         entry
         for entry in (
@@ -1531,11 +1667,14 @@ def _public_factual_items(
         if isinstance(entry, dict)
     ]
     evidence_ids = [s(entry.get("evidence_id")) for entry in summary_evidence]
-    evidence_text = "\n".join(s(entry.get("evidence")) for entry in summary_evidence)
     summary_evidence_by_id = {
-        s(entry.get("evidence_id")): s(entry.get("evidence"))
+        s(entry.get("evidence_id")): retained_evidence_text_for_id(
+            s(entry.get("evidence_id")),
+            fallback=s(entry.get("evidence")),
+        )
         for entry in summary_evidence
     }
+    evidence_text = "\n".join(summary_evidence_by_id.values())
     for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
         add_soft_copy_sentences(
             "summary",
@@ -1549,24 +1688,17 @@ def _public_factual_items(
         s(insight.get("evidence_id")): s(insight.get("evidence"))
         for insight in insights
     }
-    evidence_spans = artifact_evidence_span_index(
-        doc_map=ensure_dict(evidence_packs.get("doc_map")),
-        evidence_packs=evidence_packs,
-    )
-
+    insight_statements = {
+        s(insight.get("evidence_id")): s(insight.get("text"))
+        for insight in insights
+        if s(insight.get("evidence_id")) and s(insight.get("text"))
+    }
     def evidence_text_for_id(evidence_id: str) -> str:
-        spans = evidence_spans.get(evidence_id.casefold(), [])
-        for source_pack in ("findings", "doc_map"):
-            texts = list(
-                dict.fromkeys(
-                    s(span.get("text"))
-                    for span in spans
-                    if s(span.get("source_pack")) == source_pack and s(span.get("text"))
-                )
-            )
-            if texts:
-                return "\n".join(texts)
-        return insight_evidence.get(evidence_id, "")
+        return retained_evidence_text_for_id(
+            evidence_id,
+            statement=insight_statements.get(evidence_id, ""),
+            fallback=insight_evidence.get(evidence_id, ""),
+        )
 
     for insight in insights:
         insight_id = insight_entity_id(insight)
@@ -1582,7 +1714,10 @@ def _public_factual_items(
                 f"insights:{insight_id}.{field_name}",
                 insight.get(field_name),
                 [evidence_id],
-                insight.get("evidence"),
+                retained_evidence_text_for_id(
+                    evidence_id,
+                    fallback=s(insight.get("evidence")),
+                ),
                 declared_classification,
             )
     for index, figure in enumerate(artifacts.get("key_figures", []), start=1):
@@ -1612,8 +1747,16 @@ def _public_factual_items(
             "\n".join(insight_evidence.values()),
             insight_evidence,
         )
-    add("metadata:title", "metadata.title", report_title)
-    add("metadata:publisher", "metadata.publisher", publisher)
+    for field, public_value in (("title", report_title), ("publisher", publisher)):
+        canonical_value = _canonical_doc_map_identity(doc_map, field=field)
+        add(
+            f"metadata:{field}",
+            f"metadata.{field}",
+            public_value,
+            [f"doc_map:{field}"] if canonical_value else [],
+            canonical_value,
+            "factual_claim",
+        )
     return items
 
 
@@ -1847,7 +1990,7 @@ def grounding_issue_severity(
             "prescriptive_recommendation",
         } and section_policy_value in {"soft", "mixed"}:
             return "info"
-        return "warning"
+        return "error"
     if violation_type == "evidence_retrieval_failure":
         return "error"
     if section_policy_value == "soft" and classification in {

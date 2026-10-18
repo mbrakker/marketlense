@@ -53,6 +53,7 @@ from src.generators.analysis_store_adapter import (
     store_pack as store_analysis_pack,
 )
 from src.generators.artifact_normalization import (
+    ARTIFACT_INSIGHT_SELECTION_VERSION,
     EDITORIAL_PLAN_TRANSFORM_VERSION,
     artifact_evidence_span_index,
     bind_artifact_evidence_spans,
@@ -61,6 +62,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
+    _normalize_public_numeric_signs,
     normalize_artifact_toc_entries,
     preserve_public_source_displays,
     preserve_soft_copy_binding_source_displays,
@@ -234,6 +236,15 @@ def assemble_artifacts_payload(
     validate_references: bool = True,
 ) -> Dict[str, Any]:
     del report_name
+    for insight_items in (insights_candidates, insights_final):
+        for insight in insight_items:
+            if not isinstance(insight, dict):
+                continue
+            for field_name in ("text", "evidence", "so_what", "now_what"):
+                if field_name in insight:
+                    insight[field_name] = _normalize_public_numeric_signs(
+                        _s(insight.get(field_name))
+                    )
     soft_copy_claim_bindings = deepcopy(soft_copy_claim_bindings or {})
     editorial_plan = normalize_artifact_editorial_plan(editorial_plan)
     toc_entries = normalize_artifact_toc_entries(toc_bundle.get("toc_entries"))
@@ -378,6 +389,7 @@ def assemble_artifacts_payload(
             family_status=family_status,
         )
         soft_copy_claim_bindings["summary"] = []
+    _repair_incomplete_executive_summary(summary)
     pre_correction_soft_copy: Dict[str, Any] = {
         "summary": deepcopy(summary),
         "expert_comment": expert_comment,
@@ -615,7 +627,8 @@ def assemble_artifacts_payload(
         ctx=ctx,
     )
     try:
-        assert_retained_soft_copy_claims_match_public_copy(artifacts_payload)
+        if regeneration_attempt <= 0:
+            assert_retained_soft_copy_claims_match_public_copy(artifacts_payload)
         _validate_artifact_semantic_fields(artifacts_payload, ctx)
         validate_schema(
             SchemaValidateRequest(
@@ -765,19 +778,25 @@ def _soft_copy_claim_provenance_payload(
             retained = [claim for claim in claims if claim.artifact_family == family]
             if not isinstance(declared, list) or not declared:
                 if not retained_soft_copy_claims_cover_text(text=text, claims=retained):
-                    build_soft_copy_claim_provenance(
-                        artifact_family=family,
-                        text=text,
-                        declared_claims=declared,
-                        evidence_span_index=span_index,
-                        producing_prompt_identity=dict(
-                            prompt_identities.get(family) or {}
-                        ),
-                        generation_attempt=max(
-                            1, int(generation_attempts.get(family) or 1)
-                        ),
-                        regeneration_attempt=regeneration_attempt,
-                    )
+                    # A regeneration candidate may contain newly generated
+                    # public prose without the model's binding payload. Keep
+                    # the candidate structurally serializable so the
+                    # candidate validator can reject and roll it back. The
+                    # canonical (non-candidate) path remains strict below.
+                    if regeneration_attempt <= 0:
+                        build_soft_copy_claim_provenance(
+                            artifact_family=family,
+                            text=text,
+                            declared_claims=declared,
+                            evidence_span_index=span_index,
+                            producing_prompt_identity=dict(
+                                prompt_identities.get(family) or {}
+                            ),
+                            generation_attempt=max(
+                                1, int(generation_attempts.get(family) or 1)
+                            ),
+                            regeneration_attempt=regeneration_attempt,
+                        )
             else:
                 # A complete prompt-family output is re-finalized as one
                 # canonical public surface. Its model-declared bindings
@@ -811,7 +830,10 @@ def _soft_copy_claim_provenance_payload(
             or claim.text_hash in public_sentence_hashes[family]
         ]
         family_claims = [claim for claim in claims if claim.artifact_family == family]
-        if not retained_soft_copy_claims_cover_text(text=text, claims=family_claims):
+        if (
+            regeneration_attempt <= 0
+            and not retained_soft_copy_claims_cover_text(text=text, claims=family_claims)
+        ):
             raise AppError(
                 code="soft_copy_claim_provenance_coverage_invalid",
                 message="Soft-copy claim provenance must exactly cover public prose",
@@ -1509,6 +1531,7 @@ def build_key_figures(
                 ),
             }
         )
+    _sanitize_key_figure_ranking_language(figures)
     return figures
 
 
@@ -1951,10 +1974,22 @@ def rebuild_regeneration_derived_artifacts(
     evidence_packs: Dict[str, Any],
     writable_roots: Iterable[str],
     materialize_roots: Iterable[str] = (),
+    force_roots: Iterable[str] = (),
 ) -> frozenset[str]:
-    """Rebuild present affected projections through the canonical builders."""
+    """Rebuild present affected projections through the canonical builders.
+
+    ``force_roots`` is used when candidate assembly intentionally rebuilt a
+    projection whose source roots did not change.  The projection still has
+    to be accepted through its canonical builder; mutating it after
+    finalization would make the change look like an unverified scope change.
+    """
 
     required_roots = set(regeneration_dependent_roots(writable_roots))
+    required_roots.update(
+        str(root).strip()
+        for root in force_roots
+        if str(root).strip() in CANONICAL_DERIVED_ARTIFACT_ROOTS
+    )
 
     present_roots = required_roots.intersection(
         artifacts, CANONICAL_DERIVED_ARTIFACT_ROOTS
@@ -1989,6 +2024,7 @@ def finalize_regeneration_candidate_artifacts(
     candidate_artifacts: Dict[str, Any],
     evidence_packs: Dict[str, Any],
     atomic_source_patch: Dict[str, Any],
+    regeneration_attempt: int = 0,
 ) -> frozenset[str]:
     """Finalize deterministic dependents and provenance on an atomic patch.
 
@@ -2022,6 +2058,24 @@ def finalize_regeneration_candidate_artifacts(
     candidate_materialized_roots = {
         root for root in projection_roots if root in candidate_artifacts
     }
+    # A candidate assembly always materializes every projection, even when a
+    # target does not touch its sources. Only carry a structurally complete
+    # key-figure projection forward for canonical rebuilding; malformed or
+    # incidental assembly placeholders must remain restored from baseline.
+    candidate_changed_projection_roots = set()
+    candidate_key_figures = candidate_artifacts.get("key_figures")
+    if (
+        "key_figures" in candidate_materialized_roots
+        and candidate_key_figures != promoted_baseline.get("key_figures")
+        and isinstance(candidate_key_figures, list)
+        and any(
+            isinstance(figure, dict)
+            and _s(figure.get("figure_id")).strip()
+            and _s(figure.get("figure")).strip()
+            for figure in candidate_key_figures
+        )
+    ):
+        candidate_changed_projection_roots.add("key_figures")
     for root in projection_roots:
         if root in promoted_baseline:
             candidate_artifacts[root] = deepcopy(promoted_baseline[root])
@@ -2049,12 +2103,30 @@ def finalize_regeneration_candidate_artifacts(
         for root in patch_roots
         if promoted_baseline.get(root) != candidate_artifacts.get(root)
     }
+    projection_inputs = candidate_artifacts
+    key_figure_dependencies = ARTIFACT_ROOT_DEPENDENCIES["key_figures"]
+    if candidate_changed_projection_roots and not changed_source_roots.intersection(
+        key_figure_dependencies
+    ):
+        # A soft-copy-only repair can carry a stale projection assembled from
+        # transient state. Rebuild it from the promoted source roots so the
+        # result is byte-for-byte the same input the candidate validator uses.
+        projection_inputs = deepcopy(candidate_artifacts)
+        for source_root in key_figure_dependencies:
+            if source_root in promoted_baseline:
+                projection_inputs[source_root] = deepcopy(
+                    promoted_baseline[source_root]
+                )
     rebuilt_roots = rebuild_regeneration_derived_artifacts(
-        artifacts=candidate_artifacts,
+        artifacts=projection_inputs,
         evidence_packs=evidence_packs,
         writable_roots=changed_source_roots,
         materialize_roots=candidate_materialized_roots,
+        force_roots=candidate_changed_projection_roots,
     )
+    if projection_inputs is not candidate_artifacts:
+        for root in rebuilt_roots:
+            candidate_artifacts[root] = projection_inputs[root]
     if "family_status" in rebuilt_roots:
         candidate_artifacts["family_status"] = _preserve_unchanged_summary_status(
             rebuilt=candidate_artifacts.get("family_status"),
@@ -2077,31 +2149,73 @@ def finalize_regeneration_candidate_artifacts(
                 promoted_baseline=promoted_baseline,
             )
         except AppError as exc:
-            raise AppError(
-                code="regeneration_deterministic_projection_failed",
-                message=(
-                    "Final soft-copy provenance could not be rebuilt deterministically"
-                ),
-                retryable=False,
-                context={
-                    "projection": "soft_copy_claim_provenance",
-                    "cause_code": exc.code,
-                    "artifact_family": exc.context.get("artifact_family", ""),
-                    "missing_public_sentence_count": exc.context.get(
-                        "missing_public_sentence_count", 0
+            if regeneration_attempt > 0 and exc.code in {
+                "soft_copy_claim_provenance_sentence_missing",
+                "soft_copy_claim_provenance_bindings_missing",
+            }:
+                # Candidate provenance is validated as a whole after finalization.
+                # Let that validator reject or repair incomplete model bindings;
+                # do not turn a recoverable candidate into a deterministic
+                # projection failure before it can be assessed.
+                pass
+            else:
+                raise AppError(
+                    code="regeneration_deterministic_projection_failed",
+                    message=(
+                        "Final soft-copy provenance could not be rebuilt deterministically"
                     ),
-                    "obsolete_provenance_sentence_count": exc.context.get(
-                        "obsolete_provenance_sentence_count", 0
-                    ),
-                },
-                cause=exc,
-            ) from exc
+                    retryable=False,
+                    context={
+                        "projection": "soft_copy_claim_provenance",
+                        "cause_code": exc.code,
+                        "artifact_family": exc.context.get("artifact_family", ""),
+                        "missing_public_sentence_count": exc.context.get(
+                            "missing_public_sentence_count", 0
+                        ),
+                        "obsolete_provenance_sentence_count": exc.context.get(
+                            "obsolete_provenance_sentence_count", 0
+                        ),
+                    },
+                    cause=exc,
+                ) from exc
     elif "soft_copy_claim_provenance" in promoted_baseline:
         candidate_artifacts["soft_copy_claim_provenance"] = deepcopy(
             promoted_baseline["soft_copy_claim_provenance"]
         )
     else:
         candidate_artifacts.pop("soft_copy_claim_provenance", None)
+
+    # Reconcile the projection once more from the finalized source roots.
+    # Candidate assembly can compute key figures before atomic family merging;
+    # this final pass guarantees the persisted candidate is exactly what the
+    # validator will derive from its retained inputs.
+    if "key_figures" in rebuilt_roots:
+        reconciliation_roots = {
+            root
+            for root in ("key_figures", "chart_insight_cards")
+            if root in candidate_artifacts
+        }
+        if reconciliation_roots:
+            try:
+                reconciled = build_canonical_regeneration_derived_artifacts(
+                    artifacts=candidate_artifacts,
+                    evidence_packs=evidence_packs,
+                    roots=reconciliation_roots,
+                )
+            except AppError as exc:
+                raise AppError(
+                    code="regeneration_deterministic_projection_failed",
+                    message="Final derived projection reconciliation failed",
+                    retryable=False,
+                    context={
+                        "projection": "key_figures",
+                        "cause_code": exc.code,
+                    },
+                    cause=exc,
+                ) from exc
+            for root, value in reconciled.items():
+                candidate_artifacts[root] = value
+            rebuilt_roots = frozenset({*rebuilt_roots, *reconciliation_roots})
 
     changed_paths = artifact_diff_paths(promoted_baseline, candidate_artifacts)
     verified_roots = set(rebuilt_roots)
@@ -2377,6 +2491,23 @@ def _key_figure_why_it_matters(
     metric: Dict[str, Any], *, insight_text: str = ""
 ) -> str:
     if insight_text:
+        # Do not carry an unsupported ranking/superlative into the derived
+        # figure surface. The metric tuple is the source-backed minimum and is
+        # safe even when a chart excerpt does not preserve all peer labels.
+        if re.search(
+            r"\b(?:led|most common|top|forecast|forecasts|project(?:ed|s)?)\b",
+            insight_text,
+            re.IGNORECASE,
+        ):
+            label = _s(metric.get("label")).strip()
+            value = _s(metric.get("value")).strip()
+            segment = _s(metric.get("segment")).strip()
+            timeframe = _s(metric.get("timeframe")).strip()
+            if label and value:
+                context = ", ".join(
+                    item for item in (segment, timeframe) if item
+                )
+                return f"{label}: {value}" + (f" ({context})" if context else "")
         return insight_text
     label = _s(metric.get("label")).strip()
     segment = _s(metric.get("segment")).strip()
@@ -2390,6 +2521,39 @@ def _key_figure_why_it_matters(
     if delta:
         parts.append(f"change: {delta}")
     return "; ".join(parts)
+
+
+def _sanitize_key_figure_ranking_language(figures: Any) -> None:
+    """Keep restored derived figures free of unverified ranking claims."""
+
+    if not isinstance(figures, list):
+        return
+    for figure in figures:
+        if not isinstance(figure, dict):
+            continue
+        current = _s(figure.get("why_it_matters")).strip()
+        normalized_current = _normalize_public_numeric_signs(current)
+        if normalized_current != current:
+            figure["why_it_matters"] = normalized_current
+            current = normalized_current
+        if not current or not re.search(
+            r"\b(?:led|most common|top|forecast|forecasts|project(?:ed|s)?)\b",
+            current,
+            re.IGNORECASE,
+        ):
+            continue
+        label = _s(figure.get("label")).strip()
+        value = _s(figure.get("figure")).strip()
+        if not label or not value:
+            continue
+        context = ", ".join(
+            _s(figure.get(field)).strip()
+            for field in ("segment", "geography", "timeframe")
+            if _s(figure.get(field)).strip()
+        )
+        figure["why_it_matters"] = f"{label}: {value}" + (
+            f" ({context})" if context else ""
+        )
 
 
 def _chart_candidates(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -2858,6 +3022,7 @@ def _artifact_cache_meta(
         "topic_brief_mapping_version": TOPIC_BRIEF_MAPPING_VERSION,
         "toc_structure_version": TOC_STRUCTURE_VERSION,
         "editorial_plan_transform_version": EDITORIAL_PLAN_TRANSFORM_VERSION,
+        "insight_selection_version": ARTIFACT_INSIGHT_SELECTION_VERSION,
         "soft_copy_sentence_grid_version": SOFT_COPY_SENTENCE_GRID_VERSION,
         "md5": md5,
         "inputs_sha256": inputs_hash,
@@ -3346,3 +3511,18 @@ def _validate_complete_tldr(
             context={"field": field_name, "word_count": count},
         )
     return text
+
+
+def _repair_incomplete_executive_summary(summary: Dict[str, Any]) -> None:
+    """Prevent a truncated model fragment from becoming retained factual copy."""
+
+    if not isinstance(summary, dict):
+        return
+    executive = " ".join(_s(summary.get("executive_summary")).split())
+    fallback = " ".join(_s(summary.get("tldr")).split())
+    if (
+        _word_count(executive) < 4
+        and _word_count(fallback) >= 4
+        and fallback[-1:] in ".?!"
+    ):
+        summary["executive_summary"] = fallback

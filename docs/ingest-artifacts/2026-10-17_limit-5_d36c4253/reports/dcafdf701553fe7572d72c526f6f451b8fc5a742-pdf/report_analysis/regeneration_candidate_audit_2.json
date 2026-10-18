@@ -1,0 +1,1082 @@
+{
+  "attempt_index": 2,
+  "before_sha256": "30ab8fce602490e65bda60b41717142d81d1c3bb4c29c6fdbc3feff78f1a7714",
+  "after_sha256": "f775dad7fea82c9ac617891b2f18334e9046bc7692cbcb9da4a1a43dd5091aa1",
+  "transformation_scope": [
+    "summary",
+    "insights_candidates",
+    "insights_final"
+  ],
+  "unchanged_family_sha256": {
+    "quotes_final": "318d833624dc256e8e9cdc75363d25b4564aa6692a972fbda1ddd5899d20bbc1"
+  },
+  "current_artifacts_path": "C:\\Programing\\Market lense\\out\\dcafdf701553fe7572d72c526f6f451b8fc5a742-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\Programing\\Market lense\\out\\dcafdf701553fe7572d72c526f6f451b8fc5a742-pdf\\report_analysis\\artifacts_regen_candidate_2.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "artifact_quality:chart_insight_cards[2].business_implication",
+    "artifact_quality:chart_insight_cards[2].takeaway",
+    "artifact_quality:insights_final[1].text",
+    "artifact_quality:insights_final[5].text",
+    "artifact_quality:key_figures[2].why_it_matters",
+    "deferred_grounding_required:validation",
+    "regeneration_scope_violation:insights_candidates[item=esports-us-forecast]",
+    "regeneration_scope_violation:insights_final[item=esports-us-forecast]"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "esports-in-game-wagering-forecast",
+      "original_evidence_ids": [
+        "esports-in-game-betting-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "esports-in-game-betting-forecast"
+      ],
+      "original_source_pages": [
+        81
+      ],
+      "candidate_source_pages": [
+        81
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "esports-us-forecast",
+      "original_evidence_ids": [],
+      "candidate_evidence_ids": [
+        "esports-us-forecast"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [
+        68
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "global-media-revenue-segment-growth",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "messaging-payment-commerce-monetization",
+      "original_evidence_ids": [
+        "quote-005"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "pay-tv-price-willingness-bound",
+      "original_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "pay-tv-primary-non-subscription-reason",
+      "original_evidence_ids": [
+        "pay-tv-reason-not-subscribing"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-reason-not-subscribing"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "platform-control-over-news-publishers",
+      "original_evidence_ids": [
+        "quote-004"
+      ],
+      "candidate_evidence_ids": [
+        "quote-004"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "underserved-americans-estimate",
+      "original_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "candidate_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "original_source_pages": [
+        164
+      ],
+      "candidate_source_pages": [
+        164
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "esports-in-game-wagering-forecast",
+      "original_evidence_ids": [
+        "esports-in-game-betting-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "esports-in-game-betting-forecast"
+      ],
+      "original_source_pages": [
+        81
+      ],
+      "candidate_source_pages": [
+        81
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "esports-us-forecast",
+      "original_evidence_ids": [],
+      "candidate_evidence_ids": [
+        "esports-us-forecast"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [
+        68
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "global-media-revenue-segment-growth",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "messaging-payment-commerce-monetization",
+      "original_evidence_ids": [
+        "quote-005"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "pay-tv-price-willingness-bound",
+      "original_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "pay-tv-primary-non-subscription-reason",
+      "original_evidence_ids": [
+        "pay-tv-reason-not-subscribing"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-reason-not-subscribing"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "platform-control-over-news-publishers",
+      "original_evidence_ids": [
+        "quote-004"
+      ],
+      "candidate_evidence_ids": [
+        "quote-004"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "underserved-americans-estimate",
+      "original_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "candidate_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "original_source_pages": [
+        164
+      ],
+      "candidate_source_pages": [
+        164
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "20fecd31bda34c98afe0df965c1da140ef09b05e15bea87a303de57114d421bd",
+      "original_evidence_ids": [
+        "quote-001"
+      ],
+      "candidate_evidence_ids": [
+        "quote-001"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "9529058d312119d4a5e108c91615803be0d0c03f2c11a6ada9819fcccf81598b",
+      "original_evidence_ids": [
+        "quote-002"
+      ],
+      "candidate_evidence_ids": [
+        "quote-002"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "dc7a6872c4bc53bd55d0e2e6ffc95680a9e16e2ed21ac127fbe07388768b4c37",
+      "original_evidence_ids": [
+        "quote-005"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "us-consumer-media-multitasking"
+      ],
+      "candidate_evidence_ids": [
+        "us-consumer-media-multitasking"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "esports-us-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "esports-us-forecast"
+      ],
+      "original_source_pages": [
+        68
+      ],
+      "candidate_source_pages": [
+        68
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "candidate_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "original_source_pages": [
+        164
+      ],
+      "candidate_source_pages": [
+        164
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:8b83026c73be787e",
+      "original_evidence_ids": [
+        "quote-005"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:9ec45d1c1e1781f8",
+      "original_evidence_ids": [
+        "underserved-strategies"
+      ],
+      "candidate_evidence_ids": [
+        "underserved-strategies"
+      ],
+      "original_source_pages": [
+        165
+      ],
+      "candidate_source_pages": [
+        165
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:c13634bb948824c0",
+      "original_evidence_ids": [
+        "quote-005",
+        "underserved-strategies"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005",
+        "underserved-strategies"
+      ],
+      "original_source_pages": [
+        165
+      ],
+      "candidate_source_pages": [
+        165
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:d4b406978c53c845",
+      "original_evidence_ids": [
+        "quote-005",
+        "underserved-strategies"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005",
+        "underserved-strategies"
+      ],
+      "original_source_pages": [
+        165
+      ],
+      "candidate_source_pages": [
+        165
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:055836863ad9ba3a",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:4f69eb10a98840b5",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:da2da7c8444cae49",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:5091dffe40180b29",
+      "original_evidence_ids": [
+        "us-consumer-media-multitasking"
+      ],
+      "candidate_evidence_ids": [
+        "us-consumer-media-multitasking"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:6b7787fb6632d760",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:6bff8a1009b641bf",
+      "original_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "candidate_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "original_source_pages": [
+        164
+      ],
+      "candidate_source_pages": [
+        164
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:748bd6704383102e",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:829cf8ba8e97ca64",
+      "original_evidence_ids": [
+        "esports-us-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "esports-us-forecast"
+      ],
+      "original_source_pages": [
+        68
+      ],
+      "candidate_source_pages": [
+        68
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:b14a284aa1b50753",
+      "original_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "candidate_evidence_ids": [
+        "consumer-multitasking"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:d9f798ec4c6e5aa2",
+      "original_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "c4b6e8797af5206712614167f48458ac17d10aff10aa97995a153b4b018a7adc",
+    "47182e4fe7a6e63a8947988c3d2735f37646712a2624095bfe61562bfe4a1b6c",
+    "a41e64b1105777a3ae355083599da40bdb173969870ec8df8072889e7b7c00d8",
+    "1c489e8614c7637f6431cebc41851032e34b377fc0dc7e96e651344f909e5c67",
+    "aff936b60ec4307a5935c47f4071e6f3327795d0b367c1df8ae4c8714df814c9",
+    "d16647b7022530ab379daf474aebf1c6d966962f5b256a2ec04a1ee94fe8bc99",
+    "0eafbfca37d331aa1e388e0a6198ffbc7811cde5a7c1285016225b617c61f463",
+    "300fcba26c40d728f0841bc42ad28b38063a0a9af11281bd695d11926ce69471"
+  ],
+  "repair_action": "REBIND_EVIDENCE",
+  "repair_strategy": "alternative_evidence",
+  "allowed_paths": [
+    "insights_candidates[item=esports-us-forecast]",
+    "insights_candidates[item=global-media-revenue-segment-growth]",
+    "insights_final[item=esports-us-forecast]",
+    "insights_final[item=global-media-revenue-segment-growth]",
+    "summary.executive_summary",
+    "summary.executive_summary[claim_index=3]"
+  ],
+  "verified_dependent_paths": [
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.included_partials[2]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.routing_policy_version",
+    "_cache.prompts.report_vs/artifacts/regenerate/summary",
+    "_cache.regeneration_prompt_requirements",
+    "_repair_evidence_selection",
+    "claim_ledgers[10].canonical_claim_id",
+    "claim_ledgers[10].claim_text",
+    "claim_ledgers[10].evidence_ids[0]",
+    "claim_ledgers[10].evidence_references[0].evidence_id",
+    "claim_ledgers[10].evidence_references[0].source_pack",
+    "claim_ledgers[10].evidence_references[1]",
+    "claim_ledgers[10].evidence_span_count",
+    "claim_ledgers[11].canonical_claim_id",
+    "claim_ledgers[11].claim_text",
+    "claim_ledgers[11].evidence_ids[0]",
+    "claim_ledgers[11].evidence_references[0].evidence_id",
+    "claim_ledgers[11].evidence_references[1].evidence_id",
+    "claim_ledgers[12].canonical_claim_id",
+    "claim_ledgers[12].claim_text",
+    "claim_ledgers[12].evidence_ids[0]",
+    "claim_ledgers[13].canonical_claim_id",
+    "claim_ledgers[13].claim_text",
+    "claim_ledgers[13].evidence_ids[0]",
+    "claim_ledgers[13].risk",
+    "claim_ledgers[14].canonical_claim_id",
+    "claim_ledgers[14].claim_text",
+    "claim_ledgers[14].evidence_ids[0]",
+    "claim_ledgers[15].artifact_section",
+    "claim_ledgers[15].canonical_claim_id",
+    "claim_ledgers[15].claim_text",
+    "claim_ledgers[15].confidence",
+    "claim_ledgers[15].evidence_ids[0]",
+    "claim_ledgers[15].evidence_quality_grade",
+    "claim_ledgers[15].support_type",
+    "claim_ledgers[16].canonical_claim_id",
+    "claim_ledgers[16].claim_text",
+    "claim_ledgers[16].evidence_ids[0]",
+    "claim_ledgers[17].canonical_claim_id",
+    "claim_ledgers[17].claim_text",
+    "claim_ledgers[17].evidence_ids[0]",
+    "claim_ledgers[18].canonical_claim_id",
+    "claim_ledgers[18].claim_text",
+    "claim_ledgers[18].evidence_ids[0]",
+    "claim_ledgers[19].canonical_claim_id",
+    "claim_ledgers[19].claim_text",
+    "claim_ledgers[19].evidence_ids[0]",
+    "claim_ledgers[20].canonical_claim_id",
+    "claim_ledgers[20].claim_text",
+    "claim_ledgers[20].evidence_ids[0]",
+    "claim_ledgers[21].artifact_section",
+    "claim_ledgers[21].canonical_claim_id",
+    "claim_ledgers[21].claim_text",
+    "claim_ledgers[21].evidence_quality_grade",
+    "claim_ledgers[21].support_type",
+    "claim_ledgers[22].artifact_section",
+    "claim_ledgers[22].canonical_claim_id",
+    "claim_ledgers[22].claim_text",
+    "claim_ledgers[22].evidence_quality_grade",
+    "claim_ledgers[22].support_type",
+    "claim_ledgers[23].artifact_section",
+    "claim_ledgers[23].canonical_claim_id",
+    "claim_ledgers[23].claim_text",
+    "claim_ledgers[23].evidence_ids[0]",
+    "claim_ledgers[23].evidence_quality_grade",
+    "claim_ledgers[23].evidence_references",
+    "claim_ledgers[23].evidence_span_count",
+    "claim_ledgers[23].risk",
+    "claim_ledgers[23].support_type",
+    "claim_ledgers[24].artifact_section",
+    "claim_ledgers[24].canonical_claim_id",
+    "claim_ledgers[24].claim_text",
+    "claim_ledgers[24].evidence_ids[0]",
+    "claim_ledgers[24].evidence_quality_grade",
+    "claim_ledgers[24].evidence_references",
+    "claim_ledgers[24].evidence_span_count",
+    "claim_ledgers[24].risk",
+    "claim_ledgers[24].support_type",
+    "claim_ledgers[25].canonical_claim_id",
+    "claim_ledgers[25].claim_text",
+    "claim_ledgers[25].evidence_ids[0]",
+    "claim_ledgers[25].evidence_references[0].evidence_id",
+    "claim_ledgers[26]",
+    "claim_ledgers[27]",
+    "claim_ledgers[5].canonical_claim_id",
+    "claim_ledgers[5].claim_text",
+    "claim_ledgers[5].evidence_ids[0]",
+    "claim_ledgers[5].evidence_references[0].evidence_id",
+    "claim_ledgers[5].evidence_references[0].source_pack",
+    "claim_ledgers[5].evidence_references[1]",
+    "claim_ledgers[5].evidence_span_count",
+    "claim_ledgers[6].canonical_claim_id",
+    "claim_ledgers[6].claim_text",
+    "claim_ledgers[6].evidence_ids[0]",
+    "claim_ledgers[6].evidence_references[0].evidence_id",
+    "claim_ledgers[6].evidence_references[0].source_pack",
+    "claim_ledgers[6].evidence_references[1]",
+    "claim_ledgers[6].evidence_span_count",
+    "claim_ledgers[7].canonical_claim_id",
+    "claim_ledgers[7].claim_text",
+    "claim_ledgers[7].evidence_ids[0]",
+    "claim_ledgers[7].evidence_references[0].evidence_id",
+    "claim_ledgers[7].evidence_references[1].evidence_id",
+    "claim_ledgers[8].canonical_claim_id",
+    "claim_ledgers[8].claim_text",
+    "claim_ledgers[8].evidence_ids[0]",
+    "claim_ledgers[8].evidence_references[0].evidence_id",
+    "claim_ledgers[8].evidence_references[1].evidence_id",
+    "claim_ledgers[9].canonical_claim_id",
+    "claim_ledgers[9].claim_text",
+    "claim_ledgers[9].evidence_ids[0]",
+    "claim_ledgers[9].evidence_references[0].evidence_id",
+    "claim_ledgers[9].evidence_references[0].source_pack",
+    "claim_ledgers[9].evidence_references[1]",
+    "claim_ledgers[9].evidence_span_count",
+    "executive_advisory.coverage_diagnostics.metric_spine_count",
+    "executive_advisory.decision_brief.decision_implications[0]",
+    "executive_advisory.decision_brief.decision_implications[1]",
+    "executive_advisory.decision_brief.decision_implications[2]",
+    "executive_advisory.decision_brief.evidence_links[1]",
+    "executive_advisory.decision_brief.priority_moves[0]",
+    "executive_advisory.decision_brief.priority_moves[1]",
+    "executive_advisory.decision_brief.priority_moves[2]",
+    "executive_advisory.recommendations.items[item=global-media-revenue-segment-growth]",
+    "metric_spine[0]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:summary:242cb03b2996a8bc]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:summary:b14a284aa1b50753]"
+  ],
+  "selected_evidence_ids": [
+    "consumer-multitasking"
+  ],
+  "quarantined_evidence_ids": [
+    "internet-media-segment-cagr",
+    "pay-tv-price-limit"
+  ],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "grounding",
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:242cb03b2996a8bc",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "insights:global-media-revenue-segment-growth",
+        "entity_id": "insight:global-media-revenue-segment-growth:text",
+        "evidence_ids": [
+          "internet-media-segment-cagr"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "metadata.title",
+        "entity_id": "metadata:title",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "insights_final[6].text",
+        "entity_id": "insights_final[6].text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "insights_final[2].text",
+        "entity_id": "insights_final[2].text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "executive_summary",
+        "entity_id": "soft_copy:summary:242cb03b2996a8bc",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "summary.claim_evidence_map:4.claim",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "chart_insight_cards[2].takeaway",
+        "entity_id": "chart_insight_cards[2].takeaway",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "key_figures[2].why_it_matters",
+        "entity_id": "key_figures[2].why_it_matters",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "chart_insight_cards[2].business_implication",
+        "entity_id": "chart_insight_cards[2].business_implication",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "insights_final[1].text",
+        "entity_id": "insights_final[1].text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=esports-us-forecast]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=esports-us-forecast]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "insights_final[5].text",
+        "entity_id": "insights_final[5].text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failures": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=esports-us-forecast]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=esports-us-forecast]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failure_count": 2,
+    "introduced_failure_categories": [],
+    "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+    "severity_changes": [],
+    "mutation_scope_result": "fail",
+    "evidence_lineage_result": "pass",
+    "repair_action": "REBIND_EVIDENCE",
+    "repair_strategy": "alternative_evidence",
+    "evidence_ids_used": [
+      "consumer-multitasking"
+    ],
+    "strategy_fingerprint": "7d4a122676b2504b8b58e6f1f398317aaff567c509103164fad593b42fb4e2b9",
+    "candidate_sha256": "f775dad7fea82c9ac617891b2f18334e9046bc7692cbcb9da4a1a43dd5091aa1",
+    "input_sha256": "30ab8fce602490e65bda60b41717142d81d1c3bb4c29c6fdbc3feff78f1a7714",
+    "validator_identity": "regeneration-candidate-v1:4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa:4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [
+    {
+      "diagnosed_failure_class": "grounding",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "consumer-multitasking"
+      ],
+      "protected_fields": [
+        "summary.card_tldr_compact[claim_index=0]",
+        "summary.claim_evidence_map[0].claim",
+        "summary.claim_evidence_map[0].evidence",
+        "summary.claim_evidence_map[0].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[0].page",
+        "summary.claim_evidence_map[0].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[0].evidence_spans[0].text",
+        "summary.claim_evidence_map[0].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[1].page",
+        "summary.claim_evidence_map[0].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[0].evidence_spans[1].text",
+        "summary.claim_evidence_map[0].pages[0]",
+        "summary.claim_evidence_map[1].claim",
+        "summary.claim_evidence_map[1].evidence",
+        "summary.claim_evidence_map[1].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[0].page",
+        "summary.claim_evidence_map[1].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[1].evidence_spans[0].text",
+        "summary.claim_evidence_map[1].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[1].page",
+        "summary.claim_evidence_map[1].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[1].evidence_spans[1].text",
+        "summary.claim_evidence_map[1].pages[0]",
+        "summary.claim_evidence_map[2].claim",
+        "summary.claim_evidence_map[2].evidence",
+        "summary.claim_evidence_map[2].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[0].page",
+        "summary.claim_evidence_map[2].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[2].evidence_spans[0].text",
+        "summary.claim_evidence_map[2].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[1].page",
+        "summary.claim_evidence_map[2].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[2].evidence_spans[1].text",
+        "summary.claim_evidence_map[2].pages[0]",
+        "summary.claim_evidence_map[3].claim",
+        "summary.claim_evidence_map[3].evidence",
+        "summary.claim_evidence_map[3].evidence_id",
+        "summary.claim_evidence_map[3].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[3].evidence_spans[0].page",
+        "summary.claim_evidence_map[3].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[3].evidence_spans[0].text",
+        "summary.claim_evidence_map[3].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[3].evidence_spans[1].page",
+        "summary.claim_evidence_map[3].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[3].evidence_spans[1].text",
+        "summary.claim_evidence_map[3].pages[0]",
+        "summary.claim_evidence_map[4].claim",
+        "summary.claim_evidence_map[4].evidence",
+        "summary.claim_evidence_map[4].evidence_id",
+        "summary.claim_evidence_map[4].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[4].evidence_spans[0].page",
+        "summary.claim_evidence_map[4].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[4].evidence_spans[0].text",
+        "summary.claim_evidence_map[4].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[4].evidence_spans[1].page",
+        "summary.claim_evidence_map[4].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[4].evidence_spans[1].text",
+        "summary.claim_evidence_map[4].pages[0]",
+        "summary.executive_summary[claim_index=0]",
+        "summary.executive_summary[claim_index=1]",
+        "summary.executive_summary[claim_index=2]",
+        "summary.executive_summary[claim_index=4]",
+        "summary.executive_summary[claim_index=5]",
+        "summary.tldr[claim_index=0]"
+      ],
+      "changed_paths": [
+        "summary.executive_summary[claim_index=3]"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "summary.executive_summary[claim_index=3]",
+          "value": "The report states that 92% of consumers multitask across at least two media types."
+        }
+      ],
+      "schema_version": "5"
+    }
+  ],
+  "report_id": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+  "validation_run_id": "",
+  "cohort_id": "",
+  "workflow_run_id": "d36c4253-46d0-498c-9069-553d61010936",
+  "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+  "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "7d4a122676b2504b8b58e6f1f398317aaff567c509103164fad593b42fb4e2b9",
+  "latency_ms": 21992,
+  "schema_version": "1.0"
+}

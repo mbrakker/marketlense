@@ -1,0 +1,4195 @@
+{
+  "schema_version": "1.4",
+  "artifact_hash": "5d5aedd7923f8ae87df7286da0060f8d9840eabe491c159143e2e9404a636e29",
+  "package_hash": "88b7d6919f603604af4f15fd3dd632639d7283a9cd5773e1ac9da1194f457c3b",
+  "results": [
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:1",
+        "source_family": "summary",
+        "text": "Among U.S. adults aged 18+ in 2021, 17% had bought or sold cryptocurrency, while 4% had paid for a product or service with it.",
+        "text_hash": "7d9bd87952310b3c3f1f4372f4b5fcfea0c007b768d090ac451695f08816cd8d",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": 41,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:1.claim",
+        "entity_id": "summary_claim:1",
+        "provenance_hash": "17d9b81be37e407e0b7f8722dc6bd52d56da9b0cec24f7d4ddf35b3d34e10f95"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.008906481939633844, 17.0, 18.0, 4.0",
+            "evidence_value": "1.0, 17.0, 18.0, 4.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, ratio",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:2",
+        "source_family": "summary",
+        "text": "Among U.S. adults 18+ in 2021, 17% had bought/sold cryptocurrency; 4% had paid for a product/service with it.",
+        "text_hash": "e7f0414f1831c73854c01417880d185c54baf0fb1ef0eb0f66928241141f2fac",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": 41,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:2.claim",
+        "entity_id": "summary_claim:2",
+        "provenance_hash": "3c3c5d9522263fc57d27104605e3400d21e76996efc108f59d16952b3f23c613"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.008906481939633844, 17.0, 18.0, 4.0",
+            "evidence_value": "1.0, 17.0, 18.0, 4.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, ratio",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:3",
+        "source_family": "summary",
+        "text": "Activate forecasts global internet and media revenues to rise from $2.1T in 2021E to $2.5T in 2025E, adding $390B in growth dollars at a 4.3% CAGR.",
+        "text_hash": "35148ae75ab50af12e7409f903eefc551aa8ada5c57a59e18d1a1c1b7801f722",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "global-revenue-growth",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "f668a3d8403c52a2ba7289bbf2134df24254cdbcc5d63ac044fab272da3b4b8a"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "global-revenue-growth",
+            "source_pack": "findings",
+            "page": 6,
+            "text_hash": "f668a3d8403c52a2ba7289bbf2134df24254cdbcc5d63ac044fab272da3b4b8a"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:3.claim",
+        "entity_id": "summary_claim:3",
+        "provenance_hash": "d3e7f8ca6e8a0dd93f1472e82621f608032b247fe74a17a78907a32654782697"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "2100000000000.0, 2500000000000.0, 390000000000.0, 4.3",
+            "evidence_value": "2100000000000.0, 2500000000000.0, 390000000000.0, 4.3",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency, percent",
+            "evidence_value": "currency, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2021, 2025",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:4",
+        "source_family": "summary",
+        "text": "For 2021E–2025E, Activate forecasts global advertising revenue to grow at a 6.9% CAGR, compared with paid content at 2.2% and internet access at 3.8%.",
+        "text_hash": "424d06ae660a5c72fb8c584d5ad906af573c1308956b63eb319d3cb5d7ac5117",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "advertising-growth-rate",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "4f32903579216558299bb60042985ce064a63035d29179329409518a0017426f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "advertising-growth-rate",
+            "source_pack": "findings",
+            "page": 7,
+            "text_hash": "4f32903579216558299bb60042985ce064a63035d29179329409518a0017426f"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:4.claim",
+        "entity_id": "summary_claim:4",
+        "provenance_hash": "2c0b09bb8eaf0c673fa9e1fa2f9a3d822d7212c68f14064c353adadf8df8c2b8"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "2.2, 3.8, 6.9",
+            "evidence_value": "2.2, 3.8, 6.9",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2021, 2025",
+            "evidence_value": "2021",
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "paid content at 2",
+            "evidence_value": "2025e",
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:5",
+        "source_family": "summary",
+        "text": "In the U.S. in 2021, 60% of gamers, defined as adults aged 18+ who currently played video games, had participated in non-gaming activities or events within games in the last 12 months.",
+        "text_hash": "d0208cbfe6d118cefa6d90ef575af25f33f306229cf171d611aa9a793e83dba1",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": 71,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:5.claim",
+        "entity_id": "summary_claim:5",
+        "provenance_hash": "f38cb96e864691af63bbacbd27c9c8027ebadfd01f764cf047879c98c611e2a3"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "12.0, 18.0, 60.0",
+            "evidence_value": "12.0, 18.0, 2.0, 60.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "percent, time, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:0ad2e761c00938e9",
+        "source_family": "summary",
+        "text": "Among U.S. adults aged 18+ in 2021, 17% had bought or sold cryptocurrency, while 4% had paid for a product or service with it.",
+        "text_hash": "7d9bd87952310b3c3f1f4372f4b5fcfea0c007b768d090ac451695f08816cd8d",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": 41,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          }
+        ],
+        "affected_section": "summary",
+        "entity_id": "soft_copy:summary:0ad2e761c00938e9",
+        "provenance_hash": "7c9ede12a9c352047afda4aca73319918b9efa647b04ffc0ab794be66226b3e5"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.008906481939633844, 17.0, 18.0, 4.0",
+            "evidence_value": "1.0, 17.0, 18.0, 4.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, ratio",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:44463f248f1c17db",
+        "source_family": "summary",
+        "text": "Among U.S. adults 18+ in 2021, 17% had bought/sold cryptocurrency; 4% had paid for a product/service with it.",
+        "text_hash": "e7f0414f1831c73854c01417880d185c54baf0fb1ef0eb0f66928241141f2fac",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": 41,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          }
+        ],
+        "affected_section": "summary.card_tldr_compact",
+        "entity_id": "soft_copy:summary:44463f248f1c17db",
+        "provenance_hash": "7c9ede12a9c352047afda4aca73319918b9efa647b04ffc0ab794be66226b3e5"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.008906481939633844, 17.0, 18.0, 4.0",
+            "evidence_value": "1.0, 17.0, 18.0, 4.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, ratio",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:0ad2e761c00938e9",
+        "source_family": "summary",
+        "text": "Among U.S. adults aged 18+ in 2021, 17% had bought or sold cryptocurrency, while 4% had paid for a product or service with it.",
+        "text_hash": "7d9bd87952310b3c3f1f4372f4b5fcfea0c007b768d090ac451695f08816cd8d",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": 41,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          }
+        ],
+        "affected_section": "summary",
+        "entity_id": "soft_copy:summary:0ad2e761c00938e9",
+        "provenance_hash": "7c9ede12a9c352047afda4aca73319918b9efa647b04ffc0ab794be66226b3e5"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.008906481939633844, 17.0, 18.0, 4.0",
+            "evidence_value": "1.0, 17.0, 18.0, 4.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, ratio",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:de2ec45a29c79d5d",
+        "source_family": "summary",
+        "text": "Activate forecasts global internet and media revenues to rise from $2.1T in 2021E to $2.5T in 2025E, adding $390B in growth dollars at a 4.3% CAGR.",
+        "text_hash": "35148ae75ab50af12e7409f903eefc551aa8ada5c57a59e18d1a1c1b7801f722",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "global-revenue-growth",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "f668a3d8403c52a2ba7289bbf2134df24254cdbcc5d63ac044fab272da3b4b8a"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "global-revenue-growth",
+            "source_pack": "findings",
+            "page": 6,
+            "text_hash": "f668a3d8403c52a2ba7289bbf2134df24254cdbcc5d63ac044fab272da3b4b8a"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:de2ec45a29c79d5d",
+        "provenance_hash": "14ba76879449b5e96cfa02b618dfd6d97d450ac0fb5fd54f6ba8596020f92934"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "2100000000000.0, 2500000000000.0, 390000000000.0, 4.3",
+            "evidence_value": "2100000000000.0, 2500000000000.0, 390000000000.0, 4.3",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency, percent",
+            "evidence_value": "currency, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2021, 2025",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:872164c20587983c",
+        "source_family": "summary",
+        "text": "For 2021E–2025E, Activate forecasts global advertising revenue to grow at a 6.9% CAGR, compared with paid content at 2.2% and internet access at 3.8%.",
+        "text_hash": "424d06ae660a5c72fb8c584d5ad906af573c1308956b63eb319d3cb5d7ac5117",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "advertising-growth-rate",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "4f32903579216558299bb60042985ce064a63035d29179329409518a0017426f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "advertising-growth-rate",
+            "source_pack": "findings",
+            "page": 7,
+            "text_hash": "4f32903579216558299bb60042985ce064a63035d29179329409518a0017426f"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:872164c20587983c",
+        "provenance_hash": "433a063297a6ac6c31b5973f363cee92eeaafe827c6616dd11f2c817655cbaba"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "2.2, 3.8, 6.9",
+            "evidence_value": "2.2, 3.8, 6.9",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2021, 2025",
+            "evidence_value": "2021",
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "paid content at 2",
+            "evidence_value": "2025e",
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:838661998384287a",
+        "source_family": "summary",
+        "text": "In the U.S. in 2021, 60% of gamers, defined as adults aged 18+ who currently played video games, had participated in non-gaming activities or events within games in the last 12 months.",
+        "text_hash": "d0208cbfe6d118cefa6d90ef575af25f33f306229cf171d611aa9a793e83dba1",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": 71,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:838661998384287a",
+        "provenance_hash": "8dddecf9cf7be2f69fa366b18e322953816dc240a491fa12c83c4720d926df0e"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "12.0, 18.0, 60.0",
+            "evidence_value": "12.0, 18.0, 2.0, 60.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "percent, time, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:4a3279ecc953c34c",
+        "source_family": "summary",
+        "text": "If evaluating consumer cryptocurrency activity, MarketLense recommends tracking buying or selling separately from paying for a product or service.",
+        "text_hash": "5a1e5a39d9036f6e4cbfa7c34abe74a02327bdc64710f72522b39a8dc263dd68",
+        "kind": "descriptive",
+        "factual": false,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": 41,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:4a3279ecc953c34c",
+        "provenance_hash": "7c9ede12a9c352047afda4aca73319918b9efa647b04ffc0ab794be66226b3e5"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:cryptocurrency-trading-vs-payment-use:text",
+        "source_family": "insights_final",
+        "text": "Among U.S. adults 18+ in 2021, 17% bought/sold cryptocurrency; 4% paid for a product/service with it.",
+        "text_hash": "d5470d1655cdadabd8af281fd5a51596b188bd7221cbe5a09a1fcf1c2949c3a8",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": 41,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          }
+        ],
+        "affected_section": "insights:cryptocurrency-trading-vs-payment-use.text",
+        "entity_id": "insight:cryptocurrency-trading-vs-payment-use:text",
+        "provenance_hash": "ffebad8e7e5cabcb51739a658178206e17d55daa722ddc7f459a1bc55d674756"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.008906481939633844, 17.0, 18.0, 4.0",
+            "evidence_value": "1.0, 17.0, 18.0, 4.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, ratio",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:global-internet-media-revenue-forecast:text",
+        "source_family": "insights_final",
+        "text": "Activate forecasts global internet and media revenues at $2.1T in 2021E and $2.5T in 2025E.",
+        "text_hash": "84807342903f4c81d4c753a2b13ebd0f73cdd0742a6f6ec7616d37176c1508ce",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "global-revenue-growth",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "f668a3d8403c52a2ba7289bbf2134df24254cdbcc5d63ac044fab272da3b4b8a"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "global-revenue-growth",
+            "source_pack": "findings",
+            "page": 6,
+            "text_hash": "f668a3d8403c52a2ba7289bbf2134df24254cdbcc5d63ac044fab272da3b4b8a"
+          }
+        ],
+        "affected_section": "insights:global-internet-media-revenue-forecast.text",
+        "entity_id": "insight:global-internet-media-revenue-forecast:text",
+        "provenance_hash": "0a0389298afaf4569f05db3de59637ee1e2f2cf9ce7e311f7bd8ffd77e3ee2e0"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "2100000000000.0, 2500000000000.0",
+            "evidence_value": "2100000000000.0, 2500000000000.0, 390000000000.0, 4.3",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency",
+            "evidence_value": "currency, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2021, 2025",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:super-user-early-adoption-comparison:text",
+        "source_family": "insights_final",
+        "text": "U.S. adults 18+ (2021): Super Users (53%) vs. all other users (7%) tended to buy/use new services/devices first.",
+        "text_hash": "b1f3b10eaba350df892f9c58197cfd0c9c93092f9e68bf5cd5c528f0984c1ef4",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "super-user-early-adoption",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "96c62cfe7e900e6b0c99eecca12bad805fd8bec58a6cea71c2b1fdf69ec626ff"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "super-user-early-adoption",
+            "source_pack": "findings",
+            "page": 21,
+            "text_hash": "96c62cfe7e900e6b0c99eecca12bad805fd8bec58a6cea71c2b1fdf69ec626ff"
+          }
+        ],
+        "affected_section": "insights:super-user-early-adoption-comparison.text",
+        "entity_id": "insight:super-user-early-adoption-comparison:text",
+        "provenance_hash": "b83235eab82796e2229f07f7fddd629af6db47d16062aaf5d1b4a91ca424e48a"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 53.0, 7.0",
+            "evidence_value": "18.0, 53.0, 7.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "all other users (7%) tended to buy/use new services/devices first",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "rank:1",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:gamers-non-gaming-activity-in-games:text",
+        "source_family": "insights_final",
+        "text": "U.S. current gamers aged 18+ (2021): 60% participated in non-gaming activities/events within games in the last 12 months.",
+        "text_hash": "91a2800eb782b27b135c6f4277c3508eaab95aef101bdf5afa99457ec15138ea",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": 71,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          }
+        ],
+        "affected_section": "insights:gamers-non-gaming-activity-in-games.text",
+        "entity_id": "insight:gamers-non-gaming-activity-in-games:text",
+        "provenance_hash": "3b212d477533c5928db30b4598143803fbc2b1f07ca1ec03ee529ad24e8d04fd"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "12.0, 18.0, 60.0",
+            "evidence_value": "12.0, 18.0, 2.0, 60.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "percent, time, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:gamers-non-gaming-activity-in-games:metric",
+        "source_family": "insights_final",
+        "text": "Gamers participating in non-gaming activities within games Participation in non-gaming activities or events within games 60% share of gamers U.S. Non-gaming activities or events within video games Adults aged 18+ who currently play video games Gamers 2021; prior 12 months observed",
+        "text_hash": "2157682c6cdd26a9d896848a38f9fe72f2cb915bd52ca6cc162c9933081b3e3b",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": 71,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          }
+        ],
+        "affected_section": "insights:gamers-non-gaming-activity-in-games.metric",
+        "entity_id": "insight:gamers-non-gaming-activity-in-games:metric",
+        "provenance_hash": "3b212d477533c5928db30b4598143803fbc2b1f07ca1ec03ee529ad24e8d04fd"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "12.0, 18.0, 60.0",
+            "evidence_value": "12.0, 18.0, 2.0, 60.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, percent, time",
+            "evidence_value": "percent, time, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:online-delivered-car-purchase-forecast:text",
+        "source_family": "insights_final",
+        "text": "Activate forecasts online, delivery-fulfilled purchases at 2% of total U.S. car purchases in 2021E and 10%–15% in 2025E.",
+        "text_hash": "260f39aecaedbf74db3d3db90e18f59336a57ca278ea7956fd67c8a2238ca7bd",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-car-purchase-forecast",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "6f1aea3e186e12cb8707f6006ab7be62ed31a3ee1d64414ffadadb895f96f59e"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-car-purchase-forecast",
+            "source_pack": "findings",
+            "page": 103,
+            "text_hash": "6f1aea3e186e12cb8707f6006ab7be62ed31a3ee1d64414ffadadb895f96f59e"
+          }
+        ],
+        "affected_section": "insights:online-delivered-car-purchase-forecast.text",
+        "entity_id": "insight:online-delivered-car-purchase-forecast:text",
+        "provenance_hash": "713fc8441763046a5dcb935f00cc646ff02a6ce8f86ed99e8f6f850c21417b43"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "failed",
+          "reason": "quantity_not_entailed"
+        }
+      ],
+      "status": "unsupported",
+      "deterministic_status": "unsupported",
+      "reasons": [
+        "quantity_not_entailed"
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "10.0, 15.0, 2.0",
+            "evidence_value": "-15.0, 10.0, 2.0",
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:esports-global-audience-forecast-series:text",
+        "source_family": "insights_final",
+        "text": "Activate forecasts global esports viewership at 557M in 2021E and 725M in 2025E.",
+        "text_hash": "30a3b437bc6afc6f916c9d57c75b4a10776e12a34bb46df09a30d263c1820174",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "esports-global-audience-forecast-series",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "cf8994922aa9ec5fd599fd921c9b8dfc8f4138249811997ebe3858cafd09df6a"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "esports-global-audience-forecast-series",
+            "source_pack": "findings",
+            "page": 162,
+            "text_hash": "cf8994922aa9ec5fd599fd921c9b8dfc8f4138249811997ebe3858cafd09df6a"
+          }
+        ],
+        "affected_section": "insights:esports-global-audience-forecast-series.text",
+        "entity_id": "insight:esports-global-audience-forecast-series:text",
+        "provenance_hash": "5c411cfde9fb88b325ab9633ad58e79405eb2e95b635effec9e50098fe1d327a"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "557000000.0, 725000000.0",
+            "evidence_value": "557000000.0, 595000000.0, 636000000.0, 679000000.0, 725000000.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count",
+            "evidence_value": "count",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2021, 2025",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:global-revenue-segment-cagr-comparison:text",
+        "source_family": "insights_final",
+        "text": "Activate forecasts 2021E–2025E global revenue CAGRs: advertising 6.9%, paid content 2.2%, cost of internet access 3.8%.",
+        "text_hash": "6dd33bf4d2038988db5907bf822e0d13177d79ef2e57ac496896ef4d098608b2",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "advertising-growth-rate",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "4f32903579216558299bb60042985ce064a63035d29179329409518a0017426f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "advertising-growth-rate",
+            "source_pack": "findings",
+            "page": 7,
+            "text_hash": "4f32903579216558299bb60042985ce064a63035d29179329409518a0017426f"
+          }
+        ],
+        "affected_section": "insights:global-revenue-segment-cagr-comparison.text",
+        "entity_id": "insight:global-revenue-segment-cagr-comparison:text",
+        "provenance_hash": "40c1c6861c08a9a725e10c0431d5d5a2d3423fc97cf9ccf74597b7ceef079dcd"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "2.2, 3.8, 6.9",
+            "evidence_value": "2.2, 3.8, 6.9",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2021, 2025",
+            "evidence_value": "2021",
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "quote:7935352f75fd7fc4edff1020fc00391952b8feef2c8359d343bb3ec982a518b4:text",
+        "source_family": "quotes_final",
+        "text": "We forecast significant growth ahead for global internet and media businesses, which will add almost $400B growth dollars between 2021 and 2025",
+        "text_hash": "af196c7b4220646a0fceee6d19b07563d32cf1354eed91f1908865bf212bfe26",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "q1",
+            "source_pack": "quote_candidates",
+            "page": null,
+            "text_hash": "af196c7b4220646a0fceee6d19b07563d32cf1354eed91f1908865bf212bfe26"
+          }
+        ],
+        "affected_section": "quotes:7935352f75fd7fc4edff1020fc00391952b8feef2c8359d343bb3ec982a518b4.text",
+        "entity_id": "quote:7935352f75fd7fc4edff1020fc00391952b8feef2c8359d343bb3ec982a518b4:text",
+        "provenance_hash": "c20f64bba6dca33399997931c1053f2a9b05a24ccb55aedc302f09d36e14363e"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "400000000000.0",
+            "evidence_value": "400000000000.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency",
+            "evidence_value": "currency",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "quote:9632f95d80d691d23f3c19919dbffc0d393320f0f4b851661d578440b8cc6b34:text",
+        "source_family": "quotes_final",
+        "text": "Global advertising will be the primary driver of growth",
+        "text_hash": "cb6f1de55d0f8befcd4b800fb946bb6401794d75d308c016752d21e74de6a043",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "q2",
+            "source_pack": "quote_candidates",
+            "page": null,
+            "text_hash": "cb6f1de55d0f8befcd4b800fb946bb6401794d75d308c016752d21e74de6a043"
+          }
+        ],
+        "affected_section": "quotes:9632f95d80d691d23f3c19919dbffc0d393320f0f4b851661d578440b8cc6b34.text",
+        "entity_id": "quote:9632f95d80d691d23f3c19919dbffc0d393320f0f4b851661d578440b8cc6b34:text",
+        "provenance_hash": "bbeded93b1bfc05b721e9df4b496b1c1dbf10ef7624b9b532ae9b336afa1e5fb"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The attached retained evidence states the same global advertising growth proposition, including its future-oriented certainty and primary-driver comparison.",
+      "semantic_protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "compatible",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "global advertising is the primary driver of growth",
+            "evidence_value": "global advertising will be the primary driver of growth",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": "primary",
+            "evidence_value": "primary",
+            "status": "compatible"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "driver of growth",
+            "evidence_value": "driver of growth",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "future",
+            "evidence_value": "future",
+            "status": "compatible"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": "advertising",
+            "evidence_value": "advertising",
+            "status": "compatible"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "primary driver",
+            "evidence_value": "primary driver",
+            "status": "compatible"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "forecast",
+            "evidence_value": "forecast",
+            "status": "compatible"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": "will",
+            "evidence_value": "will",
+            "status": "compatible"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": "driver of growth",
+            "evidence_value": "driver of growth",
+            "status": "compatible"
+          }
+        }
+      },
+      "semantic_identity": {
+        "schema_version": "1.1",
+        "claim_id": "quote:9632f95d80d691d23f3c19919dbffc0d393320f0f4b851661d578440b8cc6b34:text",
+        "claim_text_hash": "cb6f1de55d0f8befcd4b800fb946bb6401794d75d308c016752d21e74de6a043",
+        "evidence_ids": [
+          "q2"
+        ],
+        "evidence_hash": "9ee977a991427e500dc891f484f071a113cdb682e7453a65e3ce544a7d0a3c4e",
+        "source_identity": "source:29c6f89b707d74d91ad9ce8749e23384",
+        "prompt_family": "report_vs/validate/grounding",
+        "prompt_content_hash": "0643e2d6ead8dee30c546800bd4d948f7aad854f828b80a29e7a7fdb37372697",
+        "execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b",
+        "validator_version": "grounding_validation_output:1.5",
+        "model_provider": "openai",
+        "model_name": "gpt-6-luna",
+        "configuration_policy_identity": "bb107ffd555c3abff33d2e2833d04d3618e04e28c1b35fad35c654fde0dfe494",
+        "relevant_input_hash": "c7285ef0622a491364df311b358d895a7740cd8c27643387aa24f5f6b3ec1d60",
+        "retrieval_identity": "1e36c88364cc7c746169e3a850c5a16d0f00984bdaf1d8f501659bf828908d18"
+      },
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "quote:0a5cf84e8e409d05656b6a6dee7179013708aee6c2fbd2f6c81b5bbe0c6d1366:text",
+        "source_family": "quotes_final",
+        "text": "During the COVID-19 outbreak, consumers significantly increased their time with technology and media, adding over 45 minutes a day; we expect that this growth will be largely sustained",
+        "text_hash": "37c044736b7f2d641de8c901e7a0eadd5423c58a8c7342326cd427dadc6b5023",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "q3",
+            "source_pack": "quote_candidates",
+            "page": null,
+            "text_hash": "37c044736b7f2d641de8c901e7a0eadd5423c58a8c7342326cd427dadc6b5023"
+          }
+        ],
+        "affected_section": "quotes:0a5cf84e8e409d05656b6a6dee7179013708aee6c2fbd2f6c81b5bbe0c6d1366.text",
+        "entity_id": "quote:0a5cf84e8e409d05656b6a6dee7179013708aee6c2fbd2f6c81b5bbe0c6d1366:text",
+        "provenance_hash": "42e4723c0ef89df18077bbd78b82b5841d9aa8795f91f287f103ca7f46839a66"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "19.0, 45.0",
+            "evidence_value": "19.0, 45.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, time",
+            "evidence_value": "count, time",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": "consumers significantly",
+            "evidence_value": "consumers significantly",
+            "status": "compatible"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "key_figure:gamers-non-gaming-activity-in-games:figure",
+        "source_family": "key_figures",
+        "text": "Gamers participating in non-gaming activities within games Participation in non-gaming activities or events within games 60% share of gamers U.S. Non-gaming activities or events within video games Adults aged 18+ who currently play video games Gamers 2021; prior 12 months observed",
+        "text_hash": "2157682c6cdd26a9d896848a38f9fe72f2cb915bd52ca6cc162c9933081b3e3b",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          }
+        ],
+        "affected_section": "key_figures:gamers-non-gaming-activity-in-games.figure",
+        "entity_id": "key_figure:gamers-non-gaming-activity-in-games:figure",
+        "provenance_hash": "a5b56befc5a6c2fdf622d7d13c4ea42b96efb5b4cc9c6cbd1dd30eeb1bf7791a"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "12.0, 18.0, 60.0",
+            "evidence_value": "12.0, 18.0, 2.0, 60.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, percent, time",
+            "evidence_value": "percent, time, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:expert_comment:24f921a368cb2c55",
+        "source_family": "expert_comment",
+        "text": "Participation in non-gaming activities or events within video games was reported by 60% of U.S. gamers in 2021, defined as adults aged 18+ who currently play video games, over the prior 12 months.",
+        "text_hash": "fe4b659223b2a737ab867a5fed3e26be3d3f80eee729a97615e19458da965460",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": 71,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          }
+        ],
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:24f921a368cb2c55",
+        "provenance_hash": "8dddecf9cf7be2f69fa366b18e322953816dc240a491fa12c83c4720d926df0e"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "12.0, 18.0, 60.0",
+            "evidence_value": "12.0, 18.0, 2.0, 60.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "percent, time, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:expert_comment:aa51bdba9e345bdd",
+        "source_family": "expert_comment",
+        "text": "Among U.S. adults aged 18+ in 2021, bought or sold cryptocurrency: 17%; paid for a product or service with cryptocurrency: 4%.",
+        "text_hash": "869506edcc0e7decef55a283e9afa7043f54cdda91acb77de4e4f57786258d59",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": 41,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          }
+        ],
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:aa51bdba9e345bdd",
+        "provenance_hash": "7c9ede12a9c352047afda4aca73319918b9efa647b04ffc0ab794be66226b3e5"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.008906481939633844, 17.0, 18.0, 4.0",
+            "evidence_value": "1.0, 17.0, 18.0, 4.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, ratio",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:expert_comment:86e054c67d485368",
+        "source_family": "expert_comment",
+        "text": "These findings measure different behaviors in different populations, so leaders assessing digital propositions should track in-game participation and payment use separately rather than infer payment readiness from participation.",
+        "text_hash": "0d58089dc98a7d15a1a676f53db81e8cbf3ff9f3d1d00b00a1a42c005a8bc2d6",
+        "kind": "interpretive",
+        "factual": false,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "crypto-usage-trading-versus-transacting",
+            "source_pack": "findings",
+            "page": 41,
+            "text_hash": "c49bedfba9171262f587bcc3fd41db84f6348caff08f554b26259fa9dd4e43d3"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "gamers-non-gaming-activities",
+            "source_pack": "findings",
+            "page": 71,
+            "text_hash": "560191fd0a148090c889af10d2fd5966841f99cdbfe95c38ec20ff47e3f99895"
+          }
+        ],
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:86e054c67d485368",
+        "provenance_hash": "27d65e75e7c454fbaf3a1820abee2c2b37f9d0fdd93394fbe2d8471768619994"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:linkedin_post:f9c9676f3e62e375",
+        "source_family": "linkedin_post",
+        "text": "In U.S. adults aged 18+ in 2021, 53% of Super Users said they tended to buy or use new services and devices before anyone else, compared with 7% of all other users.",
+        "text_hash": "6ab8a4e0e752f55be06c926e4c1d4f5d797a5097ffa168e7e7d65cc9804c90dc",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "super-user-early-adoption",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "96c62cfe7e900e6b0c99eecca12bad805fd8bec58a6cea71c2b1fdf69ec626ff"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "super-user-early-adoption",
+            "source_pack": "findings",
+            "page": 21,
+            "text_hash": "96c62cfe7e900e6b0c99eecca12bad805fd8bec58a6cea71c2b1fdf69ec626ff"
+          }
+        ],
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:f9c9676f3e62e375",
+        "provenance_hash": "3cb4df1eee53f742bd953a5ef1753b2a67dbcfb87cbd49d0dc1181618613b550"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "not_applicable",
+          "reason": "quantity_not_established"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.008906481939633844, 18.0, 53.0, 7.0",
+            "evidence_value": "18.0, 53.0, 7.0",
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, ratio",
+            "evidence_value": "percent",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "7% of all other users",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": "super users",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The linked chart assigns 53% to Super Users and 7% to All Other Users for the stated tendency, with the U.S., 2021, and adults aged 18+ specified.",
+      "semantic_protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "compatible",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "53% Super Users; 7% all other users",
+            "evidence_value": "53% Super Users; 7% All Other Users",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "%",
+            "evidence_value": "%",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": "53%; 7%",
+            "evidence_value": "53%; 7%",
+            "status": "compatible"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "Super Users higher than all other users",
+            "evidence_value": "53% versus 7%",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2021",
+            "evidence_value": "2021",
+            "status": "compatible"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "U.S.",
+            "evidence_value": "U.S.",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": "adults aged 18+; Super Users and all other users",
+            "evidence_value": "adults aged 18+; Super Users and All Other Users",
+            "status": "compatible"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "Super Users compared with all other users",
+            "evidence_value": "Super Users compared with All Other Users",
+            "status": "compatible"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "reported tendency",
+            "evidence_value": "tendency measure",
+            "status": "compatible"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": "respondents said",
+            "evidence_value": "chart reports the tendency measure",
+            "status": "compatible"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": "asserted",
+            "evidence_value": "asserted",
+            "status": "compatible"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_identity": {
+        "schema_version": "1.1",
+        "claim_id": "soft_copy:linkedin_post:f9c9676f3e62e375",
+        "claim_text_hash": "6ab8a4e0e752f55be06c926e4c1d4f5d797a5097ffa168e7e7d65cc9804c90dc",
+        "evidence_ids": [
+          "super-user-early-adoption",
+          "super-user-early-adoption"
+        ],
+        "evidence_hash": "dd3b0a3cd03b98c76dd12b7af6bb7e9961a8a6dedd920a5f2ee628a884025c42",
+        "source_identity": "source:29c6f89b707d74d91ad9ce8749e23384",
+        "prompt_family": "report_vs/validate/grounding",
+        "prompt_content_hash": "0643e2d6ead8dee30c546800bd4d948f7aad854f828b80a29e7a7fdb37372697",
+        "execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b",
+        "validator_version": "grounding_validation_output:1.5",
+        "model_provider": "openai",
+        "model_name": "gpt-6-luna",
+        "configuration_policy_identity": "bb107ffd555c3abff33d2e2833d04d3618e04e28c1b35fad35c654fde0dfe494",
+        "relevant_input_hash": "c7285ef0622a491364df311b358d895a7740cd8c27643387aa24f5f6b3ec1d60",
+        "retrieval_identity": "1e36c88364cc7c746169e3a850c5a16d0f00984bdaf1d8f501659bf828908d18"
+      },
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:linkedin_post:933c7a4a9b9791f7",
+        "source_family": "linkedin_post",
+        "text": "This is a reported tendency to adopt early, rather than a measure of observed adoption events.",
+        "text_hash": "5133cbb5a2d4df30dfe2c47f062d43cb9147d2562776cb311fbb07e24666f73c",
+        "kind": "descriptive",
+        "factual": false,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "super-user-early-adoption",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "96c62cfe7e900e6b0c99eecca12bad805fd8bec58a6cea71c2b1fdf69ec626ff"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "super-user-early-adoption",
+            "source_pack": "findings",
+            "page": 21,
+            "text_hash": "96c62cfe7e900e6b0c99eecca12bad805fd8bec58a6cea71c2b1fdf69ec626ff"
+          }
+        ],
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:933c7a4a9b9791f7",
+        "provenance_hash": "3cb4df1eee53f742bd953a5ef1753b2a67dbcfb87cbd49d0dc1181618613b550"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:linkedin_post:e5736baa0c7fc81c",
+        "source_family": "linkedin_post",
+        "text": "MarketLense’s recommendation: if planning launch research, measure this tendency separately across relevant user groups.",
+        "text_hash": "feb9f6215d46e072d1b21ec0f49494157303127773f0f2398dfc603776a6c453",
+        "kind": "descriptive",
+        "factual": false,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "super-user-early-adoption",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "96c62cfe7e900e6b0c99eecca12bad805fd8bec58a6cea71c2b1fdf69ec626ff"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "super-user-early-adoption",
+            "source_pack": "findings",
+            "page": 21,
+            "text_hash": "96c62cfe7e900e6b0c99eecca12bad805fd8bec58a6cea71c2b1fdf69ec626ff"
+          }
+        ],
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:e5736baa0c7fc81c",
+        "provenance_hash": "3cb4df1eee53f742bd953a5ef1753b2a67dbcfb87cbd49d0dc1181618613b550"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    }
+  ],
+  "readiness_status": "not_publishable",
+  "unsupported_factual_count": 1,
+  "unresolved_factual_count": 0,
+  "deterministic_pass_count": 23,
+  "semantic_validation_count": 2,
+  "semantic_execution_identities": [
+    "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b"
+  ],
+  "validation_identity": {
+    "schema_version": "1.1",
+    "report_id": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB",
+    "source_id": "source:29c6f89b707d74d91ad9ce8749e23384",
+    "source_md5": "b75240e6062919b5616c28b73224acdb",
+    "claim_validation_validator_version": "retained_claim_validation:v7",
+    "grounding_validator_version": "grounding_validation_output:1.5",
+    "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+    "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7"
+  },
+  "lineage": null
+}

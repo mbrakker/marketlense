@@ -2,10 +2,29 @@ import pytest
 
 from src.generators.artifact_normalization import (
     constrain_summary_to_source_backed_claims,
+    normalize_artifact_insights,
     preserve_public_source_displays,
     select_artifact_insights,
 )
 from src.utils.errors import AppError
+
+
+def test_insight_normalization_collapses_ocr_double_numeric_signs() -> None:
+    normalized = normalize_artifact_insights(
+        [
+            {
+                "id": "time-spend",
+                "text": "Social media changed by −-5% after shelter in place.",
+                "evidence_id": "f1",
+                "evidence": "Social media changed by -5% after shelter in place.",
+            }
+        ],
+        prefix="insight",
+    )
+
+    assert normalized[0]["text"] == (
+        "Social media changed by −5% after shelter in place."
+    )
 
 
 def test_preservation_replaces_an_unsupported_insight_number_and_clears_metric() -> (
@@ -190,6 +209,37 @@ def test_summary_constraint_fails_before_mutation_without_short_direct_sentence(
 
     assert captured.value.code == "card_tldr_compact_invalid"
     assert summary == original
+
+
+def test_select_artifact_insights_uses_each_stable_id_once():
+    candidates = [
+        {
+            "id": f"insight-{index}",
+            "text": f"Distinct source finding for category {index}.",
+            "evidence_id": f"finding-{index}",
+        }
+        for index in range(6)
+    ]
+    final = [dict(item) for item in candidates[:5]]
+    final.insert(
+        1, {**candidates[0], "text": "Different wording for the first finding."}
+    )
+
+    selected = select_artifact_insights(
+        final_insights=final,
+        candidate_insights=candidates,
+        editorial_plan={
+            "report_thesis": "Distinct findings describe the market.",
+            "themes": [
+                {"theme": "First", "priority": 1, "evidence_ids": ["finding-0"]},
+                {"theme": "Second", "priority": 2, "evidence_ids": ["finding-1"]},
+            ],
+        },
+    )
+
+    assert len(selected) == 5
+    assert len({item["id"] for item in selected}) == len(selected)
+    assert next(item for item in selected if item["id"] == "insight-0") == final[0]
 
 
 def test_select_artifact_insights_preserves_chosen_candidate_factual_fields():

@@ -1,0 +1,434 @@
+{
+  "report_id": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB",
+  "status": "pass",
+  "issues": [],
+  "measurements": [
+    {
+      "rule_id": "public_editorial_quality.insight_role_diversity",
+      "value": 5.0,
+      "unit": "distinct_roles",
+      "explanation": "Distinct assigned insight roles.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.repeated_syntax",
+      "value": 0.0,
+      "unit": "repeated_openings",
+      "explanation": "Repeated normalized insight openings.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.excessive_verbosity",
+      "value": 17.29,
+      "unit": "average_words_per_insight",
+      "explanation": "Average insight length; investigate only when it is unusually high.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.card_to_insight_linkage",
+      "value": 0.0,
+      "unit": "share",
+      "explanation": "Public chart cards with a retained insight ID.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.figure_to_evidence_linkage",
+      "value": 0.0,
+      "unit": "share",
+      "explanation": "Public chart cards with accepted candidate, source page, and evidence ID.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.figure_to_insight_linkage",
+      "value": 0.0,
+      "unit": "share",
+      "explanation": "Public chart cards with an accepted candidate and retained insight ID.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.source_note_completeness",
+      "value": 1.0,
+      "unit": "share",
+      "explanation": "Insights with explicit source evidence IDs.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.action_specificity",
+      "value": 1.0,
+      "unit": "share",
+      "explanation": "Insights with a specific decision action.",
+      "schema_version": "1.0"
+    }
+  ],
+  "disabled_rule_waivers": {},
+  "items": [
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:1:caption",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:1.caption",
+      "evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:1:public_takeaway",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:1.public_takeaway",
+      "evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "expert_comment:expert_comment",
+      "artifact": "expert_comment",
+      "field_path": "expert_comment",
+      "evidence_ids": [
+        "crypto-usage-trading-versus-transacting",
+        "global-revenue-growth",
+        "super-user-early-adoption",
+        "gamers-non-gaming-activities",
+        "online-car-purchase-forecast",
+        "esports-global-audience-forecast-series",
+        "advertising-growth-rate"
+      ],
+      "repair_target": "expert_comment",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:cryptocurrency-trading-vs-payment-use:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:cryptocurrency-trading-vs-payment-use.now_what",
+      "evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:cryptocurrency-trading-vs-payment-use:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:cryptocurrency-trading-vs-payment-use.so_what",
+      "evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:cryptocurrency-trading-vs-payment-use:text",
+      "artifact": "insights_final",
+      "field_path": "insights:cryptocurrency-trading-vs-payment-use",
+      "evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:esports-global-audience-forecast-series:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:esports-global-audience-forecast-series.now_what",
+      "evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:esports-global-audience-forecast-series:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:esports-global-audience-forecast-series.so_what",
+      "evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:esports-global-audience-forecast-series:text",
+      "artifact": "insights_final",
+      "field_path": "insights:esports-global-audience-forecast-series",
+      "evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:gamers-non-gaming-activity-in-games:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:gamers-non-gaming-activity-in-games.now_what",
+      "evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:gamers-non-gaming-activity-in-games:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:gamers-non-gaming-activity-in-games.so_what",
+      "evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:gamers-non-gaming-activity-in-games:text",
+      "artifact": "insights_final",
+      "field_path": "insights:gamers-non-gaming-activity-in-games",
+      "evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:global-internet-media-revenue-forecast:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:global-internet-media-revenue-forecast.now_what",
+      "evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:global-internet-media-revenue-forecast:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:global-internet-media-revenue-forecast.so_what",
+      "evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:global-internet-media-revenue-forecast:text",
+      "artifact": "insights_final",
+      "field_path": "insights:global-internet-media-revenue-forecast",
+      "evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:global-revenue-segment-cagr-comparison:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:global-revenue-segment-cagr-comparison.now_what",
+      "evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:global-revenue-segment-cagr-comparison:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:global-revenue-segment-cagr-comparison.so_what",
+      "evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:global-revenue-segment-cagr-comparison:text",
+      "artifact": "insights_final",
+      "field_path": "insights:global-revenue-segment-cagr-comparison",
+      "evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:online-delivered-car-purchase-forecast:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:online-delivered-car-purchase-forecast.now_what",
+      "evidence_ids": [
+        "online-car-purchase-forecast"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:online-delivered-car-purchase-forecast:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:online-delivered-car-purchase-forecast.so_what",
+      "evidence_ids": [
+        "online-car-purchase-forecast"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:online-delivered-car-purchase-forecast:text",
+      "artifact": "insights_final",
+      "field_path": "insights:online-delivered-car-purchase-forecast",
+      "evidence_ids": [
+        "online-car-purchase-forecast"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:super-user-early-adoption-comparison:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:super-user-early-adoption-comparison.now_what",
+      "evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:super-user-early-adoption-comparison:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:super-user-early-adoption-comparison.so_what",
+      "evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:super-user-early-adoption-comparison:text",
+      "artifact": "insights_final",
+      "field_path": "insights:super-user-early-adoption-comparison",
+      "evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:1:figure",
+      "artifact": "key_figures",
+      "field_path": "key_figures:1.figure",
+      "evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:1:label",
+      "artifact": "key_figures",
+      "field_path": "key_figures:1.label",
+      "evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:1:why_it_matters",
+      "artifact": "key_figures",
+      "field_path": "key_figures:1.why_it_matters",
+      "evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "linkedin_post:linkedin_post",
+      "artifact": "linkedin_post",
+      "field_path": "linkedin_post",
+      "evidence_ids": [
+        "crypto-usage-trading-versus-transacting",
+        "global-revenue-growth",
+        "super-user-early-adoption",
+        "gamers-non-gaming-activities",
+        "online-car-purchase-forecast",
+        "esports-global-audience-forecast-series",
+        "advertising-growth-rate"
+      ],
+      "repair_target": "linkedin_post",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "quotes_final:quotes:0a5cf84e8e409d05656b6a6dee7179013708aee6c2fbd2f6c81b5bbe0c6d1366",
+      "artifact": "quotes_final",
+      "field_path": "quotes:0a5cf84e8e409d05656b6a6dee7179013708aee6c2fbd2f6c81b5bbe0c6d1366",
+      "evidence_ids": [
+        "q3"
+      ],
+      "repair_target": "quotes",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "quotes_final:quotes:7935352f75fd7fc4edff1020fc00391952b8feef2c8359d343bb3ec982a518b4",
+      "artifact": "quotes_final",
+      "field_path": "quotes:7935352f75fd7fc4edff1020fc00391952b8feef2c8359d343bb3ec982a518b4",
+      "evidence_ids": [
+        "q1"
+      ],
+      "repair_target": "quotes",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "quotes_final:quotes:9632f95d80d691d23f3c19919dbffc0d393320f0f4b851661d578440b8cc6b34",
+      "artifact": "quotes_final",
+      "field_path": "quotes:9632f95d80d691d23f3c19919dbffc0d393320f0f4b851661d578440b8cc6b34",
+      "evidence_ids": [
+        "q2"
+      ],
+      "repair_target": "quotes",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "summary:card_tldr_compact",
+      "artifact": "summary",
+      "field_path": "card_tldr_compact",
+      "evidence_ids": [
+        "crypto-usage-trading-versus-transacting",
+        "crypto-usage-trading-versus-transacting",
+        "global-revenue-growth",
+        "advertising-growth-rate",
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "summary",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "summary:executive_summary",
+      "artifact": "summary",
+      "field_path": "executive_summary",
+      "evidence_ids": [
+        "crypto-usage-trading-versus-transacting",
+        "crypto-usage-trading-versus-transacting",
+        "global-revenue-growth",
+        "advertising-growth-rate",
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "summary",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "summary:tldr",
+      "artifact": "summary",
+      "field_path": "tldr",
+      "evidence_ids": [
+        "crypto-usage-trading-versus-transacting",
+        "crypto-usage-trading-versus-transacting",
+        "global-revenue-growth",
+        "advertising-growth-rate",
+        "gamers-non-gaming-activities"
+      ],
+      "repair_target": "summary",
+      "schema_version": "1.0"
+    }
+  ],
+  "publishable": true,
+  "hard_fail_count": 0,
+  "validator_version": "public-editorial-quality:v14",
+  "schema_version": "1.0"
+}

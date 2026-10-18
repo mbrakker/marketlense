@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "quote_candidates": [
+    {
+      "id": "q1",
+      "text": "We forecast significant growth ahead for global internet and media businesses, which will add almost $400B growth dollars between 2021 and 2025",
+      "source": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": null
+    },
+    {
+      "id": "q2",
+      "text": "Global advertising will be the primary driver of growth",
+      "source": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": null
+    },
+    {
+      "id": "q3",
+      "text": "During the COVID-19 outbreak, consumers significantly increased their time with technology and media, adding over 45 minutes a day; we expect that this growth will be largely sustained",
+      "source": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": null
+    },
+    {
+      "id": "q4",
+      "text": "The BIGGEST BARRIER for institutions is regulatory compliance and uncertainty",
+      "source": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": null
+    },
+    {
+      "id": "q5",
+      "text": "Activate Point of View on NFTs: as more consumer time migrates to digital experiences and interest grows in the metaverse, we believe that every technology and media company will need an NFT strategy",
+      "source": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": null
+    },
+    {
+      "id": "q6",
+      "text": "Sports programming beyond live and recorded games will be critical to expand fan engagement",
+      "source": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": null
+    },
+    {
+      "id": "q7",
+      "text": "Esports revenue will grow to $5B by 2025, with consumer spend as the largest driver of growth",
+      "source": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": null
+    },
+    {
+      "id": "q8",
+      "text": "The importance of esports goes well beyond its direct financial potential, impacting a broad set of other technology and media experiences",
+      "source": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": null
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "quote_candidates",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_plan",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "report_thesis": "The report maps technology and media change across user attention, services, content, and distribution, while examining revenue capture and gaps across industry layers as strategic questions.",
+    "themes": [
+      {
+        "theme": "Competitive positioning across the unified industry stack",
+        "priority": 1,
+        "evidence_ids": [
+          "unified_stack",
+          "unified_stack_ma_forecast"
+        ]
+      },
+      {
+        "theme": "Messaging growth and platform functions",
+        "priority": 2,
+        "evidence_ids": [
+          "messaging-user-forecast",
+          "messaging_enterprise_bots"
+        ]
+      },
+      {
+        "theme": "Distribution, monetization, and revenue comparisons",
+        "priority": 3,
+        "evidence_ids": [
+          "app_store_distribution_engagement",
+          "who_grabs_the_money"
+        ]
+      },
+      {
+        "theme": "Television transition and the smart-cable proposition",
+        "priority": 4,
+        "evidence_ids": [
+          "cord_cutting",
+          "quote-004"
+        ]
+      },
+      {
+        "theme": "Gaming and eSports business expansion",
+        "priority": 5,
+        "evidence_ids": [
+          "gaming-spend-2014",
+          "esports-revenue-forecast-2018"
+        ]
+      },
+      {
+        "theme": "Attention and audio-consumption patterns",
+        "priority": 6,
+        "evidence_ids": [
+          "attention_daily_time_cagr",
+          "audio_consumption_mix"
+        ]
+      }
+    ]
+  }
+}

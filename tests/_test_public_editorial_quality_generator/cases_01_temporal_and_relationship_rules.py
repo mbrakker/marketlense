@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v14"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v15"
 
 
 def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
@@ -37,6 +37,21 @@ def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
     assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
         swapped_period
     )
+
+
+def test_category_prose_with_commas_and_footnotes_preserves_bindings() -> None:
+    evidence = (
+        "ECOMMERCE PENETRATION BY PRODUCT CATEGORY, U.S., 2020, % ADULTS AGED 18-64. "
+        "Apparel, Shoes, and Accessories 42.3%; Grocery 40.5%; "
+        "Household Products2 36.1%."
+    )
+    text = (
+        "During shelter in place in the U.S. in 2020, eCommerce penetration "
+        "among adults aged 18-64 was 42.3% for apparel, shoes, and accessories, "
+        "40.5% for grocery, and 36.1% for household products."
+    )
+
+    assert _metric_label_relationship_explanation(text, evidence) == ""
 
 
 def test_period_relationship_check_allows_an_implicit_shared_comparison_endpoint() -> (
@@ -913,3 +928,36 @@ def test_rounded_combined_categories_accept_past_tense_source_relationship() -> 
     )
 
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
+
+
+def test_category_value_binding_ignores_age_thresholds_but_rejects_swaps() -> None:
+    evidence = (
+        "ONLINE SHOPPER PENETRATION BY PRODUCT CATEGORY, U.S., 2021, "
+        "% PURCHASERS IN THE PRODUCT CATEGORY AGED 18+; "
+        "CLOTHING 77%; GROCERY 50%."
+    )
+    valid = (
+        "U.S. clothing purchasers aged 18+ had 77% online penetration, while "
+        "grocery purchasers aged 18+ had 50%."
+    )
+    swapped = (
+        "U.S. clothing purchasers aged 18+ had 50% online penetration, while "
+        "grocery purchasers aged 18+ had 77%."
+    )
+
+    assert _metric_label_relationship_explanation(valid, evidence) == ""
+    assert _metric_label_relationship_explanation(swapped, evidence)
+
+
+def test_category_value_binding_does_not_treat_cagr_heading_as_a_category() -> None:
+    evidence = (
+        "INTERNET AND MEDIA REVENUE GROWTH BY SEGMENT, GLOBAL, 2021E VS. "
+        "2025E, USD. ACTIVATE FORECAST. 2021E-2025E CAGR: Paid content 2.2%; "
+        "Cost of internet access 3.8%; Advertising revenue 6.9%."
+    )
+    claim = (
+        "Global revenue CAGRs for 2021E-2025E were 6.9% for advertising, "
+        "2.2% for paid content, and 3.8% for internet access."
+    )
+
+    assert _metric_label_relationship_explanation(claim, evidence) == ""

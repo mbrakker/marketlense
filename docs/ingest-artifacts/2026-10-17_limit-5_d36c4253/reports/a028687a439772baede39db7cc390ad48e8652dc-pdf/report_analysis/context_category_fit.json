@@ -1,0 +1,168 @@
+{
+  "schema_version": "1.0",
+  "selected_category_ids": [
+    "omnichannel_commerce",
+    "technology"
+  ],
+  "category_fits": [
+    {
+      "category_id": "consumer_behavior",
+      "label": "Consumer Behavior & Insights",
+      "fit_score": 0.95,
+      "decision": "primary",
+      "why_fit": "The report centers on how U.S. consumers’ technology and media use, shopping behavior, expectations, and preferences changed during shelter in place and what may persist afterward.",
+      "why_not_fit": "The report also gives companies an action agenda, but that agenda is grounded in the consumer behavior findings rather than replacing them as the main subject.",
+      "evidence_sections": [
+        "Introduction",
+        "Rewire to Restart",
+        "Sustain Increased Demand",
+        "Reactivate and Acquire Customers",
+        "Accelerate New Tech Experiences"
+      ],
+      "semantic_rule_status": "ambiguous",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_ambiguous"
+    },
+    {
+      "category_id": "omnichannel_commerce",
+      "label": "Omnichannel Commerce",
+      "fit_score": 0.43,
+      "decision": "primary",
+      "why_fit": "The report measures online shopping participation and consumers’ intent to continue buying from new online retailers.",
+      "why_not_fit": "It does not center on an integrated shopper journey spanning ecommerce, stores, and service layers; ecommerce is one topic among technology and media behaviors.",
+      "evidence_sections": [
+        "Sustain Increased Demand"
+      ],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence repeatedly links online and offline shopping, store and ecommerce integration, or end-to-end shopper journey design."
+      ],
+      "supported_topic_rule_ids": [
+        "omnichannel_commerce:include:c4d080875ada239b"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "key_findings",
+        "Sustain Increased Demand"
+      ],
+      "centrality_evidence_sections": [
+        "key_findings"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "technology",
+      "label": "Technology & Innovation",
+      "fit_score": 0.34,
+      "decision": "primary",
+      "why_fit": "The report covers technology use and recommends accelerating digital experiences, including telemedicine and social viewing.",
+      "why_not_fit": "Technology is mainly the setting for observed consumer behavior and a supporting company capability; the report does not focus on infrastructure, architecture, or technology innovation as its main lens.",
+      "evidence_sections": [
+        "Introduction",
+        "Accelerate New Tech Experiences"
+      ],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence repeatedly discusses infrastructure, enterprise technology, robotics, cybersecurity, hardware, or major technology shifts."
+      ],
+      "supported_topic_rule_ids": [
+        "technology:include:84008e3e416054bb"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "overview",
+        "methods",
+        "Introduction",
+        "Rewire to Restart",
+        "Sustain Increased Demand",
+        "Accelerate New Tech Experiences",
+        "The Actionable Rewire to Restart Agenda"
+      ],
+      "centrality_evidence_sections": [
+        "overview"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "business_performance",
+      "label": "Business Performance & Growth",
+      "fit_score": 0.76,
+      "decision": "secondary",
+      "why_fit": "A substantial part of the report translates consumer shifts into company growth actions: sustaining demand, reactivating and acquiring customers, redefining value propositions and pricing, and pursuing growth investments.",
+      "why_not_fit": "The report is not primarily a performance benchmark: its central evidence describes consumer behavior and stated expectations rather than company revenue, profitability, or measured commercial outcomes.",
+      "evidence_sections": [
+        "Rewire to Restart",
+        "Reactivate and Acquire Customers",
+        "The Actionable Rewire to Restart Agenda"
+      ],
+      "semantic_rule_status": "ambiguous",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_ambiguous"
+    },
+    {
+      "category_id": "advertising_media",
+      "label": "Advertising Strategy & Media",
+      "fit_score": 0.52,
+      "decision": "reject",
+      "why_fit": "The report discusses technology and media use and recommends aligning advertisers and categories with changed consumer expectations.",
+      "why_not_fit": "It does not center on advertising strategy, media planning, buying, effectiveness, or investment; media consumption is studied as part of broader consumer behavior.",
+      "evidence_sections": [
+        "Introduction",
+        "The Actionable Rewire to Restart Agenda"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [
+        "Evidence repeatedly covers media channels, ad receptivity, media planning, brand lift, investment priorities, or advertising strategy."
+      ],
+      "supported_topic_rule_ids": [
+        "advertising_media:include:e9a7759c62f6c6cd"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "The Actionable Rewire to Restart Agenda"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "connected_tv",
+      "label": "Streaming & Connected TV",
+      "fit_score": 0.38,
+      "decision": "reject",
+      "why_fit": "The report covers streaming and video time-spend behavior, among several forms of technology and media use.",
+      "why_not_fit": "Streaming is only one part of a broad report that also covers gaming, audio, online shopping, sports, and digital activities; CTV or streaming economics are not dominant.",
+      "evidence_sections": [
+        "Sustain Increased Demand",
+        "Rewire to Restart"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [
+        "Evidence repeatedly covers streaming platforms, CTV inventory, OTT audiences, FAST, or television-like video ad strategy."
+      ],
+      "supported_topic_rule_ids": [
+        "connected_tv:include:b48186785452dc77"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "limitations",
+        "Sustain Increased Demand"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    }
+  ]
+}

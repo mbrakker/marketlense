@@ -1,0 +1,61 @@
+{
+  "cover_style_hash": "57c99a2ab855ff0825cefb238c9aba493812c1ace25cfab4fe65589725e83bcb",
+  "covered_period": "2018\u20132020",
+  "covers": {
+    "large": {
+      "content_sha256": "7e9df9f6f1a68929431c958a7d4afb2872434fa417697117ea101ca441b45a5f",
+      "height": 1600,
+      "output_path": "assets/report-card-large.png",
+      "schema_version": "1.0",
+      "size": "large",
+      "width": 1200
+    },
+    "medium": {
+      "content_sha256": "ba71faf49b7a968562430cae7b404bd3cb0959ccca3f1a8db8d0d4177cd60201",
+      "height": 1500,
+      "output_path": "assets/report-card-medium.png",
+      "schema_version": "1.0",
+      "size": "medium",
+      "width": 1200
+    },
+    "schema_version": "1.0",
+    "small": {
+      "content_sha256": "73d5fbf1ee6660fa85fc0ecfdca249ffab3c30231286e7fd3b5b23cd5bd13266",
+      "height": 900,
+      "output_path": "assets/report-card-small.png",
+      "schema_version": "1.0",
+      "size": "small",
+      "width": 1600
+    }
+  },
+  "fingerprint": {
+    "direction": "rising",
+    "domain_layer": "grid",
+    "evidence_density": "metric_rich",
+    "evidence_shape": "trend",
+    "geography_scope": "country",
+    "geometry_family": "ascending_trajectory",
+    "schema_version": "1.0",
+    "seed": 4118762454,
+    "selection_reason": "The evidence centers on U.S. behavior shifts, especially increased media attention and expected continued growth, supported by comparisons across activities and survey measures."
+  },
+  "geography_label": "United States",
+  "geography_scope": "country",
+  "key_insights": [
+    "Shelter-in-place U.S. online purchasers aged 18\u201364: 81% planned to continue new-retailer shopping in at least one category.",
+    "Technology and media companies will need to rewire engagement across value proposition, programming, experience, functionality, pricing, and marketing."
+  ],
+  "published_date": "",
+  "publisher": "Activate Consulting",
+  "schema_version": "1.0",
+  "source_identity_status": "resolved",
+  "source_metadata_hash": "4142337483cde7b9806ee24d4986a303268aebb23b7a47d85523f6d4f4afbb2b",
+  "source_note": "Source: Activate Consulting \u2014 source-1BproyPIQZFHWYDII93LhAOmIyujqbXb-. Underlying data: Activate \u2014 Source URL: Not available",
+  "source_publication_date_status": "unknown",
+  "source_title": "source-1BproyPIQZFHWYDII93LhAOmIyujqbXb-",
+  "source_url": "",
+  "title": "JUNE 10, 2020",
+  "title_scale": "short",
+  "tldr_compact": "U.S. online purchasers aged 18\u201364: 81% planned to continue new-retailer shopping in at least one category during shelter-in-place.",
+  "tldr_standard": "Among U.S. adults aged 18\u201364 who purchased online during shelter in place, 81% planned to continue purchasing from a new online retailer in at least one category."
+}

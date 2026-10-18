@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "quote_candidates": [
+    {
+      "id": "quote-001",
+      "text": "Although each is in a different stage of online adoption, all product categories analyzed — grocery, beauty/grooming, clothing — have experienced a permanent online shift as a result of COVID-19. Consumers aged 35+ will see the largest sustained growth in online penetration.",
+      "source": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-002",
+      "text": "eCommerce discovery has forever changed as most consumers are starting their online shopping journey with specific retailers instead of search engines.",
+      "source": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-003",
+      "text": "During COVID-19, a large share of consumers has been making purchases from online retailers that they had not bought from before; 90% or more plan to continue shopping with these new online retailers in the future.",
+      "source": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-004",
+      "text": "Delivery is the most popular way for consumers to receive their online purchases; in grocery, however, nearly half of consumers prefer curbside or in-store pickup.",
+      "source": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-005",
+      "text": "More than one-quarter of households signed up for a new paid shopping program membership during COVID-19. As a result, the average household now pays for 1.7 memberships. Most households plan to keep their new memberships.",
+      "source": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-006",
+      "text": "Within the new privacy-focused web, shoppers are willing to give online retailers access to their data in exchange for personalized benefits, such as better recommendations, rewards/discounts, and faster checkout.",
+      "source": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50.pdf",
+      "page": null
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "quote_candidates",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

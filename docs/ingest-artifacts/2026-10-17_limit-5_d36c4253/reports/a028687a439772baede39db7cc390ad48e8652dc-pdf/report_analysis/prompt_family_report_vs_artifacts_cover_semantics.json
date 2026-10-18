@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/cover_semantics",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "evidence_shape": "trend",
+    "direction": "rising",
+    "geography_scope": "country",
+    "evidence_density": "metric_rich",
+    "domain_layer": "grid",
+    "selection_reason": "The evidence centers on U.S. behavior shifts, especially increased media attention and expected continued growth, supported by comparisons across activities and survey measures."
+  }
+}

@@ -1,0 +1,186 @@
+{
+  "doc_id": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50",
+  "provenance_roles": {
+    "schema_version": "1.0",
+    "publication_name": "",
+    "publisher_name": "",
+    "author_names": [],
+    "author_kind": "unknown",
+    "data_provider_names": [
+      "Activate"
+    ],
+    "source_organization_names": [
+      "Activate"
+    ],
+    "report_owner_name": "",
+    "status": "ambiguous",
+    "resolution_method": "deterministic_source_visible_evidence",
+    "issues": [
+      "publisher_missing"
+    ],
+    "evidence": [
+      {
+        "schema_version": "1.0",
+        "role": "data_provider",
+        "name": "Activate",
+        "evidence_kind": "explicit_data_or_source_citation",
+        "evidence_locator": "document_pack:line:5",
+        "evidence_hash": "e094c9b010d15d3755d6dd430e933378f024077def3a764ba3ed49bdbce77891"
+      }
+    ]
+  },
+  "publisher": "",
+  "schema_version": "doc_map_v1",
+  "sections": [
+    {
+      "id": "the-post-covid-online-shopper",
+      "key_points": [
+        "Grocery, beauty/grooming, and clothing have experienced a lasting online shift; consumers aged 35+ are expected to see the largest sustained growth in online penetration.",
+        "Car shoppers have moved discovery and consideration online, while transactions are expected to shift more slowly until touchless end-to-end experiences are available.",
+        "Consumers increasingly begin online shopping at specific retailers rather than search engines; 90% or more of consumers who tried new online retailers plan to continue with at least some of them.",
+        "Delivery is the most popular fulfillment method overall, but nearly half of grocery shoppers prefer curbside or in-store pickup; more than one-quarter of households signed up for a new paid shopping membership during the outbreak."
+      ],
+      "pages": [
+        1
+      ],
+      "references": [],
+      "summary": "A summary of the report’s main conclusions about lasting shifts in consumer shopping behavior. It highlights online adoption, car shopping, retailer discovery, purchasing from new retailers, fulfillment preferences, paid memberships, and data sharing.",
+      "title": "The Post-COVID Online Shopper"
+    },
+    {
+      "id": "growth-outlook-for-online-shopping",
+      "key_points": [
+        "Chart “Online Shopper Penetration by Product Category and Time Period,” U.S., 2021: online penetration among category purchasers was 77% for clothing, 57% for beauty/grooming, and 43% for grocery before the outbreak; after the outbreak ends, the corresponding figures are 83%, 66%, and 56% (p. 4).",
+        "The age-group charts show that grocery and beauty/grooming have the greatest projected sustained growth among older purchasers, while online clothing adoption rises across all age groups (pp. 8–10).",
+        "For car shopping, consumers have shifted discovery and consideration online more than transaction; the report identifies a touchless end-to-end experience as a prerequisite for faster online transaction adoption (pp. 11–13)."
+      ],
+      "pages": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "references": [],
+      "summary": "Examines how online shopping adoption changed during COVID-19 and how much of that change consumers expect to retain. It covers grocery, beauty/grooming, clothing, and car shopping.",
+      "title": "Growth Outlook for Online Shopping"
+    },
+    {
+      "id": "ecommerce-discovery",
+      "key_points": [
+        "Chart “First Website/App Visited When Grocery Shopping Online,” U.S., 2021: 31% of online grocery shoppers typically started at Amazon and 29% at Walmart (p. 15).",
+        "For online beauty/grooming shopping, Amazon was the most common starting point at 38% (p. 16).",
+        "For online clothing shopping, Amazon was the most common starting point at 36%; department stores accounted for 17% (p. 17).",
+        "The report’s overall conclusion is that consumers increasingly begin shopping with specific retailers rather than search engines (p. 1)."
+      ],
+      "pages": [
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "references": [],
+      "summary": "Compares the websites and apps consumers typically visit first when shopping online across grocery, beauty/grooming, and clothing. The findings show the importance of retailer destinations and category-specific discovery habits.",
+      "title": "eCommerce Discovery"
+    },
+    {
+      "id": "delivery-vs-pickup",
+      "key_points": [
+        "Chart “Delivery/Pickup Option Most Frequently Used for Online Purchases by Product Category,” U.S., 2021: delivery was the most frequently used option for grocery (56%), beauty/grooming (75%), and clothing (84%) (p. 19).",
+        "For grocery purchases, 34% most frequently used curbside pickup and 11% in-store pickup (p. 19).",
+        "For beauty/grooming, 11% most frequently used curbside pickup and 14% in-store pickup; for clothing, the corresponding figures were 7% and 9% (p. 19)."
+      ],
+      "pages": [
+        19
+      ],
+      "references": [],
+      "summary": "Compares the online-purchase fulfillment option consumers use most frequently for grocery, beauty/grooming, and clothing. Delivery leads in each category, while grocery stands out for its use of pickup.",
+      "title": "Delivery vs. Pickup"
+    },
+    {
+      "id": "purchasing-with-new-online-retailers",
+      "key_points": [
+        "Chart “Purchasing from New Websites/Apps During the COVID-19 Outbreak by Product Category,” U.S., 2021: during the outbreak, 50% of online grocery purchasers, 29% of beauty/grooming purchasers, and 35% of clothing purchasers bought from at least one new site or app; after the outbreak ends, 90%, 98%, and 97%, respectively, plan to continue shopping with at least some of these new sites or apps (p. 21).",
+        "For discovering new retailers during the outbreak, word of mouth was the top listed source for grocery (49%); social media led for beauty/grooming (53%) and clothing (49%) (p. 22).",
+        "The report finds continued interest in finding or trying new online retailers across grocery, beauty/grooming, and clothing (p. 23)."
+      ],
+      "pages": [
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "references": [],
+      "summary": "Reports consumers’ experiences buying from online retailers they had not previously used, their plans to continue shopping with them, and their interest in trying additional sites and apps. It also compares how consumers discover new retailers across product categories.",
+      "title": "Purchasing with New Online Retailers"
+    },
+    {
+      "id": "shopping-program-memberships",
+      "key_points": [
+        "Chart “Signing Up for New Paid Shopping Program Memberships During the COVID-19 Outbreak,” U.S., 2021: 27% of households signed up for a new paid membership; 83% planned to keep at least one of these new memberships over the next 12 months (p. 25).",
+        "Chart “Paid Shopping Program Membership Household Penetration,” U.S., 2021: 80% of households paid for at least one membership, the average household paid for 1.7, and 64% paid for Amazon Prime (p. 27).",
+        "Half of households paid for at least one warehouse-club membership; Walmart+ had become the fourth most popular program after launching in September 2020 (p. 27)."
+      ],
+      "pages": [
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "references": [],
+      "summary": "Examines new paid shopping program sign-ups during COVID-19, households’ current paid memberships, and consumers’ plans to retain new memberships. Paid memberships are distinguished from free loyalty programs.",
+      "title": "Shopping Program Memberships"
+    },
+    {
+      "id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "key_points": [
+        "Chart “Average Number of Personal Data Types … Comfortable Sharing,” U.S., 2021: the average online shopper was comfortable sharing 6.3 types of personal data to create a retailer account or profile in exchange for personalized benefits (p. 30).",
+        "Consumers were more comfortable sharing demographic details than sensitive or behavioral information; for example, 78% were comfortable sharing gender, compared with 35% for browsing/search history on a website or app (p. 31).",
+        "Chart “Sharing of Personal Data with Online Retailers in Exchange for Monetary Benefits,” U.S., 2021: 67% had signed up for a retailer email list for a welcome reward, 57% had shared their date of birth for a birthday reward, 66% had joined a loyalty program for rewards, and 32% had signed up for a retailer credit card for rewards (p. 32)."
+      ],
+      "pages": [
+        30,
+        31,
+        32,
+        33,
+        34
+      ],
+      "references": [],
+      "summary": "Explores what personal information online shoppers are comfortable sharing with retailers in exchange for personalized experiences and monetary benefits. It also describes common data-sharing behaviors tied to rewards and discounts.",
+      "title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "about-activate",
+      "key_points": [
+        "The capabilities overview lists growth strategy, consumer insights and segmentation, digital strategy, salesforce effectiveness, strategic due diligence and value creation for private equity investors, pricing, and marketing optimization (p. 36).",
+        "Implementation and program management are presented as supporting execution of strategy and performance-improvement initiatives (p. 36)."
+      ],
+      "pages": [
+        36
+      ],
+      "references": [],
+      "summary": "Describes Activate Consulting’s growth-oriented capabilities and its implementation and program-management support. The report also includes the Activate Consulting Team credit in its closing material.",
+      "title": "About Activate"
+    }
+  ],
+  "summary": "An Activate Viewpoint presenting findings from Activate’s May 2021 consumer technology and media research (n = 2,913) on online shopping behavior and expectations after COVID-19. It covers shifts in online adoption across product categories, car shopping, retailer discovery, delivery and pickup, new online retailers, paid shopping memberships, and consumers’ willingness to share data for personalized or monetary benefits.",
+  "title": "The Post-COVID Online Shopper: New Challenges and Opportunities",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "doc_map",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 1.0,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

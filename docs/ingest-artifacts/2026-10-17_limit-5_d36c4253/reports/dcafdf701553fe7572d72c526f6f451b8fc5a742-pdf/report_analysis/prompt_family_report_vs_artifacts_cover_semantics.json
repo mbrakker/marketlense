@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/cover_semantics",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "evidence_shape": "trend",
+    "direction": "rising",
+    "geography_scope": "global",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Forward-looking revenue, viewership, and wagering projections dominate, with growth rates differentiated across segments and both global and U.S. scope."
+  }
+}

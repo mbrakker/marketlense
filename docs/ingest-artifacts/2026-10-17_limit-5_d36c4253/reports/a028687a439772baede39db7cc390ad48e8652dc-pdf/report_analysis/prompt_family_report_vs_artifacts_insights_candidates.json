@@ -1,0 +1,272 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "new-online-retailer-continuation",
+      "text": "Among U.S. adults aged 18–64 who purchased online during shelter in place, 81% planned to continue purchasing from a new online retailer in at least one category.",
+      "evidence_id": "new-online-retailer-continuation",
+      "evidence": "81% plan to continue purchasing from a new online retailer; to continue shopping from these new retailers in at least 1 category.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Adults planning to continue purchasing from a new online retailer",
+        "value": "81%",
+        "unit": "percent",
+        "trend": "Planned continuation",
+        "timeframe": "During shelter in place",
+        "geography": "U.S.",
+        "segment": "Adults aged 18–64",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Planned purchasing from a new online retailer in at least one category",
+        "cohort": "Adults aged 18–64 who purchased online during shelter in place",
+        "denominator": "Adults aged 18–64 who purchased online during shelter in place",
+        "observation_status": "Stated intention"
+      },
+      "pages": [
+        14
+      ],
+      "score": 0.91,
+      "decision_relevance_score": 0.92,
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.78,
+      "coverage_role": "behavior_shift",
+      "so_what": "The finding makes post-shelter customer retention a relevant consideration alongside initial online acquisition.",
+      "now_what": "MarketLense would consider testing retention plans for newly acquired online customers if the business is seeking to build on this behavior.",
+      "report_type_lens": "consumer_behavior"
+    },
+    {
+      "id": "live-sports-viewership-forecast",
+      "text": "Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+      "evidence_id": "live-sports-viewership-forecast",
+      "evidence": "“We forecast a 26% net increase in live sports viewership upon return”; “+26% net increase in live sports viewership when sports return.”",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Forecast net increase in live sports viewership",
+        "value": "26% net increase",
+        "unit": "percent net increase",
+        "trend": "Increase forecast",
+        "timeframe": "When live sports return",
+        "geography": "U.S.",
+        "segment": "Sports fans aged 18–64",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Live sports viewership",
+        "cohort": "U.S. sports fans aged 18–64",
+        "denominator": "",
+        "observation_status": "Forecast"
+      },
+      "pages": [
+        19
+      ],
+      "score": 0.87,
+      "decision_relevance_score": 0.9,
+      "metric_strength_score": 0.88,
+      "novelty_score": 0.75,
+      "coverage_role": "investment_signal",
+      "so_what": "The forecast is a planning signal for the return of live sports, not a realized viewing result.",
+      "now_what": "MarketLense would use the forecast as one scenario input if evaluating live-sports programming or distribution plans.",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "telemedicine-digital-equivalence",
+      "text": "In the U.S. in 2020, 55% of adults aged 18–64 who had participated in the digital activity viewed telemedicine/mobile health as the same as or better than its in-person equivalent.",
+      "evidence_id": "digital-activity-preference",
+      "evidence": "“55% Telemedicine/Mobile Health”; the measure is adults aged 18–64 who have participated in the digital activity and view it as the same as or better than the in-person equivalent.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Participants viewing telemedicine/mobile health as same as or better than in-person",
+        "value": "55%",
+        "unit": "percent",
+        "trend": "",
+        "timeframe": "2020",
+        "geography": "U.S.",
+        "segment": "Adults aged 18–64",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Perceived equivalence or advantage of telemedicine/mobile health versus its in-person equivalent",
+        "cohort": "Adults aged 18–64 who participated in the digital activity",
+        "denominator": "Adults aged 18–64 who participated in the digital activity",
+        "observation_status": "Survey response"
+      },
+      "pages": [
+        23
+      ],
+      "score": 0.88,
+      "decision_relevance_score": 0.9,
+      "metric_strength_score": 0.89,
+      "novelty_score": 0.8,
+      "coverage_role": "behavior_shift",
+      "so_what": "This is a measure of perceived equivalence or advantage, not evidence of telemedicine adoption or usage growth.",
+      "now_what": "MarketLense would assess the relevant user experience if considering digital health offerings, while treating stated perceptions separately from usage.",
+      "report_type_lens": "technology_shift"
+    },
+    {
+      "id": "apparel-ecommerce-penetration",
+      "text": "During shelter in place in the U.S. in 2020, 42.3% of adults aged 18–64 had made an online purchase in apparel, shoes, and accessories at least once.",
+      "evidence_id": "sustain-ecommerce-category-penetration",
+      "evidence": "“Apparel, Shoes, and Accessories 42.3%”; adults aged 18–64 who made an online purchase in the category at least once during shelter in place.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Apparel, shoes, and accessories eCommerce penetration",
+        "value": "42.3%",
+        "unit": "percent",
+        "trend": "",
+        "timeframe": "During shelter in place, 2020",
+        "geography": "U.S.",
+        "segment": "Adults aged 18–64",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Adults who made at least one online purchase in apparel, shoes, and accessories",
+        "cohort": "Adults aged 18–64",
+        "denominator": "Adults aged 18–64",
+        "observation_status": "Observed survey measure"
+      },
+      "pages": [
+        11
+      ],
+      "score": 0.84,
+      "decision_relevance_score": 0.85,
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.72,
+      "coverage_role": "market_context",
+      "so_what": "The measure captures whether consumers had tried online purchasing in the category, not repeat purchasing or ongoing demand.",
+      "now_what": "MarketLense would distinguish first-purchase reach from repeat behavior when assessing category growth plans.",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "esports-new-viewers",
+      "text": "The report says 30% of esports viewers during shelter in place were new, describing this as expansion beyond the historical core audience.",
+      "evidence_id": "quote-5",
+      "evidence": "“30% of viewers during shelter in place are new,” which the report says shows expansion beyond the historical core audience.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "New viewers among esports viewers during shelter in place",
+        "value": "30%",
+        "unit": "percent",
+        "trend": "New viewers",
+        "timeframe": "During shelter in place",
+        "geography": "",
+        "segment": "Esports viewers",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "New viewers",
+        "cohort": "Esports viewers during shelter in place",
+        "denominator": "Esports viewers during shelter in place",
+        "observation_status": "Survey finding"
+      },
+      "pages": [
+        24
+      ],
+      "score": 0.86,
+      "decision_relevance_score": 0.88,
+      "metric_strength_score": 0.84,
+      "novelty_score": 0.87,
+      "coverage_role": "investment_signal",
+      "so_what": "The report frames this audience change as expansion beyond esports’ historical core audience.",
+      "now_what": "MarketLense would test whether new-viewer interest persists before using it to inform longer-term audience plans.",
+      "report_type_lens": "creative_culture"
+    },
+    {
+      "id": "online-grocery-value-drivers",
+      "text": "The report says online grocery services will need to deliver free delivery and product assortment as key value drivers to sustain new customers after shelter in place.",
+      "evidence_id": "quote-4",
+      "evidence": "“To sustain these new customers after shelter in place, online grocery services will need to deliver against key value drivers: free delivery and product assortment.”",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "After shelter in place",
+        "geography": "",
+        "segment": "New online grocery customers",
+        "sample_size": "",
+        "confidence": "",
+        "subject": "Value drivers for sustaining new online grocery customers",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        12
+      ],
+      "score": 0.87,
+      "decision_relevance_score": 0.9,
+      "metric_strength_score": 0.25,
+      "novelty_score": 0.78,
+      "coverage_role": "operating_implication",
+      "so_what": "The recommendation makes delivery and assortment part of the report’s stated customer-retention proposition for online grocery services.",
+      "now_what": "MarketLense would review delivery and assortment against customer priorities if evaluating an online grocery retention strategy.",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "changed-habits-and-expectations",
+      "text": "The report says its research found that, coming out of shelter in place, people’s habits, activities, and expectations were fundamentally changed.",
+      "evidence_id": "quote-1",
+      "evidence": "“Overall, the research findings show that coming out of shelter in place, people’s habits, activities, and expectations are now fundamentally changed.”",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "Coming out of shelter in place",
+        "geography": "",
+        "segment": "People",
+        "sample_size": "",
+        "confidence": "",
+        "subject": "Habits, activities, and expectations",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        2
+      ],
+      "score": 0.8,
+      "decision_relevance_score": 0.84,
+      "metric_strength_score": 0.2,
+      "novelty_score": 0.65,
+      "coverage_role": "behavior_shift",
+      "so_what": "The report’s conclusion frames consumer habits and expectations as a consideration for company engagement choices.",
+      "now_what": "MarketLense would reassess customer assumptions if planning changes to consumer-facing experiences or offers.",
+      "report_type_lens": "consumer_behavior"
+    },
+    {
+      "id": "company-engagement-rewire",
+      "text": "The report says technology and media companies will need to rewire how they engage users and consumers, including their value proposition, programming, experience, functionality, pricing, and marketing.",
+      "evidence_id": "quote-2",
+      "evidence": "“Technology and media companies will need to rewire many of the ways they engage their users and consumers, including their value proposition, programming, experience, functionality, pricing, and marketing.”",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "Post-COVID era",
+        "geography": "",
+        "segment": "Technology and media companies",
+        "sample_size": "",
+        "confidence": "",
+        "subject": "User and consumer engagement",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        2
+      ],
+      "score": 0.82,
+      "decision_relevance_score": 0.88,
+      "metric_strength_score": 0.2,
+      "novelty_score": 0.62,
+      "coverage_role": "operating_implication",
+      "so_what": "The source recommendation covers both the customer proposition and the ways companies deliver and market it.",
+      "now_what": "MarketLense would review these engagement choices if the company is revisiting its post-COVID consumer strategy.",
+      "report_type_lens": "brand_strategy"
+    }
+  ]
+}

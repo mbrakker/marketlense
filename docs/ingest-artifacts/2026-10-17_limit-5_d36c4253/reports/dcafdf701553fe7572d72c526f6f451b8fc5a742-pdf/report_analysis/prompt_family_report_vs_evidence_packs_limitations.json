@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/limitations",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "limitations": [
+      "The digital-attention chart includes only digital-first businesses; its values do not account for multitasking.",
+      "The soundbar chart uses 2016 population data, and its figures may not total 100% because of rounding.",
+      "The digital newspapers and magazines figures exclude advertising.",
+      "Global ARPU figures use consolidated global revenues with stated exceptions: Apple equipment sales exclude accessories, apps, and iPods; Amazon excludes services; Facebook uses advertising revenue.",
+      "U.S. ARPU figures use stated company-specific measures; DirecTV is estimated by growing its 2014 ARPU at the average rate of other listed Pay TV providers, and Netflix includes streaming revenue only."
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "limitations",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

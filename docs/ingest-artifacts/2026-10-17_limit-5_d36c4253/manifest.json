@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0",
+  "run_id": "d36c4253-46d0-498c-9069-553d61010936",
+  "started_at_utc": "2026-10-17T00:16:29.955184+00:00",
+  "requested_ingest_limit": 5,
+  "source_cache": "cache/<drive_file_id>.pdf",
+  "report_artifact_source": "out/<sha1>-pdf/",
+  "sources": [
+    {
+      "drive_file_id": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50",
+      "original_pdf": "sources/19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50.pdf",
+      "source_pdf_size_bytes": 12740550,
+      "source_pdf_sha1": "faa47a4414fb47974dfd434fac67917d570d4cd4",
+      "source_pdf_sha256": "b27535c4d9ccc456c8f4c291441ecc6002202bd4bdc204901d95684a918dd59f",
+      "report_artifact_directory": "reports/faa47a4414fb47974dfd434fac67917d570d4cd4-pdf",
+      "artifact_file_count": 70,
+      "artifact_total_bytes": 8435081,
+      "artifact_file_types": {
+        ".png": 7,
+        ".json": 63
+      },
+      "pipeline_status": "error",
+      "terminal_event": "report_pipeline_complete",
+      "report_generation_failed": true,
+      "file_processing_error": false
+    },
+    {
+      "drive_file_id": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB",
+      "original_pdf": "sources/1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "source_pdf_size_bytes": 14629570,
+      "source_pdf_sha1": "1764f08de574a6ee1312e8e9eea329d4255e8a0f",
+      "source_pdf_sha256": "70e7890b8ed29b4ded1964358905ebfd57e6835c993751efee77babe7192faa9",
+      "report_artifact_directory": "reports/1764f08de574a6ee1312e8e9eea329d4255e8a0f-pdf",
+      "artifact_file_count": 71,
+      "artifact_total_bytes": 9791183,
+      "artifact_file_types": {
+        ".png": 11,
+        ".json": 60
+      },
+      "pipeline_status": "error",
+      "terminal_event": "report_pipeline_complete",
+      "report_generation_failed": true,
+      "file_processing_error": false
+    },
+    {
+      "drive_file_id": "1BproyPIQZFHWYDII93LhAOmIyujqbXb-",
+      "original_pdf": "sources/1BproyPIQZFHWYDII93LhAOmIyujqbXb-.pdf",
+      "source_pdf_size_bytes": 3561268,
+      "source_pdf_sha1": "a028687a439772baede39db7cc390ad48e8652dc",
+      "source_pdf_sha256": "d8cc0b29330b1a28d96252c8f2f99f862ab9853bd140329a9bf443f4dd566c33",
+      "report_artifact_directory": "reports/a028687a439772baede39db7cc390ad48e8652dc-pdf",
+      "artifact_file_count": 75,
+      "artifact_total_bytes": 11997928,
+      "artifact_file_types": {
+        ".png": 12,
+        ".json": 63
+      },
+      "pipeline_status": "error",
+      "terminal_event": "report_pipeline_failed",
+      "report_generation_failed": false,
+      "file_processing_error": true,
+      "error_code": "insight_safe_removal_no_replacement"
+    },
+    {
+      "drive_file_id": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "original_pdf": "sources/1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "source_pdf_size_bytes": 7787851,
+      "source_pdf_sha1": "dcafdf701553fe7572d72c526f6f451b8fc5a742",
+      "source_pdf_sha256": "089d4233b0ba7de9ecb4e3bd5d9ab8bf8dced1c960feaa7737eedfbf17a614e5",
+      "report_artifact_directory": "reports/dcafdf701553fe7572d72c526f6f451b8fc5a742-pdf",
+      "artifact_file_count": 92,
+      "artifact_total_bytes": 11466499,
+      "artifact_file_types": {
+        ".png": 18,
+        ".json": 74
+      },
+      "pipeline_status": "error",
+      "terminal_event": "report_pipeline_complete",
+      "report_generation_failed": true,
+      "file_processing_error": false
+    },
+    {
+      "drive_file_id": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU",
+      "original_pdf": "sources/12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+      "source_pdf_size_bytes": 6822114,
+      "source_pdf_sha1": "8b5dcc46e672b8dcd075df8d78a5d46fd8152267",
+      "source_pdf_sha256": "9deeca20896be9ebf5afa3f9b88dbec2c9035e6420a4cb2ac3ac8e9c47938d3b",
+      "report_artifact_directory": "reports/8b5dcc46e672b8dcd075df8d78a5d46fd8152267-pdf",
+      "artifact_file_count": 77,
+      "artifact_total_bytes": 8308725,
+      "artifact_file_types": {
+        ".png": 16,
+        ".json": 61
+      },
+      "pipeline_status": "error",
+      "terminal_event": "report_pipeline_complete",
+      "report_generation_failed": true,
+      "file_processing_error": false
+    }
+  ],
+  "run_outcome": {
+    "source_admitted_count": 5,
+    "source_pdf_integrity_validated_count": 5,
+    "pipeline_success_count": 0,
+    "pipeline_error_count": 5,
+    "report_generation_failed_count": 4,
+    "file_processing_error_count": 1,
+    "terminal_pipeline_failed_count": 1,
+    "root_error_code": "insight_safe_removal_no_replacement",
+    "root_error_file_id": "1BproyPIQZFHWYDII93LhAOmIyujqbXb-"
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_final",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "unified-stack-ma-expectation",
+      "text": "Next M&A activity is expected to be driven by larger players looking to fill gaps with independent players.",
+      "evidence_id": "unified_stack_ma_forecast",
+      "evidence": "Expect the next wave of M&A activity to be driven by larger players\nlooking to fill in the gaps with the independent players",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        132
+      ],
+      "score": 0.9,
+      "decision_relevance_score": 0.94,
+      "metric_strength_score": 0.35,
+      "novelty_score": 0.88,
+      "coverage_role": "investment_signal",
+      "so_what": "The forecast points to gap-filling as the expected driver of M&A activity.",
+      "now_what": "MarketLense: If assessing strategic positioning, treat gap-filling as a hypothesis rather than a certain deal outcome.",
+      "report_type_lens": "investment_outlook"
+    },
+    {
+      "id": "messaging-user-additions-forecast",
+      "text": "Messaging was forecast to add 1.1 billion new users by 2018.",
+      "evidence_id": "messaging-user-forecast",
+      "evidence": "We forecast that messaging will add 1.1 Billion new users by 2018",
+      "evidence_spans": [],
+      "metric": {
+        "label": "New messaging users",
+        "value": "1.1 billion",
+        "unit": "users",
+        "trend": "Increase",
+        "timeframe": "By 2018",
+        "geography": "",
+        "segment": "Messaging",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Messaging users",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": "forecast"
+      },
+      "pages": [
+        17
+      ],
+      "score": 0.86,
+      "decision_relevance_score": 0.87,
+      "metric_strength_score": 0.93,
+      "novelty_score": 0.77,
+      "coverage_role": "investment_signal",
+      "so_what": "The forecast frames messaging growth in terms of potential audience additions.",
+      "now_what": "MarketLense: If sizing a messaging opportunity, separate user additions from engagement and revenue assumptions.",
+      "report_type_lens": "technology_shift"
+    },
+    {
+      "id": "attention-time-spent-cagr",
+      "text": "For U.S. users aged 18+, social-media time spent had a 17.8% CAGR over 2011–2017E.",
+      "evidence_id": "attention_daily_time_cagr",
+      "evidence": "Time Spent Among 18+ Users, U.S., 2011 - 2017E, Hours : Minutes\n\nCAGR\nVIDEO 4.5%\nAUDIO 4.9%\nSOCIAL MEDIA 17.8%\nGAMING 11.9%\n\n2011 2012 2013 2014 2015E 2016E 2017E",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Social media time-spent CAGR",
+        "value": "17.8%",
+        "unit": "CAGR",
+        "trend": "CAGR",
+        "timeframe": "2011–2017E",
+        "geography": "U.S.",
+        "segment": "Social media",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Time spent",
+        "cohort": "U.S. users aged 18+",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        12
+      ],
+      "score": 0.88,
+      "decision_relevance_score": 0.86,
+      "metric_strength_score": 0.92,
+      "novelty_score": 0.75,
+      "coverage_role": "behavior_shift",
+      "so_what": "The category-specific CAGRs caution against treating time spent as one undifferentiated trajectory.",
+      "now_what": "MarketLense: If planning audience investment, test assumptions by activity and retain the chart’s U.S. adult scope.",
+      "report_type_lens": "consumer_behavior"
+    },
+    {
+      "id": "gaming-spend-2014",
+      "text": "Video gaming spend was $74 billion globally in 2014 and likely to expand with advertising and gambling streams.",
+      "evidence_id": "gaming-spend-2014",
+      "evidence": "Global spend of $74 Billion is likely to expand as video gaming broadens to include advertising and gambling streams\nConsumer Spend on Major Entertainment Segments, Global, 2014\n$ Billions\nGambling\nFilmed Entertainment\nMusic (LIVE & RECORDED)\nApps\nVideo Gaming\nTV Subs\nConsumer Books\n423\n205\n85\n74\n66\n38\n23",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Global video gaming consumer spend",
+        "value": "$74 billion",
+        "unit": "USD",
+        "trend": "",
+        "timeframe": "2014",
+        "geography": "Global",
+        "segment": "Video gaming",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Consumer spend",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        96
+      ],
+      "score": 0.84,
+      "decision_relevance_score": 0.86,
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.72,
+      "coverage_role": "investment_signal",
+      "so_what": "The source treats advertising and gambling as possible expansion streams for video gaming.",
+      "now_what": "MarketLense: If assessing gaming growth, separate the spend measure from the outlook tied to those streams.",
+      "report_type_lens": "investment_outlook"
+    },
+    {
+      "id": "app-store-distribution-not-monetization",
+      "text": "A new wave of companies is using the app store for distribution and engagement, not monetization.",
+      "evidence_id": "app_store_distribution_engagement",
+      "evidence": "A new wave of companies are building businesses by using the app\nstore for distribution and engagement, but not monetization",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        124
+      ],
+      "score": 0.88,
+      "decision_relevance_score": 0.91,
+      "metric_strength_score": 0.35,
+      "novelty_score": 0.86,
+      "coverage_role": "operating_implication",
+      "so_what": "The finding distinguishes app-store distribution and engagement from monetization.",
+      "now_what": "MarketLense: If evaluating app-led businesses, assess distribution, engagement, and monetization separately.",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "smart-cable-positioning",
+      "text": "The report frames a “cable killer” as “smart cable,” not a low-priced competitor.",
+      "evidence_id": "quote-004",
+      "evidence": "THE “CABLE KILLER” WON'T BE A LOW-PRICED COMPETITOR, IT WILL BE “SMART CABLE”",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        92
+      ],
+      "score": 0.87,
+      "decision_relevance_score": 0.9,
+      "metric_strength_score": 0.2,
+      "novelty_score": 0.88,
+      "coverage_role": "operating_implication",
+      "so_what": "The framing points to differentiation beyond a low-price proposition.",
+      "now_what": "MarketLense: If assessing a video offer, test its smart-cable positioning before centering evaluation on price.",
+      "report_type_lens": "channel_strategy"
+    }
+  ]
+}

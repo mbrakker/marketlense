@@ -1,0 +1,1275 @@
+{
+  "attempt_index": 1,
+  "before_sha256": "30ab8fce602490e65bda60b41717142d81d1c3bb4c29c6fdbc3feff78f1a7714",
+  "after_sha256": "4ceb16f3c02432715ad2b92cad82ebcedb82b3bb0492e8ffee4d1ba9087cb7ee",
+  "transformation_scope": [
+    "summary",
+    "summary",
+    "insights_final"
+  ],
+  "unchanged_family_sha256": {
+    "insights_candidates": "20f7160cd9c8ec7156fa1cec44887e955e09fcbe11486c97cde4ba6b38c2444b",
+    "quotes_final": "318d833624dc256e8e9cdc75363d25b4564aa6692a972fbda1ddd5899d20bbc1"
+  },
+  "current_artifacts_path": "C:\\Programing\\Market lense\\out\\dcafdf701553fe7572d72c526f6f451b8fc5a742-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\Programing\\Market lense\\out\\dcafdf701553fe7572d72c526f6f451b8fc5a742-pdf\\report_analysis\\artifacts_regen_candidate_1.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "artifact_quality:chart_insight_cards[2].business_implication",
+    "artifact_quality:chart_insight_cards[2].takeaway",
+    "artifact_quality:insights_final[1].text",
+    "artifact_quality:insights_final[2].text",
+    "artifact_quality:insights_final[6].text",
+    "artifact_quality:key_figures[2].why_it_matters",
+    "grounding:metadata.title",
+    "public_editorial_quality.metric_label_relationship:insights:global-media-revenue-segment-growth"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "esports-in-game-wagering-forecast",
+      "original_evidence_ids": [
+        "esports-in-game-betting-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "esports-in-game-betting-forecast"
+      ],
+      "original_source_pages": [
+        81
+      ],
+      "candidate_source_pages": [
+        81
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "global-media-revenue-segment-growth",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "messaging-payment-commerce-monetization",
+      "original_evidence_ids": [
+        "quote-005"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "pay-tv-price-willingness-bound",
+      "original_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "pay-tv-primary-non-subscription-reason",
+      "original_evidence_ids": [
+        "pay-tv-reason-not-subscribing"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-reason-not-subscribing"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "platform-control-over-news-publishers",
+      "original_evidence_ids": [
+        "quote-004"
+      ],
+      "candidate_evidence_ids": [
+        "quote-004"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "underserved-americans-estimate",
+      "original_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "candidate_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "original_source_pages": [
+        164
+      ],
+      "candidate_source_pages": [
+        164
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "esports-in-game-wagering-forecast",
+      "original_evidence_ids": [
+        "esports-in-game-betting-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "esports-in-game-betting-forecast"
+      ],
+      "original_source_pages": [
+        81
+      ],
+      "candidate_source_pages": [
+        81
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "global-media-revenue-segment-growth",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "messaging-payment-commerce-monetization",
+      "original_evidence_ids": [
+        "quote-005"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "pay-tv-price-willingness-bound",
+      "original_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "pay-tv-primary-non-subscription-reason",
+      "original_evidence_ids": [
+        "pay-tv-reason-not-subscribing"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-reason-not-subscribing"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "platform-control-over-news-publishers",
+      "original_evidence_ids": [
+        "quote-004"
+      ],
+      "candidate_evidence_ids": [
+        "quote-004"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "underserved-americans-estimate",
+      "original_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "candidate_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "original_source_pages": [
+        164
+      ],
+      "candidate_source_pages": [
+        164
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "20fecd31bda34c98afe0df965c1da140ef09b05e15bea87a303de57114d421bd",
+      "original_evidence_ids": [
+        "quote-001"
+      ],
+      "candidate_evidence_ids": [
+        "quote-001"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "9529058d312119d4a5e108c91615803be0d0c03f2c11a6ada9819fcccf81598b",
+      "original_evidence_ids": [
+        "quote-002"
+      ],
+      "candidate_evidence_ids": [
+        "quote-002"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "dc7a6872c4bc53bd55d0e2e6ffc95680a9e16e2ed21ac127fbe07388768b4c37",
+      "original_evidence_ids": [
+        "quote-005"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "us-consumer-media-multitasking"
+      ],
+      "candidate_evidence_ids": [
+        "us-consumer-media-multitasking"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "esports-us-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "esports-us-forecast"
+      ],
+      "original_source_pages": [
+        68
+      ],
+      "candidate_source_pages": [
+        68
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "candidate_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        164
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        164
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:8b83026c73be787e",
+      "original_evidence_ids": [
+        "quote-005"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:9ec45d1c1e1781f8",
+      "original_evidence_ids": [
+        "underserved-strategies"
+      ],
+      "candidate_evidence_ids": [
+        "underserved-strategies"
+      ],
+      "original_source_pages": [
+        165
+      ],
+      "candidate_source_pages": [
+        165
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:c13634bb948824c0",
+      "original_evidence_ids": [
+        "quote-005",
+        "underserved-strategies"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005",
+        "underserved-strategies"
+      ],
+      "original_source_pages": [
+        165
+      ],
+      "candidate_source_pages": [
+        165
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:d4b406978c53c845",
+      "original_evidence_ids": [
+        "quote-005",
+        "underserved-strategies"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005",
+        "underserved-strategies"
+      ],
+      "original_source_pages": [
+        165
+      ],
+      "candidate_source_pages": [
+        165
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:055836863ad9ba3a",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:4f69eb10a98840b5",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:da2da7c8444cae49",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:5091dffe40180b29",
+      "original_evidence_ids": [
+        "us-consumer-media-multitasking"
+      ],
+      "candidate_evidence_ids": [
+        "us-consumer-media-multitasking"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:69d3c81d049cd6ee",
+      "original_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:6b7787fb6632d760",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:6bff8a1009b641bf",
+      "original_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "candidate_evidence_ids": [
+        "underserved-americans-estimate"
+      ],
+      "original_source_pages": [
+        164
+      ],
+      "candidate_source_pages": [
+        164
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:748bd6704383102e",
+      "original_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "candidate_evidence_ids": [
+        "internet-media-segment-cagr"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:829cf8ba8e97ca64",
+      "original_evidence_ids": [
+        "esports-us-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "esports-us-forecast"
+      ],
+      "original_source_pages": [
+        68
+      ],
+      "candidate_source_pages": [
+        68
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:d9f798ec4c6e5aa2",
+      "original_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "candidate_evidence_ids": [
+        "pay-tv-price-limit"
+      ],
+      "original_source_pages": [
+        95
+      ],
+      "candidate_source_pages": [
+        95
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "c4b6e8797af5206712614167f48458ac17d10aff10aa97995a153b4b018a7adc",
+    "a33cde5c87a4dd2da1ac956b14224cf455f2da2326a763b2225848d2adb7c913",
+    "9733b06c8469dbeb8dccfce3001eda3252edf1e74822b49d8548248140066191",
+    "a41e64b1105777a3ae355083599da40bdb173969870ec8df8072889e7b7c00d8",
+    "1c489e8614c7637f6431cebc41851032e34b377fc0dc7e96e651344f909e5c67",
+    "aff936b60ec4307a5935c47f4071e6f3327795d0b367c1df8ae4c8714df814c9",
+    "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+    "3d48833e055faa2c35b402705c09aa8f7f836ec24f99440e810d326da35adeef"
+  ],
+  "repair_action": "REGENERATE_ITEM",
+  "repair_strategy": "current_evidence",
+  "allowed_paths": [
+    "insights_final[item=global-media-revenue-segment-growth].text",
+    "summary.claim_evidence_map[3]",
+    "summary.executive_summary",
+    "summary.executive_summary[claim_index=3]"
+  ],
+  "verified_dependent_paths": [
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.output_controls.max_output_tokens",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.routing_policy_version",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.included_partials[2]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.routing_policy_version",
+    "_cache.prompts.report_vs/artifacts/regenerate/insights_final",
+    "_cache.prompts.report_vs/artifacts/regenerate/summary",
+    "_cache.regeneration_prompt_requirements",
+    "_repair_evidence_selection",
+    "claim_ledgers[10].canonical_claim_id",
+    "claim_ledgers[10].claim_text",
+    "claim_ledgers[10].evidence_ids[0]",
+    "claim_ledgers[10].evidence_references[0].evidence_id",
+    "claim_ledgers[10].evidence_references[0].source_pack",
+    "claim_ledgers[10].evidence_references[1]",
+    "claim_ledgers[10].evidence_span_count",
+    "claim_ledgers[11].artifact_section",
+    "claim_ledgers[11].canonical_claim_id",
+    "claim_ledgers[11].claim_text",
+    "claim_ledgers[11].confidence",
+    "claim_ledgers[11].evidence_ids[0]",
+    "claim_ledgers[11].evidence_quality_grade",
+    "claim_ledgers[11].evidence_references",
+    "claim_ledgers[11].evidence_span_count",
+    "claim_ledgers[11].support_type",
+    "claim_ledgers[12].canonical_claim_id",
+    "claim_ledgers[12].claim_text",
+    "claim_ledgers[12].evidence_ids[0]",
+    "claim_ledgers[13].canonical_claim_id",
+    "claim_ledgers[13].claim_text",
+    "claim_ledgers[13].evidence_ids[0]",
+    "claim_ledgers[13].risk",
+    "claim_ledgers[14].canonical_claim_id",
+    "claim_ledgers[14].claim_text",
+    "claim_ledgers[14].evidence_ids[0]",
+    "claim_ledgers[15].artifact_section",
+    "claim_ledgers[15].canonical_claim_id",
+    "claim_ledgers[15].claim_text",
+    "claim_ledgers[15].confidence",
+    "claim_ledgers[15].evidence_ids[0]",
+    "claim_ledgers[15].evidence_quality_grade",
+    "claim_ledgers[15].support_type",
+    "claim_ledgers[16].canonical_claim_id",
+    "claim_ledgers[16].claim_text",
+    "claim_ledgers[16].evidence_ids[0]",
+    "claim_ledgers[17].canonical_claim_id",
+    "claim_ledgers[17].claim_text",
+    "claim_ledgers[17].evidence_ids[0]",
+    "claim_ledgers[18].canonical_claim_id",
+    "claim_ledgers[18].claim_text",
+    "claim_ledgers[18].evidence_ids[0]",
+    "claim_ledgers[19].canonical_claim_id",
+    "claim_ledgers[19].claim_text",
+    "claim_ledgers[19].evidence_ids[0]",
+    "claim_ledgers[20].canonical_claim_id",
+    "claim_ledgers[20].claim_text",
+    "claim_ledgers[20].evidence_ids[0]",
+    "claim_ledgers[21].canonical_claim_id",
+    "claim_ledgers[21].claim_text",
+    "claim_ledgers[21].evidence_ids[0]",
+    "claim_ledgers[22].artifact_section",
+    "claim_ledgers[22].canonical_claim_id",
+    "claim_ledgers[22].claim_text",
+    "claim_ledgers[22].evidence_ids[0]",
+    "claim_ledgers[22].evidence_quality_grade",
+    "claim_ledgers[22].support_type",
+    "claim_ledgers[23].canonical_claim_id",
+    "claim_ledgers[23].claim_text",
+    "claim_ledgers[23].evidence_ids[0]",
+    "claim_ledgers[24].artifact_section",
+    "claim_ledgers[24].canonical_claim_id",
+    "claim_ledgers[24].claim_text",
+    "claim_ledgers[24].evidence_ids[0]",
+    "claim_ledgers[24].evidence_quality_grade",
+    "claim_ledgers[24].evidence_references",
+    "claim_ledgers[24].evidence_span_count",
+    "claim_ledgers[24].risk",
+    "claim_ledgers[24].support_type",
+    "claim_ledgers[25].canonical_claim_id",
+    "claim_ledgers[25].claim_text",
+    "claim_ledgers[25].evidence_ids[0]",
+    "claim_ledgers[25].evidence_references[0].evidence_id",
+    "claim_ledgers[26].canonical_claim_id",
+    "claim_ledgers[26].claim_text",
+    "claim_ledgers[26].evidence_ids[0]",
+    "claim_ledgers[26].evidence_references[0].evidence_id",
+    "claim_ledgers[27]",
+    "claim_ledgers[3].claim_text",
+    "claim_ledgers[3].evidence_ids[0]",
+    "claim_ledgers[3].evidence_references[0].evidence_id",
+    "claim_ledgers[3].evidence_references[1].evidence_id",
+    "claim_ledgers[4].artifact_section",
+    "claim_ledgers[4].canonical_claim_id",
+    "claim_ledgers[4].claim_text",
+    "claim_ledgers[4].evidence_ids[0]",
+    "claim_ledgers[4].evidence_references[0].evidence_id",
+    "claim_ledgers[4].evidence_references[1].evidence_id",
+    "claim_ledgers[5].canonical_claim_id",
+    "claim_ledgers[5].claim_text",
+    "claim_ledgers[5].evidence_ids[0]",
+    "claim_ledgers[5].evidence_references[0].evidence_id",
+    "claim_ledgers[5].evidence_references[0].source_pack",
+    "claim_ledgers[5].evidence_references[1]",
+    "claim_ledgers[5].evidence_span_count",
+    "claim_ledgers[6].canonical_claim_id",
+    "claim_ledgers[6].claim_text",
+    "claim_ledgers[6].evidence_ids[0]",
+    "claim_ledgers[6].evidence_references[0].evidence_id",
+    "claim_ledgers[6].evidence_references[0].source_pack",
+    "claim_ledgers[6].evidence_references[1]",
+    "claim_ledgers[6].evidence_span_count",
+    "claim_ledgers[7].canonical_claim_id",
+    "claim_ledgers[7].claim_text",
+    "claim_ledgers[7].evidence_ids[0]",
+    "claim_ledgers[7].evidence_references[0].evidence_id",
+    "claim_ledgers[7].evidence_references[1].evidence_id",
+    "claim_ledgers[8].canonical_claim_id",
+    "claim_ledgers[8].claim_text",
+    "claim_ledgers[8].evidence_ids[0]",
+    "claim_ledgers[8].evidence_references[0].evidence_id",
+    "claim_ledgers[8].evidence_references[1].evidence_id",
+    "claim_ledgers[9].canonical_claim_id",
+    "claim_ledgers[9].claim_text",
+    "claim_ledgers[9].evidence_ids[0]",
+    "claim_ledgers[9].evidence_references[0].evidence_id",
+    "claim_ledgers[9].evidence_references[0].source_pack",
+    "claim_ledgers[9].evidence_references[1]",
+    "claim_ledgers[9].evidence_span_count",
+    "soft_copy_claim_provenance.claims[item=soft_copy:summary:242cb03b2996a8bc]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:summary:69d3c81d049cd6ee]"
+  ],
+  "selected_evidence_ids": [
+    "quote-005"
+  ],
+  "quarantined_evidence_ids": [
+    "internet-media-segment-cagr",
+    "pay-tv-price-limit"
+  ],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "grounding",
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:242cb03b2996a8bc",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "executive_summary",
+        "entity_id": "soft_copy:summary:242cb03b2996a8bc",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "summary.claim_evidence_map:4.claim",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "chart_insight_cards[2].takeaway",
+        "entity_id": "chart_insight_cards[2].takeaway",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "insights:global-media-revenue-segment-growth",
+        "entity_id": "insight:global-media-revenue-segment-growth:text",
+        "evidence_ids": [
+          "internet-media-segment-cagr"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "metadata.title",
+        "entity_id": "metadata:title",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "insights_final[6].text",
+        "entity_id": "insights_final[6].text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "insights_final[2].text",
+        "entity_id": "insights_final[2].text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "key_figures[2].why_it_matters",
+        "entity_id": "key_figures[2].why_it_matters",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "chart_insight_cards[2].business_implication",
+        "entity_id": "chart_insight_cards[2].business_implication",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "insights_final[1].text",
+        "entity_id": "insights_final[1].text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced": [],
+    "introduced_hard_failures": [],
+    "introduced_hard_failure_count": 0,
+    "introduced_failure_categories": [],
+    "semantic_grounding_validation_status": "evaluated",
+    "severity_changes": [],
+    "mutation_scope_result": "pass",
+    "evidence_lineage_result": "pass",
+    "repair_action": "REGENERATE_ITEM",
+    "repair_strategy": "current_evidence",
+    "evidence_ids_used": [
+      "quote-005"
+    ],
+    "strategy_fingerprint": "474f627eba426b1952df495f9242fc147c6117fafb54e255d8737d2bb0eb8d2a",
+    "candidate_sha256": "4ceb16f3c02432715ad2b92cad82ebcedb82b3bb0492e8ffee4d1ba9087cb7ee",
+    "input_sha256": "30ab8fce602490e65bda60b41717142d81d1c3bb4c29c6fdbc3feff78f1a7714",
+    "validator_identity": "regeneration-candidate-v1:4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa:4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [
+    {
+      "diagnosed_failure_class": "grounding",
+      "repair_action": "REGENERATE_ITEM",
+      "repair_strategy": "current_evidence",
+      "evidence_ids_used": [
+        "quote-005"
+      ],
+      "protected_fields": [
+        "summary.card_tldr_compact[claim_index=0]",
+        "summary.claim_evidence_map[0].claim",
+        "summary.claim_evidence_map[0].evidence",
+        "summary.claim_evidence_map[0].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[0].page",
+        "summary.claim_evidence_map[0].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[0].evidence_spans[0].text",
+        "summary.claim_evidence_map[0].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[1].page",
+        "summary.claim_evidence_map[0].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[0].evidence_spans[1].text",
+        "summary.claim_evidence_map[0].pages[0]",
+        "summary.claim_evidence_map[1].claim",
+        "summary.claim_evidence_map[1].evidence",
+        "summary.claim_evidence_map[1].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[0].page",
+        "summary.claim_evidence_map[1].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[1].evidence_spans[0].text",
+        "summary.claim_evidence_map[1].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[1].page",
+        "summary.claim_evidence_map[1].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[1].evidence_spans[1].text",
+        "summary.claim_evidence_map[1].pages[0]",
+        "summary.claim_evidence_map[2].claim",
+        "summary.claim_evidence_map[2].evidence",
+        "summary.claim_evidence_map[2].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[0].page",
+        "summary.claim_evidence_map[2].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[2].evidence_spans[0].text",
+        "summary.claim_evidence_map[2].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[1].page",
+        "summary.claim_evidence_map[2].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[2].evidence_spans[1].text",
+        "summary.claim_evidence_map[2].pages[0]",
+        "summary.claim_evidence_map[3].claim",
+        "summary.claim_evidence_map[3].evidence",
+        "summary.claim_evidence_map[3].evidence_id",
+        "summary.claim_evidence_map[3].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[3].evidence_spans[0].page",
+        "summary.claim_evidence_map[3].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[3].evidence_spans[0].text",
+        "summary.claim_evidence_map[3].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[3].evidence_spans[1].page",
+        "summary.claim_evidence_map[3].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[3].evidence_spans[1].text",
+        "summary.claim_evidence_map[3].pages[0]",
+        "summary.executive_summary[claim_index=0]",
+        "summary.executive_summary[claim_index=1]",
+        "summary.executive_summary[claim_index=2]",
+        "summary.executive_summary[claim_index=4]",
+        "summary.executive_summary[claim_index=5]",
+        "summary.tldr[claim_index=0]"
+      ],
+      "changed_paths": [
+        "summary.executive_summary[claim_index=3]"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "summary.executive_summary[claim_index=3]",
+          "value": "The source says services will need to address payment and eCommerce adoption in messaging for successful messaging monetization."
+        }
+      ],
+      "schema_version": "regeneration_repair_decision_v5"
+    },
+    {
+      "diagnosed_failure_class": "public_editorial_quality.metric_label_relationship",
+      "repair_action": "REGENERATE_ITEM",
+      "repair_strategy": "current_evidence",
+      "evidence_ids_used": [],
+      "protected_fields": [
+        "insights_final[item=esports-in-game-wagering-forecast].coverage_role",
+        "insights_final[item=esports-in-game-wagering-forecast].decision_relevance_score",
+        "insights_final[item=esports-in-game-wagering-forecast].evidence",
+        "insights_final[item=esports-in-game-wagering-forecast].evidence_id",
+        "insights_final[item=esports-in-game-wagering-forecast].evidence_spans[0].evidence_id",
+        "insights_final[item=esports-in-game-wagering-forecast].evidence_spans[0].page",
+        "insights_final[item=esports-in-game-wagering-forecast].evidence_spans[0].source_pack",
+        "insights_final[item=esports-in-game-wagering-forecast].evidence_spans[0].text",
+        "insights_final[item=esports-in-game-wagering-forecast].evidence_spans[1].evidence_id",
+        "insights_final[item=esports-in-game-wagering-forecast].evidence_spans[1].page",
+        "insights_final[item=esports-in-game-wagering-forecast].evidence_spans[1].source_pack",
+        "insights_final[item=esports-in-game-wagering-forecast].evidence_spans[1].text",
+        "insights_final[item=esports-in-game-wagering-forecast].id",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.cohort",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.confidence",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.denominator",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.geography",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.label",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.observation_status",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.sample_size",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.segment",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.subject",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.timeframe",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.trend",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.unit",
+        "insights_final[item=esports-in-game-wagering-forecast].metric.value",
+        "insights_final[item=esports-in-game-wagering-forecast].metric_strength_score",
+        "insights_final[item=esports-in-game-wagering-forecast].novelty_score",
+        "insights_final[item=esports-in-game-wagering-forecast].now_what",
+        "insights_final[item=esports-in-game-wagering-forecast].pages[0]",
+        "insights_final[item=esports-in-game-wagering-forecast].report_type_lens",
+        "insights_final[item=esports-in-game-wagering-forecast].score",
+        "insights_final[item=esports-in-game-wagering-forecast].so_what",
+        "insights_final[item=esports-in-game-wagering-forecast].text",
+        "insights_final[item=global-media-revenue-segment-growth].coverage_role",
+        "insights_final[item=global-media-revenue-segment-growth].decision_relevance_score",
+        "insights_final[item=global-media-revenue-segment-growth].evidence",
+        "insights_final[item=global-media-revenue-segment-growth].evidence_id",
+        "insights_final[item=global-media-revenue-segment-growth].evidence_spans[0].evidence_id",
+        "insights_final[item=global-media-revenue-segment-growth].evidence_spans[0].page",
+        "insights_final[item=global-media-revenue-segment-growth].evidence_spans[0].source_pack",
+        "insights_final[item=global-media-revenue-segment-growth].evidence_spans[0].text",
+        "insights_final[item=global-media-revenue-segment-growth].evidence_spans[1].evidence_id",
+        "insights_final[item=global-media-revenue-segment-growth].evidence_spans[1].page",
+        "insights_final[item=global-media-revenue-segment-growth].evidence_spans[1].source_pack",
+        "insights_final[item=global-media-revenue-segment-growth].evidence_spans[1].text",
+        "insights_final[item=global-media-revenue-segment-growth].id",
+        "insights_final[item=global-media-revenue-segment-growth].metric.cohort",
+        "insights_final[item=global-media-revenue-segment-growth].metric.confidence",
+        "insights_final[item=global-media-revenue-segment-growth].metric.denominator",
+        "insights_final[item=global-media-revenue-segment-growth].metric.geography",
+        "insights_final[item=global-media-revenue-segment-growth].metric.label",
+        "insights_final[item=global-media-revenue-segment-growth].metric.observation_status",
+        "insights_final[item=global-media-revenue-segment-growth].metric.sample_size",
+        "insights_final[item=global-media-revenue-segment-growth].metric.segment",
+        "insights_final[item=global-media-revenue-segment-growth].metric.subject",
+        "insights_final[item=global-media-revenue-segment-growth].metric.timeframe",
+        "insights_final[item=global-media-revenue-segment-growth].metric.trend",
+        "insights_final[item=global-media-revenue-segment-growth].metric.unit",
+        "insights_final[item=global-media-revenue-segment-growth].metric.value",
+        "insights_final[item=global-media-revenue-segment-growth].metric_strength_score",
+        "insights_final[item=global-media-revenue-segment-growth].novelty_score",
+        "insights_final[item=global-media-revenue-segment-growth].now_what",
+        "insights_final[item=global-media-revenue-segment-growth].pages[0]",
+        "insights_final[item=global-media-revenue-segment-growth].report_type_lens",
+        "insights_final[item=global-media-revenue-segment-growth].score",
+        "insights_final[item=global-media-revenue-segment-growth].so_what",
+        "insights_final[item=messaging-payment-commerce-monetization].coverage_role",
+        "insights_final[item=messaging-payment-commerce-monetization].decision_relevance_score",
+        "insights_final[item=messaging-payment-commerce-monetization].evidence",
+        "insights_final[item=messaging-payment-commerce-monetization].evidence_id",
+        "insights_final[item=messaging-payment-commerce-monetization].evidence_spans[0].evidence_id",
+        "insights_final[item=messaging-payment-commerce-monetization].evidence_spans[0].source_pack",
+        "insights_final[item=messaging-payment-commerce-monetization].evidence_spans[0].text",
+        "insights_final[item=messaging-payment-commerce-monetization].id",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.cohort",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.confidence",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.denominator",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.geography",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.label",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.observation_status",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.sample_size",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.segment",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.subject",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.timeframe",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.trend",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.unit",
+        "insights_final[item=messaging-payment-commerce-monetization].metric.value",
+        "insights_final[item=messaging-payment-commerce-monetization].metric_strength_score",
+        "insights_final[item=messaging-payment-commerce-monetization].novelty_score",
+        "insights_final[item=messaging-payment-commerce-monetization].now_what",
+        "insights_final[item=messaging-payment-commerce-monetization].pages",
+        "insights_final[item=messaging-payment-commerce-monetization].report_type_lens",
+        "insights_final[item=messaging-payment-commerce-monetization].score",
+        "insights_final[item=messaging-payment-commerce-monetization].so_what",
+        "insights_final[item=messaging-payment-commerce-monetization].text",
+        "insights_final[item=pay-tv-price-willingness-bound].coverage_role",
+        "insights_final[item=pay-tv-price-willingness-bound].decision_relevance_score",
+        "insights_final[item=pay-tv-price-willingness-bound].evidence",
+        "insights_final[item=pay-tv-price-willingness-bound].evidence_id",
+        "insights_final[item=pay-tv-price-willingness-bound].evidence_spans[0].evidence_id",
+        "insights_final[item=pay-tv-price-willingness-bound].evidence_spans[0].page",
+        "insights_final[item=pay-tv-price-willingness-bound].evidence_spans[0].source_pack",
+        "insights_final[item=pay-tv-price-willingness-bound].evidence_spans[0].text",
+        "insights_final[item=pay-tv-price-willingness-bound].evidence_spans[1].evidence_id",
+        "insights_final[item=pay-tv-price-willingness-bound].evidence_spans[1].page",
+        "insights_final[item=pay-tv-price-willingness-bound].evidence_spans[1].source_pack",
+        "insights_final[item=pay-tv-price-willingness-bound].evidence_spans[1].text",
+        "insights_final[item=pay-tv-price-willingness-bound].id",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.cohort",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.confidence",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.denominator",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.geography",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.label",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.observation_status",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.sample_size",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.segment",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.subject",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.timeframe",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.trend",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.unit",
+        "insights_final[item=pay-tv-price-willingness-bound].metric.value",
+        "insights_final[item=pay-tv-price-willingness-bound].metric_strength_score",
+        "insights_final[item=pay-tv-price-willingness-bound].novelty_score",
+        "insights_final[item=pay-tv-price-willingness-bound].now_what",
+        "insights_final[item=pay-tv-price-willingness-bound].pages[0]",
+        "insights_final[item=pay-tv-price-willingness-bound].report_type_lens",
+        "insights_final[item=pay-tv-price-willingness-bound].score",
+        "insights_final[item=pay-tv-price-willingness-bound].so_what",
+        "insights_final[item=pay-tv-price-willingness-bound].text",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].coverage_role",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].decision_relevance_score",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].evidence",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].evidence_id",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].evidence_spans[0].evidence_id",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].evidence_spans[0].page",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].evidence_spans[0].source_pack",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].evidence_spans[0].text",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].evidence_spans[1].evidence_id",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].evidence_spans[1].page",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].evidence_spans[1].source_pack",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].evidence_spans[1].text",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].id",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.cohort",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.confidence",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.denominator",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.geography",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.label",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.observation_status",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.sample_size",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.segment",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.subject",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.timeframe",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.trend",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.unit",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric.value",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].metric_strength_score",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].novelty_score",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].now_what",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].pages[0]",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].report_type_lens",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].score",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].so_what",
+        "insights_final[item=pay-tv-primary-non-subscription-reason].text",
+        "insights_final[item=platform-control-over-news-publishers].coverage_role",
+        "insights_final[item=platform-control-over-news-publishers].decision_relevance_score",
+        "insights_final[item=platform-control-over-news-publishers].evidence",
+        "insights_final[item=platform-control-over-news-publishers].evidence_id",
+        "insights_final[item=platform-control-over-news-publishers].evidence_spans[0].evidence_id",
+        "insights_final[item=platform-control-over-news-publishers].evidence_spans[0].source_pack",
+        "insights_final[item=platform-control-over-news-publishers].evidence_spans[0].text",
+        "insights_final[item=platform-control-over-news-publishers].id",
+        "insights_final[item=platform-control-over-news-publishers].metric.cohort",
+        "insights_final[item=platform-control-over-news-publishers].metric.confidence",
+        "insights_final[item=platform-control-over-news-publishers].metric.denominator",
+        "insights_final[item=platform-control-over-news-publishers].metric.geography",
+        "insights_final[item=platform-control-over-news-publishers].metric.label",
+        "insights_final[item=platform-control-over-news-publishers].metric.observation_status",
+        "insights_final[item=platform-control-over-news-publishers].metric.sample_size",
+        "insights_final[item=platform-control-over-news-publishers].metric.segment",
+        "insights_final[item=platform-control-over-news-publishers].metric.subject",
+        "insights_final[item=platform-control-over-news-publishers].metric.timeframe",
+        "insights_final[item=platform-control-over-news-publishers].metric.trend",
+        "insights_final[item=platform-control-over-news-publishers].metric.unit",
+        "insights_final[item=platform-control-over-news-publishers].metric.value",
+        "insights_final[item=platform-control-over-news-publishers].metric_strength_score",
+        "insights_final[item=platform-control-over-news-publishers].novelty_score",
+        "insights_final[item=platform-control-over-news-publishers].now_what",
+        "insights_final[item=platform-control-over-news-publishers].pages",
+        "insights_final[item=platform-control-over-news-publishers].report_type_lens",
+        "insights_final[item=platform-control-over-news-publishers].score",
+        "insights_final[item=platform-control-over-news-publishers].so_what",
+        "insights_final[item=platform-control-over-news-publishers].text",
+        "insights_final[item=underserved-americans-estimate].coverage_role",
+        "insights_final[item=underserved-americans-estimate].decision_relevance_score",
+        "insights_final[item=underserved-americans-estimate].evidence",
+        "insights_final[item=underserved-americans-estimate].evidence_id",
+        "insights_final[item=underserved-americans-estimate].evidence_spans[0].evidence_id",
+        "insights_final[item=underserved-americans-estimate].evidence_spans[0].page",
+        "insights_final[item=underserved-americans-estimate].evidence_spans[0].source_pack",
+        "insights_final[item=underserved-americans-estimate].evidence_spans[0].text",
+        "insights_final[item=underserved-americans-estimate].evidence_spans[1].evidence_id",
+        "insights_final[item=underserved-americans-estimate].evidence_spans[1].page",
+        "insights_final[item=underserved-americans-estimate].evidence_spans[1].source_pack",
+        "insights_final[item=underserved-americans-estimate].evidence_spans[1].text",
+        "insights_final[item=underserved-americans-estimate].id",
+        "insights_final[item=underserved-americans-estimate].metric.cohort",
+        "insights_final[item=underserved-americans-estimate].metric.confidence",
+        "insights_final[item=underserved-americans-estimate].metric.denominator",
+        "insights_final[item=underserved-americans-estimate].metric.geography",
+        "insights_final[item=underserved-americans-estimate].metric.label",
+        "insights_final[item=underserved-americans-estimate].metric.observation_status",
+        "insights_final[item=underserved-americans-estimate].metric.sample_size",
+        "insights_final[item=underserved-americans-estimate].metric.segment",
+        "insights_final[item=underserved-americans-estimate].metric.subject",
+        "insights_final[item=underserved-americans-estimate].metric.timeframe",
+        "insights_final[item=underserved-americans-estimate].metric.trend",
+        "insights_final[item=underserved-americans-estimate].metric.unit",
+        "insights_final[item=underserved-americans-estimate].metric.value",
+        "insights_final[item=underserved-americans-estimate].metric_strength_score",
+        "insights_final[item=underserved-americans-estimate].novelty_score",
+        "insights_final[item=underserved-americans-estimate].now_what",
+        "insights_final[item=underserved-americans-estimate].pages[0]",
+        "insights_final[item=underserved-americans-estimate].report_type_lens",
+        "insights_final[item=underserved-americans-estimate].score",
+        "insights_final[item=underserved-americans-estimate].so_what",
+        "insights_final[item=underserved-americans-estimate].text"
+      ],
+      "changed_paths": [
+        "insights_final[item=global-media-revenue-segment-growth].text"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "insights_final[item=global-media-revenue-segment-growth].text",
+          "value": "For global consumer internet and media revenues in 2016E–2021E, CAGR is forecast at 6.3% for cost of internet access, 4.7% for ad revenue, and 2.6% for paid content."
+        }
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "report_id": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+  "validation_run_id": "",
+  "cohort_id": "",
+  "workflow_run_id": "d36c4253-46d0-498c-9069-553d61010936",
+  "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+  "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "474f627eba426b1952df495f9242fc147c6117fafb54e255d8737d2bb0eb8d2a",
+  "latency_ms": 92973,
+  "schema_version": "1.0"
+}

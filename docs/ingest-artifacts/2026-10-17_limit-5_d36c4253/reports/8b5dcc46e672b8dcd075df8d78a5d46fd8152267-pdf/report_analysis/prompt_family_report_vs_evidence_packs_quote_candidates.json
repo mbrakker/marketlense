@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/quote_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "quote_candidates": [
+      {
+        "id": "quote-001",
+        "text": "Over the next five years, the consumer tech and media industry will grow by over $500 Billion",
+        "source": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+        "page": null
+      },
+      {
+        "id": "quote-002",
+        "text": "Messaging has been the fastest-growing online behavior within the social landscape over the past five years, passing social networks",
+        "source": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+        "page": null
+      },
+      {
+        "id": "quote-003",
+        "text": "Consumer behavior has moved beyond traditional appointment viewing and has created audiences for new kinds of content",
+        "source": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+        "page": null
+      },
+      {
+        "id": "quote-004",
+        "text": "THE “CABLE KILLER” WON'T BE A LOW-PRICED COMPETITOR, IT WILL BE “SMART CABLE”",
+        "source": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+        "page": null
+      },
+      {
+        "id": "quote-005",
+        "text": "JUST AS SMARTPHONES FIRST DISRUPTED THE WIRELESS MARKET (AND INCREASED MONTHLY BILLS) BY CREATING A SUPERIOR HIGH END EXPERIENCE, SMART CABLE COULD TARGET THE MOST LUCRATIVE AND PROFITABLE CUSTOMERS.",
+        "source": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+        "page": null
+      },
+      {
+        "id": "quote-006",
+        "text": "A new wave of companies are building businesses by using the app store for distribution and engagement, but not monetization",
+        "source": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+        "page": null
+      },
+      {
+        "id": "quote-007",
+        "text": "As it grows, eSports will develop its own economy, extending from multiplayer games to marketing partnerships, and eventually betting",
+        "source": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+        "page": null
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "quote_candidates",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

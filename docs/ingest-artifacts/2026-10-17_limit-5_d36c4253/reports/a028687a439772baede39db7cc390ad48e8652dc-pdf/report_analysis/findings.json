@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "new-online-retailer-continuation",
+      "text": "Among U.S. adults aged 18–64 who purchased online during shelter in place, 81% planned to continue purchasing from a new online retailer in at least one category.",
+      "evidence": "CONSUMER PURCHASING BEHAVIOR FROM NEW ONLINE RETAILERS1 DURING SHELTER IN PLACE\nU.S., 2020, % ADULTS AGED 18-64 WHO HAVE PURCHASED ONLINE DURING SHELTER IN PLACE\n81%\nPlan to continue purchasing from a new online retailer\n...to continue shopping from these new retailers in at least 1 category",
+      "confidence": "high",
+      "pages": [
+        14
+      ],
+      "section_id": "sustain-increased-demand",
+      "section_title": "Sustain Increased Demand"
+    },
+    {
+      "id": "live-sports-viewership-forecast",
+      "text": "Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+      "evidence": "We forecast a 26% net increase in live sports viewership upon return\nVIEWERSHIP INTENTION ONCE LIVE SPORTS RETURN, U.S., 2020, % SPORTS FANS1 AGED 18-64\n+26% NET INCREASE IN LIVE SPORTS VIEWERSHIP WHEN SPORTS RETURN",
+      "confidence": "high",
+      "pages": [
+        19
+      ],
+      "section_id": "reactivate-and-acquire-customers",
+      "section_title": "Reactivate and Acquire Customers"
+    },
+    {
+      "id": "digital-activity-preference",
+      "text": "Among U.S. adults aged 18–64 who participated in the digital activity, 81% viewed online banking/financial services, 64% webinars/virtual networking, and 55% telemedicine/mobile health as the same as or better than the in-person equivalent in 2020.",
+      "evidence": "PREFERENCE FOR DIGITAL ACTIVITY OVER IN-PERSON ACTIVITY1, U.S., 2020,\n% ADULTS AGED 18-64 WHO HAVE PARTICIPATED IN THE DIGITAL ACTIVITY\n81% Online Banking/Financial Services\n64% Webinars/Virtual Networking\n55% Telemedicine/Mobile Health\n1. View digital activity as same as or better than the in-person equivalent.",
+      "confidence": "high",
+      "pages": [
+        23
+      ],
+      "section_id": "accelerate-new-tech-experiences",
+      "section_title": "Accelerate New Tech Experiences"
+    },
+    {
+      "id": "sustain-ecommerce-category-penetration",
+      "text": "During shelter in place in the U.S. in 2020, eCommerce penetration among adults aged 18–64 was 42.3% for apparel, shoes, and accessories, 40.5% for grocery, and 36.1% for household products.",
+      "evidence": "“ECOMMERCE PENETRATION1 DURING SHELTER IN PLACE BY PRODUCT CATEGORY, U.S., 2020, % ADULTS AGED 18-64” … “Apparel, Shoes, and Accessories 42.3%” … “Grocery 40.5%” … “Household Products2 36.1%” … “% adults aged 18-64 who have made an online purchase in the category at least once during shelter in place.”",
+      "confidence": "high",
+      "pages": [
+        11
+      ],
+      "section_id": "sustain-increased-demand",
+      "section_title": "Sustain Increased Demand"
+    },
+    {
+      "id": "sustain-demand-young-adult-time-spend",
+      "text": "For U.S. adults aged 18–24, expected post-shelter time-spend change versus 2019 was gaming 21%, audio 12%, video 11%, browsing 3%, and social media -5%.",
+      "evidence": "For 18 to 24 year-olds, gaming, audio, and video will offer \nsignificant opportunities for growth\n 5\nEXPECTED TIME SPEND WITH TECHNOLOGY AND MEDIA AFTER SHELTER IN PLACE BY ADULTS AGED 18-24, \nU.S., % INCREASE VS. 2019\n1. “Video” includes web video, AVOD, SVOD, TVOD, and Pay TV and excludes social video. “Gaming” includes \nconsole, mobile, PC, online, and subscription gaming. “Audio” includes podcasts, streaming music, and radio.  \nSources: Activate analysis, Activate Consumer Tech & Media Study 2020 (n = 1,925)\nSUSTAIN INCREASED \nDEMAND\nREACTIVATE AND \nACQUIRE CUSTOMERS \nACCELERATE NEW \nTECH EXPERIENCES\nTHE ACTIONABLE REWIRE \nTO RESTART AGENDA\nGAMING1 AUDIO1 VIDEO1 BROWSING SOCIAL MEDIA\n-5%\n21%\n12% 11%\n3%",
+      "confidence": "high",
+      "pages": [
+        6
+      ],
+      "section_id": "sustain-increased-demand",
+      "section_title": "Sustain Increased Demand"
+    },
+    {
+      "id": "sustain-demand-ecommerce-penetration",
+      "text": "During shelter in place, eCommerce penetration among U.S. adults aged 18–64 was 42.3% for apparel, shoes, and accessories, 40.5% for grocery, and 36.1% for household products.",
+      "evidence": "ECOMMERCE PENETRATION1 DURING SHELTER IN PLACE BY PRODUCT CATEGORY, U.S., 2020, % ADULTS AGED 18-64\n\n                                                 Apparel, Shoes, and Accessories                                               42.3%\n\n                                              Grocery                                                                 40.5%\n\n                                           Household Products2                                                 36.1%\n\n                                         1. % adults aged 18-64 who have made an online purchase in the category at least once during shelter in place.\n                                         2. “Household Products” includes cleaning supplies (e.g. paper towels, Clorox).",
+      "confidence": "high",
+      "pages": [
+        11
+      ],
+      "section_id": "sustain-increased-demand",
+      "section_title": "Sustain Increased Demand"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

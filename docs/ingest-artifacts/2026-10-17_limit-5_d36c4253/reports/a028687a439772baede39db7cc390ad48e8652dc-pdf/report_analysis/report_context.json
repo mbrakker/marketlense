@@ -1,0 +1,92 @@
+{
+  "report_id": "1BproyPIQZFHWYDII93LhAOmIyujqbXb-",
+  "title": "JUNE 10, 2020",
+  "publisher": "",
+  "region": "United States",
+  "time_period": "2018 to 2020",
+  "overview": "Rewire to Restart: The Post-COVID-19 Agenda for Technology and Media Companies Dated June 10, 2020, the report examines how shelter-in-place measures changed technology and media use, shopping, and consumer expectations, and what behavior may persist afterward. It presents research findings alongside an action agenda for technology and media companies to adapt their value propositions, experiences, pricing, and marketing to post-COVID-19 needs. Examines how consumer technology and media habits, activities, expectations, and shopping behavior changed during COVID-19 shelter-in-place and what may persist after reopening, with an actionable post-COVID-19 agenda for technology and media companies. Research coverage is primarily U.S. consumer data across technology, internet, media, and entertainment; studies cited are from April and May 2020, and the report is dated June 10, 2020.",
+  "methods": [
+    "The report describes multiple consumer research studies tracking technology and media usage, behaviors, value drivers, time spent, shopping, and cultural shifts; research covered U.S. technology, internet, media, and entertainment sectors.",
+    "Activate COVID Consumer Tech & Media Study, April 2020: n=1,866; some reported measures cover U.S. adults aged 18–64.",
+    "Activate COVID Consumer Tech & Media Study, May 2020: n=1,925; some reported measures cover U.S. adults aged 18–64.",
+    "Activate 2019 Consumer Tech & Media Research Study: n=4,006. The report compares selected measures across 2019 and 2020 and before, during, and after shelter in place."
+  ],
+  "key_findings": [
+    "Among U.S. adults aged 18–64 who purchased online during shelter in place, 81% planned to continue purchasing from a new online retailer in at least one category.",
+    "Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+    "Among U.S. adults aged 18–64 who participated in the digital activity, 81% viewed online banking/financial services, 64% webinars/virtual networking, and 55% telemedicine/mobile health as the same as or better than the in-person equivalent in 2020.",
+    "During shelter in place in the U.S. in 2020, eCommerce penetration among adults aged 18–64 was 42.3% for apparel, shoes, and accessories, 40.5% for grocery, and 36.1% for household products.",
+    "For U.S. adults aged 18–24, expected post-shelter time-spend change versus 2019 was gaming 21%, audio 12%, video 11%, browsing 3%, and social media -5%.",
+    "During shelter in place, eCommerce penetration among U.S. adults aged 18–64 was 42.3% for apparel, shoes, and accessories, 40.5% for grocery, and 36.1% for household products."
+  ],
+  "limitations": [
+    "Many reported measures are survey responses or stated intentions/expectations, not observed post-reopening behavior (for example, expected time-spend growth and intent to continue using a new streaming service).",
+    "Survey measures have stated scope and differing sample sizes: examples include U.S. adults aged 18–64 and Activate study samples of n=1,866 (April 2020) and n=1,925 (May 2020)."
+  ],
+  "sections": [
+    {
+      "section_label": "Introduction",
+      "source_pack": "doc_map",
+      "summary": "The Activate Consulting Team introduces the report’s consumer research across technology, internet, media, and entertainment. It says the findings point to changed habits and expectations, and to a need for companies to rework how they engage consumers.",
+      "key_points": [
+        "The research covers usage, new behaviors, value drivers, time spent, shopping, and cultural shifts across a broad range of technology and media businesses.",
+        "The report frames the response as adapting value propositions, programming, experiences, functionality, pricing, and marketing to post-COVID-19 needs."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Rewire to Restart",
+      "source_pack": "doc_map",
+      "summary": "This opening section sets out the report’s broad finding that time spent with technology and media rose during shelter in place and is expected to remain above 2019 levels afterward. It introduces the agenda’s four areas: sustaining increased demand, reacti...",
+      "key_points": [
+        "The chart “Daily Technology and Media Attention per Adult Aged 18–64, U.S., 2018–2020, HH:MM” reports 12:13 in 2018, 12:24 in 2019, 16:06 during shelter in place, and a forecast 13:20 after shelter...",
+        "The document identifies four workstreams: “Sustain Increased Demand,” “Reactivate and Acquire Customers,” “Accelerate New Tech Experiences,” and “The Actionable Rewire to Restart Agenda.”"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Sustain Increased Demand",
+      "source_pack": "doc_map",
+      "summary": "This section explores which technology, media, and online-shopping behaviors may persist after shelter in place. It covers time spent, streaming and gaming, eCommerce participation, and consumers’ interest in continuing to shop with new online retailers.",
+      "key_points": [
+        "For U.S. adults aged 18–64, the chart “Time Spend with Technology and Media by Adults Aged 18–64, U.S., % Increase vs. 2019” pairs during-shelter increases with expected post-shelter growth: video...",
+        "For adults aged 18–24, expected post-shelter time-spend change versus 2019 is gaming +21%, audio +12%, video +11%, browsing +3%, and social media −5%.",
+        "The eCommerce penetration chart for U.S. adults aged 18–64 during shelter in place lists apparel, shoes, and accessories at 42.3%, grocery at 40.5%, and household products at 36.1%."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Reactivate and Acquire Customers",
+      "source_pack": "doc_map",
+      "summary": "This section considers how businesses can bring consumers back to activities affected by shelter in place and acquire or reactivate customers as routines resume. It addresses live sports, reopening considerations for in-person activities, and differences in...",
+      "key_points": [
+        "The report forecasts a 26% net increase in live sports viewership when sports return, and says Pay TV providers will need to reestablish their value proposition and win back subscribers.",
+        "For reopening decisions, the chart compares health and safety, pricing, experience, promotions, loyalty/rewards, and other factors across core and new/reactivated customers for different activities.",
+        "For expected return to normal routines, the report gives an average of 45% expecting a return in under a month and 55% expecting more than a month; among ages 18–24 the split is 63% and 37%, while..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Accelerate New Tech Experiences",
+      "source_pack": "doc_map",
+      "summary": "This section focuses on digital activities that consumers may prefer as alternatives to in-person experiences and the opportunity this creates for technology and media companies. It emphasizes new behaviors and experiences as areas for investment and develo...",
+      "key_points": [
+        "The chart “Preference for Digital Activity over In-Person Activity,” U.S., 2020, measures adults aged 18–64 who see a digital activity as the same as or better than its in-person equivalent; it rep...",
+        "The report’s recommendations include accelerating behaviors such as telemedicine and social viewing, and building or acquiring technology-based businesses and capabilities."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "The Actionable Rewire to Restart Agenda",
+      "source_pack": "doc_map",
+      "summary": "The agenda translates the report’s findings into company actions across investment and M&A, value propositions, pricing, advertising sales, and digital experiences. It calls for aligning with changed consumer expectations and behavior while sustaining deman...",
+      "key_points": [
+        "The agenda calls for identifying new acquisition and value-creation opportunities, pursuing growth investments, and aligning advertisers and categories with post-COVID-19 technology and media consu...",
+        "It recommends redefining value propositions, aligning prices with new consumer value perceptions, and sustaining demand while retaining customers and extending purchases.",
+        "It also recommends building or acquiring technology-enabled experiences and functionality, and using consumer insight and segmented marketing to identify, target, and retain Super Consumers."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

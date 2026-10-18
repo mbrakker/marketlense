@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/methods",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "methods": [
+      "The report uses Activate forecasts, including a global messaging-user forecast for 2012–2018E drawing on GlobalWebIndex, eMarketer, and ITO; it distinguishes registered users from monthly active users.",
+      "Activate forecasts global eSports revenue for 2018E using sources including Forbes, NewZoo, Nielsen Scarborough, PwC, and SuperData Research.",
+      "The report analyzes Dota 2 tournament prize-pool growth over 2012–2015 using SuperData Research, Forbes, and Valve data.",
+      "Consumer-tech and media ARPU comparisons use 2014 company financials, comScore, and eMarketer data; the report specifies revenue-basis exceptions for some companies.",
+      "Audience-time estimates draw on sources including Nielsen’s 2015 Total Audience Report and 2011 Cross-Platform Report, Sandvine, and other cited sources. One estimate is specified for users aged 18+ globally in 2014; a video-on-demand estimate is described as an average across age brackets 2+."
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "methods",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

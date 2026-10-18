@@ -1,0 +1,206 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_final",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "online-penetration-clothing",
+      "text": "U.S. 2021: clothing purchasers aged 18+ had 77% online penetration before outbreak start and 83% after it ends.",
+      "evidence_id": "online-penetration-clothing",
+      "evidence": "ONLINE SHOPPER PENETRATION BY PRODUCT CATEGORY AND TIME PERIOD, U.S., 2021, % PURCHASERS IN THE PRODUCT CATEGORY1 AGED 18+; BEFORE the start of the COVID-19 outbreak2; AFTER the COVID-19 outbreak ends3; CLOTHING 77% 83%.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Online shopper penetration among clothing purchasers",
+        "value": "77% before the start of the COVID-19 outbreak; 83% after the COVID-19 outbreak ends",
+        "unit": "percent",
+        "trend": "",
+        "timeframe": "U.S., 2021; before the start of the COVID-19 outbreak and after the COVID-19 outbreak ends",
+        "geography": "U.S.",
+        "segment": "Clothing",
+        "sample_size": "",
+        "confidence": "",
+        "subject": "online shopper penetration among clothing purchasers",
+        "cohort": "purchasers in the clothing product category aged 18+",
+        "denominator": "% purchasers in the product category aged 18+",
+        "observation_status": ""
+      },
+      "pages": [
+        5
+      ],
+      "score": 0,
+      "decision_relevance_score": 0,
+      "metric_strength_score": 0,
+      "novelty_score": 0,
+      "coverage_role": "behavior_shift",
+      "so_what": "",
+      "now_what": "",
+      "report_type_lens": "consumer_behavior"
+    },
+    {
+      "id": "beauty-amazon-shopping-start",
+      "text": "Amazon led starting sites/apps: 38% of U.S. online beauty/grooming shoppers aged 18+ typically started there in 2021.",
+      "evidence_id": "beauty-amazon-shopping-start",
+      "evidence": "FIRST WEBSITE/APP VISITED WHEN BEAUTY/GROOMING1 SHOPPING ONLINE, U.S., 2021, % ONLINE BEAUTY/GROOMING1 SHOPPERS2 AGED 18+; When shopping online for beauty/grooming1 items, I typically start on…; 38% Amazon.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Share typically starting online beauty/grooming shopping at Amazon",
+        "value": "38%",
+        "unit": "percent",
+        "trend": "",
+        "timeframe": "U.S., 2021",
+        "geography": "U.S.",
+        "segment": "Beauty/grooming",
+        "sample_size": "",
+        "confidence": "",
+        "subject": "first website/app typically visited when shopping beauty/grooming online",
+        "cohort": "online beauty/grooming shoppers aged 18+",
+        "denominator": "% online beauty/grooming shoppers aged 18+",
+        "observation_status": ""
+      },
+      "pages": [
+        17
+      ],
+      "score": 0,
+      "decision_relevance_score": 0,
+      "metric_strength_score": 0,
+      "novelty_score": 0,
+      "coverage_role": "behavior_shift",
+      "so_what": "",
+      "now_what": "",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "new-grocery-retailer-purchases",
+      "text": "During the outbreak, 50% of U.S. online grocery purchasers aged 18+ bought from at least one new website/app.",
+      "evidence_id": "new-grocery-retailer-purchases",
+      "evidence": "PURCHASING FROM NEW WEBSITES/APPS1 DURING THE COVID-19 OUTBREAK2 BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY3 AGED 18+; Purchased from at least one new website/app1 during the COVID-19 outbreak2; GROCERY 50%.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Online grocery purchasers buying from at least one new website/app during the outbreak",
+        "value": "50%",
+        "unit": "percent",
+        "trend": "",
+        "timeframe": "U.S., 2021; during the COVID-19 outbreak",
+        "geography": "U.S.",
+        "segment": "Grocery",
+        "sample_size": "",
+        "confidence": "",
+        "subject": "purchased from at least one new website/app during the COVID-19 outbreak",
+        "cohort": "online purchasers in the grocery category aged 18+",
+        "denominator": "% online purchasers in the product category aged 18+",
+        "observation_status": ""
+      },
+      "pages": [
+        22
+      ],
+      "score": 0,
+      "decision_relevance_score": 0,
+      "metric_strength_score": 0,
+      "novelty_score": 0,
+      "coverage_role": "behavior_shift",
+      "so_what": "",
+      "now_what": "",
+      "report_type_lens": "consumer_behavior"
+    },
+    {
+      "id": "grocery-most-used-delivery",
+      "text": "In 2021, 56% of U.S. online grocery purchasers aged 18+ most frequently used delivery for online purchases.",
+      "evidence_id": "grocery-most-used-delivery",
+      "evidence": "DELIVERY/PICKUP OPTION MOST FREQUENTLY USED FOR ONLINE PURCHASES BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY1 AGED 18+; 56% DELIVERY; GROCERY.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Online grocery purchasers most frequently using delivery for online purchases",
+        "value": "56%",
+        "unit": "percent",
+        "trend": "",
+        "timeframe": "U.S., 2021",
+        "geography": "U.S.",
+        "segment": "Grocery",
+        "sample_size": "",
+        "confidence": "",
+        "subject": "delivery option most frequently used for online purchases",
+        "cohort": "online purchasers in the grocery category aged 18+",
+        "denominator": "% online purchasers in the product category aged 18+",
+        "observation_status": ""
+      },
+      "pages": [
+        20
+      ],
+      "score": 0,
+      "decision_relevance_score": 0,
+      "metric_strength_score": 0,
+      "novelty_score": 0,
+      "coverage_role": "operating_implication",
+      "so_what": "",
+      "now_what": "",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "new-paid-membership-signups",
+      "text": "During the COVID-19 outbreak, 27% of U.S. households signed up for a new paid shopping program membership.",
+      "evidence_id": "new-paid-membership-signups",
+      "evidence": "SIGNING UP FOR NEW PAID SHOPPING PROGRAM MEMBERSHIPS1,2 DURING THE COVID-19 OUTBREAK3 FOR SELECT MAJOR SHOPPING PROGRAMS, U.S., 2021, % HOUSEHOLDS; 27% of households signed up for a new paid shopping program membership1,2 during the COVID-19 outbreak3.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Households signing up for a new paid shopping program membership during the outbreak",
+        "value": "27%",
+        "unit": "percent",
+        "trend": "",
+        "timeframe": "U.S., 2021; during the COVID-19 outbreak",
+        "geography": "U.S.",
+        "segment": "Households",
+        "sample_size": "",
+        "confidence": "",
+        "subject": "signed up for a new paid shopping program membership during the COVID-19 outbreak",
+        "cohort": "U.S. households",
+        "denominator": "% households",
+        "observation_status": ""
+      },
+      "pages": [
+        26
+      ],
+      "score": 0,
+      "decision_relevance_score": 0,
+      "metric_strength_score": 0,
+      "novelty_score": 0,
+      "coverage_role": "proof_point",
+      "so_what": "",
+      "now_what": "",
+      "report_type_lens": "consumer_behavior"
+    },
+    {
+      "id": "email-list-welcome-reward",
+      "text": "U.S. 2021: 67% of online shoppers aged 18+ signed up for retailer emails to get a welcome reward.",
+      "evidence_id": "email-list-welcome-reward",
+      "evidence": "SHARING OF PERSONAL DATA WITH ONLINE RETAILERS IN EXCHANGE FOR MONETARY BENEFITS, U.S., 2021, % ONLINE SHOPPERS1 AGED 18+; 67% Signed up online for a retailer’s email list to receive a welcome reward.",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Online shoppers signing up for a retailer email list to receive a welcome reward",
+        "value": "67%",
+        "unit": "percent",
+        "trend": "",
+        "timeframe": "U.S., 2021",
+        "geography": "U.S.",
+        "segment": "Online shoppers",
+        "sample_size": "",
+        "confidence": "",
+        "subject": "signed up online for a retailer's email list to receive a welcome reward",
+        "cohort": "online shoppers aged 18+",
+        "denominator": "% online shoppers aged 18+",
+        "observation_status": ""
+      },
+      "pages": [
+        33
+      ],
+      "score": 0,
+      "decision_relevance_score": 0,
+      "metric_strength_score": 0,
+      "novelty_score": 0,
+      "coverage_role": "proof_point",
+      "so_what": "",
+      "now_what": "",
+      "report_type_lens": "consumer_behavior"
+    }
+  ]
+}

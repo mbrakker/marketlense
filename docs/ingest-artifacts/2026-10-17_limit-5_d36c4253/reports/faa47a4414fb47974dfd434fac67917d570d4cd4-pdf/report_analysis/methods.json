@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "methods": [
+    "Large-scale consumer research examined post-COVID online shopping across auto, grocery, beauty/grooming, and clothing.",
+    "Analysis used the Activate COVID-19 Consumer Tech & Media Study, fielded May 2021 (n = 2,913); the report identifies the analysis as Activate analysis.",
+    "Online-shopping penetration measures are reported for U.S. consumers aged 18+ who purchase in the relevant product category at least once per year. For online grocery shoppers, the report defines eligibility as having shopped for groceries online since the COVID-19 outbreak began in March 2020."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "methods",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "methods": [
+    "The report describes multiple consumer research studies tracking technology and media usage, behaviors, value drivers, time spent, shopping, and cultural shifts; research covered U.S. technology, internet, media, and entertainment sectors.",
+    "Activate COVID Consumer Tech & Media Study, April 2020: n=1,866; some reported measures cover U.S. adults aged 18–64.",
+    "Activate COVID Consumer Tech & Media Study, May 2020: n=1,925; some reported measures cover U.S. adults aged 18–64.",
+    "Activate 2019 Consumer Tech & Media Research Study: n=4,006. The report compares selected measures across 2019 and 2020 and before, during, and after shelter in place.",
+    "The report identifies Activate analysis and, for one comparison, CivicScience and Comscore as sources. No validation method is stated."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "methods",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

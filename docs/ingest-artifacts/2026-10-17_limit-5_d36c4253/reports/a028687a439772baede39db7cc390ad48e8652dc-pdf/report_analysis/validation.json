@@ -1,0 +1,186 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\Programing\\Market lense\\out\\a028687a439772baede39db7cc390ad48e8652dc-pdf\\report_analysis\\validation.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe 'When live sports return' not verbatim but semantically supported (confidence=1.00) for live-sports-return-viewership-forecast",
+      "severity": "info",
+      "affected_section": "insights:live-sports-return-viewership-forecast",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe 'During shelter in place, 2020' not verbatim but semantically supported (confidence=1.00) for ecommerce-category-penetration-shelter-2020",
+      "severity": "info",
+      "affected_section": "insights:ecommerce-category-penetration-shelter-2020",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe 'After shelter in place versus 2019' not verbatim but semantically supported (confidence=1.00) for young-adult-expected-post-shelter-time-spend",
+      "severity": "info",
+      "affected_section": "insights:young-adult-expected-post-shelter-time-spend",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The attached evidence supports the value, metric, population, geography, and forecast status, but does not identify the first-person speaker as Activate..: Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+      "severity": "error",
+      "affected_section": "summary.claim_evidence_map:4.claim",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The attached evidence supports the value, metric, population, geography, and forecast status, but does not identify the first-person speaker as Activate..: Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+      "severity": "error",
+      "affected_section": "summary.executive_summary",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "soft_copy:summary:1806f63ba6dfde8a",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The attached evidence supports the value, metric, population, geography, and forecast status, but does not identify the first-person speaker as Activate..: Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+      "severity": "error",
+      "affected_section": "insights:live-sports-return-viewership-forecast.text",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "insight:live-sports-return-viewership-forecast:text",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The evidence supports the listed categories and values, including social media at -5%, but the claim’s “−-5%” is malformed and does not establish an unambiguous social-media value and direction..: For U.S. adults aged 18–24, expected post-shelter time-spend change versus 2019 was gaming 21%, audio 12%, video 11%, browsing 3%, and social media −-5%.",
+      "severity": "warning",
+      "affected_section": "insights:young-adult-expected-post-shelter-time-spend.text",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "insight:young-adult-expected-post-shelter-time-spend:text",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The forecast details are supported, but the attached retained evidence says “We forecast” without identifying Activate as the speaker; the specific attribution is not established..: Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+      "severity": "warning",
+      "affected_section": "key_figures:3.why_it_matters",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "key_figure:3:why_it_matters",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The attached evidence supports the cohort, forecast period, and the presence of a 21% chart value, but its extracted layout does not establish that 21% belongs to gaming..: Expected post-shelter gaming time-spend change versus 2019 Time spent with gaming 21% percent change U.S. Adults aged 18–24 U.S. adults aged 18–24 After shelter in place versus 2019 Expected",
+      "severity": "warning",
+      "affected_section": "key_figures:4.figure",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "key_figure:4:figure",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The extracted retained chart text includes the stated percentages and category labels but does not reliably map each value to its category. The specific category-value tuples are therefore not established..: For U.S. adults aged 18–24, expected post-shelter time-spend change versus 2019 was gaming 21%, audio 12%, video 11%, browsing 3%, and social media −-5%.",
+      "severity": "warning",
+      "affected_section": "key_figures:4.why_it_matters",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "key_figure:4:why_it_matters",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] No retained evidence is attached to this item, so the date is not established.: JUNE 10, 2020",
+      "severity": "warning",
+      "affected_section": "metadata.title",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "metadata:title",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "expert_comment",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "expert_comment",
+      "entity_id": "expert_comment:expert_comment",
+      "evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "expert_comment",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "expert_comment",
+      "entity_id": "expert_comment:expert_comment",
+      "evidence_ids": [
+        "sustain-demand-young-adult-time-spend"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "insights:ecommerce-category-penetration-shelter-2020",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:ecommerce-category-penetration-shelter-2020:text",
+      "evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "linkedin_post",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "linkedin_post",
+      "entity_id": "linkedin_post:linkedin_post",
+      "evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "linkedin_post",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "linkedin_post",
+      "entity_id": "linkedin_post:linkedin_post",
+      "evidence_ids": [
+        "sustain-demand-young-adult-time-spend"
+      ]
+    }
+  ]
+}

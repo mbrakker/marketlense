@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import pytest
 
+from src.contracts.claim_validation import ClaimCandidate, ClaimSemanticInput
 from src.contracts.validation import ValidationRequest
+from src.generators.validation.grounding import _exactly_evidenced_claims
 from src.generators.validation_generator import validate_report
 from tests._test_validation_generator._shared import (
     FakeAnalysisStore,
@@ -18,7 +20,7 @@ from tests._test_validation_generator._shared import (
     ("outcome", "expected_violation", "expected_severity", "expected_status"),
     [
         ("contradicted", "contradicted", "error", "fail"),
-        ("not_established", "not_established", "warning", "fail"),
+        ("not_established", "not_established", "error", "fail"),
     ],
 )
 def test_grounding_semantic_outcome_preserves_distinct_disposition(
@@ -64,3 +66,27 @@ def test_grounding_semantic_outcome_preserves_distinct_disposition(
     assert grounding_issues[0].severity == expected_severity
     assert result.status == expected_status
     assert f"[factual_claim|{expected_violation}]" in grounding_issues[0].message
+
+
+def test_exact_claim_reproduced_in_linked_evidence_is_deterministically_supported():
+    claim = "For U.S. adults, gaming rose 21% after shelter in place."
+    semantic_input = ClaimSemanticInput(
+        schema_version="1.0",
+        candidate=ClaimCandidate(
+            schema_version="1.4",
+            claim_id="claim:gaming",
+            source_family="insights_final",
+            text=claim,
+            text_hash="h",
+            kind="numeric",
+            factual=True,
+        ),
+        evidence_texts=[
+            "Chart statement: For U.S. adults, gaming rose 21% after shelter in place."
+        ],
+        evidence_hash="e",
+    )
+
+    assert _exactly_evidenced_claims([semantic_input]) == {
+        "for u.s. adults, gaming rose 21% after shelter in place."
+    }

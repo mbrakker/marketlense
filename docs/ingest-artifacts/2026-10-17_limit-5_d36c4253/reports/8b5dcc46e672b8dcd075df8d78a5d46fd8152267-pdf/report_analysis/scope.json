@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "scope": "Consumer technology and media trends, including attention and messaging, streaming audio, cord cutting and pay TV, gaming and wagering, the app economy, and company revenue and competitive strategy. Coverage includes global and U.S. analysis, with data from 2012–2015 and forecasts extending to 2018; the report is framed around 2016.",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "scope",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

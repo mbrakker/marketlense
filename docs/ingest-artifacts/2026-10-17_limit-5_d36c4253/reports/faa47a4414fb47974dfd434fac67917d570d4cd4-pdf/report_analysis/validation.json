@@ -1,0 +1,174 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\Programing\\Market lense\\out\\faa47a4414fb47974dfd434fac67917d570d4cd4-pdf\\report_analysis\\validation.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "insights_final[5].text",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "insights_final[5].text",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "key_figures[3].why_it_matters",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "key_figures[3].why_it_matters",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "chart_insight_cards[3].takeaway",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "chart_insight_cards[3].takeaway",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "chart_insight_cards[3].business_implication",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "chart_insight_cards[3].business_implication",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[semantic] Semantic validation input contains blank or duplicate item identifiers",
+      "severity": "error",
+      "affected_section": "semantic",
+      "rule_id": "semantic",
+      "violation_type": "semantic_input_ids_invalid",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe 'U.S., 2021; during the COVID-19 outbreak' not present in evidence for new-grocery-retailer-purchases",
+      "severity": "warning",
+      "affected_section": "insights:new-grocery-retailer-purchases",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe 'U.S., 2021; during the COVID-19 outbreak' not present in evidence for new-paid-membership-signups",
+      "severity": "warning",
+      "affected_section": "insights:new-paid-membership-signups",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[numbers] Number 0.008906481939633844 not present in report or evidence",
+      "severity": "error",
+      "affected_section": "expert_comment",
+      "rule_id": "numbers",
+      "repair_target": "",
+      "entity_id": "soft_copy:expert_comment:b199b9b82dfce6f2",
+      "evidence_ids": [
+        "beauty-amazon-shopping-start",
+        "new-beauty-retailer-purchases"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[numbers] Number 18.0 not present in report or evidence",
+      "severity": "error",
+      "affected_section": "expert_comment",
+      "rule_id": "numbers",
+      "repair_target": "",
+      "entity_id": "soft_copy:expert_comment:b199b9b82dfce6f2",
+      "evidence_ids": [
+        "beauty-amazon-shopping-start",
+        "new-beauty-retailer-purchases"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The linked findings support both percentages, populations, geography, and period, but do not establish that Amazon was the most common starting website/app..: Beauty/grooming shows two distinct forms of online activity: Amazon was the most common starting website/app, at 38% of U.S. online beauty/grooming shoppers aged 18+ in 2021, while the share of U.S. o",
+      "severity": "error",
+      "affected_section": "expert_comment",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "soft_copy:expert_comment:b199b9b82dfce6f2",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The 38% Amazon figure is supported, but the attached evidence gives no comparative values establishing that Amazon led other starting sites/apps..: Amazon led starting sites/apps: 38% of U.S. online beauty/grooming shoppers aged 18+ typically started there in 2021.",
+      "severity": "warning",
+      "affected_section": "key_figures:3.why_it_matters",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "key_figure:3:why_it_matters",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] Both percentages and their respective populations and periods are supported by the attached evidence. The attached evidence does not establish the comparative assertion that Amazon was the most common starting site/app..: Beauty/grooming shows two distinct forms of online activity: Amazon was the most common starting website/app, at 38% of U.S. online beauty/grooming shoppers aged 18+ in 2021, while the share of U.S. o",
+      "severity": "warning",
+      "affected_section": "expert_comment",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "soft_copy:expert_comment:b199b9b82dfce6f2",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "insights:new-grocery-retailer-purchases",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:new-grocery-retailer-purchases:text",
+      "evidence_ids": [
+        "new-grocery-retailer-purchases"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "insights:online-penetration-clothing",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:online-penetration-clothing:text",
+      "evidence_ids": [
+        "online-penetration-clothing"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "insights:online-penetration-clothing",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:online-penetration-clothing:text",
+      "evidence_ids": [
+        "online-penetration-clothing"
+      ]
+    }
+  ]
+}

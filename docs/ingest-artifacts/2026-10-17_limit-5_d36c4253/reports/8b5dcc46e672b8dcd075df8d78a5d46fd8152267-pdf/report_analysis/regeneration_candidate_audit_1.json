@@ -1,0 +1,1026 @@
+{
+  "attempt_index": 1,
+  "before_sha256": "90eea597954715fbe1cbfbe719ab8205ec737656aa36a3929270c9a4a552b83b",
+  "after_sha256": "f1a446adda0c1d0673dd7899242de9401f0c523287a1a659184cd74f6b6eadaa",
+  "transformation_scope": [
+    "insights_final"
+  ],
+  "unchanged_family_sha256": {
+    "summary": "bdeb3c21ac61bcdc328771ed263a360c9ae9fdd28e7c2e4176898632ab527a7a",
+    "insights_candidates": "3c982e4df08bd308dc87a261b22b75294b65626f7b5dab62344bebbb81a80d65",
+    "quotes_final": "1dc070002ceabf7eaa0704217fde760672df3c0ebcfeb76342ffb1faee1a57d5"
+  },
+  "current_artifacts_path": "C:\\Programing\\Market lense\\out\\8b5dcc46e672b8dcd075df8d78a5d46fd8152267-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\Programing\\Market lense\\out\\8b5dcc46e672b8dcd075df8d78a5d46fd8152267-pdf\\report_analysis\\artifacts_regen_candidate_1.json",
+  "validation_status": "pass",
+  "promotion_outcome": "promoted",
+  "validation_issues": [
+    "artifact_quality:expert_comment",
+    "artifact_quality:insights_final[0].text",
+    "artifact_quality:summary.card_tldr_compact",
+    "artifact_quality:summary.executive_summary",
+    "artifact_quality:summary.tldr",
+    "grounding:executive_summary",
+    "grounding:metadata.title"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "app-store-distribution-not-monetization",
+      "original_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "candidate_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "original_source_pages": [
+        124
+      ],
+      "candidate_source_pages": [
+        124
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "attention-time-spent-cagr",
+      "original_evidence_ids": [
+        "attention_daily_time_cagr"
+      ],
+      "candidate_evidence_ids": [
+        "attention_daily_time_cagr"
+      ],
+      "original_source_pages": [
+        12
+      ],
+      "candidate_source_pages": [
+        12
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "gaming-spend-2014",
+      "original_evidence_ids": [
+        "gaming-spend-2014"
+      ],
+      "candidate_evidence_ids": [
+        "gaming-spend-2014"
+      ],
+      "original_source_pages": [
+        96
+      ],
+      "candidate_source_pages": [
+        96
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "messaging-user-additions-forecast",
+      "original_evidence_ids": [
+        "messaging-user-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "messaging-user-forecast"
+      ],
+      "original_source_pages": [
+        17
+      ],
+      "candidate_source_pages": [
+        17
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "smart-cable-positioning",
+      "original_evidence_ids": [
+        "quote-004"
+      ],
+      "candidate_evidence_ids": [
+        "quote-004"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "unified-stack-ma-expectation",
+      "original_evidence_ids": [
+        "unified_stack_ma_forecast"
+      ],
+      "candidate_evidence_ids": [
+        "unified_stack_ma_forecast"
+      ],
+      "original_source_pages": [
+        132
+      ],
+      "candidate_source_pages": [
+        132
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "app-store-distribution-not-monetization",
+      "original_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "candidate_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "original_source_pages": [
+        124
+      ],
+      "candidate_source_pages": [
+        124
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "attention-time-spent-cagr",
+      "original_evidence_ids": [
+        "attention_daily_time_cagr"
+      ],
+      "candidate_evidence_ids": [
+        "attention_daily_time_cagr"
+      ],
+      "original_source_pages": [
+        12
+      ],
+      "candidate_source_pages": [
+        12
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "gaming-spend-2014",
+      "original_evidence_ids": [
+        "gaming-spend-2014"
+      ],
+      "candidate_evidence_ids": [
+        "gaming-spend-2014"
+      ],
+      "original_source_pages": [
+        96
+      ],
+      "candidate_source_pages": [
+        96
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "messaging-user-additions-forecast",
+      "original_evidence_ids": [
+        "messaging-user-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "messaging-user-forecast"
+      ],
+      "original_source_pages": [
+        17
+      ],
+      "candidate_source_pages": [
+        17
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "smart-cable-positioning",
+      "original_evidence_ids": [
+        "quote-004"
+      ],
+      "candidate_evidence_ids": [
+        "quote-004"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "unified-stack-ma-expectation",
+      "original_evidence_ids": [
+        "unified_stack_ma_forecast"
+      ],
+      "candidate_evidence_ids": [
+        "unified_stack_ma_forecast"
+      ],
+      "original_source_pages": [
+        132
+      ],
+      "candidate_source_pages": [
+        132
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "9280b85243536f37c5474c01c318c354d17b9bcc93fa4962eee1cbd0f8b27950",
+      "original_evidence_ids": [
+        "quote-003"
+      ],
+      "candidate_evidence_ids": [
+        "quote-003"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "ba53e5a705b2d5611f077c8eed68467f811603a3883aaaea2499dc8a58a4cfda",
+      "original_evidence_ids": [
+        "quote-004"
+      ],
+      "candidate_evidence_ids": [
+        "quote-004"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "fa16a52e9e6496d8d98b0fa1f5e03200e6cd7cf28a676600e5abb43e4af9ffa4",
+      "original_evidence_ids": [
+        "quote-006"
+      ],
+      "candidate_evidence_ids": [
+        "quote-006"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "unified_stack_ma_forecast"
+      ],
+      "candidate_evidence_ids": [
+        "unified_stack_ma_forecast"
+      ],
+      "original_source_pages": [
+        132
+      ],
+      "candidate_source_pages": [
+        132
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "messaging-user-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "messaging-user-forecast"
+      ],
+      "original_source_pages": [
+        17
+      ],
+      "candidate_source_pages": [
+        17
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "audio_consumption_mix"
+      ],
+      "candidate_evidence_ids": [
+        "audio_consumption_mix"
+      ],
+      "original_source_pages": [
+        36
+      ],
+      "candidate_source_pages": [
+        36
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "attention_daily_time_cagr"
+      ],
+      "candidate_evidence_ids": [
+        "attention_daily_time_cagr"
+      ],
+      "original_source_pages": [
+        12
+      ],
+      "candidate_source_pages": [
+        12
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "candidate_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "original_source_pages": [
+        124
+      ],
+      "candidate_source_pages": [
+        124
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:0de96cc3615fb271",
+      "original_evidence_ids": [
+        "app_store_distribution_engagement",
+        "messaging_enterprise_bots"
+      ],
+      "candidate_evidence_ids": [
+        "app_store_distribution_engagement",
+        "messaging_enterprise_bots"
+      ],
+      "original_source_pages": [
+        124,
+        32
+      ],
+      "candidate_source_pages": [
+        124,
+        32
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:279f3d231e1da41c",
+      "original_evidence_ids": [
+        "messaging-user-forecast",
+        "app_store_distribution_engagement",
+        "messaging_enterprise_bots"
+      ],
+      "candidate_evidence_ids": [
+        "messaging-user-forecast",
+        "app_store_distribution_engagement",
+        "messaging_enterprise_bots"
+      ],
+      "original_source_pages": [
+        17,
+        124,
+        32
+      ],
+      "candidate_source_pages": [
+        17,
+        124,
+        32
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:5d44db594f6ac3bb",
+      "original_evidence_ids": [
+        "messaging-user-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "messaging-user-forecast"
+      ],
+      "original_source_pages": [
+        17
+      ],
+      "candidate_source_pages": [
+        17
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:f0805fab788b9bcd",
+      "original_evidence_ids": [
+        "messaging-user-forecast",
+        "app_store_distribution_engagement",
+        "messaging_enterprise_bots"
+      ],
+      "candidate_evidence_ids": [
+        "messaging-user-forecast",
+        "app_store_distribution_engagement",
+        "messaging_enterprise_bots"
+      ],
+      "original_source_pages": [
+        17,
+        124,
+        32
+      ],
+      "candidate_source_pages": [
+        17,
+        124,
+        32
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:2ce1a394ddcfe38c",
+      "original_evidence_ids": [
+        "app_economy"
+      ],
+      "candidate_evidence_ids": [
+        "app_economy"
+      ],
+      "original_source_pages": [
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123
+      ],
+      "candidate_source_pages": [
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:b92d7083fec7db6d",
+      "original_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "candidate_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "original_source_pages": [
+        124
+      ],
+      "candidate_source_pages": [
+        124
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:fb230879522dc9f5",
+      "original_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "candidate_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "original_source_pages": [
+        124
+      ],
+      "candidate_source_pages": [
+        124
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:4b55c0990370bae5",
+      "original_evidence_ids": [
+        "attention_daily_time_cagr"
+      ],
+      "candidate_evidence_ids": [
+        "attention_daily_time_cagr"
+      ],
+      "original_source_pages": [
+        12
+      ],
+      "candidate_source_pages": [
+        12
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:6082613cca3f5ff4",
+      "original_evidence_ids": [
+        "unified_stack_ma_forecast"
+      ],
+      "candidate_evidence_ids": [
+        "unified_stack_ma_forecast"
+      ],
+      "original_source_pages": [
+        132
+      ],
+      "candidate_source_pages": [
+        132
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:66fa1da95d3fa86e",
+      "original_evidence_ids": [
+        "unified_stack_ma_forecast"
+      ],
+      "candidate_evidence_ids": [
+        "unified_stack_ma_forecast"
+      ],
+      "original_source_pages": [
+        132
+      ],
+      "candidate_source_pages": [
+        132
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:93b9dbc51325765e",
+      "original_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "candidate_evidence_ids": [
+        "app_store_distribution_engagement"
+      ],
+      "original_source_pages": [
+        124
+      ],
+      "candidate_source_pages": [
+        124
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:9fba16bef51c5f1d",
+      "original_evidence_ids": [
+        "audio_consumption_mix"
+      ],
+      "candidate_evidence_ids": [
+        "audio_consumption_mix"
+      ],
+      "original_source_pages": [
+        36
+      ],
+      "candidate_source_pages": [
+        36
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:a67574eeb0b37cc9",
+      "original_evidence_ids": [
+        "messaging-user-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "messaging-user-forecast"
+      ],
+      "original_source_pages": [
+        17
+      ],
+      "candidate_source_pages": [
+        17
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+    "b8214394cda6ea24b943c9758be36113d4f32807e9b120bd4fd6a2bf6b9309da",
+    "c59845421d7a398bd31c60359b77d3af06ff2dfe408dcf9f8c7e06317fbfc71b",
+    "0bb9c8d405dc2d2f5e9004a8775c4e4c7735122449cf2a2f91b8e0836678ef49",
+    "fb504ce38cd7a307df4ace66e91fa77a6f9fea0c2dd735b10b5de6c1b0dedc3a",
+    "cc954eb7410a646463e48b048ab946f0bf9176fe23d717702c55269bc8af349a",
+    "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff"
+  ],
+  "repair_action": "REGENERATE_ITEM",
+  "repair_strategy": "current_evidence",
+  "allowed_paths": [
+    "insights_final[item=smart-cable-positioning].text"
+  ],
+  "verified_dependent_paths": [
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.output_controls.max_output_tokens",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.routing_policy_version",
+    "_cache.prompts.report_vs/artifacts/regenerate/insights_final",
+    "_cache.regeneration_prompt_requirements",
+    "claim_ledgers[8].claim_text"
+  ],
+  "selected_evidence_ids": [
+    "quote-004"
+  ],
+  "quarantined_evidence_ids": [],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "retained_claim.quote_match",
+        "affected_section": "insights:smart-cable-positioning.text",
+        "entity_id": "insight:smart-cable-positioning:text",
+        "evidence_ids": [
+          "quote-004"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "insights_final[3].text",
+        "entity_id": "insights_final[3].text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "key_figures:2.why_it_matters",
+        "entity_id": "key_figure:2:why_it_matters",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "key_figures:2.figure",
+        "entity_id": "key_figure:2:figure",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:6082613cca3f5ff4",
+        "evidence_ids": [
+          "gaming-spend-2014"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "expert_comment",
+        "entity_id": "expert_comment",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "metadata.title",
+        "entity_id": "metadata:title",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "summary.tldr",
+        "entity_id": "soft_copy:summary:6082613cca3f5ff4",
+        "evidence_ids": [
+          "gaming-spend-2014"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "summary.card_tldr_compact",
+        "entity_id": "soft_copy:summary:66fa1da95d3fa86e",
+        "evidence_ids": [
+          "gaming-spend-2014"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "insights_final[0].text",
+        "entity_id": "insight:unified-stack-ma-expectation:text",
+        "evidence_ids": [
+          "gaming-spend-2014"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced": [
+      {
+        "rule_id": "grounding",
+        "affected_section": "executive_summary",
+        "entity_id": "soft_copy:summary:a67574eeb0b37cc9",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failures": [],
+    "introduced_hard_failure_count": 0,
+    "introduced_failure_categories": [],
+    "semantic_grounding_validation_status": "evaluated",
+    "severity_changes": [],
+    "mutation_scope_result": "pass",
+    "evidence_lineage_result": "pass",
+    "repair_action": "REGENERATE_ITEM",
+    "repair_strategy": "current_evidence",
+    "evidence_ids_used": [
+      "quote-004"
+    ],
+    "strategy_fingerprint": "21ceb0f0aa04993239cc067f556b66fd690775c40f5039aaf4e879ab20d20ecb",
+    "candidate_sha256": "f1a446adda0c1d0673dd7899242de9401f0c523287a1a659184cd74f6b6eadaa",
+    "input_sha256": "90eea597954715fbe1cbfbe719ab8205ec737656aa36a3929270c9a4a552b83b",
+    "validator_identity": "regeneration-candidate-v1:4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa:4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [
+    {
+      "diagnosed_failure_class": "retained_claim.quote_match",
+      "repair_action": "REGENERATE_ITEM",
+      "repair_strategy": "current_evidence",
+      "evidence_ids_used": [
+        "quote-004"
+      ],
+      "protected_fields": [
+        "insights_final[item=app-store-distribution-not-monetization].coverage_role",
+        "insights_final[item=app-store-distribution-not-monetization].decision_relevance_score",
+        "insights_final[item=app-store-distribution-not-monetization].evidence",
+        "insights_final[item=app-store-distribution-not-monetization].evidence_id",
+        "insights_final[item=app-store-distribution-not-monetization].evidence_spans[0].evidence_id",
+        "insights_final[item=app-store-distribution-not-monetization].evidence_spans[0].page",
+        "insights_final[item=app-store-distribution-not-monetization].evidence_spans[0].source_pack",
+        "insights_final[item=app-store-distribution-not-monetization].evidence_spans[0].text",
+        "insights_final[item=app-store-distribution-not-monetization].evidence_spans[1].evidence_id",
+        "insights_final[item=app-store-distribution-not-monetization].evidence_spans[1].page",
+        "insights_final[item=app-store-distribution-not-monetization].evidence_spans[1].source_pack",
+        "insights_final[item=app-store-distribution-not-monetization].evidence_spans[1].text",
+        "insights_final[item=app-store-distribution-not-monetization].id",
+        "insights_final[item=app-store-distribution-not-monetization].metric.cohort",
+        "insights_final[item=app-store-distribution-not-monetization].metric.confidence",
+        "insights_final[item=app-store-distribution-not-monetization].metric.denominator",
+        "insights_final[item=app-store-distribution-not-monetization].metric.geography",
+        "insights_final[item=app-store-distribution-not-monetization].metric.label",
+        "insights_final[item=app-store-distribution-not-monetization].metric.observation_status",
+        "insights_final[item=app-store-distribution-not-monetization].metric.sample_size",
+        "insights_final[item=app-store-distribution-not-monetization].metric.segment",
+        "insights_final[item=app-store-distribution-not-monetization].metric.subject",
+        "insights_final[item=app-store-distribution-not-monetization].metric.timeframe",
+        "insights_final[item=app-store-distribution-not-monetization].metric.trend",
+        "insights_final[item=app-store-distribution-not-monetization].metric.unit",
+        "insights_final[item=app-store-distribution-not-monetization].metric.value",
+        "insights_final[item=app-store-distribution-not-monetization].metric_strength_score",
+        "insights_final[item=app-store-distribution-not-monetization].novelty_score",
+        "insights_final[item=app-store-distribution-not-monetization].now_what",
+        "insights_final[item=app-store-distribution-not-monetization].pages[0]",
+        "insights_final[item=app-store-distribution-not-monetization].report_type_lens",
+        "insights_final[item=app-store-distribution-not-monetization].score",
+        "insights_final[item=app-store-distribution-not-monetization].so_what",
+        "insights_final[item=app-store-distribution-not-monetization].text",
+        "insights_final[item=attention-time-spent-cagr].coverage_role",
+        "insights_final[item=attention-time-spent-cagr].decision_relevance_score",
+        "insights_final[item=attention-time-spent-cagr].evidence",
+        "insights_final[item=attention-time-spent-cagr].evidence_id",
+        "insights_final[item=attention-time-spent-cagr].evidence_spans[0].evidence_id",
+        "insights_final[item=attention-time-spent-cagr].evidence_spans[0].page",
+        "insights_final[item=attention-time-spent-cagr].evidence_spans[0].source_pack",
+        "insights_final[item=attention-time-spent-cagr].evidence_spans[0].text",
+        "insights_final[item=attention-time-spent-cagr].evidence_spans[1].evidence_id",
+        "insights_final[item=attention-time-spent-cagr].evidence_spans[1].page",
+        "insights_final[item=attention-time-spent-cagr].evidence_spans[1].source_pack",
+        "insights_final[item=attention-time-spent-cagr].evidence_spans[1].text",
+        "insights_final[item=attention-time-spent-cagr].id",
+        "insights_final[item=attention-time-spent-cagr].metric.cohort",
+        "insights_final[item=attention-time-spent-cagr].metric.confidence",
+        "insights_final[item=attention-time-spent-cagr].metric.denominator",
+        "insights_final[item=attention-time-spent-cagr].metric.geography",
+        "insights_final[item=attention-time-spent-cagr].metric.label",
+        "insights_final[item=attention-time-spent-cagr].metric.observation_status",
+        "insights_final[item=attention-time-spent-cagr].metric.sample_size",
+        "insights_final[item=attention-time-spent-cagr].metric.segment",
+        "insights_final[item=attention-time-spent-cagr].metric.subject",
+        "insights_final[item=attention-time-spent-cagr].metric.timeframe",
+        "insights_final[item=attention-time-spent-cagr].metric.trend",
+        "insights_final[item=attention-time-spent-cagr].metric.unit",
+        "insights_final[item=attention-time-spent-cagr].metric.value",
+        "insights_final[item=attention-time-spent-cagr].metric_strength_score",
+        "insights_final[item=attention-time-spent-cagr].novelty_score",
+        "insights_final[item=attention-time-spent-cagr].now_what",
+        "insights_final[item=attention-time-spent-cagr].pages[0]",
+        "insights_final[item=attention-time-spent-cagr].report_type_lens",
+        "insights_final[item=attention-time-spent-cagr].score",
+        "insights_final[item=attention-time-spent-cagr].so_what",
+        "insights_final[item=attention-time-spent-cagr].text",
+        "insights_final[item=gaming-spend-2014].coverage_role",
+        "insights_final[item=gaming-spend-2014].decision_relevance_score",
+        "insights_final[item=gaming-spend-2014].evidence",
+        "insights_final[item=gaming-spend-2014].evidence_id",
+        "insights_final[item=gaming-spend-2014].evidence_spans[0].evidence_id",
+        "insights_final[item=gaming-spend-2014].evidence_spans[0].page",
+        "insights_final[item=gaming-spend-2014].evidence_spans[0].source_pack",
+        "insights_final[item=gaming-spend-2014].evidence_spans[0].text",
+        "insights_final[item=gaming-spend-2014].evidence_spans[1].evidence_id",
+        "insights_final[item=gaming-spend-2014].evidence_spans[1].page",
+        "insights_final[item=gaming-spend-2014].evidence_spans[1].source_pack",
+        "insights_final[item=gaming-spend-2014].evidence_spans[1].text",
+        "insights_final[item=gaming-spend-2014].id",
+        "insights_final[item=gaming-spend-2014].metric.cohort",
+        "insights_final[item=gaming-spend-2014].metric.confidence",
+        "insights_final[item=gaming-spend-2014].metric.denominator",
+        "insights_final[item=gaming-spend-2014].metric.geography",
+        "insights_final[item=gaming-spend-2014].metric.label",
+        "insights_final[item=gaming-spend-2014].metric.observation_status",
+        "insights_final[item=gaming-spend-2014].metric.sample_size",
+        "insights_final[item=gaming-spend-2014].metric.segment",
+        "insights_final[item=gaming-spend-2014].metric.subject",
+        "insights_final[item=gaming-spend-2014].metric.timeframe",
+        "insights_final[item=gaming-spend-2014].metric.trend",
+        "insights_final[item=gaming-spend-2014].metric.unit",
+        "insights_final[item=gaming-spend-2014].metric.value",
+        "insights_final[item=gaming-spend-2014].metric_strength_score",
+        "insights_final[item=gaming-spend-2014].novelty_score",
+        "insights_final[item=gaming-spend-2014].now_what",
+        "insights_final[item=gaming-spend-2014].pages[0]",
+        "insights_final[item=gaming-spend-2014].report_type_lens",
+        "insights_final[item=gaming-spend-2014].score",
+        "insights_final[item=gaming-spend-2014].so_what",
+        "insights_final[item=gaming-spend-2014].text",
+        "insights_final[item=messaging-user-additions-forecast].coverage_role",
+        "insights_final[item=messaging-user-additions-forecast].decision_relevance_score",
+        "insights_final[item=messaging-user-additions-forecast].evidence",
+        "insights_final[item=messaging-user-additions-forecast].evidence_id",
+        "insights_final[item=messaging-user-additions-forecast].evidence_spans[0].evidence_id",
+        "insights_final[item=messaging-user-additions-forecast].evidence_spans[0].page",
+        "insights_final[item=messaging-user-additions-forecast].evidence_spans[0].source_pack",
+        "insights_final[item=messaging-user-additions-forecast].evidence_spans[0].text",
+        "insights_final[item=messaging-user-additions-forecast].evidence_spans[1].evidence_id",
+        "insights_final[item=messaging-user-additions-forecast].evidence_spans[1].page",
+        "insights_final[item=messaging-user-additions-forecast].evidence_spans[1].source_pack",
+        "insights_final[item=messaging-user-additions-forecast].evidence_spans[1].text",
+        "insights_final[item=messaging-user-additions-forecast].id",
+        "insights_final[item=messaging-user-additions-forecast].metric.cohort",
+        "insights_final[item=messaging-user-additions-forecast].metric.confidence",
+        "insights_final[item=messaging-user-additions-forecast].metric.denominator",
+        "insights_final[item=messaging-user-additions-forecast].metric.geography",
+        "insights_final[item=messaging-user-additions-forecast].metric.label",
+        "insights_final[item=messaging-user-additions-forecast].metric.observation_status",
+        "insights_final[item=messaging-user-additions-forecast].metric.sample_size",
+        "insights_final[item=messaging-user-additions-forecast].metric.segment",
+        "insights_final[item=messaging-user-additions-forecast].metric.subject",
+        "insights_final[item=messaging-user-additions-forecast].metric.timeframe",
+        "insights_final[item=messaging-user-additions-forecast].metric.trend",
+        "insights_final[item=messaging-user-additions-forecast].metric.unit",
+        "insights_final[item=messaging-user-additions-forecast].metric.value",
+        "insights_final[item=messaging-user-additions-forecast].metric_strength_score",
+        "insights_final[item=messaging-user-additions-forecast].novelty_score",
+        "insights_final[item=messaging-user-additions-forecast].now_what",
+        "insights_final[item=messaging-user-additions-forecast].pages[0]",
+        "insights_final[item=messaging-user-additions-forecast].report_type_lens",
+        "insights_final[item=messaging-user-additions-forecast].score",
+        "insights_final[item=messaging-user-additions-forecast].so_what",
+        "insights_final[item=messaging-user-additions-forecast].text",
+        "insights_final[item=smart-cable-positioning].coverage_role",
+        "insights_final[item=smart-cable-positioning].decision_relevance_score",
+        "insights_final[item=smart-cable-positioning].evidence",
+        "insights_final[item=smart-cable-positioning].evidence_id",
+        "insights_final[item=smart-cable-positioning].evidence_spans[0].evidence_id",
+        "insights_final[item=smart-cable-positioning].evidence_spans[0].source_pack",
+        "insights_final[item=smart-cable-positioning].evidence_spans[0].text",
+        "insights_final[item=smart-cable-positioning].id",
+        "insights_final[item=smart-cable-positioning].metric.cohort",
+        "insights_final[item=smart-cable-positioning].metric.confidence",
+        "insights_final[item=smart-cable-positioning].metric.denominator",
+        "insights_final[item=smart-cable-positioning].metric.geography",
+        "insights_final[item=smart-cable-positioning].metric.label",
+        "insights_final[item=smart-cable-positioning].metric.observation_status",
+        "insights_final[item=smart-cable-positioning].metric.sample_size",
+        "insights_final[item=smart-cable-positioning].metric.segment",
+        "insights_final[item=smart-cable-positioning].metric.subject",
+        "insights_final[item=smart-cable-positioning].metric.timeframe",
+        "insights_final[item=smart-cable-positioning].metric.trend",
+        "insights_final[item=smart-cable-positioning].metric.unit",
+        "insights_final[item=smart-cable-positioning].metric.value",
+        "insights_final[item=smart-cable-positioning].metric_strength_score",
+        "insights_final[item=smart-cable-positioning].novelty_score",
+        "insights_final[item=smart-cable-positioning].now_what",
+        "insights_final[item=smart-cable-positioning].pages",
+        "insights_final[item=smart-cable-positioning].report_type_lens",
+        "insights_final[item=smart-cable-positioning].score",
+        "insights_final[item=smart-cable-positioning].so_what",
+        "insights_final[item=unified-stack-ma-expectation].coverage_role",
+        "insights_final[item=unified-stack-ma-expectation].decision_relevance_score",
+        "insights_final[item=unified-stack-ma-expectation].evidence",
+        "insights_final[item=unified-stack-ma-expectation].evidence_id",
+        "insights_final[item=unified-stack-ma-expectation].evidence_spans[0].evidence_id",
+        "insights_final[item=unified-stack-ma-expectation].evidence_spans[0].page",
+        "insights_final[item=unified-stack-ma-expectation].evidence_spans[0].source_pack",
+        "insights_final[item=unified-stack-ma-expectation].evidence_spans[0].text",
+        "insights_final[item=unified-stack-ma-expectation].evidence_spans[1].evidence_id",
+        "insights_final[item=unified-stack-ma-expectation].evidence_spans[1].page",
+        "insights_final[item=unified-stack-ma-expectation].evidence_spans[1].source_pack",
+        "insights_final[item=unified-stack-ma-expectation].evidence_spans[1].text",
+        "insights_final[item=unified-stack-ma-expectation].id",
+        "insights_final[item=unified-stack-ma-expectation].metric.cohort",
+        "insights_final[item=unified-stack-ma-expectation].metric.confidence",
+        "insights_final[item=unified-stack-ma-expectation].metric.denominator",
+        "insights_final[item=unified-stack-ma-expectation].metric.geography",
+        "insights_final[item=unified-stack-ma-expectation].metric.label",
+        "insights_final[item=unified-stack-ma-expectation].metric.observation_status",
+        "insights_final[item=unified-stack-ma-expectation].metric.sample_size",
+        "insights_final[item=unified-stack-ma-expectation].metric.segment",
+        "insights_final[item=unified-stack-ma-expectation].metric.subject",
+        "insights_final[item=unified-stack-ma-expectation].metric.timeframe",
+        "insights_final[item=unified-stack-ma-expectation].metric.trend",
+        "insights_final[item=unified-stack-ma-expectation].metric.unit",
+        "insights_final[item=unified-stack-ma-expectation].metric.value",
+        "insights_final[item=unified-stack-ma-expectation].metric_strength_score",
+        "insights_final[item=unified-stack-ma-expectation].novelty_score",
+        "insights_final[item=unified-stack-ma-expectation].now_what",
+        "insights_final[item=unified-stack-ma-expectation].pages[0]",
+        "insights_final[item=unified-stack-ma-expectation].report_type_lens",
+        "insights_final[item=unified-stack-ma-expectation].score",
+        "insights_final[item=unified-stack-ma-expectation].so_what",
+        "insights_final[item=unified-stack-ma-expectation].text"
+      ],
+      "changed_paths": [
+        "insights_final[item=smart-cable-positioning].text"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "insights_final[item=smart-cable-positioning].text",
+          "value": "THE “CABLE KILLER” WON'T BE A LOW-PRICED COMPETITOR, IT WILL BE “SMART CABLE”"
+        }
+      ],
+      "schema_version": "5"
+    }
+  ],
+  "report_id": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU",
+  "validation_run_id": "",
+  "cohort_id": "",
+  "workflow_run_id": "d36c4253-46d0-498c-9069-553d61010936",
+  "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+  "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "21ceb0f0aa04993239cc067f556b66fd690775c40f5039aaf4e879ab20d20ecb",
+  "latency_ms": 60072,
+  "schema_version": "1.0"
+}
