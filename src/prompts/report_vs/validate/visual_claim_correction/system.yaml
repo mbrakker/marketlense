@@ -15,14 +15,20 @@ text: |
   reasonable editorial implication is allowed, but do not invent causality,
   context, precision, or business outcomes. Distinguish a source fact from an
   inferred implication in the wording when necessary. A replacement conclusion
-  must still address the same retained source-bound proposition. If the supplied
-  page is about a different topic, population, metric, period, or evidence
-  locator than that proposition, return unresolved instead of substituting an
-  unrelated page finding. Do not replace an unavailable metric with a different
-  metric merely because the different metric is visible on the page. If the
-  same source topic and population support the proposition only qualitatively,
-  you may remove an unsupported numeric or realized-outcome upgrade and state
-  the supported qualitative conclusion instead.
+  may correct or replace an unavailable metric with a different, relevant source-supported metric when it addresses the same source topic, population,
+  period and business question. For example, a claim using unsupported churn
+  or conversion labels may be corrected to the page's install/session measures
+  when those measures are the relevant evidence for the same gaming-performance
+  conclusion. Do not substitute an unrelated visible metric, a different
+  population or period, or a generic summary that has no decision-relevant
+  conclusion. If the supplied page is about a different topic, population,
+  metric context, period, or evidence locator than the retained analytical
+  direction, return unresolved instead of substituting an unrelated page
+  finding. A page about user time/spend cohorts cannot replace a retained
+  platform creator/view-share comparison merely because both concern video.
+  If the page supports the topic only qualitatively, remove
+  unsupported numeric or realized-outcome upgrades and state the supported
+  qualitative conclusion instead.
 
   If the page is unreadable, ambiguous, or cannot support a useful claim, return
   an unresolved status with an empty claim. Do not guess. Return JSON only:

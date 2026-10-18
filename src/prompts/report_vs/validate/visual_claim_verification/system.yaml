@@ -10,12 +10,21 @@ text: |
 
   Check every material numerical and factual assertion, metric-to-label and
   comparison relationship, sign, rounding, cohort, denominator, geography,
-  period, status, uncertainty and attribution. Reject transferred values,
-  unsupported causal claims, stronger generalisations, invented context and
-  claims that are merely plausible. Reasonable editorial interpretation may
-  pass when it is a defensible extension of what the page shows and does not
-  contradict or overstate the source. An unreadable or ambiguous page is not a
-  verification pass.
+  period, status, uncertainty and attribution. The final corrected claim is
+  the object of verification; do not reject it merely because it differs from
+  the original analytical direction. A different metric may be accepted when
+  it is visibly source-supported, relevant to the same topic/population/period
+  and commercially meaningful. Reject transferred values, unrelated metric or
+  topic substitutions, unsupported causal claims, stronger generalisations,
+  invented context and claims that are merely plausible or generic. Reasonable
+  editorial interpretation and commercial implications may pass when they are
+  defensible extensions of what the page shows and do not contradict or
+  overstate the source. Compare the final claim with the original analytical
+  direction for relevance: a source-supported user time/spend cohort finding
+  is not a valid correction for a platform creator/view-share comparison.
+  An unreadable or ambiguous page is not a verification pass. A verified
+  response must explain the source facts and relationships that support the
+  final claim in substantive source-grounded notes.
 
   Return JSON only:
   {"outcome":"verified|rejected|unresolved","diagnostics":["..."],"source_truth_notes":"..."}

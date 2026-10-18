@@ -1807,10 +1807,10 @@
             "text": "In the global gaming-app benchmark for 2024-2025 year-on-year change, strategy churn grew 57%, casino conversion grew 22%, and slots conversion fell 5%.",
             "mutation": "unsupported churn/conversion metrics substituted for reported installs/sessions",
             "expected_assessment": "unsupported",
-            "corrected_statement": null,
-            "corrected_statement_assessment": null,
-            "promotion": "hold",
-            "reason": "The source reports installs and sessions only; no deterministic correction should invent churn or conversion values."
+            "corrected_statement": "In the global gaming-app benchmark for 2024-2025 year-on-year change, strategy sessions grew 57% with installs declining 1%, casino installs grew 22% with sessions down 5%, and slots installs grew 46% with sessions down 5%.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The original churn/conversion labels are unsupported, but the complete page directly supports the install/session replacement and the replacement remains a relevant gaming-performance conclusion."
           }
         ]
       }

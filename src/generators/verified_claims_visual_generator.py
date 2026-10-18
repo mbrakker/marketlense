@@ -5,10 +5,12 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
+from src.contracts.files import FileBundleHashRequest
 from src.contracts.llm import LLMContextCompactionPolicy
 from src.contracts.openai import OpenAIJSONImagePromptRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
@@ -24,6 +26,7 @@ from src.contracts.verified_claims import (
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import llm_service
+from src.services.file_service import hash_file_bundle as service_hash_file_bundle
 from src.services.pdf_service import render_page_for_crop_refine
 from src.services.prompt_service import load_prompt_set, render_prompt
 from src.utils.errors import AppError
@@ -35,6 +38,9 @@ CORRECTION_NAMESPACE = "report_vs/validate/visual_claim_correction"
 VERIFICATION_NAMESPACE = "report_vs/validate/visual_claim_verification"
 _CORRECTION_STATUSES = frozenset({"corrected", "unresolved", "failed"})
 _VERIFICATION_OUTCOMES = frozenset({"verified", "rejected", "unresolved"})
+_PDF_SHA256_PATTERN = re.compile(
+    r"(?:^|[|,; ])pdf-sha256[:=]([0-9a-f]{64})(?:$|[|,; ])", re.I
+)
 
 
 @dataclass(frozen=True)
@@ -49,6 +55,9 @@ class VerifiedClaimsVisualDependencies:
     openai_chat_json_with_images: Callable[
         [OpenAIJSONImagePromptRequest, RunContext], Any
     ]
+    hash_file_bundle: Callable[[FileBundleHashRequest, RunContext], Any] = (
+        service_hash_file_bundle
+    )
 
     @classmethod
     def default(cls) -> "VerifiedClaimsVisualDependencies":
@@ -57,6 +66,7 @@ class VerifiedClaimsVisualDependencies:
             render_prompt=render_prompt,
             render_page_for_crop_refine=render_page_for_crop_refine,
             openai_chat_json_with_images=llm_service.openai_chat_json_with_images,
+            hash_file_bundle=service_hash_file_bundle,
         )
 
 
@@ -110,6 +120,127 @@ def _physical_page(claim: Mapping[str, Any]) -> int | None:
     return pages[0] if pages else None
 
 
+def _source_pdf_sha256(source_identity: str) -> str:
+    matches = {
+        match.group(1).lower()
+        for match in _PDF_SHA256_PATTERN.finditer(_text(source_identity))
+    }
+    if len(matches) > 1:
+        raise AppError(
+            code="verified_claims_source_identity_ambiguous",
+            message="Source identity contains conflicting PDF hashes",
+            retryable=False,
+        )
+    return next(iter(matches), "")
+
+
+def _verify_source_pdf_identity(
+    *,
+    request: VisualClaimEvaluationRequest,
+    ctx: RunContext,
+    dependencies: VerifiedClaimsVisualDependencies,
+) -> None:
+    expected_sha256 = _source_pdf_sha256(request.source_identity)
+    if not expected_sha256:
+        raise AppError(
+            code="verified_claims_source_pdf_hash_missing",
+            message="Visual evaluation requires an expected source PDF hash",
+            retryable=False,
+        )
+    response = dependencies.hash_file_bundle(
+        FileBundleHashRequest(schema_version="1.0", paths=[request.pdf_path]),
+        ctx,
+    )
+    file_hashes = getattr(response, "file_sha256", None)
+    if isinstance(response, dict):
+        file_hashes = response.get("file_sha256")
+    actual_sha256 = (
+        _text(file_hashes.get(request.pdf_path))
+        if isinstance(file_hashes, dict)
+        else ""
+    ).lower()
+    if actual_sha256 != expected_sha256:
+        raise AppError(
+            code="verified_claims_source_pdf_hash_mismatch",
+            message="Source PDF hash does not match the expected source identity",
+            retryable=False,
+            context={
+                "expected_sha256": expected_sha256,
+                "actual_sha256": actual_sha256,
+            },
+        )
+
+
+def _binding_conflict_reason(
+    claim: Mapping[str, Any], source_identity: str
+) -> str:
+    claim_source_identity = _text(claim.get("source_identity"))
+    if claim_source_identity and claim_source_identity != _text(source_identity):
+        return "claim_source_identity_conflict"
+    raw_pages = claim.get("pages")
+    if raw_pages is not None and not isinstance(raw_pages, list):
+        return "pages_not_a_list"
+    if isinstance(raw_pages, list):
+        parsed_pages = [_positive_int(value) for value in raw_pages]
+        if any(value is None for value in parsed_pages):
+            return "pages_invalid"
+        declared_pages = set(parsed_pages)
+    else:
+        declared_pages = set()
+
+    explicit_pages = [
+        _positive_int(claim.get(key))
+        for key in ("physical_page", "physical_pdf_page")
+        if claim.get(key) is not None
+    ]
+    if any(page is None for page in explicit_pages):
+        return "physical_page_invalid"
+    if len(set(explicit_pages)) > 1:
+        return "physical_page_conflict"
+    if declared_pages and any(page not in declared_pages for page in explicit_pages):
+        return "physical_page_not_in_pages"
+
+    spans = claim.get("evidence_spans")
+    if spans is not None and not isinstance(spans, list):
+        return "evidence_spans_not_a_list"
+    span_pages: set[int] = set()
+    span_evidence_ids: set[str] = set()
+    span_source_ids: set[str] = set()
+    for span in spans or []:
+        if not isinstance(span, dict):
+            return "evidence_span_invalid"
+        page = span.get("page")
+        if page is not None:
+            parsed_page = _positive_int(page)
+            if parsed_page is None:
+                return "evidence_span_page_invalid"
+            span_pages.add(parsed_page)
+        evidence_id = _text(span.get("evidence_id"))
+        if evidence_id:
+            span_evidence_ids.add(evidence_id)
+        for key in ("source_identity", "source_id"):
+            value = _text(span.get(key))
+            if value:
+                span_source_ids.add(value)
+
+    if declared_pages and not span_pages.issubset(declared_pages):
+        return "evidence_span_page_conflict"
+    if not declared_pages and explicit_pages and span_pages and (
+        explicit_pages[0] not in span_pages
+    ):
+        return "evidence_span_page_conflict"
+    if span_source_ids and span_source_ids != {_text(source_identity)}:
+        return "evidence_span_source_conflict"
+    top_evidence_id = _text(claim.get("evidence_id"))
+    if (
+        top_evidence_id
+        and span_evidence_ids
+        and top_evidence_id not in span_evidence_ids
+    ):
+        return "evidence_id_conflict"
+    return ""
+
+
 def _evidence_ids(claim: Mapping[str, Any]) -> list[str]:
     values: list[str] = []
     for value in (_text(claim.get("evidence_id")),):
@@ -155,9 +286,10 @@ def _rendered_image_path(response: Any, output_dir: str) -> str:
         if isinstance(response, dict)
         else getattr(response, "image_path", "")
     )
-    path = Path(_text(raw_path))
-    if not path:
+    normalized_path = _text(raw_path)
+    if not normalized_path:
         return ""
+    path = Path(normalized_path)
     return str(path if path.is_absolute() else Path(output_dir) / path)
 
 
@@ -186,10 +318,33 @@ def _response_metadata(
     return request_id, model or request.model
 
 
-def _string_list(value: Any) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    return [_text(item) for item in value if _text(item)]
+def _strict_string_list(payload: Mapping[str, Any], key: str) -> list[str] | None:
+    value = payload.get(key)
+    if not isinstance(value, list) or any(
+        not isinstance(item, str) or not item.strip() for item in value
+    ):
+        return None
+    return [item.strip() for item in value]
+
+
+def _provider_error_details(prefix: str, error: Exception) -> list[str]:
+    if isinstance(error, AppError):
+        return [
+            prefix,
+            f"error_code:{error.code}",
+            f"retryable:{str(error.retryable).lower()}",
+            f"severity:{error.severity}",
+        ]
+    return [prefix, f"error_type:{type(error).__name__}", "retryable:unknown"]
+
+
+def _substantive_source_truth_notes(notes: str) -> bool:
+    normalized = " ".join(notes.split()).casefold()
+    return len(normalized.split()) >= 8 and normalized not in {
+        "matches",
+        "source matches",
+        "the source matches",
+    }
 
 
 def _require_visual_policy(bundle: Any) -> None:
@@ -342,14 +497,14 @@ def _correction_attempt(
         response = dependencies.openai_chat_json_with_images(model_request, ctx)
         payload = _response_json(response)
         request_id, model = _response_metadata(response, model_request)
-    except Exception:
+    except Exception as error:
         return (
             VisualClaimCorrectionAttempt(
                 schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
                 attempt=attempt,
                 claim="",
                 status="failed",
-                issues=["correction_provider_error"],
+                issues=_provider_error_details("correction_provider_error", error),
             ),
             "",
         )
@@ -366,12 +521,23 @@ def _correction_attempt(
             ),
             "",
         )
-    corrected_claim = _text(payload.get("claim"))
-    status = _text(payload.get("status")).lower()
-    issues = _string_list(payload.get("issues"))
+    if not isinstance(payload.get("claim"), str) or not isinstance(
+        payload.get("status"), str
+    ):
+        status = "failed"
+        corrected_claim = ""
+        issues = ["correction_response_invalid"]
+    else:
+        corrected_claim = _text(payload.get("claim"))
+        status = _text(payload.get("status")).lower()
+        issues = _strict_string_list(payload, "issues")
+    if issues is None:
+        status = "failed"
+        corrected_claim = ""
+        issues = ["correction_response_invalid"]
     if status not in _CORRECTION_STATUSES or (
         status == "corrected" and not corrected_claim
-    ):
+    ) or (status != "corrected" and corrected_claim):
         status = "failed"
         issues = [*issues, "correction_response_invalid"]
         corrected_claim = ""
@@ -416,6 +582,7 @@ def _verification_attempt(
                 "source_json": json.dumps(
                     source_payload, ensure_ascii=False, sort_keys=True
                 ),
+                "original_claim": _text(claim.get("text") or claim.get("claim")),
                 "corrected_claim": corrected_claim,
             },
         ),
@@ -433,12 +600,12 @@ def _verification_attempt(
         response = dependencies.openai_chat_json_with_images(model_request, ctx)
         payload = _response_json(response)
         request_id, model = _response_metadata(response, model_request)
-    except Exception:
+    except Exception as error:
         return VisualClaimVerificationAttempt(
             schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
             attempt=attempt,
             outcome="rejected",
-            diagnostics=["verification_provider_error"],
+            diagnostics=_provider_error_details("verification_provider_error", error),
         )
     if payload is None:
         return VisualClaimVerificationAttempt(
@@ -449,12 +616,28 @@ def _verification_attempt(
             request_id=request_id,
             model=model,
         )
-    outcome = _text(payload.get("outcome")).lower()
-    diagnostics = _string_list(payload.get("diagnostics"))
-    notes = _text(payload.get("source_truth_notes"))
+    if not isinstance(payload.get("outcome"), str) or not isinstance(
+        payload.get("source_truth_notes"), str
+    ):
+        outcome = "rejected"
+        diagnostics = ["verification_response_invalid"]
+        notes = ""
+    else:
+        outcome = _text(payload.get("outcome")).lower()
+        diagnostics = _strict_string_list(payload, "diagnostics")
+        notes = _text(payload.get("source_truth_notes"))
+    if diagnostics is None:
+        outcome = "rejected"
+        diagnostics = ["verification_response_invalid"]
     if outcome not in _VERIFICATION_OUTCOMES:
         outcome = "rejected"
         diagnostics = [*diagnostics, "verification_response_invalid"]
+    elif outcome == "verified" and not _substantive_source_truth_notes(notes):
+        outcome = "rejected"
+        diagnostics = [*diagnostics, "verification_explanation_missing"]
+    elif outcome in {"rejected", "unresolved"} and not diagnostics:
+        outcome = "rejected"
+        diagnostics = ["verification_diagnostics_missing"]
     return VisualClaimVerificationAttempt(
         schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
         attempt=attempt,
@@ -596,6 +779,11 @@ def evaluate_shortlisted_claims(
         )
     dependencies = dependencies or VerifiedClaimsVisualDependencies.default()
     evaluation_ctx = child_context(ctx, task_id=f"{ctx.task_id}:verified_claims_visual")
+    _verify_source_pdf_identity(
+        request=request,
+        ctx=evaluation_ctx,
+        dependencies=dependencies,
+    )
     correction_bundle = _bundle(
         namespace=CORRECTION_NAMESPACE,
         variables={"claim_json": "", "attempt": 1, "retry_feedback": "[]"},
@@ -624,6 +812,18 @@ def evaluate_shortlisted_claims(
                     physical_page=0,
                     outcome="skipped",
                     failure_reason="physical_page_missing",
+                )
+            )
+            continue
+        binding_conflict = _binding_conflict_reason(claim, request.source_identity)
+        if binding_conflict:
+            results.append(
+                _record_result(
+                    claim=claim,
+                    request=request,
+                    physical_page=physical_page or 0,
+                    outcome="skipped",
+                    failure_reason="source_binding_conflict",
                 )
             )
             continue

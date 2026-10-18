@@ -118,6 +118,87 @@ def _retained_report_summary(reference: dict[str, Any]) -> list[dict[str, Any]]:
     return summaries
 
 
+def _retained_artifact_path(reference: dict[str, Any], report: str) -> Path:
+    output_root = REPOSITORY_ROOT / reference["retained_run"]["isolated_output_root"]
+    digest = reference["report_artifact_digests"].get(report, {})
+    analysis_directory = digest.get("analysis_directory")
+    if not isinstance(analysis_directory, str) or not analysis_directory:
+        return output_root / "missing" / "artifacts.json"
+    return output_root / analysis_directory / "artifacts.json"
+
+
+def _retained_claims(
+    reference: dict[str, Any], report: str
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]], list[dict[str, Any]]]:
+    """Load the exact retained Step 1 shortlist without fabricating fixtures."""
+
+    artifact_path = _retained_artifact_path(reference, report)
+    if not artifact_path.is_file():
+        return [], {}, [
+            {
+                "report": report,
+                "reason": "retained_artifacts_unavailable",
+                "path": str(artifact_path),
+            }
+        ]
+    artifact = _load_json(artifact_path)
+    insights = artifact.get("insights_final")
+    if not isinstance(insights, list):
+        return [], {}, [
+            {
+                "report": report,
+                "reason": "retained_insights_final_missing",
+                "path": str(artifact_path),
+            }
+        ]
+
+    claims: list[dict[str, Any]] = []
+    metadata: dict[str, dict[str, Any]] = {}
+    unavailable: list[dict[str, Any]] = []
+    for position, insight in enumerate(insights):
+        if not isinstance(insight, dict):
+            unavailable.append(
+                {
+                    "report": report,
+                    "position": position,
+                    "reason": "retained_insight_not_an_object",
+                }
+            )
+            continue
+        candidate_id = str(
+            insight.get("id") or insight.get("candidate_id") or ""
+        ).strip()
+        text = str(insight.get("text") or "").strip()
+        pages = insight.get("pages")
+        physical_pages = (
+            [int(page) for page in pages if isinstance(page, int) and page > 0]
+            if isinstance(pages, list)
+            else []
+        )
+        if not candidate_id or not text or not physical_pages:
+            unavailable.append(
+                {
+                    "report": report,
+                    "position": position,
+                    "candidate_id": candidate_id,
+                    "reason": "retained_claim_missing_id_text_or_pages",
+                }
+            )
+            continue
+        claim = dict(insight)
+        claim["candidate_id"] = candidate_id
+        claim["text"] = text
+        claim["pages"] = physical_pages
+        claims.append(claim)
+        metadata[candidate_id] = {
+            "evaluation_set": "real_shortlisted",
+            "report": report,
+            "source_pages": physical_pages,
+            "retained_artifact_path": str(artifact_path.relative_to(REPOSITORY_ROOT)),
+        }
+    return claims, metadata, unavailable
+
+
 def _safe_report_name(report: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", report.lower()).strip("-") or "report"
 
@@ -247,8 +328,17 @@ def replay_live_step2(*, output_root: Path | None = None) -> dict[str, Any]:
     started = time.perf_counter()
     rows: list[dict[str, Any]] = []
     rendered_page_count = 0
+    retained_unavailable: list[dict[str, Any]] = []
+    retained_input_count = 0
     for report in REPORT_ORDER:
-        claims, metadata = _reference_claims(reference, report)
+        reference_claims, reference_metadata = _reference_claims(reference, report)
+        retained_claims, retained_metadata, unavailable = _retained_claims(
+            reference, report
+        )
+        retained_input_count += len(retained_claims)
+        retained_unavailable.extend(unavailable)
+        claims = reference_claims + retained_claims
+        metadata = {**reference_metadata, **retained_metadata}
         source = reference["source_pdfs"][report]
         pdf_path = REPOSITORY_ROOT / source["path"]
         request = VisualClaimEvaluationRequest(
@@ -277,36 +367,71 @@ def replay_live_step2(*, output_root: Path | None = None) -> dict[str, Any]:
             result_payload = asdict(result)
             result_metadata = metadata.get(result.candidate_id, {})
             verified = result.outcome in {"verified", "verified_after_retry"}
-            expected = bool(result_metadata.get("expected_source_supported"))
+            evaluation_set = result_metadata.get("evaluation_set", "reference_variant")
+            expected = result_metadata.get("expected_source_supported")
             result_payload.update(
                 {
+                    "evaluation_set": evaluation_set,
                     "case_id": result_metadata.get("case_id", ""),
-                    "expected_source_supported": expected,
-                    "outcome_matches_reference": verified == expected,
+                    "expected_source_supported": (
+                        bool(expected)
+                        if evaluation_set == "reference_variant"
+                        else None
+                    ),
+                    "outcome_matches_reference": (
+                        verified == bool(expected)
+                        if evaluation_set == "reference_variant"
+                        else None
+                    ),
                     "mutation": result_metadata.get("mutation", ""),
+                    "retained_artifact_path": result_metadata.get(
+                        "retained_artifact_path", ""
+                    ),
                 }
             )
             rows.append(result_payload)
 
     usage = _usage_summary(root / "cost-ledger.jsonl")
-    verified_count = sum(
-        row.get("outcome") in {"verified", "verified_after_retry"} for row in rows
+    reference_rows = [
+        row for row in rows if row.get("evaluation_set") == "reference_variant"
+    ]
+    retained_rows = [
+        row for row in rows if row.get("evaluation_set") == "real_shortlisted"
+    ]
+    expected_matches = sum(
+        bool(row.get("outcome_matches_reference")) for row in reference_rows
     )
-    first_pass_count = sum(row.get("outcome") == "verified" for row in rows)
-    retry_success_count = sum(
-        row.get("outcome") == "verified_after_retry" for row in rows
-    )
-    expected_matches = sum(bool(row.get("outcome_matches_reference")) for row in rows)
     false_accepts = sum(
         row.get("expected_source_supported") is False
         and row.get("outcome") in {"verified", "verified_after_retry"}
-        for row in rows
+        for row in reference_rows
     )
     false_rejects = sum(
         row.get("expected_source_supported") is True
         and row.get("outcome") not in {"verified", "verified_after_retry"}
-        for row in rows
+        for row in reference_rows
     )
+    def _outcome_counts(selected_rows: list[dict[str, Any]]) -> dict[str, int]:
+        return {
+            "verified": sum(
+                row.get("outcome") in {"verified", "verified_after_retry"}
+                for row in selected_rows
+            ),
+            "verified_first_pass": sum(
+                row.get("outcome") == "verified" for row in selected_rows
+            ),
+            "verified_after_retry": sum(
+                row.get("outcome") == "verified_after_retry" for row in selected_rows
+            ),
+            "failed_verification": sum(
+                row.get("outcome") == "failed_verification" for row in selected_rows
+            ),
+            "unresolved": sum(
+                row.get("outcome") == "unresolved" for row in selected_rows
+            ),
+            "skipped": sum(row.get("outcome") == "skipped" for row in selected_rows),
+        }
+
     report = {
         "schema_version": "1.0",
         "stage": "verified_claims_step2_visual_live",
@@ -317,18 +442,19 @@ def replay_live_step2(*, output_root: Path | None = None) -> dict[str, Any]:
         "reports": REPORT_ORDER,
         "reference_set": {"case_count": 15, "candidate_variant_count": 39},
         "input_claim_count": len(rows),
+        "real_shortlisted_set": {
+            "input_claim_count": retained_input_count,
+            "expected_claim_count": 29,
+            "evaluated_claim_count": len(retained_rows),
+            "unavailable": retained_unavailable,
+            "outcomes": _outcome_counts(retained_rows),
+        },
         "rendered_page_count": rendered_page_count,
         "outcomes": {
-            "verified": verified_count,
-            "verified_first_pass": first_pass_count,
-            "verified_after_retry": retry_success_count,
-            "failed_verification": sum(
-                row.get("outcome") == "failed_verification" for row in rows
-            ),
-            "unresolved": sum(row.get("outcome") == "unresolved" for row in rows),
-            "skipped": sum(row.get("outcome") == "skipped" for row in rows),
+            **_outcome_counts(rows),
         },
         "reference_comparison": {
+            "evaluated_claim_count": len(reference_rows),
             "outcome_matches": expected_matches,
             "false_accepts": false_accepts,
             "false_rejects": false_rejects,
