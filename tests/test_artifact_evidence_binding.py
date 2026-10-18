@@ -201,13 +201,14 @@ def test_numeric_summary_claim_rebinds_to_paired_metric_finding() -> None:
     assert claim["pages"] == [27]
 
 
-def test_doc_map_insight_rebinds_to_unique_section_finding_pages() -> None:
+def test_normal_insight_binding_keeps_provisional_doc_map_locator_unchanged() -> None:
     insight = {
         "id": "ai-search-platform-relationships",
         "text": "Publishers forecast search traffic to decline.",
         "evidence_id": "answer-engines-and-traffic",
         "evidence": "The section summary is navigation context.",
         "pages": [10],
+        "metric": {"value": "40%", "direction": "decline"},
     }
 
     bind_artifact_evidence_spans(
@@ -242,28 +243,11 @@ def test_doc_map_insight_rebinds_to_unique_section_finding_pages() -> None:
         },
     )
 
-    assert insight["evidence_id"] == "search-traffic-forecast"
-    assert insight["pages"] == [3, 4, 10]
-    assert insight["evidence_spans"] == [
-        {
-            "evidence_id": "search-traffic-forecast",
-            "source_pack": "findings",
-            "page": 3,
-            "text": "The forecast is a publisher expectation.",
-        },
-        {
-            "evidence_id": "search-traffic-forecast",
-            "source_pack": "findings",
-            "page": 4,
-            "text": "The forecast is a publisher expectation.",
-        },
-        {
-            "evidence_id": "search-traffic-forecast",
-            "source_pack": "findings",
-            "page": 10,
-            "text": "The forecast is a publisher expectation.",
-        },
-    ]
+    assert insight["evidence_id"] == "answer-engines-and-traffic"
+    assert insight["pages"] == [10]
+    assert insight["metric"] == {"value": "40%", "direction": "decline"}
+    assert insight["evidence"] == "The section summary is navigation context."
+    assert insight["evidence_spans"][0]["source_pack"] == "doc_map"
     assert insight["text"] == "Publishers forecast search traffic to decline."
 
 
@@ -357,3 +341,137 @@ def test_doc_map_insight_does_not_promote_unsupported_finding() -> None:
 
     assert insight["evidence_id"] == "shared-section"
     assert insight["evidence_spans"][0]["source_pack"] == "doc_map"
+
+
+def test_doc_map_insight_does_not_promote_without_explicit_fidelity_support() -> None:
+    insight = {
+        "id": "missing-fidelity",
+        "text": "Publishers forecast search traffic to decline.",
+        "evidence_id": "shared-section",
+        "pages": [8],
+    }
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=[insight],
+        quotes_final=[],
+        doc_map={"sections": [{"id": "shared-section", "pages": [8]}]},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "matching-finding",
+                        "section_id": "shared-section",
+                        "text": "Publishers forecast search traffic to decline.",
+                        "evidence": "The forecast is a publisher expectation.",
+                        "pages": [8],
+                    }
+                ]
+            }
+        },
+    )
+
+    assert insight["evidence_id"] == "shared-section"
+    assert insight["evidence_spans"][0]["source_pack"] == "doc_map"
+
+
+def test_doc_map_insight_does_not_match_reversed_proposition_by_token_overlap() -> None:
+    insight = {
+        "id": "reversed-trend",
+        "text": "Publishers forecast search traffic to rise.",
+        "evidence_id": "shared-section",
+        "pages": [8],
+    }
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=[insight],
+        quotes_final=[],
+        doc_map={"sections": [{"id": "shared-section", "pages": [8]}]},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "falling-finding",
+                        "section_id": "shared-section",
+                        "text": "Publishers forecast search traffic to decline.",
+                        "evidence": "The forecast is a publisher expectation.",
+                        "pages": [8],
+                    }
+                ]
+            }
+        },
+    )
+
+    assert insight["evidence_id"] == "shared-section"
+    assert insight["evidence_spans"][0]["source_pack"] == "doc_map"
+
+
+def test_doc_map_insight_does_not_match_same_value_for_a_different_metric() -> None:
+    insight = {
+        "id": "metric-scope",
+        "text": "Revenue growth reached 10% in 2025.",
+        "evidence_id": "shared-section",
+        "pages": [8],
+    }
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=[insight],
+        quotes_final=[],
+        doc_map={"sections": [{"id": "shared-section", "pages": [8]}]},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "user-growth",
+                        "section_id": "shared-section",
+                        "text": "User growth reached 10% in 2025.",
+                        "evidence": "The user metric is reported on the page.",
+                        "pages": [8],
+                    }
+                ]
+            }
+        },
+    )
+
+    assert insight["evidence_id"] == "shared-section"
+    assert insight["evidence_spans"][0]["source_pack"] == "doc_map"
+
+
+def test_already_canonical_insight_binding_remains_source_bound() -> None:
+    insight = {
+        "id": "canonical-insight",
+        "text": "The source-supported proposition.",
+        "evidence_id": "verified-finding",
+        "evidence": "Stale artifact text.",
+        "pages": [1],
+    }
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=[insight],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "verified-finding",
+                        "text": "The source-supported proposition.",
+                        "evidence": "Authoritative source excerpt.",
+                        "pages": [7],
+                    }
+                ]
+            }
+        },
+    )
+
+    assert insight["evidence_id"] == "verified-finding"
+    assert insight["pages"] == [7]
+    assert insight["evidence"] == "Authoritative source excerpt."
+    assert insight["evidence_spans"][0]["source_pack"] == "findings"

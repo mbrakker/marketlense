@@ -501,21 +501,35 @@ def test_conflicting_claim_source_identity_fails_closed(tmp_path):
     assert requests == []
 
 
-def test_doc_map_only_claim_binding_is_skipped_without_direct_source_span(tmp_path):
+def test_doc_map_only_claim_page_is_eligible_for_provisional_visual_inspection(tmp_path):
     claim = _claim("doc-map-only", "Original claim")
     claim["evidence_spans"][0]["source_pack"] = "doc_map"
     requests = []
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The page shows the corrected metric and cohort relationship."
+                ),
+            },
+        ]
+    )
+    dependencies = _dependencies(responses, [], requests)
 
     result = evaluate_shortlisted_claims(
         request=_request(tmp_path, [claim]),
         settings=_settings(tmp_path),
         ctx=_ctx(),
-        dependencies=_dependencies(iter(()), [], requests),
+        dependencies=dependencies,
     )
 
-    assert result.claims[0].outcome == "skipped"
-    assert result.claims[0].failure_reason == "source_binding_conflict"
-    assert requests == []
+    assert result.claims[0].outcome == "verified"
+    assert result.claims[0].evidence_ids == ["f1"]
+    assert result.claims[0].evidence_spans == claim["evidence_spans"]
+    assert len(requests) == 2
 
 
 def test_verified_outcome_requires_substantive_source_truth_notes(tmp_path):
@@ -547,6 +561,54 @@ def test_verified_outcome_requires_substantive_source_truth_notes(tmp_path):
     assert all(
         "verification_explanation_missing" in attempt.diagnostics
         for attempt in result.claims[0].verification_attempts
+    )
+
+
+def test_heading_only_qualitative_rewrite_is_not_verified(tmp_path):
+    claims = [_claim("candidate-1", "Original qualitative claim")]
+    responses = iter(
+        [
+            {
+                "claim": "The page frames this as a strategic priority.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The page is only a section divider with no explanatory text."
+                ),
+            },
+            {
+                "claim": "The page frames this as a strategic priority.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The page is only a section divider with no explanatory text."
+                ),
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, claims),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "unresolved"
+    assert item.failure_reason == "verification_claim_not_substantive"
+    assert len(item.verification_attempts) == 2
+    assert all(
+        "verification_claim_not_substantive" in attempt.diagnostics
+        for attempt in item.verification_attempts
     )
 
 

@@ -206,7 +206,6 @@ def _binding_conflict_reason(
     span_pages: set[int] = set()
     span_evidence_ids: set[str] = set()
     span_source_ids: set[str] = set()
-    span_source_packs: set[str] = set()
     for span in spans or []:
         if not isinstance(span, dict):
             return "evidence_span_invalid"
@@ -219,9 +218,6 @@ def _binding_conflict_reason(
         evidence_id = _text(span.get("evidence_id"))
         if evidence_id:
             span_evidence_ids.add(evidence_id)
-        source_pack = _text(span.get("source_pack"))
-        if source_pack:
-            span_source_packs.add(source_pack.casefold())
         for key in ("source_identity", "source_id"):
             value = _text(span.get(key))
             if value:
@@ -235,8 +231,6 @@ def _binding_conflict_reason(
         return "evidence_span_page_conflict"
     if span_source_ids and span_source_ids != {_text(source_identity)}:
         return "evidence_span_source_conflict"
-    if span_source_packs and span_source_packs <= {"doc_map"}:
-        return "doc_map_navigation_only"
     top_evidence_id = _text(claim.get("evidence_id"))
     if (
         top_evidence_id
@@ -372,7 +366,39 @@ def _substantive_source_truth_notes(notes: str) -> bool:
     )
     if normalized.startswith(generic_opening) and not source_specific_detail:
         return False
+    insufficient_page_language = (
+        "section divider",
+        "no explanatory text",
+        "does not specify",
+        "only a heading",
+    )
+    if any(marker in normalized for marker in insufficient_page_language):
+        return False
     return True
+
+
+def _verified_claim_has_substantive_content(claim: str) -> bool:
+    """Reject a verified result that only restates a page heading."""
+
+    normalized = " ".join(claim.split()).casefold()
+    if not normalized:
+        return False
+    heading_like = re.match(
+        r"^(?:the )?(?:page|report) "
+        r"(?:frames|describes|presents|states)\b.+$",
+        normalized,
+    )
+    if not heading_like:
+        return True
+    source_specific_detail = re.search(
+        r"\b(?:value|metric|cohort|population|denominator|period|timeframe|"
+        r"forecast|observed|trend|relationship|comparison|share|revenue|"
+        r"traffic|users|consumers|publishers|buyers|respondents|automation|"
+        r"oversight|chart|table|figure|survey|percent|percentage|risk|"
+        r"increase|decrease|decline|growth|recommend)\b|\d",
+        normalized,
+    )
+    return bool(source_specific_detail)
 
 
 def _require_visual_policy(bundle: Any) -> None:
@@ -660,9 +686,15 @@ def _verification_attempt(
     if outcome not in _VERIFICATION_OUTCOMES:
         outcome = "rejected"
         diagnostics = [*diagnostics, "verification_response_invalid"]
-    elif outcome == "verified" and not _substantive_source_truth_notes(notes):
-        outcome = "rejected"
-        diagnostics = [*diagnostics, "verification_explanation_missing"]
+    elif outcome == "verified":
+        quality_issues: list[str] = []
+        if not _substantive_source_truth_notes(notes):
+            quality_issues.append("verification_explanation_missing")
+        if not _verified_claim_has_substantive_content(corrected_claim):
+            quality_issues.append("verification_claim_not_substantive")
+        if quality_issues:
+            outcome = "rejected"
+            diagnostics = [*diagnostics, *quality_issues]
     elif outcome in {"rejected", "unresolved"} and not diagnostics:
         outcome = "rejected"
         diagnostics = ["verification_diagnostics_missing"]
@@ -796,6 +828,19 @@ def _evaluate_claim(
                 verification_attempts=verification_attempts,
             )
         retry_feedback = verification.diagnostics
+    if verification_attempts and any(
+        "verification_claim_not_substantive" in diagnostic
+        for diagnostic in verification_attempts[-1].diagnostics
+    ):
+        return _record_result(
+            claim=claim,
+            request=request,
+            physical_page=physical_page,
+            outcome="unresolved",
+            failure_reason="verification_claim_not_substantive",
+            correction_attempts=correction_attempts,
+            verification_attempts=verification_attempts,
+        )
     return _record_result(
         claim=claim,
         request=request,

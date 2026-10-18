@@ -63,7 +63,7 @@ def test_retained_shortlist_replay_assembles_exact_frozen_five_claims():
     assert total == 29
 
 
-def test_retained_replay_rebinds_doc_map_navigation_to_direct_finding() -> None:
+def test_retained_replay_keeps_doc_map_pages_as_provisional_source_context() -> None:
     reference = _load_json(REFERENCE_PATH)
 
     claims, metadata, unavailable = _retained_claims(
@@ -76,20 +76,21 @@ def test_retained_replay_rebinds_doc_map_navigation_to_direct_finding() -> None:
         for claim in claims
         if claim["candidate_id"] == "newsroom-ai-uses-and-oversight"
     )
-    assert newsroom_claim["evidence_id"] == "newsroom-ai-adoption"
+    assert newsroom_claim["evidence_id"] == "latest-tales-ai-newsroom"
     assert newsroom_claim["pages"] == [30]
     assert metadata["newsroom-ai-uses-and-oversight"][
         "source_binding_resolution"
-    ] == "direct_finding_rebound"
-    assert metadata["newsroom-ai-uses-and-oversight"][
-        "source_binding_before"
-    ] == {
+    ] == "provisional_page_inspection"
+    assert metadata["newsroom-ai-uses-and-oversight"]["source_binding_before"] == {
         "evidence_id": "latest-tales-ai-newsroom",
         "pages": [30],
     }
-    assert metadata["newsroom-ai-uses-and-oversight"]["source_binding_after"][
-        "source_packs"
-    ] == ["findings"]
+    assert metadata["newsroom-ai-uses-and-oversight"]["source_binding_after"] == {
+        "evidence_id": "latest-tales-ai-newsroom",
+        "pages": [30],
+        "source_packs": ["doc_map"],
+        "canonical_promotion": False,
+    }
 
     activate_claims, activate_metadata, _ = _retained_claims(reference, "Activate")
     assistant_claim = next(
@@ -100,7 +101,7 @@ def test_retained_replay_rebinds_doc_map_navigation_to_direct_finding() -> None:
     assert assistant_claim["evidence_id"] == "s4"
     assert activate_metadata["activate-digital-assistant-access-forecast"][
         "source_binding_resolution"
-    ] == "unresolved_doc_map_binding"
+    ] == "provisional_page_inspection"
 
 
 def test_step2_outcome_counts_make_retry_successes_mutually_exclusive() -> None:

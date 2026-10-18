@@ -23,7 +23,6 @@ from src.contracts.verified_claims import (
     VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
     VisualClaimEvaluationRequest,
 )
-from src.generators.artifact_normalization import bind_artifact_evidence_spans
 from src.generators.verified_claims_visual_generator import (
     evaluate_shortlisted_claims,
 )
@@ -197,15 +196,6 @@ def _retained_claims(
             "source_pages": physical_pages,
             "retained_artifact_path": str(artifact_path.relative_to(REPOSITORY_ROOT)),
         }
-    doc_map_path = artifact_path.parent / "doc_map.json"
-    findings_path = artifact_path.parent / "findings.json"
-    fidelity_path = artifact_path.parent / "evidence_fidelity.json"
-    doc_map = _load_json(doc_map_path) if doc_map_path.is_file() else {}
-    evidence_packs: dict[str, Any] = {}
-    if findings_path.is_file():
-        evidence_packs["findings"] = _load_json(findings_path)
-    if fidelity_path.is_file():
-        evidence_packs["evidence_fidelity"] = _load_json(fidelity_path)
     before_bindings = {
         str(claim.get("candidate_id")): {
             "evidence_id": str(claim.get("evidence_id") or ""),
@@ -213,15 +203,6 @@ def _retained_claims(
         }
         for claim in claims
     }
-    if isinstance(doc_map, dict) and evidence_packs:
-        bind_artifact_evidence_spans(
-            summary={},
-            insights_candidates=[],
-            insights_final=claims,
-            quotes_final=[],
-            doc_map=doc_map,
-            evidence_packs=evidence_packs,
-        )
     for claim in claims:
         candidate_id = str(claim.get("candidate_id") or "")
         after_binding = {
@@ -234,20 +215,16 @@ def _retained_claims(
                     if isinstance(span, dict) and str(span.get("source_pack") or "")
                 }
             ),
+            "canonical_promotion": False,
         }
         metadata[candidate_id]["source_binding_before"] = before_bindings.get(
             candidate_id, {}
         )
         metadata[candidate_id]["source_binding_after"] = after_binding
         metadata[candidate_id]["source_binding_resolution"] = (
-            "direct_finding_rebound"
-            if before_bindings.get(candidate_id, {}).get("evidence_id")
-            != after_binding["evidence_id"]
-            else (
-                "unresolved_doc_map_binding"
-                if after_binding["source_packs"] == ["doc_map"]
-                else "retained"
-            )
+            "provisional_page_inspection"
+            if after_binding["source_packs"] == ["doc_map"]
+            else "retained"
         )
     return claims, metadata, unavailable
 
