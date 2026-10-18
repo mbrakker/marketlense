@@ -183,6 +183,25 @@ def test_resolved_report_title_prefers_source_grounded_citation_over_filename_id
     )
 
 
+def test_title_identity_accepts_explicit_source_title_matching_runtime_title(
+    tmp_path,
+) -> None:
+    title = "TECH AND MEDIA OUTLOOK 2016"
+    runtime = replace(_runtime(tmp_path, md5="md5"), report_title=title)
+    source = replace(
+        _source(runtime),
+        title_resolution=ReportTitleResolution(
+            title=title,
+            explicit_source_title=title,
+            candidate_source="cover_title_page",
+        ),
+    )
+    selection = _selection(runtime, source)
+    analysis = replace(_analysis(runtime, source, selection), payload=source.payload)
+
+    assert _title_identity_error(runtime, source, analysis) == ""
+
+
 def test_render_report_output_sources_metadata_from_db_and_returns_complete_outcome(
     tmp_path, assert_no_defaulted_required_fields
 ):

@@ -59,6 +59,7 @@ from src.generators.report_render_generator import (
     _public_source_note,
     _resolved_public_publisher,
     _resolved_report_title,
+    _title_identity_error,
     render_preview_asset,
     render_report_output,
 )

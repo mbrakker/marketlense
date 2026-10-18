@@ -266,6 +266,13 @@ distinct ladder before any model call:
    support.
 4. Removal/abstention of the unsupported atomic item.
 
+Insight selection retains each stable insight ID at most once, including when
+candidate and final stages use different wording for the same item. Its
+selection revision participates in the artifact cache identity. A safe-removal
+replacement must introduce no new public-quality failures; unchanged failures
+on retained siblings remain visible to their own repairs and final validation,
+instead of preventing the failed item from being replaced.
+
 When the exhausted grounding target is an insight's `so_what` or `now_what`,
 safe removal clears only that exact implication field and retains the insight's
 supported text and evidence binding. The planner authorizes that leaf directly;
@@ -300,6 +307,10 @@ reported by each validated repair decision with that decision's authorized
 changed paths, then recomputes the binding from retained source data. It accepts
 the rebind only when the same insight's decision selected that evidence and the
 evidence text, pages, and source spans match exactly.
+Grounding evidence for an insight or summary claim combines the retained
+finding statement with its authoritative source-PDF page when that page is
+available, preserving qualifiers such as geography that a derived sentence may
+omit.
 
 Summary safe removal applies only to the exact claim-map or sentence paths in
 the plan. When one target contains both public-copy and claim-map issues, the
@@ -359,6 +370,12 @@ interrupting title resolution. It never regenerates editorial artifacts.
 The resolution is checkpointed and is the title authority for new source
 preparation. If it finds no candidate, rendering may use the document-map title
 only when that complete title appears in the retained first-page source text.
+Grounding also accepts a public title only when it exactly matches the retained
+explicit cover/title-page resolution. A generated DocMap heading cannot
+contradict or replace that direct source identity. Rendering treats the same
+verified explicit title as authoritative even when it matches a runtime title
+or report slug, so its generated-looking execution name cannot invalidate
+visible source evidence.
 A generic/missing final title or one that conflicts with an explicit visible
 source title remains a typed hard failure. Recovery is routed to
 metadata/identity resolution rather than editorial regeneration. A missing

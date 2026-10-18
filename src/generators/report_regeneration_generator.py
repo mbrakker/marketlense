@@ -189,8 +189,15 @@ def regenerate_artifacts(
     )
     safe_doc_map = request.doc_map if isinstance(request.doc_map, dict) else {}
     safe_evidence = (
-        request.evidence_packs if isinstance(request.evidence_packs, dict) else {}
+        deepcopy(request.evidence_packs)
+        if isinstance(request.evidence_packs, dict)
+        else {}
     )
+    # Regeneration helpers may enrich working evidence while assembling a
+    # candidate. Keep an immutable per-attempt copy for deterministic
+    # projection rebuilding so the finalizer and candidate validator consume
+    # the same retained evidence, independent of helper mutations.
+    canonical_evidence = deepcopy(safe_evidence)
     availability = normalize_artifact_source_status(
         request.source_status,
         request.settings,
@@ -422,8 +429,9 @@ def regenerate_artifacts(
     finalized_derived_paths = finalize_regeneration_candidate_artifacts(
         promoted_baseline=request.current_artifacts,
         candidate_artifacts=updated_artifacts,
-        evidence_packs=safe_evidence,
+        evidence_packs=canonical_evidence,
         atomic_source_patch=atomic_source_patch,
+        regeneration_attempt=request.attempt_index,
     )
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.
@@ -5087,6 +5095,20 @@ def _remove_failed_insight_with_retained_replacement(
     selected = retained_final
     replacement = None
     if len(selected) < target_count:
+        retained_quality = evaluate_public_editorial_quality(
+            report_id=execution.runtime.request.report_id,
+            artifacts={"insights_final": retained_final},
+        )
+        retained_quality_failures = {
+            (
+                issue.rule_id,
+                issue.public_item_id,
+                issue.affected_field,
+                issue.explanation,
+            )
+            for issue in retained_quality.issues
+            if issue.affected_artifact == "insights_final"
+        }
         occupied_ids = {_s(item.get("id")).strip() for item in selected}
         for candidate in pool:
             candidate_id = _s(candidate.get("id")).strip()
@@ -5141,7 +5163,15 @@ def _remove_failed_insight_with_retained_replacement(
                 artifacts={"insights_final": proposed},
             )
             if any(
-                issue.affected_artifact == "insights_final" for issue in quality.issues
+                issue.affected_artifact == "insights_final"
+                and (
+                    issue.rule_id,
+                    issue.public_item_id,
+                    issue.affected_field,
+                    issue.explanation,
+                )
+                not in retained_quality_failures
+                for issue in quality.issues
             ):
                 continue
             selected = proposed

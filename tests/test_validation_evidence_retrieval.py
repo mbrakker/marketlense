@@ -1,4 +1,3 @@
-import ast
 import inspect
 
 from src.generators.validation import evidence
@@ -6,6 +5,7 @@ from src.generators.validation.evidence import (
     build_evidence_windows,
     char_ngram_counts,
     retrieve_evidence_windows,
+    split_sentences,
 )
 
 
@@ -18,15 +18,15 @@ def test_build_evidence_windows_stores_precomputed_char_vectors() -> None:
     window = windows[0]
     expected_counts = char_ngram_counts(window.text, n=3)
     assert window.char_ngram_counts == expected_counts
-    assert window.char_ngram_norm == sum(
-        value * value for value in expected_counts.values()
-    ) ** 0.5
+    assert (
+        window.char_ngram_norm
+        == sum(value * value for value in expected_counts.values()) ** 0.5
+    )
     assert window.char_ngram_norm > 0.0
 
 
 def test_retrieve_evidence_windows_uses_bounded_top_k_without_full_sort() -> None:
     source = inspect.getsource(evidence.retrieve_evidence_windows)
-    tree = ast.parse(source)
 
     assert "heapq" in source
     assert ".sort(" not in source
@@ -78,6 +78,12 @@ def test_retrieve_evidence_windows_handles_empty_inputs() -> None:
     assert retrieve_evidence_windows("", windows) == []
     assert retrieve_evidence_windows("   ", windows) == []
     assert retrieve_evidence_windows("Retail media revenue grew 17%.", []) == []
+
+
+def test_split_sentences_keeps_initialism_with_its_numeric_claim() -> None:
+    assert split_sentences("U.S. shoppers recorded 77% online penetration.") == [
+        "U.S. shoppers recorded 77% online penetration."
+    ]
 
 
 def test_retrieve_evidence_windows_handles_long_pdf_text_with_stable_order() -> None:

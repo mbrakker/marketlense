@@ -2326,13 +2326,25 @@ def _source_references(
 
 
 def _item_direct_evidence_text(raw: dict) -> str:
-    """Return the item’s direct excerpt, falling back to its quote text."""
+    """Return the direct excerpt plus its canonical finding statement.
 
+    Findings retain both the chart/OCR excerpt and a source-grounded sentence.
+    Keeping both prevents layout noise from discarding an explicit category or
+    population binding that the statement already establishes.
+    """
+
+    primary = ""
     for key in ("evidence", "quote", "quote_text", "snippet", "excerpt", "text"):
         value = raw.get(key)
         if isinstance(value, str) and value.strip():
-            return value.strip()
-    return ""
+            primary = value.strip()
+            break
+    statement = str(raw.get("text") or "").strip()
+    if primary and statement and normalize_for_lookup(primary) != normalize_for_lookup(
+        statement
+    ):
+        return f"{primary}\n{statement}"
+    return primary or statement
 
 
 def _exact_evidence_pages(

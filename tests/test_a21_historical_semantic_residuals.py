@@ -504,6 +504,37 @@ def test_doubleverify_safe_removal_rejects_unsupported_numeric_retained_candidat
     assert execution.state.prompt_namespaces == []
 
 
+def test_safe_removal_preserves_unrelated_sibling_quality_failure() -> None:
+    case = _case("doubleverify")
+    sibling = case["artifacts"]["insights_final"][0]
+    sibling["text"] = "An unsupported sibling number reached 987654321%."
+    finding_text = "The source describes a separate measurement method for channels."
+    finding = {
+        "id": "retained-independent-finding",
+        "text": finding_text,
+        "evidence": finding_text,
+        "pages": [12],
+    }
+    case["evidence_packs"]["findings"] = {"findings": [finding]}
+    case["evidence_packs"]["doc_map"]["sections"].append(
+        {"id": finding["id"], "summary": finding_text, "pages": [12]}
+    )
+    execution = _doubleverify_removal_execution(case)
+
+    _handle_insights_bundle_regeneration(execution)
+
+    assert (
+        next(
+            item
+            for item in execution.state.insights_final
+            if item["id"] == sibling["id"]
+        )
+        == sibling
+    )
+    assert finding["id"] in {item["id"] for item in execution.state.insights_final}
+    assert execution.state.prompt_namespaces == []
+
+
 def test_candidate_gate_authorizes_only_the_deliberately_removed_insight() -> None:
     case = _case("doubleverify")
     removed_id = "insight-regional-attention-index"
