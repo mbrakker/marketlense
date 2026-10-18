@@ -66,6 +66,7 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "different, relevant" in correction.system.text.lower()
     assert "qualitative conclusion" in correction.system.text.lower()
     assert "relevant source-supported metric" in correction.system.text.lower()
+    assert "bounded pattern" in verification.system.text.lower()
 
 
 def _settings(tmp_path):
@@ -500,12 +501,35 @@ def test_conflicting_claim_source_identity_fails_closed(tmp_path):
     assert requests == []
 
 
+def test_doc_map_only_claim_binding_is_skipped_without_direct_source_span(tmp_path):
+    claim = _claim("doc-map-only", "Original claim")
+    claim["evidence_spans"][0]["source_pack"] = "doc_map"
+    requests = []
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [claim]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(iter(()), [], requests),
+    )
+
+    assert result.claims[0].outcome == "skipped"
+    assert result.claims[0].failure_reason == "source_binding_conflict"
+    assert requests == []
+
+
 def test_verified_outcome_requires_substantive_source_truth_notes(tmp_path):
     claims = [_claim("candidate-1", "Original claim")]
     responses = iter(
         [
             {"claim": "Corrected claim", "status": "corrected", "issues": []},
-            {"outcome": "verified", "diagnostics": [], "source_truth_notes": "matches"},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The claim is plausible and supported by the source page."
+                ),
+            },
             {"claim": "Corrected claim again", "status": "corrected", "issues": []},
             {"outcome": "verified", "diagnostics": [], "source_truth_notes": ""},
         ]
@@ -553,9 +577,66 @@ def test_typed_provider_error_details_are_retained(tmp_path):
     )
 
     assert result.claims[0].outcome == "unresolved"
-    assert len(result.claims[0].correction_attempts) == 2
+    assert len(result.claims[0].correction_attempts) == 1
     assert (
         "error_code:llm_budget_exceeded"
         in result.claims[0].correction_attempts[0].issues
     )
     assert "retryable:false" in result.claims[0].correction_attempts[0].issues
+
+
+def test_non_retryable_verification_error_does_not_retry_and_next_claim_runs(tmp_path):
+    claims = [_claim("candidate-1", "First"), _claim("candidate-2", "Second")]
+    base = _dependencies(iter(()), [], [])
+    calls = 0
+
+    def model(request, _ctx):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise AppError(
+                code="llm_provider_configuration_invalid",
+                message="invalid provider configuration",
+                retryable=False,
+                severity="error",
+            )
+        if calls in {1, 3}:
+            return SimpleNamespace(
+                parsed_json={"claim": "Corrected", "status": "corrected", "issues": []},
+                request_id=f"request-{calls}",
+                model=request.model,
+            )
+        return SimpleNamespace(
+            parsed_json={
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The source page confirms the corrected value and cohort "
+                    "relationship."
+                ),
+            },
+            request_id=f"request-{calls}",
+            model=request.model,
+        )
+
+    dependencies = base.__class__(
+        load_prompt_set=base.load_prompt_set,
+        render_prompt=base.render_prompt,
+        render_page_for_crop_refine=base.render_page_for_crop_refine,
+        openai_chat_json_with_images=model,
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, claims),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=dependencies,
+    )
+
+    assert [item.outcome for item in result.claims] == ["unresolved", "verified"]
+    assert result.claims[0].failure_reason == "verification_non_retryable"
+    assert len(result.claims[0].correction_attempts) == 1
+    assert len(result.claims[0].verification_attempts) == 1
+    assert len(result.claims[1].correction_attempts) == 1
+    assert len(result.claims[1].verification_attempts) == 1
+    assert calls == 4

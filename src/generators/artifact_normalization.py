@@ -2435,6 +2435,11 @@ def bind_artifact_evidence_spans(
     span_index = _build_evidence_span_index(
         doc_map=doc_map, evidence_packs=evidence_packs
     )
+    doc_map_finding_bindings = _doc_map_insight_finding_bindings(
+        doc_map=doc_map,
+        evidence_packs=evidence_packs,
+        span_index=span_index,
+    )
     bound_count = 0
     unbound_count = 0
     pruned_claim_count = 0
@@ -2525,6 +2530,23 @@ def bind_artifact_evidence_spans(
         else:
             unbound_count += 1
 
+    def _rebind_doc_map_insight(item: Any) -> None:
+        if not isinstance(item, dict):
+            return
+        evidence_id = _s(item.get("evidence_id")).strip()
+        bindings = doc_map_finding_bindings.get(normalize_text(evidence_id), [])
+        matching = [
+            binding
+            for binding in bindings
+            if _doc_map_insight_proposition_matches_finding(
+                insight=item, finding=binding[2]
+            )
+        ]
+        if len(matching) != 1:
+            return
+        finding_id, _, _ = matching[0]
+        item["evidence_id"] = finding_id
+
     claim_map = summary.get("claim_evidence_map")
     if isinstance(claim_map, list):
         bound_claims: List[Dict[str, Any]] = []
@@ -2574,8 +2596,10 @@ def bind_artifact_evidence_spans(
         summary["claim_evidence_map"] = bound_claims
 
     for item in insights_candidates:
+        _rebind_doc_map_insight(item)
         _bind_item(item, page_keys=("pages",), bind_canonical_evidence=True)
     for item in insights_final:
+        _rebind_doc_map_insight(item)
         _bind_item(item, page_keys=("pages",), bind_canonical_evidence=True)
     for item in quotes_final:
         _bind_item(item, page_keys=("page",))
@@ -2586,6 +2610,111 @@ def bind_artifact_evidence_spans(
         "pruned_claim_count": pruned_claim_count,
         "indexed_reference_count": len(span_index),
     }
+
+
+def _doc_map_insight_finding_bindings(
+    *,
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    span_index: Dict[str, List[Dict[str, Any]]],
+) -> Dict[str, list[tuple[str, List[Dict[str, Any]], Dict[str, Any]]]]:
+    """Resolve a DocMap section ID only when one direct finding proves it.
+
+    DocMap sections select navigation context; findings remain the factual
+    source of page and excerpt provenance.  Section membership is only a
+    candidate lookup; the caller still requires one proposition-compatible
+    finding before changing the binding.
+    """
+
+    doc_map_section_ids = {
+        normalize_text(section.get("id"))
+        for section in (doc_map.get("sections") or [])
+        if isinstance(section, dict) and normalize_text(section.get("id"))
+    }
+    if not doc_map_section_ids or not isinstance(evidence_packs, dict):
+        return {}
+    findings_pack = evidence_packs.get("findings")
+    findings = findings_pack.get("findings") if isinstance(findings_pack, dict) else []
+    if not isinstance(findings, list):
+        return {}
+    fidelity = evidence_packs.get("evidence_fidelity")
+    fidelity_results = fidelity.get("results") if isinstance(fidelity, dict) else None
+    fidelity_supported_ids: set[str] | None = None
+    if isinstance(fidelity_results, list):
+        fidelity_supported_ids = {
+            _s(candidate.get("claim_id"))
+            .strip()
+            .removeprefix("evidence:findings:")
+            .casefold()
+            for result in fidelity_results
+            if isinstance(result, dict) and result.get("status") == "supported"
+            for candidate in [result.get("candidate")]
+            if isinstance(candidate, dict)
+            and _s(candidate.get("claim_id"))
+            .strip()
+            .startswith("evidence:findings:")
+        }
+    by_section: Dict[str, list[tuple[str, List[Dict[str, Any]], Dict[str, Any]]]] = {}
+    for finding in findings:
+        if not isinstance(finding, dict):
+            continue
+        section_key = normalize_text(finding.get("section_id"))
+        finding_id = _s(finding.get("id") or finding.get("evidence_id")).strip()
+        if section_key not in doc_map_section_ids or not finding_id:
+            continue
+        if (
+            fidelity_supported_ids is not None
+            and finding_id.casefold() not in fidelity_supported_ids
+        ):
+            continue
+        direct_spans = [
+            span
+            for span in span_index.get(finding_id.casefold(), [])
+            if span.get("source_pack") in {"findings", "findings_statement"}
+            and isinstance(span.get("page"), int)
+            and span.get("page", 0) > 0
+            and _s(span.get("text")).strip()
+        ]
+        if direct_spans:
+            by_section.setdefault(section_key, []).append(
+                (finding_id, direct_spans, finding)
+            )
+    return by_section
+
+
+def _doc_map_insight_proposition_matches_finding(
+    *, insight: Dict[str, Any], finding: Dict[str, Any]
+) -> bool:
+    """Require proposition evidence before replacing a DocMap locator.
+
+    This is deliberately a grounding check, not a relevance score.  It uses
+    the retained finding proposition and evidence text plus any quantities;
+    section membership alone cannot promote a factual binding.
+    """
+
+    claim_text = _s(insight.get("text")).strip()
+    finding_text = " ".join(
+        _s(finding.get(field_name)).strip()
+        for field_name in ("text", "evidence", "statement")
+        if _s(finding.get(field_name)).strip()
+    )
+    if not claim_text or not finding_text:
+        return False
+    claim_quantities = extract_quantities(claim_text)
+    if claim_quantities and not _summary_claim_quantities_match(
+        claim_quantities, finding_text
+    ):
+        return False
+    claim_tokens = _summary_claim_content_tokens(claim_text)
+    finding_tokens = _summary_claim_content_tokens(finding_text)
+    if not claim_tokens or not finding_tokens:
+        return False
+    shared_tokens = claim_tokens.intersection(finding_tokens)
+    return (
+        claim_tokens.issubset(finding_tokens)
+        or len(shared_tokens) >= 3
+        and len(shared_tokens) / len(claim_tokens) >= 0.4
+    )
 
 
 _SUMMARY_CLAIM_STOP_WORDS = {

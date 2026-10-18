@@ -206,6 +206,7 @@ def _binding_conflict_reason(
     span_pages: set[int] = set()
     span_evidence_ids: set[str] = set()
     span_source_ids: set[str] = set()
+    span_source_packs: set[str] = set()
     for span in spans or []:
         if not isinstance(span, dict):
             return "evidence_span_invalid"
@@ -218,6 +219,9 @@ def _binding_conflict_reason(
         evidence_id = _text(span.get("evidence_id"))
         if evidence_id:
             span_evidence_ids.add(evidence_id)
+        source_pack = _text(span.get("source_pack"))
+        if source_pack:
+            span_source_packs.add(source_pack.casefold())
         for key in ("source_identity", "source_id"):
             value = _text(span.get(key))
             if value:
@@ -231,6 +235,8 @@ def _binding_conflict_reason(
         return "evidence_span_page_conflict"
     if span_source_ids and span_source_ids != {_text(source_identity)}:
         return "evidence_span_source_conflict"
+    if span_source_packs and span_source_packs <= {"doc_map"}:
+        return "doc_map_navigation_only"
     top_evidence_id = _text(claim.get("evidence_id"))
     if (
         top_evidence_id
@@ -338,13 +344,35 @@ def _provider_error_details(prefix: str, error: Exception) -> list[str]:
     return [prefix, f"error_type:{type(error).__name__}", "retryable:unknown"]
 
 
+def _attempt_is_non_retryable(details: list[str]) -> bool:
+    return any(detail.strip().casefold() == "retryable:false" for detail in details)
+
+
 def _substantive_source_truth_notes(notes: str) -> bool:
     normalized = " ".join(notes.split()).casefold()
-    return len(normalized.split()) >= 8 and normalized not in {
+    if len(normalized.split()) < 8 or normalized in {
         "matches",
         "source matches",
         "the source matches",
-    }
+    }:
+        return False
+    generic_opening = (
+        "the claim is plausible",
+        "the claim is supported",
+        "the claim matches",
+        "the source page supports the claim",
+        "the source supports the claim",
+    )
+    source_specific_detail = re.search(
+        r"\b(?:value|metric|cohort|population|denominator|period|timeframe|"
+        r"forecast|observed|trend|relationship|comparison|share|revenue|"
+        r"traffic|users|consumers|publishers|buyers|respondents|automation|"
+        r"oversight|chart|table|figure|survey|percent|percentage)\b|\d",
+        normalized,
+    )
+    if normalized.startswith(generic_opening) and not source_specific_detail:
+        return False
+    return True
 
 
 def _require_visual_policy(bundle: Any) -> None:
@@ -707,6 +735,16 @@ def _evaluate_claim(
         )
         correction_attempts.append(correction)
         if not corrected_claim:
+            if _attempt_is_non_retryable(correction.issues):
+                return _record_result(
+                    claim=claim,
+                    request=request,
+                    physical_page=physical_page,
+                    outcome="unresolved",
+                    failure_reason="correction_non_retryable",
+                    correction_attempts=correction_attempts,
+                    verification_attempts=verification_attempts,
+                )
             if correction_number == 1:
                 retry_feedback = correction.issues
                 continue
@@ -744,6 +782,16 @@ def _evaluate_claim(
                 if correction_number == 1
                 else "verified_after_retry",
                 final_claim=corrected_claim,
+                correction_attempts=correction_attempts,
+                verification_attempts=verification_attempts,
+            )
+        if _attempt_is_non_retryable(verification.diagnostics):
+            return _record_result(
+                claim=claim,
+                request=request,
+                physical_page=physical_page,
+                outcome="unresolved",
+                failure_reason="verification_non_retryable",
                 correction_attempts=correction_attempts,
                 verification_attempts=verification_attempts,
             )

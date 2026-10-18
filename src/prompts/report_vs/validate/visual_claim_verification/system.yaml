@@ -24,7 +24,10 @@ text: |
   is not a valid correction for a platform creator/view-share comparison.
   An unreadable or ambiguous page is not a verification pass. A verified
   response must explain the source facts and relationships that support the
-  final claim in substantive source-grounded notes.
+  final claim in substantive source-grounded notes. For a qualitative claim,
+  name the observed source relationship or bounded pattern and explain the
+  defensible implication; a generic statement that the claim is merely
+  supported is insufficient.
 
   Return JSON only:
   {"outcome":"verified|rejected|unresolved","diagnostics":["..."],"source_truth_notes":"..."}

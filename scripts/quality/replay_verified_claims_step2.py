@@ -23,6 +23,7 @@ from src.contracts.verified_claims import (
     VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
     VisualClaimEvaluationRequest,
 )
+from src.generators.artifact_normalization import bind_artifact_evidence_spans
 from src.generators.verified_claims_visual_generator import (
     evaluate_shortlisted_claims,
 )
@@ -196,6 +197,58 @@ def _retained_claims(
             "source_pages": physical_pages,
             "retained_artifact_path": str(artifact_path.relative_to(REPOSITORY_ROOT)),
         }
+    doc_map_path = artifact_path.parent / "doc_map.json"
+    findings_path = artifact_path.parent / "findings.json"
+    fidelity_path = artifact_path.parent / "evidence_fidelity.json"
+    doc_map = _load_json(doc_map_path) if doc_map_path.is_file() else {}
+    evidence_packs: dict[str, Any] = {}
+    if findings_path.is_file():
+        evidence_packs["findings"] = _load_json(findings_path)
+    if fidelity_path.is_file():
+        evidence_packs["evidence_fidelity"] = _load_json(fidelity_path)
+    before_bindings = {
+        str(claim.get("candidate_id")): {
+            "evidence_id": str(claim.get("evidence_id") or ""),
+            "pages": list(claim.get("pages") or []),
+        }
+        for claim in claims
+    }
+    if isinstance(doc_map, dict) and evidence_packs:
+        bind_artifact_evidence_spans(
+            summary={},
+            insights_candidates=[],
+            insights_final=claims,
+            quotes_final=[],
+            doc_map=doc_map,
+            evidence_packs=evidence_packs,
+        )
+    for claim in claims:
+        candidate_id = str(claim.get("candidate_id") or "")
+        after_binding = {
+            "evidence_id": str(claim.get("evidence_id") or ""),
+            "pages": list(claim.get("pages") or []),
+            "source_packs": sorted(
+                {
+                    str(span.get("source_pack") or "")
+                    for span in claim.get("evidence_spans") or []
+                    if isinstance(span, dict) and str(span.get("source_pack") or "")
+                }
+            ),
+        }
+        metadata[candidate_id]["source_binding_before"] = before_bindings.get(
+            candidate_id, {}
+        )
+        metadata[candidate_id]["source_binding_after"] = after_binding
+        metadata[candidate_id]["source_binding_resolution"] = (
+            "direct_finding_rebound"
+            if before_bindings.get(candidate_id, {}).get("evidence_id")
+            != after_binding["evidence_id"]
+            else (
+                "unresolved_doc_map_binding"
+                if after_binding["source_packs"] == ["doc_map"]
+                else "retained"
+            )
+        )
     return claims, metadata, unavailable
 
 
@@ -298,6 +351,30 @@ def _usage_summary(path: Path) -> dict[str, Any]:
     }
 
 
+def _outcome_counts(selected_rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Return mutually exclusive terminal outcome counts plus verified total."""
+
+    return {
+        "verified_total": sum(
+            row.get("outcome") in {"verified", "verified_after_retry"}
+            for row in selected_rows
+        ),
+        "verified_first_pass": sum(
+            row.get("outcome") == "verified" for row in selected_rows
+        ),
+        "verified_after_retry": sum(
+            row.get("outcome") == "verified_after_retry" for row in selected_rows
+        ),
+        "failed_verification": sum(
+            row.get("outcome") == "failed_verification" for row in selected_rows
+        ),
+        "unresolved": sum(
+            row.get("outcome") == "unresolved" for row in selected_rows
+        ),
+        "skipped": sum(row.get("outcome") == "skipped" for row in selected_rows),
+    }
+
+
 def replay_live_step2(*, output_root: Path | None = None) -> dict[str, Any]:
     """Run the bounded live visual evaluation against retained local inputs."""
 
@@ -387,6 +464,15 @@ def replay_live_step2(*, output_root: Path | None = None) -> dict[str, Any]:
                     "retained_artifact_path": result_metadata.get(
                         "retained_artifact_path", ""
                     ),
+                    "source_binding_before": result_metadata.get(
+                        "source_binding_before", {}
+                    ),
+                    "source_binding_after": result_metadata.get(
+                        "source_binding_after", {}
+                    ),
+                    "source_binding_resolution": result_metadata.get(
+                        "source_binding_resolution", ""
+                    ),
                 }
             )
             rows.append(result_payload)
@@ -411,27 +497,6 @@ def replay_live_step2(*, output_root: Path | None = None) -> dict[str, Any]:
         and row.get("outcome") not in {"verified", "verified_after_retry"}
         for row in reference_rows
     )
-    def _outcome_counts(selected_rows: list[dict[str, Any]]) -> dict[str, int]:
-        return {
-            "verified": sum(
-                row.get("outcome") in {"verified", "verified_after_retry"}
-                for row in selected_rows
-            ),
-            "verified_first_pass": sum(
-                row.get("outcome") == "verified" for row in selected_rows
-            ),
-            "verified_after_retry": sum(
-                row.get("outcome") == "verified_after_retry" for row in selected_rows
-            ),
-            "failed_verification": sum(
-                row.get("outcome") == "failed_verification" for row in selected_rows
-            ),
-            "unresolved": sum(
-                row.get("outcome") == "unresolved" for row in selected_rows
-            ),
-            "skipped": sum(row.get("outcome") == "skipped" for row in selected_rows),
-        }
-
     report = {
         "schema_version": "1.0",
         "stage": "verified_claims_step2_visual_live",

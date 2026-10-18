@@ -199,3 +199,161 @@ def test_numeric_summary_claim_rebinds_to_paired_metric_finding() -> None:
     claim = summary["claim_evidence_map"][0]
     assert claim["evidence_id"] == "ecommerce-growth"
     assert claim["pages"] == [27]
+
+
+def test_doc_map_insight_rebinds_to_unique_section_finding_pages() -> None:
+    insight = {
+        "id": "ai-search-platform-relationships",
+        "text": "Publishers forecast search traffic to decline.",
+        "evidence_id": "answer-engines-and-traffic",
+        "evidence": "The section summary is navigation context.",
+        "pages": [10],
+    }
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=[insight],
+        quotes_final=[],
+        doc_map={
+            "sections": [
+                {
+                    "id": "answer-engines-and-traffic",
+                    "summary": "Navigation context for changing search traffic.",
+                    "pages": [10],
+                }
+            ]
+        },
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "search-traffic-forecast",
+                        "section_id": "answer-engines-and-traffic",
+                        "text": (
+                            "Publishers forecast that search-engine traffic will "
+                            "decline by more than 40% over the next three years."
+                        ),
+                        "evidence": "The forecast is a publisher expectation.",
+                        "pages": [3, 4, 10],
+                    }
+                ]
+            }
+        },
+    )
+
+    assert insight["evidence_id"] == "search-traffic-forecast"
+    assert insight["pages"] == [3, 4, 10]
+    assert insight["evidence_spans"] == [
+        {
+            "evidence_id": "search-traffic-forecast",
+            "source_pack": "findings",
+            "page": 3,
+            "text": "The forecast is a publisher expectation.",
+        },
+        {
+            "evidence_id": "search-traffic-forecast",
+            "source_pack": "findings",
+            "page": 4,
+            "text": "The forecast is a publisher expectation.",
+        },
+        {
+            "evidence_id": "search-traffic-forecast",
+            "source_pack": "findings",
+            "page": 10,
+            "text": "The forecast is a publisher expectation.",
+        },
+    ]
+    assert insight["text"] == "Publishers forecast search traffic to decline."
+
+
+def test_doc_map_insight_does_not_choose_between_ambiguous_section_findings() -> None:
+    insight = {
+        "id": "ambiguous-insight",
+        "text": "The section has an important commercial implication.",
+        "evidence_id": "shared-section",
+        "pages": [8],
+    }
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=[insight],
+        quotes_final=[],
+        doc_map={
+            "sections": [
+                {"id": "shared-section", "summary": "Context", "pages": [8]}
+            ]
+        },
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "finding-a",
+                        "section_id": "shared-section",
+                        "text": "One distinct source proposition.",
+                        "evidence": "Evidence A.",
+                        "pages": [8],
+                    },
+                    {
+                        "id": "finding-b",
+                        "section_id": "shared-section",
+                        "text": "Another distinct source proposition.",
+                        "evidence": "Evidence B.",
+                        "pages": [9],
+                    },
+                ]
+            }
+        },
+    )
+
+    assert insight["evidence_id"] == "shared-section"
+    assert insight["pages"] == [8]
+    assert insight["evidence_spans"][0]["source_pack"] == "doc_map"
+
+
+def test_doc_map_insight_does_not_promote_unsupported_finding() -> None:
+    insight = {
+        "id": "unsupported-insight",
+        "text": "Publishers forecast search traffic to decline.",
+        "evidence_id": "shared-section",
+        "pages": [8],
+    }
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=[insight],
+        quotes_final=[],
+        doc_map={
+            "sections": [
+                {"id": "shared-section", "summary": "Context", "pages": [8]}
+            ]
+        },
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "unsupported-finding",
+                        "section_id": "shared-section",
+                        "text": "Publishers forecast search traffic to decline.",
+                        "evidence": "Evidence.",
+                        "pages": [8],
+                    }
+                ]
+            },
+            "evidence_fidelity": {
+                "results": [
+                    {
+                        "status": "unsupported",
+                        "candidate": {
+                            "claim_id": "evidence:findings:unsupported-finding"
+                        },
+                    }
+                ]
+            },
+        },
+    )
+
+    assert insight["evidence_id"] == "shared-section"
+    assert insight["evidence_spans"][0]["source_pack"] == "doc_map"

@@ -3,6 +3,7 @@ from __future__ import annotations
 from scripts.quality.replay_verified_claims_step2 import (
     REFERENCE_PATH,
     _load_json,
+    _outcome_counts,
     _reference_claims,
     _retained_claims,
     replay_frozen_step2,
@@ -60,3 +61,64 @@ def test_retained_shortlist_replay_assembles_exact_frozen_five_claims():
         assert all(claim["pages"] for claim in claims)
         total += len(claims)
     assert total == 29
+
+
+def test_retained_replay_rebinds_doc_map_navigation_to_direct_finding() -> None:
+    reference = _load_json(REFERENCE_PATH)
+
+    claims, metadata, unavailable = _retained_claims(
+        reference, "Reuters Institute"
+    )
+
+    assert unavailable == []
+    newsroom_claim = next(
+        claim
+        for claim in claims
+        if claim["candidate_id"] == "newsroom-ai-uses-and-oversight"
+    )
+    assert newsroom_claim["evidence_id"] == "newsroom-ai-adoption"
+    assert newsroom_claim["pages"] == [30]
+    assert metadata["newsroom-ai-uses-and-oversight"][
+        "source_binding_resolution"
+    ] == "direct_finding_rebound"
+    assert metadata["newsroom-ai-uses-and-oversight"][
+        "source_binding_before"
+    ] == {
+        "evidence_id": "latest-tales-ai-newsroom",
+        "pages": [30],
+    }
+    assert metadata["newsroom-ai-uses-and-oversight"]["source_binding_after"][
+        "source_packs"
+    ] == ["findings"]
+
+    activate_claims, activate_metadata, _ = _retained_claims(reference, "Activate")
+    assistant_claim = next(
+        claim
+        for claim in activate_claims
+        if claim["candidate_id"] == "activate-digital-assistant-access-forecast"
+    )
+    assert assistant_claim["evidence_id"] == "s4"
+    assert activate_metadata["activate-digital-assistant-access-forecast"][
+        "source_binding_resolution"
+    ] == "unresolved_doc_map_binding"
+
+
+def test_step2_outcome_counts_make_retry_successes_mutually_exclusive() -> None:
+    counts = _outcome_counts(
+        [
+            {"outcome": "verified"},
+            {"outcome": "verified_after_retry"},
+            {"outcome": "unresolved"},
+            {"outcome": "failed_verification"},
+            {"outcome": "skipped"},
+        ]
+    )
+
+    assert counts == {
+        "verified_total": 2,
+        "verified_first_pass": 1,
+        "verified_after_retry": 1,
+        "failed_verification": 1,
+        "unresolved": 1,
+        "skipped": 1,
+    }
