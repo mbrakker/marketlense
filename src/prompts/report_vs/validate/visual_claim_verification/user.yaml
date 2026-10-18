@@ -1,0 +1,14 @@
+text: |
+  Independently verify the corrected claim below against the complete original
+  PDF page attached to this request.
+
+  Source identity and retained binding context:
+  {{ source_json }}
+
+  Corrected claim:
+  {{ corrected_claim }}
+
+  Do not assume the claim is correct because another model produced it. Return
+  only the verification JSON required by the system prompt. Diagnostics must
+  name exact unsupported or conflicting values, labels, populations, periods,
+  status or analytical conclusions when rejecting the claim.

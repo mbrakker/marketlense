@@ -151,4 +151,11 @@ No paid provider calls, database writes, WordPress/publication writes, raw-PDF a
 - The correction replay still begins from retained post-selection rosters; it cannot establish the prevalence of stable-ID collisions or candidate recall in fresh model output.
 - Retained findings, DocMap, and artifact files are local and hash-pinned by the Step 0 record; portability requires the same retained artifact pack.
 
-**Step 2 status:** not started.
+**Subsequent Step 2 handoff (2026-10-18):** A shadow-only visual claim
+correction and independent-verification boundary is implemented on this branch.
+The provider-free frozen-five replay preserved the 29 selected identities,
+wording, themes, pages, spans, and protected bindings, but made no paid GPT-6
+Luna call and therefore does not establish live visual correction quality. The
+separate evidence record is
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`; Step 2 remains
+**PARTIAL** pending live evaluation and Step 3 remains unstarted.

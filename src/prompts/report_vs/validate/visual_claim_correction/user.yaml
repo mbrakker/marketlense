@@ -1,0 +1,15 @@
+text: |
+  Correct one shortlisted claim using the complete original PDF page attached
+  to this request.
+
+  Original claim and retained binding:
+  {{ claim_json }}
+
+  This is correction attempt {{ attempt }}. If present, the independent verifier
+  rejected the previous attempt for these source-based reasons. Repair only what
+  the page supports and reread the complete page:
+  {{ retry_feedback }}
+
+  Return only the correction JSON required by the system prompt. Do not return
+  evidence IDs, page numbers, spans, or protected fields for the caller to copy;
+  those remain authoritative in the retained candidate.

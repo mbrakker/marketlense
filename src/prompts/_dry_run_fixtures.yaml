@@ -673,3 +673,22 @@ fixtures:
       metrics_json: *metrics_json
       quotes_json: *quotes_json
       evidence_json: *evidence_json
+  - namespace: "report_vs/validate/visual_claim_correction"
+    family: "validation"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_validation
+    system_variables: {}
+    user_variables:
+      claim_json: *selected_lead_insight_json
+      attempt: 1
+      retry_feedback: "[]"
+  - namespace: "report_vs/validate/visual_claim_verification"
+    family: "validation"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_validation
+    system_variables: {}
+    user_variables:
+      source_json: '{"source_identity":"fixture-pdf","physical_page":4,"evidence_ids":["f1"]}'
+      corrected_claim: "Digital wallets continue to expand in B2B and consumer checkout flows."
