@@ -48386,6 +48386,19 @@
         "pdf_path": {
           "type": "string"
         },
+        "recovery_candidates": {
+          "additionalProperties": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "type": "object"
+        },
+        "recovery_enabled": {
+          "type": "boolean"
+        },
         "report_name": {
           "type": "string"
         },
@@ -48468,8 +48481,20 @@
         "final_claim": {
           "type": "string"
         },
+        "inspected_physical_pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
         "original_claim": {
           "type": "string"
+        },
+        "original_physical_pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
         },
         "outcome": {
           "type": "string"
@@ -48483,7 +48508,19 @@
           },
           "type": "array"
         },
+        "recovered_physical_pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "recovery_reason": {
+          "type": "string"
+        },
         "schema_version": {
+          "type": "string"
+        },
+        "source_binding_status": {
           "type": "string"
         },
         "source_identity": {

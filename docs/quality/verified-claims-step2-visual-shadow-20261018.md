@@ -21,6 +21,98 @@ by the model, but it is not promoted to a canonical finding or authoritative
 evidence binding. The live result is therefore evidence about Step 2 correction
 and verification, not fresh Step 1 candidate-selection evidence.
 
+## Current authoritative recovery run
+
+The current implementation was evaluated against reviewed baseline
+`1a65158db2caf38a05bf05da713cd68a0c0efe70` and the Step 1 retained-selection
+baseline `953555f`. The authoritative live output is
+`out/verified_claims_step2_live_recovery_final_v2_20261018/report.json`.
+It used the exact frozen-five PDFs, GPT-6 Luna with High reasoning, complete
+physical pages, deterministic recovery candidates, independent correction and
+verification calls, and no canonical or publication writes.
+
+| Evaluation set | First pass | After retry | Verified total | Unresolved | Failed | Skipped | Input |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Reference variants | 36 | 2 | 38 | 1 | 0 | 0 | 39 |
+| Real retained shortlist | 27 | 2 | 29 | 0 | 0 | 0 | 29 |
+| **All claims** | **65** | **2** | **67** | **1** | **0** | **0** | **68** |
+
+The reference gate matched **39/39** expected outcomes with **0 false accepts**
+and **0 false rejects**. The one unresolved reference is the deliberate
+`ACT-004-wrong-page` fixture; recovery is disabled for reference/adversarial
+claims, so the supplied wrong page cannot be bypassed. Retry-success counts are
+mutually exclusive with first-pass counts.
+
+Measured live usage was **139 provider calls**, **2,307,350 input tokens**,
+**80,029 output tokens**, **$0.270749 estimated cost**, **1,310.451 seconds**
+wall time, and **107 rendered physical pages**. The per-run ledger contained
+139 selected and 139 seen rows. All five expected PDF hashes matched. The
+provider-free replay separately confirmed 15 cases, 39 variants, 29 retained
+claims, 29/29 theme slots, and no fabricated fixtures.
+
+After the v2 dispatch, a final fail-closed guard was covered by focused tests:
+claims carrying the strict reference policy cannot consume a recovery map even
+if one is accidentally supplied, and unresolved recovered claims retain their
+inspected-page metadata. This does not change the v2 rows because reference
+claims had no recovery candidates.
+
+### Seven-row recovery and replacement ledger
+
+Original bindings remain immutable. “Candidate pages” are the bounded pages
+sent as provisional visual context; “primary support” identifies the page(s)
+that independently support the final wording. Recovered finding/DocMap IDs are
+audit metadata only and are never promoted to canonical evidence.
+
+| Report / stable ID | Original binding | Candidate pages → primary support | Final claim and factual/value assessment | Terminal outcome |
+|---|---|---|---|---|
+| Capgemini `consumer-control-of-ai` | `ai-consumers-trusted-guide`, p.30 divider | 35, 36, 5 → 35–36 | 12,000-consumer October 2025 results: 76% want strict assistant boundaries, 66% trust explanations more, and 71% report concern about Gen-AI data-use transparency. Source labels and population were preserved; the final wording adds a defensible trust implication. | verified after retry |
+| Capgemini `human-support-remains-important` | `reliable-tech-loyalty`, p.40 divider | 45, 32, 5 → 45 | Human interaction increasing loyalty rose from 54% to 74% at customer support and 40% to 66% at purchase stage across the two 12,000-consumer surveys. The two periods and population were preserved. | verified |
+| Capgemini `digital-assistants-engagement-recommendation` | `recommendations`, p.46 divider | 6, 47, 52 → 6, 47 | The report recommends assistants as engagement channels, preference-aware interactions, and channel-specific promotions. This is an explicit source recommendation, not an invented causal result. | verified |
+| KPMG `buyer-standalone-platform-access` | `portfolio-simplification-as-a-value-creation-strategy`, p.18 divider | 19, 21, 6 → 19, 21 | Carve-outs can give buyers more clearly defined standalone platforms with transformation levers and operational upside, subject to execution complexity. The wording remains a bounded commercial implication of the source. | verified |
+| Reuters `ai-search-platform-relationships` | `answer-engines-and-traffic`, p.10 irrelevant locator | 12, 6, 5 → 12 | Surveyed publishers expect search traffic to fall 43% over three years; Chartbeat reports 33% global and 38% US declines, while attribution to AI Overviews remains uncertain. Forecast, observed data, bases, periods, and uncertainty remain distinct. | verified |
+| Reuters `distinctive-content-response` | `content-strategies-distinctiveness`, p.15 section start | 18, 6, 17 → 17 | Q13 base 264: +91 investigations, +82 contextual analysis, +76 chart value for community-building, +72 human stories, +63 verification. The final claim explicitly records the accompanying prose’s +75 community-building value. | verified |
+| Reuters `subscription-membership-priority` | `business-models-and-innovation`, p.36 irrelevant locator | 38, 39, 40 → 38 | Among commercial publishers excluding publicly funded broadcasters (n=259), 76% expected subscription/membership to be important or very important in 2026, the leading expected stream/focus. The expectation is not presented as realized revenue. | verified |
+
+The shadow replacement selector retained all seven recovered candidates with
+editorial-theme bindings (Capgemini 3, KPMG 1, Reuters 3), while rejecting one
+Reuters candidate as semantically duplicate of its existing baseline insight.
+Activate and Adjust had no provisional replacement candidate. This selection
+is an audit comparison only; it does not call `select_artifact_insights()` and
+does not mutate the retained 29-insight artifacts.
+
+### Before/after and independent review
+
+The pre-recovery retained-artifact replay had 22/29 real claims verified (16
+first pass, 6 after retry), 6 unresolved, and 1 failed. The recovery run has
+29/29 verified, with 27 first pass and 2 after retry. The v2 rerun versus the
+immediately preceding recovery run changed only the retry distribution (29/29
+real and 39/39 reference outcomes remained the same); it removed a Reuters
+Contents page from provisional context without changing the selected
+replacement set. The earlier v1 run recorded 142 calls/$0.278674; v2 recorded
+139 calls/$0.270749. This difference is a measured run-to-run result, not a
+claim of model-quality improvement from replay alone.
+
+Independent inspection of the original PDF pages confirmed the seven primary
+support locations above, including Capgemini pp.35–36 and 45, Capgemini
+recommendation pp.6/47, KPMG pp.19/21, Reuters p.12, p.17’s chart/prose
+discrepancy, and Reuters p.38. `ACT-004-wrong-page` remained unresolved, and
+`ADJ-001-unsupported-metric` was accepted only for the source-supported gaming
+install/session metrics on Adjust p.19. No independently reviewed unsupported
+material claim was marked verified. Capgemini’s supported online-deal numeric
+content remains preserved in the upstream artifact; no speculative metric-spine
+enrichment was added.
+
+The successful Activate platform-video row also retained its multi-page
+binding; its final claim names the nested top-creator cohort before stating the
+YouTube/Facebook view split, so the component percentages are not promoted as
+unrestricted platform totals.
+
+The recovery resolver now rejects a hash-mismatched PDF, distinguishes printed
+labels from physical indices, skips divider/contents pages, limits candidates
+to three, and keeps recovered source identities provisional. Recovery is
+enabled only for the 29 real retained claims, not for the 39 adversarial
+reference variants.
+
 ## Root causes fixed
 
 Commit `1e966def` introduced two coupled regressions:
@@ -36,7 +128,7 @@ The fix removes that Step 2 rebinding path and keeps the original binding
 unchanged. The visual generator now renders the complete retained physical
 page when its source identity, page, span, PDF hash, and evidence metadata are
 internally consistent. DocMap-only evidence is recorded as
-`provisional_page_inspection` with `canonical_promotion: false). Conflicting
+`provisional_page_inspection` with `canonical_promotion: false`. Conflicting
 source identity, page, evidence ID, or malformed span metadata still fails
 closed. Existing source/PDF, evidence-fidelity, and validation boundaries are
 reused; no new service, LLM stage, or persistence path was added.
@@ -69,7 +161,7 @@ protected factual fields, metric-spine inputs, and key-figure inputs were not
 changed. This confirms input preservation and coverage, not fresh-selection
 quality.
 
-## Frozen GPT-6 Luna High replay
+## Historical pre-recovery GPT-6 Luna High replay (comparison only)
 
 Command:
 
@@ -134,7 +226,7 @@ propositions. It preserves their source identity and page for provisional
 inspection and fails closed when correction cannot establish a supported final
 claim.
 
-## Real shortlist ledger
+## Historical pre-recovery real shortlist ledger (comparison only)
 
 The replay JSON contains the complete original/corrected claim payload,
 protected fields, evidence spans, request metadata, and per-attempt notes. The
@@ -197,7 +289,7 @@ for visual context and was not promoted.
 | `ai-marketing-applications` | verified | `ai-infrastructure` p.9; provisional | AI is framed as marketing/measurement infrastructure, with cross-channel assistants, predictive segmentation, creative testing, journey modeling, and uneven maturity; advanced deployments reportedly exceeded 20% efficiency gains. |
 | `benchmark-methodology-context` | verified | `takeaways-methodology` p.13; provisional | The report’s verticals, regions, January 2024–January 2026 period, mixed app datasets, country sets, aggregation/anonymization, and limitations are preserved. |
 
-## Independent factual/editorial review
+## Historical pre-recovery independent factual/editorial review
 
 - Direct text extraction from the retained original PDFs spot-checked the
   changed cases: Capgemini p.9 contains the 62% October 2025 / 64% November
@@ -227,10 +319,11 @@ for visual context and was not promoted.
 Passed in this worktree:
 
 - `python -m pytest -q tests/test_artifact_evidence_binding.py tests/test_artifact_normalization_source_fidelity.py tests/test_artifact_insight_shortlisting.py` — **50 passed**.
-- `python -m pytest -q tests/test_verified_claims_visual_generator.py tests/test_verified_claims_step2_replay.py` — **23 passed**.
-- `python -m pytest -q tests/test_artifact_generator.py tests/test_report_regeneration_generator.py tests/test_report_regeneration_identity_and_failures.py` — **228 passed**.
+- `python -m pytest -q tests/test_verified_claims_visual_generator.py tests/test_verified_claims_step2_replay.py tests/test_prompt_dry_run_validation.py` — **71 passed**.
+- `python -m pytest -q tests/test_artifact_generator.py tests/test_report_regeneration_generator.py tests/test_report_regeneration_identity_and_failures.py tests/test_llm_service.py tests/test_llm_routing_policy.py tests/test_pdf_crop_decomposition.py tests/test_public_editorial_quality_generator.py tests/test_public_report_quality_gate.py` — **342 passed**.
+- `py scripts/ci/check_contract_schemas.py` — **passed**.
+- `ruff check` on all changed Python files, `py -m compileall` on changed Python files, and `git diff --check` — **passed**.
 - Provider-free frozen-five replay — **passed**; 15 cases, 39 variants, 5/5 hashes, 29 retained claims, 29/29 theme slots, no fabricated fixtures.
-- `python -m compileall -q src/generators/artifact_normalization.py src/generators/verified_claims_visual_generator.py scripts/quality/replay_verified_claims_step2.py` — **passed**.
 
 The focused regressions cover removal of automatic DocMap rebinding,
 provisional page inspection, missing-fidelity and lexical-overlap abstention,
@@ -248,20 +341,25 @@ in the delivery message and must not be represented as passed here until run.
 
 - This is a retained-artifact replay, not fresh Step 1 generation. It does not
   prove candidate recall, selection diversity, or repeated-run stability.
-- Six real claims remain unresolved and one failed verification. This is
-  intentionally fail-closed; no unsupported claim is promoted.
+- The 39 reference variants and 29 real claims now have complete terminal
+  accounting, but provider output remains model- and run-dependent. The
+  reference gate is a regression guard, not a substitute for independent
+  editorial review of every corrected sentence.
 - DocMap-only pages remain provisional inspection context. The frozen retained
   corpus does not provide canonical direct finding bindings for most selected
   claims, so this work does not establish upstream source-binding completeness.
 - Capgemini online-deal numeric content is preserved in the corrected shadow
   claim but still lacks a safe structured Step 1 metric binding; speculative
   enrichment remains excluded.
-- Shadow results remain non-authoritative and are not passed to regeneration or
-  publication readiness.
+- The seven recovered propositions are not persisted as canonical verified
+  claims, are not passed to regeneration or publication readiness, and have not
+  been evaluated through Step 3 visual factualisation.
+- Fresh source generation and human editorial sign-off remain outside this
+  replay. No live-selection effectiveness claim is made from post-selection
+  replay alone.
 
-**Verdict: PARTIAL.** Step 2 source identity checks, provisional-page handling,
-typed errors, retry bounds, final-claim evaluation, qualitative grounding
-requirements, and reference-benchmark correctness are implemented and
-regression-tested. Step 3 cannot safely begin until canonical direct source
-bindings and fresh selection evidence are available. Step 1/Step 2 live
-selection effectiveness remains unproven.
+**Verdict: PARTIAL.** The Step 2 shadow implementation and frozen-five
+evaluation pass the bounded recovery, source-identity, final-claim, retry,
+reference, and accounting checks. Canonical promotion and Step 3 visual
+factualisation remain intentionally unstarted; Step 3 should wait for the
+canonical source-binding/selection decision and independent editorial review.

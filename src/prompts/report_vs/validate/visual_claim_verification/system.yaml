@@ -12,16 +12,26 @@ text: |
   comparison relationship, sign, rounding, cohort, denominator, geography,
   period, status, uncertainty and attribution. The final corrected claim is
   the object of verification; do not reject it merely because it differs from
-  the original analytical direction. A different metric may be accepted when
-  it is visibly source-supported, relevant to the same topic/population/period
-  and commercially meaningful. Reject transferred values, unrelated metric or
-  topic substitutions, unsupported causal claims, stronger generalisations,
-  invented context and claims that are merely plausible or generic. Reasonable
-  editorial interpretation and commercial implications may pass when they are
-  defensible extensions of what the page shows and do not contradict or
-  overstate the source. Compare the final claim with the original analytical
-  direction for relevance: a source-supported user time/spend cohort finding
-  is not a valid correction for a platform creator/view-share comparison.
+  the original analytical direction. Read replacement_policy in the retained
+  source context: under strict_original_direction, the final claim must remain
+  materially related to the original analytical direction. A source-consistent
+  narrowing or correction of population, scope, metric label, or qualifier is
+  valid, but an unrelated proposition or topic is not; under
+  report_level_replacement_allowed, a different metric, proposition, or topic
+  may be accepted when it is visibly source-supported and is a stronger,
+  commercially meaningful finding for the same report-level analytical context.
+  Verify the replacement's own population, metric, period, geography,
+  denominator, and observation/forecast status rather than transferring any of
+  them from the original. For a chart with a nested cohort, distinguish a
+  component split within the named cohort from the cohort's total coverage;
+  accept the split when the final wording names its cohort and does not imply
+  that the components cover the whole platform. Reject transferred values,
+  unrelated or generic
+  substitutions, wrong-locator rescues, unsupported causal claims, stronger
+  generalisations, and invented context. Reasonable editorial interpretation
+  and commercial implications may pass when they are defensible extensions of
+  what the page shows and do not contradict or overstate the source. The
+  original direction remains a relevance signal, not factual authority.
   An unreadable or ambiguous page is not a verification pass. A verified
   response must explain the source facts and relationships that support the
   final claim in substantive source-grounded notes. For a qualitative claim,

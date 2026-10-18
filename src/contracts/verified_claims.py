@@ -30,6 +30,24 @@ class VisualClaimEvaluationRequest:
         default=180,
         metadata={"doc": "Full-page render DPI for visual assessment."},
     )
+    recovery_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": (
+                "Whether bounded deterministic recovery candidates may be inspected; "
+                "disabled for reference/adversarial fixtures."
+            )
+        },
+    )
+    recovery_candidates: Dict[str, List[Dict[str, Any]]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Provisional page candidates keyed by stable candidate ID; these "
+                "never replace the retained evidence binding."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -119,6 +137,30 @@ class VisualClaimEvaluationResult:
     )
     failure_reason: str = field(
         default="", metadata={"doc": "Terminal reason when the claim is not verified."}
+    )
+    original_physical_pages: List[int] = field(
+        default_factory=list,
+        metadata={"doc": "Original retained physical pages and immutable binding."},
+    )
+    inspected_physical_pages: List[int] = field(
+        default_factory=list,
+        metadata={"doc": "All physical pages supplied to correction and verification."},
+    )
+    recovered_physical_pages: List[int] = field(
+        default_factory=list,
+        metadata={"doc": "Additional provisional pages inspected during recovery."},
+    )
+    recovery_reason: str = field(
+        default="",
+        metadata={"doc": "Deterministic reason provisional recovery was attempted."},
+    )
+    source_binding_status: str = field(
+        default="retained",
+        metadata={
+            "doc": (
+                "Binding state: retained, or provisional_recovered; never canonical."
+            )
+        },
     )
 
 

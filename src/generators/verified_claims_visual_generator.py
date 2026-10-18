@@ -38,6 +38,7 @@ CORRECTION_NAMESPACE = "report_vs/validate/visual_claim_correction"
 VERIFICATION_NAMESPACE = "report_vs/validate/visual_claim_verification"
 _CORRECTION_STATUSES = frozenset({"corrected", "unresolved", "failed"})
 _VERIFICATION_OUTCOMES = frozenset({"verified", "rejected", "unresolved"})
+_MAX_RECOVERY_PAGES_PER_CLAIM = 3
 _PDF_SHA256_PATTERN = re.compile(
     r"(?:^|[|,; ])pdf-sha256[:=]([0-9a-f]{64})(?:$|[|,; ])", re.I
 )
@@ -171,9 +172,7 @@ def _verify_source_pdf_identity(
         )
 
 
-def _binding_conflict_reason(
-    claim: Mapping[str, Any], source_identity: str
-) -> str:
+def _binding_conflict_reason(claim: Mapping[str, Any], source_identity: str) -> str:
     claim_source_identity = _text(claim.get("source_identity"))
     if claim_source_identity and claim_source_identity != _text(source_identity):
         return "claim_source_identity_conflict"
@@ -225,8 +224,11 @@ def _binding_conflict_reason(
 
     if declared_pages and not span_pages.issubset(declared_pages):
         return "evidence_span_page_conflict"
-    if not declared_pages and explicit_pages and span_pages and (
-        explicit_pages[0] not in span_pages
+    if (
+        not declared_pages
+        and explicit_pages
+        and span_pages
+        and (explicit_pages[0] not in span_pages)
     ):
         return "evidence_span_page_conflict"
     if span_source_ids and span_source_ids != {_text(source_identity)}:
@@ -266,17 +268,105 @@ def _evidence_spans(claim: Mapping[str, Any]) -> list[dict[str, Any]]:
     )
 
 
+def _recovery_candidates(
+    request: VisualClaimEvaluationRequest, claim: Mapping[str, Any]
+) -> list[dict[str, Any]]:
+    """Return bounded, source-consistent provisional pages for one claim.
+
+    Recovery candidates are supplied by the deterministic replay/orchestration
+    boundary.  The visual generator only checks the source identity and page
+    shape; it never promotes a candidate's evidence ID, text, or metric into the
+    retained binding.
+    """
+
+    if getattr(request, "recovery_enabled", False) is not True:
+        return []
+    if (
+        _text(claim.get("_visual_replacement_policy"))
+        and _text(claim.get("_visual_replacement_policy"))
+        != "report_level_replacement_allowed"
+    ):
+        return []
+    candidate_id = _candidate_id(claim)
+    raw_by_id = getattr(request, "recovery_candidates", {})
+    raw_candidates = (
+        raw_by_id.get(candidate_id, []) if isinstance(raw_by_id, Mapping) else []
+    )
+    if not isinstance(raw_candidates, list):
+        return []
+    original_pages = set(_physical_pages(claim))
+    accepted: list[dict[str, Any]] = []
+    seen_pages: set[int] = set()
+    for raw in raw_candidates:
+        if not isinstance(raw, Mapping):
+            continue
+        page = _positive_int(raw.get("physical_page") or raw.get("page"))
+        if page is None or page in original_pages or page in seen_pages:
+            continue
+        candidate_identity = _text(raw.get("source_identity"))
+        if candidate_identity and candidate_identity != _text(request.source_identity):
+            continue
+        seen_pages.add(page)
+        accepted.append(dict(raw))
+    accepted.sort(
+        key=lambda item: (
+            -float(item.get("score"))
+            if isinstance(item.get("score"), (int, float))
+            else 0.0,
+            _positive_int(item.get("physical_page") or item.get("page")) or 0,
+        )
+    )
+    return accepted[:_MAX_RECOVERY_PAGES_PER_CLAIM]
+
+
+def _recovery_prompt_sources(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Expose recovery provenance as context without changing authoritative fields."""
+
+    output: list[dict[str, Any]] = []
+    for candidate in candidates:
+        page = _positive_int(candidate.get("physical_page") or candidate.get("page"))
+        if page is None:
+            continue
+        excerpt = _text(candidate.get("page_text") or candidate.get("text"))
+        output.append(
+            {
+                "physical_page": page,
+                "reason": _text(candidate.get("reason")),
+                "source_pack": _text(candidate.get("source_pack")),
+                "evidence_id": _text(candidate.get("evidence_id")),
+                "source_excerpt": excerpt[:4000],
+            }
+        )
+    return output
+
+
 def _claim_binding(
-    *, claim: Mapping[str, Any], source_identity: str, physical_page: int
+    *,
+    claim: Mapping[str, Any],
+    source_identity: str,
+    physical_page: int,
+    inspected_physical_pages: list[int] | None = None,
+    recovery_candidates: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    original_pages = _physical_pages(claim)
+    inspected_pages = list(inspected_physical_pages or original_pages)
+    recovered_pages = [page for page in inspected_pages if page not in original_pages]
     return {
         "candidate_id": _candidate_id(claim),
         "original_claim": _text(claim.get("text") or claim.get("claim")),
         "source_identity": source_identity,
         "physical_page": physical_page,
-        "physical_pages": _physical_pages(claim),
+        "physical_pages": original_pages,
+        "original_physical_pages": original_pages,
+        "inspected_physical_pages": inspected_pages,
+        "recovered_physical_pages": recovered_pages,
         "evidence_ids": _evidence_ids(claim),
         "evidence_spans": _evidence_spans(claim),
+        "replacement_policy": (
+            _text(claim.get("_visual_replacement_policy"))
+            or "strict_original_direction"
+        ),
+        "recovery_sources": _recovery_prompt_sources(recovery_candidates or []),
     }
 
 
@@ -372,9 +462,7 @@ def _substantive_source_truth_notes(notes: str) -> bool:
         "does not specify",
         "only a heading",
     )
-    if any(marker in normalized for marker in insufficient_page_language):
-        return False
-    return True
+    return not any(marker in normalized for marker in insufficient_page_language)
 
 
 def _verified_claim_has_substantive_content(claim: str) -> bool:
@@ -492,7 +580,12 @@ def _record_result(
     final_claim: str = "",
     correction_attempts: list[VisualClaimCorrectionAttempt] | None = None,
     verification_attempts: list[VisualClaimVerificationAttempt] | None = None,
+    inspected_physical_pages: list[int] | None = None,
+    recovered_physical_pages: list[int] | None = None,
+    recovery_reason: str = "",
+    source_binding_status: str = "retained",
 ) -> VisualClaimEvaluationResult:
+    original_physical_pages = _physical_pages(claim) if physical_page > 0 else []
     return VisualClaimEvaluationResult(
         schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
         candidate_id=_candidate_id(claim),
@@ -507,6 +600,13 @@ def _record_result(
         verification_attempts=list(verification_attempts or []),
         final_claim=final_claim,
         failure_reason=failure_reason,
+        original_physical_pages=original_physical_pages,
+        inspected_physical_pages=list(
+            inspected_physical_pages or original_physical_pages
+        ),
+        recovered_physical_pages=list(recovered_physical_pages or []),
+        recovery_reason=recovery_reason,
+        source_binding_status=source_binding_status,
     )
 
 
@@ -521,11 +621,15 @@ def _correction_attempt(
     dependencies: VerifiedClaimsVisualDependencies,
     bundle: Any,
     retry_feedback: list[str],
+    inspected_physical_pages: list[int],
+    recovery_candidates: list[dict[str, Any]],
 ) -> tuple[VisualClaimCorrectionAttempt, str]:
     binding = _claim_binding(
         claim=claim,
         source_identity=request.source_identity,
         physical_page=_physical_page(claim) or 0,
+        inspected_physical_pages=inspected_physical_pages,
+        recovery_candidates=recovery_candidates,
     )
     rendered = dependencies.render_prompt(
         PromptRenderRequest(
@@ -589,9 +693,11 @@ def _correction_attempt(
         status = "failed"
         corrected_claim = ""
         issues = ["correction_response_invalid"]
-    if status not in _CORRECTION_STATUSES or (
-        status == "corrected" and not corrected_claim
-    ) or (status != "corrected" and corrected_claim):
+    if (
+        status not in _CORRECTION_STATUSES
+        or (status == "corrected" and not corrected_claim)
+        or (status != "corrected" and corrected_claim)
+    ):
         status = "failed"
         issues = [*issues, "correction_response_invalid"]
         corrected_claim = ""
@@ -620,13 +726,28 @@ def _verification_attempt(
     ctx: RunContext,
     dependencies: VerifiedClaimsVisualDependencies,
     bundle: Any,
+    inspected_physical_pages: list[int],
+    recovery_candidates: list[dict[str, Any]],
 ) -> VisualClaimVerificationAttempt:
+    original_physical_pages = _physical_pages(claim)
     source_payload = {
         "source_identity": request.source_identity,
         "physical_page": _physical_page(claim),
-        "physical_pages": _physical_pages(claim),
+        "physical_pages": original_physical_pages,
+        "original_physical_pages": original_physical_pages,
+        "inspected_physical_pages": inspected_physical_pages,
+        "recovered_physical_pages": [
+            page
+            for page in inspected_physical_pages
+            if page not in original_physical_pages
+        ],
         "evidence_ids": _evidence_ids(claim),
         "evidence_spans": _evidence_spans(claim),
+        "replacement_policy": (
+            _text(claim.get("_visual_replacement_policy"))
+            or "strict_original_direction"
+        ),
+        "recovery_sources": _recovery_prompt_sources(recovery_candidates),
     }
     rendered = dependencies.render_prompt(
         PromptRenderRequest(
@@ -719,6 +840,8 @@ def _evaluate_claim(
     dependencies: VerifiedClaimsVisualDependencies,
     correction_bundle: Any,
     verification_bundle: Any,
+    inspected_physical_pages: list[int],
+    recovery_candidates: list[dict[str, Any]],
 ) -> VisualClaimEvaluationResult:
     physical_page = _physical_page(claim)
     if not _candidate_id(claim):
@@ -728,6 +851,18 @@ def _evaluate_claim(
             physical_page=physical_page or 0,
             outcome="skipped",
             failure_reason="candidate_id_missing",
+            inspected_physical_pages=inspected_physical_pages,
+            recovered_physical_pages=[
+                page
+                for page in inspected_physical_pages
+                if page not in _physical_pages(claim)
+            ],
+            recovery_reason=_text(recovery_candidates[0].get("reason"))
+            if recovery_candidates
+            else "",
+            source_binding_status=(
+                "provisional_recovered" if recovery_candidates else "retained"
+            ),
         )
     if physical_page is None:
         return _record_result(
@@ -736,6 +871,7 @@ def _evaluate_claim(
             physical_page=0,
             outcome="skipped",
             failure_reason="physical_page_missing",
+            inspected_physical_pages=inspected_physical_pages,
         )
     original_claim = _text(claim.get("text") or claim.get("claim"))
     if not original_claim:
@@ -745,6 +881,7 @@ def _evaluate_claim(
             physical_page=physical_page,
             outcome="skipped",
             failure_reason="claim_text_missing",
+            inspected_physical_pages=inspected_physical_pages,
         )
     correction_attempts: list[VisualClaimCorrectionAttempt] = []
     verification_attempts: list[VisualClaimVerificationAttempt] = []
@@ -764,6 +901,8 @@ def _evaluate_claim(
             dependencies=dependencies,
             bundle=correction_bundle,
             retry_feedback=retry_feedback,
+            inspected_physical_pages=inspected_physical_pages,
+            recovery_candidates=recovery_candidates,
         )
         correction_attempts.append(correction)
         if not corrected_claim:
@@ -776,6 +915,18 @@ def _evaluate_claim(
                     failure_reason="correction_non_retryable",
                     correction_attempts=correction_attempts,
                     verification_attempts=verification_attempts,
+                    inspected_physical_pages=inspected_physical_pages,
+                    recovered_physical_pages=[
+                        page
+                        for page in inspected_physical_pages
+                        if page not in _physical_pages(claim)
+                    ],
+                    recovery_reason=_text(recovery_candidates[0].get("reason"))
+                    if recovery_candidates
+                    else "",
+                    source_binding_status=(
+                        "provisional_recovered" if recovery_candidates else "retained"
+                    ),
                 )
             if correction_number == 1:
                 retry_feedback = correction.issues
@@ -788,6 +939,18 @@ def _evaluate_claim(
                 failure_reason="correction_unresolved",
                 correction_attempts=correction_attempts,
                 verification_attempts=verification_attempts,
+                inspected_physical_pages=inspected_physical_pages,
+                recovered_physical_pages=[
+                    page
+                    for page in inspected_physical_pages
+                    if page not in _physical_pages(claim)
+                ],
+                recovery_reason=_text(recovery_candidates[0].get("reason"))
+                if recovery_candidates
+                else "",
+                source_binding_status=(
+                    "provisional_recovered" if recovery_candidates else "retained"
+                ),
             )
         verification_ctx = child_context(
             ctx,
@@ -803,6 +966,8 @@ def _evaluate_claim(
             ctx=verification_ctx,
             dependencies=dependencies,
             bundle=verification_bundle,
+            inspected_physical_pages=inspected_physical_pages,
+            recovery_candidates=recovery_candidates,
         )
         verification_attempts.append(verification)
         if verification.outcome == "verified":
@@ -816,6 +981,18 @@ def _evaluate_claim(
                 final_claim=corrected_claim,
                 correction_attempts=correction_attempts,
                 verification_attempts=verification_attempts,
+                inspected_physical_pages=inspected_physical_pages,
+                recovered_physical_pages=[
+                    page
+                    for page in inspected_physical_pages
+                    if page not in _physical_pages(claim)
+                ],
+                recovery_reason=_text(recovery_candidates[0].get("reason"))
+                if recovery_candidates
+                else "",
+                source_binding_status=(
+                    "provisional_recovered" if recovery_candidates else "retained"
+                ),
             )
         if _attempt_is_non_retryable(verification.diagnostics):
             return _record_result(
@@ -826,6 +1003,18 @@ def _evaluate_claim(
                 failure_reason="verification_non_retryable",
                 correction_attempts=correction_attempts,
                 verification_attempts=verification_attempts,
+                inspected_physical_pages=inspected_physical_pages,
+                recovered_physical_pages=[
+                    page
+                    for page in inspected_physical_pages
+                    if page not in _physical_pages(claim)
+                ],
+                recovery_reason=_text(recovery_candidates[0].get("reason"))
+                if recovery_candidates
+                else "",
+                source_binding_status=(
+                    "provisional_recovered" if recovery_candidates else "retained"
+                ),
             )
         retry_feedback = verification.diagnostics
     if verification_attempts and any(
@@ -840,6 +1029,18 @@ def _evaluate_claim(
             failure_reason="verification_claim_not_substantive",
             correction_attempts=correction_attempts,
             verification_attempts=verification_attempts,
+            inspected_physical_pages=inspected_physical_pages,
+            recovered_physical_pages=[
+                page
+                for page in inspected_physical_pages
+                if page not in _physical_pages(claim)
+            ],
+            recovery_reason=_text(recovery_candidates[0].get("reason"))
+            if recovery_candidates
+            else "",
+            source_binding_status=(
+                "provisional_recovered" if recovery_candidates else "retained"
+            ),
         )
     return _record_result(
         claim=claim,
@@ -849,6 +1050,18 @@ def _evaluate_claim(
         failure_reason="verification_failed_twice",
         correction_attempts=correction_attempts,
         verification_attempts=verification_attempts,
+        inspected_physical_pages=inspected_physical_pages,
+        recovered_physical_pages=[
+            page
+            for page in inspected_physical_pages
+            if page not in _physical_pages(claim)
+        ],
+        recovery_reason=_text(recovery_candidates[0].get("reason"))
+        if recovery_candidates
+        else "",
+        source_binding_status=(
+            "provisional_recovered" if recovery_candidates else "retained"
+        ),
     )
 
 
@@ -920,8 +1133,17 @@ def evaluate_shortlisted_claims(
                 )
             )
             continue
+        recovery_candidates = _recovery_candidates(request, claim)
+        recovered_pages = [
+            _positive_int(item.get("physical_page") or item.get("page"))
+            for item in recovery_candidates
+        ]
+        recovered_pages = [page for page in recovered_pages if page is not None]
+        inspected_physical_pages = list(
+            dict.fromkeys([*physical_pages, *recovered_pages])
+        )
         missing_page = False
-        for page in physical_pages:
+        for page in inspected_physical_pages:
             if page in rendered_pages:
                 continue
             render_ctx = child_context(
@@ -954,10 +1176,18 @@ def evaluate_shortlisted_claims(
                     physical_page=physical_page or 0,
                     outcome="skipped",
                     failure_reason="page_render_failed",
+                    inspected_physical_pages=inspected_physical_pages,
+                    recovered_physical_pages=recovered_pages,
+                    recovery_reason=_text(recovery_candidates[0].get("reason"))
+                    if recovery_candidates
+                    else "",
+                    source_binding_status=(
+                        "provisional_recovered" if recovery_candidates else "retained"
+                    ),
                 )
             )
             continue
-        image_paths = [rendered_pages[page] for page in physical_pages]
+        image_paths = [rendered_pages[page] for page in inspected_physical_pages]
         claim_ctx = child_context(
             evaluation_ctx, task_id=f"{evaluation_ctx.task_id}:claim:{index}"
         )
@@ -971,6 +1201,8 @@ def evaluate_shortlisted_claims(
                 dependencies=dependencies,
                 correction_bundle=correction_bundle,
                 verification_bundle=verification_bundle,
+                inspected_physical_pages=inspected_physical_pages,
+                recovery_candidates=recovery_candidates,
             )
         )
     LOGGER.info(

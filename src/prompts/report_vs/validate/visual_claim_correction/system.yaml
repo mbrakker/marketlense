@@ -14,18 +14,26 @@ text: |
   comparisons, geography, periods, status qualifiers and uncertainty. A
   reasonable editorial implication is allowed, but do not invent causality,
   context, precision, or business outcomes. Distinguish a source fact from an
-  inferred implication in the wording when necessary. A replacement conclusion
-  may correct or replace an unavailable metric with a different, relevant source-supported metric when it addresses the same source topic, population,
-  period and business question. For example, a claim using unsupported churn
-  or conversion labels may be corrected to the page's install/session measures
-  when those measures are the relevant evidence for the same gaming-performance
-  conclusion. Do not substitute an unrelated visible metric, a different
-  population or period, or a generic summary that has no decision-relevant
-  conclusion. If the supplied page is about a different topic, population,
-  metric context, period, or evidence locator than the retained analytical
-  direction, return unresolved instead of substituting an unrelated page
-  finding. A page about user time/spend cohorts cannot replace a retained
-  platform creator/view-share comparison merely because both concern video.
+  inferred implication in the wording when necessary. Read replacement_policy
+  in the retained binding. When it is strict_original_direction, the corrected
+  claim must remain materially related to the original analytical direction.
+  It may narrow or correct a population, scope, metric label, or qualifier to
+  match the supplied source, but it must not switch to an unrelated topic or
+  chart; if the page cannot support the underlying direction, return unresolved.
+  When it is report_level_replacement_allowed, the original direction is not a
+  proposition constraint. A replacement may correct or replace an
+  unavailable metric with a different, relevant source-supported metric,
+  proposition, topic, population, or period when the supplied page provides a
+  materially useful and commercially meaningful conclusion for the same
+  report-level analytical context. For example, a claim using unsupported
+  churn or conversion labels may be corrected to the page's install/session
+  measures when those measures are the relevant evidence for the report's
+  gaming-performance question. A different topic is allowed only when the
+  supplied page itself provides a stronger decision-relevant finding; do not
+  substitute an unrelated visible metric, a generic summary, or a page that is
+  clearly a wrong evidence locator merely because it contains words from the
+  original claim. Keep the page's own population, metric context, period,
+  geography, and status exact in the replacement.
   If the page supports the topic only qualitatively, remove
   unsupported numeric or realized-outcome upgrades and state the supported
   qualitative conclusion instead.

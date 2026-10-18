@@ -66,7 +66,10 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "different, relevant" in correction.system.text.lower()
     assert "qualitative conclusion" in correction.system.text.lower()
     assert "relevant source-supported metric" in correction.system.text.lower()
+    assert "replacement_policy" in correction.system.text
+    assert "report_level_replacement_allowed" in correction.system.text
     assert "bounded pattern" in verification.system.text.lower()
+    assert "nested cohort" in verification.system.text.lower()
 
 
 def _settings(tmp_path):
@@ -501,7 +504,9 @@ def test_conflicting_claim_source_identity_fails_closed(tmp_path):
     assert requests == []
 
 
-def test_doc_map_only_claim_page_is_eligible_for_provisional_visual_inspection(tmp_path):
+def test_doc_map_only_claim_page_is_eligible_for_provisional_visual_inspection(
+    tmp_path,
+):
     claim = _claim("doc-map-only", "Original claim")
     claim["evidence_spans"][0]["source_pack"] = "doc_map"
     requests = []
@@ -566,6 +571,18 @@ def test_verified_outcome_requires_substantive_source_truth_notes(tmp_path):
 
 def test_heading_only_qualitative_rewrite_is_not_verified(tmp_path):
     claims = [_claim("candidate-1", "Original qualitative claim")]
+    request = _request(tmp_path, claims)
+    request.recovery_enabled = True
+    request.recovery_candidates = {
+        "candidate-1": [
+            {
+                "physical_page": 7,
+                "source_identity": request.source_identity,
+                "reason": "retained_page_is_section_divider",
+                "score": 10,
+            }
+        ]
+    }
     responses = iter(
         [
             {
@@ -596,7 +613,7 @@ def test_heading_only_qualitative_rewrite_is_not_verified(tmp_path):
     )
 
     result = evaluate_shortlisted_claims(
-        request=_request(tmp_path, claims),
+        request=request,
         settings=_settings(tmp_path),
         ctx=_ctx(),
         dependencies=_dependencies(responses, [], []),
@@ -605,6 +622,9 @@ def test_heading_only_qualitative_rewrite_is_not_verified(tmp_path):
     item = result.claims[0]
     assert item.outcome == "unresolved"
     assert item.failure_reason == "verification_claim_not_substantive"
+    assert item.inspected_physical_pages == [5, 7]
+    assert item.recovered_physical_pages == [7]
+    assert item.source_binding_status == "provisional_recovered"
     assert len(item.verification_attempts) == 2
     assert all(
         "verification_claim_not_substantive" in attempt.diagnostics
@@ -702,3 +722,100 @@ def test_non_retryable_verification_error_does_not_retry_and_next_claim_runs(tmp
     assert len(result.claims[1].correction_attempts) == 1
     assert len(result.claims[1].verification_attempts) == 1
     assert calls == 4
+
+
+def test_real_recovery_inspects_new_pages_but_keeps_original_binding(tmp_path):
+    claims = [_claim("candidate-1", "Original direction")]
+    request = _request(tmp_path, claims)
+    request.recovery_enabled = True
+    request.recovery_candidates = {
+        "candidate-1": [
+            {
+                "physical_page": 7,
+                "source_identity": request.source_identity,
+                "reason": "retained_page_is_section_divider",
+                "evidence_id": "recovered-finding",
+                "text": "The source reports a supported 73% adoption measure.",
+            }
+        ]
+    }
+    responses = iter(
+        [
+            {
+                "claim": "Supported 73% adoption result",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The recovered page reports the 73% adoption measure for the "
+                    "named population and supports the corrected conclusion."
+                ),
+            },
+        ]
+    )
+    render_calls = []
+    requests = []
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, render_calls, requests),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified"
+    assert item.original_physical_pages == [5]
+    assert item.physical_pages == [5]
+    assert item.inspected_physical_pages == [5, 7]
+    assert item.recovered_physical_pages == [7]
+    assert item.recovery_reason == "retained_page_is_section_divider"
+    assert item.source_binding_status == "provisional_recovered"
+    assert item.evidence_ids == ["f1"]
+    assert item.evidence_spans == claims[0]["evidence_spans"]
+    assert [call.page for call in render_calls] == [4, 6]
+    assert requests[0].image_paths == [
+        str(tmp_path / "report/crop_refine_pages/page-4.png"),
+        str(tmp_path / "report/crop_refine_pages/page-6.png"),
+    ]
+
+
+def test_recovery_is_disabled_for_reference_style_requests(tmp_path):
+    claims = [_claim("candidate-1", "Original direction")]
+    claims[0]["_visual_replacement_policy"] = "strict_original_direction"
+    request = _request(tmp_path, claims)
+    request.recovery_enabled = True
+    request.recovery_candidates = {
+        "candidate-1": [{"physical_page": 7, "reason": "should_not_be_used"}]
+    }
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The retained source page confirms the corrected relationship "
+                    "for the stated population."
+                ),
+            },
+        ]
+    )
+    render_calls = []
+    requests = []
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, render_calls, requests),
+    )
+
+    assert result.claims[0].outcome == "verified"
+    assert [call.page for call in render_calls] == [4]
+    assert requests[0].image_paths == [
+        str(tmp_path / "report/crop_refine_pages/page-4.png")
+    ]
