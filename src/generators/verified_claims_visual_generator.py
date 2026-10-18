@@ -245,7 +245,10 @@ def _binding_conflict_reason(claim: Mapping[str, Any], source_identity: str) -> 
 
 def _evidence_ids(claim: Mapping[str, Any]) -> list[str]:
     values: list[str] = []
-    for value in (_text(claim.get("evidence_id")),):
+    raw_plural = claim.get("evidence_ids")
+    plural_values = raw_plural if isinstance(raw_plural, list) else []
+    for value in [*plural_values, _text(claim.get("evidence_id"))]:
+        value = _text(value)
         if value and value not in values:
             values.append(value)
     spans = claim.get("evidence_spans")
@@ -281,10 +284,8 @@ def _recovery_candidates(
 
     if getattr(request, "recovery_enabled", False) is not True:
         return []
-    if (
-        _text(claim.get("_visual_replacement_policy"))
-        and _text(claim.get("_visual_replacement_policy"))
-        != "report_level_replacement_allowed"
+    if _text(claim.get("_visual_replacement_policy")) != (
+        "report_level_replacement_allowed"
     ):
         return []
     candidate_id = _candidate_id(claim)
@@ -415,6 +416,68 @@ def _strict_string_list(payload: Mapping[str, Any], key: str) -> list[str] | Non
     ):
         return None
     return [item.strip() for item in value]
+
+
+def _strict_physical_page_list(
+    payload: Mapping[str, Any], key: str
+) -> list[int] | None:
+    value = payload.get(key)
+    if not isinstance(value, list):
+        return None
+    pages: list[int] = []
+    for item in value:
+        if type(item) is not int or item <= 0 or item in pages:
+            return None
+        pages.append(item)
+    return pages
+
+
+def _supporting_page_notes(
+    payload: Mapping[str, Any], inspected_physical_pages: list[int]
+) -> tuple[list[int], dict[str, str], list[str]]:
+    supporting_pages = _strict_physical_page_list(payload, "supporting_physical_pages")
+    raw_notes = payload.get("source_truth_notes_by_page")
+    diagnostics: list[str] = []
+    if (
+        supporting_pages is None
+        or not supporting_pages
+        or any(page not in inspected_physical_pages for page in supporting_pages)
+    ):
+        diagnostics.append("verification_supporting_pages_invalid")
+        supporting_pages = []
+
+    notes: dict[str, str] = {}
+    if not isinstance(raw_notes, dict):
+        diagnostics.append("verification_source_truth_notes_by_page_invalid")
+    else:
+        for raw_page, raw_note in raw_notes.items():
+            page = _positive_int(raw_page)
+            if page is None or not isinstance(raw_note, str) or not raw_note.strip():
+                diagnostics.append("verification_source_truth_notes_by_page_invalid")
+                continue
+            notes[str(page)] = raw_note.strip()
+        expected_keys = {str(page) for page in supporting_pages}
+        if set(notes) != expected_keys:
+            diagnostics.append("verification_source_truth_notes_by_page_incomplete")
+        if any(page not in inspected_physical_pages for page in map(int, notes)):
+            diagnostics.append("verification_source_truth_notes_by_page_invalid")
+        if any(not _substantive_source_truth_notes(note) for note in notes.values()):
+            diagnostics.append("verification_page_explanation_missing")
+    return supporting_pages, notes, list(dict.fromkeys(diagnostics))
+
+
+def _recovery_support_pages(
+    recovery_candidates: list[dict[str, Any]],
+) -> set[int]:
+    return {
+        page
+        for candidate in recovery_candidates
+        if isinstance(candidate, Mapping)
+        for page in [
+            _positive_int(candidate.get("physical_page") or candidate.get("page"))
+        ]
+        if page is not None
+    }
 
 
 def _provider_error_details(prefix: str, error: Exception) -> list[str]:
@@ -584,6 +647,9 @@ def _record_result(
     recovered_physical_pages: list[int] | None = None,
     recovery_reason: str = "",
     source_binding_status: str = "retained",
+    supporting_physical_pages: list[int] | None = None,
+    source_truth_notes_by_page: Mapping[str, str] | None = None,
+    canonical_approval_status: str = "not_approved",
 ) -> VisualClaimEvaluationResult:
     original_physical_pages = _physical_pages(claim) if physical_page > 0 else []
     return VisualClaimEvaluationResult(
@@ -607,6 +673,9 @@ def _record_result(
         recovered_physical_pages=list(recovered_physical_pages or []),
         recovery_reason=recovery_reason,
         source_binding_status=source_binding_status,
+        supporting_physical_pages=list(supporting_physical_pages or []),
+        source_truth_notes_by_page=dict(source_truth_notes_by_page or {}),
+        canonical_approval_status=canonical_approval_status,
     )
 
 
@@ -797,10 +866,27 @@ def _verification_attempt(
         outcome = "rejected"
         diagnostics = ["verification_response_invalid"]
         notes = ""
+        supporting_pages: list[int] = []
+        notes_by_page: dict[str, str] = {}
     else:
         outcome = _text(payload.get("outcome")).lower()
         diagnostics = _strict_string_list(payload, "diagnostics")
         notes = _text(payload.get("source_truth_notes"))
+        supporting_pages, notes_by_page, support_diagnostics = _supporting_page_notes(
+            payload, inspected_physical_pages
+        )
+        recovery_support_pages = _recovery_support_pages(recovery_candidates)
+        if recovery_support_pages and any(
+            page not in recovery_support_pages for page in supporting_pages
+        ):
+            support_diagnostics.append(
+                "verification_supporting_page_not_recovery_candidate"
+            )
+            supporting_pages = []
+            notes_by_page = {}
+        diagnostics = (
+            [*diagnostics, *support_diagnostics] if diagnostics is not None else None
+        )
     if diagnostics is None:
         outcome = "rejected"
         diagnostics = ["verification_response_invalid"]
@@ -811,6 +897,18 @@ def _verification_attempt(
         quality_issues: list[str] = []
         if not _substantive_source_truth_notes(notes):
             quality_issues.append("verification_explanation_missing")
+        if not supporting_pages:
+            quality_issues.append("verification_supporting_pages_invalid")
+        if any(
+            diagnostic
+            in {
+                "verification_source_truth_notes_by_page_invalid",
+                "verification_source_truth_notes_by_page_incomplete",
+                "verification_page_explanation_missing",
+            }
+            for diagnostic in diagnostics
+        ):
+            quality_issues.append("verification_source_truth_notes_by_page_invalid")
         if not _verified_claim_has_substantive_content(corrected_claim):
             quality_issues.append("verification_claim_not_substantive")
         if quality_issues:
@@ -825,6 +923,8 @@ def _verification_attempt(
         outcome=outcome,
         diagnostics=diagnostics,
         source_truth_notes=notes,
+        supporting_physical_pages=supporting_pages,
+        source_truth_notes_by_page=notes_by_page,
         request_id=request_id,
         model=model,
     )
@@ -987,6 +1087,8 @@ def _evaluate_claim(
                     for page in inspected_physical_pages
                     if page not in _physical_pages(claim)
                 ],
+                supporting_physical_pages=verification.supporting_physical_pages,
+                source_truth_notes_by_page=verification.source_truth_notes_by_page,
                 recovery_reason=_text(recovery_candidates[0].get("reason"))
                 if recovery_candidates
                 else "",

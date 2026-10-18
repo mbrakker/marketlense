@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import re
 from types import SimpleNamespace
 
 import pytest
@@ -70,6 +71,8 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "report_level_replacement_allowed" in correction.system.text
     assert "bounded pattern" in verification.system.text.lower()
     assert "nested cohort" in verification.system.text.lower()
+    assert "recovery_sources" in verification.system.text
+    assert "recovered physical pages" in verification.system.text
 
 
 def _settings(tmp_path):
@@ -147,8 +150,30 @@ def _dependencies(responses, render_calls, requests):
 
     def call_model(request: OpenAIJSONImagePromptRequest, _ctx):
         requests.append(request)
+        payload = next(responses)
+        if (
+            isinstance(payload, dict)
+            and payload.get("outcome") == "verified"
+            and isinstance(payload.get("source_truth_notes"), str)
+            and payload.get("source_truth_notes").strip()
+            and "supporting_physical_pages" not in payload
+            and "source_truth_notes_by_page" not in payload
+        ):
+            pages = [
+                int(match.group(1)) + 1
+                for match in re.finditer(
+                    r"page-(\d+)\.png", " ".join(request.image_paths)
+                )
+            ]
+            payload = {
+                **payload,
+                "supporting_physical_pages": pages,
+                "source_truth_notes_by_page": {
+                    str(page): payload["source_truth_notes"] for page in pages
+                },
+            }
         return SimpleNamespace(
-            parsed_json=next(responses),
+            parsed_json=payload,
             request_id=f"request-{len(requests)}",
             model=request.model,
         )
@@ -571,6 +596,7 @@ def test_verified_outcome_requires_substantive_source_truth_notes(tmp_path):
 
 def test_heading_only_qualitative_rewrite_is_not_verified(tmp_path):
     claims = [_claim("candidate-1", "Original qualitative claim")]
+    claims[0]["_visual_replacement_policy"] = "report_level_replacement_allowed"
     request = _request(tmp_path, claims)
     request.recovery_enabled = True
     request.recovery_candidates = {
@@ -696,6 +722,13 @@ def test_non_retryable_verification_error_does_not_retry_and_next_claim_runs(tmp
                     "The source page confirms the corrected value and cohort "
                     "relationship."
                 ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": (
+                        "The source page confirms the corrected value and cohort "
+                        "relationship."
+                    )
+                },
             },
             request_id=f"request-{calls}",
             model=request.model,
@@ -726,6 +759,7 @@ def test_non_retryable_verification_error_does_not_retry_and_next_claim_runs(tmp
 
 def test_real_recovery_inspects_new_pages_but_keeps_original_binding(tmp_path):
     claims = [_claim("candidate-1", "Original direction")]
+    claims[0]["_visual_replacement_policy"] = "report_level_replacement_allowed"
     request = _request(tmp_path, claims)
     request.recovery_enabled = True
     request.recovery_candidates = {
@@ -753,6 +787,13 @@ def test_real_recovery_inspects_new_pages_but_keeps_original_binding(tmp_path):
                     "The recovered page reports the 73% adoption measure for the "
                     "named population and supports the corrected conclusion."
                 ),
+                "supporting_physical_pages": [7],
+                "source_truth_notes_by_page": {
+                    "7": (
+                        "Page 7 reports the 73% adoption measure for the named "
+                        "population and supports the corrected conclusion."
+                    )
+                },
             },
         ]
     )
@@ -781,6 +822,63 @@ def test_real_recovery_inspects_new_pages_but_keeps_original_binding(tmp_path):
         str(tmp_path / "report/crop_refine_pages/page-4.png"),
         str(tmp_path / "report/crop_refine_pages/page-6.png"),
     ]
+
+
+def test_recovery_cannot_verify_using_only_retained_page_support(tmp_path):
+    claims = [_claim("candidate-1", "Original direction")]
+    claims[0]["_visual_replacement_policy"] = "report_level_replacement_allowed"
+    request = _request(tmp_path, claims)
+    request.recovery_enabled = True
+    request.recovery_candidates = {
+        "candidate-1": [
+            {"physical_page": 7, "reason": "retained_page_is_section_divider"}
+        ]
+    }
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The retained page reports the corrected value and cohort "
+                    "relationship."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": "Page 5 reports the corrected value and cohort relationship."
+                },
+            },
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The retained page reports the corrected value and cohort "
+                    "relationship."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": "Page 5 reports the corrected value and cohort relationship."
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "failed_verification"
+    assert item.supporting_physical_pages == []
+    assert all(
+        "verification_supporting_page_not_recovery_candidate" in attempt.diagnostics
+        for attempt in item.verification_attempts
+    )
 
 
 def test_recovery_is_disabled_for_reference_style_requests(tmp_path):
@@ -819,3 +917,198 @@ def test_recovery_is_disabled_for_reference_style_requests(tmp_path):
     assert requests[0].image_paths == [
         str(tmp_path / "report/crop_refine_pages/page-4.png")
     ]
+
+
+def test_verified_result_records_only_inspected_supporting_pages_and_page_notes(
+    tmp_path,
+):
+    claims = [_claim("candidate-1", "Original direction")]
+    request = _request(tmp_path, claims)
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "Page 5 reports the corrected value for the named cohort."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": "The page reports the corrected value for the named cohort."
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified"
+    assert item.supporting_physical_pages == [5]
+    assert item.source_truth_notes_by_page == {
+        "5": "The page reports the corrected value for the named cohort."
+    }
+    assert item.verification_attempts[0].supporting_physical_pages == [5]
+
+
+def test_verified_result_can_attribute_one_support_page_from_multiple_inspected_pages(
+    tmp_path,
+):
+    claim = _claim("candidate-1", "Original direction")
+    claim["pages"] = [5, 6]
+    claim["evidence_spans"] = [
+        {"evidence_id": "f1", "page": 5, "start": 10, "end": 20},
+        {"evidence_id": "f1", "page": 6, "start": 10, "end": 20},
+    ]
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "Page 6 reports the corrected value for the named cohort."
+                ),
+                "supporting_physical_pages": [6],
+                "source_truth_notes_by_page": {
+                    "6": "The page reports the corrected value for the named cohort."
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [claim]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified"
+    assert item.inspected_physical_pages == [5, 6]
+    assert item.supporting_physical_pages == [6]
+
+
+def test_uninspected_supporting_page_fails_closed(tmp_path):
+    claims = [_claim("candidate-1", "Original direction")]
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The page reports the corrected value and cohort."
+                ),
+                "supporting_physical_pages": [6],
+                "source_truth_notes_by_page": {
+                    "6": "The page reports the corrected value and cohort."
+                },
+            },
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The page reports the corrected value and cohort."
+                ),
+                "supporting_physical_pages": [6],
+                "source_truth_notes_by_page": {
+                    "6": "The page reports the corrected value and cohort."
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, claims),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "failed_verification"
+    assert item.supporting_physical_pages == []
+    assert all(
+        "verification_supporting_pages_invalid" in attempt.diagnostics
+        for attempt in item.verification_attempts
+    )
+
+
+def test_top_level_plural_evidence_ids_are_preserved(tmp_path):
+    claim = _claim("candidate-1", "Original direction")
+    claim.pop("evidence_id")
+    claim["evidence_ids"] = ["f1", "f2"]
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The page reports the corrected value and cohort."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": "The page reports the corrected value and cohort."
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [claim]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    assert result.claims[0].evidence_ids == ["f1", "f2"]
+
+
+def test_recovery_requires_explicit_report_level_replacement_policy(tmp_path):
+    claim = _claim("candidate-1", "Original direction")
+    request = _request(tmp_path, [claim])
+    request.recovery_enabled = True
+    request.recovery_candidates = {
+        "candidate-1": [
+            {
+                "physical_page": 7,
+                "source_identity": request.source_identity,
+                "reason": "retained_page_is_section_divider",
+            }
+        ]
+    }
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The retained page reports the corrected value and cohort."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": "The retained page reports the corrected value and cohort."
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    assert result.claims[0].inspected_physical_pages == [5]

@@ -21,7 +21,93 @@ by the model, but it is not promoted to a canonical finding or authoritative
 evidence binding. The live result is therefore evidence about Step 2 correction
 and verification, not fresh Step 1 candidate-selection evidence.
 
-## Current authoritative recovery run
+## Latest final-code frozen-five evaluation
+
+The latest final-code live output is
+`out/verified_claims_step2_live_recovery_final_v4_20261018/report.json`.
+It used the exact five hash-matched PDFs, complete physical pages, GPT-6 Luna
+High, independent correction and verification calls, and no canonical or
+publication writes. The final correction adds one fail-closed provenance rule:
+when deterministic recovery was required, a verified replacement must cite a
+supporting physical page from its bounded recovery candidates; the retained
+page cannot be replacement provenance merely because it was inspected.
+
+| Evaluation set | First pass | After retry | Verified total | Unresolved | Failed | Skipped | Input |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Reference variants | 37 | 1 | 38 | 0 | 1 | 0 | 39 |
+| Real retained shortlist | 28 | 0 | 28 | 1 | 0 | 0 | 29 |
+| **All claims** | **65** | **1** | **66** | **1** | **1** | **0** | **68** |
+
+Counts are mutually exclusive terminal outcomes and are checked by the replay
+arithmetic guard. The reference gate matched **39/39** expected outcomes with
+**0 false accepts** and **0 false rejects**. `ACT-004-wrong-page` failed closed
+after two bounded correction attempts: the second correction was source-factual
+for the supplied page but unrelated to the strict original direction. It was
+not verified. `ADJ-001-unsupported-metric` was not accepted as written; the
+final claim replaced churn/conversion with the page-19 install/session metrics
+and was verified against the original PDF.
+
+Measured v4 usage was **139 provider calls**, **2,262,219 input tokens**,
+**83,192 output tokens**, **2,345,411 total tokens**, **$0.267819 estimated
+cost**, **1,200.603 seconds** wall time, and **107 rendered physical pages**.
+The cost ledger contained 139 selected and 139 seen rows; all five expected
+PDF hashes matched. The separate seven-case recovery rerun completed **7/7
+first-pass verified** with 14 calls, 327,059 total tokens, $0.036580, and
+202.990 seconds.
+
+### Final seven-case supporting-page ledger
+
+These are the seven targeted recovered real claims, using the final v4 rows.
+Original evidence IDs, spans and retained physical pages remained unchanged;
+the support pages below are visual-verifier output, not canonical evidence.
+
+| Report / stable ID | Original page(s) | Recovery pages inspected | Verified supporting page(s) | Outcome |
+|---|---:|---:|---:|---|
+| Capgemini `consumer-control-of-ai` | 30 | 35, 36, 5 | 35 | verified |
+| Capgemini `human-support-remains-important` | 40 | 45, 32, 5 | 45 | verified |
+| Capgemini `digital-assistants-engagement-recommendation` | 46 | 6, 47, 52 | 6 | verified |
+| KPMG `buyer-standalone-platform-access` | 18 | 19, 21, 6 | 21, 6 | verified |
+| Reuters `ai-search-platform-relationships` | 10 | 12, 6, 5 | 12 | verified |
+| Reuters `distinctive-content-response` | 15 | 18, 6, 17 | 17 | verified |
+| Reuters `subscription-membership-priority` | 36 | 38, 39, 40 | 38 | verified |
+
+The physical-page check matters: Reuters page 15 is a different Q8 page, while
+page 17 contains the Q13 distinctiveness chart; Reuters page 36 is a section
+locator, while page 38 contains the commercial-publisher revenue chart. The
+final guard therefore cannot silently accept a model response that cites only
+the retained locator. Recovered IDs remain provisional audit metadata and each
+selected shadow row is `source_binding_status=provisional_recovered` with
+`canonical_approval_status=not_approved`.
+
+### Final report-level shadow selection
+
+Selection used the complete verified corrected insight set per report, the
+existing public editorial-quality evaluator, and duplicate checks. It did not
+sort or assign provenance from retrieval scores.
+
+| Report | Verified corrected set | Recovered candidates | Selected replacements | Decision |
+|---|---:|---:|---|---|
+| Capgemini Research Institute | 5 | 3 | `consumer-control-of-ai`, `human-support-remains-important`, `digital-assistants-engagement-recommendation` | retained; distinct themes and candidate support pages |
+| Activate | 6 | 0 | none | no safe recovered replacement; one retained claim unresolved after malformed correction responses |
+| KPMG | 5 | 1 | `buyer-standalone-platform-access` | retained; support pages 21/6, provisional only |
+| Reuters Institute | 6 | 4 | `subscription-membership-priority` | retained; other recovered final claims abstained by existing numeric-evidence quality blocker |
+| Adjust | 6 | 0 | none | no recovery candidates |
+
+The three Reuters abstentions (`ai-search-platform-relationships`,
+`distinctive-content-response`, and `ai-browsers-adaptable-content`) were not
+silently promoted: their corrected wording was source-grounded on pages 12,
+17, and 41 respectively, but the retained evidence text did not carry the
+material numeric bindings required by the existing public-quality validator.
+The selector records those blockers rather than treating visual verification
+as canonical evidence. This is a conservative editorial/provenance outcome,
+not evidence that the source pages are factually wrong.
+
+This v4 run improves provenance safety relative to the v3 replay by rejecting
+retained-locator-only replacement support. It is not a claim of improved live
+Step 1 selection effectiveness: the inputs are the retained 29-insight replay
+cohort, and model output remains run-dependent.
+
+## Prior v2 recovery run (historical comparison)
 
 The current implementation was evaluated against reviewed baseline
 `1a65158db2caf38a05bf05da713cd68a0c0efe70` and the Step 1 retained-selection
@@ -359,7 +445,10 @@ in the delivery message and must not be represented as passed here until run.
   replay alone.
 
 **Verdict: PARTIAL.** The Step 2 shadow implementation and frozen-five
-evaluation pass the bounded recovery, source-identity, final-claim, retry,
-reference, and accounting checks. Canonical promotion and Step 3 visual
-factualisation remain intentionally unstarted; Step 3 should wait for the
-canonical source-binding/selection decision and independent editorial review.
+evaluation pass source-hash checking, bounded recovery, final-claim validation,
+reference accounting, and the physical-support fail-closed guard. The v4 run
+still has one unresolved real retained claim and conservative report-level
+abstentions where retained numeric evidence is insufficient. Canonical
+promotion and Step 3 visual factualisation remain intentionally unstarted;
+Step 3 should wait for canonical source-binding/selection approval and
+independent editorial review.

@@ -18,24 +18,23 @@ import pymupdf as fitz
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.contracts.config import ConfigLoadRequest
-from src.contracts.pdf_text import PdfTextExtractRequest
 from src.contracts.run_context import RunContext
 from src.contracts.verified_claims import (
     VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
     VisualClaimEvaluationRequest,
 )
 from src.generators.artifact_normalization import _insights_semantically_equivalent
-from src.generators.claim_validation_generator import (
-    _has_printed_page_label,
-    _recovery_quantity_values,
-    _recovery_tokens,
+from src.generators.verified_claims_recovery import (
+    load_verified_claims_recovery_context,
+    recovery_candidates_for_claim,
+)
+from src.generators.verified_claims_recovery import (
+    page_is_likely_divider as _recovery_page_is_likely_divider,
 )
 from src.generators.verified_claims_visual_generator import (
     evaluate_shortlisted_claims,
 )
 from src.services.config_service import load_settings
-from src.services.pdf_service import extract_pdf_text
-from src.utils.errors import AppError
 from src.utils.text_normalization import normalize_for_lookup
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -137,90 +136,8 @@ def _retained_artifact_path(reference: dict[str, Any], report: str) -> Path:
     return output_root / analysis_directory / "artifacts.json"
 
 
-def _page_value(page: Any, field: str, default: Any = "") -> Any:
-    if isinstance(page, Mapping):
-        return page.get(field, default)
-    return getattr(page, field, default)
-
-
-def _page_number(page: Any) -> int:
-    value = _page_value(page, "page_number", 0)
-    return int(value) if isinstance(value, int) and value > 0 else 0
-
-
-def _page_text(page: Any) -> str:
-    return str(_page_value(page, "text", "") or "").strip()
-
-
 def _page_is_likely_divider(page_text: str, section_title: str = "") -> bool:
-    """Detect navigation/section pages without treating compact charts as empty."""
-
-    normalized = normalize_for_lookup(page_text)
-    if not normalized:
-        return True
-    words = normalized.split()
-    has_chart_or_measure = bool(
-        re.search(
-            r"(?:%|percent|percentage|figure|table|chart|survey|respondent|"
-            r"n\s*=|increase|decrease|decline|growth|compared|versus)",
-            normalized,
-        )
-    )
-    if len(words) < 35 and not has_chart_or_measure:
-        return True
-    contents_prefix = normalized[:240]
-    contents_listing = len(re.findall(r"\b\d+\.", normalized[:1600])) >= 3
-    if (
-        "contents" in contents_prefix
-        and contents_listing
-        and "source:" not in normalized[:1200]
-    ):
-        return True
-    title = normalize_for_lookup(section_title)
-    return bool(
-        title
-        and normalized.count(title) >= 2
-        and len(words) < 260
-        and not has_chart_or_measure
-    )
-
-
-def _page_similarity(page_text: str, source_texts: list[str]) -> tuple[int, int]:
-    page_tokens = _recovery_tokens(page_text)
-    page_quantities = _recovery_quantity_values(page_text)
-    best_tokens = 0
-    best_quantities = 0
-    for source_text in source_texts:
-        if not source_text:
-            continue
-        best_tokens = max(best_tokens, len(page_tokens & _recovery_tokens(source_text)))
-        best_quantities = max(
-            best_quantities,
-            len(page_quantities & _recovery_quantity_values(source_text)),
-        )
-    return best_tokens, best_quantities
-
-
-def _physical_pages_for_reference(
-    reference_page: Any, source_pages: list[Any]
-) -> list[int]:
-    if not isinstance(reference_page, int) or reference_page <= 0:
-        return []
-    exact = [
-        _page_number(page)
-        for page in source_pages
-        if _page_number(page) == reference_page
-    ]
-    printed = [
-        _page_number(page)
-        for page in source_pages
-        if _page_text(page)
-        and _has_printed_page_label(_page_text(page), reference_page)
-    ]
-    # DocMap/finding page values may be printed page labels rather than PDF
-    # indices.  Prefer the unambiguous printed-label mapping when present; use
-    # the physical index only when the PDF has no matching label.
-    return list(dict.fromkeys(printed or exact))
+    return _recovery_page_is_likely_divider(page_text, section_title)
 
 
 def _load_recovery_context(reference: dict[str, Any], report: str) -> dict[str, Any]:
@@ -232,51 +149,27 @@ def _load_recovery_context(reference: dict[str, Any], report: str) -> dict[str, 
         return {"available": False, "reason": "recovery_inputs_unavailable"}
     pdf_path = REPOSITORY_ROOT / str(source.get("path") or "")
     expected_sha = str(source.get("sha256") or "").lower()
-    if not pdf_path.is_file() or not expected_sha or _sha256(pdf_path) != expected_sha:
+    if not pdf_path.is_file() or not expected_sha:
         return {"available": False, "reason": "source_pdf_hash_unavailable_or_mismatch"}
     analysis_directory = artifact_path.parent
     doc_map_path = analysis_directory / "doc_map.json"
     findings_path = analysis_directory / "findings.json"
     if not doc_map_path.is_file() or not findings_path.is_file():
         return {"available": False, "reason": "recovery_evidence_packs_unavailable"}
-    try:
-        with fitz.open(pdf_path) as document:
-            page_count = int(document.page_count)
-        extracted = extract_pdf_text(
-            PdfTextExtractRequest(
-                schema_version="1.0",
-                path=str(pdf_path),
-                max_pages=page_count,
-                max_chars=5_000_000,
-            ),
-            RunContext(
-                schema_version="1.0",
-                run_id="verified-claims-step2-recovery",
-                task_id=f"verified-claims-step2-recovery:{_safe_report_name(report)}",
-                span_id=f"verified-claims-step2-recovery:{_safe_report_name(report)}",
-            ),
-        )
-    except AppError as error:
-        return {
-            "available": False,
-            "reason": (
-                f"pdf_text_extraction_failed:{error.code}:"
-                f"retryable_{str(error.retryable).lower()}"
-            ),
-        }
-    except (OSError, ValueError, TypeError) as error:
-        return {
-            "available": False,
-            "reason": f"pdf_text_extraction_failed:{type(error).__name__}",
-        }
-    return {
-        "available": True,
-        "source_identity": f"{report}|pdf-sha256:{expected_sha}",
-        "pdf_path": str(pdf_path),
-        "pages": list(extracted.pages),
-        "doc_map": _load_json(doc_map_path),
-        "findings": _load_json(findings_path),
-    }
+    return load_verified_claims_recovery_context(
+        source_identity=f"{report}|pdf-sha256:{expected_sha}",
+        pdf_path=str(pdf_path),
+        evidence_packs={
+            "doc_map": _load_json(doc_map_path),
+            "findings": _load_json(findings_path),
+        },
+        ctx=RunContext(
+            schema_version="1.0",
+            run_id="verified-claims-step2-recovery",
+            task_id=f"verified-claims-step2-recovery:{_safe_report_name(report)}",
+            span_id=f"verified-claims-step2-recovery:{_safe_report_name(report)}",
+        ),
+    )
 
 
 def _recovery_candidates_for_claim(
@@ -287,227 +180,8 @@ def _recovery_candidates_for_claim(
     context: dict[str, Any] | None = None,
     limit: int = 3,
 ) -> list[dict[str, Any]]:
-    """Resolve bounded provisional pages from retained artifacts and PDF text."""
-
-    if limit <= 0:
-        return []
     context = context or _load_recovery_context(reference, report)
-    if not context.get("available"):
-        return []
-    pages = list(context.get("pages") or [])
-    doc_map = context.get("doc_map") if isinstance(context.get("doc_map"), dict) else {}
-    findings_pack = (
-        context.get("findings") if isinstance(context.get("findings"), dict) else {}
-    )
-    candidate_id = str(claim.get("candidate_id") or claim.get("id") or "").strip()
-    claim_text = str(claim.get("text") or claim.get("claim") or "").strip()
-    claim_evidence = str(claim.get("evidence") or "").strip()
-    evidence_id = str(claim.get("evidence_id") or "").strip()
-    if not candidate_id or not claim_text or not pages:
-        return []
-
-    sections = doc_map.get("sections") if isinstance(doc_map, dict) else []
-    section: dict[str, Any] | None = None
-    if isinstance(sections, list):
-        for raw_section in sections:
-            if not isinstance(raw_section, dict):
-                continue
-            section_id = str(
-                raw_section.get("id") or raw_section.get("section_id") or ""
-            )
-            if section_id == evidence_id:
-                section = raw_section
-                break
-            for span in claim.get("evidence_spans") or []:
-                if (
-                    isinstance(span, dict)
-                    and str(span.get("section_id") or "") == section_id
-                ):
-                    section = raw_section
-                    break
-            if section is not None:
-                break
-
-    section_id = str(section.get("id") or "") if section else evidence_id
-    section_title = str(section.get("title") or "") if section else ""
-    section_texts = []
-    if section:
-        section_texts.extend(
-            str(section.get(key) or "").strip()
-            for key in ("title", "summary")
-            if str(section.get(key) or "").strip()
-        )
-        section_texts.extend(
-            str(item).strip()
-            for item in section.get("key_points") or []
-            if str(item).strip()
-        )
-
-    raw_findings = findings_pack.get("findings")
-    relevant_findings = [
-        finding
-        for finding in raw_findings or []
-        if isinstance(finding, dict)
-        and (
-            not section_id
-            or str(finding.get("section_id") or "") == section_id
-            or str(finding.get("id") or "") == evidence_id
-        )
-    ]
-    source_texts = [claim_text, claim_evidence, *section_texts]
-    for finding in relevant_findings:
-        source_texts.extend(
-            str(finding.get(key) or "").strip()
-            for key in ("text", "evidence")
-            if str(finding.get(key) or "").strip()
-        )
-    source_texts = list(dict.fromkeys(text for text in source_texts if text))
-
-    page_by_number = {
-        _page_number(page): page for page in pages if _page_number(page) > 0
-    }
-    original_pages = {
-        int(value)
-        for value in claim.get("pages") or []
-        if isinstance(value, int) and value > 0
-    }
-    section_start_pages: set[int] = set()
-    if section:
-        for reference_page in section.get("pages") or []:
-            section_start_pages.update(
-                _physical_pages_for_reference(reference_page, pages)
-            )
-    all_section_starts: list[int] = []
-    if isinstance(sections, list):
-        for raw_section in sections:
-            if not isinstance(raw_section, dict):
-                continue
-            for reference_page in raw_section.get("pages") or []:
-                all_section_starts.extend(
-                    _physical_pages_for_reference(reference_page, pages)
-                )
-    section_start = min(section_start_pages) if section_start_pages else None
-    next_section_start = next(
-        (
-            start
-            for start in sorted(set(all_section_starts))
-            if section_start and start > section_start
-        ),
-        None,
-    )
-    original_quality: list[tuple[int, int, bool, bool]] = []
-    for page in sorted(original_pages):
-        if page not in page_by_number:
-            continue
-        page_text = _page_text(page_by_number[page])
-        tokens, quantities = _page_similarity(page_text, source_texts)
-        inside_section = bool(
-            section_start is not None
-            and page >= section_start
-            and (next_section_start is None or page < next_section_start)
-        )
-        original_quality.append(
-            (
-                tokens,
-                quantities,
-                _page_is_likely_divider(page_text, section_title),
-                inside_section,
-            )
-        )
-    if len(original_pages) > 1 and any(
-        not is_divider for _, _, is_divider, _ in original_quality
-    ):
-        return []
-    retained_is_insufficient = not any(
-        not is_divider
-        and (tokens >= 7 or (inside_section and tokens >= 5) or quantities >= 2)
-        for tokens, quantities, is_divider, inside_section in original_quality
-    )
-    if not retained_is_insufficient:
-        return []
-    recovery_reason = (
-        "retained_page_is_section_divider"
-        if any(
-            _page_is_likely_divider(_page_text(page_by_number[page]), section_title)
-            for page in original_pages
-            if page in page_by_number
-        )
-        else "retained_page_irrelevant_or_insufficient"
-    )
-
-    body_pages = {
-        page_number
-        for page_number in page_by_number
-        if section_start_pages
-        and page_number >= min(section_start_pages)
-        and (next_section_start is None or page_number < next_section_start)
-        and page_number not in original_pages
-    }
-
-    referenced_pages: set[int] = set()
-    finding_by_page: dict[int, str] = {}
-    finding_section_by_page: dict[int, str] = {}
-    for finding in relevant_findings:
-        for reference_page in finding.get("pages") or []:
-            for physical_page in _physical_pages_for_reference(reference_page, pages):
-                referenced_pages.add(physical_page)
-                finding_by_page.setdefault(
-                    physical_page, str(finding.get("id") or evidence_id)
-                )
-                finding_section_by_page.setdefault(
-                    physical_page, str(finding.get("section_id") or section_id)
-                )
-
-    ranked: list[tuple[tuple[float, ...], dict[str, Any]]] = []
-    for page_number, page in page_by_number.items():
-        if page_number in original_pages:
-            continue
-        text = _page_text(page)
-        if not text or _page_is_likely_divider(text, section_title):
-            continue
-        token_overlap, quantity_overlap = _page_similarity(text, source_texts)
-        if token_overlap < 4 and quantity_overlap == 0:
-            continue
-        is_finding_page = page_number in referenced_pages
-        is_body_page = page_number in body_pages
-        if (
-            not is_finding_page
-            and not is_body_page
-            and token_overlap < 6
-            and quantity_overlap == 0
-        ):
-            continue
-        exact_match = any(
-            normalize_for_lookup(source_text) in normalize_for_lookup(text)
-            for source_text in source_texts
-            if len(normalize_for_lookup(source_text)) >= 40
-        )
-        score = (
-            float(is_finding_page) * 30.0
-            + float(is_body_page) * 10.0
-            + float(exact_match) * 20.0
-            + min(token_overlap, 20) * 2.0
-            + min(quantity_overlap, 8) * 5.0
-        )
-        ranked.append(
-            (
-                (-score, page_number),
-                {
-                    "physical_page": page_number,
-                    "source_identity": context["source_identity"],
-                    "source_pack": "findings" if is_finding_page else "doc_map",
-                    "evidence_id": finding_by_page.get(page_number, evidence_id),
-                    "section_id": finding_section_by_page.get(
-                        page_number, section_id
-                    ),
-                    "page_text": text,
-                    "reason": recovery_reason,
-                    "score": score,
-                },
-            )
-        )
-    ranked.sort(key=lambda item: item[0])
-    return [item[1] for item in ranked[:limit]]
+    return recovery_candidates_for_claim(context=context, claim=claim, limit=limit)
 
 
 def _retained_claims(
@@ -754,27 +428,230 @@ def _outcome_counts(selected_rows: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
-def _theme_for_recovery_candidate(
-    candidate: Mapping[str, Any], editorial_plan: Mapping[str, Any]
+def _assert_outcome_count_arithmetic(
+    selected_rows: list[dict[str, Any]], counts: Mapping[str, int]
+) -> None:
+    """Fail closed if aggregate counts cannot be reconciled to terminal rows."""
+
+    if counts.get("verified_total") != (
+        counts.get("verified_first_pass", 0) + counts.get("verified_after_retry", 0)
+    ):
+        raise RuntimeError("Step 2 verified outcome counts are inconsistent")
+    terminal_count = sum(
+        counts.get(key, 0)
+        for key in (
+            "verified_first_pass",
+            "verified_after_retry",
+            "failed_verification",
+            "unresolved",
+            "skipped",
+        )
+    )
+    if terminal_count != len(selected_rows):
+        raise RuntimeError("Step 2 terminal outcome counts do not match evaluated rows")
+
+
+def _theme_for_evidence_ids(
+    evidence_ids: list[str], editorial_plan: Mapping[str, Any]
 ) -> tuple[int | None, str]:
-    evidence_ids = {
-        str(candidate.get(key) or "").strip().casefold()
-        for key in ("evidence_id", "section_id")
-        if str(candidate.get(key) or "").strip()
+    normalized_ids = {
+        str(value or "").strip().casefold()
+        for value in evidence_ids
+        if str(value or "").strip()
     }
     matches: list[tuple[int, str]] = []
     for theme in editorial_plan.get("themes") or []:
-        if not isinstance(theme, dict):
+        if not isinstance(theme, dict) or not isinstance(theme.get("priority"), int):
             continue
         theme_ids = {
             str(value or "").strip().casefold()
             for value in theme.get("evidence_ids") or []
+            if str(value or "").strip()
         }
-        if evidence_ids.intersection(theme_ids):
-            priority = theme.get("priority")
-            if isinstance(priority, int):
-                matches.append((priority, str(theme.get("theme") or "")))
+        if normalized_ids.intersection(theme_ids):
+            matches.append((theme["priority"], str(theme.get("theme") or "")))
     return min(matches) if matches else (None, "")
+
+
+def _theme_for_recovery_candidate(
+    candidate: Mapping[str, Any], editorial_plan: Mapping[str, Any]
+) -> tuple[int | None, str]:
+    return _theme_for_evidence_ids(
+        [
+            str(candidate.get(key) or "")
+            for key in ("evidence_id", "section_id")
+            if str(candidate.get(key) or "")
+        ],
+        editorial_plan,
+    )
+
+
+def _page_notes_text(row: Mapping[str, Any]) -> str:
+    notes = row.get("source_truth_notes_by_page")
+    if not isinstance(notes, dict):
+        return ""
+    ordered = sorted(
+        (
+            int(page),
+            str(note).strip(),
+        )
+        for page, note in notes.items()
+        if str(page).strip().isdigit() and str(note).strip()
+    )
+    return " ".join(f"Page {page}: {note}" for page, note in ordered)
+
+
+def _metric_bindings_conflict(
+    left: Mapping[str, Any], right: Mapping[str, Any]
+) -> bool:
+    left_metric = left.get("metric") if isinstance(left.get("metric"), dict) else {}
+    right_metric = right.get("metric") if isinstance(right.get("metric"), dict) else {}
+    for field_name in set(left_metric) | set(right_metric):
+        left_value = normalize_for_lookup(left_metric.get(field_name))
+        right_value = normalize_for_lookup(right_metric.get(field_name))
+        if left_value and right_value and left_value != right_value:
+            return True
+    return False
+
+
+def _editorial_quality_report(report: str, insights: list[dict[str, Any]]):
+    from src.generators.public_editorial_quality_generator import (
+        evaluate_public_editorial_quality,
+    )
+
+    return evaluate_public_editorial_quality(
+        report_id=report,
+        artifacts={"insights_final": insights},
+    )
+
+
+def _editorial_duplicate_pairs(quality_report: Any) -> set[tuple[str, str]]:
+    pairs: set[tuple[str, str]] = set()
+    for issue in quality_report.issues:
+        if issue.rule_id != "public_editorial_quality.duplicate_insight":
+            continue
+        field = str(issue.affected_field or "")
+        if not field.startswith("insights:") or "~insights:" not in field:
+            continue
+        left, right = field.split("~insights:", 1)
+        left = left.removeprefix("insights:")
+        if left and right:
+            pairs.add(tuple(sorted((left, right))))
+    return pairs
+
+
+def _editorially_duplicate(
+    left: Mapping[str, Any],
+    right: Mapping[str, Any],
+    duplicate_pairs: set[tuple[str, str]],
+) -> bool:
+    if _metric_bindings_conflict(left, right):
+        return False
+    left_text = normalize_for_lookup(left.get("text"))
+    right_text = normalize_for_lookup(right.get("text"))
+    if left_text and left_text == right_text:
+        return True
+    left_id = str(left.get("id") or left.get("candidate_id") or "").strip()
+    right_id = str(right.get("id") or right.get("candidate_id") or "").strip()
+    if (
+        left_id
+        and right_id
+        and left_id != right_id
+        and _insights_semantically_equivalent(dict(left), dict(right))
+    ):
+        return True
+    if tuple(sorted((left_id, right_id))) not in duplicate_pairs:
+        return False
+    left_evidence = normalize_for_lookup(left.get("evidence_id"))
+    right_evidence = normalize_for_lookup(right.get("evidence_id"))
+    return bool(left_evidence and left_evidence == right_evidence)
+
+
+def _verified_corrected_insight(
+    row: Mapping[str, Any], baseline_by_id: Mapping[str, dict[str, Any]]
+) -> dict[str, Any] | None:
+    candidate_id = str(row.get("candidate_id") or "").strip()
+    final_claim = str(row.get("final_claim") or "").strip()
+    if not candidate_id or not final_claim:
+        return None
+    insight = dict(baseline_by_id.get(candidate_id) or {})
+    insight["id"] = candidate_id
+    insight["text"] = final_claim
+    evidence_ids = [
+        str(value).strip()
+        for value in row.get("evidence_ids") or []
+        if str(value).strip()
+    ]
+    if evidence_ids and not str(insight.get("evidence_id") or "").strip():
+        insight["evidence_id"] = evidence_ids[0]
+    if row.get("evidence_spans"):
+        insight["evidence_spans"] = list(row.get("evidence_spans") or [])
+    if row.get("original_physical_pages"):
+        insight["pages"] = list(row.get("original_physical_pages") or [])
+    source_notes = _page_notes_text(row)
+    if source_notes:
+        insight["evidence"] = source_notes
+    insight["supporting_physical_pages"] = list(
+        row.get("supporting_physical_pages") or []
+    )
+    return insight
+
+
+def _valid_supporting_pages(
+    row: Mapping[str, Any], recovery_candidates: list[dict[str, Any]] | None = None
+) -> tuple[list[int], str]:
+    raw_pages = row.get("supporting_physical_pages")
+    inspected = {
+        page
+        for page in row.get("inspected_physical_pages") or []
+        if type(page) is int and page > 0
+    }
+    if not isinstance(raw_pages, list):
+        return [], "supporting_page_provenance_missing"
+    pages = [page for page in raw_pages if type(page) is int and page > 0]
+    if not pages or len(set(pages)) != len(pages):
+        return [], "supporting_page_provenance_invalid"
+    if not set(pages).issubset(inspected):
+        return [], "supporting_page_provenance_uninspected"
+    recovery_pages = {
+        page
+        for candidate in recovery_candidates or []
+        if isinstance(candidate, dict)
+        for page in [candidate.get("physical_page") or candidate.get("page")]
+        if type(page) is int and page > 0
+    }
+    if recovery_pages and any(page not in recovery_pages for page in pages):
+        return [], "supporting_page_not_recovery_candidate"
+    notes = row.get("source_truth_notes_by_page")
+    if not isinstance(notes, dict):
+        return [], "supporting_page_notes_missing"
+    normalized_notes = {str(key) for key in notes}
+    if normalized_notes != {str(page) for page in pages} or any(
+        not isinstance(value, str) or not value.strip() for value in notes.values()
+    ):
+        return [], "supporting_page_notes_incomplete"
+    return pages, ""
+
+
+def _provisional_recovery_ids(
+    candidates: list[dict[str, Any]], supporting_pages: list[int]
+) -> tuple[list[str], list[str]]:
+    ids: list[str] = []
+    packs: list[str] = []
+    for page in supporting_pages:
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            candidate_page = candidate.get("physical_page") or candidate.get("page")
+            if candidate_page != page:
+                continue
+            evidence_id = str(candidate.get("evidence_id") or "").strip()
+            source_pack = str(candidate.get("source_pack") or "").strip()
+            if evidence_id and evidence_id not in ids:
+                ids.append(evidence_id)
+            if source_pack and source_pack not in packs:
+                packs.append(source_pack)
+    return ids, packs
 
 
 def _shadow_replacement_selection(
@@ -784,16 +661,44 @@ def _shadow_replacement_selection(
     retained_rows: list[dict[str, Any]],
     editorial_plan: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Select verified recovered wording for audit only; never mutate artifacts."""
+    """Select independently page-supported replacements for shadow audit only."""
 
-    proposals: list[dict[str, Any]] = []
+    baseline_by_id = {
+        str(item.get("id") or item.get("candidate_id") or "").strip(): item
+        for item in baseline_insights
+        if isinstance(item, dict)
+        and str(item.get("id") or item.get("candidate_id") or "").strip()
+    }
+    baseline_order = {
+        candidate_id: index for index, candidate_id in enumerate(baseline_by_id)
+    }
+    verified_insights: list[dict[str, Any]] = []
+    verified_by_id: dict[str, dict[str, Any]] = {}
     for row in retained_rows:
+        if row.get("outcome") not in {"verified", "verified_after_retry"}:
+            continue
+        insight = _verified_corrected_insight(row, baseline_by_id)
+        if insight is None:
+            continue
+        candidate_id = str(insight.get("id") or "")
+        if candidate_id in verified_by_id:
+            continue
+        verified_by_id[candidate_id] = insight
+        verified_insights.append(insight)
+
+    complete_quality = _editorial_quality_report(report, verified_insights)
+    duplicate_pairs = _editorial_duplicate_pairs(complete_quality)
+    proposals: list[dict[str, Any]] = []
+    pre_rejected: list[dict[str, Any]] = []
+    candidate_count = 0
+    recovered_ids: set[str] = set()
+    for row_order, row in enumerate(retained_rows):
         if row.get("outcome") not in {"verified", "verified_after_retry"}:
             continue
         recovered_pages = [
             page
             for page in row.get("recovered_physical_pages") or []
-            if isinstance(page, int) and page > 0
+            if type(page) is int and page > 0
         ]
         final_claim = str(row.get("final_claim") or "").strip()
         recovery_candidates = row.get("recovery_candidates")
@@ -803,76 +708,180 @@ def _shadow_replacement_selection(
             or not isinstance(recovery_candidates, list)
         ):
             continue
-        best_source = max(
-            (item for item in recovery_candidates if isinstance(item, dict)),
-            key=lambda item: (
-                float(item.get("score"))
-                if isinstance(item.get("score"), (int, float))
-                else 0.0
-            ),
-            default={},
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        candidate_count += 1
+        supporting_pages, support_error = _valid_supporting_pages(
+            row, [item for item in recovery_candidates if isinstance(item, dict)]
         )
-        theme_priority, theme = _theme_for_recovery_candidate(
-            best_source, editorial_plan
+        if support_error:
+            pre_rejected.append(
+                {
+                    "candidate_id": candidate_id,
+                    "final_claim": final_claim,
+                    "selection_status": "abstained",
+                    "selection_reason": support_error,
+                }
+            )
+            continue
+        provisional_ids, provisional_packs = _provisional_recovery_ids(
+            [item for item in recovery_candidates if isinstance(item, dict)],
+            supporting_pages,
         )
-        specificity = len(_recovery_tokens(final_claim))
-        quantities = len(_recovery_quantity_values(final_claim))
+        original_evidence_ids = [
+            str(value).strip()
+            for value in row.get("evidence_ids") or []
+            if str(value).strip()
+        ]
+        theme_priority, theme = _theme_for_evidence_ids(
+            original_evidence_ids, editorial_plan
+        )
+        if theme_priority is None:
+            for candidate in recovery_candidates:
+                if not isinstance(candidate, dict):
+                    continue
+                page = candidate.get("physical_page") or candidate.get("page")
+                if page not in supporting_pages:
+                    continue
+                theme_priority, theme = _theme_for_recovery_candidate(
+                    candidate, editorial_plan
+                )
+                if theme_priority is not None:
+                    break
+        if candidate_id not in recovered_ids:
+            recovered_ids.add(candidate_id)
+        editorial_insight = verified_by_id.get(candidate_id)
+        if editorial_insight is None:
+            pre_rejected.append(
+                {
+                    "candidate_id": candidate_id,
+                    "final_claim": final_claim,
+                    "selection_status": "abstained",
+                    "selection_reason": "verified_insight_missing",
+                }
+            )
+            continue
+        proposal_quality = _editorial_quality_report(report, [editorial_insight])
+        quality_issues = [
+            issue.rule_id
+            for issue in proposal_quality.issues
+            if issue.severity == "error"
+        ]
         proposals.append(
             {
-                "candidate_id": row.get("candidate_id", ""),
+                "candidate_id": candidate_id,
                 "original_claim": row.get("original_claim", ""),
                 "final_claim": final_claim,
                 "source_identity": row.get("source_identity", ""),
-                "original_evidence_ids": list(row.get("evidence_ids") or []),
+                "original_evidence_ids": original_evidence_ids,
                 "original_evidence_spans": list(row.get("evidence_spans") or []),
                 "recovered_pages": recovered_pages,
-                "recovered_evidence_id": best_source.get("evidence_id", ""),
-                "recovered_source_pack": best_source.get("source_pack", ""),
+                "supporting_physical_pages": supporting_pages,
+                "source_truth_notes_by_page": dict(
+                    row.get("source_truth_notes_by_page") or {}
+                ),
+                "provisional_recovery_evidence_ids": provisional_ids,
+                "provisional_recovery_source_packs": provisional_packs,
                 "recovery_reason": row.get("recovery_reason", ""),
                 "theme": theme,
                 "theme_priority": theme_priority,
-                "specificity_tokens": specificity,
-                "numeric_values": quantities,
-                "source_score": best_source.get("score", 0.0),
+                "source_score": max(
+                    (
+                        float(item.get("score"))
+                        for item in recovery_candidates
+                        if isinstance(item, dict)
+                        and isinstance(item.get("score"), (int, float))
+                    ),
+                    default=0.0,
+                ),
+                "editorial_quality_issues": quality_issues,
+                "editorial_quality_status": "abstained" if quality_issues else "pass",
+                "verification_status": str(row.get("outcome") or ""),
                 "source_binding_status": "provisional_recovered",
+                "canonical_approval_status": "not_approved",
+                "row_order": row_order,
+                "baseline_order": baseline_order.get(candidate_id, len(baseline_order)),
             }
         )
 
     proposals.sort(
         key=lambda item: (
             item["theme_priority"] if item["theme_priority"] is not None else 10_000,
-            -float(item["source_score"] or 0.0),
-            -item["numeric_values"],
-            -item["specificity_tokens"],
+            item["baseline_order"],
+            item["row_order"],
             str(item["candidate_id"]),
         )
     )
     selected: list[dict[str, Any]] = []
-    rejected: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = [*pre_rejected]
     for proposal in proposals:
-        shadow_candidate = {
-            "id": proposal["candidate_id"],
-            "text": proposal["final_claim"],
-            "evidence_id": proposal["recovered_evidence_id"],
-            "pages": proposal["recovered_pages"],
-        }
-        duplicate_of = next(
-            (
-                str(existing.get("id") or existing.get("candidate_id") or "")
-                for existing in baseline_insights
-                if isinstance(existing, dict)
-                and _insights_semantically_equivalent(shadow_candidate, existing)
-            ),
-            "",
-        )
-        duplicate_of = duplicate_of or next(
-            (
-                str(existing.get("candidate_id") or "")
-                for existing in selected
-                if _insights_semantically_equivalent(shadow_candidate, existing)
-            ),
-            "",
-        )
+        candidate_id = str(proposal["candidate_id"])
+        editorial_insight = verified_by_id[candidate_id]
+        if proposal["editorial_quality_issues"]:
+            rejected.append(
+                {
+                    **proposal,
+                    "selection_status": "abstained",
+                    "selection_reason": "editorial_quality_blocker:"
+                    + ",".join(proposal["editorial_quality_issues"]),
+                }
+            )
+            continue
+        duplicate_of = ""
+        baseline = baseline_by_id.get(candidate_id)
+        if baseline is not None:
+            pair_quality = _editorial_quality_report(
+                report, [editorial_insight, dict(baseline)]
+            )
+            if _editorially_duplicate(
+                editorial_insight,
+                baseline,
+                _editorial_duplicate_pairs(pair_quality),
+            ):
+                duplicate_of = candidate_id
+        if not duplicate_of:
+            duplicates = [
+                other_id
+                for other_id, other in verified_by_id.items()
+                if other_id != candidate_id
+                and _editorially_duplicate(editorial_insight, other, duplicate_pairs)
+            ]
+            if duplicates:
+                non_replacement = [
+                    other_id for other_id in duplicates if other_id not in recovered_ids
+                ]
+                if non_replacement:
+                    duplicate_of = min(non_replacement)
+                else:
+                    winner = min(
+                        [candidate_id, *duplicates],
+                        key=lambda value: (
+                            baseline_order.get(value, len(baseline_order)),
+                            next(
+                                (
+                                    item["row_order"]
+                                    for item in proposals
+                                    if item["candidate_id"] == value
+                                ),
+                                10_000,
+                            ),
+                            value,
+                        ),
+                    )
+                    if winner != candidate_id:
+                        duplicate_of = winner
+        if not duplicate_of:
+            duplicate_of = next(
+                (
+                    str(existing.get("candidate_id") or "")
+                    for existing in selected
+                    if _editorially_duplicate(
+                        editorial_insight,
+                        verified_by_id.get(str(existing.get("candidate_id") or ""), {}),
+                        duplicate_pairs,
+                    )
+                ),
+                "",
+            )
         if duplicate_of:
             rejected.append(
                 {
@@ -894,10 +903,11 @@ def _shadow_replacement_selection(
         selected.append(
             {
                 **proposal,
-                "id": proposal["candidate_id"],
+                "id": candidate_id,
                 "text": proposal["final_claim"],
-                "evidence_id": proposal["recovered_evidence_id"],
                 "selection_status": "selected",
+                "selection_reason": "source_verified_theme_preserved",
+                "theme_coverage_preserved": True,
             }
         )
 
@@ -905,8 +915,15 @@ def _shadow_replacement_selection(
         "report": report,
         "selected": selected,
         "rejected_or_abstained": rejected,
-        "candidate_count": len(proposals),
+        "candidate_count": candidate_count,
         "selected_count": len(selected),
+        "complete_verified_insight_count": len(verified_insights),
+        "complete_verified_set_quality": {
+            "status": complete_quality.status,
+            "publishable": complete_quality.publishable,
+            "duplicate_pairs": [list(pair) for pair in sorted(duplicate_pairs)],
+            "issue_count": len(complete_quality.issues),
+        },
         "canonical_mutation": False,
         "publication_write": False,
     }
@@ -1122,6 +1139,12 @@ def replay_live_step2(
         and row.get("outcome") not in {"verified", "verified_after_retry"}
         for row in reference_rows
     )
+    real_outcomes = _outcome_counts(retained_rows)
+    reference_outcomes = _outcome_counts(reference_rows)
+    all_outcomes = _outcome_counts(rows)
+    _assert_outcome_count_arithmetic(retained_rows, real_outcomes)
+    _assert_outcome_count_arithmetic(reference_rows, reference_outcomes)
+    _assert_outcome_count_arithmetic(rows, all_outcomes)
     report = {
         "schema_version": "1.0",
         "stage": "verified_claims_step2_visual_live",
@@ -1152,14 +1175,15 @@ def replay_live_step2(
             ),
             "evaluated_claim_count": len(retained_rows),
             "unavailable": retained_unavailable,
-            "outcomes": _outcome_counts(retained_rows),
+            "outcomes": real_outcomes,
         },
         "rendered_page_count": rendered_page_count,
         "outcomes": {
-            **_outcome_counts(rows),
+            **all_outcomes,
         },
         "reference_comparison": {
             "evaluated_claim_count": len(reference_rows),
+            "outcomes": reference_outcomes,
             "outcome_matches": expected_matches,
             "false_accepts": false_accepts,
             "false_rejects": false_rejects,

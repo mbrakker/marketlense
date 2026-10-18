@@ -84,6 +84,23 @@ class VisualClaimVerificationAttempt:
     source_truth_notes: str = field(
         default="", metadata={"doc": "Verifier explanation tied to the source page."}
     )
+    supporting_physical_pages: List[int] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "One-based physical pages independently identified as supporting "
+                "the final corrected claim."
+            )
+        },
+    )
+    source_truth_notes_by_page: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Page-keyed source-grounded explanations for supporting physical pages."
+            )
+        },
+    )
     request_id: str = field(default="", metadata={"doc": "Provider request ID."})
     model: str = field(default="", metadata={"doc": "Resolved provider model."})
 
@@ -159,6 +176,31 @@ class VisualClaimEvaluationResult:
         metadata={
             "doc": (
                 "Binding state: retained, or provisional_recovered; never canonical."
+            )
+        },
+    )
+    supporting_physical_pages: List[int] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "One-based physical pages independently identified as supporting "
+                "the final corrected claim."
+            )
+        },
+    )
+    source_truth_notes_by_page: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Page-keyed source-grounded explanations for supporting physical pages."
+            )
+        },
+    )
+    canonical_approval_status: str = field(
+        default="not_approved",
+        metadata={
+            "doc": (
+                "Canonical promotion state; shadow verification never approves a claim."
             )
         },
     )
