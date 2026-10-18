@@ -22,7 +22,7 @@ from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:2"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:3"
 
 METRIC_FIELDS = (
     "label",
@@ -1201,7 +1201,114 @@ def _candidate_group_has_factual_conflict(
         values.discard("")
         if len(values) > 1:
             return True
+    for index, candidate in enumerate(candidates):
+        for other in candidates[index + 1 :]:
+            if _candidate_provenance_has_conflict(candidate, other):
+                return True
     return False
+
+
+def _candidate_provenance_has_conflict(
+    candidate: Dict[str, Any], other: Dict[str, Any]
+) -> bool:
+    """Reject incompatible physical bindings for one stable candidate ID.
+
+    A canonical evidence ID can legitimately be represented by the same
+    excerpt on several pages, or by overlapping source spans.  It cannot,
+    however, identify two unrelated page/span excerpts and still be resolved
+    by editorial score.
+    """
+    candidate_pages, candidate_spans, candidate_texts = _candidate_provenance(candidate)
+    other_pages, other_spans, other_texts = _candidate_provenance(other)
+    shared_texts = candidate_texts.intersection(other_texts)
+    if shared_texts:
+        return False
+    if _candidate_spans_are_compatible(candidate_spans, other_spans):
+        return False
+
+    pages_overlap = bool(candidate_pages.intersection(other_pages))
+    candidate_has_physical_binding = bool(candidate_pages or candidate_spans)
+    other_has_physical_binding = bool(other_pages or other_spans)
+    if candidate_has_physical_binding and other_has_physical_binding:
+        if pages_overlap:
+            return bool(candidate_texts and other_texts)
+        return True
+    return bool(candidate_texts and other_texts)
+
+
+def _candidate_provenance(
+    insight: Dict[str, Any],
+) -> tuple[set[int], List[Dict[str, Any]], set[str]]:
+    pages = {
+        page
+        for page in insight.get("pages") or []
+        if isinstance(page, int) and page > 0
+    }
+    spans = [
+        span for span in (insight.get("evidence_spans") or []) if isinstance(span, dict)
+    ]
+    texts = {
+        normalized
+        for value in [insight.get("evidence")]
+        + [span.get("text") or span.get("evidence") for span in spans]
+        if (normalized := normalize_for_lookup(value))
+    }
+    for span in spans:
+        page = span.get("page")
+        if isinstance(page, int) and page > 0:
+            pages.add(page)
+    return pages, spans, texts
+
+
+def _candidate_spans_are_compatible(
+    candidate_spans: List[Dict[str, Any]],
+    other_spans: List[Dict[str, Any]],
+) -> bool:
+    for candidate_span in candidate_spans:
+        for other_span in other_spans:
+            candidate_text = normalize_for_lookup(
+                candidate_span.get("text") or candidate_span.get("evidence")
+            )
+            other_text = normalize_for_lookup(
+                other_span.get("text") or other_span.get("evidence")
+            )
+            if candidate_text and candidate_text == other_text:
+                return True
+            if (
+                candidate_span.get("page") == other_span.get("page")
+                and _compatible_span_source(
+                    candidate_span.get("source_pack"),
+                    other_span.get("source_pack"),
+                )
+                and _compatible_span_source(
+                    candidate_span.get("section_id"),
+                    other_span.get("section_id"),
+                )
+                and _span_offsets_overlap(candidate_span, other_span)
+            ):
+                return True
+    return False
+
+
+def _compatible_span_source(left: Any, right: Any) -> bool:
+    left_value = normalize_for_lookup(left)
+    right_value = normalize_for_lookup(right)
+    return not left_value or not right_value or left_value == right_value
+
+
+def _span_offsets_overlap(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
+    if not isinstance(left.get("page"), int) or not isinstance(right.get("page"), int):
+        return False
+    left_start = left.get("start_offset")
+    left_end = left.get("end_offset")
+    right_start = right.get("start_offset")
+    right_end = right.get("end_offset")
+    if not all(
+        isinstance(value, int)
+        for value in (left_start, left_end, right_start, right_end)
+    ):
+        return False
+    return max(left_start, right_start) <= min(left_end, right_end)
 
 
 def _complete_protected_metric_binding(metric: Any) -> Dict[str, Any]:

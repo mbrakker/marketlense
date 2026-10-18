@@ -3,7 +3,10 @@ from __future__ import annotations
 import pytest
 
 from src.generators import artifact_normalization
-from src.generators._artifact_generator.storage import _artifact_cache_meta_matches
+from src.generators._artifact_generator.storage import (
+    _artifact_cache_meta_matches,
+    derive_metric_spine_from_insights,
+)
 from src.generators.artifact_normalization import (
     fallback_artifact_insights_from_findings,
     select_artifact_insights,
@@ -371,6 +374,221 @@ def test_selector_accepts_same_id_source_consistent_representations() -> None:
     }
 
 
+def test_selector_fails_closed_for_same_id_conflicting_physical_provenance() -> None:
+    metric = {
+        "label": "Respondent share",
+        "value": "42%",
+        "unit": "%",
+        "cohort": "Survey respondents",
+    }
+    first = _insight(
+        "shared",
+        "f1",
+        "The first source proposition.",
+        score=0.99,
+        metric=metric,
+        evidence="The source reports 42% for the first population.",
+        pages=[4],
+        evidence_spans=[
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "start_offset": 10,
+                "end_offset": 40,
+                "text": "The source reports 42% for the first population.",
+            }
+        ],
+    )
+    second = _insight(
+        "shared",
+        "f1",
+        "The second source proposition.",
+        score=0.01,
+        metric=metric,
+        evidence="The source reports 42% for the second population.",
+        pages=[9],
+        evidence_spans=[
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 9,
+                "start_offset": 80,
+                "end_offset": 110,
+                "text": "The source reports 42% for the second population.",
+            }
+        ],
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[],
+        candidate_insights=[first, second],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert selected == []
+
+
+def test_selector_fails_closed_for_disjoint_same_page_spans() -> None:
+    metric = {"label": "Respondent share", "value": "42%", "unit": "%"}
+    first = _insight(
+        "shared",
+        "f1",
+        "The first source proposition.",
+        score=0.99,
+        metric=metric,
+        evidence="The first source excerpt.",
+        pages=[4],
+        evidence_spans=[
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "start_offset": 10,
+                "end_offset": 20,
+                "text": "The first source excerpt.",
+            }
+        ],
+    )
+    second = _insight(
+        "shared",
+        "f1",
+        "The second source proposition.",
+        score=0.01,
+        metric=metric,
+        evidence="The second source excerpt.",
+        pages=[4],
+        evidence_spans=[
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "start_offset": 30,
+                "end_offset": 40,
+                "text": "The second source excerpt.",
+            }
+        ],
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[],
+        candidate_insights=[first, second],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert selected == []
+
+
+def test_selector_accepts_overlapping_alternative_source_spans() -> None:
+    metric = {"label": "Respondent share", "value": "42%", "unit": "%"}
+    first = _insight(
+        "shared",
+        "f1",
+        "The first source wording.",
+        score=0.7,
+        metric=metric,
+        evidence="The first source excerpt.",
+        pages=[4],
+        evidence_spans=[
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "start_offset": 10,
+                "end_offset": 30,
+                "text": "The first source excerpt.",
+            }
+        ],
+    )
+    second = _insight(
+        "shared",
+        "f1",
+        "The equivalent source wording.",
+        score=0.9,
+        metric=metric,
+        evidence="The equivalent source excerpt.",
+        pages=[4],
+        evidence_spans=[
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "start_offset": 25,
+                "end_offset": 45,
+                "text": "The equivalent source excerpt.",
+            }
+        ],
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[],
+        candidate_insights=[first, second],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert [item["id"] for item in selected] == ["shared"]
+    assert selected[0]["evidence"] == "The equivalent source excerpt."
+
+
+def test_selector_accepts_legitimate_multi_page_source_representation() -> None:
+    metric = {
+        "label": "Respondent share",
+        "value": "42%",
+        "unit": "%",
+        "cohort": "Survey respondents",
+    }
+    shared_excerpt = "The source reports 42% for surveyed respondents."
+    first = _insight(
+        "shared",
+        "f1",
+        "The source wording.",
+        score=0.7,
+        metric=metric,
+        evidence=shared_excerpt,
+        pages=[4],
+        evidence_spans=[
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "text": shared_excerpt,
+            }
+        ],
+    )
+    second = _insight(
+        "shared",
+        "f1",
+        "Equivalent source wording.",
+        score=0.9,
+        metric=metric,
+        evidence=shared_excerpt,
+        pages=[4, 5],
+        evidence_spans=[
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "text": shared_excerpt,
+            },
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 5,
+                "text": shared_excerpt,
+            },
+        ],
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[],
+        candidate_insights=[first, second],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert [item["id"] for item in selected] == ["shared"]
+    assert selected[0]["pages"] == [4, 5]
+
+
 def test_selector_removes_final_only_protected_metric_additions() -> None:
     candidate = _insight(
         "shared",
@@ -415,6 +633,49 @@ def test_selector_removes_final_only_protected_metric_additions() -> None:
         "value": "42%",
         "unit": "%",
     }
+
+
+def test_supported_candidate_numeric_binding_survives_downstream_metric_spine() -> None:
+    candidate = _insight(
+        "shared",
+        "f1",
+        "The retained source proposition.",
+        score=0.8,
+        metric={
+            "label": "Respondent share",
+            "value": "42%",
+            "unit": "%",
+            "subject": "Survey respondents",
+        },
+    )
+    final = _insight(
+        "shared",
+        "f-final",
+        "The final editorial rewrite.",
+        score=0.2,
+        metric={
+            "label": "Respondent share",
+            "value": "99%",
+            "unit": "%",
+            "timeframe": "2026 forecast",
+            "geography": "Global",
+        },
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[final],
+        candidate_insights=[candidate],
+        editorial_plan=_plan("f1", "f2"),
+    )
+    metric_spine = derive_metric_spine_from_insights(selected)
+
+    assert selected[0]["text"] == "The final editorial rewrite."
+    assert selected[0]["metric"]["value"] == "42%"
+    assert selected[0]["metric"]["timeframe"] == ""
+    assert selected[0]["metric"]["geography"] == ""
+    assert metric_spine[0]["value"] == "42%"
+    assert metric_spine[0]["timeframe"] == ""
+    assert metric_spine[0]["geography"] == ""
 
 
 def test_selector_rejects_final_rewrite_without_candidate_binding() -> None:
@@ -727,6 +988,9 @@ def test_finding_fallback_covers_uncovered_themes_before_filling_capacity() -> N
 
 
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:
+    assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION == (
+        "evidence_backed_shortlisting:3"
+    )
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
         "stable_id_unique_selection:2"
     )
@@ -735,7 +999,11 @@ def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> N
     )
 
 
-def test_old_selection_version_cannot_match_a_new_cache_key() -> None:
+@pytest.mark.parametrize(
+    "old_version",
+    ["stable_id_unique_selection:2", "evidence_backed_shortlisting:2"],
+)
+def test_old_selection_version_cannot_match_a_new_cache_key(old_version: str) -> None:
     expected = {
         "insight_selection_version": (
             artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION
@@ -745,7 +1013,7 @@ def test_old_selection_version_cannot_match_a_new_cache_key() -> None:
     matched, reason = _artifact_cache_meta_matches(
         cached_meta={
             "key": "new-cache-key",
-            "insight_selection_version": "stable_id_unique_selection:2",
+            "insight_selection_version": old_version,
         },
         expected_cache_meta=expected,
         cache_key="new-cache-key",
