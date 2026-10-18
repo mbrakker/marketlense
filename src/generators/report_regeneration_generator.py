@@ -1676,10 +1676,12 @@ def _resolve_mutation_child(
     if not isinstance(child, list):
         return None
     if selector.isdigit():
-        index = int(selector)
-        return child[index] if 0 <= index < len(child) else None
-    index = _mutation_list_index(child, selector, identity_fields=identity_fields)
-    return child[index] if index is not None else None
+        numeric_index = int(selector)
+        return child[numeric_index] if 0 <= numeric_index < len(child) else None
+    matching_index = _mutation_list_index(
+        child, selector, identity_fields=identity_fields
+    )
+    return child[matching_index] if matching_index is not None else None
 
 
 def _read_mutation_path(

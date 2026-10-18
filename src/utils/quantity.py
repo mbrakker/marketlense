@@ -810,7 +810,19 @@ def _resolve_unit_family(
     unit_norm = _clean_unit(unit)
     magnitude_norm = _clean_unit(magnitude)
     sentence_norm = normalize_text(sentence)
-    around = sentence_norm[max(0, span[0] - 32) : min(len(sentence_norm), span[1] + 32)]
+    context_start = max(0, span[0] - 32)
+    context_end = min(len(sentence_norm), span[1] + 32)
+    before = sentence_norm[context_start : span[0]]
+    after = sentence_norm[span[1] : context_end]
+    # Currency words belong to the local clause. Do not let a later
+    # semicolon-delimited metric (for example ``200 mil; Spend: $400B``)
+    # reclassify the preceding population count as currency.
+    for boundary in (";", ".", "!", "?", "\n"):
+        before = before[before.rfind(boundary) + 1 :]
+        boundary_index = after.find(boundary)
+        if boundary_index >= 0:
+            after = after[:boundary_index]
+    around = before + sentence_norm[span[0] : span[1]] + after
     near = sentence_norm[max(0, span[0] - 10) : min(len(sentence_norm), span[1] + 10)]
     following = sentence_norm[span[1] : min(len(sentence_norm), span[1] + 24)]
 

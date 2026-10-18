@@ -192,6 +192,8 @@ def test_insight_grounding_includes_authoritative_source_page_context():
         artifacts,
     )
     item = next(
-        x for x in payload["public_factual_items"] if x["item_id"] == "insight:pay-tv:text"
+        x
+        for x in payload["public_factual_items"]
+        if x["item_id"] == "insight:pay-tv:text"
     )
     assert "U.S." in item["retained_evidence"]

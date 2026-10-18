@@ -774,7 +774,9 @@ def test_finalization_invariant_rejects_public_copy_mutated_after_provenance() -
     assert captured.value.code == "soft_copy_claim_provenance_coverage_invalid"
 
 
-def test_regeneration_candidate_defers_missing_bindings_to_candidate_validator() -> None:
+def test_regeneration_candidate_defers_missing_bindings_to_candidate_validator() -> (
+    None
+):
     original = _assemble_soft_copy(
         expert_comment="Revenue grew by 12%.",
         evidence_packs={
@@ -804,9 +806,7 @@ def test_regeneration_candidate_defers_missing_bindings_to_candidate_validator()
                 ]
             }
         },
-        existing_soft_copy_claim_provenance=original[
-            "soft_copy_claim_provenance"
-        ],
+        existing_soft_copy_claim_provenance=original["soft_copy_claim_provenance"],
         regeneration_attempt=1,
     )
 

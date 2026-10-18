@@ -188,9 +188,7 @@ def test_key_figure_why_it_matters_drops_unverified_ranking_language() -> None:
         metric_spine=[],
         evidence_packs={
             "findings": {
-                "findings": [
-                    {"id": "beauty-amazon", "evidence": insight["evidence"]}
-                ]
+                "findings": [{"id": "beauty-amazon", "evidence": insight["evidence"]}]
             }
         },
         insights_final=[insight],

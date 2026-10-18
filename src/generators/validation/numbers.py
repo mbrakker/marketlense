@@ -138,23 +138,31 @@ def validate_new_numbers(
                     quantity=quantity,
                     sentence=sentence,
                 )
-                key = (section, quantity.raw or str(quantity.value), severity)
-                if key in seen:
-                    continue
-                seen.add(key)
                 claim = soft_copy_claims.get((section, _normalized_text_hash(sentence)))
-                issues.append(
-                    replace(
-                        issue(
-                            rule_id=RULE_ID,
-                            message=f"Number {quantity.value} not present in report or evidence",
-                            severity=severity,
-                            section=section,
-                            entity_id=claim.claim_id if claim else "",
-                        ),
-                        evidence_ids=list(claim.evidence_ids) if claim else [],
-                    )
+                missing_values = (
+                    [quantity.low, quantity.high]
+                    if quantity.comparator == "range"
+                    and quantity.low is not None
+                    and quantity.high is not None
+                    else [quantity.value]
                 )
+                for missing_value in missing_values:
+                    key = (section, str(missing_value), severity)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    issues.append(
+                        replace(
+                            issue(
+                                rule_id=RULE_ID,
+                                message=f"Number {missing_value} not present in report or evidence",
+                                severity=severity,
+                                section=section,
+                                entity_id=claim.claim_id if claim else "",
+                            ),
+                            evidence_ids=list(claim.evidence_ids) if claim else [],
+                        )
+                    )
         unsupported_pairs = unsupported_period_time_pairs(text, source_text)
         source_pairs = period_time_pairs(source_text)
         source_values_by_period = {period: value for period, value in source_pairs}

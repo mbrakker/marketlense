@@ -830,9 +830,8 @@ def _soft_copy_claim_provenance_payload(
             or claim.text_hash in public_sentence_hashes[family]
         ]
         family_claims = [claim for claim in claims if claim.artifact_family == family]
-        if (
-            regeneration_attempt <= 0
-            and not retained_soft_copy_claims_cover_text(text=text, claims=family_claims)
+        if regeneration_attempt <= 0 and not retained_soft_copy_claims_cover_text(
+            text=text, claims=family_claims
         ):
             raise AppError(
                 code="soft_copy_claim_provenance_coverage_invalid",
@@ -2495,7 +2494,7 @@ def _key_figure_why_it_matters(
         # figure surface. The metric tuple is the source-backed minimum and is
         # safe even when a chart excerpt does not preserve all peer labels.
         if re.search(
-            r"\b(?:led|most common|top|forecast|forecasts|project(?:ed|s)?)\b",
+            r"\b(?:led|most common|top)\b",
             insight_text,
             re.IGNORECASE,
         ):
@@ -2504,9 +2503,7 @@ def _key_figure_why_it_matters(
             segment = _s(metric.get("segment")).strip()
             timeframe = _s(metric.get("timeframe")).strip()
             if label and value:
-                context = ", ".join(
-                    item for item in (segment, timeframe) if item
-                )
+                context = ", ".join(item for item in (segment, timeframe) if item)
                 return f"{label}: {value}" + (f" ({context})" if context else "")
         return insight_text
     label = _s(metric.get("label")).strip()
@@ -2537,7 +2534,7 @@ def _sanitize_key_figure_ranking_language(figures: Any) -> None:
             figure["why_it_matters"] = normalized_current
             current = normalized_current
         if not current or not re.search(
-            r"\b(?:led|most common|top|forecast|forecasts|project(?:ed|s)?)\b",
+            r"\b(?:led|most common|top)\b",
             current,
             re.IGNORECASE,
         ):

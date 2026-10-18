@@ -1708,8 +1708,7 @@ def _structured_category_value_pairs(text: str) -> set[tuple[str, str]]:
             label != other_label
             and value == other_value
             and (
-                other_label.endswith(f" {label}")
-                or other_label.startswith(f"{label} ")
+                other_label.endswith(f" {label}") or other_label.startswith(f"{label} ")
             )
             for other_label, other_value in pairs
         )
@@ -1938,9 +1937,7 @@ def _normalized_relationship_search_text(value: str) -> str:
 def _relationship_label_pattern(label: str) -> re.Pattern[str]:
     parts = [part for part in label.split() if part]
     pattern = r"(?:\s*,?\s+)".join(re.escape(part) for part in parts)
-    return re.compile(
-        rf"(?<![A-Za-z0-9]){pattern}(?![A-Za-z0-9])", re.IGNORECASE
-    )
+    return re.compile(rf"(?<![A-Za-z0-9]){pattern}(?![A-Za-z0-9])", re.IGNORECASE)
 
 
 def _is_year_value(value: str) -> bool:

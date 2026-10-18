@@ -420,7 +420,9 @@ def _normalize_regeneration_issue(
 def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
     """Keep a rejected binding out of the next atomic repair prompt."""
 
-    rule_id = str(issue.rule_id or "").strip().lower()
+    rule_id = str(issue.rule_id or "").strip().lower() or _extract_rule_id(
+        issue.message
+    )
     violation_type = str(issue.violation_type or "").strip().lower()
     if rule_id == "public_editorial_quality.duplicate_insight":
         # The wording duplicates a sibling; their shared source is still valid.
@@ -677,9 +679,7 @@ def _issue_allowed_path(
             stable_id = str(entry.get("id") or entry.get("claim_id") or "").strip()
             item_identity = f"item={stable_id}" if stable_id else str(index)
             return f"summary.claim_evidence_map[{item_identity}].claim"
-        if re.match(
-            r"^summary\.claim_evidence_map(?::|\[)", affected, re.IGNORECASE
-        ):
+        if re.match(r"^summary\.claim_evidence_map(?::|\[)", affected, re.IGNORECASE):
             return ""
         soft_copy_paths = _soft_copy_claim_paths(
             family="summary", entity_id=entity_id, artifacts=artifacts
@@ -693,7 +693,6 @@ def _issue_allowed_path(
         if match:
             return f"summary.{match.group(1)}"
         return ""
-
 
     if target_key == "insights_bundle":
         insight_paths = _issue_insight_allowed_paths(issue, artifacts)
@@ -1369,8 +1368,7 @@ def _summary_issue_groups(
     """Keep unrelated summary leaves in separate model-repair targets."""
 
     paths = [
-        (issue, _issue_allowed_paths("summary", issue, artifacts))
-        for issue in issues
+        (issue, _issue_allowed_paths("summary", issue, artifacts)) for issue in issues
     ]
     if any(not issue_paths for _issue, issue_paths in paths):
         return [issues]
