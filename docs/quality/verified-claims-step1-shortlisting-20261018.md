@@ -154,8 +154,11 @@ No paid provider calls, database writes, WordPress/publication writes, raw-PDF a
 **Subsequent Step 2 handoff (2026-10-18):** A shadow-only visual claim
 correction and independent-verification boundary is implemented on this branch.
 The provider-free frozen-five replay preserved the 29 selected identities,
-wording, themes, pages, spans, and protected bindings, but made no paid GPT-6
-Luna call and therefore does not establish live visual correction quality. The
+wording, themes, pages, spans, and protected bindings. A bounded GPT-6 Luna
+High replay of the exact 15 reference cases / 39 variants verified 38, left
+one wrong-page case unresolved, and exposed one unsupported-metric false accept;
+it did not change retained artifacts or establish fresh candidate recall. The
 separate evidence record is
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`; Step 2 remains
-**PARTIAL** pending live evaluation and Step 3 remains unstarted.
+**PARTIAL** because of the false accept and lack of human editorial review;
+Step 3 remains unstarted.

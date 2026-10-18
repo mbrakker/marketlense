@@ -58,6 +58,9 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "complete original PDF page" in correction.system.text
     assert "independently" in verification.system.text.lower()
     assert "original claim" in correction.user.text.lower()
+    assert "different topic" in correction.system.text.lower()
+    assert "different metric" in correction.system.text.lower()
+    assert "supported qualitative conclusion" in correction.system.text.lower()
 
 
 def _settings(tmp_path):

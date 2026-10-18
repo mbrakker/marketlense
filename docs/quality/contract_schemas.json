@@ -48331,6 +48331,216 @@
       ],
       "type": "object"
     },
+    "src.contracts.verified_claims.VisualClaimCorrectionAttempt": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt": {
+          "type": "integer"
+        },
+        "claim": {
+          "type": "string"
+        },
+        "issues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "model": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "attempt",
+        "claim",
+        "status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.verified_claims.VisualClaimEvaluationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "dpi": {
+          "type": "integer"
+        },
+        "output_dir": {
+          "type": "string"
+        },
+        "pdf_path": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "shadow_mode": {
+          "type": "boolean"
+        },
+        "source_identity": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "pdf_path",
+        "output_dir",
+        "report_name",
+        "source_identity",
+        "claims"
+      ],
+      "type": "object"
+    },
+    "src.contracts.verified_claims.VisualClaimEvaluationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.verified_claims.VisualClaimEvaluationResult"
+          },
+          "type": "array"
+        },
+        "rendered_pages": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "shadow_mode": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "shadow_mode"
+      ],
+      "type": "object"
+    },
+    "src.contracts.verified_claims.VisualClaimEvaluationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "correction_attempts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.verified_claims.VisualClaimCorrectionAttempt"
+          },
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "evidence_spans": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_reason": {
+          "type": "string"
+        },
+        "final_claim": {
+          "type": "string"
+        },
+        "original_claim": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "physical_page": {
+          "type": "integer"
+        },
+        "physical_pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity": {
+          "type": "string"
+        },
+        "verification_attempts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.verified_claims.VisualClaimVerificationAttempt"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "candidate_id",
+        "original_claim",
+        "source_identity",
+        "physical_page",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "src.contracts.verified_claims.VisualClaimVerificationAttempt": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt": {
+          "type": "integer"
+        },
+        "diagnostics": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "model": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_truth_notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "attempt",
+        "outcome"
+      ],
+      "type": "object"
+    },
     "src.contracts.wordpress.WordPressAuthSettings": {
       "additionalProperties": false,
       "properties": {

@@ -14,7 +14,15 @@ text: |
   comparisons, geography, periods, status qualifiers and uncertainty. A
   reasonable editorial implication is allowed, but do not invent causality,
   context, precision, or business outcomes. Distinguish a source fact from an
-  inferred implication in the wording when necessary.
+  inferred implication in the wording when necessary. A replacement conclusion
+  must still address the same retained source-bound proposition. If the supplied
+  page is about a different topic, population, metric, period, or evidence
+  locator than that proposition, return unresolved instead of substituting an
+  unrelated page finding. Do not replace an unavailable metric with a different
+  metric merely because the different metric is visible on the page. If the
+  same source topic and population support the proposition only qualitatively,
+  you may remove an unsupported numeric or realized-outcome upgrade and state
+  the supported qualitative conclusion instead.
 
   If the page is unreadable, ambiguous, or cannot support a useful claim, return
   an unresolved status with an empty claim. Do not guess. Return JSON only:

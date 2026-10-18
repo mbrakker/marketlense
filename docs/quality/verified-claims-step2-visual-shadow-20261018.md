@@ -15,12 +15,12 @@ WordPress. Step 3 visual factualisation and canonical verified-claim persistence
 remain unstarted.
 
 The implementation is complete and the provider-free behavior and policy tests
-pass. The frozen-cohort evaluation below deliberately made no paid model calls:
-the local environment does not establish access to the required GPT-6 Luna
-provider/model (the dotenv model is `gpt-5`, with no configured provider base
-URL). Therefore this record does not claim source verification, corrected-claim
-quality, first-pass verification, retry effectiveness, or live selection
-improvement. A live GPT-6 Luna High run is still required before Step 3.
+pass. The repository dotenv/configuration path resolves `OPENAI_API_KEY` and
+the configured `gpt-6-luna` / High policy. A bounded live shadow run was
+therefore executed against the same retained five-report cohort. It made no
+publication or canonical-artifact writes. The live result is reported below;
+it is an evaluation of visual correction/verification, not fresh candidate
+selection quality or human editorial acceptance.
 
 ## Implemented behavior
 
@@ -131,11 +131,59 @@ failure count, false accepts, false rejects, human-reference accuracy,
 analytical quality, tokens, cost, latency, and cache reuse are **not
 measurable** from this replay. They are not reported as zero-quality outcomes.
 
+## Live GPT-6 Luna High replay
+
+The dotenv-backed repository configuration resolved `OPENAI_API_KEY`, model
+`gpt-6-luna`, and reasoning effort `high`. The bounded command was:
+
+`python scripts/quality/replay_verified_claims_step2.py --live --output out/verified_claims_step2_live_final/report.json`
+
+It used the same hash-matched retained PDFs, the same 15 cases and 39
+candidate variants, complete pages at 216 DPI, shadow mode, and isolated local
+cache/usage paths. No publication, database, canonical-claim, or retained
+artifact write was performed.
+
+| Report | Variants | Verified | Unresolved | Failed/skipped |
+|---|---:|---:|---:|---:|
+| Capgemini Research Institute | 9 | 9 | 0 | 0 |
+| Activate | 11 | 10 | 1 | 0 |
+| KPMG | 7 | 7 | 0 | 0 |
+| Reuters Institute | 8 | 8 | 0 | 0 |
+| Adjust | 4 | 4 | 0 | 0 |
+| **Total** | **39** | **38** | **1** | **0** |
+
+The run used 78 provider calls, 610,349 input tokens, 31,543 output tokens,
+an estimated cost of `$0.076812`, and 506.640 seconds wall time. All 15 page
+renders were available and hash-bound. The final run had 38/39 first-pass
+verified outcomes, no retry successes, no model failures, and no skipped
+claims. The semantic cache was enabled; reuse was not counted as a quality
+result in this fresh output root.
+
+Reference-case comparison is an expected-outcome gate, not human editorial
+acceptance. Of 39 variants, 37 had source-supported expected outcomes and were
+accepted; one expected-unsupported case was correctly unresolved, and one was
+incorrectly accepted. There were no false rejects. The false accept was
+`ADJ-001-unsupported-metric`: the model correctly noticed that the page showed
+installs/sessions rather than churn/conversion, but then substituted the
+page's installs/sessions conclusion instead of abstaining. The corrected
+prompt did close `ACT-004-wrong-page` (unresolved on physical page 15) and
+allowed the same-topic qualitative correction for `KPM-002` without treating
+the unsupported outcome percentage as a realized result.
+
+Representative source-verified outcomes included the Capgemini 49%/48%
+behavior-label swap, Activate's 61%/34% and 64%/47% time-versus-spend swaps,
+Reuters' forecast-versus-observed −43% correction, and Adjust's negative
+session changes and install/session bindings. Final editorial wording was
+preserved in the shadow result, while source identity, physical pages,
+canonical evidence IDs where present, and protected bindings remained
+immutable inputs. This replay does not prove fresh candidate recall, live
+selection effectiveness, or human-rated analytical quality.
+
 ## Regression verification
 
 Passed:
 
-- `python -m pytest -q tests/test_verified_claims_visual_generator.py tests/test_verified_claims_step2_replay.py` — **10 passed**.
+- `python -m pytest -q tests/test_verified_claims_visual_generator.py tests/test_verified_claims_step2_replay.py` — **11 passed**.
 - `python -m pytest -q tests/test_prompt_dry_run_validation.py tests/test_llm_routing_policy.py tests/test_report_generation_execution_policy.py` — **57 passed**.
 - `python -m pytest -q tests/test_artifact_insight_shortlisting.py tests/test_artifact_normalization_source_fidelity.py` — **39 passed**.
 - `python -m pytest -q tests/test_artifact_generator.py tests/test_report_regeneration_generator.py` — **199 passed**.
@@ -153,17 +201,22 @@ cache-enabled image requests, and GPT-6 Luna High policy enforcement.
 
 ## Remaining limitations and recommendation
 
-- No actual GPT-6 Luna High visual call was made, so source truth has not been
-  independently compared with corrected model claims.
 - The provider-free replay starts from retained post-selection artifacts; it
   cannot measure fresh candidate recall or live visual correction quality.
+- The live replay is provider-backed but still starts from retained
+  post-selection reference variants; it does not establish live candidate
+  selection effectiveness or human editorial acceptance.
+- One unsupported-metric reference variant was falsely accepted after a
+  different, source-visible metric was substituted. Step 2 remains shadow-only
+  until this class is resolved by a future scoped correction.
 - Shadow results are not persisted as canonical claims and are not sent through
   downstream regeneration or publication.
 - Step 0's 15 cases and 39 variants are available locally and hash-verified;
-  they must be used in a live, budgeted evaluation before any promotion policy
-  or Step 3 work.
+  they have now been used in the bounded live evaluation, but the single false
+  accept prevents promotion policy or Step 3 work.
 
 **Verdict: PARTIAL.** Step 2's deterministic boundary, contracts, prompts,
 retry behavior, cache wiring, and fail-closed isolation are implemented and
-tested. The required live visual evaluation and independent human/reference
-comparison remain outstanding. Step 3 is not justified by this evidence.
+tested. The live run provides reference-case evidence but has one false
+accept, and independent human editorial review remains outstanding. Step 3 is
+not justified by this evidence.

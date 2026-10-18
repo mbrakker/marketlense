@@ -3,12 +3,30 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
+import re
+import sys
+import time
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
 import pymupdf as fitz
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.contracts.config import ConfigLoadRequest
+from src.contracts.run_context import RunContext
+from src.contracts.verified_claims import (
+    VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
+    VisualClaimEvaluationRequest,
+)
+from src.generators.verified_claims_visual_generator import (
+    evaluate_shortlisted_claims,
+)
+from src.services.config_service import load_settings
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 REFERENCE_PATH = (
@@ -98,6 +116,237 @@ def _retained_report_summary(reference: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
     return summaries
+
+
+def _safe_report_name(report: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", report.lower()).strip("-") or "report"
+
+
+def _reference_claims(
+    reference: dict[str, Any], report: str
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    claims: list[dict[str, Any]] = []
+    metadata: dict[str, dict[str, Any]] = {}
+    for case in reference.get("cases", []):
+        if not isinstance(case, dict) or case.get("report") != report:
+            continue
+        source_pages = case.get("source_pages")
+        physical_pages = (
+            source_pages.get("physical_pdf")
+            if isinstance(source_pages, dict)
+            else []
+        )
+        default_pages = physical_pages
+        physical_pages = [
+            int(page) for page in physical_pages if isinstance(page, int) and page > 0
+        ]
+        evidence_ids = [
+            str(value).strip()
+            for value in case.get("canonical_evidence_ids", [])
+            if str(value).strip()
+        ]
+        fixture = case.get("evaluation_fixture")
+        candidates = fixture.get("candidates", []) if isinstance(fixture, dict) else []
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            locator_override = candidate.get("evidence_locator_override")
+            if isinstance(locator_override, dict):
+                physical_pages = locator_override.get("physical_pdf", default_pages)
+            else:
+                physical_pages = default_pages
+            candidate_id = str(candidate.get("candidate_id") or "").strip()
+            text = str(candidate.get("text") or "").strip()
+            if not candidate_id or not text or not physical_pages:
+                continue
+            claim: dict[str, Any] = {
+                "candidate_id": candidate_id,
+                "text": text,
+                "pages": physical_pages,
+            }
+            if len(evidence_ids) == 1:
+                claim["evidence_id"] = evidence_ids[0]
+            elif evidence_ids:
+                claim["evidence_ids"] = evidence_ids
+            claims.append(claim)
+            metadata[candidate_id] = {
+                "case_id": str(case.get("case_id") or ""),
+                "report": report,
+                "expected_assessment": candidate.get("expected_assessment"),
+                "corrected_statement_assessment": candidate.get(
+                    "corrected_statement_assessment"
+                ),
+                "mutation": candidate.get("mutation"),
+                "source_pages": physical_pages,
+                "expected_source_supported": (
+                    candidate.get("expected_assessment") == "supported"
+                    or candidate.get("corrected_statement_assessment") == "supported"
+                ),
+            }
+    return claims, metadata
+
+
+def _usage_summary(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {
+            "provider_calls": 0,
+            "input_tokens": None,
+            "output_tokens": None,
+            "total_tokens": None,
+            "estimated_cost_usd": None,
+        }
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            rows.append(payload)
+
+    def _sum_field(field: str) -> int | float | None:
+        values = [row.get(field) for row in rows if row.get(field) is not None]
+        return sum(values) if values else None
+
+    return {
+        "provider_calls": len(rows),
+        "input_tokens": _sum_field("input_tokens"),
+        "output_tokens": _sum_field("output_tokens"),
+        "total_tokens": _sum_field("total_tokens"),
+        "estimated_cost_usd": _sum_field("estimated_cost_usd"),
+    }
+
+
+def replay_live_step2(*, output_root: Path | None = None) -> dict[str, Any]:
+    """Run the bounded live visual evaluation against retained local inputs."""
+
+    reference = _load_json(REFERENCE_PATH)
+    root = output_root or (REPOSITORY_ROOT / "out" / "verified_claims_step2_live")
+    root.mkdir(parents=True, exist_ok=True)
+    context = RunContext(
+        schema_version="1.0",
+        run_id="verified-claims-step2-live",
+        task_id="verified-claims-step2-live",
+        span_id="verified-claims-step2-live",
+    )
+    settings = load_settings(
+        ConfigLoadRequest(schema_version="1.0", path="src/config/app.yaml"),
+        context,
+    )
+    if not settings.openai_api_key:
+        raise RuntimeError("OPENAI_API_KEY is not configured")
+    settings = replace(
+        settings,
+        output_dir=str(root),
+        cache_dir=str(root / "cache"),
+        cost_ledger_path=str(root / "cost-ledger.jsonl"),
+        cost_daily_path=str(root / "cost-daily.json"),
+        usage_db_path=str(root / "usage.sqlite"),
+    )
+
+    started = time.perf_counter()
+    rows: list[dict[str, Any]] = []
+    rendered_page_count = 0
+    for report in REPORT_ORDER:
+        claims, metadata = _reference_claims(reference, report)
+        source = reference["source_pdfs"][report]
+        pdf_path = REPOSITORY_ROOT / source["path"]
+        request = VisualClaimEvaluationRequest(
+            schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
+            pdf_path=str(pdf_path),
+            output_dir=str(root),
+            report_name=_safe_report_name(report),
+            source_identity=f"{report}|pdf-sha256:{source['sha256']}",
+            claims=claims,
+            shadow_mode=True,
+            dpi=216,
+        )
+        report_context = RunContext(
+            schema_version="1.0",
+            run_id="verified-claims-step2-live",
+            task_id=f"verified-claims-step2-live:{_safe_report_name(report)}",
+            span_id=f"verified-claims-step2-live:{_safe_report_name(report)}",
+        )
+        response = evaluate_shortlisted_claims(
+            request=request,
+            settings=settings,
+            ctx=report_context,
+        )
+        rendered_page_count += len(response.rendered_pages)
+        for result in response.claims:
+            result_payload = asdict(result)
+            result_metadata = metadata.get(result.candidate_id, {})
+            verified = result.outcome in {"verified", "verified_after_retry"}
+            expected = bool(result_metadata.get("expected_source_supported"))
+            result_payload.update(
+                {
+                    "case_id": result_metadata.get("case_id", ""),
+                    "expected_source_supported": expected,
+                    "outcome_matches_reference": verified == expected,
+                    "mutation": result_metadata.get("mutation", ""),
+                }
+            )
+            rows.append(result_payload)
+
+    usage = _usage_summary(root / "cost-ledger.jsonl")
+    verified_count = sum(
+        row.get("outcome") in {"verified", "verified_after_retry"} for row in rows
+    )
+    first_pass_count = sum(row.get("outcome") == "verified" for row in rows)
+    retry_success_count = sum(
+        row.get("outcome") == "verified_after_retry" for row in rows
+    )
+    expected_matches = sum(bool(row.get("outcome_matches_reference")) for row in rows)
+    false_accepts = sum(
+        row.get("expected_source_supported") is False
+        and row.get("outcome") in {"verified", "verified_after_retry"}
+        for row in rows
+    )
+    false_rejects = sum(
+        row.get("expected_source_supported") is True
+        and row.get("outcome") not in {"verified", "verified_after_retry"}
+        for row in rows
+    )
+    report = {
+        "schema_version": "1.0",
+        "stage": "verified_claims_step2_visual_live",
+        "provider_status": "dispatched",
+        "model": settings.openai_model,
+        "reasoning_effort": "high",
+        "manifest_sha256": reference.get("scope", {}).get("manifest_sha256", ""),
+        "reports": REPORT_ORDER,
+        "reference_set": {"case_count": 15, "candidate_variant_count": 39},
+        "input_claim_count": len(rows),
+        "rendered_page_count": rendered_page_count,
+        "outcomes": {
+            "verified": verified_count,
+            "verified_first_pass": first_pass_count,
+            "verified_after_retry": retry_success_count,
+            "failed_verification": sum(
+                row.get("outcome") == "failed_verification" for row in rows
+            ),
+            "unresolved": sum(row.get("outcome") == "unresolved" for row in rows),
+            "skipped": sum(row.get("outcome") == "skipped" for row in rows),
+        },
+        "reference_comparison": {
+            "outcome_matches": expected_matches,
+            "false_accepts": false_accepts,
+            "false_rejects": false_rejects,
+            "note": (
+                "Expected-source outcome matching is a reference-case gate; it is "
+                "not a substitute for human review of corrected wording."
+            ),
+        },
+        "usage": usage,
+        "wall_time_seconds": round(time.perf_counter() - started, 3),
+        "cache": {
+            "enabled": True,
+            "cache_dir": str(root / "cache"),
+            "reuse_measured": False,
+        },
+        "claims": rows,
+    }
+    return report
 
 
 def replay_frozen_step2(
@@ -212,12 +461,23 @@ def main() -> int:
         default=None,
         help="Optional JSON output path.",
     )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Dispatch the bounded GPT-6 Luna High shadow evaluation.",
+    )
     args = parser.parse_args()
-    report = replay_frozen_step2(provider_free=bool(args.provider_free))
+    report = (
+        replay_live_step2(output_root=args.output.parent if args.output else None)
+        if args.live
+        else replay_frozen_step2(provider_free=bool(args.provider_free))
+    )
     serialized = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(serialized + "\n", encoding="utf-8")
+    with contextlib.suppress(AttributeError):
+        sys.stdout.reconfigure(encoding="utf-8")
     print(serialized)
     return 0
 
