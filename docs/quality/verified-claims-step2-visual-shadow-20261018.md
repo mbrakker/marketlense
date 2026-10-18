@@ -21,39 +21,41 @@ by the model, but it is not promoted to a canonical finding or authoritative
 evidence binding. The live result is therefore evidence about Step 2 correction
 and verification, not fresh Step 1 candidate-selection evidence.
 
-## Latest final-code frozen-five evaluation
+## Latest final-code v5 frozen-five evaluation
 
 The latest final-code live output is
-`out/verified_claims_step2_live_recovery_final_v4_20261018/report.json`.
+`out/verified_claims_step2_live_recovery_final_v5_20261019/report.json`.
 It used the exact five hash-matched PDFs, complete physical pages, GPT-6 Luna
 High, independent correction and verification calls, and no canonical or
-publication writes. The final correction adds one fail-closed provenance rule:
-when deterministic recovery was required, a verified replacement must cite a
-supporting physical page from its bounded recovery candidates; the retained
-page cannot be replacement provenance merely because it was inspected.
+publication writes. v5 rebuilds editorial-quality inputs from the final
+corrected claim and actual inspected PDF page text when available; retained
+metric/evidence fields remain lineage only, and verifier notes are not treated
+as verbatim PDF evidence. The correction namespace now has a 4,096-token
+structured-output budget; correction and verification attempt limits remain
+two each.
 
 | Evaluation set | First pass | After retry | Verified total | Unresolved | Failed | Skipped | Input |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Reference variants | 37 | 1 | 38 | 0 | 1 | 0 | 39 |
-| Real retained shortlist | 28 | 0 | 28 | 1 | 0 | 0 | 29 |
-| **All claims** | **65** | **1** | **66** | **1** | **1** | **0** | **68** |
+| Reference variants | 36 | 2 | 38 | 1 | 0 | 0 | 39 |
+| Real retained shortlist | 27 | 1 | 28 | 0 | 1 | 0 | 29 |
+| **All claims** | **63** | **3** | **66** | **1** | **1** | **0** | **68** |
 
 Counts are mutually exclusive terminal outcomes and are checked by the replay
 arithmetic guard. The reference gate matched **39/39** expected outcomes with
-**0 false accepts** and **0 false rejects**. `ACT-004-wrong-page` failed closed
-after two bounded correction attempts: the second correction was source-factual
-for the supplied page but unrelated to the strict original direction. It was
-not verified. `ADJ-001-unsupported-metric` was not accepted as written; the
-final claim replaced churn/conversion with the page-19 install/session metrics
-and was verified against the original PDF.
+**0 false accepts** and **0 false rejects**. `ACT-004-wrong-page` remained
+unresolved after two bounded correction attempts. `ADJ-001-unsupported-metric`
+was not accepted as written; the final claim replaced churn/conversion with the
+page-19 install/session metrics and was verified against the original PDF.
+Activate’s previously unresolved real claim now verifies after one retry with a
+relevant page-96 traffic replacement; the replacement is still provisional and
+is not canonical evidence.
 
-Measured v4 usage was **139 provider calls**, **2,262,219 input tokens**,
-**83,192 output tokens**, **2,345,411 total tokens**, **$0.267819 estimated
-cost**, **1,200.603 seconds** wall time, and **107 rendered physical pages**.
-The cost ledger contained 139 selected and 139 seen rows; all five expected
-PDF hashes matched. The separate seven-case recovery rerun completed **7/7
-first-pass verified** with 14 calls, 327,059 total tokens, $0.036580, and
-202.990 seconds.
+Measured v5 usage was **144 provider calls**, **2,431,356 input tokens**,
+**90,879 output tokens**, **2,522,235 total tokens**, **$0.288577 estimated
+cost**, **1,275.670 seconds** wall time, and **107 rendered physical pages**.
+The cost ledger contained 144 selected and 144 seen rows; all five expected
+PDF hashes matched. These are live-run measurements, not estimates from the
+prior v4 output.
 
 ### Final seven-case supporting-page ledger
 
@@ -106,6 +108,59 @@ This v4 run improves provenance safety relative to the v3 replay by rejecting
 retained-locator-only replacement support. It is not a claim of improved live
 Step 1 selection effectiveness: the inputs are the retained 29-insight replay
 cohort, and model output remains run-dependent.
+
+### v5 editorial-input and replacement-selection correction
+
+The v5 selector fixes two stale-input defects. `_verified_corrected_insight()`
+now creates a fresh, provisional quality input containing the final corrected
+wording and actual inspected page text when available; it does not copy the
+retained metric, evidence ID, evidence excerpt, or original pages into the
+replacement facts. Original IDs, spans, pages, source identity, and evidence
+lineage remain separate audit fields. Verifier explanations remain
+`source_truth_notes_by_page`, never verbatim PDF evidence. Exact normalized
+final propositions are deduplicated before inherited metric compatibility is
+considered; near duplicates still require compatible metric bindings.
+
+| Report | Verified corrected set | Recovered candidates | Selected shadow replacements | v4 selected | Measured change |
+|---|---:|---:|---|---|---|
+| Capgemini Research Institute | 5 | 3 | `consumer-control-of-ai`, `human-support-remains-important`, `digital-assistants-engagement-recommendation` | same 3 | no identity change |
+| Activate | 7 | 0 | none | none | prior unresolved claim verified after retry; no recovered replacement candidate |
+| KPMG | 4 | 1 | `buyer-standalone-platform-access` | same 1 | one contradictory chart correction failed closed |
+| Reuters Institute | 6 | 4 | `ai-search-platform-relationships`, `distinctive-content-response`, `subscription-membership-priority`, `ai-browsers-adaptable-content` | 1 | three valid recovered replacements retained |
+| Adjust | 6 | 0 | none | none | no identity change |
+
+The three newly selected Reuters replacements retain `source_binding_status =
+provisional_recovered` and `canonical_approval_status = not_approved`. The
+distinctiveness row is `editorial_quality_status =
+pending_visual_source_text` because deterministic text extraction does not
+reliably carry the chart’s percentage-point unit; the full physical page and
+visual verification support the values. This is pending evidence state, not a
+publication-quality waiver.
+
+The Activate correction is source-grounded on physical page 96 and replaces
+the unsupported news-discovery/direct-visits proposition with the relevant
+top-news-site traffic chart. The KPMG `strategic-focus-capability-building`
+row failed closed after two verification attempts because the corrected
+response combined APAC and Americas headline totals with incompatible component
+splits; no unsupported combined claim was promoted.
+
+Independent review of the 28 real verified final claims found seven
+deterministic numeric/text-quality warnings caused by chart extraction or unit
+representation, not unsupported values: Activate pages 4–5, 14, 96 and 136;
+KPMG pages 15/17; Reuters pages 17 and 18. Full-page visual inspection
+confirmed the reported chart values. One material provenance limitation remains:
+the Activate super-user row reports supporting physical page 14 although the
+chart is visibly on physical page 15 (the page was among the inspected pages).
+It was not selected as a recovered shadow replacement and no canonical artifact
+was changed, but this mismatch blocks a clean Step 3 readiness verdict.
+
+Provider-free replay command:
+`py scripts/quality/replay_verified_claims_step2.py --provider-free --output out/verified_claims_step2_provider_free_after_fix_20261019/report.json`
+
+The provider-free replay preserved the exact 29 retained identities, 39
+reference variants, five PDF hashes, and all retained source artifacts. The v5
+live run is evidence about this Step 2 implementation and this model replay;
+it is not fresh evidence that Step 1 live selection quality improved.
 
 ## Prior v2 recovery run (historical comparison)
 

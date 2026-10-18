@@ -8,6 +8,7 @@ import pymupdf as fitz
 from scripts.quality.replay_verified_claims_step2 import (
     REFERENCE_PATH,
     _assert_outcome_count_arithmetic,
+    _editorially_duplicate,
     _load_json,
     _outcome_counts,
     _page_is_likely_divider,
@@ -16,6 +17,7 @@ from scripts.quality.replay_verified_claims_step2 import (
     _retained_claims,
     _shadow_replacement_selection,
     _usage_summary,
+    _verified_corrected_insight,
     replay_frozen_step2,
 )
 from src.contracts.run_context import RunContext
@@ -304,6 +306,179 @@ def test_shadow_replacement_selection_rejects_duplicate_and_keeps_specific() -> 
         selection["rejected_or_abstained"][0]["selection_reason"]
         == "duplicate_of:candidate-1"
     )
+
+
+def test_exact_corrected_duplicate_is_detected_before_metric_conflicts() -> None:
+    left = {
+        "id": "candidate-1",
+        "text": "The same final source-grounded conclusion.",
+        "metric": {"value": "12", "cohort": "legacy cohort"},
+    }
+    right = {
+        "id": "candidate-2",
+        "text": "The same final source-grounded conclusion.",
+        "metric": {"value": "73", "cohort": "current cohort"},
+    }
+
+    assert _editorially_duplicate(left, right, set()) is True
+
+
+def test_verified_corrected_insight_uses_replacement_page_not_retained_facts() -> None:
+    row = {
+        "candidate_id": "candidate-1",
+        "final_claim": "The source reports 73% adoption among video users.",
+        "evidence_ids": ["old-evidence"],
+        "evidence_spans": [{"source_pack": "doc_map", "page": 1}],
+        "original_physical_pages": [1],
+        "supporting_physical_pages": [2],
+        "source_truth_notes_by_page": {
+            "2": "The verifier explains that page 2 supports the replacement."
+        },
+    }
+    baseline = {
+        "candidate-1": {
+            "id": "candidate-1",
+            "text": "The retained claim reports 12% legacy adoption.",
+            "evidence_id": "old-evidence",
+            "evidence": "The old retained evidence reports 12%.",
+            "metric": {"value": "12", "cohort": "legacy cohort"},
+            "pages": [1],
+        }
+    }
+
+    insight = _verified_corrected_insight(
+        row,
+        baseline,
+        source_page_text_by_page={
+            2: "The source reports 73% adoption among video users."
+        },
+    )
+
+    assert insight is not None
+    assert insight["text"] == row["final_claim"]
+    assert insight["evidence"] == (
+        "The source reports 73% adoption among video users."
+    )
+    assert insight["evidence_id"] == "provisional-page:candidate-1"
+    assert insight["pages"] == [2]
+    assert "metric" not in insight
+    assert "old retained evidence" not in insight["evidence"]
+
+
+def test_shadow_selection_keeps_visual_replacement_pending_canonical_approval() -> None:
+    row = {
+        "candidate_id": "candidate-1",
+        "original_claim": "The retained claim reports 12% legacy adoption.",
+        "source_identity": "Report|pdf-sha256:" + "a" * 64,
+        "evidence_ids": ["old-evidence"],
+        "evidence_spans": [{"source_pack": "doc_map", "page": 1}],
+        "outcome": "verified",
+        "final_claim": "The source reports 73% adoption among video users.",
+        "recovered_physical_pages": [2],
+        "inspected_physical_pages": [2],
+        "supporting_physical_pages": [2],
+        "source_truth_notes_by_page": {
+            "2": "The verifier explains that page 2 supports the replacement."
+        },
+        "recovery_candidates": [
+            {
+                "physical_page": 2,
+                "evidence_id": "replacement-finding",
+                "source_pack": "findings",
+                "score": 80,
+            }
+        ],
+    }
+
+    selection = _shadow_replacement_selection(
+        report="Report",
+        baseline_insights=[
+            {
+                "id": "candidate-1",
+                "text": row["original_claim"],
+                "evidence_id": "old-evidence",
+                "evidence": "The old retained evidence reports 12%.",
+                "metric": {"value": "12", "cohort": "legacy cohort"},
+            }
+        ],
+        retained_rows=[row],
+        editorial_plan={
+            "themes": [
+                {
+                    "priority": 1,
+                    "theme": "Theme A",
+                    "evidence_ids": ["old-evidence"],
+                }
+            ]
+        },
+        source_page_text_by_page={
+            2: "The source reports 73% adoption among video users."
+        },
+    )
+
+    assert selection["selected_count"] == 1
+    selected = selection["selected"][0]
+    assert selected["final_claim"] == row["final_claim"]
+    assert selected["editorial_quality_status"] == "pass"
+    assert selected["source_binding_status"] == "provisional_recovered"
+    assert selected["canonical_approval_status"] == "not_approved"
+
+
+def test_shadow_selection_keeps_visually_verified_chart_fact_pending_text_quality(
+) -> None:
+    row = {
+        "candidate_id": "candidate-chart",
+        "original_claim": "The report discusses newsroom priorities.",
+        "source_identity": "Report|pdf-sha256:" + "b" * 64,
+        "evidence_ids": ["theme-chart"],
+        "outcome": "verified",
+        "final_claim": (
+            "Among Q13 respondents (base 264), the net balance was +91 percentage "
+            "points for original investigations, +82 for contextual analysis, "
+            "+76 for community-building, +72 for human stories, and +63 for "
+            "fact-checking and verification; opinion/commentary was also +55 points."
+        ),
+        "recovered_physical_pages": [17],
+        "inspected_physical_pages": [17],
+        "supporting_physical_pages": [17],
+        "source_truth_notes_by_page": {
+            "17": "The verifier confirms the chart value and survey base on page 17."
+        },
+        "recovery_candidates": [
+            {
+                "physical_page": 17,
+                "evidence_id": "theme-chart",
+                "source_pack": "findings",
+                "score": 80,
+            }
+        ],
+    }
+
+    selection = _shadow_replacement_selection(
+        report="Report",
+        baseline_insights=[],
+        retained_rows=[row],
+        editorial_plan={
+            "themes": [
+                {"priority": 1, "theme": "Theme chart", "evidence_ids": ["theme-chart"]}
+            ]
+        },
+        source_page_text_by_page={
+            17: (
+                "Publisher perceptions. Original investigations/on-the-ground "
+                "reporting +91. Contextual analysis +82. Community building +76. "
+                "Human stories +72. Fact-checking/verification +63. Base = 264."
+            )
+        },
+    )
+
+    assert selection["selected_count"] == 1
+    selected = selection["selected"][0]
+    assert selected["editorial_quality_status"] == "pending_visual_source_text"
+    assert selected["editorial_quality_blockers"] == []
+    assert "public_editorial_quality.unsupported_numeric_claim" in selected[
+        "editorial_quality_issues"
+    ]
 
 
 def test_usage_summary_isolated_to_current_replay_run(tmp_path) -> None:

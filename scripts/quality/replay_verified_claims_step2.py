@@ -486,21 +486,6 @@ def _theme_for_recovery_candidate(
     )
 
 
-def _page_notes_text(row: Mapping[str, Any]) -> str:
-    notes = row.get("source_truth_notes_by_page")
-    if not isinstance(notes, dict):
-        return ""
-    ordered = sorted(
-        (
-            int(page),
-            str(note).strip(),
-        )
-        for page, note in notes.items()
-        if str(page).strip().isdigit() and str(note).strip()
-    )
-    return " ".join(f"Page {page}: {note}" for page, note in ordered)
-
-
 def _metric_bindings_conflict(
     left: Mapping[str, Any], right: Mapping[str, Any]
 ) -> bool:
@@ -545,12 +530,12 @@ def _editorially_duplicate(
     right: Mapping[str, Any],
     duplicate_pairs: set[tuple[str, str]],
 ) -> bool:
-    if _metric_bindings_conflict(left, right):
-        return False
     left_text = normalize_for_lookup(left.get("text"))
     right_text = normalize_for_lookup(right.get("text"))
     if left_text and left_text == right_text:
         return True
+    if _metric_bindings_conflict(left, right):
+        return False
     left_id = str(left.get("id") or left.get("candidate_id") or "").strip()
     right_id = str(right.get("id") or right.get("candidate_id") or "").strip()
     if (
@@ -568,33 +553,96 @@ def _editorially_duplicate(
 
 
 def _verified_corrected_insight(
-    row: Mapping[str, Any], baseline_by_id: Mapping[str, dict[str, Any]]
+    row: Mapping[str, Any],
+    baseline_by_id: Mapping[str, dict[str, Any]],
+    *,
+    source_page_text_by_page: Mapping[Any, Any] | None = None,
 ) -> dict[str, Any] | None:
+    """Build a fresh quality input for a verified replacement.
+
+    Retained artifacts are lineage only.  They are deliberately not copied into
+    this object because their metric/evidence fields describe the original
+    claim, not a visually verified replacement.  Verifier notes explain the
+    decision but are not verbatim source evidence; when available, the actual
+    inspected PDF page text is the only evidence text used for deterministic
+    editorial checks.
+    """
+
     candidate_id = str(row.get("candidate_id") or "").strip()
     final_claim = str(row.get("final_claim") or "").strip()
     if not candidate_id or not final_claim:
         return None
-    insight = dict(baseline_by_id.get(candidate_id) or {})
-    insight["id"] = candidate_id
-    insight["text"] = final_claim
-    evidence_ids = [
-        str(value).strip()
-        for value in row.get("evidence_ids") or []
-        if str(value).strip()
+
+    supporting_pages = [
+        page
+        for page in row.get("supporting_physical_pages") or []
+        if type(page) is int and page > 0
     ]
-    if evidence_ids and not str(insight.get("evidence_id") or "").strip():
-        insight["evidence_id"] = evidence_ids[0]
-    if row.get("evidence_spans"):
-        insight["evidence_spans"] = list(row.get("evidence_spans") or [])
-    if row.get("original_physical_pages"):
-        insight["pages"] = list(row.get("original_physical_pages") or [])
-    source_notes = _page_notes_text(row)
-    if source_notes:
-        insight["evidence"] = source_notes
-    insight["supporting_physical_pages"] = list(
-        row.get("supporting_physical_pages") or []
-    )
+    source_texts: list[str] = []
+    normalized_page_texts = {
+        int(page): str(text).strip()
+        for page, text in (source_page_text_by_page or {}).items()
+        if str(page).strip().isdigit() and str(text).strip()
+    }
+    for page in supporting_pages:
+        page_text = normalized_page_texts.get(page, "")
+        if page_text:
+            source_texts.append(page_text)
+    if not source_texts:
+        for candidate in row.get("recovery_candidates") or []:
+            if not isinstance(candidate, Mapping):
+                continue
+            page = candidate.get("physical_page") or candidate.get("page")
+            if page not in supporting_pages:
+                continue
+            page_text = str(candidate.get("page_text") or "").strip()
+            if page_text:
+                source_texts.append(page_text)
+    source_text = "\n\n".join(dict.fromkeys(source_texts))
+
+    insight: dict[str, Any] = {
+        "id": candidate_id,
+        "text": final_claim,
+        "pages": supporting_pages,
+        "supporting_physical_pages": supporting_pages,
+        "evidence_status": "visual_verified_provisional",
+    }
+    if source_text:
+        insight["evidence_id"] = f"provisional-page:{candidate_id}"
+        insight["evidence"] = source_text
     return insight
+
+
+def _shadow_quality_assessment(
+    report: str,
+    insight: dict[str, Any],
+    *,
+    visually_verified: bool,
+) -> tuple[list[str], list[str], str]:
+    """Separate deterministic editorial blockers from visual-evidence pending work."""
+
+    quality = _editorial_quality_report(report, [insight])
+    errors = [
+        issue.rule_id for issue in quality.issues if issue.severity == "error"
+    ]
+    visual_pending_rules = {
+        "public_editorial_quality.material_claim_evidence_missing",
+        "public_editorial_quality.unsupported_numeric_claim",
+    }
+    pending = (
+        [rule for rule in errors if rule in visual_pending_rules]
+        if visually_verified
+        else []
+    )
+    blockers = [rule for rule in errors if rule not in pending]
+    status = (
+        "abstained"
+        if blockers
+        else "pending_visual_source_text"
+        if pending
+        else "pass"
+    )
+    return errors, blockers, status
 
 
 def _valid_supporting_pages(
@@ -660,6 +708,7 @@ def _shadow_replacement_selection(
     baseline_insights: list[dict[str, Any]],
     retained_rows: list[dict[str, Any]],
     editorial_plan: Mapping[str, Any],
+    source_page_text_by_page: Mapping[Any, Any] | None = None,
 ) -> dict[str, Any]:
     """Select independently page-supported replacements for shadow audit only."""
 
@@ -677,7 +726,11 @@ def _shadow_replacement_selection(
     for row in retained_rows:
         if row.get("outcome") not in {"verified", "verified_after_retry"}:
             continue
-        insight = _verified_corrected_insight(row, baseline_by_id)
+        insight = _verified_corrected_insight(
+            row,
+            baseline_by_id,
+            source_page_text_by_page=source_page_text_by_page,
+        )
         if insight is None:
             continue
         candidate_id = str(insight.get("id") or "")
@@ -760,12 +813,16 @@ def _shadow_replacement_selection(
                 }
             )
             continue
-        proposal_quality = _editorial_quality_report(report, [editorial_insight])
-        quality_issues = [
-            issue.rule_id
-            for issue in proposal_quality.issues
-            if issue.severity == "error"
-        ]
+        quality_issues, quality_blockers, quality_status = _shadow_quality_assessment(
+            report,
+            editorial_insight,
+            visually_verified=bool(
+                row.get("source_truth_notes_by_page")
+                and supporting_pages
+                and str(row.get("outcome") or "")
+                in {"verified", "verified_after_retry"}
+            ),
+        )
         proposals.append(
             {
                 "candidate_id": candidate_id,
@@ -774,6 +831,9 @@ def _shadow_replacement_selection(
                 "source_identity": row.get("source_identity", ""),
                 "original_evidence_ids": original_evidence_ids,
                 "original_evidence_spans": list(row.get("evidence_spans") or []),
+                "original_physical_pages": list(
+                    row.get("original_physical_pages") or []
+                ),
                 "recovered_pages": recovered_pages,
                 "supporting_physical_pages": supporting_pages,
                 "source_truth_notes_by_page": dict(
@@ -794,7 +854,8 @@ def _shadow_replacement_selection(
                     default=0.0,
                 ),
                 "editorial_quality_issues": quality_issues,
-                "editorial_quality_status": "abstained" if quality_issues else "pass",
+                "editorial_quality_blockers": quality_blockers,
+                "editorial_quality_status": quality_status,
                 "verification_status": str(row.get("outcome") or ""),
                 "source_binding_status": "provisional_recovered",
                 "canonical_approval_status": "not_approved",
@@ -816,13 +877,13 @@ def _shadow_replacement_selection(
     for proposal in proposals:
         candidate_id = str(proposal["candidate_id"])
         editorial_insight = verified_by_id[candidate_id]
-        if proposal["editorial_quality_issues"]:
+        if proposal["editorial_quality_blockers"]:
             rejected.append(
                 {
                     **proposal,
                     "selection_status": "abstained",
                     "selection_reason": "editorial_quality_blocker:"
-                    + ",".join(proposal["editorial_quality_issues"]),
+                    + ",".join(proposal["editorial_quality_blockers"]),
                 }
             )
             continue
@@ -1117,6 +1178,15 @@ def replay_live_step2(
                 and row.get("evaluation_set") == "real_shortlisted"
             ],
             editorial_plan=editorial_plan,
+            source_page_text_by_page={
+                int(getattr(page, "page_number", 0)): str(
+                    getattr(page, "text", "") or ""
+                ).strip()
+                for page in recovery_context.get("pages") or []
+                if isinstance(getattr(page, "page_number", None), int)
+                and getattr(page, "page_number", 0) > 0
+                and str(getattr(page, "text", "") or "").strip()
+            },
         )
 
     usage = _usage_summary(root / "cost-ledger.jsonl", run_id=live_run_id)

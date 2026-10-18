@@ -48456,6 +48456,9 @@
         "candidate_id": {
           "type": "string"
         },
+        "canonical_approval_status": {
+          "type": "string"
+        },
         "correction_attempts": {
           "items": {
             "$ref": "#/$defs/src.contracts.verified_claims.VisualClaimCorrectionAttempt"
@@ -48526,6 +48529,18 @@
         "source_identity": {
           "type": "string"
         },
+        "source_truth_notes_by_page": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "supporting_physical_pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
         "verification_attempts": {
           "items": {
             "$ref": "#/$defs/src.contracts.verified_claims.VisualClaimVerificationAttempt"
@@ -48569,6 +48584,18 @@
         },
         "source_truth_notes": {
           "type": "string"
+        },
+        "source_truth_notes_by_page": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "supporting_physical_pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
         }
       },
       "required": [
