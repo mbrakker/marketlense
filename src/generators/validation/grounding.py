@@ -20,6 +20,7 @@ from src.contracts.prompt_family_materialization import (
     PromptFamilyMaterializationRequest,
     PromptFamilyReuseRequest,
 )
+from src.contracts.pdf_text import PdfTextPage
 from src.contracts.protected_facts import ProtectedFactComparison
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.soft_copy_claim_provenance import (
@@ -1503,7 +1504,7 @@ def _public_factual_items(
     *,
     artifacts: dict,
     evidence_packs: dict,
-    source_pages: Sequence[EvidenceWindow] = (),
+    source_pages: Sequence[PdfTextPage] = (),
     report_title: str,
     publisher: str,
     insights: Sequence[dict],
@@ -1551,7 +1552,7 @@ def _public_factual_items(
     ) -> None:
         claim = sanitize_citation_tokens(s(text))
         if claim:
-            item = {
+            item: dict[str, Any] = {
                 "item_id": item_id,
                 "section": section,
                 "text": claim,
