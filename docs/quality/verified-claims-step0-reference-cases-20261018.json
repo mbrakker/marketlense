@@ -1,0 +1,378 @@
+{
+  "schema_version": "1.0.0",
+  "baseline_kind": "verified_claims_step0_reference_cases",
+  "audit_date": "2026-10-18",
+  "branch": "codex/fix-retained-insight-evidence-validation",
+  "starting_sha": "7f3a8891efa55739d993a37df29fc791e44de19f",
+  "scope": {
+    "manifest_path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+    "manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+    "reports": [
+      "Capgemini Research Institute",
+      "Activate",
+      "KPMG",
+      "Reuters Institute",
+      "Adjust"
+    ],
+    "source_verification": "Original frozen PDFs were checked with PyMuPDF text extraction and rendered-page inspection. Physical PDF pages are primary; printed page numbers are recorded where they differ.",
+    "excluded_scope": [
+      "2026-10-16 to 2026-10-17 ingest archive",
+      "new provider calls",
+      "publication or WordPress writes",
+      "raw PDFs and raw model responses"
+    ]
+  },
+  "source_pdfs": {
+    "Capgemini Research Institute": {
+      "path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+      "md5": "81af3890cd84ece81ef16e1aabda8027",
+      "sha256": "612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e"
+    },
+    "Activate": {
+      "path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "md5": "cbb6e7df67412186b8bc094a424ac890",
+      "sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2"
+    },
+    "KPMG": {
+      "path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf",
+      "md5": "2acb4a56e14add5d7717f34c378f9091",
+      "sha256": "a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589"
+    },
+    "Reuters Institute": {
+      "path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf",
+      "md5": "4b763ae2286ca69fe8acb63b17508dfb",
+      "sha256": "f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52"
+    },
+    "Adjust": {
+      "path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+      "md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+      "sha256": "ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3"
+    }
+  },
+  "retained_run": {
+    "result_path": "docs/quality/reliability-cohort-20261001-next-five/cohort_result.json",
+    "result_sha256": "043bfd0f86dec3880a7c5c9850958ded6d832a49429c8e1043b8ac8f133d6839",
+    "producer_sha": "469c13c15d0d654f60c04a84bb97bf7ee44d1de0",
+    "cohort_run_id": "frozen-reliability-xxcdkw0r",
+    "workflow_run_id": "ias-first-attempt-7z7shs6j",
+    "workflow_root_id": "cb9b27e1-245f-4703-aeb0-4c9baede232a",
+    "isolated_output_root": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output",
+    "publication": "disabled; all five ended awaiting_review",
+    "report_level_metric_attribution": "unavailable in cohort_result.json"
+  },
+  "report_artifact_digests": {
+    "Capgemini Research Institute": {
+      "analysis_directory": "final-web-versi-1d9e64dd7425/report_analysis",
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "findings_sha256": "2b20b194a15c1475d963572e2e017f69ec6af8a1ea1e612b198158d80573c75b",
+      "evidence_fidelity_sha256": "6805f287002ae1391fa9da4275990e17683b3d2184cace3a74bd20b94a1034a9",
+      "artifacts_sha256": "073080307e02b04740a777a21c6e31d1c6429c27a74c90d408b24f990fa3e907",
+      "retained_claim_validation_sha256": "3a1510fcf57dcc688965e7a4fab4236cfe1394f9acadd50f8c8cf6598cb59391",
+      "publish_readiness_sha256": "3a568dd28c58dd113d679615529499a416cdcef2ec0019fd86d51f4eadf69e5c",
+      "final_html_sha256": "bddde39f772f0e00bd814f3d903029abf1ebe834a6287db5c282925eb3b8d327"
+    },
+    "Activate": {
+      "analysis_directory": "d8ca0bf6efb9c70-d460f8aa84f6/report_analysis",
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "findings_sha256": "6af524a0fcbe54cbfeea6465eeb98ea9edd91226136237b1fec209841a62a9b4",
+      "evidence_fidelity_sha256": "ce85ac37be0122c34e2dd2f9ef26bad829b56b79135b7b2e1aa25961f59977ad",
+      "artifacts_sha256": "aee803d83d4a75090ebd28874beb2bd43cf8201dfe335e0b59a329114e7202fe",
+      "retained_claim_validation_sha256": "7f9668e49872ce2c9cb006d106440bc2da426511a54703c8937601aa69000359",
+      "publish_readiness_sha256": "8b538288bc36b78ad97e5d0237b98adb5ae02332f01c9a894e9cbea3cfe0772d",
+      "final_html_sha256": "5c638ada394fde0ef78848cddb0fb49d35d2b995b252a240ccb99dd88631ebdc"
+    },
+    "KPMG": {
+      "analysis_directory": "kpmg-2026-globa-55902486e798/report_analysis",
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "findings_sha256": "fb9aa58826959d1718aad4ddd465b91d3ba504a8991904ea1ee5cf242d89a516",
+      "evidence_fidelity_sha256": "b0669ab83efdfaba861e5cb52f53aa6f27a41c7405cab74e3b3bc37a6ba388d3",
+      "artifacts_sha256": "60356d0bd81ca3a9a88b59bc846df0ecfe161686edc255484d7a47404eb9a877",
+      "retained_claim_validation_sha256": "e485856d9873e3d8f62d9aa4c356878bc9669f173705c2d696d5e35af0b6ffe5",
+      "publish_readiness_sha256": "a06d1774b432f88d9f6b793bef957637a19631155a3855042c1c360018f019ad",
+      "final_html_sha256": "0ee173cb85ab17e380cf2bcac931fd7af1118064da2b355124033e6a62b45859"
+    },
+    "Adjust": {
+      "analysis_directory": "mobile-app-trends-2026-pdf/report_analysis",
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "findings_sha256": "b7827aaa43d864bd4a23aeecabb54e5dae22afe4977723d7a7e2520aeb7c6243",
+      "evidence_fidelity_sha256": "0c29b19acc071333f8f89ef13ecb2c2b256798df4437fcffa5bf895ff711afd6",
+      "artifacts_sha256": "f3bbb051395c571fdb14e2172412cef391d2ec1b2f86477484a10e3377c2dab0",
+      "retained_claim_validation_sha256": "7b5b67f7f8f0e5a3cf7008a475d75ea5cfaca8193570168cc616fededf3c2379",
+      "publish_readiness_sha256": "f3610e98cd598f217690ef9548735c95a1f4aba3d002f4b41d394b0b3e14bb74",
+      "final_html_sha256": "bc2fcd0a98d337ebfe8c33ce5ab2305530e19dab985022c390a9084a2f039992"
+    },
+    "Reuters Institute": {
+      "analysis_directory": "trends-and-pred-cf474e4f079f/report_analysis",
+      "report_id": "cohort-4b763ae2286ca69fe8ac",
+      "findings_sha256": "3cfafeaf7d2d644ff876480dda7b46a3ef8376e5b802e18373e5de6aeea884f0",
+      "evidence_fidelity_sha256": "730107a09c1d6c1e0853b61026611794361fc9d69b9c5957667e6b0a020c4bf9",
+      "artifacts_sha256": "eb758f26873a1865996aa77bd225bdc887e511390800ea675b2aae97c2c9f3b2",
+      "retained_claim_validation_sha256": "e76900dd2700fcd6a40b707a1cc08035f9e3968a5c03bc51d6b76c7c15e40dd8",
+      "publish_readiness_sha256": "99ebfd513879f605b3b5565d8d87f25af84afae66493f4a561a507f8746666ac",
+      "final_html_sha256": "4efbb46753944db5b58981b0452164654b19fb817d6b36555ed6f0b731da9e10"
+    }
+  },
+  "cases": [
+    {
+      "case_id": "ACT-001",
+      "report": "Activate",
+      "canonical_evidence_ids": ["ACT-1", "f1", "s1"],
+      "pdf_sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
+      "source_pages": {
+        "physical_pdf": [5],
+        "printed": [4]
+      },
+      "source_supported_meaning": "The report forecasts approximately 302 billion dollars of global Internet and media revenue growth from 2017E to 2021E, at 4.1% CAGR versus approximately 3% global GDP CAGR.",
+      "qualifiers": ["forecast", "report-defined Internet and media scope", "2017E to 2021E"],
+      "observed_candidate_or_editorial": "Current finding f1 preserves the forecast, period and CAGR comparison while rounding the chart value to approximately 300 billion dollars; selected insight activate-outlook-revenue-models keeps the forecast framing.",
+      "defect_classification": "preserved_with_source-consistent_rounding",
+      "expected_verification_outcome": "accept only if forecast status, scope and period remain explicit",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "accepted_with_qualifier"
+    },
+    {
+      "case_id": "ACT-002",
+      "report": "Activate",
+      "canonical_evidence_ids": ["ACT-2", "video-superusers-share-of-time"],
+      "pdf_sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
+      "source_pages": {
+        "physical_pdf": [15],
+        "printed": [14]
+      },
+      "source_supported_meaning": "In the U.S. 2017 top quartile of video users, the cohort accounts for 61% of viewing time and 34% of consumer spend; the complementary cohort accounts for 39% and 66%.",
+      "qualifiers": ["top 25% of users", "4.5 or more daily video-attention hours", "time share and spend share are separate measures", "U.S. 2017"],
+      "observed_candidate_or_editorial": "A retained historical Expert View inverted the top-cohort values into 66% of time and 39% of spend. Existing evidence-fidelity validation rejected the candidate; the later source-binding audit retained the correct 61% and 34% relation.",
+      "defect_classification": "known_historical_cohort_and_metric_inversion",
+      "expected_verification_outcome": "reject the inverted relation; accept only the paired 61%/34% tuple with cohort labels",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "known_defect_rejected"
+    },
+    {
+      "case_id": "ACT-003",
+      "report": "Activate",
+      "canonical_evidence_ids": ["ACT-2", "audio-superusers-share-of-time"],
+      "pdf_sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
+      "source_pages": {
+        "physical_pdf": [17],
+        "printed": [16]
+      },
+      "source_supported_meaning": "In the U.S. 2017 top quartile of audio users, the cohort accounts for 64% of listening time and 47% of consumer spend; the complementary cohort accounts for 36% and 53%.",
+      "qualifiers": ["top 25% of users", "3 or more daily audio-attention hours", "listening time and spend are separate measures", "U.S. 2017"],
+      "observed_candidate_or_editorial": "A retained historical Expert View inverted the top-cohort values into 53% of time and 36% of spend. Existing evidence-fidelity validation rejected the candidate; the later source-binding audit retained the correct 64% and 47% relation.",
+      "defect_classification": "known_historical_cohort_and_metric_inversion",
+      "expected_verification_outcome": "reject the inverted relation; accept only the paired 64%/47% tuple with cohort labels",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "known_defect_rejected"
+    },
+    {
+      "case_id": "ACT-004",
+      "report": "Activate",
+      "canonical_evidence_ids": ["ACT-3"],
+      "pdf_sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
+      "source_pages": {
+        "physical_pdf": [53],
+        "printed": [52]
+      },
+      "source_supported_meaning": "Among creators with 50M or more YouTube views in Q2 2017, the YouTube cohort is 24% of creators and 71% of views; the Facebook cohort is 26% of creators and 77% of views.",
+      "qualifiers": ["platform-specific", "50M or more views", "creator share and view share are distinct", "Q2 2017"],
+      "observed_candidate_or_editorial": "The retained source-binding replay accepts the correct platform/cohort/metric tuple and rejects platform or metric swaps, missing cohort labels, population expansion and loss of visual identity. Current selected insight activate-platform-specific-web-video is a broader editorial synthesis.",
+      "defect_classification": "source_binding_guardrail",
+      "expected_verification_outcome": "accept only a fully bound platform/cohort/metric/population tuple; otherwise fail closed",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "guarded_requires_exact_binding"
+    },
+    {
+      "case_id": "CAP-001",
+      "report": "Capgemini Research Institute",
+      "canonical_evidence_ids": ["CAP-1", "value-fairness-quality"],
+      "pdf_sha256": "612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e",
+      "source_pages": {
+        "physical_pdf": [11]
+      },
+      "source_supported_meaning": "74% cite a competitor's lower regular price as a reason to switch; 71% cite an unannounced reduction in pack size or product quality.",
+      "qualifiers": ["reported switching reasons", "not observed switching rates", "October 2025 consumer survey"],
+      "observed_candidate_or_editorial": "Current finding value-fairness-quality preserves both switching reasons. Selected value-fairness-transparency uses the broader fairness and trust synthesis and retains the source evidence link.",
+      "defect_classification": "source_supported_mechanisms_preserved",
+      "expected_verification_outcome": "accept only as reported reasons with survey scope; do not convert to realized churn",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "accepted_with_scope"
+    },
+    {
+      "case_id": "CAP-002",
+      "report": "Capgemini Research Institute",
+      "canonical_evidence_ids": ["CAP-1"],
+      "pdf_sha256": "612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e",
+      "source_pages": {
+        "physical_pdf": [11]
+      },
+      "source_supported_meaning": "The Figure 2 switching responses are based on 12,000 consumers; that population applies to the reported 74% and 71% measures.",
+      "qualifiers": ["N=12,000 consumers", "October 2025", "population is not a rate of all consumers in the market"],
+      "observed_candidate_or_editorial": "The current selected insight carries the 74% and 71% mechanisms but does not repeat the N=12,000 denominator in its metric object or short text; methodology evidence is retained elsewhere in the report context.",
+      "defect_classification": "population_scope_not_carried_to_selected_text",
+      "expected_verification_outcome": "requires review before a numeric public claim; preserve the population or explicitly cite the methodology",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "requires_review"
+    },
+    {
+      "case_id": "CAP-003",
+      "report": "Capgemini Research Institute",
+      "canonical_evidence_ids": ["CAP-2"],
+      "pdf_sha256": "612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e",
+      "source_pages": {
+        "physical_pdf": [21, 22]
+      },
+      "source_supported_meaning": "In October 2025, 49% report buying smaller quantities and 48% report choosing cheaper alternatives. The source associates the first with consumption control and the second with managing budgets; they are separate responses.",
+      "qualifiers": ["separate response categories", "October 2025", "reported behavior, not causal proof"],
+      "observed_candidate_or_editorial": "A retained historical output transferred the cheaper-alternative budget motive onto the 49% smaller-quantity response. Semantic grounding identified the unsupported relation; the current readiness path is fail-closed for the tagged not-established issue.",
+      "defect_classification": "known_historical_causal_or_motive_transfer",
+      "expected_verification_outcome": "reject the merged motive; accept the two percentages only as separate source-supported responses",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "known_defect_rejected"
+    },
+    {
+      "case_id": "CAP-004",
+      "report": "Capgemini Research Institute",
+      "canonical_evidence_ids": [],
+      "pdf_sha256": "612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e",
+      "source_pages": {
+        "physical_pdf": [34]
+      },
+      "source_supported_meaning": "Figure 14 reports willingness-to-pay responses among 3,125 consumers who use chatbots at least once a week; the categories are one-time, subscription, bundled, after-trial and no payment.",
+      "qualifiers": ["N=3,125 weekly chatbot users", "willingness to pay, not realized revenue", "response categories are not additive behavior"],
+      "observed_candidate_or_editorial": "The current digital-assistant final insight is a qualitative recommendation and does not use this numeric proposition. No canonical findings evidence ID for this exact page-level denominator was retained in the current pack.",
+      "defect_classification": "unbound_denominator_reference",
+      "expected_verification_outcome": "requires review before use; do not attach the denominator or willingness-to-pay values to a different chatbot population",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "requires_review"
+    },
+    {
+      "case_id": "KPM-001",
+      "report": "KPMG",
+      "canonical_evidence_ids": ["KPMG-1", "buyer-outlook-contrast"],
+      "pdf_sha256": "a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589",
+      "source_pages": {
+        "physical_pdf": [15]
+      },
+      "source_supported_meaning": "Respondents expect private equity firms to undertake a mean 7.3 deals in 2026 versus 5.2 for corporate respondents.",
+      "qualifiers": ["mean planned deals", "respondent expectations/plans, not completed transactions", "PE and corporate cohorts must stay separate"],
+      "observed_candidate_or_editorial": "Current finding buyer-outlook-contrast preserves the qualitative PE-versus-corporate contrast, while selected buyer-appetite-execution-approaches does not repeat the 5.2/7.3 comparison.",
+      "defect_classification": "comparative_metric_omission_without_false_accept",
+      "expected_verification_outcome": "accept only if both cohorts, means and forward-looking status remain bound",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "requires_review_if_reintroduced"
+    },
+    {
+      "case_id": "KPM-002",
+      "report": "KPMG",
+      "canonical_evidence_ids": ["KPMG-2", "outlook-execution-environment", "strategic-focus-capability-building"],
+      "pdf_sha256": "a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589",
+      "source_pages": {
+        "physical_pdf": [12, 13]
+      },
+      "source_supported_meaning": "The report presents portfolio separation, carve-outs and related portfolio actions as qualitative structural mechanisms for reshaping portfolios and creating deal opportunity.",
+      "qualifiers": ["qualitative thesis", "not a measured increase in completed deal volume", "regional and buyer differences remain"],
+      "observed_candidate_or_editorial": "Current findings and selected strategic-focus-capability-building preserve the qualitative execution and portfolio-reconfiguration direction without inventing a numeric growth rate.",
+      "defect_classification": "qualitative_comparative_finding_preserved",
+      "expected_verification_outcome": "accept the qualitative thesis; reject any unsupported numeric or realized-outcome upgrade",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "accepted_with_scope"
+    },
+    {
+      "case_id": "KPM-003",
+      "report": "KPMG",
+      "canonical_evidence_ids": ["KPMG-2", "carveout-outlook"],
+      "pdf_sha256": "a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589",
+      "source_pages": {
+        "physical_pdf": [19]
+      },
+      "source_supported_meaning": "For the next 12 to 24 months, 50% expect a moderate or significant increase in carve-out activity, 44% expect no change and 6% expect a decrease.",
+      "qualifiers": ["expectation", "next 12 to 24 months", "not realized deal activity"],
+      "observed_candidate_or_editorial": "Current finding carveout-outlook explicitly labels rising activity as an expectation; current selected insights use a broader portfolio and execution framing.",
+      "defect_classification": "expectation_observation_boundary",
+      "expected_verification_outcome": "accept only with forward-looking status and timeframe; otherwise require review",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "guarded_requires_qualifier"
+    },
+    {
+      "case_id": "REU-001",
+      "report": "Reuters Institute",
+      "canonical_evidence_ids": ["REU-1", "search-traffic-forecast"],
+      "pdf_sha256": "f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52",
+      "source_pages": {
+        "physical_pdf": [12],
+        "printed": [10]
+      },
+      "source_supported_meaning": "Publishers expect search referrals to almost halve, an average decline of 43%, over the next three years.",
+      "qualifiers": ["publisher expectation/forecast", "next three years", "not realized traffic", "survey respondent scope"],
+      "observed_candidate_or_editorial": "Current finding search-traffic-forecast preserves the prospective status but rounds to more than 40%; a retained current-HEAD Reuters run separately preserved the exact -43% and timeframe through final HTML. Current selected ai-search-platform-relationships is qualitative and does not repeat the number.",
+      "defect_classification": "forecast_value_and_timeframe_guardrail",
+      "expected_verification_outcome": "accept only with forecast status, publisher cohort and three-year timeframe; reject observation wording",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "accepted_with_qualifier"
+    },
+    {
+      "case_id": "REU-002",
+      "report": "Reuters Institute",
+      "canonical_evidence_ids": ["REU-2", "social-referral-declines"],
+      "pdf_sha256": "f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52",
+      "source_pages": {
+        "physical_pdf": [13],
+        "printed": [11]
+      },
+      "source_supported_meaning": "The referral chart distinguishes periods and channels: for May 2023 to November 2025, Facebook is down 43% and X is down 46%; for November 2024 to November 2025, the same channels are up 9% and 15%. Google Search and Discover have their own period-specific values.",
+      "qualifiers": ["observed referral traffic", "channel-specific", "period-specific", "global chart scope", "distinct from the search forecast"],
+      "observed_candidate_or_editorial": "Current finding social-referral-declines says Facebook is down 43% and X 46% over the last three years, but the selected video-platform-discovery-shift is broader. The exact period and channel qualifiers must remain attached if the figures are promoted.",
+      "defect_classification": "period_and_measure_binding_guardrail",
+      "expected_verification_outcome": "accept only with the chart period, channel and observed-referral status; otherwise require review",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "guarded_requires_exact_period"
+    },
+    {
+      "case_id": "REU-003",
+      "report": "Reuters Institute",
+      "canonical_evidence_ids": ["REU-2"],
+      "pdf_sha256": "f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52",
+      "source_pages": {
+        "physical_pdf": [12, 13],
+        "printed": [10, 11]
+      },
+      "source_supported_meaning": "From November 2024 to November 2025, Google Search referral traffic fell 33% globally, 38% in the U.S. and 17% in Europe, with the chart adding the longer comparison period separately.",
+      "qualifiers": ["observed year-on-year referral traffic", "geography-specific", "not an AI-causality finding", "separate from REU-001"],
+      "observed_candidate_or_editorial": "The current selected insight set does not retain these Google referral figures; omission is not a factual error, but reintroduction must not merge them with the Facebook/X three-year comparison or the search forecast.",
+      "defect_classification": "omitted_alternative_reference_case",
+      "expected_verification_outcome": "accept if deliberately selected with geography and year-on-year qualifier; otherwise record as an editorial omission",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "requires_review_if_reintroduced"
+    },
+    {
+      "case_id": "ADJ-001",
+      "report": "Adjust",
+      "canonical_evidence_ids": ["ADJ-1", "gaming-subvertical-growth"],
+      "pdf_sha256": "ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3",
+      "source_pages": {
+        "physical_pdf": [19]
+      },
+      "source_supported_meaning": "Globally in 2024 to 2025, strategy sessions rose 57% with installs flat; casino installs rose 22% while sessions fell 5%; slots installs rose 46% while sessions fell 5%.",
+      "qualifiers": ["global", "YoY 2024 to 2025", "installs and sessions are separate measures", "declining sessions do not prove churn"],
+      "observed_candidate_or_editorial": "Current finding gaming-subvertical-growth preserves the complete strategy, casino and slots tuple. Selected gaming-benchmark-coverage retains the category coverage but does not repeat the figures in its short text.",
+      "defect_classification": "source_supported_metric_tuple_preserved_in_findings",
+      "expected_verification_outcome": "accept only with category, measure, direction and period bound; do not infer churn or conversion impact",
+      "source_confirmation": "independently_confirmed",
+      "editorial_verification_state": "accepted_with_scope"
+    }
+  ],
+  "summary_counts": {
+    "total_cases": 15,
+    "independently_confirmed_source_cases": 15,
+    "demonstrated_historical_defect_or_false_accept_cases": 3,
+    "binding_or_qualifier_guardrail_cases": 7,
+    "positive_or_omission_cases": 5,
+    "requires_editorial_review_states": 4
+  },
+  "limitations": [
+    "Current cohort_result.json does not attribute calls, tokens, cost, duration or repairs to individual reports.",
+    "Current retained final artifacts are ignored local evidence under tmp; their hashes are recorded here but the raw artifacts are not committed.",
+    "A current report-level candidate rejection is not a published factual error: rejected candidates are intentionally excluded by fail-closed evidence-fidelity handling.",
+    "Reference cases establish source truth and observed trace points; they do not establish repeated-run stability or human editorial value."
+  ]
+}
