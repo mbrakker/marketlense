@@ -7,6 +7,7 @@
 **Step 1 correction SHA:** `4596d6dd`
 **Step 1 P1 factual-integrity correction:** `a7fc47cd`
 **Step 1 P2 provenance/numeric correction:** `25e479d7`
+**Step 1 final provenance-consistency correction:** `2ce49d69`
 **Frozen manifest SHA-256:** `744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7`
 **Retained producer:** `469c13c15d0d654f60c04a84bb97bf7ee44d1de0`
 
@@ -26,7 +27,7 @@ Overall verdict: **PARTIAL**. The implementation and provider-free retained-arti
 - Same stable IDs are now grouped by compatible source identity and protected metric bindings before any editorial score is used. Conflicting evidence IDs, values, cohorts, periods, or observation statuses fail closed; equivalent source-consistent representations may still use the strongest existing retained signals.
 - Same stable IDs also fail closed when their physical page/span bindings are contradictory. Identical excerpts, overlapping spans, and source-consistent multi-page representations remain eligible; unrelated excerpts or disjoint physical bindings cannot be resolved by editorial score.
 - Final editorial wording remains authoritative, but the complete candidate protected metric binding is restored, including empty fields. Final-only metric, forecast, cohort, denominator, timeframe, geography, evidence, page, or span additions are removed; a matching final rewrite without a reliable candidate binding is rejected.
-- Artifact cache metadata now carries `evidence_backed_shortlisting:3`; the cache matcher rejects the prior `evidence_backed_shortlisting:2`, `evidence_backed_shortlisting:1`, and `stable_id_unique_selection:2` versions.
+- Artifact cache metadata now carries `evidence_backed_shortlisting:4`; the cache matcher rejects the prior `evidence_backed_shortlisting:3`, `evidence_backed_shortlisting:2`, `evidence_backed_shortlisting:1`, and `stable_id_unique_selection:2` versions.
 - Two independent insights remain a valid generated artifact family result; the downstream report-payload contract still rejects fewer than five populated insight slots unless the family is explicitly abstained.
 
 ## Frozen-five before/after replay (initial Step 1 baseline)
@@ -81,6 +82,20 @@ Numeric-content check: on corrected replay, all five reports still derive **0 me
 
 New regressions cover disjoint page/excerpt/span conflicts, disjoint same-page spans, overlapping alternative spans, legitimate identical multi-page excerpts, cache invalidation from selection version `:2` to `:3`, and downstream numeric preservation. This P2 correction is **PARTIAL** only because the retained replay cannot measure fresh candidate recall, live collision prevalence, or repeated-run stability; it introduces no frozen-cohort regression and does not start Step 2.
 
+## Final provenance-consistency correction
+
+Commit `2ce49d69` compares the selector with baseline `953555f` on the exact retained frozen-five artifacts. Concrete span bindings are now checked before shared top-level evidence text; source-pack/section identity is checked before excerpt equality; incomplete spans remain eligible only when their available location/source metadata is consistent. Cache identity advanced from `evidence_backed_shortlisting:3` to `evidence_backed_shortlisting:4`.
+
+| Report | Selected IDs / wording | Theme coverage | Evidence IDs/pages/spans | Protected metrics | Metric spine / key figures | Fallback | Difference vs `953555f` |
+|---|---|---:|---|---|---:|---|---|
+| Capgemini | unchanged, 5→5 | 5/5→5/5 | unchanged | unchanged | 0→0 / 0→0 | unchanged | None |
+| Activate | unchanged, 7→7 | 7/7→7/7 | unchanged | unchanged | 0→0 / 0→0 | unchanged | None |
+| KPMG | unchanged, 5→5 | 5/5→5/5 | unchanged | unchanged | 0→0 / 0→0 | `outlook-execution-environment` unchanged | None |
+| Reuters Institute | unchanged, 6→6 | 6/6→6/6 | unchanged | unchanged | 0→0 / 0→0 | unchanged | None |
+| Adjust | unchanged, 6→6 | 6/6→6/6 | unchanged | unchanged | 0→0 / 0→0 | unchanged | None |
+
+Aggregate final replay: **29→29** selected identities and editorial wordings unchanged; theme coverage, evidence IDs, physical pages/spans, protected metric bindings, metric-spine/key-figure counts, fallback availability, validation outcomes, and publication-readiness safeguards were unchanged. The retained cohort has no duplicate stable-ID candidate groups, so the new defect is demonstrated by focused regressions rather than a live-frozen collision. No provider calls or publication writes were made. Overall Step 1 remains **PARTIAL** because retained post-selection replay cannot establish fresh live selection effectiveness or repeated-run stability; no further Step 1 corrective work is indicated by this verification, and Step 2 remains unstarted.
+
 ## Fifteen frozen reference cases
 
 The following review distinguishes an editorial omission or intentionally broad qualitative selection from a factual error. “No factual regression” means the retained selected record did not promote the held numeric/provenance mutation; it does not mean an unresolved source binding became verified.
@@ -110,6 +125,7 @@ No Step 0 unresolved reference case was promoted by the fallback path. The sourc
 Passed:
 
 - `python -m pytest -q tests/test_artifact_insight_shortlisting.py tests/test_artifact_normalization_source_fidelity.py` — **35 passed** after the P2 correction.
+- `python -m pytest -q tests/test_artifact_insight_shortlisting.py tests/test_artifact_normalization_source_fidelity.py` — **39 passed** after the final provenance correction.
 - `python -m pytest -q tests/test_artifact_generator.py` — **109 passed**.
 - `python -m pytest -q tests/test_report_regeneration_generator.py` — **90 passed**.
 - `python -m pytest -q tests/test_public_editorial_quality_generator.py tests/test_public_report_quality_gate.py tests/test_render_service_public_advisory.py tests/test_render_service_public_prose.py` — **115 passed**.
