@@ -52,6 +52,39 @@ def _insight(
     }
 
 
+def _shared_evidence_span_candidates(
+    first_span: dict[str, object],
+    second_span: dict[str, object],
+    *,
+    first_pages: list[int],
+    second_pages: list[int],
+) -> list[dict[str, object]]:
+    metric = {"label": "Respondent share", "value": "42%", "unit": "%"}
+    shared_evidence = "The report provides a generic supporting excerpt."
+    return [
+        _insight(
+            "shared",
+            "f1",
+            "The first source proposition.",
+            score=0.99,
+            metric=metric,
+            evidence=shared_evidence,
+            pages=first_pages,
+            evidence_spans=[first_span],
+        ),
+        _insight(
+            "shared",
+            "f1",
+            "The second source proposition.",
+            score=0.01,
+            metric=metric,
+            evidence=shared_evidence,
+            pages=second_pages,
+            evidence_spans=[second_span],
+        ),
+    ]
+
+
 def test_selector_prefers_bound_relevant_finding_over_generic_high_score() -> None:
     generic = _insight(
         "generic",
@@ -418,6 +451,93 @@ def test_selector_fails_closed_for_same_id_conflicting_physical_provenance() -> 
                 "text": "The source reports 42% for the second population.",
             }
         ],
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[],
+        candidate_insights=[first, second],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert selected == []
+
+
+@pytest.mark.parametrize(
+    ("first_pages", "second_pages", "first_span", "second_span"),
+    [
+        (
+            [4],
+            [9],
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "start_offset": 10,
+                "end_offset": 20,
+                "text": "The first physical excerpt.",
+            },
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 9,
+                "start_offset": 30,
+                "end_offset": 40,
+                "text": "The second physical excerpt.",
+            },
+        ),
+        (
+            [4],
+            [4],
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "start_offset": 10,
+                "end_offset": 20,
+                "text": "The first physical excerpt.",
+            },
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "start_offset": 30,
+                "end_offset": 40,
+                "text": "The second physical excerpt.",
+            },
+        ),
+        (
+            [4],
+            [4],
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "start_offset": 10,
+                "end_offset": 20,
+                "text": "The same physical excerpt.",
+            },
+            {
+                "evidence_id": "f1",
+                "source_pack": "doc_map",
+                "page": 4,
+                "start_offset": 10,
+                "end_offset": 20,
+                "text": "The same physical excerpt.",
+            },
+        ),
+    ],
+)
+def test_selector_fails_closed_for_shared_text_with_incompatible_spans(
+    first_pages: list[int],
+    second_pages: list[int],
+    first_span: dict[str, object],
+    second_span: dict[str, object],
+) -> None:
+    first, second = _shared_evidence_span_candidates(
+        first_span,
+        second_span,
+        first_pages=first_pages,
+        second_pages=second_pages,
     )
 
     selected = select_artifact_insights(
@@ -989,7 +1109,7 @@ def test_finding_fallback_covers_uncovered_themes_before_filling_capacity() -> N
 
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION == (
-        "evidence_backed_shortlisting:3"
+        "evidence_backed_shortlisting:4"
     )
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
         "stable_id_unique_selection:2"
@@ -1001,7 +1121,11 @@ def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> N
 
 @pytest.mark.parametrize(
     "old_version",
-    ["stable_id_unique_selection:2", "evidence_backed_shortlisting:2"],
+    [
+        "stable_id_unique_selection:2",
+        "evidence_backed_shortlisting:2",
+        "evidence_backed_shortlisting:3",
+    ],
 )
 def test_old_selection_version_cannot_match_a_new_cache_key(old_version: str) -> None:
     expected = {

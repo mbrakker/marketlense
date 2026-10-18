@@ -22,7 +22,7 @@ from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:3"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:4"
 
 METRIC_FIELDS = (
     "label",
@@ -1220,6 +1220,8 @@ def _candidate_provenance_has_conflict(
     """
     candidate_pages, candidate_spans, candidate_texts = _candidate_provenance(candidate)
     other_pages, other_spans, other_texts = _candidate_provenance(other)
+    if _candidates_have_concrete_physical_spans(candidate_spans, other_spans):
+        return not _candidate_spans_are_compatible(candidate_spans, other_spans)
     shared_texts = candidate_texts.intersection(other_texts)
     if shared_texts:
         return False
@@ -1260,32 +1262,57 @@ def _candidate_provenance(
     return pages, spans, texts
 
 
+def _candidates_have_concrete_physical_spans(
+    candidate_spans: List[Dict[str, Any]],
+    other_spans: List[Dict[str, Any]],
+) -> bool:
+    def has_concrete_span(spans: List[Dict[str, Any]]) -> bool:
+        return any(
+            normalize_for_lookup(
+                span.get("source_pack")
+                or span.get("section_id")
+                or span.get("text")
+                or span.get("evidence")
+            )
+            or any(
+                isinstance(span.get(field_name), int)
+                for field_name in ("page", "start_offset", "end_offset")
+            )
+            for span in spans
+        )
+
+    return has_concrete_span(candidate_spans) and has_concrete_span(other_spans)
+
+
 def _candidate_spans_are_compatible(
     candidate_spans: List[Dict[str, Any]],
     other_spans: List[Dict[str, Any]],
 ) -> bool:
     for candidate_span in candidate_spans:
         for other_span in other_spans:
+            if not _compatible_span_source(
+                candidate_span.get("source_pack"),
+                other_span.get("source_pack"),
+            ) or not _compatible_span_source(
+                candidate_span.get("section_id"),
+                other_span.get("section_id"),
+            ):
+                continue
             candidate_text = normalize_for_lookup(
                 candidate_span.get("text") or candidate_span.get("evidence")
             )
             other_text = normalize_for_lookup(
                 other_span.get("text") or other_span.get("evidence")
             )
-            if candidate_text and candidate_text == other_text:
+            if candidate_span.get("page") == other_span.get(
+                "page"
+            ) and _span_offsets_overlap(candidate_span, other_span):
                 return True
-            if (
-                candidate_span.get("page") == other_span.get("page")
-                and _compatible_span_source(
-                    candidate_span.get("source_pack"),
-                    other_span.get("source_pack"),
-                )
-                and _compatible_span_source(
-                    candidate_span.get("section_id"),
-                    other_span.get("section_id"),
-                )
-                and _span_offsets_overlap(candidate_span, other_span)
-            ):
+            if candidate_text and other_text:
+                if candidate_text == other_text:
+                    return True
+                continue
+            if _span_locations_match(candidate_span, other_span):
                 return True
     return False
 
@@ -1309,6 +1336,23 @@ def _span_offsets_overlap(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
     ):
         return False
     return max(left_start, right_start) <= min(left_end, right_end)
+
+
+def _span_locations_match(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
+    fields = ("source_pack", "section_id", "page", "start_offset", "end_offset")
+    values = [
+        normalize_for_lookup(left.get(field_name))
+        if field_name in {"source_pack", "section_id"}
+        else left.get(field_name)
+        for field_name in fields
+    ]
+    other_values = [
+        normalize_for_lookup(right.get(field_name))
+        if field_name in {"source_pack", "section_id"}
+        else right.get(field_name)
+        for field_name in fields
+    ]
+    return values == other_values and any(value is not None for value in values)
 
 
 def _complete_protected_metric_binding(metric: Any) -> Dict[str, Any]:
