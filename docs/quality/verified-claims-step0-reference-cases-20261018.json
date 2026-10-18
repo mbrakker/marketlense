@@ -3,7 +3,7 @@
   "baseline_kind": "verified_claims_step0_reference_cases",
   "audit_date": "2026-10-18",
   "branch": "codex/fix-retained-insight-evidence-validation",
-  "starting_sha": "7f3a8891efa55739d993a37df29fc791e44de19f",
+  "starting_sha": "cdc7ae2bb01ef257d3f5f4666801f8be37234352",
   "scope": {
     "manifest_path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
     "manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
@@ -116,118 +116,749 @@
     {
       "case_id": "ACT-001",
       "report": "Activate",
-      "canonical_evidence_ids": ["ACT-1", "f1", "s1"],
+      "canonical_evidence_ids": [
+        "f1",
+        "s1"
+      ],
       "pdf_sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
       "source_pages": {
-        "physical_pdf": [5],
-        "printed": [4]
+        "physical_pdf": [
+          5
+        ],
+        "printed": [
+          4
+        ],
+        "zero_based_library_index": [
+          4
+        ]
       },
       "source_supported_meaning": "The report forecasts approximately 302 billion dollars of global Internet and media revenue growth from 2017E to 2021E, at 4.1% CAGR versus approximately 3% global GDP CAGR.",
-      "qualifiers": ["forecast", "report-defined Internet and media scope", "2017E to 2021E"],
+      "qualifiers": [
+        "forecast",
+        "report-defined Internet and media scope",
+        "2017E to 2021E"
+      ],
       "observed_candidate_or_editorial": "Current finding f1 preserves the forecast, period and CAGR comparison while rounding the chart value to approximately 300 billion dollars; selected insight activate-outlook-revenue-models keeps the forecast framing.",
       "defect_classification": "preserved_with_source-consistent_rounding",
       "expected_verification_outcome": "accept only if forecast status, scope and period remain explicit",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "accepted_with_qualifier"
+      "editorial_verification_state": "accepted_with_qualifier",
+      "source_reference_ids": [
+        "ACT-1"
+      ],
+      "persisted_findings_ids": [
+        "f1"
+      ],
+      "persisted_doc_map_ids": [
+        "s1"
+      ],
+      "editorial_ids": [
+        "activate-outlook-revenue-models"
+      ],
+      "identity_resolution": {
+        "status": "resolved",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": true,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "Activate forecasts approximately $302B of global Internet and media revenue growth from 2017E to 2021E, with 4.1% CAGR versus approximately 3% global GDP CAGR.",
+          "metric": {
+            "name": "global Internet and media revenue growth",
+            "values": {
+              "forecast_revenue": "$302B",
+              "forecast_cagr": "4.1%",
+              "benchmark_global_gdp_cagr": "~3%"
+            }
+          },
+          "population": "Report-defined global Internet and media revenue scope",
+          "denominator": "Global revenue forecast; denominator is the report-defined market scope",
+          "geography": "Global",
+          "period": "2017E-2021E",
+          "observation_status": "forecast",
+          "source_page": {
+            "physical_pdf": 5,
+            "printed": [
+              4
+            ],
+            "zero_based_library_index": [
+              4
+            ],
+            "chart_or_section": "revenue forecast chart"
+          },
+          "qualifier_requirements": [
+            "forecast, not observed growth",
+            "report-defined Internet and media scope",
+            "2017E-2021E period",
+            "CAGR comparison to approximately 3% global GDP"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "ACT-001-valid",
+            "text": "Activate forecasts approximately $302B of global Internet and media revenue growth from 2017E to 2021E at a 4.1% CAGR versus approximately 3% global GDP CAGR.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves value, scope, period, forecast status, and CAGR comparison."
+          },
+          {
+            "candidate_id": "ACT-001-observed-mutation",
+            "text": "Global Internet and media revenue grew approximately $302B from 2017E to 2021E at a 4.1% CAGR.",
+            "mutation": "forecast converted to observed outcome",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Activate forecasts approximately $302B of global Internet and media revenue growth from 2017E to 2021E at a 4.1% CAGR versus approximately 3% global GDP CAGR.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The source is a forecast and does not establish a realized outcome; it also drops the GDP comparison."
+          },
+          {
+            "candidate_id": "ACT-001-scope-mutation",
+            "text": "All technology revenue is forecast to grow by approximately $302B from 2017E to 2021E.",
+            "mutation": "report-defined Internet and media scope broadened to all technology revenue",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Activate forecasts approximately $302B of global Internet and media revenue growth from 2017E to 2021E at a 4.1% CAGR versus approximately 3% global GDP CAGR.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The source scope is Internet and media, not all technology revenue."
+          }
+        ]
+      }
     },
     {
       "case_id": "ACT-002",
       "report": "Activate",
-      "canonical_evidence_ids": ["ACT-2", "video-superusers-share-of-time"],
+      "canonical_evidence_ids": [
+        "s3"
+      ],
       "pdf_sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
       "source_pages": {
-        "physical_pdf": [15],
-        "printed": [14]
+        "physical_pdf": [
+          15
+        ],
+        "printed": [
+          14
+        ],
+        "zero_based_library_index": [
+          14
+        ]
       },
       "source_supported_meaning": "In the U.S. 2017 top quartile of video users, the cohort accounts for 61% of viewing time and 34% of consumer spend; the complementary cohort accounts for 39% and 66%.",
-      "qualifiers": ["top 25% of users", "4.5 or more daily video-attention hours", "time share and spend share are separate measures", "U.S. 2017"],
+      "qualifiers": [
+        "top 25% of users",
+        "4.5 or more daily video-attention hours",
+        "time share and spend share are separate measures",
+        "U.S. 2017"
+      ],
       "observed_candidate_or_editorial": "A retained historical Expert View inverted the top-cohort values into 66% of time and 39% of spend. Existing evidence-fidelity validation rejected the candidate; the later source-binding audit retained the correct 61% and 34% relation.",
       "defect_classification": "known_historical_cohort_and_metric_inversion",
       "expected_verification_outcome": "reject the inverted relation; accept only the paired 61%/34% tuple with cohort labels",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "known_defect_rejected"
+      "editorial_verification_state": "known_defect_rejected",
+      "source_reference_ids": [
+        "ACT-2"
+      ],
+      "persisted_findings_ids": [],
+      "persisted_doc_map_ids": [
+        "s3"
+      ],
+      "editorial_ids": [
+        "activate-super-user-time-and-spending"
+      ],
+      "identity_resolution": {
+        "status": "partial_doc_map_only",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "Among the top 25% daily video cohort watching at least 4.5 hours per day, video represents 61% of time and 34% of spend; the remaining cohort represents 39% of time and 66% of spend.",
+          "metric": {
+            "name": "video time and spend share",
+            "values": {
+              "top_cohort_time": "61%",
+              "top_cohort_spend": "34%",
+              "remaining_time": "39%",
+              "remaining_spend": "66%"
+            }
+          },
+          "population": "Top 25% daily video cohort at 4.5+ hours per day versus the remaining cohort",
+          "denominator": "Share of cohort time and spend",
+          "geography": "Report-defined market",
+          "period": "Report snapshot; no forecast period",
+          "observation_status": "observed",
+          "source_page": {
+            "physical_pdf": 15,
+            "printed": [
+              14
+            ],
+            "zero_based_library_index": [
+              14
+            ],
+            "chart_or_section": "video time/spend cohort chart"
+          },
+          "qualifier_requirements": [
+            "top 25% cohort",
+            "4.5+ hours per day",
+            "time and spend are separate measures",
+            "remaining cohort is 39% time and 66% spend"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "ACT-002-valid",
+            "text": "For the top 25% daily video cohort watching at least 4.5 hours per day, video is 61% of time and 34% of spend; the remaining cohort is 39% of time and 66% of spend.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves cohort, threshold, measure identity, and complement."
+          },
+          {
+            "candidate_id": "ACT-002-swap-time-spend",
+            "text": "For the top 25% daily video cohort, video is 34% of time and 61% of spend.",
+            "mutation": "time and spend values swapped",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "For the top 25% daily video cohort watching at least 4.5 hours per day, video is 61% of time and 34% of spend; the remaining cohort is 39% of time and 66% of spend.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The chart assigns 61% to time and 34% to spend."
+          },
+          {
+            "candidate_id": "ACT-002-complement-on-top-cohort",
+            "text": "The top 25% daily video cohort accounts for 39% of time and 66% of spend.",
+            "mutation": "complementary-cohort values assigned to the top cohort",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "For the top 25% daily video cohort watching at least 4.5 hours per day, video is 61% of time and 34% of spend; the remaining cohort is 39% of time and 66% of spend.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "39% and 66% describe the remaining cohort, not the top cohort."
+          }
+        ]
+      }
     },
     {
       "case_id": "ACT-003",
       "report": "Activate",
-      "canonical_evidence_ids": ["ACT-2", "audio-superusers-share-of-time"],
+      "canonical_evidence_ids": [
+        "s3"
+      ],
       "pdf_sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
       "source_pages": {
-        "physical_pdf": [17],
-        "printed": [16]
+        "physical_pdf": [
+          17
+        ],
+        "printed": [
+          16
+        ],
+        "zero_based_library_index": [
+          16
+        ]
       },
       "source_supported_meaning": "In the U.S. 2017 top quartile of audio users, the cohort accounts for 64% of listening time and 47% of consumer spend; the complementary cohort accounts for 36% and 53%.",
-      "qualifiers": ["top 25% of users", "3 or more daily audio-attention hours", "listening time and spend are separate measures", "U.S. 2017"],
+      "qualifiers": [
+        "top 25% of users",
+        "3 or more daily audio-attention hours",
+        "listening time and spend are separate measures",
+        "U.S. 2017"
+      ],
       "observed_candidate_or_editorial": "A retained historical Expert View inverted the top-cohort values into 53% of time and 36% of spend. Existing evidence-fidelity validation rejected the candidate; the later source-binding audit retained the correct 64% and 47% relation.",
       "defect_classification": "known_historical_cohort_and_metric_inversion",
       "expected_verification_outcome": "reject the inverted relation; accept only the paired 64%/47% tuple with cohort labels",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "known_defect_rejected"
+      "editorial_verification_state": "known_defect_rejected",
+      "source_reference_ids": [
+        "ACT-2"
+      ],
+      "persisted_findings_ids": [],
+      "persisted_doc_map_ids": [
+        "s3"
+      ],
+      "editorial_ids": [
+        "activate-super-user-time-and-spending"
+      ],
+      "identity_resolution": {
+        "status": "partial_doc_map_only",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "Among the top 25% daily audio cohort listening at least 3 hours per day, audio represents 64% of time and 47% of spend; the remaining cohort represents 36% of time and 53% of spend.",
+          "metric": {
+            "name": "audio time and spend share",
+            "values": {
+              "top_cohort_time": "64%",
+              "top_cohort_spend": "47%",
+              "remaining_time": "36%",
+              "remaining_spend": "53%"
+            }
+          },
+          "population": "Top 25% daily audio cohort at 3+ hours per day versus the remaining cohort",
+          "denominator": "Share of cohort time and spend",
+          "geography": "Report-defined market",
+          "period": "Report snapshot; no forecast period",
+          "observation_status": "observed",
+          "source_page": {
+            "physical_pdf": 17,
+            "printed": [
+              16
+            ],
+            "zero_based_library_index": [
+              16
+            ],
+            "chart_or_section": "audio time/spend cohort chart"
+          },
+          "qualifier_requirements": [
+            "top 25% cohort",
+            "3+ hours per day",
+            "time and spend are separate measures"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "ACT-003-valid",
+            "text": "For the top 25% daily audio cohort listening at least 3 hours per day, audio is 64% of time and 47% of spend; the remaining cohort is 36% of time and 53% of spend.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves cohort, threshold, measure identity, and complement."
+          },
+          {
+            "candidate_id": "ACT-003-swap-time-spend",
+            "text": "For the top 25% daily audio cohort, audio is 47% of time and 64% of spend.",
+            "mutation": "time and spend values swapped",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "For the top 25% daily audio cohort listening at least 3 hours per day, audio is 64% of time and 47% of spend; the remaining cohort is 36% of time and 53% of spend.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The chart assigns 64% to time and 47% to spend."
+          }
+        ]
+      }
     },
     {
       "case_id": "ACT-004",
       "report": "Activate",
-      "canonical_evidence_ids": ["ACT-3"],
+      "canonical_evidence_ids": [
+        "s6"
+      ],
       "pdf_sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
       "source_pages": {
-        "physical_pdf": [53],
-        "printed": [52]
+        "physical_pdf": [
+          53
+        ],
+        "printed": [
+          52
+        ],
+        "zero_based_library_index": [
+          52
+        ]
       },
       "source_supported_meaning": "Among creators with 50M or more YouTube views in Q2 2017, the YouTube cohort is 24% of creators and 71% of views; the Facebook cohort is 26% of creators and 77% of views.",
-      "qualifiers": ["platform-specific", "50M or more views", "creator share and view share are distinct", "Q2 2017"],
+      "qualifiers": [
+        "platform-specific",
+        "50M or more views",
+        "creator share and view share are distinct",
+        "Q2 2017"
+      ],
       "observed_candidate_or_editorial": "The retained source-binding replay accepts the correct platform/cohort/metric tuple and rejects platform or metric swaps, missing cohort labels, population expansion and loss of visual identity. Current selected insight activate-platform-specific-web-video is a broader editorial synthesis.",
       "defect_classification": "source_binding_guardrail",
       "expected_verification_outcome": "accept only a fully bound platform/cohort/metric/population tuple; otherwise fail closed",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "guarded_requires_exact_binding"
+      "editorial_verification_state": "guarded_requires_exact_binding",
+      "source_reference_ids": [
+        "ACT-3"
+      ],
+      "persisted_findings_ids": [],
+      "persisted_doc_map_ids": [
+        "s6"
+      ],
+      "editorial_ids": [
+        "activate-platform-specific-web-video"
+      ],
+      "identity_resolution": {
+        "status": "partial_doc_map_only",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "The creator platform visual reports YouTube at 24% of creators and 71% of views, and Facebook at 26% of creators and 77% of views.",
+          "metric": {
+            "name": "creator share and view share by platform",
+            "values": {
+              "YouTube": {
+                "creator_share": "24%",
+                "view_share": "71%"
+              },
+              "Facebook": {
+                "creator_share": "26%",
+                "view_share": "77%"
+              }
+            }
+          },
+          "population": "Creators and views in the report's platform comparison",
+          "denominator": "Platform share of creators and views",
+          "geography": "Report-defined platform market",
+          "period": "Report snapshot; no forecast period",
+          "observation_status": "observed",
+          "source_page": {
+            "physical_pdf": 53,
+            "printed": [
+              52
+            ],
+            "zero_based_library_index": [
+              52
+            ],
+            "chart_or_section": "creator platform comparison visual"
+          },
+          "qualifier_requirements": [
+            "platform identity",
+            "creator share vs view share",
+            "YouTube and Facebook values must not be swapped"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "ACT-004-valid",
+            "text": "The creator platform visual reports YouTube at 24% of creators and 71% of views, and Facebook at 26% of creators and 77% of views.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves platform and metric identity."
+          },
+          {
+            "candidate_id": "ACT-004-platform-swap",
+            "text": "Facebook has 24% of creators and 71% of views, while YouTube has 26% of creators and 77% of views.",
+            "mutation": "YouTube and Facebook labels swapped",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "The creator platform visual reports YouTube at 24% of creators and 71% of views, and Facebook at 26% of creators and 77% of views.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The numeric pairs are bound to their platform labels."
+          },
+          {
+            "candidate_id": "ACT-004-wrong-page",
+            "text": "The creator platform visual reports YouTube at 24% of creators and 71% of views, and Facebook at 26% of creators and 77% of views; source page physical PDF 15.",
+            "mutation": "page identity points to an unrelated video cohort page",
+            "expected_assessment": "unresolved",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "hold",
+            "reason": "The statement may be textually plausible, but the supplied page identity is not the verified creator visual page."
+          }
+        ]
+      }
     },
     {
       "case_id": "CAP-001",
       "report": "Capgemini Research Institute",
-      "canonical_evidence_ids": ["CAP-1", "value-fairness-quality"],
+      "canonical_evidence_ids": [
+        "value-fairness-quality",
+        "value-redefined"
+      ],
       "pdf_sha256": "612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e",
       "source_pages": {
-        "physical_pdf": [11]
+        "physical_pdf": [
+          11
+        ],
+        "printed": [],
+        "zero_based_library_index": [
+          10
+        ]
       },
       "source_supported_meaning": "74% cite a competitor's lower regular price as a reason to switch; 71% cite an unannounced reduction in pack size or product quality.",
-      "qualifiers": ["reported switching reasons", "not observed switching rates", "October 2025 consumer survey"],
+      "qualifiers": [
+        "reported switching reasons",
+        "not observed switching rates",
+        "October 2025 consumer survey"
+      ],
       "observed_candidate_or_editorial": "Current finding value-fairness-quality preserves both switching reasons. Selected value-fairness-transparency uses the broader fairness and trust synthesis and retains the source evidence link.",
       "defect_classification": "source_supported_mechanisms_preserved",
       "expected_verification_outcome": "accept only as reported reasons with survey scope; do not convert to realized churn",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "accepted_with_scope"
+      "editorial_verification_state": "accepted_with_scope",
+      "source_reference_ids": [
+        "CAP-1"
+      ],
+      "persisted_findings_ids": [
+        "value-fairness-quality"
+      ],
+      "persisted_doc_map_ids": [
+        "value-redefined"
+      ],
+      "editorial_ids": [
+        "value-fairness-transparency"
+      ],
+      "identity_resolution": {
+        "status": "resolved",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": true,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "In the N=12,000 consumer sample, 74% reported that competitors offered lower regular prices, while 71% reported reductions in pack size or quality without notice.",
+          "metric": {
+            "name": "consumer value-fairness responses",
+            "values": {
+              "competitor_lower_regular_price": "74%",
+              "unannounced_pack_size_or_quality_reduction": "71%"
+            }
+          },
+          "population": "N=12,000 consumers",
+          "denominator": "Share of respondents to separate survey items",
+          "geography": "Report-defined consumer market",
+          "period": "2025 consumer research",
+          "observation_status": "observed",
+          "source_page": {
+            "physical_pdf": 11,
+            "printed": [],
+            "zero_based_library_index": [
+              10
+            ],
+            "chart_or_section": "Figure 2 value/fairness chart"
+          },
+          "qualifier_requirements": [
+            "N=12,000 sample",
+            "74% is lower regular price",
+            "71% is unannounced pack size/quality reduction",
+            "separate response items"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "CAP-001-valid",
+            "text": "Among N=12,000 consumers, 74% reported competitors offered lower regular prices and 71% reported pack size or quality reductions without notice.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves sample, separate measures, and values."
+          },
+          {
+            "candidate_id": "CAP-001-metric-swap",
+            "text": "Among N=12,000 consumers, 71% reported competitors offered lower regular prices and 74% reported pack size or quality reductions without notice.",
+            "mutation": "price and pack-size/quality values swapped",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Among N=12,000 consumers, 74% reported competitors offered lower regular prices and 71% reported pack size or quality reductions without notice.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The two percentages belong to distinct chart items."
+          }
+        ]
+      }
     },
     {
       "case_id": "CAP-002",
       "report": "Capgemini Research Institute",
-      "canonical_evidence_ids": ["CAP-1"],
+      "canonical_evidence_ids": [
+        "value-fairness-quality",
+        "value-redefined"
+      ],
       "pdf_sha256": "612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e",
       "source_pages": {
-        "physical_pdf": [11]
+        "physical_pdf": [
+          11
+        ],
+        "printed": [],
+        "zero_based_library_index": [
+          10
+        ]
       },
       "source_supported_meaning": "The Figure 2 switching responses are based on 12,000 consumers; that population applies to the reported 74% and 71% measures.",
-      "qualifiers": ["N=12,000 consumers", "October 2025", "population is not a rate of all consumers in the market"],
+      "qualifiers": [
+        "N=12,000 consumers",
+        "October 2025",
+        "population is not a rate of all consumers in the market"
+      ],
       "observed_candidate_or_editorial": "The current selected insight carries the 74% and 71% mechanisms but does not repeat the N=12,000 denominator in its metric object or short text; methodology evidence is retained elsewhere in the report context.",
       "defect_classification": "population_scope_not_carried_to_selected_text",
       "expected_verification_outcome": "requires review before a numeric public claim; preserve the population or explicitly cite the methodology",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "requires_review"
+      "editorial_verification_state": "requires_review",
+      "source_reference_ids": [
+        "CAP-1"
+      ],
+      "persisted_findings_ids": [
+        "value-fairness-quality"
+      ],
+      "persisted_doc_map_ids": [
+        "value-redefined"
+      ],
+      "editorial_ids": [
+        "value-fairness-transparency"
+      ],
+      "identity_resolution": {
+        "status": "partial_claim_only",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "The value-fairness chart is based on N=12,000 consumers; its percentages are respondent shares, not a universal population estimate.",
+          "metric": {
+            "name": "survey denominator",
+            "values": {
+              "sample": "N=12,000"
+            }
+          },
+          "population": "Survey respondents",
+          "denominator": "N=12,000 respondents",
+          "geography": "Report-defined consumer market",
+          "period": "2025 consumer research",
+          "observation_status": "observed",
+          "source_page": {
+            "physical_pdf": 11,
+            "printed": [],
+            "zero_based_library_index": [
+              10
+            ],
+            "chart_or_section": "Figure 2 sample note and response bars"
+          },
+          "qualifier_requirements": [
+            "N=12,000 denominator",
+            "do not generalize sample count into all consumers",
+            "percentages are respondent shares"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "CAP-002-valid",
+            "text": "The value-fairness chart reports respondent shares from an N=12,000 consumer sample.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves the denominator and population."
+          },
+          {
+            "candidate_id": "CAP-002-population-expansion",
+            "text": "The value-fairness chart shows that 74% of all consumers experienced lower regular prices.",
+            "mutation": "survey respondent share generalized to all consumers",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "The value-fairness chart reports respondent shares from an N=12,000 consumer sample; it does not establish a universal all-consumer rate.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The source supplies a sample denominator, not a census estimate."
+          }
+        ]
+      }
     },
     {
       "case_id": "CAP-003",
       "report": "Capgemini Research Institute",
-      "canonical_evidence_ids": ["CAP-2"],
+      "canonical_evidence_ids": [],
       "pdf_sha256": "612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e",
       "source_pages": {
-        "physical_pdf": [21, 22]
+        "physical_pdf": [
+          21,
+          22
+        ],
+        "printed": [],
+        "zero_based_library_index": [
+          20,
+          21
+        ]
       },
       "source_supported_meaning": "In October 2025, 49% report buying smaller quantities and 48% report choosing cheaper alternatives. The source associates the first with consumption control and the second with managing budgets; they are separate responses.",
-      "qualifiers": ["separate response categories", "October 2025", "reported behavior, not causal proof"],
+      "qualifiers": [
+        "separate response categories",
+        "October 2025",
+        "reported behavior, not causal proof"
+      ],
       "observed_candidate_or_editorial": "A retained historical output transferred the cheaper-alternative budget motive onto the 49% smaller-quantity response. Semantic grounding identified the unsupported relation; the current readiness path is fail-closed for the tagged not-established issue.",
       "defect_classification": "known_historical_causal_or_motive_transfer",
       "expected_verification_outcome": "reject the merged motive; accept the two percentages only as separate source-supported responses",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "known_defect_rejected"
+      "editorial_verification_state": "known_defect_rejected",
+      "source_reference_ids": [
+        "CAP-2"
+      ],
+      "persisted_findings_ids": [],
+      "persisted_doc_map_ids": [],
+      "editorial_ids": [
+        "online-deal-searching"
+      ],
+      "identity_resolution": {
+        "status": "unresolved_exact_binding",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": "No exact current persisted finding/doc_map binding was found for the source statement."
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "The careful-spending research separates two responses: 49% bought smaller quantities and 48% chose cheaper alternatives.",
+          "metric": {
+            "name": "careful-spending responses",
+            "values": {
+              "smaller_quantities": "49%",
+              "cheaper_alternatives": "48%"
+            }
+          },
+          "population": "Consumers responding to separate careful-spending items",
+          "denominator": "Share of respondents to separate items",
+          "geography": "Report-defined consumer market",
+          "period": "2025 consumer research",
+          "observation_status": "observed",
+          "source_page": {
+            "physical_pdf": 21,
+            "printed": [],
+            "zero_based_library_index": [
+              20
+            ],
+            "chart_or_section": "careful-spending chart"
+          },
+          "qualifier_requirements": [
+            "49% and 48% are separate motives/actions",
+            "do not transfer one response label to the other"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "CAP-003-valid",
+            "text": "The careful-spending research reports 49% buying smaller quantities and 48% choosing cheaper alternatives.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves separate motives and values."
+          },
+          {
+            "candidate_id": "CAP-003-motive-transfer",
+            "text": "The careful-spending research reports 49% choosing cheaper alternatives and 48% buying smaller quantities.",
+            "mutation": "response labels transferred between values",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "The careful-spending research reports 49% buying smaller quantities and 48% choosing cheaper alternatives.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The chart binds each value to a distinct response label."
+          }
+        ]
+      }
     },
     {
       "case_id": "CAP-004",
@@ -235,130 +866,869 @@
       "canonical_evidence_ids": [],
       "pdf_sha256": "612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e",
       "source_pages": {
-        "physical_pdf": [34]
+        "physical_pdf": [
+          34
+        ],
+        "printed": [],
+        "zero_based_library_index": [
+          33
+        ]
       },
       "source_supported_meaning": "Figure 14 reports willingness-to-pay responses among 3,125 consumers who use chatbots at least once a week; the categories are one-time, subscription, bundled, after-trial and no payment.",
-      "qualifiers": ["N=3,125 weekly chatbot users", "willingness to pay, not realized revenue", "response categories are not additive behavior"],
+      "qualifiers": [
+        "N=3,125 weekly chatbot users",
+        "willingness to pay, not realized revenue",
+        "response categories are not additive behavior"
+      ],
       "observed_candidate_or_editorial": "The current digital-assistant final insight is a qualitative recommendation and does not use this numeric proposition. No canonical findings evidence ID for this exact page-level denominator was retained in the current pack.",
       "defect_classification": "unbound_denominator_reference",
       "expected_verification_outcome": "requires review before use; do not attach the denominator or willingness-to-pay values to a different chatbot population",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "requires_review"
+      "editorial_verification_state": "requires_review",
+      "source_reference_ids": [],
+      "persisted_findings_ids": [],
+      "persisted_doc_map_ids": [],
+      "editorial_ids": [
+        "digital-assistants-engagement-recommendation"
+      ],
+      "identity_resolution": {
+        "status": "unresolved_no_source_reference_id",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": "The source statement is present in the audit scope but has no independent source-reference ID in the canonical source-reference document."
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "Among N=3,125 weekly chatbot users, 31% would pay after a free trial and 28% would not pay.",
+          "metric": {
+            "name": "chatbot willingness to pay",
+            "values": {
+              "after_trial": "31%",
+              "none": "28%"
+            }
+          },
+          "population": "N=3,125 weekly chatbot users",
+          "denominator": "Share of weekly chatbot users",
+          "geography": "Report-defined consumer market",
+          "period": "2025 consumer research",
+          "observation_status": "observed",
+          "source_page": {
+            "physical_pdf": 34,
+            "printed": [],
+            "zero_based_library_index": [
+              33
+            ],
+            "chart_or_section": "Figure 14 chatbot willingness-to-pay chart"
+          },
+          "qualifier_requirements": [
+            "N=3,125 weekly chatbot users",
+            "31% is after-trial willingness",
+            "28% is no willingness to pay",
+            "not all consumers"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "CAP-004-valid",
+            "text": "Among N=3,125 weekly chatbot users, 31% would pay after a free trial and 28% would not pay.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves cohort, denominator, and response labels."
+          },
+          {
+            "candidate_id": "CAP-004-population-expansion",
+            "text": "Among all consumers, 31% would pay for a chatbot after a free trial and 28% would not pay.",
+            "mutation": "weekly chatbot-user cohort generalized to all consumers",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Among N=3,125 weekly chatbot users, 31% would pay after a free trial and 28% would not pay.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The source does not support an all-consumer estimate."
+          }
+        ]
+      }
     },
     {
       "case_id": "KPM-001",
       "report": "KPMG",
-      "canonical_evidence_ids": ["KPMG-1", "buyer-outlook-contrast"],
+      "canonical_evidence_ids": [
+        "buyer-outlook-contrast",
+        "diverging-risk-appetites-between-buyers"
+      ],
       "pdf_sha256": "a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589",
       "source_pages": {
-        "physical_pdf": [15]
+        "physical_pdf": [
+          15
+        ],
+        "printed": [],
+        "zero_based_library_index": [
+          14
+        ]
       },
       "source_supported_meaning": "Respondents expect private equity firms to undertake a mean 7.3 deals in 2026 versus 5.2 for corporate respondents.",
-      "qualifiers": ["mean planned deals", "respondent expectations/plans, not completed transactions", "PE and corporate cohorts must stay separate"],
+      "qualifiers": [
+        "mean planned deals",
+        "respondent expectations/plans, not completed transactions",
+        "PE and corporate cohorts must stay separate"
+      ],
       "observed_candidate_or_editorial": "Current finding buyer-outlook-contrast preserves the qualitative PE-versus-corporate contrast, while selected buyer-appetite-execution-approaches does not repeat the 5.2/7.3 comparison.",
       "defect_classification": "comparative_metric_omission_without_false_accept",
       "expected_verification_outcome": "accept only if both cohorts, means and forward-looking status remain bound",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "requires_review_if_reintroduced"
+      "editorial_verification_state": "requires_review_if_reintroduced",
+      "source_reference_ids": [
+        "KPMG-1"
+      ],
+      "persisted_findings_ids": [
+        "buyer-outlook-contrast"
+      ],
+      "persisted_doc_map_ids": [
+        "diverging-risk-appetites-between-buyers"
+      ],
+      "editorial_ids": [
+        "buyer-appetite-execution-approaches"
+      ],
+      "identity_resolution": {
+        "status": "partial_claim_only",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "The report's mean number of planned deals is 7.3 for private equity buyers versus 5.2 for corporate buyers.",
+          "metric": {
+            "name": "mean planned deals",
+            "values": {
+              "private_equity": "7.3",
+              "corporate": "5.2"
+            }
+          },
+          "population": "Surveyed private equity and corporate buyers",
+          "denominator": "Mean planned deals among each buyer subgroup",
+          "geography": "Report-defined M&A market",
+          "period": "2026 planned-deal outlook",
+          "observation_status": "planned",
+          "source_page": {
+            "physical_pdf": 15,
+            "printed": [],
+            "zero_based_library_index": [
+              14
+            ],
+            "chart_or_section": "buyer appetite comparison chart"
+          },
+          "qualifier_requirements": [
+            "private equity vs corporate subgroup",
+            "planned deals, not completed deals",
+            "mean values retain one decimal"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "KPM-001-valid",
+            "text": "Private equity buyers plan 7.3 deals on average versus 5.2 for corporate buyers.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves subgroup labels, mean values, and planned status."
+          },
+          {
+            "candidate_id": "KPM-001-subgroup-swap",
+            "text": "Corporate buyers plan 7.3 deals on average versus 5.2 for private equity buyers.",
+            "mutation": "private equity and corporate labels swapped",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Private equity buyers plan 7.3 deals on average versus 5.2 for corporate buyers.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The chart binds 7.3 to private equity and 5.2 to corporate buyers."
+          },
+          {
+            "candidate_id": "KPM-001-realized-mutation",
+            "text": "Private equity buyers completed 7.3 deals on average versus 5.2 for corporate buyers.",
+            "mutation": "planned outlook converted to completed realized deals",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Private equity buyers plan 7.3 deals on average versus 5.2 for corporate buyers.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The source measures planned deals, not completed transactions."
+          }
+        ]
+      }
     },
     {
       "case_id": "KPM-002",
       "report": "KPMG",
-      "canonical_evidence_ids": ["KPMG-2", "outlook-execution-environment", "strategic-focus-capability-building"],
+      "canonical_evidence_ids": [
+        "strategic-focus-in-a-fragmented-world"
+      ],
       "pdf_sha256": "a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589",
       "source_pages": {
-        "physical_pdf": [12, 13]
+        "physical_pdf": [
+          12,
+          13
+        ],
+        "printed": [],
+        "zero_based_library_index": [
+          11,
+          12
+        ]
       },
       "source_supported_meaning": "The report presents portfolio separation, carve-outs and related portfolio actions as qualitative structural mechanisms for reshaping portfolios and creating deal opportunity.",
-      "qualifiers": ["qualitative thesis", "not a measured increase in completed deal volume", "regional and buyer differences remain"],
+      "qualifiers": [
+        "qualitative thesis",
+        "not a measured increase in completed deal volume",
+        "regional and buyer differences remain"
+      ],
       "observed_candidate_or_editorial": "Current findings and selected strategic-focus-capability-building preserve the qualitative execution and portfolio-reconfiguration direction without inventing a numeric growth rate.",
       "defect_classification": "qualitative_comparative_finding_preserved",
       "expected_verification_outcome": "accept the qualitative thesis; reject any unsupported numeric or realized-outcome upgrade",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "accepted_with_scope"
+      "editorial_verification_state": "accepted_with_scope",
+      "source_reference_ids": [
+        "KPMG-2"
+      ],
+      "persisted_findings_ids": [],
+      "persisted_doc_map_ids": [
+        "strategic-focus-in-a-fragmented-world"
+      ],
+      "editorial_ids": [
+        "strategic-focus-capability-building"
+      ],
+      "identity_resolution": {
+        "status": "partial_doc_map_only",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "KPMG describes portfolio separation and carve-outs as a structural execution/value-creation focus in the M&A outlook.",
+          "metric": {
+            "name": "portfolio separation and carve-outs",
+            "values": {
+              "type": "qualitative strategic theme"
+            }
+          },
+          "population": "KPMG's M&A outlook discussion",
+          "denominator": "Not applicable; qualitative discussion",
+          "geography": "Report-defined M&A market",
+          "period": "2026 outlook",
+          "observation_status": "qualitative",
+          "source_page": {
+            "physical_pdf": 12,
+            "printed": [],
+            "zero_based_library_index": [
+              11
+            ],
+            "chart_or_section": "strategic-focus and portfolio-separation discussion"
+          },
+          "qualifier_requirements": [
+            "qualitative theme",
+            "do not invent a percentage or outcome",
+            "carve-out/separation framing"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "KPM-002-valid",
+            "text": "KPMG identifies portfolio separation and carve-outs as a structural execution and value-creation focus.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves the qualitative nature of the source."
+          },
+          {
+            "candidate_id": "KPM-002-quantified-mutation",
+            "text": "KPMG reports that 20% of portfolio separations delivered the targeted value-creation outcome.",
+            "mutation": "qualitative discussion converted into unsupported percentage/outcome",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "KPMG identifies portfolio separation and carve-outs as a structural execution and value-creation focus.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The cited source passage is qualitative and supplies no 20% outcome."
+          }
+        ]
+      }
     },
     {
       "case_id": "KPM-003",
       "report": "KPMG",
-      "canonical_evidence_ids": ["KPMG-2", "carveout-outlook"],
+      "canonical_evidence_ids": [
+        "carveout-outlook",
+        "portfolio-simplification-as-a-value-creation-strategy"
+      ],
       "pdf_sha256": "a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589",
       "source_pages": {
-        "physical_pdf": [19]
+        "physical_pdf": [
+          19
+        ],
+        "printed": [],
+        "zero_based_library_index": [
+          18
+        ]
       },
       "source_supported_meaning": "For the next 12 to 24 months, 50% expect a moderate or significant increase in carve-out activity, 44% expect no change and 6% expect a decrease.",
-      "qualifiers": ["expectation", "next 12 to 24 months", "not realized deal activity"],
+      "qualifiers": [
+        "expectation",
+        "next 12 to 24 months",
+        "not realized deal activity"
+      ],
       "observed_candidate_or_editorial": "Current finding carveout-outlook explicitly labels rising activity as an expectation; current selected insights use a broader portfolio and execution framing.",
       "defect_classification": "expectation_observation_boundary",
       "expected_verification_outcome": "accept only with forward-looking status and timeframe; otherwise require review",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "guarded_requires_qualifier"
+      "editorial_verification_state": "guarded_requires_qualifier",
+      "source_reference_ids": [
+        "KPMG-2"
+      ],
+      "persisted_findings_ids": [
+        "carveout-outlook"
+      ],
+      "persisted_doc_map_ids": [
+        "portfolio-simplification-as-a-value-creation-strategy"
+      ],
+      "editorial_ids": [],
+      "identity_resolution": {
+        "status": "resolved_finding_only",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": true,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "For the next 12-24 months, 50% expect carve-out activity to increase, 44% expect it to remain the same, and 6% expect it to decrease.",
+          "metric": {
+            "name": "expected carve-out activity",
+            "values": {
+              "increase": "50%",
+              "same": "44%",
+              "decrease": "6%"
+            }
+          },
+          "population": "Survey respondents giving a carve-out outlook",
+          "denominator": "Share of respondents",
+          "geography": "Report-defined M&A market",
+          "period": "next 12-24 months",
+          "observation_status": "forecast",
+          "source_page": {
+            "physical_pdf": 19,
+            "printed": [],
+            "zero_based_library_index": [
+              18
+            ],
+            "chart_or_section": "carve-out outlook chart"
+          },
+          "qualifier_requirements": [
+            "next 12-24 months",
+            "expectation, not realized activity",
+            "increase/same/decrease labels"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "KPM-003-valid",
+            "text": "For the next 12-24 months, 50% expect carve-out activity to increase, 44% expect no change, and 6% expect it to decrease.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves horizon, expectation status, and three response buckets."
+          },
+          {
+            "candidate_id": "KPM-003-realized-mutation",
+            "text": "Carve-out activity increased for 50% of respondents, was unchanged for 44%, and decreased for 6%.",
+            "mutation": "expectation converted to realized activity",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "For the next 12-24 months, 50% expect carve-out activity to increase, 44% expect no change, and 6% expect it to decrease.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The chart records expectations for the next 12-24 months."
+          }
+        ]
+      }
     },
     {
       "case_id": "REU-001",
       "report": "Reuters Institute",
-      "canonical_evidence_ids": ["REU-1", "search-traffic-forecast"],
+      "canonical_evidence_ids": [
+        "search-traffic-forecast",
+        "answer-engines-and-traffic"
+      ],
       "pdf_sha256": "f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52",
       "source_pages": {
-        "physical_pdf": [12],
-        "printed": [10]
+        "physical_pdf": [
+          12
+        ],
+        "printed": [
+          10
+        ],
+        "zero_based_library_index": [
+          11
+        ]
       },
       "source_supported_meaning": "Publishers expect search referrals to almost halve, an average decline of 43%, over the next three years.",
-      "qualifiers": ["publisher expectation/forecast", "next three years", "not realized traffic", "survey respondent scope"],
+      "qualifiers": [
+        "publisher expectation/forecast",
+        "next three years",
+        "not realized traffic",
+        "survey respondent scope"
+      ],
       "observed_candidate_or_editorial": "Current finding search-traffic-forecast preserves the prospective status but rounds to more than 40%; a retained current-HEAD Reuters run separately preserved the exact -43% and timeframe through final HTML. Current selected ai-search-platform-relationships is qualitative and does not repeat the number.",
       "defect_classification": "forecast_value_and_timeframe_guardrail",
       "expected_verification_outcome": "accept only with forecast status, publisher cohort and three-year timeframe; reject observation wording",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "accepted_with_qualifier"
+      "editorial_verification_state": "accepted_with_qualifier",
+      "source_reference_ids": [
+        "REU-1"
+      ],
+      "persisted_findings_ids": [
+        "search-traffic-forecast"
+      ],
+      "persisted_doc_map_ids": [
+        "answer-engines-and-traffic"
+      ],
+      "editorial_ids": [
+        "ai-search-platform-relationships"
+      ],
+      "identity_resolution": {
+        "status": "partial_claim_only",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "Publishers expect search referrals to fall by 43% over the next three years.",
+          "metric": {
+            "name": "expected search-referral change",
+            "values": {
+              "next_three_years": "-43%"
+            }
+          },
+          "population": "Surveyed news publishers",
+          "denominator": "Share/aggregate expectation reported by publishers",
+          "geography": "Report-defined publisher sample",
+          "period": "next three years",
+          "observation_status": "forecast",
+          "source_page": {
+            "physical_pdf": 12,
+            "printed": [
+              10
+            ],
+            "zero_based_library_index": [
+              11
+            ],
+            "chart_or_section": "search-referral forecast chart"
+          },
+          "qualifier_requirements": [
+            "forecast/expectation",
+            "next three years",
+            "-43% is not a measured historical change",
+            "no causal attribution to AI in this statement"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "REU-001-valid",
+            "text": "Publishers expect search referrals to fall by 43% over the next three years.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves forecast status, horizon, and magnitude."
+          },
+          {
+            "candidate_id": "REU-001-observed-mutation",
+            "text": "Search referrals fell by 43% over the last three years.",
+            "mutation": "forecast converted to observed historical change and horizon reversed",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Publishers expect search referrals to fall by 43% over the next three years.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The source is a forward-looking expectation, not a measured last-three-years outcome."
+          },
+          {
+            "candidate_id": "REU-001-causality-mutation",
+            "text": "AI caused search referrals to fall by 43% over the next three years.",
+            "mutation": "forecast reframed as established AI causation",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Publishers expect search referrals to fall by 43% over the next three years; the source does not establish causality.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The source reports an expectation and does not prove an AI causal effect."
+          }
+        ]
+      }
     },
     {
       "case_id": "REU-002",
       "report": "Reuters Institute",
-      "canonical_evidence_ids": ["REU-2", "social-referral-declines"],
+      "canonical_evidence_ids": [
+        "social-referral-declines",
+        "social-media-mid-life-crisis-video"
+      ],
       "pdf_sha256": "f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52",
       "source_pages": {
-        "physical_pdf": [13],
-        "printed": [11]
+        "physical_pdf": [
+          13
+        ],
+        "printed": [
+          11
+        ],
+        "zero_based_library_index": [
+          12
+        ]
       },
       "source_supported_meaning": "The referral chart distinguishes periods and channels: for May 2023 to November 2025, Facebook is down 43% and X is down 46%; for November 2024 to November 2025, the same channels are up 9% and 15%. Google Search and Discover have their own period-specific values.",
-      "qualifiers": ["observed referral traffic", "channel-specific", "period-specific", "global chart scope", "distinct from the search forecast"],
+      "qualifiers": [
+        "observed referral traffic",
+        "channel-specific",
+        "period-specific",
+        "global chart scope",
+        "distinct from the search forecast"
+      ],
       "observed_candidate_or_editorial": "Current finding social-referral-declines says Facebook is down 43% and X 46% over the last three years, but the selected video-platform-discovery-shift is broader. The exact period and channel qualifiers must remain attached if the figures are promoted.",
       "defect_classification": "period_and_measure_binding_guardrail",
       "expected_verification_outcome": "accept only with the chart period, channel and observed-referral status; otherwise require review",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "guarded_requires_exact_period"
+      "editorial_verification_state": "guarded_requires_exact_period",
+      "source_reference_ids": [
+        "REU-2"
+      ],
+      "persisted_findings_ids": [
+        "social-referral-declines"
+      ],
+      "persisted_doc_map_ids": [
+        "social-media-mid-life-crisis-video"
+      ],
+      "editorial_ids": [
+        "video-platform-discovery-shift"
+      ],
+      "identity_resolution": {
+        "status": "partial_claim_only",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "The social-referral chart reports Facebook -43% and X -46% over the last three years, while the latest one-year change is Facebook +9% and X +15%.",
+          "metric": {
+            "name": "social referral change",
+            "values": {
+              "last_three_years": {
+                "Facebook": "-43%",
+                "X": "-46%"
+              },
+              "latest_one_year": {
+                "Facebook": "+9%",
+                "X": "+15%"
+              }
+            }
+          },
+          "population": "Publisher referral traffic by platform",
+          "denominator": "Change in referrals by platform and period",
+          "geography": "Report-defined publisher sample",
+          "period": "last three years and Nov 2024-Nov 2025 latest year",
+          "observation_status": "observed",
+          "source_page": {
+            "physical_pdf": 13,
+            "printed": [
+              11
+            ],
+            "zero_based_library_index": [
+              12
+            ],
+            "chart_or_section": "social referral chart"
+          },
+          "qualifier_requirements": [
+            "Facebook/X platform identity",
+            "three-year vs one-year periods",
+            "negative historical and positive latest-year signs",
+            "Google/Discover are separate series"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "REU-002-valid",
+            "text": "Facebook referrals were down 43% and X referrals down 46% over the last three years; in the latest year Facebook was up 9% and X up 15%.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves platforms, periods, and signs."
+          },
+          {
+            "candidate_id": "REU-002-platform-swap",
+            "text": "X referrals were down 43% and Facebook referrals down 46% over the last three years; in the latest year X was up 9% and Facebook up 15%.",
+            "mutation": "Facebook and X labels swapped",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Facebook referrals were down 43% and X referrals down 46% over the last three years; in the latest year Facebook was up 9% and X up 15%.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The chart binds each percentage to a platform."
+          },
+          {
+            "candidate_id": "REU-002-period-swap",
+            "text": "Facebook referrals were down 43% and X referrals down 46% in the latest year; in the previous three years Facebook was up 9% and X up 15%.",
+            "mutation": "three-year and latest-year series swapped",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Facebook referrals were down 43% and X referrals down 46% over the last three years; in the latest year Facebook was up 9% and X up 15%.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The chart separates the three-year decline from the latest-year change."
+          }
+        ]
+      }
     },
     {
       "case_id": "REU-003",
       "report": "Reuters Institute",
-      "canonical_evidence_ids": ["REU-2"],
+      "canonical_evidence_ids": [],
       "pdf_sha256": "f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52",
       "source_pages": {
-        "physical_pdf": [12, 13],
-        "printed": [10, 11]
+        "physical_pdf": [
+          12,
+          13
+        ],
+        "printed": [
+          10,
+          11
+        ],
+        "zero_based_library_index": [
+          11,
+          12
+        ]
       },
       "source_supported_meaning": "From November 2024 to November 2025, Google Search referral traffic fell 33% globally, 38% in the U.S. and 17% in Europe, with the chart adding the longer comparison period separately.",
-      "qualifiers": ["observed year-on-year referral traffic", "geography-specific", "not an AI-causality finding", "separate from REU-001"],
+      "qualifiers": [
+        "observed year-on-year referral traffic",
+        "geography-specific",
+        "not an AI-causality finding",
+        "separate from REU-001"
+      ],
       "observed_candidate_or_editorial": "The current selected insight set does not retain these Google referral figures; omission is not a factual error, but reintroduction must not merge them with the Facebook/X three-year comparison or the search forecast.",
       "defect_classification": "omitted_alternative_reference_case",
       "expected_verification_outcome": "accept if deliberately selected with geography and year-on-year qualifier; otherwise record as an editorial omission",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "requires_review_if_reintroduced"
+      "editorial_verification_state": "requires_review_if_reintroduced",
+      "source_reference_ids": [
+        "REU-2"
+      ],
+      "persisted_findings_ids": [],
+      "persisted_doc_map_ids": [],
+      "editorial_ids": [],
+      "identity_resolution": {
+        "status": "unresolved_exact_binding",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": false,
+        "unresolved_reason": "No exact current persisted finding/doc_map binding was found for the source statement."
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "Observed Google Search referral change from Nov 2024 to Nov 2025 was -33% globally, -38% in the US, and -17% in Europe; the source does not establish AI causation.",
+          "metric": {
+            "name": "Google Search referral change",
+            "values": {
+              "global": "-33%",
+              "US": "-38%",
+              "Europe": "-17%"
+            }
+          },
+          "population": "Publisher Google Search referrals",
+          "denominator": "Year-on-year change Nov 2024-Nov 2025",
+          "geography": "Global, US, Europe",
+          "period": "Nov 2024-Nov 2025",
+          "observation_status": "observed",
+          "source_page": {
+            "physical_pdf": 12,
+            "printed": [
+              10
+            ],
+            "zero_based_library_index": [
+              11
+            ],
+            "chart_or_section": "search-referral observed chart and regional values"
+          },
+          "qualifier_requirements": [
+            "geography labels",
+            "Nov 2024-Nov 2025 year-on-year period",
+            "non-causality: AI contribution unclear",
+            "Google Search is distinct from social platforms"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "REU-003-valid",
+            "text": "Google Search referrals changed -33% globally, -38% in the US, and -17% in Europe from November 2024 to November 2025; the source does not establish AI causation.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves geography, period, observed status, and non-causality."
+          },
+          {
+            "candidate_id": "REU-003-geography-swap",
+            "text": "Google Search referrals changed -38% globally, -33% in the US, and -17% in Europe from November 2024 to November 2025.",
+            "mutation": "global and US values swapped",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Google Search referrals changed -33% globally, -38% in the US, and -17% in Europe from November 2024 to November 2025; the source does not establish AI causation.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The regional values are bound to explicit geography labels."
+          }
+        ]
+      }
     },
     {
       "case_id": "ADJ-001",
       "report": "Adjust",
-      "canonical_evidence_ids": ["ADJ-1", "gaming-subvertical-growth"],
+      "canonical_evidence_ids": [
+        "gaming-subvertical-growth",
+        "gaming-finding-keeping-users"
+      ],
       "pdf_sha256": "ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3",
       "source_pages": {
-        "physical_pdf": [19]
+        "physical_pdf": [
+          19
+        ],
+        "printed": [],
+        "zero_based_library_index": [
+          18
+        ]
       },
       "source_supported_meaning": "Globally in 2024 to 2025, strategy sessions rose 57% with installs flat; casino installs rose 22% while sessions fell 5%; slots installs rose 46% while sessions fell 5%.",
-      "qualifiers": ["global", "YoY 2024 to 2025", "installs and sessions are separate measures", "declining sessions do not prove churn"],
+      "qualifiers": [
+        "global",
+        "YoY 2024 to 2025",
+        "installs and sessions are separate measures",
+        "declining sessions do not prove churn"
+      ],
       "observed_candidate_or_editorial": "Current finding gaming-subvertical-growth preserves the complete strategy, casino and slots tuple. Selected gaming-benchmark-coverage retains the category coverage but does not repeat the figures in its short text.",
       "defect_classification": "source_supported_metric_tuple_preserved_in_findings",
       "expected_verification_outcome": "accept only with category, measure, direction and period bound; do not infer churn or conversion impact",
       "source_confirmation": "independently_confirmed",
-      "editorial_verification_state": "accepted_with_scope"
+      "editorial_verification_state": "accepted_with_scope",
+      "source_reference_ids": [
+        "ADJ-1"
+      ],
+      "persisted_findings_ids": [
+        "gaming-subvertical-growth"
+      ],
+      "persisted_doc_map_ids": [
+        "gaming-finding-keeping-users"
+      ],
+      "editorial_ids": [
+        "gaming-benchmark-coverage"
+      ],
+      "identity_resolution": {
+        "status": "resolved",
+        "canonical_evidence_ids_are_persisted_only": true,
+        "source_reference_ids_are_not_canonical_evidence": true,
+        "exact_binding_available": true,
+        "unresolved_reason": null
+      },
+      "evaluation_fixture": {
+        "source_truth": {
+          "statement": "Gaming benchmarks report strategy sessions +57% with installs flat, casino installs +22% with sessions -5%, and slots installs +46% with sessions -5%.",
+          "metric": {
+            "name": "gaming subvertical install/session change",
+            "values": {
+              "strategy": {
+                "sessions": "+57%",
+                "installs": "flat"
+              },
+              "casino": {
+                "installs": "+22%",
+                "sessions": "-5%"
+              },
+              "slots": {
+                "installs": "+46%",
+                "sessions": "-5%"
+              }
+            }
+          },
+          "population": "Gaming app subverticals",
+          "denominator": "Year-on-year change in installs and sessions",
+          "geography": "Report-defined gaming app market",
+          "period": "2025 benchmark comparison",
+          "observation_status": "observed",
+          "source_page": {
+            "physical_pdf": 19,
+            "printed": [],
+            "zero_based_library_index": [
+              18
+            ],
+            "chart_or_section": "gaming subvertical benchmark chart"
+          },
+          "qualifier_requirements": [
+            "strategy/casino/slots subvertical labels",
+            "installs vs sessions metric identity",
+            "negative session deltas retain minus signs",
+            "do not substitute churn or conversion metrics"
+          ]
+        },
+        "candidates": [
+          {
+            "candidate_id": "ADJ-001-valid",
+            "text": "Gaming benchmarks report strategy sessions +57% with installs flat, casino installs +22% with sessions -5%, and slots installs +46% with sessions -5%.",
+            "mutation": "none",
+            "expected_assessment": "supported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "accept",
+            "reason": "Preserves all subvertical, metric, and sign qualifiers."
+          },
+          {
+            "candidate_id": "ADJ-001-sign-loss",
+            "text": "Gaming benchmarks report strategy sessions +57% with installs flat, casino installs +22% with sessions 5%, and slots installs +46% with sessions 5%.",
+            "mutation": "negative signs removed from casino and slots session changes",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Gaming benchmarks report strategy sessions +57% with installs flat, casino installs +22% with sessions -5%, and slots installs +46% with sessions -5%.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The minus signs are substantive decreases."
+          },
+          {
+            "candidate_id": "ADJ-001-metric-swap",
+            "text": "Gaming benchmarks report strategy installs +57% with sessions flat, casino sessions +22% with installs -5%, and slots sessions +46% with installs -5%.",
+            "mutation": "installs and sessions measures swapped",
+            "expected_assessment": "unsupported",
+            "corrected_statement": "Gaming benchmarks report strategy sessions +57% with installs flat, casino installs +22% with sessions -5%, and slots installs +46% with sessions -5%.",
+            "corrected_statement_assessment": "supported",
+            "promotion": "accept_corrected",
+            "reason": "The chart binds each value to installs or sessions."
+          },
+          {
+            "candidate_id": "ADJ-001-unsupported-metric",
+            "text": "Gaming benchmarks show strategy churn +57%, casino conversion +22%, and slots conversion -5%.",
+            "mutation": "unsupported churn/conversion metrics substituted for reported installs/sessions",
+            "expected_assessment": "unsupported",
+            "corrected_statement": null,
+            "corrected_statement_assessment": null,
+            "promotion": "hold",
+            "reason": "The source reports installs and sessions only; no deterministic correction should invent churn or conversion values."
+          }
+        ]
+      }
     }
   ],
   "summary_counts": {
@@ -372,7 +1742,227 @@
   "limitations": [
     "Current cohort_result.json does not attribute calls, tokens, cost, duration or repairs to individual reports.",
     "Current retained final artifacts are ignored local evidence under tmp; their hashes are recorded here but the raw artifacts are not committed.",
+    "Exact current persisted bindings remain unavailable for CAP-003, CAP-004 and REU-003; their canonical evidence arrays are intentionally empty and their candidates remain held or require unresolved handling.",
+    "Source-reference IDs are independent audit references; they are not interchangeable with persisted findings/doc-map IDs or editorial IDs.",
     "A current report-level candidate rejection is not a published factual error: rejected candidates are intentionally excluded by fail-closed evidence-fidelity handling.",
     "Reference cases establish source truth and observed trace points; they do not establish repeated-run stability or human editorial value."
-  ]
+  ],
+  "identity_semantics": {
+    "source_reference_ids": "Independent IDs assigned in docs/quality/docmap-discovery-ab-20261014/source-reference-findings.md (for example ACT-1 or CAP-1). They are source-audit references, not persisted output IDs.",
+    "canonical_evidence_ids": "Union of IDs actually present in the retained report's findings.json findings[].id and doc_map.json sections[].id. Editorial IDs are excluded.",
+    "persisted_findings_ids": "IDs from the retained report's findings.json findings[].id.",
+    "persisted_doc_map_ids": "IDs from the retained report's doc_map.json sections[].id.",
+    "editorial_ids": "IDs from the retained report's artifacts.json insights_final[].id. They identify editorial outputs, not evidence.",
+    "page_numbers": {
+      "physical_pdf": "One-based physical PDF page number.",
+      "printed": "One-based page number printed in the source when available; empty means the source did not expose a verified printed number for this case.",
+      "zero_based_library_index": "Zero-based library index derived from physical_pdf - 1.",
+      "retained_artifact_pages": "Retained findings/doc_map page fields are treated as one-based report/printed page numbers and are not silently converted."
+    },
+    "unresolved_mapping_policy": "If no exact current persisted binding is available, the corresponding ID array is empty and identity_resolution records the reason. No source-reference ID is promoted into canonical_evidence_ids."
+  },
+  "persisted_artifact_catalog": {
+    "capgemini_findings": {
+      "report": "Capgemini",
+      "kind": "findings",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/final-web-versi-1d9e64dd7425/report_analysis/findings.json",
+      "sha256": "2b20b194a15c1475d963572e2e017f69ec6af8a1ea1e612b198158d80573c75b",
+      "id_field": "findings[].id",
+      "page_semantics": "reported_pages are one-based retained report/printed page numbers",
+      "available": true,
+      "committed": false
+    },
+    "capgemini_doc_map": {
+      "report": "Capgemini",
+      "kind": "doc_map",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/final-web-versi-1d9e64dd7425/report_analysis/doc_map.json",
+      "sha256": "824b448c9b0d32b7a2fdbcc8da53481e5c644e45844fa515d2a19a5703a1d502",
+      "id_field": "sections[].id",
+      "page_semantics": "source page references are retained report/printed page numbers",
+      "available": true,
+      "committed": false
+    },
+    "capgemini_artifacts": {
+      "report": "Capgemini",
+      "kind": "artifacts",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/final-web-versi-1d9e64dd7425/report_analysis/artifacts.json",
+      "sha256": "073080307e02b04740a777a21c6e31d1c6429c27a74c90d408b24f990fa3e907",
+      "id_field": "insights_final[].id",
+      "page_semantics": "editorial artifact IDs; not evidence IDs",
+      "available": true,
+      "committed": false
+    },
+    "activate_findings": {
+      "report": "Activate",
+      "kind": "findings",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/d8ca0bf6efb9c70-d460f8aa84f6/report_analysis/findings.json",
+      "sha256": "6af524a0fcbe54cbfeea6465eeb98ea9edd91226136237b1fec209841a62a9b4",
+      "id_field": "findings[].id",
+      "page_semantics": "reported_pages are one-based retained report/printed page numbers",
+      "available": true,
+      "committed": false
+    },
+    "activate_doc_map": {
+      "report": "Activate",
+      "kind": "doc_map",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/d8ca0bf6efb9c70-d460f8aa84f6/report_analysis/doc_map.json",
+      "sha256": "c70f49647c6b44342fe18588282ee10e9c552884642305015b4765752f710922",
+      "id_field": "sections[].id",
+      "page_semantics": "source page references are retained report/printed page numbers",
+      "available": true,
+      "committed": false
+    },
+    "activate_artifacts": {
+      "report": "Activate",
+      "kind": "artifacts",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/d8ca0bf6efb9c70-d460f8aa84f6/report_analysis/artifacts.json",
+      "sha256": "aee803d83d4a75090ebd28874beb2bd43cf8201dfe335e0b59a329114e7202fe",
+      "id_field": "insights_final[].id",
+      "page_semantics": "editorial artifact IDs; not evidence IDs",
+      "available": true,
+      "committed": false
+    },
+    "kpmg_findings": {
+      "report": "KPMG",
+      "kind": "findings",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/kpmg-2026-globa-55902486e798/report_analysis/findings.json",
+      "sha256": "fb9aa58826959d1718aad4ddd465b91d3ba504a8991904ea1ee5cf242d89a516",
+      "id_field": "findings[].id",
+      "page_semantics": "reported_pages are one-based retained report/printed page numbers",
+      "available": true,
+      "committed": false
+    },
+    "kpmg_doc_map": {
+      "report": "KPMG",
+      "kind": "doc_map",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/kpmg-2026-globa-55902486e798/report_analysis/doc_map.json",
+      "sha256": "657ce06608884a34672a6a84cbc3c3eaea7d8b8425ac2e1af727dc83a68c08b2",
+      "id_field": "sections[].id",
+      "page_semantics": "source page references are retained report/printed page numbers",
+      "available": true,
+      "committed": false
+    },
+    "kpmg_artifacts": {
+      "report": "KPMG",
+      "kind": "artifacts",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/kpmg-2026-globa-55902486e798/report_analysis/artifacts.json",
+      "sha256": "60356d0bd81ca3a9a88b59bc846df0ecfe161686edc255484d7a47404eb9a877",
+      "id_field": "insights_final[].id",
+      "page_semantics": "editorial artifact IDs; not evidence IDs",
+      "available": true,
+      "committed": false
+    },
+    "adjust_findings": {
+      "report": "Adjust",
+      "kind": "findings",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/mobile-app-trends-2026-pdf/report_analysis/findings.json",
+      "sha256": "b7827aaa43d864bd4a23aeecabb54e5dae22afe4977723d7a7e2520aeb7c6243",
+      "id_field": "findings[].id",
+      "page_semantics": "reported_pages are one-based retained report/printed page numbers",
+      "available": true,
+      "committed": false
+    },
+    "adjust_doc_map": {
+      "report": "Adjust",
+      "kind": "doc_map",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/mobile-app-trends-2026-pdf/report_analysis/doc_map.json",
+      "sha256": "1270ca7fc06417f2c1cf57887a66b90818a9246ba702b0ae5fdf8451127d699c",
+      "id_field": "sections[].id",
+      "page_semantics": "source page references are retained report/printed page numbers",
+      "available": true,
+      "committed": false
+    },
+    "adjust_artifacts": {
+      "report": "Adjust",
+      "kind": "artifacts",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/mobile-app-trends-2026-pdf/report_analysis/artifacts.json",
+      "sha256": "f3bbb051395c571fdb14e2172412cef391d2ec1b2f86477484a10e3377c2dab0",
+      "id_field": "insights_final[].id",
+      "page_semantics": "editorial artifact IDs; not evidence IDs",
+      "available": true,
+      "committed": false
+    },
+    "reuters_findings": {
+      "report": "Reuters",
+      "kind": "findings",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/trends-and-pred-cf474e4f079f/report_analysis/findings.json",
+      "sha256": "3cfafeaf7d2d644ff876480dda7b46a3ef8376e5b802e18373e5de6aeea884f0",
+      "id_field": "findings[].id",
+      "page_semantics": "reported_pages are one-based retained report/printed page numbers",
+      "available": true,
+      "committed": false
+    },
+    "reuters_doc_map": {
+      "report": "Reuters",
+      "kind": "doc_map",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/trends-and-pred-cf474e4f079f/report_analysis/doc_map.json",
+      "sha256": "909f8c13acc7cf5dd2f9834f3cc3525d517f8c2717ff6551f8e4b6cad58ea9e2",
+      "id_field": "sections[].id",
+      "page_semantics": "source page references are retained report/printed page numbers",
+      "available": true,
+      "committed": false
+    },
+    "reuters_artifacts": {
+      "report": "Reuters",
+      "kind": "artifacts",
+      "path": "tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output/trends-and-pred-cf474e4f079f/report_analysis/artifacts.json",
+      "sha256": "eb758f26873a1865996aa77bd225bdc887e511390800ea675b2aae97c2c9f3b2",
+      "id_field": "insights_final[].id",
+      "page_semantics": "editorial artifact IDs; not evidence IDs",
+      "available": true,
+      "committed": false
+    }
+  },
+  "fixture_contract": {
+    "assessment_values": [
+      "supported",
+      "unsupported",
+      "unresolved"
+    ],
+    "supported_candidate": "Candidate preserves the source statement, metric, population, denominator, geography, period, and observation/forecast status required by source_truth.",
+    "corrected_statement": "A correction must be supplied when a mutation is unsupported and the source truth supports a deterministic repair; correction is null when the variant is unresolved or intentionally held.",
+    "promotion_values": [
+      "accept",
+      "accept_corrected",
+      "hold"
+    ],
+    "unresolved_policy": "Unresolved candidates remain held; the fixture does not infer missing evidence or promote an editorial artifact as evidence.",
+    "scope": "Fixture evaluation only; no production validator, prompt, model, workflow, or publication behavior is changed."
+  },
+  "fixture_coverage": {
+    "Activate": [
+      "forecast vs observed",
+      "publisher/time/spend cohort qualifiers",
+      "platform and metric identity",
+      "platform scope"
+    ],
+    "Capgemini": [
+      "population/denominator",
+      "price vs pack-size/quality metric",
+      "motive separation",
+      "chatbot cohort and willingness-to-pay qualifier"
+    ],
+    "KPMG": [
+      "PE vs corporate subgroup",
+      "qualitative vs quantitative claim",
+      "expected vs realized period"
+    ],
+    "Reuters": [
+      "forecast vs observed",
+      "platform and period identity",
+      "geography and non-causality qualifier"
+    ],
+    "Adjust": [
+      "negative session deltas",
+      "installs vs sessions metric identity",
+      "unsupported metric substitution"
+    ]
+  },
+  "fixture_counts": {
+    "top_level_cases": 15,
+    "evaluation_candidate_variants": 38,
+    "supported_candidates": 15,
+    "negative_or_ambiguous_candidates": 23,
+    "cases_with_positive_and_nonpositive_variants": 15
+  }
 }
