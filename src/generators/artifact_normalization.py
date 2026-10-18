@@ -22,7 +22,7 @@ from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:1"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:2"
 
 METRIC_FIELDS = (
     "label",
@@ -1074,12 +1074,21 @@ def select_artifact_insights(
     reverted to the retained candidate values instead of mutating the fact.
     """
     plan = normalize_artifact_editorial_plan(editorial_plan)
+    conflicting_candidate_ids = _candidate_factual_conflict_ids(candidate_insights)
     candidate_facts = _candidate_factual_fields(candidate_insights)
+    unresolved_candidate_ids = set(_candidate_insight_groups(candidate_insights)) - set(
+        candidate_facts
+    )
     anchored_finals = [
         _restore_candidate_factual_fields(item, candidate_facts)
         if isinstance(item, dict)
         else item
         for item in final_insights
+        if not (
+            isinstance(item, dict)
+            and _s(item.get("id")).strip()
+            in conflicting_candidate_ids.union(unresolved_candidate_ids)
+        )
     ]
     ranked = _ranked_unique_insights(anchored_finals, candidate_insights)
     required_count = max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
@@ -1120,51 +1129,87 @@ def _candidate_factual_fields(
     """Index the retained factual payload of each stable-ID candidate."""
 
     best_candidates: Dict[str, Dict[str, Any]] = {}
+    for insight_id, group in _candidate_insight_groups(candidate_insights).items():
+        reliable = [
+            insight for insight in group if _s(insight.get("evidence_id")).strip()
+        ]
+        if not reliable or _candidate_group_has_factual_conflict(reliable):
+            continue
+        best_candidates[insight_id] = min(reliable, key=_insight_quality_key)
+
+    facts: Dict[str, Dict[str, Any]] = {}
+    for insight_id, insight in best_candidates.items():
+        fact: Dict[str, Any] = {}
+        if "metric" in insight:
+            fact["metric"] = _complete_protected_metric_binding(insight.get("metric"))
+        for field_name in ("evidence_id", "evidence", "pages", "evidence_spans"):
+            if field_name not in insight:
+                continue
+            value = insight.get(field_name)
+            if field_name in {"evidence_id", "evidence"}:
+                fact[field_name] = _s(value).strip()
+            else:
+                fact[field_name] = deepcopy(value) if value else []
+        facts[insight_id] = fact
+    return facts
+
+
+def _candidate_insight_groups(
+    candidate_insights: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    groups: Dict[str, List[Dict[str, Any]]] = {}
     for insight in candidate_insights:
         if not isinstance(insight, dict):
             continue
         insight_id = _s(insight.get("id")).strip()
-        if not insight_id:
-            continue
-        metric = insight.get("metric")
-        has_metric = isinstance(metric, dict) and any(
-            _s(metric.get(field_name)).strip()
-            for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
-        )
-        has_source_binding = any(
-            (
-                _s(insight.get(field_name)).strip()
-                if field_name in {"evidence_id", "evidence"}
-                else bool(insight.get(field_name))
-            )
-            for field_name in ("evidence_id", "evidence", "pages", "evidence_spans")
-        )
-        if not has_metric and not has_source_binding:
-            continue
-        current = best_candidates.get(insight_id)
-        if current is None or _insight_quality_key(insight) < _insight_quality_key(
-            current
-        ):
-            best_candidates[insight_id] = insight
+        if insight_id:
+            groups.setdefault(insight_id, []).append(insight)
+    return groups
 
-    facts: Dict[str, Dict[str, Any]] = {}
-    for insight_id, insight in best_candidates.items():
-        metric = insight.get("metric")
-        fact: Dict[str, Any] = {}
-        if isinstance(metric, dict) and any(
-            _s(metric.get(field_name)).strip()
-            for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
-        ):
-            fact["metric"] = deepcopy(metric)
-        for field_name in ("evidence_id", "evidence", "pages", "evidence_spans"):
-            value = insight.get(field_name)
-            if field_name in {"evidence_id", "evidence"}:
-                if _s(value).strip():
-                    fact[field_name] = _s(value).strip()
-            elif value:
-                fact[field_name] = deepcopy(value)
-        facts[insight_id] = fact
-    return facts
+
+def _candidate_factual_conflict_ids(
+    candidate_insights: List[Dict[str, Any]],
+) -> set[str]:
+    return {
+        insight_id
+        for insight_id, group in _candidate_insight_groups(candidate_insights).items()
+        if _candidate_group_has_factual_conflict(
+            [insight for insight in group if _s(insight.get("evidence_id")).strip()]
+        )
+    }
+
+
+def _candidate_group_has_factual_conflict(
+    candidates: List[Dict[str, Any]],
+) -> bool:
+    evidence_ids = {
+        normalize_for_lookup(candidate.get("evidence_id"))
+        for candidate in candidates
+        if normalize_for_lookup(candidate.get("evidence_id"))
+    }
+    if len(evidence_ids) > 1:
+        return True
+    for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS):
+        values = {
+            normalize_for_lookup(
+                (candidate.get("metric") or {}).get(field_name)
+                if isinstance(candidate.get("metric"), dict)
+                else ""
+            )
+            for candidate in candidates
+        }
+        values.discard("")
+        if len(values) > 1:
+            return True
+    return False
+
+
+def _complete_protected_metric_binding(metric: Any) -> Dict[str, Any]:
+    metric = metric if isinstance(metric, dict) else {}
+    return {
+        field_name: deepcopy(metric.get(field_name, ""))
+        for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
+    }
 
 
 def _restore_candidate_factual_fields(
@@ -1177,32 +1222,18 @@ def _restore_candidate_factual_fields(
     if candidate is None:
         return insight
     restored = dict(insight)
-    current_metric = restored.get("metric")
-    current_metric = current_metric if isinstance(current_metric, dict) else {}
     candidate_metric = candidate.get("metric")
     if isinstance(candidate_metric, dict):
-        drifted = any(
-            _s(current_metric.get(field_name)).strip()
-            != _s(candidate_metric.get(field_name)).strip()
-            for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
-            if _s(candidate_metric.get(field_name)).strip()
-        )
-        if drifted:
-            restored["metric"] = {
-                **current_metric,
-                **{
-                    field_name: deepcopy(candidate_metric.get(field_name, ""))
-                    for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
-                    if field_name in candidate_metric
-                },
-            }
+        restored["metric"] = _complete_protected_metric_binding(candidate_metric)
+    elif "metric" in restored:
+        restored["metric"] = _complete_protected_metric_binding(None)
     for field_name in ("evidence_id", "evidence", "pages", "evidence_spans"):
-        candidate_value = candidate.get(field_name)
+        if field_name not in candidate and field_name not in restored:
+            continue
         if field_name in {"evidence_id", "evidence"}:
-            if _s(candidate_value).strip():
-                restored[field_name] = _s(candidate_value).strip()
-        elif candidate_value:
-            restored[field_name] = deepcopy(candidate_value)
+            restored[field_name] = _s(candidate.get(field_name)).strip()
+        else:
+            restored[field_name] = deepcopy(candidate.get(field_name) or [])
     return restored
 
 
@@ -1478,6 +1509,7 @@ def _ranked_unique_insights(
     candidate_by_id: dict[str, tuple[int, Dict[str, Any]]] = {}
     candidate_without_id: list[tuple[int, Dict[str, Any]]] = []
     candidate_offset = len(final_insights)
+    candidate_groups: dict[str, list[tuple[int, Dict[str, Any]]]] = {}
     for index, item in enumerate(candidate_insights):
         if not isinstance(item, dict) or not _s(item.get("text")).strip():
             continue
@@ -1489,11 +1521,15 @@ def _ranked_unique_insights(
             continue
         if insight_id in final_by_id:
             continue
-        current = candidate_by_id.get(insight_id)
-        if current is None or (
-            _insight_rank_key((source_order, insight)) < _insight_rank_key(current)
+        candidate_groups.setdefault(insight_id, []).append((source_order, insight))
+
+    for insight_id, group in candidate_groups.items():
+        reliable = [item for item in group if _s(item[1].get("evidence_id")).strip()]
+        if not reliable or _candidate_group_has_factual_conflict(
+            [insight for _, insight in reliable]
         ):
-            candidate_by_id[insight_id] = (source_order, insight)
+            continue
+        candidate_by_id[insight_id] = min(reliable, key=_insight_rank_key)
 
     ordered_items = [
         *final_by_id.values(),

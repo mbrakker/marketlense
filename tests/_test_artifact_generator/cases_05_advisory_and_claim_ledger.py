@@ -1,10 +1,11 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
-from ._support_cases import *  # noqa: F401,F403
 from src.generators._artifact_generator.storage import (
     _sanitize_key_figure_ranking_language,
 )
+
+from ._support_cases import *  # noqa: F401,F403
 
 
 def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:
@@ -558,7 +559,11 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
                     "text": "Wallet adoption: adoption is rising among merchants.",
                     "evidence_id": "f1",
                     "evidence": "Enterprise wallet adoption reached 42 percent.",
-                    "metric": {},
+                    "metric": {
+                        "label": "Enterprise wallet adoption",
+                        "value": "42",
+                        "unit": "percent",
+                    },
                     "pages": [2],
                 }
             ]
@@ -613,6 +618,9 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
     )
 
     assert payload["metric_spine"][0]["label"] == "Enterprise wallet adoption"
+    assert payload["metric_spine"][0]["timeframe"] == ""
+    assert payload["metric_spine"][0]["segment"] == ""
+    assert payload["metric_spine"][0]["geography"] == ""
     assert json.loads(expert_vars["metric_spine_json"])[0]["evidence_id"] == "f1"
     assert json.loads(linkedin_vars["metric_spine_json"])[0]["label"] == (
         "Enterprise wallet adoption"

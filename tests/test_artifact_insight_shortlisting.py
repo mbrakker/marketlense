@@ -203,7 +203,248 @@ def test_selector_preserves_final_wording_over_higher_scored_candidate() -> None
     assert selected[0]["evidence"] == "The retained source proposition."
     assert selected[0]["pages"] == [4]
     assert selected[0]["evidence_spans"] == candidate["evidence_spans"]
-    assert selected[0]["metric"] == candidate_metric
+    assert selected[0]["metric"] == {
+        **dict.fromkeys(artifact_normalization.METRIC_FIELDS, ""),
+        **{
+            field_name: candidate_metric.get(field_name, "")
+            for field_name in artifact_normalization.METRIC_BINDING_FIELDS
+        },
+        **candidate_metric,
+    }
+
+
+def test_selector_fails_closed_for_same_id_conflicting_evidence_bindings() -> None:
+    stronger = _insight(
+        "shared",
+        "f1",
+        "The first source proposition.",
+        score=0.99,
+        metric={"label": "Share", "value": "42%", "unit": "%"},
+    )
+    weaker = _insight(
+        "shared",
+        "f2",
+        "The second source proposition.",
+        score=0.01,
+        metric={"label": "Share", "value": "42%", "unit": "%"},
+    )
+    final = _insight(
+        "shared",
+        "f1",
+        "The final editorial rewrite.",
+        score=0.5,
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[final],
+        candidate_insights=[stronger, weaker],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert selected == []
+
+
+def test_selector_excludes_conflicting_candidate_id_without_final_rewrite() -> None:
+    conflicting_first = _insight(
+        "shared",
+        "f1",
+        "The first source proposition.",
+        score=0.99,
+    )
+    conflicting_second = _insight(
+        "shared",
+        "f2",
+        "The second source proposition.",
+        score=0.01,
+    )
+    valid = _insight(
+        "valid",
+        "f3",
+        "The unambiguous source proposition.",
+        score=0.5,
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[],
+        candidate_insights=[conflicting_first, conflicting_second, valid],
+        editorial_plan=_plan("f1", "f3"),
+    )
+
+    assert [item["id"] for item in selected] == ["valid"]
+
+
+@pytest.mark.parametrize(
+    ("field_name", "first_value", "second_value"),
+    [
+        ("value", "42%", "43%"),
+        ("cohort", "Survey respondents", "Enterprise buyers"),
+        ("observation_status", "observed", "forecast"),
+    ],
+)
+def test_selector_fails_closed_for_same_id_conflicting_metric_bindings(
+    field_name: str, first_value: str, second_value: str
+) -> None:
+    base_metric = {
+        "label": "Respondent share",
+        "value": "42%",
+        "unit": "%",
+        "cohort": "Survey respondents",
+        "observation_status": "observed",
+    }
+    first_metric = {**base_metric, field_name: first_value}
+    second_metric = {**base_metric, field_name: second_value}
+    first = _insight(
+        "shared",
+        "f1",
+        "The first source proposition.",
+        score=0.99,
+        metric=first_metric,
+    )
+    second = _insight(
+        "shared",
+        "f1",
+        "The second source proposition.",
+        score=0.01,
+        metric=second_metric,
+    )
+    final = _insight(
+        "shared",
+        "f1",
+        "The final editorial rewrite.",
+        score=0.5,
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[final],
+        candidate_insights=[first, second],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert selected == []
+
+
+def test_selector_accepts_same_id_source_consistent_representations() -> None:
+    metric = {
+        "label": "Respondent share",
+        "value": "42%",
+        "unit": "%",
+        "cohort": "Survey respondents",
+    }
+    first = _insight(
+        "shared",
+        "f1",
+        "The source wording.",
+        score=0.7,
+        metric=metric,
+    )
+    second = _insight(
+        "shared",
+        "f1",
+        "Equivalent source wording.",
+        score=0.9,
+        metric=metric,
+    )
+    final = _insight(
+        "shared",
+        "f-drifted",
+        "The final editorial rewrite.",
+        score=0.2,
+        metric={"label": "Drifted", "value": "99%", "unit": "%"},
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[final],
+        candidate_insights=[first, second],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert len(selected) == 1
+    assert selected[0]["text"] == "The final editorial rewrite."
+    assert selected[0]["evidence_id"] == "f1"
+    assert selected[0]["metric"] == {
+        **dict.fromkeys(artifact_normalization.METRIC_FIELDS, ""),
+        **{
+            field_name: metric.get(field_name, "")
+            for field_name in artifact_normalization.METRIC_BINDING_FIELDS
+        },
+        **metric,
+    }
+
+
+def test_selector_removes_final_only_protected_metric_additions() -> None:
+    candidate = _insight(
+        "shared",
+        "f1",
+        "The retained source proposition.",
+        score=0.8,
+        metric={"label": "Share", "value": "42%", "unit": "%"},
+    )
+    final = _insight(
+        "shared",
+        "f-drifted",
+        "The final editorial rewrite.",
+        score=0.2,
+        metric={
+            "label": "Share",
+            "value": "99%",
+            "unit": "%",
+            "subject": "Enterprise buyers",
+            "cohort": "Enterprise buyers",
+            "denominator": "All buyers",
+            "timeframe": "2026 forecast",
+            "geography": "Global",
+            "observation_status": "forecast",
+        },
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[final],
+        candidate_insights=[candidate],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert len(selected) == 1
+    assert selected[0]["text"] == "The final editorial rewrite."
+    assert selected[0]["metric"] == {
+        **dict.fromkeys(
+            (*artifact_normalization.METRIC_FIELDS,)
+            + artifact_normalization.METRIC_BINDING_FIELDS,
+            "",
+        ),
+        "label": "Share",
+        "value": "42%",
+        "unit": "%",
+    }
+
+
+def test_selector_rejects_final_rewrite_without_candidate_binding() -> None:
+    candidate = _insight(
+        "unbound",
+        "",
+        "A candidate without a retained source binding.",
+        score=0.9,
+    )
+    final = _insight(
+        "unbound",
+        "f-final",
+        "An unsupported final rewrite.",
+        score=0.1,
+        metric={
+            "label": "Unsupported share",
+            "value": "99%",
+            "unit": "%",
+            "cohort": "Invented cohort",
+            "observation_status": "forecast",
+        },
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[final],
+        candidate_insights=[candidate],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert selected == []
 
 
 def test_selector_deduplicates_identical_public_claims_across_evidence_ids() -> None:
@@ -488,6 +729,9 @@ def test_finding_fallback_covers_uncovered_themes_before_filling_capacity() -> N
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
         "stable_id_unique_selection:2"
+    )
+    assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
+        "evidence_backed_shortlisting:1"
     )
 
 
