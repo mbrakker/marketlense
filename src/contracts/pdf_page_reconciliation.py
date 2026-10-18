@@ -7,6 +7,7 @@ from typing import Any, Literal, Mapping, cast
 
 PDF_PAGE_RECONCILIATION_SCHEMA_VERSION = "1.1"
 PDF_PAGE_RECONCILIATION_ALGORITHM_VERSION = "pdf-page-reconciliation-v2"
+SCHEMA_VERSION = PDF_PAGE_RECONCILIATION_SCHEMA_VERSION
 _MD5_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 _STATUS_VALUES = {"verified", "inferred", "unresolved"}
 _METHOD_VALUES = {
@@ -61,6 +62,11 @@ class PdfPageReconciliationRequest:
 class PdfPageReconciliationEvidence:
     """Bounded evidence retained for one page-label decision."""
 
+    schema_version: str = field(
+        default=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
+        kw_only=True,
+        metadata={"doc": "PDF page reconciliation evidence schema version."},
+    )
     kind: EvidenceKind = field(metadata={"doc": "Deterministic evidence kind."})
     detail: str = field(metadata={"doc": "Short bounded evidence detail."})
     anchor_physical_pages: tuple[int, ...] = field(
@@ -71,6 +77,8 @@ class PdfPageReconciliationEvidence:
     )
 
     def __post_init__(self) -> None:
+        if self.schema_version != PDF_PAGE_RECONCILIATION_SCHEMA_VERSION:
+            raise ValueError("unsupported reconciliation schema version")
         if self.kind not in _EVIDENCE_KINDS:
             raise ValueError("evidence kind is invalid")
         if (
@@ -92,6 +100,11 @@ class PdfPageReconciliationEvidence:
 class PdfPageReconciliationGeometry:
     """Bounded geometry for the extracted text block containing a label."""
 
+    schema_version: str = field(
+        default=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
+        kw_only=True,
+        metadata={"doc": "PDF page reconciliation geometry schema version."},
+    )
     physical_page: int = field(metadata={"doc": "One-based physical PDF page."})
     label_text: str = field(
         metadata={"doc": "Source-extracted line text containing the label."}
@@ -110,6 +123,8 @@ class PdfPageReconciliationGeometry:
     )
 
     def __post_init__(self) -> None:
+        if self.schema_version != PDF_PAGE_RECONCILIATION_SCHEMA_VERSION:
+            raise ValueError("unsupported reconciliation schema version")
         if (
             not isinstance(self.physical_page, int)
             or isinstance(self.physical_page, bool)
@@ -146,6 +161,11 @@ class PdfPageReconciliationGeometry:
 class PdfPageLabelMapping:
     """One physical page and its visible printed-label reconciliation."""
 
+    schema_version: str = field(
+        default=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
+        kw_only=True,
+        metadata={"doc": "PDF page reconciliation mapping schema version."},
+    )
     physical_page: int = field(metadata={"doc": "One-based physical PDF page."})
     printed_label: str | None = field(
         metadata={"doc": "Visible printed page label, preserving its string form."}
@@ -161,13 +181,14 @@ class PdfPageLabelMapping:
         metadata={"doc": "Bounded evidence for the mapping decision."}
     )
     source_geometry: PdfPageReconciliationGeometry | None = field(
-        default=None,
         metadata={
             "doc": "Source-derived geometry required for directly verified labels."
         },
     )
 
     def __post_init__(self) -> None:
+        if self.schema_version != PDF_PAGE_RECONCILIATION_SCHEMA_VERSION:
+            raise ValueError("unsupported reconciliation schema version")
         if (
             not isinstance(self.physical_page, int)
             or isinstance(self.physical_page, bool)
@@ -232,6 +253,11 @@ class PdfPageLabelMapping:
 class PdfPageReconciliationCoverage:
     """Count and percentage summary for all physical pages."""
 
+    schema_version: str = field(
+        default=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
+        kw_only=True,
+        metadata={"doc": "PDF page reconciliation coverage schema version."},
+    )
     verified_count: int = field(metadata={"doc": "Number of verified mappings."})
     inferred_count: int = field(metadata={"doc": "Number of inferred mappings."})
     unresolved_count: int = field(metadata={"doc": "Number of unresolved mappings."})
@@ -246,6 +272,8 @@ class PdfPageReconciliationCoverage:
     )
 
     def __post_init__(self) -> None:
+        if self.schema_version != PDF_PAGE_RECONCILIATION_SCHEMA_VERSION:
+            raise ValueError("unsupported reconciliation schema version")
         counts = (self.verified_count, self.inferred_count, self.unresolved_count)
         if any(
             not isinstance(count, int) or isinstance(count, bool) or count < 0
@@ -360,6 +388,7 @@ def response_from_payload(payload: Mapping[str, Any]) -> PdfPageReconciliationRe
             raise ValueError("mapping evidence payload must be an array")
         evidence = tuple(
             PdfPageReconciliationEvidence(
+                schema_version=str(item.get("schema_version") or ""),
                 kind=cast(EvidenceKind, str(item.get("kind") or "")),
                 detail=str(item.get("detail") or ""),
                 anchor_physical_pages=tuple(item.get("anchor_physical_pages") or ()),
@@ -380,6 +409,7 @@ def response_from_payload(payload: Mapping[str, Any]) -> PdfPageReconciliationRe
                     "mapping source_geometry bounding_box must have four values"
                 )
             source_geometry = PdfPageReconciliationGeometry(
+                schema_version=str(raw_geometry.get("schema_version") or ""),
                 physical_page=int(raw_geometry["physical_page"]),
                 label_text=str(raw_geometry["label_text"]),
                 location=cast(GeometryLocation, str(raw_geometry["location"])),
@@ -396,6 +426,7 @@ def response_from_payload(payload: Mapping[str, Any]) -> PdfPageReconciliationRe
             )
         mappings.append(
             PdfPageLabelMapping(
+                schema_version=str(raw_mapping.get("schema_version") or ""),
                 physical_page=int(raw_mapping["physical_page"]),
                 printed_label=raw_mapping.get("printed_label"),
                 status=cast(MappingStatus, str(raw_mapping["status"])),
@@ -412,6 +443,7 @@ def response_from_payload(payload: Mapping[str, Any]) -> PdfPageReconciliationRe
         physical_page_count=int(payload["physical_page_count"]),
         mappings=tuple(mappings),
         coverage_statistics=PdfPageReconciliationCoverage(
+            schema_version=str(raw_coverage.get("schema_version") or ""),
             verified_count=int(raw_coverage["verified_count"]),
             inferred_count=int(raw_coverage["inferred_count"]),
             unresolved_count=int(raw_coverage["unresolved_count"]),

@@ -24,6 +24,7 @@
       "items": {
         "type": "object",
         "required": [
+          "schema_version",
           "physical_page",
           "printed_label",
           "status",
@@ -33,6 +34,7 @@
           "source_geometry"
         ],
         "properties": {
+          "schema_version": {"type": "string", "const": "1.1"},
           "physical_page": {"type": "integer", "minimum": 1},
           "printed_label": {"type": ["string", "null"], "minLength": 1},
           "status": {
@@ -55,6 +57,7 @@
               {
                 "type": "object",
                 "required": [
+                  "schema_version",
                   "physical_page",
                   "label_text",
                   "location",
@@ -62,6 +65,7 @@
                   "bounding_box_scope"
                 ],
                 "properties": {
+                  "schema_version": {"type": "string", "const": "1.1"},
                   "physical_page": {"type": "integer", "minimum": 1},
                   "label_text": {"type": "string", "minLength": 1, "maxLength": 240},
                   "location": {
@@ -89,8 +93,14 @@
             "maxItems": 4,
             "items": {
               "type": "object",
-              "required": ["kind", "detail", "anchor_physical_pages"],
+              "required": [
+                "schema_version",
+                "kind",
+                "detail",
+                "anchor_physical_pages"
+              ],
               "properties": {
+                "schema_version": {"type": "string", "const": "1.1"},
                 "kind": {
                   "type": "string",
                   "enum": [
@@ -121,6 +131,7 @@
     "coverage_statistics": {
       "type": "object",
       "required": [
+        "schema_version",
         "verified_count",
         "inferred_count",
         "unresolved_count",
@@ -129,6 +140,7 @@
         "unresolved_percentage"
       ],
       "properties": {
+        "schema_version": {"type": "string", "const": "1.1"},
         "verified_count": {"type": "integer", "minimum": 0},
         "inferred_count": {"type": "integer", "minimum": 0},
         "unresolved_count": {"type": "integer", "minimum": 0},

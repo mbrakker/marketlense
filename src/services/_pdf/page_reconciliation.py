@@ -582,6 +582,7 @@ def _mapping_for_observation(
             method="sequence_inference",
             native_pdf_label=observation.native_pdf_label,
             evidence=tuple(evidence),
+            source_geometry=None,
         )
 
     if observation.unreadable:
@@ -627,6 +628,7 @@ def _mapping_for_observation(
         method="unresolved",
         native_pdf_label=observation.native_pdf_label,
         evidence=tuple(evidence),
+        source_geometry=None,
     )
 
 

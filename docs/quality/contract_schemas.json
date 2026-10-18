@@ -29753,6 +29753,9 @@
             }
           ]
         },
+        "schema_version": {
+          "type": "string"
+        },
         "source_geometry": {
           "anyOf": [
             {
@@ -29777,7 +29780,8 @@
         "status",
         "method",
         "native_pdf_label",
-        "evidence"
+        "evidence",
+        "source_geometry"
       ],
       "type": "object"
     },
@@ -29789,6 +29793,9 @@
         },
         "inferred_percentage": {
           "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
         },
         "unresolved_count": {
           "type": "integer"
@@ -29835,6 +29842,9 @@
             "unreadable",
             "no_visible_label"
           ]
+        },
+        "schema_version": {
+          "type": "string"
         }
       },
       "required": [
@@ -29881,6 +29891,9 @@
         },
         "physical_page": {
           "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
         }
       },
       "required": [

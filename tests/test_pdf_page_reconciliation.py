@@ -52,15 +52,21 @@ def _make_pdf(
 
 def test_response_rejects_missing_physical_page_mapping() -> None:
     mapping = PdfPageLabelMapping(
+        schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
         physical_page=1,
         printed_label="1",
         status="verified",
         method="visible_footer",
         native_pdf_label=None,
         evidence=(
-            PdfPageReconciliationEvidence(kind="visible_footer", detail="Page 1"),
+            PdfPageReconciliationEvidence(
+                schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
+                kind="visible_footer",
+                detail="Page 1",
+            ),
         ),
         source_geometry=PdfPageReconciliationGeometry(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
             physical_page=1,
             label_text="Page 1",
             location="visible_footer",
@@ -68,6 +74,7 @@ def test_response_rejects_missing_physical_page_mapping() -> None:
         ),
     )
     coverage = PdfPageReconciliationCoverage(
+        schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
         verified_count=1,
         inferred_count=0,
         unresolved_count=0,
@@ -95,6 +102,7 @@ def test_reconciliation_schema_rejects_invalid_status(run_context) -> None:
         "physical_page_count": 1,
         "mappings": [
             {
+                "schema_version": PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
                 "physical_page": 1,
                 "printed_label": None,
                 "status": "unsupported",
@@ -103,6 +111,7 @@ def test_reconciliation_schema_rejects_invalid_status(run_context) -> None:
                 "source_geometry": None,
                 "evidence": [
                     {
+                        "schema_version": PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
                         "kind": "no_visible_label",
                         "detail": "no label",
                         "anchor_physical_pages": [],
@@ -111,6 +120,7 @@ def test_reconciliation_schema_rejects_invalid_status(run_context) -> None:
             }
         ],
         "coverage_statistics": {
+            "schema_version": PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
             "verified_count": 0,
             "inferred_count": 0,
             "unresolved_count": 1,
