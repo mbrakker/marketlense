@@ -2,8 +2,8 @@
 
 ## Scope and implementation
 
-This is the standalone Phase 1 pilot for implementation commit
-`3ce3c5030c0bd50865a55fc33de64c29136ce4b4` (`pdf-page-reconciliation-v2`,
+This is the standalone Phase 1 pilot for final implementation commit
+`4c3427c7b72eb2eb52ce577490510d00f159368f` (`pdf-page-reconciliation-v2`,
 schema `1.1`). It maps one-based physical PDF pages to visible printed labels
 using positioned native PDF text and bounded local sequence inference. It does
 not call OCR, LLMs, File Search, vector stores, network services, report
@@ -110,10 +110,14 @@ Focused and affected downstream regressions passed:
 python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_text_service.py tests/test_pdf_contents_service.py tests/test_claim_validation_source_pages.py tests/_test_evidence_pack_generator/cases_05_findings_targeted_retrieval.py
 60 passed
 
+python -m pytest -q tests/contracts/test_contract_roundtrip.py
+2375 passed
+
 python -m ruff check src/contracts/pdf_page_reconciliation.py src/services/_pdf/page_reconciliation.py scripts/quality/reconcile_pdf_pages.py tests/test_pdf_page_reconciliation.py
 python -m ruff format --check src/contracts/pdf_page_reconciliation.py src/services/_pdf/page_reconciliation.py scripts/quality/reconcile_pdf_pages.py tests/test_pdf_page_reconciliation.py
 python -m mypy src/contracts/pdf_page_reconciliation.py src/services/_pdf/page_reconciliation.py scripts/quality/reconcile_pdf_pages.py
 python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json
+python scripts/ci/check_documentation.py --check-generated
 ```
 
 The implementation has no new dependency, no LLM/provider call, no production
@@ -121,6 +125,13 @@ pipeline change, and no downstream consumer. The exact retained five-report
 cohort referenced by broader quality evidence was not available as a complete
 retained-PDF set, so it was not substituted with a different cohort. OCR,
 image-label recovery, and generic scoring remain intentionally out of scope.
+
+Hosted CI run [39171924785](https://github.com/mbrakker/marketlense/actions/runs/39171924785)
+passed on the final implementation SHA. It recorded 7,669 passing tests,
+86% total coverage, both mutation partitions passed, the PDF candidate
+benchmark passed, and release evidence assembled successfully. The run also
+passed the architecture, service-boundary, documentation, contract-schema,
+typing, and repository quality gates.
 
 Phase 2 downstream adoption and duplicated-logic removal is **blocked pending
 measured approval**. No existing evidence-pack or claim-validation consumer was
