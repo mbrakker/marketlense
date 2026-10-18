@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 
 from src.generators import artifact_normalization
+from src.generators._artifact_generator.storage import _artifact_cache_meta_matches
 from src.generators.artifact_normalization import (
     fallback_artifact_insights_from_findings,
     select_artifact_insights,
 )
-from src.generators._artifact_generator.storage import _artifact_cache_meta_matches
 
 
 def _plan(*evidence_ids: str) -> dict[str, object]:
@@ -77,13 +77,18 @@ def test_selector_prefers_bound_relevant_finding_over_generic_high_score() -> No
             "observation_status": "observed",
         },
         pages=[9],
-        evidence="The report measures the channel mix at 42% for survey respondents in 2025.",
+        evidence=(
+            "The report measures the channel mix at 42% for survey respondents in 2025."
+        ),
         evidence_spans=[
             {
                 "evidence_id": "f-bound",
                 "source_pack": "findings",
                 "page": 9,
-                "text": "The report measures the channel mix at 42% for survey respondents in 2025.",
+                "text": (
+                    "The report measures the channel mix at 42% for survey respondents "
+                    "in 2025."
+                ),
             }
         ],
     )
@@ -335,7 +340,9 @@ def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> N
 
 def test_old_selection_version_cannot_match_a_new_cache_key() -> None:
     expected = {
-        "insight_selection_version": artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION,
+        "insight_selection_version": (
+            artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION
+        ),
         "prompts": {},
     }
     matched, reason = _artifact_cache_meta_matches(

@@ -1579,11 +1579,8 @@ def _insights_semantically_equivalent(
         fallback_id = normalize_for_lookup(left.get("id"))
         other_id = normalize_for_lookup(right.get("id"))
         if left_metric or right_metric:
-            if fallback_id != left_evidence_id and other_id != left_evidence_id:
-                return False
-            return True
-        else:
-            return False
+            return fallback_id == left_evidence_id or other_id == left_evidence_id
+        return False
     left_id = _s(left.get("id")).strip()
     right_id = _s(right.get("id")).strip()
     if left_id and left_id == right_id:
@@ -1596,9 +1593,7 @@ def _insights_semantically_equivalent(
     if not left_proposition or not right_proposition:
         left_proposition = normalize_for_lookup(left.get("text"))
         right_proposition = normalize_for_lookup(right.get("text"))
-    if not left_proposition or left_proposition != right_proposition:
-        return False
-    return True
+    return bool(left_proposition and left_proposition == right_proposition)
 
 
 def _append_distinct_insight(
