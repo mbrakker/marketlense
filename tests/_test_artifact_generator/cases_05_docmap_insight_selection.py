@@ -107,7 +107,7 @@ def test_select_artifact_insights_keeps_representative_sections_for_broad_doc_ma
     assert len(selected) <= 7
 
 
-def test_select_artifact_insights_drops_redundant_grounded_slots_for_narrow_doc_map():
+def test_select_artifact_insights_preserves_distinct_same_source_propositions():
     candidates = [
         _insight("f1", score=0.99, text="Demand is increasing."),
         _insight("f1", score=0.98, text="Demand is increasing faster."),
@@ -121,8 +121,13 @@ def test_select_artifact_insights_drops_redundant_grounded_slots_for_narrow_doc_
         editorial_plan=_editorial_plan("f1", "f2"),
     )
 
-    assert [item["text"] for item in selected] == ["Demand is increasing."]
-    assert len(selected) == 1
+    assert [item["text"] for item in selected] == [
+        "Demand is increasing.",
+        "Demand is increasing faster.",
+        "Demand warrants a response.",
+        "Demand remains the central signal.",
+    ]
+    assert len(selected) == 4
 
 
 def test_select_artifact_insights_fills_report_slots_after_theme_coverage():
@@ -139,7 +144,7 @@ def test_select_artifact_insights_fills_report_slots_after_theme_coverage():
         editorial_plan=_editorial_plan("f1", "f2", "f3"),
     )
 
-    assert [item["evidence_id"] for item in selected] == ["f1", "f2", "f3"]
+    assert [item["evidence_id"] for item in selected] == ["f1", "f2", "f3", "f1"]
 
 
 def test_select_artifact_insights_leads_with_top_score_and_preserves_theme_coverage():
@@ -289,6 +294,7 @@ def test_generate_artifacts_does_not_expand_a_narrow_editorial_plan(tmp_path):
     ]
     assert len(payload["insights_final"]) == 2, payload["insights_final"]
     assert {item["evidence_id"] for item in payload["insights_final"]} == {"f1", "f2"}
+    assert payload["family_status"]["insights_bundle"]["status"] == "generated"
 
 
 def _generation_evidence(section_count: int) -> dict[str, object]:
@@ -378,7 +384,7 @@ def test_generate_artifacts_retains_broad_doc_map_theme_coverage(tmp_path):
     assert payload["family_status"]["insights_bundle"]["status"] == "generated"
 
 
-def test_generate_artifacts_fills_narrow_doc_map_to_required_grounded_slots(tmp_path):
+def test_generate_artifacts_preserves_distinct_same_source_slots(tmp_path):
     candidates = [
         _insight("f1", score=0.99, text="Demand is increasing."),
         _insight("f1", score=0.98, text="Demand is increasing faster."),
@@ -398,7 +404,12 @@ def test_generate_artifacts_fills_narrow_doc_map_to_required_grounded_slots(tmp_
         analysis_store=FakeAnalysisStore(),
     )
 
-    assert [item["evidence_id"] for item in payload["insights_final"]] == ["f1", "f2"]
+    assert [item["evidence_id"] for item in payload["insights_final"]] == [
+        "f1",
+        "f2",
+        "f1",
+        "f1",
+    ]
     assert payload["family_status"]["insights_bundle"]["status"] == "generated"
 
 
@@ -439,13 +450,13 @@ def test_generate_artifacts_completes_broad_theme_coverage_from_findings(tmp_pat
 
 __all__ = [
     "test_select_artifact_insights_keeps_representative_sections_for_broad_doc_map",
-    "test_select_artifact_insights_drops_redundant_grounded_slots_for_narrow_doc_map",
+    "test_select_artifact_insights_preserves_distinct_same_source_propositions",
     "test_select_artifact_insights_fills_report_slots_after_theme_coverage",
     "test_select_artifact_insights_leads_with_top_score_and_preserves_theme_coverage",
     "test_select_artifact_insights_maps_pages_within_doc_map_section_ranges",
     "test_generate_artifacts_repairs_a_clustered_broad_plan_with_early_middle_and_late_themes",
     "test_generate_artifacts_does_not_expand_a_narrow_editorial_plan",
     "test_generate_artifacts_retains_broad_doc_map_theme_coverage",
-    "test_generate_artifacts_fills_narrow_doc_map_to_required_grounded_slots",
+    "test_generate_artifacts_preserves_distinct_same_source_slots",
     "test_generate_artifacts_completes_broad_theme_coverage_from_findings",
 ]

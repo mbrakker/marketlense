@@ -4664,6 +4664,11 @@ def _handle_insights_bundle_regeneration(
             limit=target_count * 2,
             editorial_plan=execution.state.editorial_plan,
             evidence_fidelity=execution.runtime.safe_evidence.get("evidence_fidelity"),
+            covered_evidence_ids=[
+                _s(item.get("evidence_id"))
+                for item in execution.state.insights_candidates
+                if isinstance(item, dict)
+            ],
         ),
         editorial_plan=execution.state.editorial_plan,
     )
@@ -5098,6 +5103,11 @@ def _remove_failed_insight_with_retained_replacement(
             limit=target_count * 2,
             editorial_plan=execution.state.editorial_plan,
             evidence_fidelity=execution.runtime.safe_evidence.get("evidence_fidelity"),
+            covered_evidence_ids=[
+                _s(item.get("evidence_id"))
+                for item in [*retained_final, *retained_candidates]
+                if isinstance(item, dict)
+            ],
         ),
     ]
     selected = retained_final

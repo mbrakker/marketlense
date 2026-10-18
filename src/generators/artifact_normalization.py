@@ -1119,22 +1119,51 @@ def _candidate_factual_fields(
 ) -> Dict[str, Dict[str, Any]]:
     """Index the retained factual payload of each stable-ID candidate."""
 
-    facts: Dict[str, Dict[str, Any]] = {}
+    best_candidates: Dict[str, Dict[str, Any]] = {}
     for insight in candidate_insights:
         if not isinstance(insight, dict):
             continue
         insight_id = _s(insight.get("id")).strip()
-        metric = insight.get("metric")
-        if (
-            not insight_id
-            or not isinstance(metric, dict)
-            or not _s(metric.get("value")).strip()
-        ):
+        if not insight_id:
             continue
-        facts[insight_id] = {
-            "metric": deepcopy(metric),
-            "evidence_id": _s(insight.get("evidence_id")).strip(),
-        }
+        metric = insight.get("metric")
+        has_metric = isinstance(metric, dict) and any(
+            _s(metric.get(field_name)).strip()
+            for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
+        )
+        has_source_binding = any(
+            (
+                _s(insight.get(field_name)).strip()
+                if field_name in {"evidence_id", "evidence"}
+                else bool(insight.get(field_name))
+            )
+            for field_name in ("evidence_id", "evidence", "pages", "evidence_spans")
+        )
+        if not has_metric and not has_source_binding:
+            continue
+        current = best_candidates.get(insight_id)
+        if current is None or _insight_quality_key(insight) < _insight_quality_key(
+            current
+        ):
+            best_candidates[insight_id] = insight
+
+    facts: Dict[str, Dict[str, Any]] = {}
+    for insight_id, insight in best_candidates.items():
+        metric = insight.get("metric")
+        fact: Dict[str, Any] = {}
+        if isinstance(metric, dict) and any(
+            _s(metric.get(field_name)).strip()
+            for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
+        ):
+            fact["metric"] = deepcopy(metric)
+        for field_name in ("evidence_id", "evidence", "pages", "evidence_spans"):
+            value = insight.get(field_name)
+            if field_name in {"evidence_id", "evidence"}:
+                if _s(value).strip():
+                    fact[field_name] = _s(value).strip()
+            elif value:
+                fact[field_name] = deepcopy(value)
+        facts[insight_id] = fact
     return facts
 
 
@@ -1150,25 +1179,30 @@ def _restore_candidate_factual_fields(
     restored = dict(insight)
     current_metric = restored.get("metric")
     current_metric = current_metric if isinstance(current_metric, dict) else {}
-    candidate_metric = candidate["metric"]
-    drifted = any(
-        _s(current_metric.get(field_name)).strip()
-        != _s(candidate_metric.get(field_name)).strip()
-        for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
-        if _s(candidate_metric.get(field_name)).strip()
-    )
-    if drifted:
-        restored["metric"] = {
-            **current_metric,
-            **{
-                field_name: deepcopy(candidate_metric.get(field_name, ""))
-                for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
-                if field_name in candidate_metric
-            },
-        }
-    candidate_evidence_id = candidate["evidence_id"]
-    if candidate_evidence_id and not _s(restored.get("evidence_id")).strip():
-        restored["evidence_id"] = candidate_evidence_id
+    candidate_metric = candidate.get("metric")
+    if isinstance(candidate_metric, dict):
+        drifted = any(
+            _s(current_metric.get(field_name)).strip()
+            != _s(candidate_metric.get(field_name)).strip()
+            for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
+            if _s(candidate_metric.get(field_name)).strip()
+        )
+        if drifted:
+            restored["metric"] = {
+                **current_metric,
+                **{
+                    field_name: deepcopy(candidate_metric.get(field_name, ""))
+                    for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
+                    if field_name in candidate_metric
+                },
+            }
+    for field_name in ("evidence_id", "evidence", "pages", "evidence_spans"):
+        candidate_value = candidate.get(field_name)
+        if field_name in {"evidence_id", "evidence"}:
+            if _s(candidate_value).strip():
+                restored[field_name] = _s(candidate_value).strip()
+        elif candidate_value:
+            restored[field_name] = deepcopy(candidate_value)
     return restored
 
 
@@ -1427,52 +1461,51 @@ def _append_expert_context_item(
 def _ranked_unique_insights(
     final_insights: List[Dict[str, Any]], candidate_insights: List[Dict[str, Any]]
 ) -> List[tuple[int, Dict[str, Any]]]:
-    # Final copy can repeat a claim under several provisional evidence IDs.
-    # Reuse each colliding stable ID's distinct retained candidate wording
-    # before source normalization collapses those IDs to canonical bindings.
-    candidate_by_id = {
-        _s(item.get("id")).strip(): item
-        for item in candidate_insights
-        if isinstance(item, dict) and _s(item.get("id")).strip()
-    }
-    final_claim_counts: dict[str, int] = {}
-    for item in final_insights:
-        if not isinstance(item, dict):
+    # A final-stage record owns its public wording.  Resolve stable-ID matches
+    # before ranking so a higher-scored candidate cannot replace that wording.
+    final_by_id: dict[str, tuple[int, Dict[str, Any]]] = {}
+    final_without_id: list[tuple[int, Dict[str, Any]]] = []
+    for source_order, item in enumerate(final_insights):
+        if not isinstance(item, dict) or not _s(item.get("text")).strip():
             continue
-        key = _insight_duplicate_key(item)
-        if key:
-            final_claim_counts[key] = final_claim_counts.get(key, 0) + 1
+        insight = dict(item)
+        insight_id = _s(insight.get("id")).strip()
+        if insight_id:
+            final_by_id.setdefault(insight_id, (source_order, insight))
+        else:
+            final_without_id.append((source_order, insight))
 
-    ranked: List[tuple[int, Dict[str, Any]]] = []
+    candidate_by_id: dict[str, tuple[int, Dict[str, Any]]] = {}
+    candidate_without_id: list[tuple[int, Dict[str, Any]]] = []
+    candidate_offset = len(final_insights)
+    for index, item in enumerate(candidate_insights):
+        if not isinstance(item, dict) or not _s(item.get("text")).strip():
+            continue
+        insight = dict(item)
+        insight_id = _s(insight.get("id")).strip()
+        source_order = candidate_offset + index
+        if not insight_id:
+            candidate_without_id.append((source_order, insight))
+            continue
+        if insight_id in final_by_id:
+            continue
+        current = candidate_by_id.get(insight_id)
+        if current is None or (
+            _insight_rank_key((source_order, insight)) < _insight_rank_key(current)
+        ):
+            candidate_by_id[insight_id] = (source_order, insight)
+
     ordered_items = [
-        (source_order, insight)
-        for source_order, insight in enumerate([*final_insights, *candidate_insights])
-        if isinstance(insight, dict)
+        *final_by_id.values(),
+        *final_without_id,
+        *candidate_by_id.values(),
+        *candidate_without_id,
     ]
     ordered_items.sort(key=_insight_rank_key)
+    ranked: List[tuple[int, Dict[str, Any]]] = []
     for source_order, insight in ordered_items:
-        if not isinstance(insight, dict) or not _s(insight.get("text")).strip():
-            continue
-        insight = dict(insight)
-        insight_id = _s(insight.get("id")).strip()
         if not _s(insight.get("evidence_id")).strip():
             continue
-        duplicate_key = _insight_duplicate_key(insight)
-        if duplicate_key and final_claim_counts.get(duplicate_key, 0) > 1:
-            candidate = candidate_by_id.get(insight_id)
-            if isinstance(candidate, dict):
-                candidate_key = _insight_duplicate_key(candidate)
-                if candidate_key and candidate_key != duplicate_key:
-                    for field_name in (
-                        "text",
-                        "metric",
-                        "evidence_id",
-                        "evidence",
-                        "pages",
-                        "evidence_spans",
-                    ):
-                        if field_name in candidate:
-                            insight[field_name] = deepcopy(candidate[field_name])
         if any(
             _insights_semantically_equivalent(insight, retained)
             for _, retained in ranked
@@ -1562,37 +1595,29 @@ def _insight_metric_signature(insight: Dict[str, Any]) -> tuple[tuple[str, str],
 def _insights_semantically_equivalent(
     left: Dict[str, Any], right: Dict[str, Any]
 ) -> bool:
-    """Collapse only a same-evidence, same-proposition, same-binding duplicate."""
+    """Collapse only an explicitly identical public proposition and binding."""
 
-    left_evidence_id = normalize_for_lookup(left.get("evidence_id"))
-    right_evidence_id = normalize_for_lookup(right.get("evidence_id"))
-    if not left_evidence_id or left_evidence_id != right_evidence_id:
-        return False
     left_metric = _insight_metric_signature(left)
     right_metric = _insight_metric_signature(right)
     if left_metric != right_metric:
-        # A source-finding fallback has no editorial metric binding.  When it
-        # shares the canonical evidence ID with a richer model item, it is an
-        # alternate representation of that source slot, not a second metric.
-        if left_metric and right_metric:
-            return False
-        fallback_id = normalize_for_lookup(left.get("id"))
-        other_id = normalize_for_lookup(right.get("id"))
-        if left_metric or right_metric:
-            return fallback_id == left_evidence_id or other_id == left_evidence_id
         return False
     left_id = _s(left.get("id")).strip()
     right_id = _s(right.get("id")).strip()
-    if left_id and left_id == right_id:
-        # A stable ID is the candidate contract's identity.  Distinct metric
-        # bindings were rejected above; with the same binding, alternate
-        # editorial wording is one source-bound slot, not another insight.
+    left_evidence_id = normalize_for_lookup(left.get("evidence_id"))
+    right_evidence_id = normalize_for_lookup(right.get("evidence_id"))
+    if (
+        left_id
+        and left_id == right_id
+        and left_evidence_id
+        and left_evidence_id == right_evidence_id
+    ):
+        # Stable ID plus the same source binding identifies a final rewrite of
+        # one candidate, even when the editorial wording is intentionally new.
         return True
-    left_proposition = normalize_for_lookup(left.get("evidence"))
-    right_proposition = normalize_for_lookup(right.get("evidence"))
-    if not left_proposition or not right_proposition:
-        left_proposition = normalize_for_lookup(left.get("text"))
-        right_proposition = normalize_for_lookup(right.get("text"))
+    left_proposition = normalize_for_lookup(left.get("text"))
+    right_proposition = normalize_for_lookup(right.get("text"))
+    # Evidence excerpts are source support, not propositions.  They are never
+    # used to collapse differently worded claims.
     return bool(left_proposition and left_proposition == right_proposition)
 
 
@@ -1611,12 +1636,17 @@ def _append_distinct_insight(
     selected.append(insight)
 
 
+def _fallback_evidence_key(value: Any) -> str:
+    return normalize_text(value).removeprefix("evidence:findings:")
+
+
 def fallback_artifact_insights_from_findings(
     findings_pack: Any,
     *,
     limit: int = 5,
     editorial_plan: Dict[str, Any] | None = None,
     evidence_fidelity: Any = None,
+    covered_evidence_ids: List[str] | None = None,
 ) -> List[Dict[str, Any]]:
     """Build a bounded insight candidate set from addressable findings.
 
@@ -1650,14 +1680,22 @@ def fallback_artifact_insights_from_findings(
             if claim_id.startswith("evidence:findings:")
         }
     theme_priority: dict[str, int] = {}
+    theme_evidence_ids: list[tuple[int, set[str]]] = []
     if isinstance(editorial_plan, dict):
         for theme in editorial_plan.get("themes") or []:
             if not isinstance(theme, dict) or not isinstance(
                 theme.get("priority"), int
             ):
                 continue
+            evidence_keys = {
+                _fallback_evidence_key(evidence_id)
+                for evidence_id in theme.get("evidence_ids") or []
+                if _fallback_evidence_key(evidence_id)
+            }
+            if evidence_keys:
+                theme_evidence_ids.append((theme["priority"], evidence_keys))
             for evidence_id in theme.get("evidence_ids") or []:
-                normalized_id = normalize_text(evidence_id)
+                normalized_id = _fallback_evidence_key(evidence_id)
                 if normalized_id:
                     theme_priority[normalized_id] = min(
                         theme_priority.get(normalized_id, theme["priority"]),
@@ -1713,7 +1751,39 @@ def fallback_artifact_insights_from_findings(
             )
         )
     ranked_findings.sort(key=lambda item: (item[0], item[1], item[2]["id"].casefold()))
-    raw_candidates = [item[2] for item in ranked_findings[:limit]]
+    covered_keys = {
+        _fallback_evidence_key(evidence_id)
+        for evidence_id in covered_evidence_ids or []
+        if _fallback_evidence_key(evidence_id)
+    }
+    selected_ranked: list[tuple[tuple[float, ...], int, Dict[str, Any]]] = []
+    selected_ids: set[str] = set()
+    for _, theme_ids in sorted(theme_evidence_ids):
+        if theme_ids & covered_keys:
+            continue
+        theme_candidates = [
+            item
+            for item in ranked_findings
+            if _fallback_evidence_key(item[2].get("id")) in theme_ids
+            and _fallback_evidence_key(item[2].get("id")) not in selected_ids
+        ]
+        if not theme_candidates:
+            continue
+        chosen = min(theme_candidates, key=lambda item: (item[0], item[1]))
+        selected_ranked.append(chosen)
+        selected_ids.add(_fallback_evidence_key(chosen[2].get("id")))
+        if len(selected_ranked) >= limit:
+            break
+    if len(selected_ranked) < limit:
+        for item in ranked_findings:
+            evidence_key = _fallback_evidence_key(item[2].get("id"))
+            if evidence_key in selected_ids or evidence_key in covered_keys:
+                continue
+            selected_ranked.append(item)
+            selected_ids.add(evidence_key)
+            if len(selected_ranked) >= limit:
+                break
+    raw_candidates = [item[2] for item in selected_ranked]
     return normalize_artifact_insights(raw_candidates, prefix="finding")
 
 
@@ -1724,6 +1794,7 @@ def fallback_artifact_insights_from_evidence(
     limit: int = 5,
     editorial_plan: Dict[str, Any] | None = None,
     evidence_fidelity: Any = None,
+    covered_evidence_ids: List[str] | None = None,
 ) -> List[Dict[str, Any]]:
     """Build replacement candidates from fidelity-approved findings and quotes.
 
@@ -1738,6 +1809,7 @@ def fallback_artifact_insights_from_evidence(
         limit=limit,
         editorial_plan=editorial_plan,
         evidence_fidelity=evidence_fidelity,
+        covered_evidence_ids=covered_evidence_ids,
     )
     seen_evidence_ids = {
         normalize_text(_s(item.get("evidence_id")))

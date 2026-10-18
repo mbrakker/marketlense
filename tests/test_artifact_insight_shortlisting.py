@@ -104,7 +104,7 @@ def test_selector_prefers_bound_relevant_finding_over_generic_high_score() -> No
     assert selected[0]["evidence_spans"][0]["page"] == 9
 
 
-def test_selector_collapses_same_bound_proposition_with_different_wording() -> None:
+def test_selector_keeps_same_evidence_id_with_different_propositions() -> None:
     shared_evidence = "The report records 42% among surveyed respondents in 2025."
     metric = {
         "label": "Respondent share",
@@ -141,7 +141,109 @@ def test_selector_collapses_same_bound_proposition_with_different_wording() -> N
         editorial_plan=_plan("f1", "f2"),
     )
 
-    assert [item["id"] for item in selected] == ["paraphrase"]
+    assert {item["id"] for item in selected} == {"first", "paraphrase"}
+
+
+def test_selector_preserves_final_wording_over_higher_scored_candidate() -> None:
+    candidate_metric = {
+        "label": "Respondent share",
+        "value": "42%",
+        "unit": "%",
+        "subject": "Survey respondents",
+        "cohort": "Survey respondents",
+        "denominator": "Respondents",
+        "timeframe": "2025",
+        "observation_status": "observed",
+    }
+    candidate = _insight(
+        "slot-1",
+        "f1",
+        "The retained candidate wording.",
+        score=0.99,
+        metric=candidate_metric,
+        pages=[4],
+        evidence="The retained source proposition.",
+        evidence_spans=[
+            {
+                "evidence_id": "f1",
+                "source_pack": "findings",
+                "page": 4,
+                "text": "The retained source proposition.",
+            }
+        ],
+    )
+    final = _insight(
+        "slot-1",
+        "f-drifted",
+        "The final editorial rewrite.",
+        score=0.2,
+        metric={"label": "Drifted", "value": "99%", "unit": "%"},
+        pages=[99],
+        evidence="A drifted source proposition.",
+        evidence_spans=[
+            {
+                "evidence_id": "f-drifted",
+                "source_pack": "findings",
+                "page": 99,
+                "text": "A drifted source proposition.",
+            }
+        ],
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[final],
+        candidate_insights=[candidate],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert len(selected) == 1
+    assert selected[0]["id"] == "slot-1"
+    assert selected[0]["text"] == "The final editorial rewrite."
+    assert selected[0]["evidence_id"] == "f1"
+    assert selected[0]["evidence"] == "The retained source proposition."
+    assert selected[0]["pages"] == [4]
+    assert selected[0]["evidence_spans"] == candidate["evidence_spans"]
+    assert selected[0]["metric"] == candidate_metric
+
+
+def test_selector_deduplicates_identical_public_claims_across_evidence_ids() -> None:
+    claim = "Survey respondents recorded a 42% share in 2025."
+    selected = select_artifact_insights(
+        final_insights=[
+            _insight("first", "f1", claim, score=0.7),
+            _insight("second", "f2", claim, score=0.9),
+        ],
+        candidate_insights=[],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert [item["id"] for item in selected] == ["second"]
+
+
+def test_selector_keeps_identical_public_claim_when_metric_binding_differs() -> None:
+    claim = "The strategy segment recorded a 57% increase."
+    first = _insight(
+        "installs",
+        "f1",
+        claim,
+        score=0.8,
+        metric={"label": "Installs", "value": "57%", "unit": "%"},
+    )
+    second = _insight(
+        "sessions",
+        "f2",
+        claim,
+        score=0.79,
+        metric={"label": "Sessions", "value": "57%", "unit": "%"},
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[first, second],
+        candidate_insights=[],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert [item["id"] for item in selected] == ["installs", "sessions"]
 
 
 def test_selector_keeps_same_page_topic_when_metric_binding_differs() -> None:
@@ -330,6 +432,57 @@ def test_finding_fallback_uses_supported_page_bound_alternatives() -> None:
     assert "unsupported" not in {item["evidence_id"] for item in selected}
     assert "no-physical-page" not in {item["evidence_id"] for item in selected}
     assert selected[0]["pages"] == [8]
+
+
+def test_finding_fallback_covers_uncovered_themes_before_filling_capacity() -> None:
+    findings = {
+        "findings": [
+            {
+                "id": "f1-high-a",
+                "text": "The first topic has a strong finding.",
+                "evidence": "First topic source text A.",
+                "confidence": "high",
+                "score": 0.99,
+                "pages": [3],
+            },
+            {
+                "id": "f1-high-b",
+                "text": "The first topic has another strong finding.",
+                "evidence": "First topic source text B.",
+                "confidence": "high",
+                "score": 0.98,
+                "pages": [4],
+            },
+            {
+                "id": "f2-medium",
+                "text": "The second topic has a supported finding.",
+                "evidence": "Second topic source text.",
+                "confidence": "medium",
+                "score": 0.6,
+                "pages": [5],
+            },
+            {
+                "id": "f3-low",
+                "text": "The third topic has a supported finding.",
+                "evidence": "Third topic source text.",
+                "confidence": "low",
+                "score": 0.4,
+                "pages": [6],
+            },
+        ]
+    }
+
+    selected = fallback_artifact_insights_from_findings(
+        findings,
+        editorial_plan=_plan("f1-high-a", "f2-medium", "f3-low"),
+        covered_evidence_ids=["f1-high-a"],
+        limit=2,
+    )
+
+    assert [item["evidence_id"] for item in selected] == [
+        "f2-medium",
+        "f3-low",
+    ]
 
 
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:

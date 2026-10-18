@@ -1234,6 +1234,11 @@ def generate_artifacts(
             limit=fallback_limit,
             editorial_plan=editorial_plan,
             evidence_fidelity=safe_evidence.get("evidence_fidelity"),
+            covered_evidence_ids=[
+                _s(candidate.get("evidence_id"))
+                for candidate in insights_candidates
+                if isinstance(candidate, dict)
+            ],
         )
         if candidate_generation_deferred
         else fallback_artifact_insights_from_findings(
@@ -1241,6 +1246,11 @@ def generate_artifacts(
             limit=fallback_limit,
             editorial_plan=editorial_plan,
             evidence_fidelity=safe_evidence.get("evidence_fidelity"),
+            covered_evidence_ids=[
+                _s(candidate.get("evidence_id"))
+                for candidate in insights_candidates
+                if isinstance(candidate, dict)
+            ],
         )
     )
     insights_candidates = select_artifact_insights(

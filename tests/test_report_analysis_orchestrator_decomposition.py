@@ -87,6 +87,29 @@ def test_report_payload_completeness_lists_all_missing_public_surfaces() -> None
     }
 
 
+def test_two_generated_insights_do_not_pass_report_payload_completeness() -> None:
+    payload = SimpleNamespace(
+        title="Report",
+        tldr="tldr",
+        commentary="commentary",
+        insights=["first", "second"],
+        quote=SimpleNamespace(text="quote"),
+        figure=SimpleNamespace(title="figure", evidence="evidence"),
+    )
+
+    with pytest.raises(AppError) as error:
+        _ensure_report_payload_complete(
+            payload,
+            artifacts={"family_status": {"insights_bundle": {"status": "generated"}}},
+            ctx=RunContext("1.0", "run", "analysis", "span"),
+            file_id="file-1",
+            stage="initial",
+        )
+
+    assert error.value.code == "report_payload_incomplete"
+    assert "insights" in error.value.context["missing_fields"]
+
+
 def test_source_provenance_roles_are_json_safe_for_doc_map_validation() -> None:
     roles = SourceProvenanceRoles(
         schema_version="1.0",
