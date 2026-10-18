@@ -4,6 +4,7 @@
 **Branch:** `codex/fix-retained-insight-evidence-validation`
 **Step 0 starting SHA:** `7fcd71bd6b17157d0d4246f8da73ca585532f9ab`
 **Step 1 implementation SHA:** `cb5c7396`
+**Step 1 correction SHA:** `4596d6dd`
 **Frozen manifest SHA-256:** `744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7`
 **Retained producer:** `469c13c15d0d654f60c04a84bb97bf7ee44d1de0`
 
@@ -16,18 +17,20 @@ Overall verdict: **PARTIAL**. The implementation and provider-free retained-arti
 ## Implemented behavior
 
 - Ranking now uses retained evidence binding strength, existing relevance/metric/novelty/score fields, physical pages/spans, and editorial-plan theme priority/coverage. No keyword-based business-relevance score was added.
-- Semantic deduplication is conservative: it requires the same canonical evidence identity, the same retained proposition/evidence text or stable candidate identity, and compatible metric bindings. Different metric labels/values, populations/cohorts, periods, or observation/forecast statuses remain distinct.
+- Final-stage records are resolved before ranking: a matching stable ID keeps final editorial wording, while candidate metric, evidence ID/text, physical pages, and evidence spans restore the retained factual binding.
+- Semantic deduplication is conservative: shared evidence IDs or excerpts alone never establish equivalence. It requires an explicit stable-ID/source match or identical public proposition with compatible protected metric bindings. Different conclusions, metrics, populations/cohorts, periods, or observation/forecast statuses remain distinct.
 - Missing evidence IDs and page-less finding fallbacks are not promoted. An explicit `evidence_fidelity.results` set admits only `supported` findings; absent fidelity data retains the existing findings-pack behavior.
-- Fallback pools are ranked and expanded to retain alternatives for later replacement. Existing IDs, evidence IDs, pages, spans, and protected metric fields are copied from the winning retained record.
+- Fallback pools first cover uncovered editorial themes, then fill from eligible alternatives while excluding source IDs already covered by the current candidate roster. Existing IDs, evidence IDs, pages, spans, and protected metric fields are copied from the winning retained record.
 - Artifact cache metadata now carries `evidence_backed_shortlisting:1`; the cache matcher rejects the previous `stable_id_unique_selection:2` version explicitly.
+- Two independent insights remain a valid generated artifact family result; the downstream report-payload contract still rejects fewer than five populated insight slots unless the family is explicitly abstained.
 
-## Frozen-five before/after replay
+## Frozen-five before/after replay (corrected selector)
 
 Replay input was the local retained real-report artifact set under `tmp/frozen20-next5-systemic-fix-20260930/frozen-reliability-xxcdkw0r/members/ias-first-attempt-7z7shs6j/output`, using each report’s `artifacts.json`, `findings.json`, and `evidence_fidelity.json`. No provider or publication endpoint was called.
 
 | Report | Before selected IDs | After selected IDs | Count | Theme coverage | Eligible fidelity-approved fallback | Ledger result |
 |---|---|---|---:|---|---:|---|
-| Activate | `activate-outlook-revenue-models`, `activate-super-user-time-and-spending`, `activate-digital-assistant-access-forecast`, `activate-platform-specific-web-video`, `activate-news-discovery-and-direct-visits`, `activate-ecommerce-capability-stack`, `activate-podcasting-engagement-rationale` | `activate-super-user-time-and-spending`, `activate-outlook-revenue-models`, `activate-digital-assistant-access-forecast`, `activate-platform-specific-web-video`, `activate-news-discovery-and-direct-visits`, `activate-ecommerce-capability-stack`, `activate-podcasting-engagement-rationale` | 7→7 | 7/7→7/7 | 0 | Lead moved to the stronger retained evidence-bound Super Users finding; all existing themes retained; no unsupported fallback promoted. |
+| Activate | `activate-outlook-revenue-models`, `activate-super-user-time-and-spending`, `activate-digital-assistant-access-forecast`, `activate-platform-specific-web-video`, `activate-news-discovery-and-direct-visits`, `activate-ecommerce-capability-stack`, `activate-podcasting-engagement-rationale` | `activate-digital-assistant-access-forecast`, `activate-outlook-revenue-models`, `activate-super-user-time-and-spending`, `activate-platform-specific-web-video`, `activate-news-discovery-and-direct-visits`, `activate-ecommerce-capability-stack`, `activate-podcasting-engagement-rationale` | 7→7 | 7/7→7/7 | 0 | Correction replay preserves the roster and bindings while the evidence-backed ranking leads with the digital-assistant forecast; no unsupported fallback promoted. |
 | Capgemini | `value-fairness-transparency`, `online-deal-searching`, `consumer-control-of-ai`, `human-support-remains-important`, `digital-assistants-engagement-recommendation` | `online-deal-searching`, `value-fairness-transparency`, `consumer-control-of-ai`, `human-support-remains-important`, `digital-assistants-engagement-recommendation` | 5→5 | 5/5→5/5 | 2 | Lead moved to the quantified deal-searching finding; value/fairness and AI/human-support coverage retained; the two eligible findings were already represented. |
 | KPMG | `buyer-standalone-platform-access`, `execution-governance-value-creation`, `agentic-ai-deal-workflows`, `buyer-appetite-execution-approaches`, `strategic-focus-capability-building` | `execution-governance-value-creation`, `strategic-focus-capability-building`, `agentic-ai-deal-workflows`, `buyer-appetite-execution-approaches`, `buyer-standalone-platform-access` | 5→5 | 5/5→5/5 | 1 | Concrete execution/governance and strategic-focus findings lead; the one eligible fallback was not needed and was not forced into a full, covered roster. |
 | Adjust | `cross-channel-measurement-recommendation`, `gaming-benchmark-coverage`, `ecommerce-benchmark-coverage`, `finance-benchmark-coverage`, `ai-marketing-applications`, `benchmark-methodology-context` | `gaming-benchmark-coverage`, `cross-channel-measurement-recommendation`, `ecommerce-benchmark-coverage`, `finance-benchmark-coverage`, `ai-marketing-applications`, `benchmark-methodology-context` | 6→6 | 6/6→6/6 | 0 | Gaming’s distinct metric coverage leads; cross-channel, vertical, AI, and methodology coverage retained; no unapproved fallback was available. |
@@ -36,6 +39,14 @@ Replay input was the local retained real-report artifact set under `tmp/frozen20
 Aggregate result: **29→29** selected insights; **29/29** retained evidence IDs, physical-page bindings, and evidence-span bindings before and after; protected evidence/metric payloads changed **0** times; selected theme coverage remained **29/29 theme slots**. The retained selected rosters had zero repeated evidence IDs and zero repeated normalized texts before or after. Synthetic tests removed one same-proposition paraphrase while retaining same-page distinct metrics and changed cohort/period/status variants.
 
 The fallback audit covered **39 retained findings**. Explicit fidelity approval was available for **3** findings total (Capgemini 2, KPMG 1; Activate, Adjust, and Reuters 0); unsupported or unapproved findings were excluded rather than used to manufacture coverage. This is a measurable fail-closed improvement over source-order fallback, but the sparse approval set limits observed fallback replacement gains.
+
+## Correction pass against the Step 1 baseline
+
+The correction replay used the same retained post-selection artifacts and compared with the prior Step 1 ledger. Selected roster sets remained unchanged: 29→29 insights, 29/29 theme slots, zero repeated evidence IDs, and zero repeated normalized public texts. Activate’s deterministic lead order changed from `activate-super-user-time-and-spending` to `activate-digital-assistant-access-forecast`; Capgemini, KPMG, Adjust, and Reuters retained their prior leads. This is an ordering correction, not evidence loss or a live-quality claim.
+
+The fallback audit now distinguishes availability from uncovered need. The same three fidelity-approved findings remain available in principle (Capgemini 2, KPMG 1), but Capgemini’s two are already covered by the candidate roster, so the uncovered replacement pool contains only KPMG’s `outlook-execution-environment`; no unsupported finding is promoted. Synthetic regressions confirm that same-source different propositions survive, exact public duplicates across evidence IDs collapse, and protected metric differences survive.
+
+The two-insight narrow-plan case remains `generated` at the artifact-family layer without fabricated padding. A separate orchestrator regression confirms that a report payload with two generated insights still fails the existing five-slot completeness gate, so the short artifact is not silently publication-ready.
 
 ## Fifteen frozen reference cases
 
@@ -65,15 +76,16 @@ No Step 0 unresolved reference case was promoted by the fallback path. The sourc
 
 Passed:
 
-- `python -m pytest -q tests/test_artifact_insight_shortlisting.py tests/test_artifact_generator.py tests/test_artifact_normalization_source_fidelity.py` — **126 passed**.
-- `python -m pytest -q tests/test_public_editorial_quality_generator.py tests/test_public_report_quality_gate.py` — **75 passed**.
-- `python -m pytest -q tests/test_render_service_public_advisory.py tests/test_render_service_public_prose.py` — **40 passed**.
+- `python -m pytest -q tests/test_artifact_insight_shortlisting.py tests/test_artifact_generator.py tests/test_artifact_normalization_source_fidelity.py` — **130 passed**.
+- `python -m pytest -q tests/test_report_analysis_orchestrator_decomposition.py tests/test_a21_historical_semantic_residuals.py` — **17 passed**.
+- `python -m pytest -q tests/test_report_regeneration_generator.py` — **90 passed**.
+- `python -m pytest -q tests/test_public_editorial_quality_generator.py tests/test_public_report_quality_gate.py tests/test_render_service_public_advisory.py tests/test_render_service_public_prose.py` — **115 passed**.
 - `python scripts/ci/check_public_report_quality.py` — passed.
 - `python scripts/ci/check_ruff_lint.py` — passed.
 - `python scripts/ci/check_formatting.py` — passed.
 - `python scripts/ci/check_forbidden_patching.py` — passed.
 - `python scripts/ci/check_repository_hygiene.py` — passed.
-- `git diff --check` — passed before the evidence-only documentation commit.
+- `git diff --check` — passed on the final correction/documentation diff.
 
 No paid provider calls, database writes, WordPress/publication writes, raw-PDF additions, raw model-response additions, visual factualisation, or canonical verified-claim persistence were performed. Step 2 remains unstarted.
 
@@ -83,6 +95,7 @@ No paid provider calls, database writes, WordPress/publication writes, raw-PDF a
 - No three-run current-HEAD generation or fixed-input semantic-validator baseline was run; model repeatability remains open.
 - The retained evidence-fidelity packs approve only three finding fallbacks. Their sparse/contradictory historical support decisions require future classification, without weakening fail-closed behavior.
 - No anchored human usefulness/distinctiveness rubric exists yet. That remains outside Step 1 and is not inferred from ordering changes.
+- The correction replay still begins from retained post-selection rosters; it cannot establish the prevalence of stable-ID collisions or candidate recall in fresh model output.
 - Retained findings, DocMap, and artifact files are local and hash-pinned by the Step 0 record; portability requires the same retained artifact pack.
 
 **Step 2 status:** not started.
