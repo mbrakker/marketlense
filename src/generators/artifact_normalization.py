@@ -22,7 +22,7 @@ from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "stable_id_unique_selection:2"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:1"
 
 METRIC_FIELDS = (
     "label",
@@ -1444,23 +1444,18 @@ def _ranked_unique_insights(
             final_claim_counts[key] = final_claim_counts.get(key, 0) + 1
 
     ranked: List[tuple[int, Dict[str, Any]]] = []
-    seen: set[str] = set()
-    seen_ids: set[str] = set()
-    grounded_ids = {
-        _s(item.get("id")).strip()
-        for item in [*final_insights, *candidate_insights]
-        if isinstance(item, dict) and _s(item.get("evidence_id")).strip()
-    }
-    for source_order, insight in enumerate([*final_insights, *candidate_insights]):
+    ordered_items = [
+        (source_order, insight)
+        for source_order, insight in enumerate([*final_insights, *candidate_insights])
+        if isinstance(insight, dict)
+    ]
+    ordered_items.sort(key=_insight_rank_key)
+    for source_order, insight in ordered_items:
         if not isinstance(insight, dict) or not _s(insight.get("text")).strip():
             continue
         insight = dict(insight)
         insight_id = _s(insight.get("id")).strip()
-        if insight_id in grounded_ids and not _s(insight.get("evidence_id")).strip():
-            continue
-        # Stable IDs identify one source-bound item even when final and
-        # candidate stages use different wording for it.
-        if insight_id and insight_id in seen_ids:
+        if not _s(insight.get("evidence_id")).strip():
             continue
         duplicate_key = _insight_duplicate_key(insight)
         if duplicate_key and final_claim_counts.get(duplicate_key, 0) > 1:
@@ -1478,13 +1473,11 @@ def _ranked_unique_insights(
                     ):
                         if field_name in candidate:
                             insight[field_name] = deepcopy(candidate[field_name])
-        duplicate_key = _insight_duplicate_key(insight)
-        if duplicate_key and duplicate_key in seen:
+        if any(
+            _insights_semantically_equivalent(insight, retained)
+            for _, retained in ranked
+        ):
             continue
-        if duplicate_key:
-            seen.add(duplicate_key)
-        if insight_id:
-            seen_ids.add(insight_id)
         ranked.append((source_order, dict(insight)))
     return ranked
 
@@ -1495,11 +1488,117 @@ def _best_ranked_insight(
     return min(items, key=_insight_rank_key)
 
 
-def _insight_rank_key(item: tuple[int, Dict[str, Any]]) -> tuple[float, int]:
+def _insight_rank_key(item: tuple[int, Dict[str, Any]]) -> tuple[float, ...]:
     source_order, insight = item
-    score = insight.get("score")
-    numeric_score = float(score) if isinstance(score, (int, float)) else 0.0
-    return (-numeric_score, source_order)
+    return (*_insight_quality_key(insight), source_order)
+
+
+def _insight_quality_key(insight: Dict[str, Any]) -> tuple[float, ...]:
+    """Return a deterministic quality tuple using only retained signals."""
+
+    metric = insight.get("metric")
+    metric = metric if isinstance(metric, dict) else {}
+    evidence_id = _s(insight.get("evidence_id")).strip()
+    evidence = _s(insight.get("evidence")).strip()
+    pages = [
+        page
+        for page in insight.get("pages", [])
+        if isinstance(page, int) and not isinstance(page, bool) and page > 0
+    ]
+    spans = insight.get("evidence_spans")
+    page_bound_spans = (
+        [
+            span
+            for span in spans
+            if isinstance(span, dict)
+            and isinstance(span.get("page"), int)
+            and span["page"] > 0
+            and _s(span.get("text")).strip()
+        ]
+        if isinstance(spans, list)
+        else []
+    )
+    metric_label = _s(metric.get("label")).strip()
+    metric_value = _s(metric.get("value")).strip()
+    binding_count = sum(
+        bool(_s(metric.get(field_name)).strip()) for field_name in METRIC_BINDING_FIELDS
+    )
+    relevance = _numeric_score(insight.get("decision_relevance_score"))
+    metric_strength = _numeric_score(insight.get("metric_strength_score"))
+    novelty = _numeric_score(insight.get("novelty_score"))
+    score = _numeric_score(insight.get("score"))
+    evidence_strength = (
+        bool(evidence_id) * 4
+        + bool(evidence) * 2
+        + bool(pages) * 2
+        + min(len(page_bound_spans), 2) * 2
+        + bool(metric_label and metric_value) * 2
+        + min(binding_count, len(METRIC_BINDING_FIELDS))
+    )
+    return (
+        -float(evidence_strength),
+        -relevance,
+        -metric_strength,
+        -novelty,
+        -score,
+    )
+
+
+def _numeric_score(value: Any) -> float:
+    return float(value) if isinstance(value, (int, float)) else 0.0
+
+
+def _insight_metric_signature(insight: Dict[str, Any]) -> tuple[tuple[str, str], ...]:
+    metric = insight.get("metric")
+    if not isinstance(metric, dict):
+        return ()
+    return tuple(
+        (field_name, normalize_for_lookup(metric.get(field_name)))
+        for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
+        if normalize_for_lookup(metric.get(field_name))
+    )
+
+
+def _insights_semantically_equivalent(
+    left: Dict[str, Any], right: Dict[str, Any]
+) -> bool:
+    """Collapse only a same-evidence, same-proposition, same-binding duplicate."""
+
+    left_evidence_id = normalize_for_lookup(left.get("evidence_id"))
+    right_evidence_id = normalize_for_lookup(right.get("evidence_id"))
+    if not left_evidence_id or left_evidence_id != right_evidence_id:
+        return False
+    left_metric = _insight_metric_signature(left)
+    right_metric = _insight_metric_signature(right)
+    if left_metric != right_metric:
+        # A source-finding fallback has no editorial metric binding.  When it
+        # shares the canonical evidence ID with a richer model item, it is an
+        # alternate representation of that source slot, not a second metric.
+        if left_metric and right_metric:
+            return False
+        fallback_id = normalize_for_lookup(left.get("id"))
+        other_id = normalize_for_lookup(right.get("id"))
+        if left_metric or right_metric:
+            if fallback_id != left_evidence_id and other_id != left_evidence_id:
+                return False
+            return True
+        else:
+            return False
+    left_id = _s(left.get("id")).strip()
+    right_id = _s(right.get("id")).strip()
+    if left_id and left_id == right_id:
+        # A stable ID is the candidate contract's identity.  Distinct metric
+        # bindings were rejected above; with the same binding, alternate
+        # editorial wording is one source-bound slot, not another insight.
+        return True
+    left_proposition = normalize_for_lookup(left.get("evidence"))
+    right_proposition = normalize_for_lookup(right.get("evidence"))
+    if not left_proposition or not right_proposition:
+        left_proposition = normalize_for_lookup(left.get("text"))
+        right_proposition = normalize_for_lookup(right.get("text"))
+    if not left_proposition or left_proposition != right_proposition:
+        return False
+    return True
 
 
 def _append_distinct_insight(
@@ -1508,7 +1607,9 @@ def _append_distinct_insight(
     insight: Dict[str, Any],
 ) -> None:
     duplicate_key = _insight_duplicate_key(insight)
-    if duplicate_key and duplicate_key in selected_keys:
+    if any(
+        _insights_semantically_equivalent(insight, retained) for retained in selected
+    ):
         return
     if duplicate_key:
         selected_keys.add(duplicate_key)
@@ -1519,6 +1620,8 @@ def fallback_artifact_insights_from_findings(
     findings_pack: Any,
     *,
     limit: int = 5,
+    editorial_plan: Dict[str, Any] | None = None,
+    evidence_fidelity: Any = None,
 ) -> List[Dict[str, Any]]:
     """Build a bounded insight candidate set from addressable findings.
 
@@ -1533,30 +1636,89 @@ def fallback_artifact_insights_from_findings(
     if not isinstance(raw_findings, list):
         return []
     raw_candidates: List[Dict[str, Any]] = []
+    fidelity_results = (
+        evidence_fidelity.get("results")
+        if isinstance(evidence_fidelity, dict)
+        else findings_pack.get("evidence_fidelity", {}).get("results")
+        if isinstance(findings_pack.get("evidence_fidelity"), dict)
+        else None
+    )
+    fidelity_ids: set[str] | None = None
+    if isinstance(fidelity_results, list):
+        fidelity_ids = {
+            claim_id.removeprefix("evidence:findings:").casefold()
+            for result in fidelity_results
+            if isinstance(result, dict) and result.get("status") == "supported"
+            for candidate in [result.get("candidate")]
+            if isinstance(candidate, dict)
+            for claim_id in [_s(candidate.get("claim_id")).strip()]
+            if claim_id.startswith("evidence:findings:")
+        }
+    theme_priority: dict[str, int] = {}
+    if isinstance(editorial_plan, dict):
+        for theme in editorial_plan.get("themes") or []:
+            if not isinstance(theme, dict) or not isinstance(
+                theme.get("priority"), int
+            ):
+                continue
+            for evidence_id in theme.get("evidence_ids") or []:
+                normalized_id = normalize_text(evidence_id)
+                if normalized_id:
+                    theme_priority[normalized_id] = min(
+                        theme_priority.get(normalized_id, theme["priority"]),
+                        theme["priority"],
+                    )
     seen_evidence_ids: set[str] = set()
-    for finding in raw_findings:
+    ranked_findings: list[tuple[tuple[float, ...], int, Dict[str, Any]]] = []
+    for source_order, finding in enumerate(raw_findings):
         if not isinstance(finding, dict):
             continue
         evidence_id = _s(finding.get("id"))
         text = _s(finding.get("text"))
         evidence = _s(finding.get("evidence"))
+        pages = (
+            [
+                page
+                for page in finding.get("pages", [])
+                if isinstance(page, int) and not isinstance(page, bool) and page > 0
+            ]
+            if isinstance(finding.get("pages"), list)
+            else []
+        )
         if not evidence_id or not text or not evidence:
+            continue
+        if not pages:
+            continue
+        if fidelity_ids is not None and evidence_id.casefold() not in fidelity_ids:
             continue
         normalized_evidence_id = normalize_text(evidence_id)
         if normalized_evidence_id in seen_evidence_ids:
             continue
         seen_evidence_ids.add(normalized_evidence_id)
-        raw_candidates.append(
-            {
-                "id": evidence_id,
-                "text": text,
-                "evidence_id": evidence_id,
-                "evidence": evidence,
-                "pages": finding.get("pages"),
-            }
+        confidence = normalize_text(finding.get("confidence"))
+        confidence_rank = {"high": 3.0, "medium": 2.0, "low": 1.0}.get(confidence, 0.0)
+        source_score = _numeric_score(finding.get("score"))
+        theme_rank = theme_priority.get(normalized_evidence_id, 10_000)
+        ranked_findings.append(
+            (
+                (
+                    -confidence_rank,
+                    -source_score,
+                    float(theme_rank),
+                    float(source_order),
+                ),
+                source_order,
+                {
+                    "id": evidence_id,
+                    "text": text,
+                    "evidence_id": evidence_id,
+                    "evidence": evidence,
+                    "pages": pages,
+                },
+            )
         )
-        if len(raw_candidates) == limit:
-            break
+    ranked_findings.sort(key=lambda item: (item[0], item[1], item[2]["id"].casefold()))
+    raw_candidates = [item[2] for item in ranked_findings[:limit]]
     return normalize_artifact_insights(raw_candidates, prefix="finding")
 
 
@@ -1565,6 +1727,8 @@ def fallback_artifact_insights_from_evidence(
     quote_candidates_pack: Any,
     *,
     limit: int = 5,
+    editorial_plan: Dict[str, Any] | None = None,
+    evidence_fidelity: Any = None,
 ) -> List[Dict[str, Any]]:
     """Build replacement candidates from fidelity-approved findings and quotes.
 
@@ -1574,7 +1738,12 @@ def fallback_artifact_insights_from_evidence(
     """
     if limit <= 0:
         return []
-    candidates = fallback_artifact_insights_from_findings(findings_pack, limit=limit)
+    candidates = fallback_artifact_insights_from_findings(
+        findings_pack,
+        limit=limit,
+        editorial_plan=editorial_plan,
+        evidence_fidelity=evidence_fidelity,
+    )
     seen_evidence_ids = {
         normalize_text(_s(item.get("evidence_id")))
         for item in candidates

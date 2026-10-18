@@ -4660,7 +4660,10 @@ def _handle_insights_bundle_regeneration(
     execution.state.insights_candidates = select_artifact_insights(
         final_insights=execution.state.insights_candidates,
         candidate_insights=fallback_artifact_insights_from_findings(
-            execution.runtime.safe_evidence.get("findings"), limit=target_count
+            execution.runtime.safe_evidence.get("findings"),
+            limit=target_count * 2,
+            editorial_plan=execution.state.editorial_plan,
+            evidence_fidelity=execution.runtime.safe_evidence.get("evidence_fidelity"),
         ),
         editorial_plan=execution.state.editorial_plan,
     )
@@ -5091,7 +5094,10 @@ def _remove_failed_insight_with_retained_replacement(
     pool = [
         *retained_candidates,
         *fallback_artifact_insights_from_findings(
-            execution.runtime.safe_evidence.get("findings"), limit=target_count * 2
+            execution.runtime.safe_evidence.get("findings"),
+            limit=target_count * 2,
+            editorial_plan=execution.state.editorial_plan,
+            evidence_fidelity=execution.runtime.safe_evidence.get("evidence_fidelity"),
         ),
     ]
     selected = retained_final

@@ -3086,6 +3086,12 @@ def _artifact_cache_meta_matches(
     expected_cache_meta: dict[str, Any],
     cache_key: str,
 ) -> tuple[bool, str]:
+    expected_selection_version = expected_cache_meta.get("insight_selection_version")
+    if (
+        expected_selection_version
+        and cached_meta.get("insight_selection_version") != expected_selection_version
+    ):
+        return False, "insight_selection_version_mismatch"
     if cached_meta.get("key") == cache_key:
         return True, ""
     cached_prompts = cached_meta.get("prompts")

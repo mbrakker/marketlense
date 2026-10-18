@@ -1219,7 +1219,7 @@ def generate_artifacts(
         REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(editorial_plan["themes"])
     )
     fallback_limit = max(
-        final_insight_target_count,
+        final_insight_target_count * 2,
         sum(len(theme["evidence_ids"]) for theme in editorial_plan["themes"]),
     )
     candidate_generation_deferred = bool(
@@ -1232,10 +1232,15 @@ def generate_artifacts(
             safe_evidence.get("findings"),
             safe_evidence.get("quote_candidates"),
             limit=fallback_limit,
+            editorial_plan=editorial_plan,
+            evidence_fidelity=safe_evidence.get("evidence_fidelity"),
         )
         if candidate_generation_deferred
         else fallback_artifact_insights_from_findings(
-            safe_evidence.get("findings"), limit=fallback_limit
+            safe_evidence.get("findings"),
+            limit=fallback_limit,
+            editorial_plan=editorial_plan,
+            evidence_fidelity=safe_evidence.get("evidence_fidelity"),
         )
     )
     insights_candidates = select_artifact_insights(
