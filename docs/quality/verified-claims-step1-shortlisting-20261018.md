@@ -6,6 +6,7 @@
 **Step 1 implementation SHA:** `cb5c7396`
 **Step 1 correction SHA:** `4596d6dd`
 **Step 1 P1 factual-integrity correction:** `a7fc47cd`
+**Step 1 P2 provenance/numeric correction:** `25e479d7`
 **Frozen manifest SHA-256:** `744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7`
 **Retained producer:** `469c13c15d0d654f60c04a84bb97bf7ee44d1de0`
 
@@ -23,8 +24,9 @@ Overall verdict: **PARTIAL**. The implementation and provider-free retained-arti
 - Missing evidence IDs and page-less finding fallbacks are not promoted. An explicit `evidence_fidelity.results` set admits only `supported` findings; absent fidelity data retains the existing findings-pack behavior.
 - Fallback pools first cover uncovered editorial themes, then fill from eligible alternatives while excluding source IDs already covered by the current candidate roster. Existing IDs, evidence IDs, pages, spans, and protected metric fields are copied from the winning retained record.
 - Same stable IDs are now grouped by compatible source identity and protected metric bindings before any editorial score is used. Conflicting evidence IDs, values, cohorts, periods, or observation statuses fail closed; equivalent source-consistent representations may still use the strongest existing retained signals.
+- Same stable IDs also fail closed when their physical page/span bindings are contradictory. Identical excerpts, overlapping spans, and source-consistent multi-page representations remain eligible; unrelated excerpts or disjoint physical bindings cannot be resolved by editorial score.
 - Final editorial wording remains authoritative, but the complete candidate protected metric binding is restored, including empty fields. Final-only metric, forecast, cohort, denominator, timeframe, geography, evidence, page, or span additions are removed; a matching final rewrite without a reliable candidate binding is rejected.
-- Artifact cache metadata now carries `evidence_backed_shortlisting:2`; the cache matcher rejects both `evidence_backed_shortlisting:1` and the previous `stable_id_unique_selection:2` versions.
+- Artifact cache metadata now carries `evidence_backed_shortlisting:3`; the cache matcher rejects the prior `evidence_backed_shortlisting:2`, `evidence_backed_shortlisting:1`, and `stable_id_unique_selection:2` versions.
 - Two independent insights remain a valid generated artifact family result; the downstream report-payload contract still rejects fewer than five populated insight slots unless the family is explicitly abstained.
 
 ## Frozen-five before/after replay (initial Step 1 baseline)
@@ -61,6 +63,24 @@ Focused regressions confirm that conflicting same-ID evidence or protected metri
 
 The two-insight narrow-plan case remains `generated` at the artifact-family layer without fabricated padding. A separate orchestrator regression confirms that a report payload with two generated insights still fails the existing five-slot completeness gate, so the short artifact is not silently publication-ready.
 
+## P2 provenance and numeric-content correction pass
+
+Commit `25e479d7` compares the current selector with the latest corrected Step 1 baseline at `a7fc47cd` using the exact retained Capgemini, Activate, KPMG, Reuters Institute, and Adjust artifacts. It does not claim a live selection-quality improvement: the retained inputs are already post-selection rosters. The per-report ledger is:
+
+| Report | Selected IDs / wording | Physical and protected bindings | Theme coverage | Fallback alternatives | P2 result |
+|---|---|---|---:|---|---|
+| Activate | unchanged, 7→7; wording unchanged | pages/spans/metric bindings unchanged | 7/7→7/7 | 0→0 | No provenance ambiguity in the retained candidate roster. |
+| Capgemini | unchanged, 5→5; wording unchanged | pages/spans/metric bindings unchanged | 5/5→5/5 | 2 available→2 available | No new change. The corrected replay still omits the unsupported final-only metric binding. |
+| KPMG | unchanged, 5→5; wording unchanged | pages/spans/metric bindings unchanged | 5/5→5/5 | `outlook-execution-environment`→unchanged | No provenance ambiguity; the eligible alternative remains available but is not forced. |
+| Reuters Institute | unchanged, 6→6; wording unchanged | pages/spans/metric bindings unchanged | 6/6→6/6 | 0→0 | No provenance ambiguity in the retained candidate roster. |
+| Adjust | unchanged, 6→6; wording unchanged | pages/spans/metric bindings unchanged | 6/6→6/6 | 0→0 | No provenance ambiguity in the retained candidate roster. |
+
+Aggregate P2 replay: **29→29** selected insights, **29/29** IDs and final wordings unchanged, **29/29** physical page/span bindings unchanged, zero protected-payload changes, zero duplicate evidence IDs, and **29/29** theme slots retained. The frozen cohort contains no duplicate stable-ID candidate groups, so the new provenance guard is exercised by focused synthetic regressions rather than a live-frozen collision.
+
+Numeric-content check: on corrected replay, all five reports still derive **0 metric-spine and 0 key-figure items** from the retained candidate-authoritative selections, matching the latest corrected baseline. The retained Capgemini post-selection artifact contains a 62% `online-deal-searching` metric spine/key figure, but its retained candidate binding has empty protected metric fields; the source prose alone is not promoted into a structured metric. The focused regression confirms that a supported candidate value survives into `metric_spine`, while final-only timeframe/geography values are removed. No safe existing authoritative structured binding was available for the real Capgemini candidate, so fail-closed behavior is retained rather than enriched speculatively.
+
+New regressions cover disjoint page/excerpt/span conflicts, disjoint same-page spans, overlapping alternative spans, legitimate identical multi-page excerpts, cache invalidation from selection version `:2` to `:3`, and downstream numeric preservation. This P2 correction is **PARTIAL** only because the retained replay cannot measure fresh candidate recall, live collision prevalence, or repeated-run stability; it introduces no frozen-cohort regression and does not start Step 2.
+
 ## Fifteen frozen reference cases
 
 The following review distinguishes an editorial omission or intentionally broad qualitative selection from a factual error. “No factual regression” means the retained selected record did not promote the held numeric/provenance mutation; it does not mean an unresolved source binding became verified.
@@ -89,7 +109,7 @@ No Step 0 unresolved reference case was promoted by the fallback path. The sourc
 
 Passed:
 
-- `python -m pytest -q tests/test_artifact_insight_shortlisting.py tests/test_artifact_normalization_source_fidelity.py` — **29 passed**.
+- `python -m pytest -q tests/test_artifact_insight_shortlisting.py tests/test_artifact_normalization_source_fidelity.py` — **35 passed** after the P2 correction.
 - `python -m pytest -q tests/test_artifact_generator.py` — **109 passed**.
 - `python -m pytest -q tests/test_report_regeneration_generator.py` — **90 passed**.
 - `python -m pytest -q tests/test_public_editorial_quality_generator.py tests/test_public_report_quality_gate.py tests/test_render_service_public_advisory.py tests/test_render_service_public_prose.py` — **115 passed**.
