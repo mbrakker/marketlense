@@ -1550,6 +1550,12 @@ def _has_repeated_boilerplate(surfaces: list[tuple[str, str]]) -> bool:
             normalized = " ".join(
                 re.sub(r"[^a-z0-9]+", " ", sentence.casefold()).split()
             )
+            # Card provenance badges are repeated presentation metadata, not
+            # editorial prose. Their following location text can be split into
+            # a sentence by abbreviations such as ``U.S.``; exclude the badge
+            # before applying the repeated-copy gate.
+            if "direct evidence span source backed" in normalized:
+                continue
             if len(normalized) >= 48 and _looks_like_boilerplate(normalized):
                 sentences.append(normalized)
     return any(count > 1 for count in _counts(sentences).values())

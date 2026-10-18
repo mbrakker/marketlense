@@ -21,10 +21,15 @@ _COMP_RE = (
 )
 _MAG_RE = r"(?:k|m|mm|mn|mil|b|bn|bil|t|tn|tril|thousand|million|billion|trillion)\b"
 
+_RANGE_UNIT_RE = (
+    r"percentage[\s-]+points?|basis[\s-]+points?|%|percent|pct|pp|bps|"
+    r"usd|eur|gbp|jpy|k|m|mm|mn|mil|b|bn|bil|t|tn|tril|thousand|"
+    r"million|billion|trillion"
+)
 _RANGE_RE = re.compile(
-    rf"(?<!\w)(?:between\s+)?(?P<low>{_NUMBER_RE})\s*(?:-|to|and)\s*(?P<high>{_NUMBER_RE})\s*"
-    r"(?P<unit>percentage[\s-]+points?|basis[\s-]+points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
-    r"k|m|mm|mn|mil|b|bn|bil|t|tn|tril|thousand|million|billion|trillion)?(?!\w)",
+    rf"(?<!\w)(?:between\s+)?(?P<low>{_NUMBER_RE})\s*"
+    rf"(?P<low_unit>{_RANGE_UNIT_RE})?\s*(?:-|to|and)\s*"
+    rf"(?P<high>{_NUMBER_RE})\s*(?P<high_unit>{_RANGE_UNIT_RE})?(?!\w)",
     re.IGNORECASE,
 )
 _COMPACT_YEAR_RANGE_RE = re.compile(
@@ -241,6 +246,9 @@ def _normalize_for_quantity_extraction(text: str) -> str:
     """
 
     raw_text = str(text or "")
+    raw_text = (
+        raw_text.replace("\u2013", "-").replace("\u2014", "-").replace("\u2212", "-")
+    )
     # Keep the dash inside compact year ranges as one ASCII character so that
     # the abbreviated endpoint can be excluded from numeric claim extraction.
     raw_text = _COMPACT_YEAR_RANGE_RE.sub(
@@ -449,7 +457,7 @@ def _extract_ranges(text: str) -> List[Quantity]:
         high = _to_float(match.group("high"))
         if low is None or high is None:
             continue
-        unit = _clean_unit(match.group("unit"))
+        unit = _clean_unit(match.group("high_unit") or match.group("low_unit"))
         low_is_year = bool(re.fullmatch(r"(?:19|20)\d{2}", match.group("low").strip()))
         high_is_year = bool(
             re.fullmatch(r"(?:19|20)\d{2}", match.group("high").strip())
@@ -570,6 +578,9 @@ def _extract_ratios(text: str) -> List[Quantity]:
         a = _word_or_number(match.group("a"))
         b = _word_or_number(match.group("b"))
         if a is None or b is None or b == 0:
+            continue
+        if b.is_integer() and 1900 <= b <= 2100:
+            # Demographic prose such as "aged 18+ in 2021" is not a ratio.
             continue
         value = a / b
         output.append(
@@ -799,7 +810,19 @@ def _resolve_unit_family(
     unit_norm = _clean_unit(unit)
     magnitude_norm = _clean_unit(magnitude)
     sentence_norm = normalize_text(sentence)
-    around = sentence_norm[max(0, span[0] - 32) : min(len(sentence_norm), span[1] + 32)]
+    context_start = max(0, span[0] - 32)
+    context_end = min(len(sentence_norm), span[1] + 32)
+    before = sentence_norm[context_start : span[0]]
+    after = sentence_norm[span[1] : context_end]
+    # Currency words belong to the local clause. Do not let a later
+    # semicolon-delimited metric (for example ``200 mil; Spend: $400B``)
+    # reclassify the preceding population count as currency.
+    for boundary in (";", ".", "!", "?", "\n"):
+        before = before[before.rfind(boundary) + 1 :]
+        boundary_index = after.find(boundary)
+        if boundary_index >= 0:
+            after = after[:boundary_index]
+    around = before + sentence_norm[span[0] : span[1]] + after
     near = sentence_norm[max(0, span[0] - 10) : min(len(sentence_norm), span[1] + 10)]
     following = sentence_norm[span[1] : min(len(sentence_norm), span[1] + 24)]
 

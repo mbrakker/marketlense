@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional, Sequence
 
 from src.contracts.validation import ValidationIssue
@@ -10,6 +11,11 @@ from .models import EvidenceWindow, SemanticSupport, ValidationRuntime
 from .shared import RETRIEVE_TOP_K, format_confidence, issue, s
 
 RULE_ID = "metrics"
+_COMPARISON_CUE = re.compile(
+    r"\b(?:from|to|than|increased?|decreased?|grew|rose|fell|declined?|"
+    r"prior|previous|current|before|after)\b",
+    re.IGNORECASE,
+)
 
 
 def run_metric_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
@@ -147,6 +153,16 @@ def _invalid_more_than_doubled(claim_text: str, evidence_text: str) -> bool:
         return False
     quantities = extract_quantities(evidence_text)
     for first, second in zip(quantities, quantities[1:], strict=False):
-        if first.value > 0 and second.value > 0 and first.unit_family == second.unit_family:
-            return second.value <= first.value * 2
+        if (
+            first.value <= 0
+            or second.value <= 0
+            or first.unit_family != second.unit_family
+        ):
+            continue
+        comparison_context = first.sentence[
+            max(0, first.start - 24) : min(len(first.sentence), second.end + 24)
+        ]
+        if not _COMPARISON_CUE.search(comparison_context):
+            continue
+        return second.value <= first.value * 2
     return True

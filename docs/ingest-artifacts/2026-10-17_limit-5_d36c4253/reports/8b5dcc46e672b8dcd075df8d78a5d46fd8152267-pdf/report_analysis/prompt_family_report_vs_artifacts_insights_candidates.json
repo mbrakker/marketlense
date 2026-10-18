@@ -1,0 +1,272 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "attention-time-spent-cagr",
+      "text": "For U.S. users aged 18+, the chart reports 2011–2017E time-spent CAGRs of 4.5% for video, 4.9% for audio, 17.8% for social media, and 11.9% for gaming.",
+      "evidence_id": "attention_daily_time_cagr",
+      "evidence": "Time Spent Among 18+ Users, U.S., 2011 - 2017E, Hours : Minutes\nCAGR\nVIDEO 4.5%\nAUDIO 4.9%\nSOCIAL MEDIA 17.8%\nGAMING 11.9%",
+      "evidence_spans": [],
+      "metric": {
+        "label": "U.S. users aged 18+ time-spent CAGRs by activity",
+        "value": "Video 4.5%, audio 4.9%, social media 17.8%, gaming 11.9%",
+        "unit": "CAGR",
+        "trend": "CAGR by activity",
+        "timeframe": "2011–2017E",
+        "geography": "U.S.",
+        "segment": "Video, audio, social media, gaming",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Time spent",
+        "cohort": "U.S. users aged 18+",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        12
+      ],
+      "score": 0.88,
+      "decision_relevance_score": 0.86,
+      "metric_strength_score": 0.92,
+      "novelty_score": 0.75,
+      "coverage_role": "behavior_shift",
+      "so_what": "The chart shows category-specific time-spent trajectories, so a single media-use assumption would blur differences across activities.",
+      "now_what": "MarketLense: If allocating audience-development effort, test assumptions by activity against the relevant audience rather than relying on one blended time-spent forecast.",
+      "report_type_lens": "consumer_behavior"
+    },
+    {
+      "id": "messaging-user-additions-forecast",
+      "text": "The messaging forecast projects 1.1 billion new users by 2018.",
+      "evidence_id": "messaging-user-forecast",
+      "evidence": "We forecast that messaging will add 1.1 Billion new users by 2018",
+      "evidence_spans": [],
+      "metric": {
+        "label": "New messaging users",
+        "value": "1.1 billion",
+        "unit": "users",
+        "trend": "Increase",
+        "timeframe": "By 2018",
+        "geography": "",
+        "segment": "Messaging",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Messaging users",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": "forecast"
+      },
+      "pages": [
+        17
+      ],
+      "score": 0.86,
+      "decision_relevance_score": 0.87,
+      "metric_strength_score": 0.93,
+      "novelty_score": 0.77,
+      "coverage_role": "investment_signal",
+      "so_what": "The forecast frames messaging growth in terms of potential audience additions.",
+      "now_what": "MarketLense: If assessing messaging investment, test the user-growth case alongside separate engagement and revenue measures.",
+      "report_type_lens": "technology_shift"
+    },
+    {
+      "id": "audio-consumption-mix",
+      "text": "In the 2014 U.S. audio-consumption chart for users aged 13+, total audio consumption is 4:05 hours; AM/FM accounts for 52% of the displayed mix and streaming for 12%.",
+      "evidence_id": "audio_consumption_mix",
+      "evidence": "Audio Consumption Time Among 13+ Users, U.S., 2014 Total = 4:05 hours\n12%\nSTREAMING\n52%\nAM/FM",
+      "evidence_spans": [],
+      "metric": {
+        "label": "AM/FM and streaming shares of audio consumption",
+        "value": "AM/FM 52% vs. streaming 12%",
+        "unit": "Share of displayed audio-consumption mix",
+        "trend": "Consumption mix",
+        "timeframe": "2014",
+        "geography": "U.S.",
+        "segment": "AM/FM and streaming",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Audio-consumption time",
+        "cohort": "Users aged 13+",
+        "denominator": "Displayed audio-consumption mix",
+        "observation_status": "observed"
+      },
+      "pages": [
+        36
+      ],
+      "score": 0.84,
+      "decision_relevance_score": 0.83,
+      "metric_strength_score": 0.91,
+      "novelty_score": 0.7,
+      "coverage_role": "market_context",
+      "so_what": "The chart provides an audio-consumption baseline across listening formats; consumption share is a distinct consideration from format economics.",
+      "now_what": "MarketLense: If setting audio-channel priorities, compare your audience’s listening mix with separate measures of monetization.",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "esports-revenue-forecast",
+      "text": "The 2018E global eSports revenue forecast is $4 billion: APAC $2.2 billion, NA $1.3 billion, Europe $0.4 billion, and LA $0.1 billion.",
+      "evidence_id": "esports_revenue_forecast",
+      "evidence": "Activate Forecast: eSports Revenue, Global, 2018E\n$4 Billion\n$2.2 B APAC\n$1.3 B NA\n$0.4 B EUROPE\n$0.1 B LA",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Global eSports revenue",
+        "value": "$4 billion",
+        "unit": "",
+        "trend": "Forecast",
+        "timeframe": "2018E",
+        "geography": "Global",
+        "segment": "eSports",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "eSports revenue",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": "forecast"
+      },
+      "pages": [
+        105
+      ],
+      "score": 0.88,
+      "decision_relevance_score": 0.9,
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.83,
+      "coverage_role": "investment_signal",
+      "so_what": "The forecast allocates revenue across regions, making regional assumptions relevant when assessing the market.",
+      "now_what": "MarketLense: If screening eSports exposure, assess regional scenarios separately rather than relying only on a global total.",
+      "report_type_lens": "market_size"
+    },
+    {
+      "id": "app-store-distribution-not-monetization",
+      "text": "The report says a new wave of companies are using the app store for distribution and engagement, but not monetization.",
+      "evidence_id": "app_store_distribution_engagement",
+      "evidence": "A new wave of companies are building businesses by using the app store for distribution and engagement, but not monetization",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        124
+      ],
+      "score": 0.88,
+      "decision_relevance_score": 0.91,
+      "metric_strength_score": 0.35,
+      "novelty_score": 0.86,
+      "coverage_role": "operating_implication",
+      "so_what": "The report distinguishes app-store distribution and engagement from monetization in this business model.",
+      "now_what": "MarketLense: If evaluating an app-led business, assess distribution, engagement, and monetization as distinct parts of the model.",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "unified-stack-ma-expectation",
+      "text": "The report expects the next wave of M&A activity to be driven by larger players looking to fill gaps with independent players.",
+      "evidence_id": "unified_stack_ma_forecast",
+      "evidence": "Expect the next wave of M&A activity to be driven by larger players looking to fill in the gaps with the independent players",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        132
+      ],
+      "score": 0.9,
+      "decision_relevance_score": 0.94,
+      "metric_strength_score": 0.35,
+      "novelty_score": 0.88,
+      "coverage_role": "investment_signal",
+      "so_what": "The report presents stack gaps as a potential rationale for larger players to pursue independent players through M&A.",
+      "now_what": "MarketLense: If assessing strategic positioning, map potential layer gaps as hypotheses for future moves, not as certain deal outcomes.",
+      "report_type_lens": "investment_outlook"
+    },
+    {
+      "id": "smart-cable-positioning",
+      "text": "The report frames the “cable killer” not as a low-priced competitor but as “smart cable.”",
+      "evidence_id": "quote-004",
+      "evidence": "THE “CABLE KILLER” WON'T BE A LOW-PRICED COMPETITOR, IT WILL BE “SMART CABLE”",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        92
+      ],
+      "score": 0.87,
+      "decision_relevance_score": 0.9,
+      "metric_strength_score": 0.2,
+      "novelty_score": 0.88,
+      "coverage_role": "strategic_risk",
+      "so_what": "The report’s framing contrasts a smart-cable proposition with competing on low price.",
+      "now_what": "MarketLense: If assessing a video-market offer, test whether its positioning fits the smart-cable framing before centering the case on price.",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "viewing-beyond-appointment",
+      "text": "The report says consumer behavior has moved beyond traditional appointment viewing and created audiences for new kinds of content.",
+      "evidence_id": "quote-003",
+      "evidence": "Consumer behavior has moved beyond traditional appointment viewing and has created audiences for new kinds of content",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        73
+      ],
+      "score": 0.84,
+      "decision_relevance_score": 0.84,
+      "metric_strength_score": 0.2,
+      "novelty_score": 0.79,
+      "coverage_role": "behavior_shift",
+      "so_what": "The report describes audience formation extending beyond traditional appointment viewing, a consideration for content distribution choices.",
+      "now_what": "MarketLense: If planning content distribution, consider how the offer serves audiences beyond appointment viewing.",
+      "report_type_lens": "consumer_behavior"
+    }
+  ]
+}

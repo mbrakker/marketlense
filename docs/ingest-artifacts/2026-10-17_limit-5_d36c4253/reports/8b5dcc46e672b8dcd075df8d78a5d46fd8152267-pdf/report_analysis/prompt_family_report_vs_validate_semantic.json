@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/validate/semantic",
+  "family_schema_version": "1.0",
+  "processing_version": "semantic_validation_v2",
+  "output": {
+    "metrics": [
+      {
+        "id": "evidence:quote_candidates:quote-005",
+        "supported": true,
+        "confidence": 1.0,
+        "reason": "The insight text is directly supported by the evidence snippet; no value, unit, or timeframe is specified."
+      }
+    ],
+    "quotes": []
+  }
+}

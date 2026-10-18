@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/quotes",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "quote-001",
+      "text": "Serving everyone means reaching out to the 50M under-served: those who currently face obstacles to a quality tech and media experience",
+      "speaker": "Unknown",
+      "citation": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "page": 0,
+      "evidence_id": "quote-001",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    },
+    {
+      "id": "quote-002",
+      "text": "Tech and media companies will need to strengthen the major pillars of their user experience to reach the under-served",
+      "speaker": "Unknown",
+      "citation": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "page": 0,
+      "evidence_id": "quote-002",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    },
+    {
+      "id": "quote-005",
+      "text": "For successful messaging monetization, services will need to address payment and eCommerce adoption in messaging",
+      "speaker": "Unknown",
+      "citation": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "page": 0,
+      "evidence_id": "quote-005",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    }
+  ]
+}

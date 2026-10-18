@@ -49,6 +49,7 @@ from src.contracts.validation import (
 from src.generators._artifact_generator.storage import (
     ARTIFACT_ROOT_DEPENDENCIES,
     REGENERATION_PRIVATE_METADATA_ROOTS,
+    build_canonical_regeneration_derived_artifacts,
     regeneration_dependent_roots,
 )
 from src.generators.artifact_normalization import (
@@ -1837,12 +1838,11 @@ def _preflight_empty_grounding_strategies(
                     for issue in target.issues
                 )
             )
-            is_insight_evidence_rebind = (
+            is_insight_evidence_requiring = (
                 target.target_section == "insights_bundle"
-                and target.repair_action == "REBIND_EVIDENCE"
-                and target.repair_strategy == "alternative_evidence"
+                and bool(target.quarantined_evidence_ids)
             )
-            if not is_insight_evidence_rebind and (
+            if not is_insight_evidence_requiring and (
                 not is_summary_claim_map_target
                 or target.repair_strategy
                 not in {"current_evidence", "alternative_evidence"}
@@ -1877,6 +1877,54 @@ def _preflight_empty_grounding_strategies(
             repair_memory=repair_memory,
         )
     return current_plan, skipped
+
+
+def _reconcile_candidate_key_figure_projections(
+    *,
+    before: Dict[str, Any],
+    candidate: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+) -> None:
+    """Canonicalize stale derived key figures before candidate validation.
+
+    Candidate assembly runs before atomic family merging and can retain a
+    projection selected from transient repair state. If the candidate changed
+    a derived key-figure root, replace it only with the canonical builder
+    result computed from the candidate's finalized source roots. This keeps
+    the scope gate strict while making the repair path deterministic.
+    """
+
+    if "key_figures" not in candidate:
+        return
+    key_figure_sources = ARTIFACT_ROOT_DEPENDENCIES["key_figures"]
+    source_changed = any(
+        candidate.get(source_root) != before.get(source_root)
+        for source_root in key_figure_sources
+    )
+    if not source_changed:
+        # A soft-copy-only repair has no authority to alter key figures or
+        # their chart cards. Restore the promoted projections byte-for-byte.
+        candidate["key_figures"] = deepcopy(before.get("key_figures"))
+        if "chart_insight_cards" in candidate:
+            candidate["chart_insight_cards"] = deepcopy(
+                before.get("chart_insight_cards")
+            )
+        return
+    if candidate.get("key_figures") == before.get("key_figures"):
+        return
+    roots = {
+        root for root in ("key_figures", "chart_insight_cards") if root in candidate
+    }
+    if not roots:
+        return
+    expected = build_canonical_regeneration_derived_artifacts(
+        artifacts=candidate,
+        evidence_packs=deepcopy(evidence_packs),
+        roots=roots,
+    )
+    for root in roots:
+        if candidate.get(root) != expected[root]:
+            candidate[root] = expected[root]
 
 
 def _run_validation_regeneration_loop(
@@ -2132,6 +2180,11 @@ def _run_validation_regeneration_loop(
             **regeneration_kwargs,
         )
         candidate_artifacts = regeneration_response.updated_artifacts
+        _reconcile_candidate_key_figure_projections(
+            before=artifacts_before,
+            candidate=candidate_artifacts,
+            evidence_packs=evidence_packs,
+        )
         artifact_diff = _artifact_diff_summary(artifacts_before, candidate_artifacts)
         candidate_artifacts_path = _candidate_artifacts_path(regeneration_response)
         candidate_enforced = bool(candidate_artifacts_path)

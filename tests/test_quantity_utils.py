@@ -459,3 +459,24 @@ def test_extract_quantities_does_not_borrow_a_distant_time_unit() -> None:
     assert not any(
         quantity.value == 4.5 and quantity.unit_family == "time" for quantity in parsed
     )
+
+
+def test_age_threshold_before_calendar_year_is_not_a_ratio() -> None:
+    parsed = extract_quantities("U.S. shoppers aged 18+ in 2021")
+
+    assert not any(quantity.unit_family == "ratio" for quantity in parsed)
+
+
+def test_percent_range_with_units_at_both_endpoints_keeps_its_2025_timeframe() -> None:
+    parsed = extract_quantities(
+        "Online purchases were 2% in 2021E and 10%-15% in 2025E."
+    )
+
+    ranges = [quantity for quantity in parsed if quantity.comparator == "range"]
+    assert [
+        (quantity.low, quantity.high, quantity.timeframe) for quantity in ranges
+    ] == [(10.0, 15.0, "2025e")]
+    assert not any(
+        quantity.value == -15.0 and quantity.unit_family == "percent"
+        for quantity in parsed
+    )

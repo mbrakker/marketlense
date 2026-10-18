@@ -1,0 +1,365 @@
+{
+  "doc_id": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+  "provenance_roles": {
+    "schema_version": "1.0",
+    "publication_name": "",
+    "publisher_name": "",
+    "author_names": [],
+    "author_kind": "unknown",
+    "data_provider_names": [],
+    "source_organization_names": [],
+    "report_owner_name": "",
+    "status": "unknown",
+    "resolution_method": "",
+    "issues": [],
+    "evidence": []
+  },
+  "publisher": "",
+  "schema_version": "doc_map_v1",
+  "sections": [
+    {
+      "id": "consumer-time-attention",
+      "key_points": [
+        "The report states that 92% of consumers multitask across at least two media types; the chart compares multitasking frequency across video, music, messaging, gaming, and reading.",
+        "It describes digital-attention businesses as capturing one billion or more U.S. minutes per week, with digital-first platforms compared by weekly minutes."
+      ],
+      "pages": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "references": [
+        "Printed page 5",
+        "Printed page 9"
+      ],
+      "summary": "This opening section considers how audiences divide their time across media and which digital platforms command substantial attention. It frames attention as a key resource for media and technology businesses.",
+      "title": "Consumer Time & Attention"
+    },
+    {
+      "id": "internet-media-spend",
+      "key_points": [
+        "The report forecasts global consumer internet and media revenues increasing from $1.7 trillion in 2016E to $2.1 trillion in 2021E, a projected $402 billion increase; it compares the 4.4% revenue CAGR with approximately 3% global GDP CAGR.",
+        "For 2016E–2021E, the revenue-segment chart assigns a 6.3% CAGR to internet access, 4.7% to advertising, and 2.6% to paid content.",
+        "The section describes subscription and freemium models as increasingly dominant among leading non-game media and entertainment apps, and reports that top subscription apps over-index on users aged 18–35."
+      ],
+      "pages": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "references": [
+        "Printed pages 12–13",
+        "Printed pages 14–17"
+      ],
+      "summary": "This section examines global consumer internet and media revenues, the drivers of future growth, and changing consumer payment models. It also considers the audience profile of subscription apps.",
+      "title": "Internet & Media Spend"
+    },
+    {
+      "id": "arpu",
+      "key_points": [
+        "The U.S. comparison covers annual ARPU in 2015 and identifies digital access and television providers as the leaders.",
+        "The global 2015 comparison identifies hardware- and commerce-oriented businesses as ARPU leaders."
+      ],
+      "pages": [
+        18,
+        19,
+        20
+      ],
+      "references": [
+        "Printed pages 19–20"
+      ],
+      "summary": "This section compares annual average revenue per user across technology and media businesses in the United States and globally. Its central contrast is between high U.S. ARPU for digital access and television providers and high global ARPU for hardware- and commerce-oriented businesses.",
+      "title": "ARPU"
+    },
+    {
+      "id": "discovery-oligopoly",
+      "key_points": [
+        "The report maps platform capabilities across the consumer journey, including hardware, operating systems, search, social networks, advertising, publishing, e-commerce, and wallets.",
+        "Discovery mechanisms include preferred content, search optimization, curated results, paid promotion, sponsored ads, and exclusives.",
+        "The section describes publishers as adapting to changing platform requirements, sharing advertising revenue through first-party publishing, and competing with bot and widget discovery systems."
+      ],
+      "pages": [
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33
+      ],
+      "references": [
+        "Printed pages 22–26"
+      ],
+      "summary": "This section describes a small set of major digital platforms as controlling important stages of the consumer journey, from access and discovery to consumption and payment. It argues that platform algorithms and commercial discovery arrangements increasingly shape publishers’ visibility and traffic.",
+      "title": "Discovery Oligopoly"
+    },
+    {
+      "id": "messaging-bots",
+      "key_points": [
+        "The report argues that messaging and bots put core platform revenues and consumer bases at stake, including search advertising, apps, retail e-commerce, social advertising, and enterprise software.",
+        "It identifies simple, fast, automatable interactions—such as local services, e-commerce, customer service, and quick diagnostics—as likely bot use cases.",
+        "Messaging monetization forecasts compare services and ARPU across major platforms; the report notes that payment and e-commerce adoption remain important steps beyond messaging and stickers.",
+        "Enterprise messaging entrants anticipate messaging becoming a primary interface for internal workplace communication and collaboration."
+      ],
+      "pages": [
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62
+      ],
+      "references": [
+        "Printed pages 42–43",
+        "Printed pages 49, 52–53, 56"
+      ],
+      "summary": "This section examines messaging platforms and bots as potential interfaces for services, content, commerce, and workplace collaboration. It links their growth to competition over platform control, consumer relationships, and monetization.",
+      "title": "Messaging & Bots"
+    },
+    {
+      "id": "2017-insights",
+      "key_points": [
+        "The insights call for serving high-engagement users and pursuing digital attention leaders, while treating subscriptions as a major internet and media business model.",
+        "They frame discovery and messaging as platform-control contests and identify eSports as an emerging technology and media phenomenon.",
+        "They highlight new competitive dynamics in Pay TV, the role of bundles in video streaming, smart speakers and gray music in audio, and post-household users as a new era of audiences."
+      ],
+      "pages": [
+        63
+      ],
+      "references": [
+        "Printed page 63"
+      ],
+      "summary": "This overview distills the report’s main themes into nine strategic insights spanning attention, subscriptions, discovery, messaging, eSports, Pay TV, video streaming, audio, and post-household users.",
+      "title": "The 9 Most Important Insights for Tech and Media in 2017"
+    },
+    {
+      "id": "esports",
+      "key_points": [
+        "The report forecasts U.S. eSports viewership to outstrip the viewership of most established sports by 2020.",
+        "Its global 2020E digital-media spending comparison places eSports at $5 billion, alongside digital video, eBooks, digital music, newspapers, and magazines.",
+        "The section describes betting by gamers within games as a potential monetization model, forecasting $12 billion in global in-game wagers in 2020E and estimating an additional $1–2 billion in revenue for global video-game revenues.",
+        "The report lists integration with technology and media platforms, cohesive event scheduling, league consolidation, global television and sponsorship deals, mainstream stars, and gambling growth as conditions for eSports to reach its potential."
+      ],
+      "pages": [
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82
+      ],
+      "references": [
+        "Printed pages 68, 71, 75, 77, 80, 82"
+      ],
+      "summary": "This section assesses eSports as a growing digital-media category, covering viewership, spending, sponsorship, investment, and betting. It also identifies changes in organization and distribution that the report says would be needed for eSports to reach its potential.",
+      "title": "eSports"
+    },
+    {
+      "id": "video",
+      "key_points": [
+        "The report identifies established technology players with ecosystem advantages as best positioned to challenge multichannel video programming distributors in virtual Pay TV.",
+        "It describes live sports as essential to Pay TV packages but fragmented across markets, limiting a new virtual entrant’s ability to offer the full range of demanded content.",
+        "The section states that Pay TV prices have reached the upper bound of consumer willingness to pay and examines reasons consumers do not subscribe.",
+        "It segments U.S. adults into six video-consumer groups, ranging from frugalists using broadcast and web video to super-users using multiple SVOD services, Pay TV, and web video."
+      ],
+      "pages": [
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123
+      ],
+      "references": [
+        "Printed pages 93–94",
+        "Printed pages 106, 122–123"
+      ],
+      "summary": "This section analyzes Pay TV and streaming competition, consumer spending, content access, and the position of potential virtual-TV providers. It argues that specialization makes streaming services unlikely to eliminate cable on their own, while bundles and sports rights could change the competitive landscape.",
+      "title": "Video"
+    },
+    {
+      "id": "audio",
+      "key_points": [
+        "The report traces three generations of music piracy—peer-to-peer file sharing, torrents, and stream ripping—and links each to subsequent legal service models.",
+        "It describes stream ripping as extracting audio from a streamed source and cites access to otherwise unavailable music and early uploads of exclusives as drivers.",
+        "The section examines changes in the home-audio market and the consumer age groups associated with purchasing home-audio equipment."
+      ],
+      "pages": [
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140,
+        141,
+        142,
+        143,
+        144,
+        145
+      ],
+      "references": [
+        "Printed pages 135, 138"
+      ],
+      "summary": "This section considers changes in music access and home audio, including the relationship between piracy and subsequent legal services. It also addresses the opportunities associated with newer audio experiences.",
+      "title": "Audio"
+    },
+    {
+      "id": "post-household-america",
+      "key_points": [
+        "The report describes non-traditional household structures and behaviors such as multigenerational living, roommates, shared subscriptions, pooled payments, and social-circle account sharing.",
+        "It identifies virtual families, Boomers and seniors, Millennials, and multicultural consumers as four principal post-household opportunity groups.",
+        "The report estimates that approximately 50 million Americans are underserved by technology and media companies and identifies barriers involving broadband, devices, banking access, English proficiency, and legal or economic status.",
+        "Recommended strategies address pricing and packaging, flexible payment, culturally and linguistically diverse content, connectivity and accessibility, and authentication and identity."
+      ],
+      "pages": [
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155,
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171,
+        172,
+        173,
+        174
+      ],
+      "references": [
+        "Printed pages 145–149",
+        "Printed pages 151–153",
+        "Printed pages 162–165",
+        "Printed pages 167–168"
+      ],
+      "summary": "This section argues that technology and media companies need to look beyond conventional households to serve complex living arrangements and social groups that share services and purchasing power. It describes opportunities among distinct audience segments and barriers faced by underserved Americans.",
+      "title": "Post-Household America"
+    }
+  ],
+  "summary": "An outlook on technology and media in 2017 that examines consumer attention and spending, platform control of discovery and messaging, eSports, video, audio, and changing household structures. It combines consumer research and market analysis with forecasts and strategic implications for technology and media companies.",
+  "title": "THINK AGAIN: TECH & MEDIA OUTLOOK 2017",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "doc_map",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 1.0,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

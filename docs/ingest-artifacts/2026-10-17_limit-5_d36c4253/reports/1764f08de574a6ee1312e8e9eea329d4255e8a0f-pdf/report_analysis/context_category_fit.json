@@ -1,0 +1,163 @@
+{
+  "schema_version": "1.0",
+  "selected_category_ids": [
+    "technology",
+    "advertising_media"
+  ],
+  "category_fits": [
+    {
+      "category_id": "technology",
+      "label": "Technology & Innovation",
+      "fit_score": 0.82,
+      "decision": "primary",
+      "why_fit": "The report is an outlook on technology and media, covering consumer technology, digital finance, cryptocurrency, NFTs, gaming and the metaverse, and enterprise software and automation across its forecast period.",
+      "why_not_fit": "It is a broad market and consumer outlook, not a focused report on infrastructure, product architecture, or one specific technology system.",
+      "evidence_sections": [
+        "14 Takeaways from the Activate Technology & Media Outlook 2022",
+        "Consumer Technology and Media Time and Attention",
+        "Cryptocurrency: Massive Runway Ahead"
+      ],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence repeatedly discusses infrastructure, enterprise technology, robotics, cybersecurity, hardware, or major technology shifts."
+      ],
+      "supported_topic_rule_ids": [
+        "technology:include:84008e3e416054bb"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "overview",
+        "methods",
+        "key_findings",
+        "14 Takeaways from the Activate Technology & Media Outlook 2022",
+        "Consumer Technology and Media Time and Attention",
+        "Super Users Will Drive the Digital Economy",
+        "Digital Consumer Finance at the Inflection Point",
+        "Cryptocurrency: Massive Runway Ahead"
+      ],
+      "centrality_evidence_sections": [
+        "overview",
+        "key_findings"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "advertising_media",
+      "label": "Advertising Strategy & Media",
+      "fit_score": 0.42,
+      "decision": "primary",
+      "why_fit": "The report forecasts global advertising revenue growth at 6.9% CAGR, faster than paid content and internet access.",
+      "why_not_fit": "Advertising is presented as a revenue segment in a broad technology and media outlook; the context does not show repeated coverage of media planning, buying, effectiveness, or advertising strategy.",
+      "evidence_sections": [
+        "$390 Billion Global Technology and Media Growth Dollars Up for Grabs"
+      ],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence repeatedly covers media channels, ad receptivity, media planning, brand lift, investment priorities, or advertising strategy."
+      ],
+      "supported_topic_rule_ids": [
+        "advertising_media:include:e9a7759c62f6c6cd"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "key_findings",
+        "$390 Billion Global Technology and Media Growth Dollars Up for Grabs"
+      ],
+      "centrality_evidence_sections": [
+        "key_findings"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "consumer_behavior",
+      "label": "Consumer Behavior & Insights",
+      "fit_score": 0.71,
+      "decision": "secondary",
+      "why_fit": "Consumer time, attention, spending, and adoption behaviors are recurring themes, including forecasts of media use and findings about super users and cryptocurrency participation.",
+      "why_not_fit": "The report also emphasizes market revenue forecasts across many technology and media sectors, so consumer behavior is a substantial lens rather than the sole organizing subject.",
+      "evidence_sections": [
+        "Consumer Technology and Media Time and Attention",
+        "Super Users Will Drive the Digital Economy",
+        "Digital Consumer Finance at the Inflection Point",
+        "Cryptocurrency: Massive Runway Ahead"
+      ],
+      "semantic_rule_status": "ambiguous",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_ambiguous"
+    },
+    {
+      "category_id": "business_performance",
+      "label": "Business Performance & Growth",
+      "fit_score": 0.65,
+      "decision": "secondary",
+      "why_fit": "The opening chapter forecasts $390 billion in global internet and media revenue growth from 2021E to 2025E and compares growth rates for advertising, paid content, and internet access; the report frames these trends as business opportunities.",
+      "why_not_fit": "The report is a broad technology and media outlook, not primarily a guide to profitability, productivity, or performance levers for a particular business.",
+      "evidence_sections": [
+        "$390 Billion Global Technology and Media Growth Dollars Up for Grabs",
+        "14 Takeaways from the Activate Technology & Media Outlook 2022"
+      ],
+      "semantic_rule_status": "ambiguous",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_ambiguous"
+    },
+    {
+      "category_id": "digital_payments",
+      "label": "Digital Payments & Wallets",
+      "fit_score": 0.39,
+      "decision": "reject",
+      "why_fit": "The digital consumer finance chapter covers online-only payments, and the cryptocurrency chapter discusses potential payment and transfer uses.",
+      "why_not_fit": "Payments are one part of broader digital finance and cryptocurrency coverage; payment products, wallets, checkout, or payment security are not the report's dominant subject.",
+      "evidence_sections": [
+        "Digital Consumer Finance at the Inflection Point",
+        "Cryptocurrency: Massive Runway Ahead"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [
+        "Evidence repeatedly covers payments, wallets, fraud, checkout conversion, payment preferences, or transaction trust."
+      ],
+      "supported_topic_rule_ids": [
+        "digital_payments:include:9503e5abb0c1c95a"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "14 Takeaways from the Activate Technology & Media Outlook 2022",
+        "Digital Consumer Finance at the Inflection Point",
+        "Cryptocurrency: Massive Runway Ahead"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "macroeconomics",
+      "label": "Macroeconomics & Regional Outlooks",
+      "fit_score": 0.27,
+      "decision": "reject",
+      "why_fit": "The report includes global and U.S. market forecasts extending through 2025E.",
+      "why_not_fit": "Its forecasts concern technology and media sectors and consumer behavior, not economy-wide indicators, policy, or broad regional economic conditions.",
+      "evidence_sections": [
+        "$390 Billion Global Technology and Media Growth Dollars Up for Grabs"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    }
+  ]
+}

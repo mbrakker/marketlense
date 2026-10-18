@@ -1,0 +1,702 @@
+{
+  "attempt_index": 2,
+  "before_sha256": "8eb9501a6187d0fce7b530f98ef408c92d10aaafd59406809e6f08445841d3d7",
+  "after_sha256": "46056dd0c1ec8ad9cb44868e8f4843daf09c29791e910695c53333ccc214ea9e",
+  "transformation_scope": [
+    "expert_comment"
+  ],
+  "unchanged_family_sha256": {
+    "summary": "8a9d8b84c8dc801f7944eed423c28244958c817ad1ebd5d5a501660f12d729e5",
+    "insights_candidates": "05f90ff9ceca43654a1073cb92970230e557ff704a7eceda2f1e181c28feb741",
+    "insights_final": "28e056215c999213ab7214ec403d7fdec2efe3e44babc7a81635609231f68aca",
+    "quotes_final": "b3f941f631bd90b9cca23943c53b6d97102b9e06973a3fe6a3a63cc31b9c5570"
+  },
+  "current_artifacts_path": "C:\\Programing\\Market lense\\out\\a028687a439772baede39db7cc390ad48e8652dc-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\Programing\\Market lense\\out\\a028687a439772baede39db7cc390ad48e8652dc-pdf\\report_analysis\\artifacts_regen_candidate_2.json",
+  "validation_status": "pass",
+  "promotion_outcome": "promoted",
+  "validation_issues": [
+    "grounding:metadata.title",
+    "metrics:insights:apparel-ecommerce-penetration",
+    "metrics:insights:live-sports-viewership-forecast"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "apparel-ecommerce-penetration",
+      "original_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "original_source_pages": [
+        11
+      ],
+      "candidate_source_pages": [
+        11
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "company-engagement-rewire",
+      "original_evidence_ids": [
+        "quote-2"
+      ],
+      "candidate_evidence_ids": [
+        "quote-2"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "live-sports-viewership-forecast",
+      "original_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        19
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "new-online-retailer-continuation",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "telemedicine-digital-equivalence",
+      "original_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        23
+      ],
+      "candidate_source_pages": [
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "apparel-ecommerce-penetration",
+      "original_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "original_source_pages": [
+        11
+      ],
+      "candidate_source_pages": [
+        11
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "company-engagement-rewire",
+      "original_evidence_ids": [
+        "quote-2"
+      ],
+      "candidate_evidence_ids": [
+        "quote-2"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "live-sports-viewership-forecast",
+      "original_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        19
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "new-online-retailer-continuation",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "telemedicine-digital-equivalence",
+      "original_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        23
+      ],
+      "candidate_source_pages": [
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "171e2b081cdd87e4d58e3f29739d1266afbd643abba02376fab527c6858eba18",
+      "original_evidence_ids": [
+        "quote-2"
+      ],
+      "candidate_evidence_ids": [
+        "quote-2"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "2caecea8dc58a53de0a56764a2f55a7fa1d7857a56e4a3a32814054209e4a567",
+      "original_evidence_ids": [
+        "quote-1"
+      ],
+      "candidate_evidence_ids": [
+        "quote-1"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "c093f36255ecc75faacbd1c0e41ed6c273b08a8045ef2298f040bb02b988a557",
+      "original_evidence_ids": [
+        "quote-4"
+      ],
+      "candidate_evidence_ids": [
+        "quote-4"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "quote-2"
+      ],
+      "candidate_evidence_ids": [
+        "quote-2"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        23
+      ],
+      "candidate_source_pages": [
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        19
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "actionable-rewire-to-restart-agenda"
+      ],
+      "candidate_evidence_ids": [
+        "actionable-rewire-to-restart-agenda"
+      ],
+      "original_source_pages": [
+        28
+      ],
+      "candidate_source_pages": [
+        28
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:94d882e25d3d5700",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation",
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation",
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        14,
+        23
+      ],
+      "candidate_source_pages": [
+        14,
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:e5e2bda2e4bd793c",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation",
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation",
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        14,
+        23
+      ],
+      "candidate_source_pages": [
+        14,
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:eb304246050734a3",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation",
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation",
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        14,
+        23
+      ],
+      "candidate_source_pages": [
+        14,
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:183ceabe71cf09a6",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:3e18243522385289",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:c1ef05a354c83523",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:e7031b573ac0ffce",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:1806f63ba6dfde8a",
+      "original_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        19
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:41eaff3db672e9d4",
+      "original_evidence_ids": [
+        "actionable-rewire-to-restart-agenda"
+      ],
+      "candidate_evidence_ids": [
+        "actionable-rewire-to-restart-agenda"
+      ],
+      "original_source_pages": [
+        28
+      ],
+      "candidate_source_pages": [
+        28
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:4fa55297182b6409",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:755d804bfe97d4d1",
+      "original_evidence_ids": [
+        "quote-2"
+      ],
+      "candidate_evidence_ids": [
+        "quote-2"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:c1ef05a354c83523",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:d0da18e95a072fa4",
+      "original_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        23
+      ],
+      "candidate_source_pages": [
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "056b94a898515c678628cbebb846682c145de62f1e010e95f49b15fda3a4ac05",
+    "0fe495b0e7361806ee6b41ae56abe2b61043898449b2ee98131150c7a351745e",
+    "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff"
+  ],
+  "repair_action": "REBIND_EVIDENCE",
+  "repair_strategy": "alternative_evidence",
+  "allowed_paths": [
+    "expert_comment[claim_index=0]"
+  ],
+  "verified_dependent_paths": [
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.included_partials[2]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.routing_policy_version",
+    "_cache.prompts.report_vs/artifacts/regenerate/expert_comment",
+    "_cache.regeneration_prompt_requirements",
+    "_repair_evidence_selection",
+    "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:010a55918c895626]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:94d882e25d3d5700]"
+  ],
+  "selected_evidence_ids": [
+    "digital-activity-preference",
+    "new-online-retailer-continuation"
+  ],
+  "quarantined_evidence_ids": [],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "retained_claim.number_value_unit_match",
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:010a55918c895626",
+        "evidence_ids": [
+          "digital-activity-preference",
+          "digital-activity-preference",
+          "new-online-retailer-continuation",
+          "new-online-retailer-continuation"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [
+      {
+        "rule_id": "metrics",
+        "affected_section": "insights:live-sports-viewership-forecast",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "metrics",
+        "affected_section": "insights:apparel-ecommerce-penetration",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "metadata.title",
+        "entity_id": "metadata:title",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced": [],
+    "introduced_hard_failures": [],
+    "introduced_hard_failure_count": 0,
+    "introduced_failure_categories": [],
+    "semantic_grounding_validation_status": "evaluated",
+    "severity_changes": [],
+    "mutation_scope_result": "pass",
+    "evidence_lineage_result": "pass",
+    "repair_action": "REBIND_EVIDENCE",
+    "repair_strategy": "alternative_evidence",
+    "evidence_ids_used": [
+      "new-online-retailer-continuation",
+      "digital-activity-preference"
+    ],
+    "strategy_fingerprint": "8ee506ea2ab2240def4085905d8bb1c0b95273dd018cc9302a9c56673e38a37b",
+    "candidate_sha256": "46056dd0c1ec8ad9cb44868e8f4843daf09c29791e910695c53333ccc214ea9e",
+    "input_sha256": "8eb9501a6187d0fce7b530f98ef408c92d10aaafd59406809e6f08445841d3d7",
+    "validator_identity": "regeneration-candidate-v1:4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa:4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [
+    {
+      "diagnosed_failure_class": "retained_claim.number_value_unit_match",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "new-online-retailer-continuation",
+        "digital-activity-preference"
+      ],
+      "protected_fields": [
+        "expert_comment[claim_index=1]",
+        "expert_comment[claim_index=2]"
+      ],
+      "changed_paths": [
+        "expert_comment[claim_index=0]"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "expert_comment[claim_index=0]",
+          "value": "In 2020, among U.S. adults aged 18–64 who purchased online during shelter in place, 81% planned to continue purchasing from a new online retailer in at least one category; separately, among U.S. adults aged 18–64 who participated in telemedicine/mobile health, 55% viewed the digital activity as the same as or better than its in-person equivalent."
+        }
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "report_id": "1BproyPIQZFHWYDII93LhAOmIyujqbXb-",
+  "validation_run_id": "",
+  "cohort_id": "",
+  "workflow_run_id": "fd7cf66c-a82b-46de-9d56-43c62eabeb8d",
+  "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+  "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "8ee506ea2ab2240def4085905d8bb1c0b95273dd018cc9302a9c56673e38a37b",
+  "latency_ms": 65612,
+  "schema_version": "1.0"
+}

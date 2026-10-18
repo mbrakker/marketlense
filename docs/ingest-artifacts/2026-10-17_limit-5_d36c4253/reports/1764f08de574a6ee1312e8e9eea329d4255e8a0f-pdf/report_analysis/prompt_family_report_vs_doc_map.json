@@ -1,0 +1,492 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/doc_map",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "doc_id": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB",
+    "provenance_roles": {
+      "author_kind": "organization",
+      "author_names": [
+        "Activate Consulting Team"
+      ],
+      "data_provider_names": [
+        "Dentsu International",
+        "eMarketer",
+        "GroupM",
+        "IBISWorld",
+        "Newzoo",
+        "Omdia",
+        "PricewaterhouseCoopers",
+        "Statista",
+        "Zenith Media"
+      ],
+      "evidence": [
+        {
+          "name": "Activate Technology & Media Outlook 2022",
+          "role": "publication_name",
+          "source_excerpt": "ACTIVATE TECHNOLOGY & MEDIA OUTLOOK 2022"
+        },
+        {
+          "name": "Activate Consulting Team",
+          "role": "author_names",
+          "source_excerpt": "CREATED BY THE ACTIVATE CONSULTING TEAM:"
+        },
+        {
+          "name": "Activate Consulting",
+          "role": "source_organization_names",
+          "source_excerpt": "Activate Consulting helps technology and media companies drive revenue growth"
+        },
+        {
+          "name": "Dentsu International; eMarketer; GroupM; IBISWorld; Newzoo; Omdia; PricewaterhouseCoopers; Statista; Zenith Media",
+          "role": "data_provider_names",
+          "source_excerpt": "Sources: Activate analysis, Dentsu International, eMarketer, GroupM, IBISWorld, Newzoo, Omdia, PricewaterhouseCoopers, Statista, Zenith Media"
+        }
+      ],
+      "publication_name": "Activate Technology & Media Outlook 2022",
+      "publisher_name": "",
+      "report_owner_name": "",
+      "source_organization_names": [
+        "Activate Consulting"
+      ]
+    },
+    "publisher": "",
+    "schema_version": "doc_map_v1",
+    "sections": [
+      {
+        "id": "takeaways",
+        "key_points": [
+          "The report forecasts sustained growth in technology and media use and spending after the pandemic.",
+          "It describes cryptocurrency and NFTs as expanding beyond investment and collectibles into payments, transfers, and broader industry applications.",
+          "It presents gaming as a path to the metaverse and identifies super users as a disproportionate source of time and spending.",
+          "It anticipates more streaming, digital sports experiences, audio growth, and enterprise capabilities enabled by new companies."
+        ],
+        "pages": [
+          1,
+          2
+        ],
+        "references": [],
+        "summary": "An executive overview previews the report’s principal forecasts and strategic themes, from consumer-spend growth and super users to video, sports, audio, and enterprise automation. It highlights anticipated shifts in consumer behavior and the expanding role of technology platforms.",
+        "title": "14 Takeaways from the Activate Technology & Media Outlook 2022"
+      },
+      {
+        "id": "global-growth-dollars",
+        "key_points": [
+          "Global internet and media revenues are forecast to increase from $2.1T in 2021E to $2.5T in 2025E, adding $390B in growth dollars.",
+          "The report forecasts 4.3% CAGR for overall internet and media revenues from 2021E to 2025E.",
+          "Advertising revenue is forecast to grow faster than paid content and internet access over the period."
+        ],
+        "pages": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "references": [],
+        "summary": "This opening chapter forecasts global internet and media revenues and breaks growth into major revenue segments. It identifies advertising as the primary source of projected growth.",
+        "title": "$390 Billion Global Technology and Media Growth Dollars Up for Grabs"
+      },
+      {
+        "id": "consumer-time-attention",
+        "key_points": [
+          "Average daily technology and media attention rose during the COVID-19 outbreak, and the report expects most of that increase to be sustained.",
+          "Gaming and audio together are forecast to add more than 20 minutes of daily user time between 2021E and 2025E.",
+          "The forecast shows video time declining slightly while gaming, audio, and messaging/social media increase."
+        ],
+        "pages": [
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "references": [],
+        "summary": "The chapter examines changes in daily consumer attention to technology and media, including pandemic-era increases and forecasts by activity. It expects much of the increased attention to persist, with gaming and audio contributing further growth.",
+        "title": "Consumer Technology and Media Time and Attention"
+      },
+      {
+        "id": "super-users",
+        "key_points": [
+          "Super users are 26% of users but account for 70% of total eCommerce spend.",
+          "Super users over-index on spending across eCommerce categories, including grocery, apparel, electronics, furniture, and household products.",
+          "They are more likely than other users to adopt new services and devices early and to keep informed about technology and media.",
+          "They are also more likely to talk about, show, and recommend technology and media products and services."
+        ],
+        "pages": [
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28
+        ],
+        "references": [],
+        "summary": "The report defines super users as a high-value consumer group that accounts for a disproportionate share of technology and media activity and spending. It describes their spending, early adoption, and tendency to recommend products and services as growth opportunities for companies.",
+        "title": "Super Users Will Drive the Digital Economy"
+      },
+      {
+        "id": "digital-consumer-finance",
+        "key_points": [
+          "The report expects investing, borrowing, and online-only payment methods to become increasingly prominent digital behaviors.",
+          "Younger adults are more likely than older adults to use digital services for peer-to-peer payments.",
+          "Use of digital services for consumer-to-business payments varies less by age than peer-to-peer payments, suggesting a different growth pattern."
+        ],
+        "pages": [
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37
+        ],
+        "references": [],
+        "summary": "This chapter covers digital investing, borrowing, and payments, and the growing role of financial services embedded in consumer, retail, and technology offerings. It also distinguishes payment behavior by age and payment type.",
+        "title": "Digital Consumer Finance at the Inflection Point"
+      },
+      {
+        "id": "cryptocurrency",
+        "key_points": [
+          "The report projects that the number of consumers trading cryptocurrency will double over the next 12 months.",
+          "It anticipates a shift from buying cryptocurrency for investment toward using it for payments and transfers.",
+          "While Bitcoin and Ethereum dominate, the report expects innovation in altcoins and applications across several technology and media sectors."
+        ],
+        "pages": [
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45
+        ],
+        "references": [],
+        "summary": "The chapter considers expanding consumer participation in cryptocurrency and the ways crypto may move beyond investment into payments and transfers. It also describes cryptocurrency as an enabler across areas such as eCommerce, gaming, data, and NFTs.",
+        "title": "Cryptocurrency: Massive Runway Ahead"
+      },
+      {
+        "id": "nfts",
+        "key_points": [
+          "The report expects buying, collecting, and trading NFTs to become more mainstream, with applications in art, fashion, sports, video games, and consumer products.",
+          "NFT participation is presented as an extension of existing collecting, betting/bidding, and creator-support behaviors.",
+          "Extremely or very active cryptocurrency participants are more than five times as likely to be active NFT participants as adults overall."
+        ],
+        "pages": [
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61
+        ],
+        "references": [],
+        "summary": "This chapter frames NFTs as digital assets with applications across industries and links participation to familiar behaviors such as collecting, bidding, and supporting creators. It surveys examples of companies entering the space and consumer involvement across industries.",
+        "title": "NFTs Will Become a Mainstream Behavior"
+      },
+      {
+        "id": "video-gaming",
+        "key_points": [
+          "The report argues that gaming will change how people interact and that more digital activities will take place inside games.",
+          "60% of surveyed gamers had participated in non-gaming activities within games in the prior 12 months.",
+          "Major technology companies are building or acquiring capabilities across the gaming stack.",
+          "The report identifies substantial demand for gaming subscriptions and cloud gaming services."
+        ],
+        "pages": [
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75
+        ],
+        "references": [],
+        "summary": "The chapter treats gaming as a major technology platform and describes the components of a full gaming stack, from publishing and virtual worlds to cloud, subscriptions, and gaming video. It also highlights non-gaming activities inside games and technology companies’ efforts to expand across the stack.",
+        "title": "Video Gaming: The New Technology Paradigm Leading to the Metaverse"
+      },
+      {
+        "id": "metaverse",
+        "key_points": [
+          "The report identifies games as a viable route to the metaverse because they already include creator participation, social experiences, and in-game economies.",
+          "Foundational elements include avatars, user-generated content, virtual ownership, and AR/VR connections between physical and digital worlds.",
+          "The future vision includes persistent identities, interoperability across platforms, digital ownership, and connected social, enterprise, media, and economic experiences."
+        ],
+        "pages": [
+          76,
+          77,
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97
+        ],
+        "references": [],
+        "summary": "This chapter describes the metaverse as an evolution of existing digital experiences, with games providing many of its foundations. It considers user-created content, social and non-game activities, virtual economies, AR/VR, interoperability, and a longer-term vision connecting digital and physical worlds.",
+        "title": "Metaverse: Users and Companies Will Build the Future"
+      },
+      {
+        "id": "ecommerce",
+        "key_points": [
+          "The report links visual search to product discovery, virtual try-on to product evaluation, and ultrafast delivery to long wait times.",
+          "A substantial share of in-person grocery, beauty/grooming, and clothing shoppers cited wanting items immediately as a reason for shopping in person.",
+          "The report describes online re-commerce as an established behavior with additional participation potential, particularly among younger online shoppers."
+        ],
+        "pages": [
+          98,
+          99,
+          100,
+          101,
+          102,
+          103,
+          104,
+          105,
+          106,
+          107,
+          108,
+          109,
+          110,
+          111,
+          112,
+          113,
+          114,
+          115
+        ],
+        "references": [],
+        "summary": "The chapter examines how visual search, virtual try-on, and faster delivery could address barriers to shopping online, including discovery, product evaluation, and wait times. It also covers ultrafast delivery, online re-commerce, and online ordering innovations.",
+        "title": "eCommerce: New Technologies Break Down the Barriers for Faster Growth"
+      },
+      {
+        "id": "video",
+        "key_points": [
+          "The report forecasts that the average paid video-streaming subscriber will own 5.8 subscriptions by 2025.",
+          "It forecasts a decline in U.S. pay-TV households and growth in broadband-only households between 2021E and 2025E.",
+          "Media companies are expected to spend extensively on licensed and original content as competition intensifies."
+        ],
+        "pages": [
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          122,
+          123,
+          124,
+          125,
+          126,
+          127,
+          128,
+          129,
+          130,
+          131,
+          132,
+          133,
+          134,
+          135,
+          136,
+          137,
+          138
+        ],
+        "references": [],
+        "summary": "This chapter examines competition among streaming, social video, and traditional television, alongside changes in household subscriptions and content investment. It describes a crowded video landscape in which services compete for attention through paid and free offerings, licensed programming, and originals.",
+        "title": "Video: Social and Streaming Growth Reshape the Strategies of Technology and Media Companies"
+      },
+      {
+        "id": "sports-and-sports-tech",
+        "key_points": [
+          "The share of U.S. adults identified as sports fans rose from 63% in 2020 to 70% in 2021, as schedules returned to more regular programming.",
+          "New rights deals for 2022–23 are expected to bring more live games to streaming services.",
+          "Sports technology partnerships support personalized recommendations, real-time data integrations, and betting-focused programming.",
+          "The report distinguishes full-game viewing from other sports content, including highlights, subscriber-exclusive programs, and betting shows."
+        ],
+        "pages": [
+          139,
+          140,
+          141,
+          142,
+          143,
+          144,
+          145,
+          146,
+          147,
+          148,
+          149,
+          150
+        ],
+        "references": [],
+        "summary": "The chapter describes the return of sports fans after pandemic-related disruption and the continued shift of sports viewing toward streaming. It also covers rights deals, sports content beyond games, and technology partnerships that can personalize viewing and deepen engagement.",
+        "title": "Sports and Sports Tech: Fans Rebound as Sports Goes Digital"
+      },
+      {
+        "id": "sports-betting-igaming",
+        "key_points": [
+          "As of September 2021, 28 states had live sports betting; U.S. wagers reached $23.5B in the first half of 2021.",
+          "The report forecasts total U.S. sports-betting wagers rising from $21B in 2020 to $198B in 2025E, alongside an increase from 20 to 43 states with legal sports betting.",
+          "Despite fewer states with live iGaming than online sports betting in the cited 2021 comparison, iGaming had attracted four times the amount wagered on sports betting.",
+          "Operators are pursuing media partnerships and investments, while technology companies are entering the sports-betting market."
+        ],
+        "pages": [
+          151,
+          152,
+          153,
+          154,
+          155,
+          156,
+          157,
+          158,
+          159
+        ],
+        "references": [],
+        "summary": "This chapter follows the expansion of legal sports betting, forecasts growth in wagers and revenues, and examines the relationship between sports betting and iGaming. It also describes partnerships and investments through which operators and technology companies are building content and customer reach.",
+        "title": "Sports Betting and iGaming: New Growth Engine for Technology and Media"
+      },
+      {
+        "id": "esports",
+        "key_points": [
+          "The global esports audience is forecast to grow from 557M viewers in 2021E to 725M in 2025E.",
+          "U.S. esports viewership grew from 39M in 2019 to 62M in 2021; the report describes viewers as disproportionately young, affluent, educated, and male.",
+          "Traditional sports leagues, teams, and other companies are investing in esports organizations and competitions.",
+          "Esports followers are more likely than non-followers to engage in behaviors including VR headset use, cryptocurrency, podcasts, and betting."
+        ],
+        "pages": [
+          160,
+          161,
+          162,
+          163,
+          164,
+          165,
+          166,
+          167,
+          168,
+          169
+        ],
+        "references": [],
+        "summary": "The chapter covers global and U.S. esports audiences, viewer characteristics, content preferences, and investment by sports organizations and other companies. It also presents esports followers as a gateway audience for other technology and media behaviors.",
+        "title": "Esports: The Global Sport of the Future"
+      },
+      {
+        "id": "audio",
+        "key_points": [
+          "The report identifies audio as a fast-growing media behavior, driven by increased time spent with digital audio.",
+          "It expects social/live audio to become more mainstream and describes TikTok as an important influence on music discovery.",
+          "Monthly U.S. podcast listeners aged 12+ are forecast to increase from 127M in 2021E to 166M in 2025E.",
+          "Major audio platforms are investing in podcast acquisitions and exclusive content to acquire, engage, and retain users."
+        ],
+        "pages": [
+          170,
+          171,
+          172,
+          173,
+          174,
+          175,
+          176,
+          177,
+          178,
+          179,
+          180,
+          181,
+          182,
+          183,
+          184,
+          185,
+          186
+        ],
+        "references": [],
+        "summary": "This chapter examines growth in digital audio, music services, social/live audio, and podcasts. It describes podcast integration and exclusive programming as strategies for audio platforms to attract and retain users.",
+        "title": "Audio: More Streaming Services, Live, and Social Drive Growth"
+      },
+      {
+        "id": "data-solutions-enterprise-automation",
+        "key_points": [
+          "The chapter presents data, storage, compute, and connectivity innovations as foundations for new consumer experiences and enterprise productivity.",
+          "It describes new vendors as enabling data-based decision-making and improvements across functions such as IT, HR, finance, sales, and marketing.",
+          "Examples of capabilities include automation, data management, security, customer and employee experience, and decision support.",
+          "The report identifies strategy and transformation, go-to-market and pricing, and sales and marketing as areas requiring attention for company growth."
+        ],
+        "pages": [
+          187,
+          188,
+          189,
+          190,
+          191,
+          192,
+          193,
+          194,
+          195,
+          196,
+          197,
+          198
+        ],
+        "references": [],
+        "summary": "The final main chapter describes a growing ecosystem of companies whose infrastructure, tools, and applications help enterprises improve experiences and productivity. It covers technological advances, funding and company growth, examples of enterprise capabilities, and business imperatives for scaling these companies.",
+        "title": "Data Solutions and Enterprise Automation: Technology Advances Create Breakthrough Capabilities"
+      },
+      {
+        "id": "data-partners",
+        "key_points": [],
+        "pages": [
+          199
+        ],
+        "references": [],
+        "summary": "A closing acknowledgement page identifies the report’s data-partner section. The readable content labels the page “ACTIVATE DATA PARTNERS.”",
+        "title": "Our 2022 data partners"
+      }
+    ],
+    "summary": "The report forecasts growth and changing consumer behavior across technology, media, finance, gaming, commerce, sports, audio, and enterprise software. It argues that consumer time and spending, new digital behaviors, and technology advances will create opportunities for companies, including an estimated $390 billion in global internet and media revenue growth from 2021 to 2025.",
+    "title": "Activate Technology & Media Outlook 2022",
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "doc_map",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 1.0,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

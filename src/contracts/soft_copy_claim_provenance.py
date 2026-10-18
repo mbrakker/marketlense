@@ -427,7 +427,16 @@ def soft_copy_material_sentences(text: object) -> list[str]:
         if (
             sentences
             and re.search(r"(?:\b[A-Za-z]\.){2,}$", sentences[-1])
-            and (fragment[:1].islower() or fragment[:1].isdigit())
+            and (
+                fragment[:1].islower()
+                or fragment[:1].isdigit()
+                or re.search(
+                    r"\b(?:says|reports|indicates|shows|found)\s+"
+                    r"(?:U\.S\.|U\.K\.|E\.U\.|U\.N\.)$",
+                    sentences[-1],
+                    re.IGNORECASE,
+                )
+            )
         ):
             sentences[-1] = f"{sentences[-1]} {fragment}"
         elif _is_prose_fragment(fragment):

@@ -1,0 +1,61 @@
+{
+  "cover_style_hash": "57c99a2ab855ff0825cefb238c9aba493812c1ace25cfab4fe65589725e83bcb",
+  "covered_period": "",
+  "covers": {
+    "large": {
+      "content_sha256": "470e946fa3e3994d8d8ee4322eabfcb1be95385e85789bc002888d30d96c8e35",
+      "height": 1600,
+      "output_path": "assets/report-card-large.png",
+      "schema_version": "1.0",
+      "size": "large",
+      "width": 1200
+    },
+    "medium": {
+      "content_sha256": "bf4aa26a5a7930571f7eda132a303fefb3f2643fa328aa5a85b8a1c7b26e8261",
+      "height": 1500,
+      "output_path": "assets/report-card-medium.png",
+      "schema_version": "1.0",
+      "size": "medium",
+      "width": 1200
+    },
+    "schema_version": "1.0",
+    "small": {
+      "content_sha256": "ce94cd4d9f179da7983f2043570f6994c42ff4c2ae04d7196c675543ad5ca6f9",
+      "height": 900,
+      "output_path": "assets/report-card-small.png",
+      "schema_version": "1.0",
+      "size": "small",
+      "width": 1600
+    }
+  },
+  "fingerprint": {
+    "direction": "rising",
+    "domain_layer": "grid",
+    "evidence_density": "metric_rich",
+    "evidence_shape": "trend",
+    "geography_scope": "global",
+    "geometry_family": "ascending_trajectory",
+    "schema_version": "1.0",
+    "seed": 1155646578,
+    "selection_reason": "The report combines category growth rates and audience and revenue forecasts with historical comparisons across U.S. and global markets."
+  },
+  "geography_label": "",
+  "geography_scope": "unknown",
+  "key_insights": [
+    "Next M&A activity is expected to be driven by larger players looking to fill gaps with independent players.",
+    "Messaging was forecast to add 1.1 billion new users by 2018."
+  ],
+  "published_date": "",
+  "publisher": "Activate",
+  "schema_version": "1.0",
+  "source_identity_status": "resolved",
+  "source_metadata_hash": "50181da7605e72cdfe809617f0b82d9c42f438d63504c139904f7e57ee0c5478",
+  "source_note": "Source: Activate \u2014 source-12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU. Underlying data: Activate \u2014 Source URL: Not available",
+  "source_publication_date_status": "unknown",
+  "source_title": "source-12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU",
+  "source_url": "",
+  "title": "TECH AND MEDIA OUTLOOK 2016",
+  "title_scale": "short",
+  "tldr_compact": "The report expects larger players to drive the next M&A wave by filling gaps with independent players.",
+  "tldr_standard": "The report expects the next M&A wave to be driven by larger players looking to fill gaps with independent players."
+}

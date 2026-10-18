@@ -1,0 +1,96 @@
+{
+  "report_id": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU",
+  "title": "TECH AND MEDIA OUTLOOK 2016",
+  "publisher": "",
+  "region": "United States, with Asia-Pacific messaging markets also covered",
+  "time_period": "2011 to 2017E, with selected 2015 estimates and data from 2014 to 2015E",
+  "overview": "The 9 most important insights for tech and media in 2016 by Activate Activate’s report presents nine insights on technology and media, covering attention, messaging, audio, television, gaming, apps, revenue capture, and the convergence of industry layers. It closes with a view of Activate’s consulting services. Consumer technology and media trends, including attention and messaging, streaming audio, cord cutting and pay TV, gaming and wagering, the app economy, and company revenue and competitive strategy. Coverage includes global and U.S. analysis, with data from 2012–2015 and forecasts extending to 2018; the report is framed around 2016.",
+  "methods": [
+    "The report uses Activate forecasts, including a global messaging-user forecast for 2012–2018E drawing on GlobalWebIndex, eMarketer, and ITO; it distinguishes registered users from monthly active users.",
+    "Activate forecasts global eSports revenue for 2018E using sources including Forbes, NewZoo, Nielsen Scarborough, PwC, and SuperData Research.",
+    "The report analyzes Dota 2 tournament prize-pool growth over 2012–2015 using SuperData Research, Forbes, and Valve data.",
+    "Consumer-tech and media ARPU comparisons use 2014 company financials, comScore, and eMarketer data; the report specifies revenue-basis exceptions for some companies."
+  ],
+  "key_findings": [
+    "For U.S. users aged 18+, the 2011–2017E CAGRs for time spent were video 4.5%, audio 4.9%, social media 17.8%, and gaming 11.9%.",
+    "The report describes third-party integrations and automated bots in Slack as functioning like an app store, differentiating Slack from competitors and being essential for adoption.",
+    "In 2014, among U.S. users aged 13+, total audio consumption was 4:05 hours; AM/FM accounted for 52% and streaming for 12% of the displayed audio-consumption mix.",
+    "Activate forecast global eSports revenue of $4 billion in 2018E, comprising $2.2 billion in APAC, $1.3 billion in North America, $0.4 billion in Europe, and $0.1 billion in Latin America.",
+    "The report says a new wave of companies are using the app store for distribution and engagement, but not monetization.",
+    "The report expects the next wave of M&A activity to be driven by larger players filling gaps with independent players."
+  ],
+  "limitations": [
+    "Messaging user counts are registered users; monthly active users are lower.",
+    "Some app figures are estimates; one estimate is based on the number of iPhones sold.",
+    "The video-on-demand measure includes multimedia devices and video watched on PC or mobile; the stated average covers all age brackets 2+.",
+    "Global ARPU uses consolidated global revenues, except Apple uses equipment sales and excludes accessories and apps, and Amazon excludes services."
+  ],
+  "sections": [
+    {
+      "section_label": "The 9 most important insights for tech and media in 2016",
+      "source_pack": "doc_map",
+      "summary": "An opening overview lists the report’s nine central insights, from attention and messaging through consumer-tech revenue and competition across industry layers.",
+      "key_points": [
+        "The listed insights address attention, messaging, streaming audio, cord cutting, and the future of pay television.",
+        "The remaining topics cover eSports and wagering, app-store economics, revenue capture, and predicting competitive moves."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "TIME AND ATTENTION",
+      "source_pack": "doc_map",
+      "summary": "This section examines how people allocate attention across media and digital activities, and how businesses can grow by capturing user time. It argues that attention capture is not a zero-sum contest.",
+      "key_points": [
+        "The report says a billion-dollar business can be built by capturing less than a minute of an average user’s daily attention (p. 10).",
+        "For U.S. users aged 18+, the chart’s 2011–2017E CAGRs are video 4.5%, audio 4.9%, social media 17.8%, and gaming 11.9% (p. 12).",
+        "The report identifies a concentration of user time among a few digital properties and platforms (p. 9)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "MESSAGING",
+      "source_pack": "doc_map",
+      "summary": "The section describes messaging as an expanding media activity and a platform for new services and revenue streams. It compares the scale and monetization of messaging services and considers consumer and enterprise uses.",
+      "key_points": [
+        "Activate forecasts 1.1 billion additional messaging users by 2018; the chart shows 3.6 billion messaging users, 2.4 billion social-media users, and 4.0 billion internet users in 2018E (p. 16).",
+        "The report points to WeChat, KakaoTalk, and LINE as examples of messaging platforms with broader services and higher ARPU than the global services shown in the comparison (p. 33).",
+        "It describes app and bot integrations as a way messaging can add functions such as search and workplace productivity (p. 31)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "STREAMING AUDIO",
+      "source_pack": "doc_map",
+      "summary": "This section assesses the audio market, where streaming competes with established listening formats, and discusses curation and podcast advertising as areas of opportunity.",
+      "key_points": [
+        "The U.S. audio-consumption chart for users aged 13+ reports a total of 4 hours 5 minutes in 2014; AM/FM accounts for 52%, while streaming accounts for about 12% (pp. 35–36).",
+        "The report presents human curation and algorithmic recommendations as distinct approaches to differentiation, with Beats 1 and Spotify’s Discover Weekly as examples (p. 47).",
+        "Podcast examples and standard ad placements are used to show that podcasts can command premium advertising rates (p. 55)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "CORD CUTTING",
+      "source_pack": "doc_map",
+      "summary": "The section argues that the shift away from traditional television is gradual, even as viewing habits diversify beyond appointment television. It emphasizes the continued importance of TV- and studio-produced programming.",
+      "key_points": [
+        "The report states that changes in television are not simply a technology transition and that cord cutting will not happen overnight (p. 65).",
+        "Its U.S. monthly video-consumption chart says people still spend most of their time with TV- and studio-produced content (p. 67).",
+        "The section describes audiences forming around content beyond traditional appointment viewing, including on-demand and creator-driven formats (p. 72)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "CABLE KILLER",
+      "source_pack": "doc_map",
+      "summary": "This section examines what a viable challenger to cable would need to offer, and why incumbent operators have structural advantages. Its central argument is that the likely “cable killer” is a higher-end “smart cable” experience rather than simply a low-pri...",
+      "key_points": [
+        "The report defines a potential cable killer as combining equivalent or better video content, a lower-cost package, and a better user experience and reliability (p. 86).",
+        "It says a new entrant would have to begin by licensing top-tier content (p. 87).",
+        "Cable operators benefit from economies of scale that lower their programming costs per subscriber (p. 88)."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

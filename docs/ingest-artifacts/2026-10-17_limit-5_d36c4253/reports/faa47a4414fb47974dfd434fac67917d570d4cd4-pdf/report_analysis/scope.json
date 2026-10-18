@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "scope": "Consumer research on post-COVID online shopping, covering adoption across auto, grocery, beauty/grooming, and clothing, as well as e-commerce discovery, delivery versus pickup, new online retailers, shopping memberships, and consumer data sharing. The geographic coverage is the U.S.; the research is framed around 2021 and shopping before, during, and after the COVID-19 outbreak, defined as beginning in March 2020.",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "scope",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

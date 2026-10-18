@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/validate/semantic",
+  "family_schema_version": "1.0",
+  "processing_version": "semantic_validation_v2",
+  "output": {
+    "metrics": [
+      {
+        "id": "evidence:quote_candidates:quote-007",
+        "supported": true,
+        "confidence": 1.0,
+        "reason": "The evidence directly states that new virtual Pay TV entrants face significant customer acquisition challenges that established MVPDs can overcome."
+      }
+    ],
+    "quotes": []
+  }
+}

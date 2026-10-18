@@ -1,0 +1,1486 @@
+{
+  "attempt_index": 1,
+  "before_sha256": "75956d74df3b24bc9dc1967127205d62b08d537a9ea8aee765a8dd7f6a8bc51e",
+  "after_sha256": "e40e644301c2c30d4ca0b66e688766b1f19b5523cc9602f323ba27a8b8b767c1",
+  "transformation_scope": [
+    "summary",
+    "summary",
+    "insights_final",
+    "insights_final"
+  ],
+  "unchanged_family_sha256": {
+    "insights_candidates": "64902181ffd182dda061be18f7276a97aff0f58f3290a3bda2db82cc158ad90b",
+    "quotes_final": "69bf9ffe8b1ec3f043b99ddf72e7485a213be6834f9344cd4cdb92ca5849a097"
+  },
+  "current_artifacts_path": "C:\\Programing\\Market lense\\out\\a028687a439772baede39db7cc390ad48e8652dc-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\Programing\\Market lense\\out\\a028687a439772baede39db7cc390ad48e8652dc-pdf\\report_analysis\\artifacts_regen_candidate_1.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "deferred_grounding_required:validation",
+    "grounding:summary_claim:claim_5",
+    "metrics:insights:ecommerce-category-penetration-shelter-2020",
+    "metrics:insights:live-sports-return-viewership-forecast",
+    "metrics:insights:young-adult-expected-post-shelter-time-spend",
+    "public_editorial_quality.duplicate_insight:insights:ecommerce-category-penetration-shelter-2020~insights:live-sports-return-viewership-forecast",
+    "public_editorial_quality.metric_label_relationship:expert_comment",
+    "public_editorial_quality.metric_label_relationship:linkedin_post"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "digital-activity-same-or-better-perception",
+      "original_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        23
+      ],
+      "candidate_source_pages": [
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "ecommerce-category-penetration-shelter-2020",
+      "original_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "original_source_pages": [
+        11
+      ],
+      "candidate_source_pages": [
+        11
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "live-sports-return-viewership-forecast",
+      "original_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        19
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "new-online-retailer-continuation-intent",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "young-adult-expected-post-shelter-time-spend",
+      "original_evidence_ids": [
+        "sustain-demand-young-adult-time-spend"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-demand-young-adult-time-spend"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "digital-activity-same-or-better-perception",
+      "original_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        23
+      ],
+      "candidate_source_pages": [
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "ecommerce-category-penetration-shelter-2020",
+      "original_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "original_source_pages": [
+        11
+      ],
+      "candidate_source_pages": [
+        11
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "live-sports-return-viewership-forecast",
+      "original_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        19
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "new-online-retailer-continuation-intent",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "young-adult-expected-post-shelter-time-spend",
+      "original_evidence_ids": [
+        "sustain-demand-young-adult-time-spend"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-demand-young-adult-time-spend"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "171e2b081cdd87e4d58e3f29739d1266afbd643abba02376fab527c6858eba18",
+      "original_evidence_ids": [
+        "quote-2"
+      ],
+      "candidate_evidence_ids": [
+        "quote-2"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "2caecea8dc58a53de0a56764a2f55a7fa1d7857a56e4a3a32814054209e4a567",
+      "original_evidence_ids": [
+        "quote-1"
+      ],
+      "candidate_evidence_ids": [
+        "quote-1"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "c093f36255ecc75faacbd1c0e41ed6c273b08a8045ef2298f040bb02b988a557",
+      "original_evidence_ids": [
+        "quote-4"
+      ],
+      "candidate_evidence_ids": [
+        "quote-4"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "original_source_pages": [
+        11
+      ],
+      "candidate_source_pages": [
+        11
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        23
+      ],
+      "candidate_source_pages": [
+        23
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "quote-2"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "quote-2"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:674633c6982cee5f",
+      "original_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "original_source_pages": [
+        11
+      ],
+      "candidate_source_pages": [
+        11
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:6b78b51161d8327a",
+      "original_evidence_ids": [
+        "sustain-ecommerce-category-penetration",
+        "digital-activity-preference",
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-ecommerce-category-penetration",
+        "digital-activity-preference",
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        11,
+        23,
+        14
+      ],
+      "candidate_source_pages": [
+        11,
+        23,
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:727b1e72aa6cda5b",
+      "original_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        23
+      ],
+      "candidate_source_pages": [
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:db8d4efbfd86bb2d",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:00071e7c33290b6b",
+      "original_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "original_source_pages": [
+        11
+      ],
+      "candidate_source_pages": [
+        11
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:185ea1c0698dd805",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:2b256a40bf281d47",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:62d8fbe24c9d7e95",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:1a6c5cc8797672c3",
+      "original_evidence_ids": [
+        "live-sports-viewership-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:674633c6982cee5f",
+      "original_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "candidate_evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ],
+      "original_source_pages": [
+        11
+      ],
+      "candidate_source_pages": [
+        11
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:c1ef05a354c83523",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:cea1ea6257c04743",
+      "original_evidence_ids": [
+        "quote-2"
+      ],
+      "candidate_evidence_ids": [
+        "quote-2"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:d7db26523ea13cd2",
+      "original_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "candidate_evidence_ids": [
+        "new-online-retailer-continuation"
+      ],
+      "original_source_pages": [
+        14
+      ],
+      "candidate_source_pages": [
+        14
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:e1eba4fe452ca82a",
+      "original_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "candidate_evidence_ids": [
+        "digital-activity-preference"
+      ],
+      "original_source_pages": [
+        23
+      ],
+      "candidate_source_pages": [
+        23
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "0a8094684d2c3bf9ef4b61671bc608c4a96f30b2c0e3f76ee29aa2aef2f916fe",
+    "e9963cadb531991f946606ab784fd8779b66ea9c6fc361848b537603d6eee445",
+    "4b80e9de8d98ef6e266114d7054295af44f81f09bc5b67a14f5678e9a64a410b",
+    "4b199aaa07a0585e97fb3d47813af4dbde5743f466d74f9185eb5eb24a23d9c1",
+    "0d8dbc000d662f318465a0bcdc7d1e03ec647b152678f056a68614708854e94c",
+    "e1ed8027fd34a94db1d8b38681976773532c8a6faa71ea4671da343393cf9f00",
+    "a9695e040e7c5c164ba3416e5350ad4196644ebffd4a9f7a63dfbae22424b4b7",
+    "8d0f31e0f9fc0a97a677d292a2dae6eb29294aab8c9ec42e4314cbe19aedc0a9",
+    "5964a76b493515c399c13db0bf6cbc2fc0aa414107abd7ffea790e1c92189232",
+    "7ac556dc54b8ee33231b5a1844057fd2cb1aeb7ddcb8d2b403ec7faff7c5037b"
+  ],
+  "repair_action": "REGENERATE_ITEM",
+  "repair_strategy": "current_evidence",
+  "allowed_paths": [
+    "insights_final[item=ecommerce-category-penetration-shelter-2020].text",
+    "insights_final[item=live-sports-return-viewership-forecast].text",
+    "summary.claim_evidence_map[3]",
+    "summary.executive_summary",
+    "summary.executive_summary[claim_index=3]"
+  ],
+  "verified_dependent_paths": [
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.output_controls.max_output_tokens",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.routing_policy_version",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.included_partials[2]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.routing_policy_version",
+    "_cache.prompts.report_vs/artifacts/regenerate/insights_final",
+    "_cache.prompts.report_vs/artifacts/regenerate/summary",
+    "_cache.regeneration_prompt_requirements",
+    "_repair_evidence_selection",
+    "chart_insight_cards[item=digital-activity-same-or-better-perception].card_id",
+    "chart_insight_cards[item=ecommerce-category-penetration-shelter-2020]",
+    "chart_insight_cards[item=live-sports-return-viewership-forecast].business_implication",
+    "chart_insight_cards[item=live-sports-return-viewership-forecast].card_id",
+    "chart_insight_cards[item=live-sports-return-viewership-forecast].public_takeaway",
+    "chart_insight_cards[item=live-sports-return-viewership-forecast].takeaway",
+    "chart_insight_cards[item=young-adult-expected-post-shelter-time-spend].card_id",
+    "claim_ledgers[10].canonical_claim_id",
+    "claim_ledgers[10].claim_text",
+    "claim_ledgers[10].evidence_ids[0]",
+    "claim_ledgers[11].canonical_claim_id",
+    "claim_ledgers[11].claim_text",
+    "claim_ledgers[11].evidence_ids[0]",
+    "claim_ledgers[12].canonical_claim_id",
+    "claim_ledgers[12].claim_text",
+    "claim_ledgers[12].evidence_ids[0]",
+    "claim_ledgers[13].canonical_claim_id",
+    "claim_ledgers[13].claim_text",
+    "claim_ledgers[13].evidence_ids[0]",
+    "claim_ledgers[14].artifact_section",
+    "claim_ledgers[14].canonical_claim_id",
+    "claim_ledgers[14].claim_text",
+    "claim_ledgers[14].confidence",
+    "claim_ledgers[14].evidence_ids[0]",
+    "claim_ledgers[14].evidence_quality_grade",
+    "claim_ledgers[14].risk",
+    "claim_ledgers[14].support_type",
+    "claim_ledgers[15].canonical_claim_id",
+    "claim_ledgers[15].claim_text",
+    "claim_ledgers[15].evidence_ids[0]",
+    "claim_ledgers[16].canonical_claim_id",
+    "claim_ledgers[16].claim_text",
+    "claim_ledgers[16].evidence_ids[0]",
+    "claim_ledgers[17].canonical_claim_id",
+    "claim_ledgers[17].claim_text",
+    "claim_ledgers[17].evidence_ids[0]",
+    "claim_ledgers[18].canonical_claim_id",
+    "claim_ledgers[18].claim_text",
+    "claim_ledgers[18].evidence_ids[0]",
+    "claim_ledgers[19].artifact_section",
+    "claim_ledgers[19].canonical_claim_id",
+    "claim_ledgers[19].claim_text",
+    "claim_ledgers[19].evidence_ids[0]",
+    "claim_ledgers[19].evidence_quality_grade",
+    "claim_ledgers[19].evidence_references",
+    "claim_ledgers[19].evidence_span_count",
+    "claim_ledgers[19].risk",
+    "claim_ledgers[19].support_type",
+    "claim_ledgers[20].canonical_claim_id",
+    "claim_ledgers[20].claim_text",
+    "claim_ledgers[20].evidence_ids[0]",
+    "claim_ledgers[20].evidence_references[0].evidence_id",
+    "claim_ledgers[21].canonical_claim_id",
+    "claim_ledgers[21].claim_text",
+    "claim_ledgers[21].evidence_ids[0]",
+    "claim_ledgers[21].evidence_references[0].evidence_id",
+    "claim_ledgers[22]",
+    "claim_ledgers[3].claim_text",
+    "claim_ledgers[3].evidence_ids[0]",
+    "claim_ledgers[3].evidence_references[0].evidence_id",
+    "claim_ledgers[3].evidence_references[0].source_pack",
+    "claim_ledgers[3].evidence_references[1]",
+    "claim_ledgers[3].evidence_span_count",
+    "claim_ledgers[4].artifact_section",
+    "claim_ledgers[4].canonical_claim_id",
+    "claim_ledgers[4].claim_text",
+    "claim_ledgers[4].evidence_ids[0]",
+    "claim_ledgers[4].evidence_references[0].evidence_id",
+    "claim_ledgers[4].evidence_references[0].source_pack",
+    "claim_ledgers[4].evidence_references[1]",
+    "claim_ledgers[4].evidence_span_count",
+    "claim_ledgers[5].canonical_claim_id",
+    "claim_ledgers[5].claim_text",
+    "claim_ledgers[5].evidence_ids[0]",
+    "claim_ledgers[5].evidence_references[0].evidence_id",
+    "claim_ledgers[5].evidence_references[1].evidence_id",
+    "claim_ledgers[6].canonical_claim_id",
+    "claim_ledgers[6].claim_text",
+    "claim_ledgers[6].evidence_ids[0]",
+    "claim_ledgers[6].evidence_references[0].evidence_id",
+    "claim_ledgers[6].evidence_references[1].evidence_id",
+    "claim_ledgers[7].canonical_claim_id",
+    "claim_ledgers[7].claim_text",
+    "claim_ledgers[7].evidence_ids[0]",
+    "claim_ledgers[7].evidence_references[0].evidence_id",
+    "claim_ledgers[7].evidence_references[1].evidence_id",
+    "claim_ledgers[8].canonical_claim_id",
+    "claim_ledgers[8].claim_text",
+    "claim_ledgers[8].evidence_ids[0]",
+    "claim_ledgers[8].evidence_references[0].evidence_id",
+    "claim_ledgers[8].evidence_references[1].evidence_id",
+    "claim_ledgers[9].artifact_section",
+    "claim_ledgers[9].canonical_claim_id",
+    "claim_ledgers[9].claim_text",
+    "claim_ledgers[9].confidence",
+    "claim_ledgers[9].evidence_ids[0]",
+    "claim_ledgers[9].evidence_quality_grade",
+    "claim_ledgers[9].evidence_references",
+    "claim_ledgers[9].evidence_span_count",
+    "claim_ledgers[9].support_type",
+    "key_figures[1].denominator",
+    "key_figures[1].evidence_id",
+    "key_figures[1].figure",
+    "key_figures[1].figure_id",
+    "key_figures[1].label",
+    "key_figures[1].observation_status",
+    "key_figures[1].segment",
+    "key_figures[1].source_page",
+    "key_figures[1].subject",
+    "key_figures[1].timeframe",
+    "key_figures[1].why_it_matters",
+    "key_figures[2].cohort",
+    "key_figures[2].denominator",
+    "key_figures[2].evidence_id",
+    "key_figures[2].figure",
+    "key_figures[2].figure_id",
+    "key_figures[2].label",
+    "key_figures[2].observation_status",
+    "key_figures[2].segment",
+    "key_figures[2].source_page",
+    "key_figures[2].subject",
+    "key_figures[2].timeframe",
+    "key_figures[2].why_it_matters",
+    "key_figures[3].cohort",
+    "key_figures[3].denominator",
+    "key_figures[3].evidence_id",
+    "key_figures[3].figure",
+    "key_figures[3].figure_id",
+    "key_figures[3].label",
+    "key_figures[3].observation_status",
+    "key_figures[3].segment",
+    "key_figures[3].source_page",
+    "key_figures[3].subject",
+    "key_figures[3].timeframe",
+    "key_figures[3].unit",
+    "key_figures[3].why_it_matters",
+    "key_figures[4]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:summary:1806f63ba6dfde8a]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:summary:1a6c5cc8797672c3]"
+  ],
+  "selected_evidence_ids": [
+    "accelerate-new-tech-experiences",
+    "digital-activity-preference",
+    "introduction",
+    "quote-2",
+    "quote-3",
+    "quote-4"
+  ],
+  "quarantined_evidence_ids": [
+    "live-sports-viewership-forecast",
+    "sustain-ecommerce-category-penetration"
+  ],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "grounding",
+        "affected_section": "key_figures:4.figure",
+        "entity_id": "key_figure:4:figure",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "insights:young-adult-expected-post-shelter-time-spend.text",
+        "entity_id": "insight:young-adult-expected-post-shelter-time-spend:text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "insights:live-sports-return-viewership-forecast.text",
+        "entity_id": "insight:live-sports-return-viewership-forecast:text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "insights:ecommerce-category-penetration-shelter-2020",
+        "entity_id": "insight:ecommerce-category-penetration-shelter-2020:text",
+        "evidence_ids": [
+          "sustain-ecommerce-category-penetration"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "metadata.title",
+        "entity_id": "metadata:title",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "key_figures:3.why_it_matters",
+        "entity_id": "key_figure:3:why_it_matters",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "key_figures:4.why_it_matters",
+        "entity_id": "key_figure:4:why_it_matters",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "summary.claim_evidence_map:4.claim",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:1806f63ba6dfde8a",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [
+      {
+        "rule_id": "metrics",
+        "affected_section": "insights:young-adult-expected-post-shelter-time-spend",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "metrics",
+        "affected_section": "insights:ecommerce-category-penetration-shelter-2020",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "linkedin_post",
+        "entity_id": "linkedin_post:linkedin_post",
+        "evidence_ids": [
+          "sustain-ecommerce-category-penetration"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "linkedin_post",
+        "entity_id": "linkedin_post:linkedin_post",
+        "evidence_ids": [
+          "sustain-demand-young-adult-time-spend"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "expert_comment",
+        "entity_id": "expert_comment:expert_comment",
+        "evidence_ids": [
+          "sustain-demand-young-adult-time-spend"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "expert_comment",
+        "entity_id": "expert_comment:expert_comment",
+        "evidence_ids": [
+          "sustain-ecommerce-category-penetration"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "metrics",
+        "affected_section": "insights:live-sports-return-viewership-forecast",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced": [
+      {
+        "rule_id": "grounding",
+        "affected_section": "summary_claim:claim_5",
+        "entity_id": "claim_5",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.duplicate_insight",
+        "affected_section": "insights:ecommerce-category-penetration-shelter-2020~insights:live-sports-return-viewership-forecast",
+        "entity_id": "insight:ecommerce-category-penetration-shelter-2020:text",
+        "evidence_ids": [
+          "sustain-ecommerce-category-penetration"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failures": [
+      {
+        "rule_id": "grounding",
+        "affected_section": "summary_claim:claim_5",
+        "entity_id": "claim_5",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.duplicate_insight",
+        "affected_section": "insights:ecommerce-category-penetration-shelter-2020~insights:live-sports-return-viewership-forecast",
+        "entity_id": "insight:ecommerce-category-penetration-shelter-2020:text",
+        "evidence_ids": [
+          "sustain-ecommerce-category-penetration"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failure_count": 2,
+    "introduced_failure_categories": [
+      "unsupported_claim_evidence_introduction"
+    ],
+    "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+    "severity_changes": [
+      {
+        "failure_fingerprint": "4b199aaa07a0585e97fb3d47813af4dbde5743f466d74f9185eb5eb24a23d9c1",
+        "before": "info",
+        "after": "warning"
+      },
+      {
+        "failure_fingerprint": "4b80e9de8d98ef6e266114d7054295af44f81f09bc5b67a14f5678e9a64a410b",
+        "before": "info",
+        "after": "warning"
+      },
+      {
+        "failure_fingerprint": "e9963cadb531991f946606ab784fd8779b66ea9c6fc361848b537603d6eee445",
+        "before": "info",
+        "after": "warning"
+      }
+    ],
+    "mutation_scope_result": "pass",
+    "evidence_lineage_result": "fail",
+    "repair_action": "REGENERATE_ITEM",
+    "repair_strategy": "current_evidence",
+    "evidence_ids_used": [
+      "quote-2",
+      "introduction",
+      "accelerate-new-tech-experiences",
+      "quote-3",
+      "digital-activity-preference",
+      "quote-4"
+    ],
+    "strategy_fingerprint": "2c8063f86361963055386054c3faf7081d3c8208e08dbe234f8b73d8b42ef933",
+    "candidate_sha256": "e40e644301c2c30d4ca0b66e688766b1f19b5523cc9602f323ba27a8b8b767c1",
+    "input_sha256": "75956d74df3b24bc9dc1967127205d62b08d537a9ea8aee765a8dd7f6a8bc51e",
+    "validator_identity": "regeneration-candidate-v1:4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa:4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [
+    {
+      "diagnosed_failure_class": "grounding",
+      "repair_action": "REGENERATE_ITEM",
+      "repair_strategy": "current_evidence",
+      "evidence_ids_used": [
+        "digital-activity-preference"
+      ],
+      "protected_fields": [
+        "summary.card_tldr_compact[claim_index=0]",
+        "summary.claim_evidence_map[0].claim",
+        "summary.claim_evidence_map[0].evidence",
+        "summary.claim_evidence_map[0].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[0].page",
+        "summary.claim_evidence_map[0].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[0].evidence_spans[0].text",
+        "summary.claim_evidence_map[0].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[1].page",
+        "summary.claim_evidence_map[0].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[0].evidence_spans[1].text",
+        "summary.claim_evidence_map[0].pages[0]",
+        "summary.claim_evidence_map[1].claim",
+        "summary.claim_evidence_map[1].evidence",
+        "summary.claim_evidence_map[1].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[0].page",
+        "summary.claim_evidence_map[1].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[1].evidence_spans[0].text",
+        "summary.claim_evidence_map[1].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[1].page",
+        "summary.claim_evidence_map[1].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[1].evidence_spans[1].text",
+        "summary.claim_evidence_map[1].pages[0]",
+        "summary.claim_evidence_map[2].claim",
+        "summary.claim_evidence_map[2].evidence",
+        "summary.claim_evidence_map[2].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[0].page",
+        "summary.claim_evidence_map[2].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[2].evidence_spans[0].text",
+        "summary.claim_evidence_map[2].evidence_spans[1].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[1].page",
+        "summary.claim_evidence_map[2].evidence_spans[1].source_pack",
+        "summary.claim_evidence_map[2].evidence_spans[1].text",
+        "summary.claim_evidence_map[2].pages[0]",
+        "summary.claim_evidence_map[3].claim",
+        "summary.claim_evidence_map[3].evidence",
+        "summary.claim_evidence_map[3].evidence_id",
+        "summary.claim_evidence_map[3].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[3].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[3].evidence_spans[0].text",
+        "summary.claim_evidence_map[3].pages",
+        "summary.executive_summary[claim_index=0]",
+        "summary.executive_summary[claim_index=1]",
+        "summary.executive_summary[claim_index=2]",
+        "summary.executive_summary[claim_index=4]",
+        "summary.tldr[claim_index=0]"
+      ],
+      "changed_paths": [
+        "summary.executive_summary[claim_index=3]"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "summary.executive_summary[claim_index=3]",
+          "value": "Some U.S. adults aged 18–64 who participated in digital activities viewed them as the same as or better than their in-person equivalents."
+        }
+      ],
+      "schema_version": "regeneration_repair_decision_v5"
+    },
+    {
+      "diagnosed_failure_class": "public_editorial_quality.metric_label_relationship",
+      "repair_action": "REGENERATE_ITEM",
+      "repair_strategy": "current_evidence",
+      "evidence_ids_used": [
+        "quote-4"
+      ],
+      "protected_fields": [
+        "insights_final[item=digital-activity-same-or-better-perception].coverage_role",
+        "insights_final[item=digital-activity-same-or-better-perception].decision_relevance_score",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_id",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[0].evidence_id",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[0].page",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[0].source_pack",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[0].text",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[1].evidence_id",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[1].page",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[1].source_pack",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[1].text",
+        "insights_final[item=digital-activity-same-or-better-perception].id",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.cohort",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.confidence",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.denominator",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.geography",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.label",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.observation_status",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.sample_size",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.segment",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.subject",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.timeframe",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.trend",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.unit",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.value",
+        "insights_final[item=digital-activity-same-or-better-perception].metric_strength_score",
+        "insights_final[item=digital-activity-same-or-better-perception].novelty_score",
+        "insights_final[item=digital-activity-same-or-better-perception].now_what",
+        "insights_final[item=digital-activity-same-or-better-perception].pages[0]",
+        "insights_final[item=digital-activity-same-or-better-perception].report_type_lens",
+        "insights_final[item=digital-activity-same-or-better-perception].score",
+        "insights_final[item=digital-activity-same-or-better-perception].so_what",
+        "insights_final[item=digital-activity-same-or-better-perception].text",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].coverage_role",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].decision_relevance_score",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_id",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[0].evidence_id",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[0].page",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[0].source_pack",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[0].text",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[1].evidence_id",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[1].page",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[1].source_pack",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[1].text",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].id",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.cohort",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.confidence",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.denominator",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.geography",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.label",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.observation_status",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.sample_size",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.segment",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.subject",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.timeframe",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.trend",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.unit",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.value",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric_strength_score",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].novelty_score",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].now_what",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].pages[0]",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].report_type_lens",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].score",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].so_what",
+        "insights_final[item=live-sports-return-viewership-forecast].coverage_role",
+        "insights_final[item=live-sports-return-viewership-forecast].decision_relevance_score",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_id",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[0].evidence_id",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[0].page",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[0].source_pack",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[0].text",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[1].evidence_id",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[1].page",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[1].source_pack",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[1].text",
+        "insights_final[item=live-sports-return-viewership-forecast].id",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.cohort",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.confidence",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.denominator",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.geography",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.label",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.observation_status",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.sample_size",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.segment",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.subject",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.timeframe",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.trend",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.unit",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.value",
+        "insights_final[item=live-sports-return-viewership-forecast].metric_strength_score",
+        "insights_final[item=live-sports-return-viewership-forecast].novelty_score",
+        "insights_final[item=live-sports-return-viewership-forecast].now_what",
+        "insights_final[item=live-sports-return-viewership-forecast].pages[0]",
+        "insights_final[item=live-sports-return-viewership-forecast].report_type_lens",
+        "insights_final[item=live-sports-return-viewership-forecast].score",
+        "insights_final[item=live-sports-return-viewership-forecast].so_what",
+        "insights_final[item=live-sports-return-viewership-forecast].text",
+        "insights_final[item=new-online-retailer-continuation-intent].coverage_role",
+        "insights_final[item=new-online-retailer-continuation-intent].decision_relevance_score",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_id",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[0].evidence_id",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[0].page",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[0].source_pack",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[0].text",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[1].evidence_id",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[1].page",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[1].source_pack",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[1].text",
+        "insights_final[item=new-online-retailer-continuation-intent].id",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.cohort",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.confidence",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.denominator",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.geography",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.label",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.observation_status",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.sample_size",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.segment",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.subject",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.timeframe",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.trend",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.unit",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.value",
+        "insights_final[item=new-online-retailer-continuation-intent].metric_strength_score",
+        "insights_final[item=new-online-retailer-continuation-intent].novelty_score",
+        "insights_final[item=new-online-retailer-continuation-intent].now_what",
+        "insights_final[item=new-online-retailer-continuation-intent].pages[0]",
+        "insights_final[item=new-online-retailer-continuation-intent].report_type_lens",
+        "insights_final[item=new-online-retailer-continuation-intent].score",
+        "insights_final[item=new-online-retailer-continuation-intent].so_what",
+        "insights_final[item=new-online-retailer-continuation-intent].text",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].coverage_role",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].decision_relevance_score",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_id",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[0].evidence_id",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[0].page",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[0].source_pack",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[0].text",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[1].evidence_id",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[1].page",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[1].source_pack",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[1].text",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].id",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.cohort",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.confidence",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.denominator",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.geography",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.label",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.observation_status",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.sample_size",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.segment",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.subject",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.timeframe",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.trend",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.unit",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.value",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric_strength_score",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].novelty_score",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].now_what",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].pages[0]",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].report_type_lens",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].score",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].so_what",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].text"
+      ],
+      "changed_paths": [
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].text"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "insights_final[item=ecommerce-category-penetration-shelter-2020].text",
+          "value": "To sustain online grocery customers after shelter in place, services need to deliver free delivery and product assortment."
+        }
+      ],
+      "schema_version": "regeneration_repair_decision_v5"
+    },
+    {
+      "diagnosed_failure_class": "grounding",
+      "repair_action": "REGENERATE_ITEM",
+      "repair_strategy": "current_evidence",
+      "evidence_ids_used": [
+        "quote-4"
+      ],
+      "protected_fields": [
+        "insights_final[item=digital-activity-same-or-better-perception].coverage_role",
+        "insights_final[item=digital-activity-same-or-better-perception].decision_relevance_score",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_id",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[0].evidence_id",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[0].page",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[0].source_pack",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[0].text",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[1].evidence_id",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[1].page",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[1].source_pack",
+        "insights_final[item=digital-activity-same-or-better-perception].evidence_spans[1].text",
+        "insights_final[item=digital-activity-same-or-better-perception].id",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.cohort",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.confidence",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.denominator",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.geography",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.label",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.observation_status",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.sample_size",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.segment",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.subject",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.timeframe",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.trend",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.unit",
+        "insights_final[item=digital-activity-same-or-better-perception].metric.value",
+        "insights_final[item=digital-activity-same-or-better-perception].metric_strength_score",
+        "insights_final[item=digital-activity-same-or-better-perception].novelty_score",
+        "insights_final[item=digital-activity-same-or-better-perception].now_what",
+        "insights_final[item=digital-activity-same-or-better-perception].pages[0]",
+        "insights_final[item=digital-activity-same-or-better-perception].report_type_lens",
+        "insights_final[item=digital-activity-same-or-better-perception].score",
+        "insights_final[item=digital-activity-same-or-better-perception].so_what",
+        "insights_final[item=digital-activity-same-or-better-perception].text",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].coverage_role",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].decision_relevance_score",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_id",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[0].evidence_id",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[0].page",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[0].source_pack",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[0].text",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[1].evidence_id",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[1].page",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[1].source_pack",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].evidence_spans[1].text",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].id",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.cohort",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.confidence",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.denominator",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.geography",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.label",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.observation_status",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.sample_size",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.segment",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.subject",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.timeframe",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.trend",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.unit",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric.value",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].metric_strength_score",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].novelty_score",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].now_what",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].pages[0]",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].report_type_lens",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].score",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].so_what",
+        "insights_final[item=ecommerce-category-penetration-shelter-2020].text",
+        "insights_final[item=live-sports-return-viewership-forecast].coverage_role",
+        "insights_final[item=live-sports-return-viewership-forecast].decision_relevance_score",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_id",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[0].evidence_id",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[0].page",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[0].source_pack",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[0].text",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[1].evidence_id",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[1].page",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[1].source_pack",
+        "insights_final[item=live-sports-return-viewership-forecast].evidence_spans[1].text",
+        "insights_final[item=live-sports-return-viewership-forecast].id",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.cohort",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.confidence",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.denominator",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.geography",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.label",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.observation_status",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.sample_size",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.segment",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.subject",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.timeframe",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.trend",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.unit",
+        "insights_final[item=live-sports-return-viewership-forecast].metric.value",
+        "insights_final[item=live-sports-return-viewership-forecast].metric_strength_score",
+        "insights_final[item=live-sports-return-viewership-forecast].novelty_score",
+        "insights_final[item=live-sports-return-viewership-forecast].now_what",
+        "insights_final[item=live-sports-return-viewership-forecast].pages[0]",
+        "insights_final[item=live-sports-return-viewership-forecast].report_type_lens",
+        "insights_final[item=live-sports-return-viewership-forecast].score",
+        "insights_final[item=live-sports-return-viewership-forecast].so_what",
+        "insights_final[item=new-online-retailer-continuation-intent].coverage_role",
+        "insights_final[item=new-online-retailer-continuation-intent].decision_relevance_score",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_id",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[0].evidence_id",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[0].page",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[0].source_pack",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[0].text",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[1].evidence_id",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[1].page",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[1].source_pack",
+        "insights_final[item=new-online-retailer-continuation-intent].evidence_spans[1].text",
+        "insights_final[item=new-online-retailer-continuation-intent].id",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.cohort",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.confidence",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.denominator",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.geography",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.label",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.observation_status",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.sample_size",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.segment",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.subject",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.timeframe",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.trend",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.unit",
+        "insights_final[item=new-online-retailer-continuation-intent].metric.value",
+        "insights_final[item=new-online-retailer-continuation-intent].metric_strength_score",
+        "insights_final[item=new-online-retailer-continuation-intent].novelty_score",
+        "insights_final[item=new-online-retailer-continuation-intent].now_what",
+        "insights_final[item=new-online-retailer-continuation-intent].pages[0]",
+        "insights_final[item=new-online-retailer-continuation-intent].report_type_lens",
+        "insights_final[item=new-online-retailer-continuation-intent].score",
+        "insights_final[item=new-online-retailer-continuation-intent].so_what",
+        "insights_final[item=new-online-retailer-continuation-intent].text",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].coverage_role",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].decision_relevance_score",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_id",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[0].evidence_id",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[0].page",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[0].source_pack",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[0].text",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[1].evidence_id",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[1].page",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[1].source_pack",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].evidence_spans[1].text",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].id",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.cohort",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.confidence",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.denominator",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.geography",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.label",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.observation_status",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.sample_size",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.segment",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.subject",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.timeframe",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.trend",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.unit",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric.value",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].metric_strength_score",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].novelty_score",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].now_what",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].pages[0]",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].report_type_lens",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].score",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].so_what",
+        "insights_final[item=young-adult-expected-post-shelter-time-spend].text"
+      ],
+      "changed_paths": [
+        "insights_final[item=live-sports-return-viewership-forecast].text"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "insights_final[item=live-sports-return-viewership-forecast].text",
+          "value": "Online grocery services need to deliver free delivery and product assortment to sustain new customers after shelter in place."
+        }
+      ],
+      "schema_version": "5"
+    }
+  ],
+  "report_id": "1BproyPIQZFHWYDII93LhAOmIyujqbXb-",
+  "validation_run_id": "",
+  "cohort_id": "",
+  "workflow_run_id": "d36c4253-46d0-498c-9069-553d61010936",
+  "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+  "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "2c8063f86361963055386054c3faf7081d3c8208e08dbe234f8b73d8b42ef933",
+  "latency_ms": 58862,
+  "schema_version": "1.0"
+}

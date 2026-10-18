@@ -497,7 +497,7 @@ def test_activate_numeric_insight_grounding_uses_validated_finding_relationship(
         issue for issue in issues if "Among all U.S. consumers" in issue.message
     ]
     assert denominator_issues
-    assert all(issue.severity == "warning" for issue in denominator_issues)
+    assert all(issue.severity == "error" for issue in denominator_issues)
 
 
 def test_final_materialization_reuses_matching_page_bound_semantic_result():

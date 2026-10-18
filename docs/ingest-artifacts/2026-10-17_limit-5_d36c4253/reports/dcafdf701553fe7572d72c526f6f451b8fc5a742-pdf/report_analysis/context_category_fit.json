@@ -1,0 +1,160 @@
+{
+  "schema_version": "1.0",
+  "selected_category_ids": [
+    "technology"
+  ],
+  "category_fits": [
+    {
+      "category_id": "business_performance",
+      "label": "Business Performance & Growth",
+      "fit_score": 0.78,
+      "decision": "primary",
+      "why_fit": "The outlook emphasizes commercial growth and strategic implications for technology and media companies, including projected internet and media revenue growth, segment CAGRs, ARPU comparisons, and forecasts for eSports and in-game wagering.",
+      "why_not_fit": "The report is a broad technology-and-media outlook, not a focused benchmark of company profitability or performance rankings.",
+      "evidence_sections": [
+        "Internet & Media Spend",
+        "ARPU",
+        "The 9 Most Important Insights for Tech and Media in 2017"
+      ],
+      "semantic_rule_status": "ambiguous",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_ambiguous"
+    },
+    {
+      "category_id": "consumer_behavior",
+      "label": "Consumer Behavior & Insights",
+      "fit_score": 0.69,
+      "decision": "secondary",
+      "why_fit": "The report draws on consumer research about media multitasking, attention, spending, willingness to pay for Pay TV, and subscription-app user profiles.",
+      "why_not_fit": "Consumer behavior is a major lens, but the report also centrally analyzes market revenues, platform dynamics, and industry forecasts rather than focusing solely on audience behavior.",
+      "evidence_sections": [
+        "Consumer Time & Attention",
+        "Internet & Media Spend",
+        "The 9 Most Important Insights for Tech and Media in 2017"
+      ],
+      "semantic_rule_status": "ambiguous",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_ambiguous"
+    },
+    {
+      "category_id": "technology",
+      "label": "Technology & Innovation",
+      "fit_score": 0.65,
+      "decision": "secondary",
+      "why_fit": "The report examines digital platform control over access and discovery, messaging and bots as emerging interfaces, and technology shifts affecting media businesses.",
+      "why_not_fit": "It is not primarily an infrastructure, hardware, or product-architecture report; technology is treated alongside media markets and consumer trends.",
+      "evidence_sections": [
+        "Discovery Oligopoly",
+        "Messaging & Bots",
+        "The 9 Most Important Insights for Tech and Media in 2017"
+      ],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence repeatedly discusses infrastructure, enterprise technology, robotics, cybersecurity, hardware, or major technology shifts."
+      ],
+      "supported_topic_rule_ids": [
+        "technology:include:84008e3e416054bb"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "title",
+        "overview",
+        "methods",
+        "Consumer Time & Attention",
+        "ARPU",
+        "The 9 Most Important Insights for Tech and Media in 2017"
+      ],
+      "centrality_evidence_sections": [
+        "title",
+        "overview"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "advertising_media",
+      "label": "Advertising Strategy & Media",
+      "fit_score": 0.53,
+      "decision": "reject",
+      "why_fit": "The report discusses advertising revenue growth and platform discovery, including sponsored ads and publisher revenue sharing.",
+      "why_not_fit": "It does not mainly provide advertising planning, buying, investment, or effectiveness guidance; advertising is one component of a broader technology and media outlook.",
+      "evidence_sections": [
+        "Internet & Media Spend",
+        "Discovery Oligopoly"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [
+        "Evidence repeatedly covers media channels, ad receptivity, media planning, brand lift, investment priorities, or advertising strategy."
+      ],
+      "supported_topic_rule_ids": [
+        "advertising_media:include:e9a7759c62f6c6cd"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "limitations",
+        "Internet & Media Spend",
+        "Discovery Oligopoly",
+        "Messaging & Bots"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "connected_tv",
+      "label": "Streaming & Connected TV",
+      "fit_score": 0.48,
+      "decision": "reject",
+      "why_fit": "The report includes Pay TV pricing and video streaming among its strategic insights.",
+      "why_not_fit": "Streaming and television are individual topics within a wider outlook; the report does not center on streaming platforms, CTV inventory, or streaming economics.",
+      "evidence_sections": [
+        "The 9 Most Important Insights for Tech and Media in 2017"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [
+        "Evidence repeatedly covers streaming platforms, CTV inventory, OTT audiences, FAST, or television-like video ad strategy."
+      ],
+      "supported_topic_rule_ids": [
+        "connected_tv:include:b48186785452dc77"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "Messaging & Bots",
+        "The 9 Most Important Insights for Tech and Media in 2017"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "social_video_creator",
+      "label": "Social, Short Video & Creator",
+      "fit_score": 0.39,
+      "decision": "reject",
+      "why_fit": "The report discusses social networks as part of the platform landscape and includes video among its media topics.",
+      "why_not_fit": "It does not center on creator ecosystems, short-form video, or social-content strategy; those topics are not independently central in the provided context.",
+      "evidence_sections": [
+        "Discovery Oligopoly",
+        "The 9 Most Important Insights for Tech and Media in 2017"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    }
+  ]
+}

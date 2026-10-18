@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_plan",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "report_thesis": "The report depicts post-COVID commerce as a category-specific transition: online adoption is expected to persist unevenly, while discovery, fulfillment, retailer trial, memberships, and data sharing show distinct consumer behaviors.",
+    "themes": [
+      {
+        "theme": "Online penetration is projected to remain higher after the outbreak than before it across grocery, beauty/grooming, and clothing, with growth varying by category.",
+        "priority": 1,
+        "evidence_ids": [
+          "growth-outlook-for-online-shopping",
+          "online-penetration-grocery",
+          "online-penetration-beauty-grooming",
+          "online-penetration-clothing"
+        ]
+      },
+      {
+        "theme": "In car shopping, discovery and consideration have shifted online more than transactions; faster transaction adoption is tied to touchless end-to-end experiences.",
+        "priority": 2,
+        "evidence_ids": [
+          "growth-outlook-for-online-shopping"
+        ]
+      },
+      {
+        "theme": "Online shoppers often start at specific retailer sites or apps, with starting destinations varying by product category.",
+        "priority": 3,
+        "evidence_ids": [
+          "ecommerce-discovery",
+          "beauty-amazon-shopping-start",
+          "clothing-amazon-shopping-start",
+          "clothing-department-store-shopping-start"
+        ]
+      },
+      {
+        "theme": "Many consumers who tried new online retailers during the outbreak plan to continue shopping with at least some of them; discovery sources vary by category.",
+        "priority": 4,
+        "evidence_ids": [
+          "purchasing-with-new-online-retailers",
+          "new-grocery-retailer-purchases",
+          "new-beauty-retailer-purchases",
+          "new-clothing-retailer-purchases",
+          "continue-new-grocery-retailers",
+          "continue-new-beauty-retailers",
+          "continue-new-clothing-retailers",
+          "new-retailer-discovery-sources"
+        ]
+      },
+      {
+        "theme": "Delivery is the most frequently used online-purchase fulfillment option across the reported categories, while grocery shoppers also use curbside and in-store pickup.",
+        "priority": 5,
+        "evidence_ids": [
+          "delivery-vs-pickup",
+          "grocery-most-used-delivery",
+          "beauty-most-used-delivery",
+          "clothing-most-used-delivery",
+          "grocery-curbside-pickup",
+          "grocery-in-store-pickup"
+        ]
+      },
+      {
+        "theme": "The report tracks new paid shopping memberships, plans to retain them, and household paid-membership use.",
+        "priority": 6,
+        "evidence_ids": [
+          "shopping-program-memberships",
+          "new-paid-membership-signups",
+          "retain-new-paid-memberships",
+          "households-with-paid-membership",
+          "average-paid-memberships-household",
+          "amazon-prime-paid-households"
+        ]
+      },
+      {
+        "theme": "Online shoppers report differing comfort with sharing personal information and exchange some information with retailers for monetary benefits.",
+        "priority": 7,
+        "evidence_ids": [
+          "consumer-data-sharing-on-the-privacy-focused-web",
+          "privacy-comfortable-data-types-2021",
+          "consumer-data-sharing-comfort-by-information-type",
+          "consumer-data-sharing-monetary-benefits",
+          "email-list-welcome-reward",
+          "date-of-birth-birthday-reward",
+          "loyalty-program-rewards",
+          "retailer-credit-card-rewards"
+        ]
+      }
+    ]
+  }
+}

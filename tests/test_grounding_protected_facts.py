@@ -198,7 +198,7 @@ def test_grounding_flags_the_unsupported_reason_on_the_49_percent_finding(
     )
 
     assert len(issues) == 1
-    assert issues[0].severity == "warning"
+    assert issues[0].severity == "error"
     assert "[factual_claim|not_established]" in issues[0].message
 
 

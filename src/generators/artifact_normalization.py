@@ -22,6 +22,7 @@ from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "stable_id_unique_selection:2"
 
 METRIC_FIELDS = (
     "label",
@@ -1036,9 +1037,9 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
         evidence_id = _s(item.get("evidence_id"))
         insight: Dict[str, Any] = {
             "id": _s(item.get("id") or f"{prefix}_{idx + 1}"),
-            "text": _s(item.get("text")),
+            "text": _normalize_public_numeric_signs(_s(item.get("text"))),
             "evidence_id": evidence_id,
-            "evidence": _s(item.get("evidence")),
+            "evidence": _normalize_public_numeric_signs(_s(item.get("evidence"))),
             "evidence_spans": _normalize_evidence_spans(
                 item.get("evidence_spans"), evidence_id=evidence_id
             ),
@@ -1444,11 +1445,23 @@ def _ranked_unique_insights(
 
     ranked: List[tuple[int, Dict[str, Any]]] = []
     seen: set[str] = set()
+    seen_ids: set[str] = set()
+    grounded_ids = {
+        _s(item.get("id")).strip()
+        for item in [*final_insights, *candidate_insights]
+        if isinstance(item, dict) and _s(item.get("evidence_id")).strip()
+    }
     for source_order, insight in enumerate([*final_insights, *candidate_insights]):
         if not isinstance(insight, dict) or not _s(insight.get("text")).strip():
             continue
         insight = dict(insight)
         insight_id = _s(insight.get("id")).strip()
+        if insight_id in grounded_ids and not _s(insight.get("evidence_id")).strip():
+            continue
+        # Stable IDs identify one source-bound item even when final and
+        # candidate stages use different wording for it.
+        if insight_id and insight_id in seen_ids:
+            continue
         duplicate_key = _insight_duplicate_key(insight)
         if duplicate_key and final_claim_counts.get(duplicate_key, 0) > 1:
             candidate = candidate_by_id.get(insight_id)
@@ -1470,6 +1483,8 @@ def _ranked_unique_insights(
             continue
         if duplicate_key:
             seen.add(duplicate_key)
+        if insight_id:
+            seen_ids.add(insight_id)
         ranked.append((source_order, dict(insight)))
     return ranked
 
@@ -2401,9 +2416,9 @@ def _normalize_claims(items: Any) -> List[Dict[str, Any]]:
         evidence_id = _s(item.get("evidence_id"))
         normalized.append(
             {
-                "claim": _s(item.get("claim")),
+                "claim": _normalize_public_numeric_signs(_s(item.get("claim"))),
                 "evidence_id": evidence_id,
-                "evidence": _s(item.get("evidence")),
+                "evidence": _normalize_public_numeric_signs(_s(item.get("evidence"))),
                 "evidence_spans": _normalize_evidence_spans(
                     item.get("evidence_spans"), evidence_id=evidence_id
                 ),
@@ -2427,6 +2442,15 @@ def _normalize_insight_text_field(field_name: str, value: Any) -> str:
             return text
         return COVERAGE_ROLE_TO_REPORT_TYPE_LENS.get(text, "")
     return text
+
+
+_DOUBLE_NUMERIC_SIGN_RE = re.compile(r"([\u2212-])\s*[\u2212-](?=\s*\d)")
+
+
+def _normalize_public_numeric_signs(text: str) -> str:
+    """Collapse OCR/model double signs without changing a valid range."""
+
+    return _DOUBLE_NUMERIC_SIGN_RE.sub(r"\1", text)
 
 
 def _collect_known_evidence_ids(

@@ -1,0 +1,187 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "public_output": {
+      "tldr": "In 2021, U.S. clothing purchasers aged 18+ had 77% online penetration before and 83% after the outbreak ends.",
+      "card_tldr_compact": "In 2021, U.S. clothing purchasers aged 18+ had 77% online penetration before and 83% after the outbreak ends.",
+      "executive_summary": "In 2021, U.S. clothing purchasers aged 18+ had 77% online penetration before and 83% after the outbreak ends. In the U.S. 2021 chart, online penetration among grocery purchasers aged 18+ was 43% before the outbreak began and 56% after it ends. In the U.S. 2021 chart, online penetration among beauty/grooming purchasers aged 18+ was 57% before the outbreak began and 66% after it ends. During the COVID-19 outbreak, 27% of U.S. households signed up for a new paid shopping program membership. Of households that signed up for a new paid shopping program membership during the outbreak, 83% planned to keep at least one of those memberships over the next 12 months.",
+      "claim_evidence_map": [
+        {
+          "claim": "In 2021, U.S. clothing purchasers aged 18+ had 77% online penetration before and 83% after the outbreak ends.",
+          "evidence_id": "online-penetration-clothing",
+          "evidence": "The U.S. 2021 chart reports online penetration among clothing purchasers aged 18+ as 77% before the start of the COVID-19 outbreak and 83% after the outbreak ends.",
+          "evidence_spans": [],
+          "pages": [
+            5
+          ]
+        },
+        {
+          "claim": "In the U.S. 2021 chart, online penetration among grocery purchasers aged 18+ was 43% before the outbreak began and 56% after it ends.",
+          "evidence_id": "online-penetration-grocery",
+          "evidence": "The U.S. 2021 chart reports online penetration among grocery purchasers aged 18+ as 43% before the start of the COVID-19 outbreak and 56% after the outbreak ends.",
+          "evidence_spans": [],
+          "pages": [
+            5
+          ]
+        },
+        {
+          "claim": "In the U.S. 2021 chart, online penetration among beauty/grooming purchasers aged 18+ was 57% before the outbreak began and 66% after it ends.",
+          "evidence_id": "online-penetration-beauty-grooming",
+          "evidence": "The U.S. 2021 chart reports online penetration among beauty/grooming purchasers aged 18+ as 57% before the start of the COVID-19 outbreak and 66% after the outbreak ends.",
+          "evidence_spans": [],
+          "pages": [
+            5
+          ]
+        },
+        {
+          "claim": "During the COVID-19 outbreak, 27% of U.S. households signed up for a new paid shopping program membership.",
+          "evidence_id": "new-paid-membership-signups",
+          "evidence": "During the COVID-19 outbreak, 27% of U.S. households signed up for a new paid shopping program membership.",
+          "evidence_spans": [],
+          "pages": [
+            26
+          ]
+        },
+        {
+          "claim": "Of households that signed up for a new paid shopping program membership during the outbreak, 83% planned to keep at least one of those memberships over the next 12 months.",
+          "evidence_id": "retain-new-paid-memberships",
+          "evidence": "Of households that signed up for a new paid shopping program membership during the COVID-19 outbreak, 83% planned to keep at least one of those memberships over the next 12 months.",
+          "evidence_spans": [],
+          "pages": [
+            26
+          ]
+        }
+      ]
+    },
+    "claim_provenance": [
+      {
+        "claim": "In 2021, U.S. clothing purchasers aged 18+ had 77% online penetration before and 83% after the outbreak ends.",
+        "classification": "factual",
+        "evidence_ids": [
+          "online-penetration-clothing"
+        ]
+      },
+      {
+        "claim": "In the U.S. 2021 chart, online penetration among grocery purchasers aged 18+ was 43% before the outbreak began and 56% after it ends.",
+        "classification": "factual",
+        "evidence_ids": [
+          "online-penetration-grocery"
+        ]
+      },
+      {
+        "claim": "In the U.S. 2021 chart, online penetration among beauty/grooming purchasers aged 18+ was 57% before the outbreak began and 66% after it ends.",
+        "classification": "factual",
+        "evidence_ids": [
+          "online-penetration-beauty-grooming"
+        ]
+      },
+      {
+        "claim": "During the COVID-19 outbreak, 27% of U.S. households signed up for a new paid shopping program membership.",
+        "classification": "factual",
+        "evidence_ids": [
+          "new-paid-membership-signups"
+        ]
+      },
+      {
+        "claim": "Of households that signed up for a new paid shopping program membership during the outbreak, 83% planned to keep at least one of those memberships over the next 12 months.",
+        "classification": "factual",
+        "evidence_ids": [
+          "retain-new-paid-memberships"
+        ]
+      }
+    ],
+    "producing_prompt_identity": {
+      "schema_version": "1.0",
+      "namespace": "report_vs/artifacts/summary",
+      "family_schema_version": "1.0",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9",
+      "prompt_dependency_manifest": {
+        "schema_version": "1.0",
+        "namespace": "report_vs/artifacts/summary",
+        "system_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "sha256": "3df572a3c0dde0f0e5b7f3d83fd30339674224df030cfe2eb072b8493a4a7b05",
+          "kind": "system_root",
+          "source": ""
+        },
+        "user_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "kind": "user_root",
+          "source": ""
+        },
+        "included_partials": [
+          {
+            "schema_version": "1.0",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "kind": "partial",
+            "source": "user:0"
+          }
+        ],
+        "schema_snippets": [
+          {
+            "schema_version": "1.0",
+            "path": "schemas/artifacts.schema.json",
+            "sha256": "fa2d3dd109c1f2ff61152454a7dff4a29dd781b490069be25e8ac3744165b3f9",
+            "kind": "schema_snippet",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "composition_version": "2.0",
+        "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9"
+      },
+      "execution_identity": "1b182a84ae507957f833d729d8cb0577cbb40b57cddbfc3e2b69e58926de4221",
+      "execution_identity_manifest": {
+        "schema_version": "1.0",
+        "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9",
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "temperature": null,
+        "seed": null,
+        "reasoning_effort": "medium",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "timeout_seconds": 600.0,
+          "provider_retry_count": 0
+        },
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "policy_source": "report_vs/artifacts/summary",
+          "tier": "routine_structured",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "max_input_tokens": 48000,
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary"
+        },
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "output_contract_schema_version": "artifact_json:1.0",
+        "validator_version": "artifacts_schema:3.0",
+        "execution_identity": "1b182a84ae507957f833d729d8cb0577cbb40b57cddbfc3e2b69e58926de4221"
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "validator_version": "artifacts_schema:3.0",
+      "relevant_input_hash": "b78460cbca2a2751aec1bd3ca9df7315c02a8ba31675e3a231a8f2c0d2fdbb62",
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "regeneration_reason": "validation_not_passed"
+    },
+    "generation_attempt": 1
+  }
+}

@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 from src.contracts.files import PdfCacheTextReadRequest
 from src.contracts.run_context import RunContext
+from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
 from src.contracts.validation import ValidationRequest
 from src.services import file_service
 from src.utils.analysis_family import family_is_abstained
@@ -417,8 +418,7 @@ def split_sentences(text: str) -> List[str]:
     cleaned = sanitize_citation_tokens(s(text))
     if not cleaned.strip():
         return []
-    parts = re.split(r"(?<=[.!?])\s+|\n+", cleaned)
-    return [part.strip() for part in parts if part and part.strip()]
+    return soft_copy_material_sentences(cleaned)
 
 
 def tokenize(text: str) -> List[str]:

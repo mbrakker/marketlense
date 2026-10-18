@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "public_output": {
+      "tldr": "Among U.S. adults aged 18–64 who purchased online during shelter in place, 81% planned to continue purchasing from a new online retailer in at least one category.",
+      "card_tldr_compact": "U.S. online purchasers aged 18–64: 81% planned to continue new-retailer shopping in at least one category during shelter-in-place.",
+      "executive_summary": "Among U.S. adults aged 18–64 who purchased online during shelter in place, 81% planned to continue purchasing from a new online retailer in at least one category. The report says that, to serve people’s new needs and expectations and thrive in the post-COVID era, technology and media companies will need to rewire many of the ways they engage users, including value propositions, programming, experiences, functionality, pricing, and marketing. Among U.S. adults aged 18–64 who participated in the digital activity, 81% viewed online banking/financial services, 64% webinars/virtual networking, and 55% telemedicine/mobile health as the same as or better than the in-person equivalent in 2020. Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64. The agenda recommends aligning prices with new consumer value perceptions.",
+      "claim_evidence_map": [
+        {
+          "claim": "U.S. online purchasers aged 18–64: 81% planned to continue new-retailer shopping in at least one category during shelter-in-place.",
+          "evidence_id": "new-online-retailer-continuation",
+          "evidence": "Among U.S. adults aged 18–64 who purchased online during shelter in place, 81% planned to continue purchasing from a new online retailer in at least one category.",
+          "evidence_spans": [],
+          "pages": [
+            14
+          ]
+        },
+        {
+          "claim": "The report says that, to serve people’s new needs and expectations and thrive in the post-COVID era, technology and media companies will need to rewire many of the ways they engage users, including value propositions, programming, experiences, functionality, pricing, and marketing.",
+          "evidence_id": "quote-2",
+          "evidence": "To serve people’s new needs and expectations and thrive in this post-Covid era, technology and media companies will need to rewire many of the ways they engage their users and consumers, including their value proposition, programming, experience, functionality, pricing, and marketing.",
+          "evidence_spans": [],
+          "pages": [
+            2
+          ]
+        },
+        {
+          "claim": "Among U.S. adults aged 18–64 who participated in the digital activity, 81% viewed online banking/financial services, 64% webinars/virtual networking, and 55% telemedicine/mobile health as the same as or better than the in-person equivalent in 2020.",
+          "evidence_id": "digital-activity-preference",
+          "evidence": "Among U.S. adults aged 18–64 who participated in the digital activity, 81% viewed online banking/financial services, 64% webinars/virtual networking, and 55% telemedicine/mobile health as the same as or better than the in-person equivalent in 2020.",
+          "evidence_spans": [],
+          "pages": [
+            23
+          ]
+        },
+        {
+          "claim": "Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+          "evidence_id": "live-sports-viewership-forecast",
+          "evidence": "Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+          "evidence_spans": [],
+          "pages": [
+            19
+          ]
+        },
+        {
+          "claim": "The agenda recommends aligning prices with new consumer value perceptions.",
+          "evidence_id": "actionable-rewire-to-restart-agenda",
+          "evidence": "The agenda recommends redefining value propositions and aligning prices with new consumer value perceptions.",
+          "evidence_spans": [],
+          "pages": [
+            28
+          ]
+        }
+      ]
+    },
+    "claim_provenance": [
+      {
+        "claim": "Among U.S. adults aged 18–64 who purchased online during shelter in place, 81% planned to continue purchasing from a new online retailer in at least one category.",
+        "classification": "factual",
+        "evidence_ids": [
+          "new-online-retailer-continuation"
+        ]
+      },
+      {
+        "claim": "U.S. online purchasers aged 18–64: 81% planned to continue new-retailer shopping in at least one category during shelter-in-place.",
+        "classification": "factual",
+        "evidence_ids": [
+          "new-online-retailer-continuation"
+        ]
+      },
+      {
+        "claim": "The report says that, to serve people’s new needs and expectations and thrive in the post-COVID era, technology and media companies will need to rewire many of the ways they engage users, including value propositions, programming, experiences, functionality, pricing, and marketing.",
+        "classification": "recommendation",
+        "evidence_ids": [
+          "quote-2"
+        ]
+      },
+      {
+        "claim": "Among U.S. adults aged 18–64 who participated in the digital activity, 81% viewed online banking/financial services, 64% webinars/virtual networking, and 55% telemedicine/mobile health as the same as or better than the in-person equivalent in 2020.",
+        "classification": "factual",
+        "evidence_ids": [
+          "digital-activity-preference"
+        ]
+      },
+      {
+        "claim": "Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+        "classification": "factual",
+        "evidence_ids": [
+          "live-sports-viewership-forecast"
+        ]
+      },
+      {
+        "claim": "The agenda recommends aligning prices with new consumer value perceptions.",
+        "classification": "recommendation",
+        "evidence_ids": [
+          "actionable-rewire-to-restart-agenda"
+        ]
+      }
+    ],
+    "producing_prompt_identity": {
+      "schema_version": "1.0",
+      "namespace": "report_vs/artifacts/summary",
+      "family_schema_version": "1.0",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9",
+      "prompt_dependency_manifest": {
+        "schema_version": "1.0",
+        "namespace": "report_vs/artifacts/summary",
+        "system_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "sha256": "3df572a3c0dde0f0e5b7f3d83fd30339674224df030cfe2eb072b8493a4a7b05",
+          "kind": "system_root",
+          "source": ""
+        },
+        "user_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "kind": "user_root",
+          "source": ""
+        },
+        "included_partials": [
+          {
+            "schema_version": "1.0",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "kind": "partial",
+            "source": "user:0"
+          }
+        ],
+        "schema_snippets": [
+          {
+            "schema_version": "1.0",
+            "path": "schemas/artifacts.schema.json",
+            "sha256": "fa2d3dd109c1f2ff61152454a7dff4a29dd781b490069be25e8ac3744165b3f9",
+            "kind": "schema_snippet",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "composition_version": "2.0",
+        "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9"
+      },
+      "execution_identity": "1b182a84ae507957f833d729d8cb0577cbb40b57cddbfc3e2b69e58926de4221",
+      "execution_identity_manifest": {
+        "schema_version": "1.0",
+        "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9",
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "temperature": null,
+        "seed": null,
+        "reasoning_effort": "medium",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "timeout_seconds": 600.0,
+          "provider_retry_count": 0
+        },
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "policy_source": "report_vs/artifacts/summary",
+          "tier": "routine_structured",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "max_input_tokens": 48000,
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary"
+        },
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "output_contract_schema_version": "artifact_json:1.0",
+        "validator_version": "artifacts_schema:3.0",
+        "execution_identity": "1b182a84ae507957f833d729d8cb0577cbb40b57cddbfc3e2b69e58926de4221"
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "validator_version": "artifacts_schema:3.0",
+      "relevant_input_hash": "87dd8b2d2ec3c7cc7e0ceb273a2cbf660d95ae8c616a211a258e06581ea0e614",
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "regeneration_reason": "materialization_missing"
+    },
+    "generation_attempt": 1
+  }
+}

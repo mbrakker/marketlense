@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "scope": "A technology and media outlook covering consumer behavior and markets, including internet and media spending, ARPU, discovery, messaging and bots, eSports, video, audio, and household trends. It includes U.S. and global analysis, with historical data and forecasts spanning 2015–2021.",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "scope",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

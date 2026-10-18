@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "_cache": {
+    "schema_version": "1.0",
+    "key": "249494329fbd8c1ba7329d8ecabe72b5c0ece635815094359de4740c8f46387d",
+    "md5": "58aebe24483505e5db9cfaf696159dc2",
+    "model": "gpt-6-luna",
+    "temperature": null,
+    "reasoning_effort": "low",
+    "seed": null,
+    "mode": "adaptive",
+    "prompt_system_sha256": "e44deabb4806c9edb05abd9327c83928adf3430f5894a2d52b7ecd356f64a410",
+    "prompt_user_sha256": "b7270ca58326e41ede53a92c23768f2f517a2dfbfcb03de5547e2d1c1a1ef280"
+  },
+  "results": [
+    {
+      "entry_key": "4a6f6233b4defb16ab875e43fc6f0f265fa9de946808a5721a54d5f06dbd7bbf",
+      "candidate_id": "chart-168-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        54.0,
+        88.0,
+        1534.0,
+        1148.0
+      ],
+      "reason": "model_accepted",
+      "page": 168
+    },
+    {
+      "entry_key": "668f59208c7cf11597697dcf5835adb110990f0b10dd7320d612820d5e54bdc0",
+      "candidate_id": "chart-41-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        58.0,
+        992.0,
+        747.0
+      ],
+      "reason": "model_accepted",
+      "page": 41
+    },
+    {
+      "entry_key": "a9a62a654b066cbd05f9618cee9ebb6381f49279529daa8c3e52f058bca79981",
+      "candidate_id": "chart-52-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        48.0,
+        58.0,
+        970.0,
+        750.0
+      ],
+      "reason": "model_accepted",
+      "page": 52
+    },
+    {
+      "entry_key": "bd0ebf763987d97831c8c99eb062e671d3f665c96960129ed0f721c091168600",
+      "candidate_id": "chart-40-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        39.0,
+        91.0,
+        1160.0,
+        1146.0
+      ],
+      "reason": "model_accepted",
+      "page": 40
+    },
+    {
+      "entry_key": "d48f7da1221abf50dcd0ce2a97875c0308233169b514899906a86a7460cfd5e5",
+      "candidate_id": "chart-67-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        0.0,
+        1024.0,
+        768.0
+      ],
+      "reason": "model_accepted",
+      "page": 67
+    }
+  ]
+}

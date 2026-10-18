@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "ecommerce",
+      "online_grocery",
+      "fashion_ecommerce",
+      "beauty_retail",
+      "consumer_behavior",
+      "purchase_journey",
+      "subscriptions",
+      "personalization"
+    ],
+    "primary_tags": [
+      "ecommerce",
+      "consumer_behavior",
+      "purchase_journey",
+      "online_grocery",
+      "fashion_ecommerce"
+    ],
+    "secondary_tags": [
+      "beauty_retail",
+      "subscriptions",
+      "personalization"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "ecommerce",
+        "tier": "primary",
+        "section_label": "Key Takeaways from Activate Consulting’s Consumer Research on Post-COVID Online Shopping",
+        "evidence": "Examines post-COVID shifts in online shopping adoption, discovery, retailer choice, and delivery across major product categories."
+      },
+      {
+        "tag": "consumer_behavior",
+        "tier": "primary",
+        "section_label": "Key Takeaways from Activate Consulting’s Consumer Research on Post-COVID Online Shopping",
+        "evidence": "Reports consumer adoption patterns, intentions to continue shopping online, and willingness to try new retailers."
+      },
+      {
+        "tag": "purchase_journey",
+        "tier": "primary",
+        "section_label": "Car Shopping",
+        "evidence": "Tracks movement of car discovery and consideration online, with transactions shifting more slowly."
+      },
+      {
+        "tag": "online_grocery",
+        "tier": "primary",
+        "section_label": "Growth Outlook for Online Shopping",
+        "evidence": "Measures grocery shoppers’ online penetration and sustained adoption after the COVID-19 outbreak."
+      },
+      {
+        "tag": "fashion_ecommerce",
+        "tier": "primary",
+        "section_label": "Growth Outlook for Online Shopping",
+        "evidence": "Measures online clothing shopping penetration and its sustained growth."
+      },
+      {
+        "tag": "beauty_retail",
+        "tier": "secondary",
+        "section_label": "Growth Outlook for Online Shopping",
+        "evidence": "Tracks online beauty/grooming shopping adoption and anticipated persistence."
+      },
+      {
+        "tag": "subscriptions",
+        "tier": "secondary",
+        "section_label": "Shopping Program Memberships",
+        "evidence": "Covers new paid shopping program memberships and households’ plans to retain them."
+      },
+      {
+        "tag": "personalization",
+        "tier": "secondary",
+        "section_label": "Consumer Data Sharing on the Privacy-Focused Web",
+        "evidence": "Describes shoppers sharing data with online retailers in exchange for personalized benefits."
+      }
+    ],
+    "region": "United States",
+    "time_period": "2021; COVID-19 outbreak since March 2020",
+    "not_found_reason": null
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "consumer_behavior",
+      "consumer_insights",
+      "technology",
+      "internet_and_media",
+      "ecommerce",
+      "gaming"
+    ],
+    "primary_tags": [
+      "consumer_behavior",
+      "consumer_insights",
+      "technology",
+      "internet_and_media"
+    ],
+    "secondary_tags": [
+      "ecommerce",
+      "gaming"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "consumer_behavior",
+        "tier": "primary",
+        "section_label": "Report overview",
+        "evidence": "Examines changed consumer habits, activities, expectations, time use, shopping, and spending in the post-COVID period."
+      },
+      {
+        "tag": "consumer_insights",
+        "tier": "primary",
+        "section_label": "Report overview",
+        "evidence": "Draws on consumer research to assess value drivers, behavior, preferences, and new digital activities."
+      },
+      {
+        "tag": "technology",
+        "tier": "primary",
+        "section_label": "Report overview",
+        "evidence": "Covers technology businesses and how they should adapt value propositions, experiences, functionality, pricing, and marketing."
+      },
+      {
+        "tag": "internet_and_media",
+        "tier": "primary",
+        "section_label": "Report overview",
+        "evidence": "Addresses technology, internet, media, and entertainment usage, including video, social media, music, news, and gaming."
+      },
+      {
+        "tag": "ecommerce",
+        "tier": "secondary",
+        "section_label": "Sustain increased demand",
+        "evidence": "Analyzes online shopping, retailer discovery, eCommerce category activity, and online grocery usage."
+      },
+      {
+        "tag": "gaming",
+        "tier": "secondary",
+        "section_label": "Accelerate new tech experiences",
+        "evidence": "Covers gaming usage, subscriber growth, social connections through games, and esports."
+      }
+    ],
+    "region": "United States",
+    "time_period": "2018 to 2020",
+    "not_found_reason": null
+  }
+}

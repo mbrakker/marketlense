@@ -8,6 +8,19 @@ __file__ = str(
 
 from ._split_support_test_publish_readiness_gate import *  # noqa: F401,F403
 from src.contracts.pdf_text import PdfTextPage
+from src.generators.publish_readiness_generator import _has_repeated_boilerplate
+
+
+def test_repeated_boilerplate_ignores_repeated_card_provenance_badges() -> None:
+    surfaces = [
+        (
+            "body",
+            "In the U.S. Direct evidence span · Source backed · Low "
+            "In the U.S. Direct evidence span · Source backed · Low",
+        )
+    ]
+
+    assert not _has_repeated_boilerplate(surfaces)
 
 
 def test_readiness_accepts_the_canonical_page_bound_semantic_identity() -> None:

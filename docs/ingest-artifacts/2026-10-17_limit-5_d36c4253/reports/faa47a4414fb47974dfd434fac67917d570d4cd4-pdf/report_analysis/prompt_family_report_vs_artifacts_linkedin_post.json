@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/linkedin_post",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "public_output": "Online shopping discovery is category-specific.\n\nIn the U.S. in 2021, 31% of online grocery shoppers typically started at Amazon. Among U.S. online beauty/grooming shoppers aged 18+ that year, 38% typically started there.\n\nFor online clothing shopping in the U.S. in 2021, Amazon was the most common starting point, at 36%.",
+    "claim_provenance": [
+      {
+        "claim": "Online shopping discovery is category-specific.",
+        "classification": "factual",
+        "evidence_ids": [
+          "ecommerce-discovery"
+        ]
+      },
+      {
+        "claim": "In the U.S. in 2021, 31% of online grocery shoppers typically started at Amazon.",
+        "classification": "factual",
+        "evidence_ids": [
+          "ecommerce-discovery"
+        ]
+      },
+      {
+        "claim": "Among U.S. online beauty/grooming shoppers aged 18+ that year, 38% typically started there.",
+        "classification": "factual",
+        "evidence_ids": [
+          "beauty-amazon-shopping-start"
+        ]
+      },
+      {
+        "claim": "For online clothing shopping in the U.S. in 2021, Amazon was the most common starting point, at 36%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "ecommerce-discovery"
+        ]
+      }
+    ],
+    "producing_prompt_identity": {
+      "schema_version": "1.0",
+      "namespace": "report_vs/artifacts/linkedin_post",
+      "family_schema_version": "1.0",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "f23475bd9e6f2fdcb43a2cea5e34e750d42a4bf51df9454dceef8259df6ccfea",
+      "prompt_dependency_manifest": {
+        "schema_version": "1.0",
+        "namespace": "report_vs/artifacts/linkedin_post",
+        "system_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/linkedin_post/system.yaml",
+          "sha256": "c6b3ee58c2066ab1396cf187f27909e513e8a6fe128b7a0ac31c43f02d752bc4",
+          "kind": "system_root",
+          "source": ""
+        },
+        "user_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/linkedin_post/user.yaml",
+          "sha256": "2d7fd15f7ab8cd6ba24c6fe29de18dc9504638760109656c75290150d164f8a7",
+          "kind": "user_root",
+          "source": ""
+        },
+        "included_partials": [
+          {
+            "schema_version": "1.0",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "kind": "partial",
+            "source": "user:0"
+          }
+        ],
+        "schema_snippets": [],
+        "composition_version": "2.0",
+        "prompt_content_hash": "f23475bd9e6f2fdcb43a2cea5e34e750d42a4bf51df9454dceef8259df6ccfea"
+      },
+      "execution_identity": "2c4c481fb8373a27e3797457fafa01ecabe77d0b66d449c66256ccd37ff09a4a",
+      "execution_identity_manifest": {
+        "schema_version": "1.0",
+        "prompt_content_hash": "f23475bd9e6f2fdcb43a2cea5e34e750d42a4bf51df9454dceef8259df6ccfea",
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "temperature": null,
+        "seed": null,
+        "reasoning_effort": "medium",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "timeout_seconds": 600.0,
+          "provider_retry_count": 0
+        },
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "policy_source": "report_vs/artifacts/linkedin_post",
+          "tier": "routine_structured",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "max_input_tokens": 48000,
+          "compaction_enabled": true,
+          "execution_policy_hash": "717fac1f533ed855ef44f26edcb9c63113609f1139c4e23fa3cd1537b2bf7169",
+          "execution_policy_source": "report_vs/artifacts/linkedin_post"
+        },
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "output_contract_schema_version": "artifact_json:1.0",
+        "validator_version": "artifacts_schema:3.0",
+        "execution_identity": "2c4c481fb8373a27e3797457fafa01ecabe77d0b66d449c66256ccd37ff09a4a"
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "routing_policy_version": "717fac1f533ed855ef44f26edcb9c63113609f1139c4e23fa3cd1537b2bf7169",
+      "validator_version": "artifacts_schema:3.0",
+      "relevant_input_hash": "777b2d6e11d0d205240adcc7bd46d769144cc98456a896278077d2e9e89bcb98",
+      "configuration_policy_hash": "79895e8de9d6d55e044b98f4345fcee062ab9f2f9d65b5f8e9101499ed809023",
+      "decision": "regenerated",
+      "regeneration_reason": "validation_not_passed"
+    },
+    "generation_attempt": 1
+  }
+}

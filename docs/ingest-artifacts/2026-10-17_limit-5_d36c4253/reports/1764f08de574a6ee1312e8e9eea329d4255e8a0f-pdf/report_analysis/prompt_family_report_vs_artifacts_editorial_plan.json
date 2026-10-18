@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_plan",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "report_thesis": "Activate’s outlook projects growth in global internet and media revenues through 2025E alongside changes in consumer behavior and the expansion of digital experiences across commerce, entertainment, and enterprise technology.",
+    "themes": [
+      {
+        "theme": "Global internet and media revenues are forecast to rise from $2.1T in 2021E to $2.5T in 2025E, adding $390B; advertising has the highest forecast CAGR among the segments shown.",
+        "priority": 1,
+        "evidence_ids": [
+          "global-revenue-growth",
+          "advertising-growth-rate"
+        ]
+      },
+      {
+        "theme": "The report expects most pandemic-era gains in technology and media attention to persist and describes super users as a disproportionate source of eCommerce spending and early adoption.",
+        "priority": 2,
+        "evidence_ids": [
+          "consumer-time-attention",
+          "super-users",
+          "super-user-early-adoption"
+        ]
+      },
+      {
+        "theme": "The outlook anticipates wider cryptocurrency use beyond investment and forecasts NFTs becoming more mainstream, while reporting that buying or selling cryptocurrency was more common than using it to pay for a product or service among U.S. adults in 2021.",
+        "priority": 3,
+        "evidence_ids": [
+          "cryptocurrency",
+          "nfts",
+          "crypto-usage-trading-versus-transacting"
+        ]
+      },
+      {
+        "theme": "Gaming already hosts non-gaming activities, and the report presents games as a route to metaverse experiences.",
+        "priority": 4,
+        "evidence_ids": [
+          "video-gaming",
+          "gamers-non-gaming-activities",
+          "metaverse"
+        ]
+      },
+      {
+        "theme": "eCommerce technologies and delivery models address shopping barriers, with online car purchases fulfilled by delivery forecast to make up a larger share of U.S. purchases by 2025E.",
+        "priority": 5,
+        "evidence_ids": [
+          "ecommerce",
+          "online-car-purchase-forecast"
+        ]
+      },
+      {
+        "theme": "The outlook covers changing video and audio use alongside digital sports and esports audiences, including forecasts for global esports viewership.",
+        "priority": 6,
+        "evidence_ids": [
+          "video",
+          "audio",
+          "sports-and-sports-tech",
+          "esports-global-audience-forecast-series"
+        ]
+      },
+      {
+        "theme": "Data, storage, compute, and connectivity capabilities are presented as foundations for consumer experiences and enterprise productivity.",
+        "priority": 7,
+        "evidence_ids": [
+          "data-solutions-enterprise-automation"
+        ]
+      }
+    ]
+  }
+}

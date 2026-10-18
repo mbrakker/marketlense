@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\Programing\\Market lense\\out\\dcafdf701553fe7572d72c526f6f451b8fc5a742-pdf\\report_analysis\\validation_regen_attempt_1.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "insights_final[1].text",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "insights_final[1].text",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "insights_final[2].text",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "insights_final[2].text",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "insights_final[6].text",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "insights_final[6].text",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "key_figures[2].why_it_matters",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "key_figures[2].why_it_matters",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "chart_insight_cards[2].takeaway",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "chart_insight_cards[2].takeaway",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "chart_insight_cards[2].business_implication",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "chart_insight_cards[2].business_implication",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] No retained evidence is attached to this item, so the report title is not established by linked evidence.: TECH & MEDIA OUTLOOK 2017",
+      "severity": "warning",
+      "affected_section": "metadata.title",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "metadata:title",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "insights:global-media-revenue-segment-growth",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:global-media-revenue-segment-growth:text",
+      "evidence_ids": [
+        "internet-media-segment-cagr"
+      ]
+    }
+  ]
+}

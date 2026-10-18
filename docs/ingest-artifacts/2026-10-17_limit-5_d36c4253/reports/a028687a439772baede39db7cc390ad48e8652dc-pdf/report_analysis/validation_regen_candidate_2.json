@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.1",
+  "status": "pass",
+  "severity": "warning",
+  "source_path": "C:\\Programing\\Market lense\\out\\a028687a439772baede39db7cc390ad48e8652dc-pdf\\report_analysis\\validation_regen_candidate_2.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe 'When live sports return' not verbatim but semantically supported (confidence=1.00) for live-sports-viewership-forecast",
+      "severity": "info",
+      "affected_section": "insights:live-sports-viewership-forecast",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe 'During shelter in place, 2020' not verbatim but semantically supported (confidence=1.00) for apparel-ecommerce-penetration",
+      "severity": "info",
+      "affected_section": "insights:apparel-ecommerce-penetration",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] No retained evidence is attached to this item. The date appearing in source context is not linked evidence and cannot establish the claim.: JUNE 10, 2020",
+      "severity": "warning",
+      "affected_section": "metadata.title",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "metadata:title",
+      "evidence_ids": []
+    }
+  ]
+}

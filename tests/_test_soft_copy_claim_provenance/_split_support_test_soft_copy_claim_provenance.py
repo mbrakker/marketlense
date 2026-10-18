@@ -43,6 +43,7 @@ def _assemble_soft_copy(
     existing_soft_copy_claim_provenance: dict[str, object] | None = None,
     replaced_soft_copy_claim_ids: dict[str, list[str]] | None = None,
     soft_copy_repair_texts: dict[str, list[str]] | None = None,
+    regeneration_attempt: int = 0,
     validate_references: bool = False,
 ) -> dict[str, object]:
     """Exercise the canonical artifact assembly boundary with no claim bindings."""
@@ -89,6 +90,7 @@ def _assemble_soft_copy(
         existing_soft_copy_claim_provenance=existing_soft_copy_claim_provenance,
         replaced_soft_copy_claim_ids=replaced_soft_copy_claim_ids,
         soft_copy_repair_texts=soft_copy_repair_texts,
+        regeneration_attempt=regeneration_attempt,
         validate_references=validate_references,
     )
 

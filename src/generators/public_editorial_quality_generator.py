@@ -178,6 +178,11 @@ _CAPITALIZED_CATEGORY_VALUE_PAIR = re.compile(
     rf"(?:[ \t]*(?::|is|has|accounts\s+for|at|reaches)[ \t]*|[ \t]+)"
     rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
 )
+_COMMA_CATEGORY_VALUE_PAIR = re.compile(
+    rf"\b(?P<label>[A-Z][A-Za-z0-9&/-]*(?:,\s*[A-Z][A-Za-z0-9&/-]*){{1,4}}"
+    rf"(?:\s*,?\s*and\s+[A-Z][A-Za-z0-9&/-]*)?)"
+    rf"\s+(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
+)
 _DELIMITED_SPACE_CATEGORY_VALUE_PAIR = re.compile(
     rf";\s*(?P<label>[A-Za-z][A-Za-z0-9&/-]*"
     rf"(?:\s+[A-Za-z][A-Za-z0-9&/-]*){{1,4}})"
@@ -1672,6 +1677,7 @@ def _period_value_pairs(text: str) -> set[tuple[str, str]]:
 def _structured_category_value_pairs(text: str) -> set[tuple[str, str]]:
     pairs: set[tuple[str, str]] = set()
     for pattern in (
+        _COMMA_CATEGORY_VALUE_PAIR,
         _CAPITALIZED_CATEGORY_VALUE_PAIR,
         _DELIMITED_SPACE_CATEGORY_VALUE_PAIR,
         _DELIMITED_CATEGORY_VALUE_PAIR,
@@ -1679,9 +1685,34 @@ def _structured_category_value_pairs(text: str) -> set[tuple[str, str]]:
         for match in pattern.finditer(text):
             value = _normalized_relationship_value(match.group("value"))
             label = _normalized_category_value_label(match.group("label"))
-            if value and label and not _is_year_value(value):
+            if (
+                value
+                and label
+                and not _is_year_value(value)
+                and not _is_demographic_age_threshold(
+                    f"{match.group('label')} {match.group('value')}",
+                    len(match.group("label")) + 1,
+                    len(match.group(0)),
+                )
+                and "cagr" not in label.split()
+            ):
                 pairs.add((label, value))
-    return pairs
+    # A comma-separated category such as "Apparel, Shoes, and Accessories"
+    # also matches the trailing token "Accessories" through the generic
+    # capitalized parser. Keep the most specific label when both bindings carry
+    # the same value so the short parser match cannot create a false swap.
+    return {
+        (label, value)
+        for label, value in pairs
+        if not any(
+            label != other_label
+            and value == other_value
+            and (
+                other_label.endswith(f" {label}") or other_label.startswith(f"{label} ")
+            )
+            for other_label, other_value in pairs
+        )
+    }
 
 
 def _subject_value_relationships(text: str) -> set[tuple[str, str]]:
@@ -1724,9 +1755,7 @@ def _values_near_label(
 ) -> set[str]:
     values: set[str] = set()
     normalized_text = _normalized_relationship_search_text(text)
-    label_pattern = re.compile(
-        rf"(?<![A-Za-z0-9]){re.escape(label)}(?![A-Za-z0-9])", re.IGNORECASE
-    )
+    label_pattern = _relationship_label_pattern(label)
     other_labels = sorted(
         {
             value.strip()
@@ -1738,10 +1767,7 @@ def _values_near_label(
     other_label_patterns = [
         (
             related_label,
-            re.compile(
-                rf"(?<![A-Za-z0-9]){re.escape(related_label)}(?![A-Za-z0-9])",
-                re.IGNORECASE,
-            ),
+            _relationship_label_pattern(related_label),
         )
         for related_label in other_labels
     ]
@@ -1835,16 +1861,35 @@ def _values_near_label(
             )
             window_end = min(label_match.end() + 80, next_category_start)
             window = fragment[label_match.end() : window_end]
-            value_match = re.search(
-                rf"{_RELATIONSHIP_VALUE}(?![A-Za-z0-9%])",
-                window,
-                re.IGNORECASE,
+            value_matches = re.finditer(
+                rf"{_RELATIONSHIP_VALUE}(?![A-Za-z0-9%])", window, re.IGNORECASE
             )
-            if value_match:
+            for value_match in value_matches:
+                if _is_demographic_age_threshold(
+                    window, value_match.start(), value_match.end()
+                ):
+                    continue
                 value = _normalized_relationship_value(value_match.group(0))
                 if value and not _is_year_value(value):
                     values.add(value)
+                    break
     return values
+
+
+def _is_demographic_age_threshold(text: str, start: int, end: int) -> bool:
+    """Exclude age qualifiers from label-to-metric relationships."""
+    before = text[max(0, start - 24) : end]
+    after = text[end : end + 8]
+    return bool(
+        re.search(r"\baged\s+\d{1,3}\s*$", before, re.IGNORECASE)
+        or re.search(
+            r"\baged\s+\d{1,3}\s*[-\u2013]\s*\d{1,3}\s*$", before, re.IGNORECASE
+        )
+        or (
+            re.search(r"\baged\s+\d{1,3}\s*$", before, re.IGNORECASE)
+            and re.match(r"\s*(?:\+|[-\u2013]\s*\d{1,3})", after)
+        )
+    )
 
 
 def _is_compound_category_header(text: str, label_start: int) -> bool:
@@ -1866,11 +1911,19 @@ def _is_compound_category_header(text: str, label_start: int) -> bool:
 def _normalized_category_value_label(value: str) -> str:
     """Use the nearest blank-line-delimited row label, not its table heading."""
     nearest_label = re.split(r"\r?\n[ \t]*\r?\n", value)[-1]
-    return _normalized_relationship_label(nearest_label)
+    normalized = _normalized_relationship_label(nearest_label)
+    # Delimited prose rows such as ``CTV accounts for 30.83%`` can be
+    # captured with the verb phrase as part of the label. Strip that suffix so
+    # combined-category checks compare the actual category names.
+    return re.sub(
+        r"\b(?:accounts?\s+for|is|are|was|were|has|had)\s*$", "", normalized
+    ).strip()
 
 
 def _normalized_relationship_label(value: str) -> str:
-    return " ".join(value.casefold().replace("–", "-").split())
+    normalized = value.casefold().replace("–", "-").replace(",", " ")
+    normalized = re.sub(r"(?<=[a-z])\d+$", "", normalized)
+    return " ".join(normalized.split())
 
 
 def _normalized_relationship_value(value: str) -> str:
@@ -1879,6 +1932,12 @@ def _normalized_relationship_value(value: str) -> str:
 
 def _normalized_relationship_search_text(value: str) -> str:
     return value.casefold().replace("–", "-")
+
+
+def _relationship_label_pattern(label: str) -> re.Pattern[str]:
+    parts = [part for part in label.split() if part]
+    pattern = r"(?:\s*,?\s+)".join(re.escape(part) for part in parts)
+    return re.compile(rf"(?<![A-Za-z0-9]){pattern}(?![A-Za-z0-9])", re.IGNORECASE)
 
 
 def _is_year_value(value: str) -> bool:

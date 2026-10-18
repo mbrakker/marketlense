@@ -1,0 +1,95 @@
+{
+  "report_id": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+  "title": "TECH & MEDIA OUTLOOK 2017",
+  "publisher": "",
+  "region": "Global and United States",
+  "time_period": "2016–2021E",
+  "overview": "THINK AGAIN: TECH & MEDIA OUTLOOK 2017 An outlook on technology and media in 2017 that examines consumer attention and spending, platform control of discovery and messaging, eSports, video, audio, and changing household structures. It combines consumer research and market analysis with forecasts and strategic implications for technology and media companies. A technology and media outlook covering consumer behavior and markets, including internet and media spending, ARPU, discovery, messaging and bots, eSports, video, audio, and household trends. It includes U.S. and global analysis, with historical data and forecasts spanning 2015–2021.",
+  "methods": [
+    "Consumer research uses the Activate 2016 Consumer Tech & Media Research Study; reported sample sizes include n=4,000, n=2,064, n=1,003, and chart-specific samples of n=4,000 (LHS) and n=840 (RHS).",
+    "Data sources cited include company financial statements (10-K/10-Q), comScore, eMarketer, IRS exchange rates, and other named industry sources.",
+    "Activate forecasts are presented for periods such as 2016E–2021E; the forecasting model and validation approach are not specified in the excerpts.",
+    "ARPU is calculated from revenues divided by users, with chart notes specifying consolidated revenues and exceptions for particular companies."
+  ],
+  "key_findings": [
+    "The report states that 92% of consumers multitask across at least two media types.",
+    "For global consumer internet and media revenues in 2016E–2021E, the report assigns a 6.3% CAGR to cost of internet access, 4.7% to ad revenue, and 2.6% to paid content.",
+    "Activate forecast that by 2020, eSports would account for approximately 10% of all U.S. sports viewing, with 70 million or more people watching an eSports final—more than the finals of the MLB, NHL, or NBA.",
+    "The report forecasts that the global amount wagered on in-game activities could reach $12 billion by 2020.",
+    "The report says U.S. Pay TV prices had reached the upper bound of consumer willingness to pay.",
+    "In 2016, “Not Worth Money” was listed as the primary reason for not having Pay TV, at 35%."
+  ],
+  "limitations": [
+    "The digital-attention chart includes only digital-first businesses; its values do not account for multitasking.",
+    "The soundbar chart uses 2016 population data, and its figures may not total 100% because of rounding.",
+    "The digital newspapers and magazines figures exclude advertising.",
+    "Global ARPU figures use consolidated global revenues with stated exceptions: Apple equipment sales exclude accessories, apps, and iPods; Amazon excludes services; Facebook uses advertising revenue."
+  ],
+  "sections": [
+    {
+      "section_label": "Consumer Time & Attention",
+      "source_pack": "doc_map",
+      "summary": "This opening section considers how audiences divide their time across media and which digital platforms command substantial attention. It frames attention as a key resource for media and technology businesses.",
+      "key_points": [
+        "The report states that 92% of consumers multitask across at least two media types; the chart compares multitasking frequency across video, music, messaging, gaming, and reading.",
+        "It describes digital-attention businesses as capturing one billion or more U.S. minutes per week, with digital-first platforms compared by weekly minutes."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Internet & Media Spend",
+      "source_pack": "doc_map",
+      "summary": "This section examines global consumer internet and media revenues, the drivers of future growth, and changing consumer payment models. It also considers the audience profile of subscription apps.",
+      "key_points": [
+        "The report forecasts global consumer internet and media revenues increasing from $1.7 trillion in 2016E to $2.1 trillion in 2021E, a projected $402 billion increase; it compares the 4.4% revenue CA...",
+        "For 2016E–2021E, the revenue-segment chart assigns a 6.3% CAGR to internet access, 4.7% to advertising, and 2.6% to paid content.",
+        "The section describes subscription and freemium models as increasingly dominant among leading non-game media and entertainment apps, and reports that top subscription apps over-index on users aged..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "ARPU",
+      "source_pack": "doc_map",
+      "summary": "This section compares annual average revenue per user across technology and media businesses in the United States and globally. Its central contrast is between high U.S. ARPU for digital access and television providers and high global ARPU for hardware- and...",
+      "key_points": [
+        "The U.S. comparison covers annual ARPU in 2015 and identifies digital access and television providers as the leaders.",
+        "The global 2015 comparison identifies hardware- and commerce-oriented businesses as ARPU leaders."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Discovery Oligopoly",
+      "source_pack": "doc_map",
+      "summary": "This section describes a small set of major digital platforms as controlling important stages of the consumer journey, from access and discovery to consumption and payment. It argues that platform algorithms and commercial discovery arrangements increasingl...",
+      "key_points": [
+        "The report maps platform capabilities across the consumer journey, including hardware, operating systems, search, social networks, advertising, publishing, e-commerce, and wallets.",
+        "Discovery mechanisms include preferred content, search optimization, curated results, paid promotion, sponsored ads, and exclusives.",
+        "The section describes publishers as adapting to changing platform requirements, sharing advertising revenue through first-party publishing, and competing with bot and widget discovery systems."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Messaging & Bots",
+      "source_pack": "doc_map",
+      "summary": "This section examines messaging platforms and bots as potential interfaces for services, content, commerce, and workplace collaboration. It links their growth to competition over platform control, consumer relationships, and monetization.",
+      "key_points": [
+        "The report argues that messaging and bots put core platform revenues and consumer bases at stake, including search advertising, apps, retail e-commerce, social advertising, and enterprise software.",
+        "It identifies simple, fast, automatable interactions—such as local services, e-commerce, customer service, and quick diagnostics—as likely bot use cases.",
+        "Messaging monetization forecasts compare services and ARPU across major platforms; the report notes that payment and e-commerce adoption remain important steps beyond messaging and stickers."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "The 9 Most Important Insights for Tech and Media in 2017",
+      "source_pack": "doc_map",
+      "summary": "This overview distills the report’s main themes into nine strategic insights spanning attention, subscriptions, discovery, messaging, eSports, Pay TV, video streaming, audio, and post-household users.",
+      "key_points": [
+        "The insights call for serving high-engagement users and pursuing digital attention leaders, while treating subscriptions as a major internet and media business model.",
+        "They frame discovery and messaging as platform-control contests and identify eSports as an emerging technology and media phenomenon.",
+        "They highlight new competitive dynamics in Pay TV, the role of bundles in video streaming, smart speakers and gray music in audio, and post-household users as a new era of audiences."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

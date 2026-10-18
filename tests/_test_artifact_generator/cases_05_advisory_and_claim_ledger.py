@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 from ._support_cases import *  # noqa: F401,F403
+from src.generators._artifact_generator.storage import (
+    _sanitize_key_figure_ranking_language,
+)
 
 
 def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:
@@ -162,6 +165,57 @@ def test_metric_spine_preserves_source_display_and_exposes_complete_numeric_meta
         insights_final=[insight],
     )
     assert figures[0]["figure"] == display
+
+
+def test_key_figure_why_it_matters_drops_unverified_ranking_language() -> None:
+    insight = {
+        "id": "beauty-amazon",
+        "text": (
+            "Amazon led starting sites/apps: 38% of beauty/grooming shoppers "
+            "started there."
+        ),
+        "evidence_id": "beauty-amazon",
+        "evidence": "FIRST WEBSITE/APP VISITED; 38% Amazon.",
+        "metric": {
+            "label": "Share starting beauty/grooming shopping at Amazon",
+            "value": "38%",
+            "segment": "beauty/grooming shoppers",
+            "timeframe": "U.S., 2021",
+        },
+    }
+
+    figures = build_key_figures(
+        metric_spine=[],
+        evidence_packs={
+            "findings": {
+                "findings": [{"id": "beauty-amazon", "evidence": insight["evidence"]}]
+            }
+        },
+        insights_final=[insight],
+    )
+
+    assert figures
+    assert "led" not in figures[0]["why_it_matters"].lower()
+    assert figures[0]["why_it_matters"].startswith(
+        "Share starting beauty/grooming shopping at Amazon: 38%"
+    )
+
+
+def test_restored_key_figure_projection_is_sanitized_too() -> None:
+    figures = [
+        {
+            "label": "Share starting beauty/grooming shopping at Amazon",
+            "figure": "38%",
+            "segment": "Beauty/grooming",
+            "geography": "U.S.",
+            "timeframe": "U.S., 2021",
+            "why_it_matters": "Amazon led starting sites/apps: 38% of shoppers.",
+        }
+    ]
+
+    _sanitize_key_figure_ranking_language(figures)
+
+    assert "led" not in figures[0]["why_it_matters"].lower()
 
 
 def test_build_executive_advisory_artifacts_omits_unsupported_decision_fields() -> None:

@@ -774,6 +774,49 @@ def test_finalization_invariant_rejects_public_copy_mutated_after_provenance() -
     assert captured.value.code == "soft_copy_claim_provenance_coverage_invalid"
 
 
+def test_regeneration_candidate_defers_missing_bindings_to_candidate_validator() -> (
+    None
+):
+    original = _assemble_soft_copy(
+        expert_comment="Revenue grew by 12%.",
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {"id": "f1", "evidence": "Revenue grew by 12%.", "pages": [1]}
+                ]
+            }
+        },
+        soft_copy_claim_bindings={
+            "expert_comment": [
+                {
+                    "claim": "Revenue grew by 12%.",
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                }
+            ]
+        },
+    )
+
+    candidate = _assemble_soft_copy(
+        expert_comment="Revenue grew by 13%.",
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {"id": "f1", "evidence": "Revenue grew by 12%.", "pages": [1]}
+                ]
+            }
+        },
+        existing_soft_copy_claim_provenance=original["soft_copy_claim_provenance"],
+        regeneration_attempt=1,
+    )
+
+    assert candidate["expert_comment"] == "Revenue grew by 13%."
+    assert not any(
+        claim["artifact_family"] == "expert_comment"
+        for claim in candidate["soft_copy_claim_provenance"]["claims"]
+    )
+
+
 def test_finalization_drops_provenance_for_rolled_back_repair_text() -> None:
     final_text = "Retailers rely on measurable audience signals."
     stale_repair_text = "Retailers rely on a 19% lift in audience signals."

@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/quotes",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "quote-004",
+      "text": "THE “CABLE KILLER” WON'T BE A LOW-PRICED COMPETITOR, IT WILL BE “SMART CABLE”",
+      "speaker": "Unknown",
+      "citation": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+      "page": 0,
+      "evidence_id": "quote-004",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    },
+    {
+      "id": "quote-006",
+      "text": "A new wave of companies are building businesses by using the app store for distribution and engagement, but not monetization",
+      "speaker": "Unknown",
+      "citation": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+      "page": 0,
+      "evidence_id": "quote-006",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    },
+    {
+      "id": "quote-003",
+      "text": "Consumer behavior has moved beyond traditional appointment viewing and has created audiences for new kinds of content",
+      "speaker": "Unknown",
+      "citation": "12BLIKSWr7ehr2ILmOkTl2KwJp62qchwU.pdf",
+      "page": 0,
+      "evidence_id": "quote-003",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    }
+  ]
+}

@@ -2326,13 +2326,19 @@ def _source_references(
 
 
 def _item_direct_evidence_text(raw: dict) -> str:
-    """Return the item’s direct excerpt, falling back to its quote text."""
+    """Return only the retained direct excerpt for a finding or quotation.
 
+    The finding ``text`` is generated copy, so appending it to an excerpt would
+    let an unsupported value prove itself during deterministic validation.
+    """
+
+    primary = ""
     for key in ("evidence", "quote", "quote_text", "snippet", "excerpt", "text"):
         value = raw.get(key)
         if isinstance(value, str) and value.strip():
-            return value.strip()
-    return ""
+            primary = value.strip()
+            break
+    return primary
 
 
 def _exact_evidence_pages(

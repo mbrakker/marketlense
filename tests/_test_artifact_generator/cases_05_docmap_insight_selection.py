@@ -14,7 +14,7 @@ def _insight(
     coverage_role: str = "market_context",
 ) -> dict[str, object]:
     return {
-        "id": f"insight-{evidence_id}",
+        "id": f"insight-{evidence_id}-{score}",
         "text": text or f"{evidence_id} changes the planning outlook.",
         "evidence_id": evidence_id,
         "evidence": f"Evidence for {evidence_id}.",

@@ -420,7 +420,9 @@ def _normalize_regeneration_issue(
 def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
     """Keep a rejected binding out of the next atomic repair prompt."""
 
-    rule_id = str(issue.rule_id or "").strip().lower()
+    rule_id = str(issue.rule_id or "").strip().lower() or _extract_rule_id(
+        issue.message
+    )
     violation_type = str(issue.violation_type or "").strip().lower()
     if rule_id == "public_editorial_quality.duplicate_insight":
         # The wording duplicates a sibling; their shared source is still valid.
@@ -677,9 +679,7 @@ def _issue_allowed_path(
             stable_id = str(entry.get("id") or entry.get("claim_id") or "").strip()
             item_identity = f"item={stable_id}" if stable_id else str(index)
             return f"summary.claim_evidence_map[{item_identity}].claim"
-        if re.match(
-            r"^summary\.claim_evidence_map(?::|\[)", affected, re.IGNORECASE
-        ):
+        if re.match(r"^summary\.claim_evidence_map(?::|\[)", affected, re.IGNORECASE):
             return ""
         soft_copy_paths = _soft_copy_claim_paths(
             family="summary", entity_id=entity_id, artifacts=artifacts
@@ -693,7 +693,6 @@ def _issue_allowed_path(
         if match:
             return f"summary.{match.group(1)}"
         return ""
-
 
     if target_key == "insights_bundle":
         insight_paths = _issue_insight_allowed_paths(issue, artifacts)
@@ -1369,8 +1368,7 @@ def _summary_issue_groups(
     """Keep unrelated summary leaves in separate model-repair targets."""
 
     paths = [
-        (issue, _issue_allowed_paths("summary", issue, artifacts))
-        for issue in issues
+        (issue, _issue_allowed_paths("summary", issue, artifacts)) for issue in issues
     ]
     if any(not issue_paths for _issue, issue_paths in paths):
         return [issues]
@@ -1399,27 +1397,17 @@ def _summary_issue_groups(
 def _insight_issue_groups(
     issues: List[RegenerationIssue], artifacts: Dict[str, Any]
 ) -> List[List[RegenerationIssue]]:
-    """Isolate duplicate-insight targets while preserving other atomic bundles."""
-    duplicate_rule = "public_editorial_quality.duplicate_insight"
-    duplicate_issues = [issue for issue in issues if issue.rule_id == duplicate_rule]
-    if not duplicate_issues:
-        return [issues]
-
+    """Keep each insight's repair atomic without bundling unrelated failures."""
     identities = [_issue_insight_identity(issue, artifacts) for issue in issues]
     if any(not identity for identity in identities):
-        # An unresolved family-level finding keeps the target atomic and
-        # prevents a partial repair from silently ignoring that finding.
+        # An unresolved identity keeps the family atomic; splitting it could
+        # let a repair silently omit a failure or remove the wrong insight.
         return [issues]
 
-    ordinary = [issue for issue in issues if issue.rule_id != duplicate_rule]
-    grouped_duplicates: Dict[str, List[RegenerationIssue]] = {}
-    for issue in duplicate_issues:
-        identity = _issue_insight_identity(issue, artifacts)
-        grouped_duplicates.setdefault(identity, []).append(issue)
-
-    groups = [ordinary] if ordinary else []
-    groups.extend(grouped_duplicates[key] for key in sorted(grouped_duplicates))
-    return groups
+    grouped: Dict[str, List[RegenerationIssue]] = {}
+    for issue, identity in zip(issues, identities):
+        grouped.setdefault(identity, []).append(issue)
+    return [grouped[identity] for identity in sorted(grouped)]
 
 
 def _canonical_metric_copy_changes(paths: List[str], artifacts: Dict[str, Any]) -> bool:

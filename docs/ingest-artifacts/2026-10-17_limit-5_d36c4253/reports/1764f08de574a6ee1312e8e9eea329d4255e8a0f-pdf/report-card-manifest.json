@@ -1,0 +1,61 @@
+{
+  "cover_style_hash": "57c99a2ab855ff0825cefb238c9aba493812c1ace25cfab4fe65589725e83bcb",
+  "covered_period": "2021\u20132025E",
+  "covers": {
+    "large": {
+      "content_sha256": "6d35220122d48c8105718358cd164dbe2706f65743d678ee03191d3a72fdbfd7",
+      "height": 1600,
+      "output_path": "assets/report-card-large.png",
+      "schema_version": "1.0",
+      "size": "large",
+      "width": 1200
+    },
+    "medium": {
+      "content_sha256": "40c7adf676e981e375687e6b217e2f4d7ef2ba7dec46c5b012c94aa94864b01a",
+      "height": 1500,
+      "output_path": "assets/report-card-medium.png",
+      "schema_version": "1.0",
+      "size": "medium",
+      "width": 1200
+    },
+    "schema_version": "1.0",
+    "small": {
+      "content_sha256": "e1229101fa18d017b5f091a81390cf86ec2852aa13ea3668610f05e364ea1ec1",
+      "height": 900,
+      "output_path": "assets/report-card-small.png",
+      "schema_version": "1.0",
+      "size": "small",
+      "width": 1600
+    }
+  },
+  "fingerprint": {
+    "direction": "rising",
+    "domain_layer": "forecast",
+    "evidence_density": "metric_rich",
+    "evidence_shape": "trend",
+    "geography_scope": "country",
+    "geometry_family": "forecast_horizon",
+    "schema_version": "1.0",
+    "seed": 879754520,
+    "selection_reason": "The report is dominated by quantified forward growth forecasts across global and U.S. technology and media measures, with most headline trends rising."
+  },
+  "geography_label": "Global and United States",
+  "geography_scope": "country",
+  "key_insights": [
+    "Activate forecasts global internet and media revenues to rise from $2.1T in 2021E to $2.5T in 2025E, adding $390B in growth dollars at a 4.3% CAGR.",
+    "In the U.S. in 2021, adults extremely or very active in cryptocurrency were 5.3 times as likely to be active NFT participants as adults overall."
+  ],
+  "published_date": "",
+  "publisher": "activate.com",
+  "schema_version": "1.0",
+  "source_identity_status": "resolved",
+  "source_metadata_hash": "00f2b34a4126bbe356969fcfb0b2ddfe3fa86bc64925d18c89f54a60806a872a",
+  "source_note": "Source: activate.com \u2014 source-1ictWKc_jIIy1NozvCorBSPINo4W0DFMB \u2014 Source URL: Not available",
+  "source_publication_date_status": "unknown",
+  "source_title": "source-1ictWKc_jIIy1NozvCorBSPINo4W0DFMB",
+  "source_url": "",
+  "title": "OUTLOOK 2022",
+  "title_scale": "short",
+  "tldr_compact": "Activate forecasts global internet/media revenues to rise from $2.1T (2021E) to $2.5T (2025E), adding $390B at 4.3% CAGR.",
+  "tldr_standard": "Activate forecasts global internet and media revenues to rise from $2.1T in 2021E to $2.5T in 2025E, adding $390B at a 4.3% CAGR."
+}

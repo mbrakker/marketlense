@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.1",
+  "status": "pass",
+  "severity": "warning",
+  "source_path": "C:\\Programing\\Market lense\\out\\8b5dcc46e672b8dcd075df8d78a5d46fd8152267-pdf\\report_analysis\\validation.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "expert_comment",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "expert_comment",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Summary opening is broader than a retained source-supported finding.",
+      "severity": "warning",
+      "affected_section": "summary.tldr",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "soft_copy:summary:6082613cca3f5ff4",
+      "evidence_ids": [
+        "gaming-spend-2014"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Summary opening is broader than a retained source-supported finding.",
+      "severity": "warning",
+      "affected_section": "summary.card_tldr_compact",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "soft_copy:summary:66fa1da95d3fa86e",
+      "evidence_ids": [
+        "gaming-spend-2014"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Summary opening is broader than a retained source-supported finding.",
+      "severity": "warning",
+      "affected_section": "summary.executive_summary",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "soft_copy:summary:6082613cca3f5ff4",
+      "evidence_ids": [
+        "gaming-spend-2014"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Core signal is broader than another retained source-supported insight.",
+      "severity": "warning",
+      "affected_section": "insights_final[0].text",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "insight:unified-stack-ma-expectation:text",
+      "evidence_ids": [
+        "gaming-spend-2014"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The amount, population, timeframe, and forecast status match the retained text, but that text does not identify Activate as the forecaster..: Activate forecast that messaging would add 1.1 Billion new users by 2018.",
+      "severity": "warning",
+      "affected_section": "executive_summary",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "soft_copy:summary:a67574eeb0b37cc9",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] No retained evidence is attached to establish the report title or year.: TECH AND MEDIA OUTLOOK 2016",
+      "severity": "warning",
+      "affected_section": "metadata.title",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "metadata:title",
+      "evidence_ids": []
+    }
+  ]
+}

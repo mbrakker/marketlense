@@ -1,0 +1,157 @@
+{
+  "schema_version": "1.0",
+  "selected_category_ids": [
+    "technology",
+    "connected_tv"
+  ],
+  "category_fits": [
+    {
+      "category_id": "technology",
+      "label": "Technology & Innovation",
+      "fit_score": 0.79,
+      "decision": "primary",
+      "why_fit": "The report is framed as a 2016 tech and media outlook and examines technology platforms and their evolution, including messaging services, Slack integrations and bots, the app economy, and convergence across industry layers.",
+      "why_not_fit": "Much of the report concerns media consumption and industry economics rather than technology infrastructure or product architecture specifically.",
+      "evidence_sections": [
+        "The 9 most important insights for tech and media in 2016",
+        "MESSAGING"
+      ],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence repeatedly discusses infrastructure, enterprise technology, robotics, cybersecurity, hardware, or major technology shifts."
+      ],
+      "supported_topic_rule_ids": [
+        "technology:include:84008e3e416054bb"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "title",
+        "overview",
+        "CORD CUTTING"
+      ],
+      "centrality_evidence_sections": [
+        "title",
+        "overview"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "connected_tv",
+      "label": "Streaming & Connected TV",
+      "fit_score": 0.48,
+      "decision": "primary",
+      "why_fit": "The report has dedicated sections on cord cutting and the cable-killer proposition, including discussion of pay television, on-demand viewing, and video consumption.",
+      "why_not_fit": "Television is one topic within a nine-insight technology and media outlook; the report also covers messaging, audio, gaming, apps, and industry strategy, so streaming and TV are not the dominant subject.",
+      "evidence_sections": [
+        "CORD CUTTING",
+        "CABLE KILLER"
+      ],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence repeatedly covers streaming platforms, CTV inventory, OTT audiences, FAST, or television-like video ad strategy."
+      ],
+      "supported_topic_rule_ids": [
+        "connected_tv:include:b48186785452dc77"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "overview",
+        "key_findings",
+        "The 9 most important insights for tech and media in 2016",
+        "STREAMING AUDIO"
+      ],
+      "centrality_evidence_sections": [
+        "overview",
+        "key_findings"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "business_performance",
+      "label": "Business Performance & Growth",
+      "fit_score": 0.57,
+      "decision": "reject",
+      "why_fit": "The report discusses revenue capture, messaging-service ARPU, eSports revenue forecasts, and expected M&A activity.",
+      "why_not_fit": "Those commercial topics are among a broad set of technology and media insights; the report is not primarily a performance benchmark or guide to business-growth decisions.",
+      "evidence_sections": [
+        "The 9 most important insights for tech and media in 2016",
+        "MESSAGING"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "consumer_behavior",
+      "label": "Consumer Behavior & Insights",
+      "fit_score": 0.43,
+      "decision": "reject",
+      "why_fit": "The report measures attention and time spent across video, audio, social media, and gaming, and describes changing viewing and messaging activity.",
+      "why_not_fit": "These usage measures support analysis of technology and media markets; the report does not center on consumer attitudes, motivations, or decision drivers.",
+      "evidence_sections": [
+        "TIME AND ATTENTION",
+        "MESSAGING",
+        "CORD CUTTING"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "advertising_media",
+      "label": "Advertising Strategy & Media",
+      "fit_score": 0.34,
+      "decision": "reject",
+      "why_fit": "The streaming-audio discussion notes podcast advertising and premium ad rates as an opportunity.",
+      "why_not_fit": "The context does not present cross-channel advertising strategy, media planning, or investment as a central lens; advertising appears as a limited part of the audio discussion.",
+      "evidence_sections": [
+        "STREAMING AUDIO"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [
+        "Evidence repeatedly covers media channels, ad receptivity, media planning, brand lift, investment priorities, or advertising strategy."
+      ],
+      "supported_topic_rule_ids": [
+        "advertising_media:include:e9a7759c62f6c6cd"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "STREAMING AUDIO"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "social_video_creator",
+      "label": "Social, Short Video & Creator",
+      "fit_score": 0.3,
+      "decision": "reject",
+      "why_fit": "The report notes audiences forming around creator-driven formats beyond traditional appointment television.",
+      "why_not_fit": "Creator-led content is one viewing example in the television discussion, while the report's broader coverage spans many non-social technology and media topics.",
+      "evidence_sections": [
+        "CORD CUTTING"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    }
+  ]
+}

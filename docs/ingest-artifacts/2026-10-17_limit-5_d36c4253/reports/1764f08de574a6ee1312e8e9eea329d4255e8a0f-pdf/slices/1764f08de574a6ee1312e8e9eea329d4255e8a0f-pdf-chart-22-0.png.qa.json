@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-22-0",
+  "candidate_type": "chart",
+  "page": 22,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    0.0,
+    0.0,
+    1024.0,
+    686.341
+  ],
+  "final_bbox": [
+    0.0,
+    0.0,
+    1024.0,
+    694.341
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 135,
+    "bottom": 0,
+    "left": 205,
+    "right": 205
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": false,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 1.0,
+    "margin_balance": 0.1098,
+    "neighbor_contamination": 0.0,
+    "readability": 1.0,
+    "visual_crispness": 0.35,
+    "total_score": 0.7245,
+    "defect_labels": [
+      "chart_axis_or_label_clipped"
+    ],
+    "edge_density": {
+      "top": 0.0,
+      "bottom": 0.1895,
+      "left": 0.7987,
+      "right": 0.0981
+    },
+    "edge_leakage": {
+      "top": 0.0,
+      "bottom": 0.0,
+      "left": 0.0,
+      "right": 0.0
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.5,
+        "strong_edges": [
+          "bottom",
+          "left"
+        ],
+        "edge_density": {
+          "top": 0.0,
+          "bottom": 0.1895,
+          "left": 0.7987,
+          "right": 0.0981
+        }
+      },
+      "chart_completeness": {
+        "accepted": false,
+        "confidence": 0.7987,
+        "clipped_edges": [
+          "left"
+        ],
+        "edge_density": {
+          "top": 0.0,
+          "bottom": 0.1895,
+          "left": 0.7987,
+          "right": 0.0981
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.7987,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0,
+          "bottom": 0.1895,
+          "left": 0.7987,
+          "right": 0.0981
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": false,
+  "rejection_reason": "chart_axis_or_label_clipped"
+}

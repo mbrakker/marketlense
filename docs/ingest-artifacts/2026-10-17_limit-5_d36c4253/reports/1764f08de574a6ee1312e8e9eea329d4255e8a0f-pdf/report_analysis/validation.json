@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\Programing\\Market lense\\out\\1764f08de574a6ee1312e8e9eea329d4255e8a0f-pdf\\report_analysis\\validation.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe '2021; prior 12 months' not verbatim but semantically supported (confidence=1.00) for gamers-non-gaming-activity-in-games",
+      "severity": "info",
+      "affected_section": "insights:gamers-non-gaming-activity-in-games",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [factual_claim|not_established] The attached retained evidence is empty and provides no support for this title.: OUTLOOK 2022",
+      "severity": "warning",
+      "affected_section": "metadata.title",
+      "rule_id": "grounding",
+      "violation_type": "not_established",
+      "repair_target": "",
+      "entity_id": "metadata:title",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[retained_claim.number_value_unit_match] Retained factual claim failed deterministic validation: quantity_not_entailed.",
+      "severity": "error",
+      "affected_section": "insights:online-delivered-car-purchase-forecast.text",
+      "rule_id": "retained_claim.number_value_unit_match",
+      "violation_type": "unsupported_factual_claim",
+      "repair_target": "",
+      "entity_id": "insight:online-delivered-car-purchase-forecast:text",
+      "evidence_ids": [
+        "online-car-purchase-forecast"
+      ]
+    }
+  ]
+}
