@@ -2494,7 +2494,7 @@ def _key_figure_why_it_matters(
         # figure surface. The metric tuple is the source-backed minimum and is
         # safe even when a chart excerpt does not preserve all peer labels.
         if re.search(
-            r"\b(?:led|most common|top|forecast|forecasts|project(?:ed|s)?)\b",
+            r"\b(?:led|most common|top)\b",
             insight_text,
             re.IGNORECASE,
         ):
@@ -2534,7 +2534,7 @@ def _sanitize_key_figure_ranking_language(figures: Any) -> None:
             figure["why_it_matters"] = normalized_current
             current = normalized_current
         if not current or not re.search(
-            r"\b(?:led|most common|top|forecast|forecasts|project(?:ed|s)?)\b",
+            r"\b(?:led|most common|top)\b",
             current,
             re.IGNORECASE,
         ):

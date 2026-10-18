@@ -2326,11 +2326,10 @@ def _source_references(
 
 
 def _item_direct_evidence_text(raw: dict) -> str:
-    """Return the direct excerpt plus its canonical finding statement.
+    """Return only the retained direct excerpt for a finding or quotation.
 
-    Findings retain both the chart/OCR excerpt and a source-grounded sentence.
-    Keeping both prevents layout noise from discarding an explicit category or
-    population binding that the statement already establishes.
+    The finding ``text`` is generated copy, so appending it to an excerpt would
+    let an unsupported value prove itself during deterministic validation.
     """
 
     primary = ""
@@ -2339,14 +2338,7 @@ def _item_direct_evidence_text(raw: dict) -> str:
         if isinstance(value, str) and value.strip():
             primary = value.strip()
             break
-    statement = str(raw.get("text") or "").strip()
-    if (
-        primary
-        and statement
-        and normalize_for_lookup(primary) != normalize_for_lookup(statement)
-    ):
-        return f"{primary}\n{statement}"
-    return primary or statement
+    return primary
 
 
 def _exact_evidence_pages(

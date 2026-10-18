@@ -420,7 +420,9 @@ def _normalize_regeneration_issue(
 def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
     """Keep a rejected binding out of the next atomic repair prompt."""
 
-    rule_id = str(issue.rule_id or "").strip().lower()
+    rule_id = str(issue.rule_id or "").strip().lower() or _extract_rule_id(
+        issue.message
+    )
     violation_type = str(issue.violation_type or "").strip().lower()
     if rule_id == "public_editorial_quality.duplicate_insight":
         # The wording duplicates a sibling; their shared source is still valid.

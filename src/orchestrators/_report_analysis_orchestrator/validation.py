@@ -1838,12 +1838,11 @@ def _preflight_empty_grounding_strategies(
                     for issue in target.issues
                 )
             )
-            is_insight_evidence_rebind = (
+            is_insight_evidence_requiring = (
                 target.target_section == "insights_bundle"
-                and target.repair_action == "REBIND_EVIDENCE"
-                and target.repair_strategy == "alternative_evidence"
+                and bool(target.quarantined_evidence_ids)
             )
-            if not is_insight_evidence_rebind and (
+            if not is_insight_evidence_requiring and (
                 not is_summary_claim_map_target
                 or target.repair_strategy
                 not in {"current_evidence", "alternative_evidence"}
