@@ -190,6 +190,69 @@ provenance correction; the other differences are fresh, source-supported
 model selections or multi-page explanations. No live run can establish that
 all wording differences are deterministic improvements over v5.
 
+### Latest P2 source-attribution and deduplication hardening replay
+
+The current correction is intentionally narrower than v6. It changes the
+existing page-attribution boundary to compare all material numeric values
+against the union of the cited pages. A cited page that contains only one
+shared value no longer bypasses a conflict when the remaining values occur
+together on another inspected page. If extracted text cannot demonstrate that
+conflict, the guard remains permissive for visual-only, OCR-incomplete, and
+legitimate multi-page cases. The regression set includes the Activate pages
+14–16 partial-overlap failure and a valid split-value attribution across pages
+14–15.
+
+The shadow selector now separates provable final duplicates from ambiguous
+public-quality near-duplicates. Exact final propositions and same-ID final
+repairs retain their existing behavior; conflicting metric or temporal/
+forecast bindings remain distinct. Near-duplicates without an authoritative
+binding are retained and reported in `ambiguous_duplicate_pairs` for editorial
+assessment instead of being silently removed. The corrected-input builder
+continues to use final corrected wording and does not copy obsolete retained
+metric/evidence fields.
+
+The fresh live replay is
+`out/verified_claims_step2_live_page_dedup_p2_20261019/report.json`. It used
+the exact frozen five-report PDFs, GPT-6 Luna High, full pages, separate
+correction and verification calls, and the unchanged two-attempt limits. The
+provider-free replay hash-checked all five source PDFs.
+
+| Evaluation set | First pass | After retry | Verified total | Unresolved | Failed | Skipped | Input |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Reference variants | 38 | 0 | 38 | 1 | 0 | 0 | 39 |
+| Real retained shortlist | 26 | 2 | 28 | 1 | 0 | 0 | 29 |
+| **All claims** | **64** | **2** | **66** | **2** | **0** | **0** | **68** |
+
+The reference gate matched **39/39** expected terminal outcomes with zero
+false accepts and zero false rejects; `ACT-004-wrong-page` remained the sole
+unresolved reference variant. The one unresolved real row was
+`activate-outlook-revenue-models`: the corrected claim included the overall
+forecast values visible on physical pages 4–5 and segment contributions visible
+together on physical page 6, but the model cited only pages 4–5. The new guard
+failed closed on both attempts. The prior v6 run accepted this row because its
+single-value-overlap shortcut returned success; the PDF confirms that this is
+a source-page attribution correction, not a forced 29/29 target.
+
+Compared with v6, the current run used **142 provider calls**, **2,454,944
+input tokens**, **87,489 output tokens**, **2,542,433 total tokens**,
+**$0.289241 estimated cost**, **1,491.478 seconds** wall time, and **107
+full-page renders**. v6 used 140 calls, 2,277,696 input tokens, 78,729 output
+tokens, 2,356,425 total tokens, $0.267140, 1,244.423 seconds, and 107 renders.
+The additional calls and other outcome changes are model-run variance plus the
+demonstrated attribution rejection; no retry or model policy was increased.
+Cache reuse was not measured in either run.
+
+The actual report-level shadow selection retained the same eight replacement
+IDs as v6 (Capgemini 3, KPMG 1, Reuters 4; none from Activate or Adjust), with
+no duplicate pairs and no ambiguous pairs in either live report. One current
+Reuters selected row, `distinctive-content-response`, is marked
+`pending_visual_source_text`; it remains shadow-only and
+`canonical_approval_status=not_approved`, so it is not publication-ready.
+The provider-free replay remains
+`out/verified_claims_step2_provider_free_page_dedup_p2_20261019/report.json`
+and records 15 cases, 39 variants, 29 retained IDs, 29 theme slots, and no
+fabricated fixtures.
+
 ### v5 seven-case supporting-page ledger (historical)
 
 These are the seven targeted recovered real claims, using the final v4 rows.
@@ -592,7 +655,7 @@ for visual context and was not promoted.
 
 Passed in this worktree:
 
-- `py -m pytest tests/test_verified_claims_visual_generator.py tests/test_verified_claims_step2_replay.py tests/test_llm_routing_policy.py tests/test_llm_routing_retained_benchmark.py -q --disable-warnings --maxfail=10` — **69 passed**.
+- `py -m pytest tests/test_verified_claims_visual_generator.py tests/test_verified_claims_step2_replay.py tests/test_llm_routing_policy.py tests/test_llm_routing_retained_benchmark.py -q --disable-warnings --maxfail=10` — **75 passed**.
 - `py -m pytest tests/test_artifact_insight_shortlisting.py -q --disable-warnings --maxfail=10` — **32 passed**.
 - `py -m pytest tests/test_artifact_normalization_source_fidelity.py tests/test_public_editorial_quality_generator.py tests/test_public_editorial_quality_provenance.py tests/test_claim_validation_source_pages.py tests/test_claim_validation_source_excerpts.py tests/test_lineage_regeneration.py tests/test_regeneration_candidate.py tests/test_regeneration_finalization.py tests/test_contract_schema_gate.py -q --disable-warnings --maxfail=10` — **183 passed**.
 - `py -m pytest tests/test_prompt_service.py tests/test_prompt_dry_run_validation.py tests/test_prompt_fixture_corpus_regression.py -q --disable-warnings --maxfail=10` — **78 passed**.
@@ -638,13 +701,16 @@ in the delivery message and must not be represented as passed here until run.
   replay. No live-selection effectiveness claim is made from post-selection
   replay alone.
 
-**Verdict: PARTIAL.** The latest v6 shadow implementation and frozen-five
-evaluation pass source-hash checking, bounded correction/verification,
-final-claim validation, reference accounting, duplicate protection, and the
-physical-support fail-closed guard. All 29 real retained claims verified in
-this replay; the single unresolved row is the intentionally adversarial
-`ACT-004-wrong-page` reference variant. This does not prove fresh Step 1
-selection effectiveness, canonical source-binding completeness, or independent
-editorial acceptance. Canonical promotion and Step 3 visual factualisation
-remain intentionally unstarted; Step 3 should wait for canonical
-source-binding/selection approval and independent editorial review.
+**Verdict: PARTIAL.** The latest P2 hardening replay passes source-hash
+checking, bounded correction/verification, final-claim validation, reference
+accounting, duplicate protection, and the strengthened physical-support
+fail-closed guard. It verified 28/29 real retained claims and correctly left
+`activate-outlook-revenue-models` unresolved after the PDF demonstrated that
+its cited pages omitted the segment values used in the final claim; the
+adversarial `ACT-004-wrong-page` reference variant also remained unresolved.
+The exact v6 29/29 result is retained as a comparison, not overwritten. This
+does not prove fresh Step 1 selection effectiveness, canonical source-binding
+completeness, or independent editorial acceptance. Canonical promotion and
+Step 3 visual factualisation remain intentionally unstarted; Step 3 should
+wait for canonical source-binding/selection approval and independent editorial
+review.

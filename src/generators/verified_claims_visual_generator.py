@@ -172,19 +172,15 @@ def _supporting_page_attribution_diagnostics(
             for page in supporting_pages
         )
     )
-    if claim_values.intersection(support_values):
+    missing_values = claim_values - support_values
+    if not missing_values:
         return []
-    alternate_matches = [
-        len(
-            claim_values.intersection(
-                _material_quantity_values(page_text.get(page, ""))
-            )
-        )
-        for page in inspected_physical_pages
-        if page not in supporting_pages
-    ]
-    if alternate_matches and max(alternate_matches) >= 2:
-        return ["verification_supporting_page_attribution_conflict"]
+    for page in inspected_physical_pages:
+        if page in supporting_pages:
+            continue
+        alternate_values = _material_quantity_values(page_text.get(page, ""))
+        if missing_values.issubset(alternate_values):
+            return ["verification_supporting_page_attribution_conflict"]
     return []
 
 

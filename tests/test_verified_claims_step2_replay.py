@@ -4,10 +4,14 @@ import hashlib
 import json
 
 import pymupdf as fitz
+import pytest
 
 from scripts.quality.replay_verified_claims_step2 import (
     REFERENCE_PATH,
     _assert_outcome_count_arithmetic,
+    _editorial_duplicate_pairs,
+    _editorial_duplicate_status,
+    _editorial_quality_report,
     _editorially_duplicate,
     _load_json,
     _outcome_counts,
@@ -308,6 +312,67 @@ def test_shadow_replacement_selection_rejects_duplicate_and_keeps_specific() -> 
     )
 
 
+def test_shadow_selection_keeps_unstructured_scope_near_duplicates_for_review() -> None:
+    def row(candidate_id: str, claim: str, page: int, score: int) -> dict:
+        return {
+            "candidate_id": candidate_id,
+            "original_claim": "Original direction",
+            "source_identity": "report|pdf-sha256:" + "a" * 64,
+            "evidence_ids": [f"old-{candidate_id}"],
+            "evidence_spans": [],
+            "outcome": "verified",
+            "final_claim": claim,
+            "recovered_physical_pages": [page],
+            "inspected_physical_pages": [page],
+            "supporting_physical_pages": [page],
+            "source_truth_notes_by_page": {
+                str(page): (
+                    "The page supports the report-specific finding and its scope."
+                )
+            },
+            "recovery_candidates": [
+                {
+                    "physical_page": page,
+                    "evidence_id": f"theme-{candidate_id}",
+                    "source_pack": "findings",
+                    "score": score,
+                }
+            ],
+        }
+
+    selection = _shadow_replacement_selection(
+        report="Report",
+        baseline_insights=[],
+        retained_rows=[
+            row(
+                "candidate-1",
+                "Global app installs fell 10% while sessions rose 5% in 2025.",
+                7,
+                80,
+            ),
+            row(
+                "candidate-2",
+                "Regional app installs fell 10% while sessions rose 5% in 2025.",
+                8,
+                70,
+            ),
+        ],
+        editorial_plan={
+            "themes": [
+                {
+                    "priority": 1,
+                    "theme": "Theme A",
+                    "evidence_ids": ["theme-candidate-1", "theme-candidate-2"],
+                }
+            ]
+        },
+    )
+
+    assert selection["selected_count"] == 2
+    assert selection["rejected_or_abstained"] == []
+    assert selection["ambiguous_duplicate_pairs"] == [["candidate-1", "candidate-2"]]
+
+
 def test_exact_corrected_duplicate_is_detected_before_metric_conflicts() -> None:
     left = {
         "id": "candidate-1",
@@ -415,6 +480,38 @@ def test_near_duplicate_guard_preserves_distinct_metric_bindings() -> None:
     assert not _editorially_duplicate(
         left, right, {("candidate-1", "candidate-2")}
     )
+
+
+@pytest.mark.parametrize(
+    ("left_text", "right_text"),
+    [
+        (
+            "Among enterprise users, adoption rose 20% in 2025.",
+            "Among consumer users, adoption rose 20% in 2025.",
+        ),
+        (
+            "Revenue rose 20% while users rose 5% in 2025.",
+            "Sessions rose 20% while users rose 5% in 2025.",
+        ),
+        (
+            "In 2025, global app installs fell 10% while sessions rose 5%.",
+            "In 2024, global app installs fell 10% while sessions rose 5%.",
+        ),
+    ],
+)
+def test_unstructured_material_propositions_are_not_proven_equivalent(
+    left_text: str, right_text: str
+) -> None:
+    left = {"id": "candidate-1", "text": left_text}
+    right = {"id": "candidate-2", "text": right_text}
+    quality = _editorial_quality_report("Report", [left, right])
+    duplicate_pairs = _editorial_duplicate_pairs(quality)
+
+    assert ("candidate-1", "candidate-2") in duplicate_pairs
+    assert _editorial_duplicate_status(left, right, duplicate_pairs) in {
+        "distinct",
+        "ambiguous",
+    }
 
 
 def test_verified_corrected_insight_uses_replacement_page_not_retained_facts() -> None:

@@ -24,6 +24,11 @@ from src.contracts.verified_claims import (
     VisualClaimEvaluationRequest,
 )
 from src.generators.artifact_normalization import _insights_semantically_equivalent
+from src.generators.public_editorial_quality_generator import (
+    _FORECAST_MARKER,
+    _material_numbers,
+    _temporal_qualifiers,
+)
 from src.generators.verified_claims_recovery import (
     load_verified_claims_recovery_context,
     recovery_candidates_for_claim,
@@ -525,29 +530,74 @@ def _editorial_duplicate_pairs(quality_report: Any) -> set[tuple[str, str]]:
     return pairs
 
 
-def _editorially_duplicate(
+def _proposition_temporal_signature(text: str) -> tuple[frozenset[str], frozenset[str]]:
+    """Return existing temporal bindings without treating years as quantities."""
+
+    years = frozenset(
+        re.findall(r"\b(?:19|20)\d{2}e?\b", text.casefold())
+    )
+    return frozenset(_temporal_qualifiers(text)), years
+
+
+def _editorial_duplicate_status(
     left: Mapping[str, Any],
     right: Mapping[str, Any],
     duplicate_pairs: set[tuple[str, str]],
-) -> bool:
+) -> str:
+    """Classify final propositions without promoting a near-duplicate to fact."""
+
     left_id = str(left.get("id") or left.get("candidate_id") or "").strip()
     right_id = str(right.get("id") or right.get("candidate_id") or "").strip()
     if left_id and left_id == right_id:
-        return False
+        return "distinct"
+
     left_text = normalize_for_lookup(left.get("text"))
     right_text = normalize_for_lookup(right.get("text"))
     if left_text and left_text == right_text:
-        return True
+        return "duplicate"
     if _metric_bindings_conflict(left, right):
-        return False
+        return "distinct"
     if (
         left_id
         and right_id
         and left_id != right_id
         and _insights_semantically_equivalent(dict(left), dict(right))
     ):
-        return True
-    return tuple(sorted((left_id, right_id))) in duplicate_pairs
+        return "duplicate"
+
+    pair = tuple(sorted((left_id, right_id)))
+    if pair not in duplicate_pairs:
+        return "distinct"
+
+    left_numbers = _material_numbers(str(left.get("text") or ""))
+    right_numbers = _material_numbers(str(right.get("text") or ""))
+    if left_numbers and right_numbers and left_numbers != right_numbers:
+        return "distinct"
+
+    left_temporal = _proposition_temporal_signature(str(left.get("text") or ""))
+    right_temporal = _proposition_temporal_signature(str(right.get("text") or ""))
+    if left_temporal != right_temporal and (any(left_temporal) or any(right_temporal)):
+        return "distinct"
+
+    left_forecast = bool(_FORECAST_MARKER.search(str(left.get("text") or "")))
+    right_forecast = bool(_FORECAST_MARKER.search(str(right.get("text") or "")))
+    if left_forecast != right_forecast:
+        return "distinct"
+
+    # The public quality rule is intentionally a near-duplicate signal.  When
+    # no authoritative metric or qualifier binding proves equivalence, retain
+    # both findings and surface the pair for editorial review.
+    return "ambiguous"
+
+
+def _editorially_duplicate(
+    left: Mapping[str, Any],
+    right: Mapping[str, Any],
+    duplicate_pairs: set[tuple[str, str]],
+) -> bool:
+    """Return the existing duplicate signal, including pairs needing review."""
+
+    return _editorial_duplicate_status(left, right, duplicate_pairs) != "distinct"
 
 
 def _verified_corrected_insight(
@@ -741,6 +791,7 @@ def _shadow_replacement_selection(
     duplicate_pairs = _editorial_duplicate_pairs(complete_quality)
     proposals: list[dict[str, Any]] = []
     pre_rejected: list[dict[str, Any]] = []
+    ambiguous_duplicate_pairs: set[tuple[str, str]] = set()
     candidate_count = 0
     recovered_ids: set[str] = set()
     for row_order, row in enumerate(retained_rows):
@@ -891,19 +942,25 @@ def _shadow_replacement_selection(
             pair_quality = _editorial_quality_report(
                 report, [editorial_insight, dict(baseline)]
             )
-            if _editorially_duplicate(
+            if _editorial_duplicate_status(
                 editorial_insight,
                 baseline,
                 _editorial_duplicate_pairs(pair_quality),
-            ):
+            ) == "duplicate":
                 duplicate_of = candidate_id
         if not duplicate_of:
-            duplicates = [
-                other_id
-                for other_id, other in verified_by_id.items()
-                if other_id != candidate_id
-                and _editorially_duplicate(editorial_insight, other, duplicate_pairs)
-            ]
+            duplicates: list[str] = []
+            for other_id, other in verified_by_id.items():
+                if other_id == candidate_id:
+                    continue
+                status = _editorial_duplicate_status(
+                    editorial_insight, other, duplicate_pairs
+                )
+                pair = tuple(sorted((candidate_id, other_id)))
+                if status == "duplicate":
+                    duplicates.append(other_id)
+                elif status == "ambiguous":
+                    ambiguous_duplicate_pairs.add(pair)
             if duplicates:
                 non_replacement = [
                     other_id for other_id in duplicates if other_id not in recovered_ids
@@ -929,18 +986,19 @@ def _shadow_replacement_selection(
                     if winner != candidate_id:
                         duplicate_of = winner
         if not duplicate_of:
-            duplicate_of = next(
-                (
-                    str(existing.get("candidate_id") or "")
-                    for existing in selected
-                    if _editorially_duplicate(
-                        editorial_insight,
-                        verified_by_id.get(str(existing.get("candidate_id") or ""), {}),
-                        duplicate_pairs,
-                    )
-                ),
-                "",
-            )
+            for existing in selected:
+                existing_id = str(existing.get("candidate_id") or "")
+                status = _editorial_duplicate_status(
+                    editorial_insight,
+                    verified_by_id.get(existing_id, {}),
+                    duplicate_pairs,
+                )
+                pair = tuple(sorted((candidate_id, existing_id)))
+                if status == "duplicate":
+                    duplicate_of = existing_id
+                    break
+                if status == "ambiguous":
+                    ambiguous_duplicate_pairs.add(pair)
         if duplicate_of:
             rejected.append(
                 {
@@ -976,11 +1034,17 @@ def _shadow_replacement_selection(
         "rejected_or_abstained": rejected,
         "candidate_count": candidate_count,
         "selected_count": len(selected),
+        "ambiguous_duplicate_pairs": [
+            list(pair) for pair in sorted(ambiguous_duplicate_pairs)
+        ],
         "complete_verified_insight_count": len(verified_insights),
         "complete_verified_set_quality": {
             "status": complete_quality.status,
             "publishable": complete_quality.publishable,
             "duplicate_pairs": [list(pair) for pair in sorted(duplicate_pairs)],
+            "ambiguous_duplicate_pairs": [
+                list(pair) for pair in sorted(ambiguous_duplicate_pairs)
+            ],
             "issue_count": len(complete_quality.issues),
         },
         "canonical_mutation": False,

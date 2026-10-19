@@ -555,6 +555,120 @@ def test_wrong_support_page_fails_closed_when_another_inspected_page_has_claim_v
     )
 
 
+def test_partial_numeric_overlap_does_not_bypass_page_attribution_conflict(tmp_path):
+    claim = _claim("candidate-1", "Original claim", page=14)
+    claim["pages"] = [14, 15]
+    claim["evidence_spans"] = [
+        {"evidence_id": "f1", "page": 14, "start": 10, "end": 20},
+        {"evidence_id": "f1", "page": 15, "start": 10, "end": 20},
+    ]
+    request = _request(tmp_path, [claim])
+    request.source_page_text_by_physical_page = {
+        14: "Top users account for 61% of time, while the page omits the spend split.",
+        15: "Top users account for 61% of time and 34% of consumer spend.",
+    }
+    responses = iter(
+        [
+            {
+                "claim": "The top users account for 61% of time and 34% of spend.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The chart supports the corrected time and spend relationship "
+                    "for the identified top-user cohort."
+                ),
+                "supporting_physical_pages": [14],
+                "source_truth_notes_by_page": {
+                    "14": (
+                        "The chart supports the corrected time and spend relationship "
+                        "for the identified top-user cohort."
+                    )
+                },
+            },
+            {
+                "claim": "The top users account for 61% of time and 34% of spend.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The chart supports the corrected time and spend relationship "
+                    "for the identified top-user cohort."
+                ),
+                "supporting_physical_pages": [14],
+                "source_truth_notes_by_page": {
+                    "14": (
+                        "The chart supports the corrected time and spend relationship "
+                        "for the identified top-user cohort."
+                    )
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "unresolved"
+    assert item.failure_reason == "verification_supporting_page_attribution_conflict"
+
+
+def test_multi_page_numeric_attribution_uses_combined_cited_pages(tmp_path):
+    claim = _claim("candidate-1", "Original claim", page=14)
+    claim["pages"] = [14, 15]
+    claim["evidence_spans"] = [
+        {"evidence_id": "f1", "page": 14, "start": 10, "end": 20},
+        {"evidence_id": "f1", "page": 15, "start": 10, "end": 20},
+    ]
+    request = _request(tmp_path, [claim])
+    request.source_page_text_by_physical_page = {
+        14: "Top users account for 61% of time.",
+        15: "Top users account for 34% of consumer spend.",
+    }
+    responses = iter(
+        [
+            {
+                "claim": "The top users account for 61% of time and 34% of spend.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The two chart pages together support the corrected time and "
+                    "spend relationship for the identified top-user cohort."
+                ),
+                "supporting_physical_pages": [14, 15],
+                "source_truth_notes_by_page": {
+                    "14": "The time share is shown on this page.",
+                    "15": "The spend share is shown on this page.",
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    assert result.claims[0].outcome == "verified"
+
+
 def test_empty_render_path_fails_closed_without_model_call(tmp_path):
     claims = [_claim("candidate-1", "Original claim")]
     requests = []
