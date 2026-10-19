@@ -162,7 +162,11 @@ def test_identical_soft_copy_claims_share_one_semantic_result() -> None:
     evidence = {
         "findings": {
             "findings": [
-                {"id": "f1", "text": "Wallet use is becoming a common checkout method."}
+                {
+                    "id": "f1",
+                    "text": "Wallet use is becoming a common checkout method.",
+                    "evidence": "Wallet use is becoming a common checkout method.",
+                }
             ]
         }
     }
@@ -214,7 +218,11 @@ def test_final_package_reuses_one_semantic_result_for_duplicate_public_claims() 
     evidence = {
         "findings": {
             "findings": [
-                {"id": "f1", "text": "Wallet use is becoming a common checkout method."}
+                {
+                    "id": "f1",
+                    "text": "Wallet use is becoming a common checkout method.",
+                    "evidence": "Wallet use is becoming a common checkout method.",
+                }
             ]
         }
     }
@@ -276,8 +284,16 @@ def test_conflicting_claim_inputs_with_same_id_remain_blocked() -> None:
     evidence = {
         "findings": {
             "findings": [
-                {"id": "f1", "text": "Wallet use is becoming a common method."},
-                {"id": "f2", "text": "Wallet checkout has grown among retailers."},
+                {
+                    "id": "f1",
+                    "text": "Wallet use is becoming a common method.",
+                    "evidence": "Wallet use is becoming a common method.",
+                },
+                {
+                    "id": "f2",
+                    "text": "Wallet checkout has grown among retailers.",
+                    "evidence": "Wallet checkout has grown among retailers.",
+                },
             ]
         }
     }
@@ -329,7 +345,13 @@ def test_retained_claim_deterministic_support_and_contradiction_bypass_semantics
     }
     evidence = {
         "findings": {
-            "findings": [{"id": "f1", "text": "Wallet adoption reached 42% in 2026."}]
+            "findings": [
+                {
+                    "id": "f1",
+                    "text": "Wallet adoption reached 42% in 2026.",
+                    "evidence": "Wallet adoption reached 42% in 2026.",
+                }
+            ]
         }
     }
     calls = []
@@ -364,7 +386,13 @@ def test_retained_claim_provenance_failure_bypasses_semantic_grounding() -> None
         {"expert_comment": claim},
         {
             "findings": {
-                "findings": [{"id": "f1", "text": "Wallet use is becoming common."}]
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Wallet use is becoming common.",
+                        "evidence": "Wallet use is becoming common.",
+                    }
+                ]
             }
         },
         semantic_batch_validator=ground_batch,

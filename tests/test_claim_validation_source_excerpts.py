@@ -1,6 +1,7 @@
 from src.contracts.pdf_text import PdfTextPage
 from src.generators.claim_validation_generator import (
     retained_claim_semantic_inputs,
+    validate_evidence_fidelity,
     validate_retained_claims,
 )
 
@@ -67,10 +68,36 @@ def test_direct_source_excerpt_is_not_concatenated_with_generated_copy():
     assert all(text == "Physical page thirteen." for text in bound[0].evidence_texts)
 
 
-def test_source_text_remains_usable_when_no_separate_excerpt_exists():
+def test_generated_finding_text_cannot_support_itself_without_source_excerpt():
     artifacts, packs = _case(include_excerpt=False)
 
-    assert validate_retained_claims(artifacts, packs).results[0].status == "supported"
+    result = validate_retained_claims(artifacts, packs).results[0]
+
+    assert result.status == "unsupported"
+    assert any(
+        check.name == "evidence_reference_completeness" and check.status == "failed"
+        for check in result.checks
+    )
+
+
+def test_generated_finding_can_use_independently_bound_source_page_text():
+    _artifacts, packs = _case(include_excerpt=False)
+
+    package = validate_evidence_fidelity(
+        packs,
+        source_spans=[
+            {
+                "id": "source:page:13",
+                "page": 13,
+                "text": (
+                    "68% of consumers expect brands to use data for relevant "
+                    "experiences."
+                ),
+            }
+        ],
+    )
+
+    assert package.results[0].status == "supported"
 
 
 def test_retained_quote_text_alias_remains_usable_as_direct_evidence():
@@ -87,6 +114,27 @@ def test_retained_quote_text_alias_remains_usable_as_direct_evidence():
         {
             "quote_candidates": {
                 "quotes": [{"id": "privacy-source", "quote_text": "Privacy matters."}]
+            }
+        },
+    )
+
+    assert package.results[0].status == "supported"
+
+
+def test_retained_quote_candidate_text_remains_source_evidence():
+    package = validate_retained_claims(
+        {
+            "insights_final": [
+                {
+                    "id": "privacy",
+                    "text": 'The report says "Privacy matters."',
+                    "evidence_id": "privacy-source",
+                }
+            ]
+        },
+        {
+            "quote_candidates": {
+                "quotes": [{"id": "privacy-source", "text": "Privacy matters."}]
             }
         },
     )

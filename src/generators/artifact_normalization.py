@@ -22,7 +22,7 @@ from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:4"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:5"
 
 METRIC_FIELDS = (
     "label",
@@ -1330,9 +1330,11 @@ def _span_offsets_overlap(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
     left_end = left.get("end_offset")
     right_start = right.get("start_offset")
     right_end = right.get("end_offset")
-    if not all(
-        isinstance(value, int)
-        for value in (left_start, left_end, right_start, right_end)
+    if not (
+        isinstance(left_start, int)
+        and isinstance(left_end, int)
+        and isinstance(right_start, int)
+        and isinstance(right_end, int)
     ):
         return False
     return max(left_start, right_start) <= min(left_end, right_end)
@@ -1658,6 +1660,7 @@ def _ranked_unique_insights(
             final_without_id.append((source_order, insight))
 
     candidate_by_id: dict[str, tuple[int, Dict[str, Any]]] = {}
+    candidate_alternatives_by_id: dict[str, list[tuple[int, Dict[str, Any]]]] = {}
     candidate_without_id: list[tuple[int, Dict[str, Any]]] = []
     candidate_offset = len(final_insights)
     candidate_groups: dict[str, list[tuple[int, Dict[str, Any]]]] = {}
@@ -1670,8 +1673,6 @@ def _ranked_unique_insights(
         if not insight_id:
             candidate_without_id.append((source_order, insight))
             continue
-        if insight_id in final_by_id:
-            continue
         candidate_groups.setdefault(insight_id, []).append((source_order, insight))
 
     for insight_id, group in candidate_groups.items():
@@ -1680,7 +1681,18 @@ def _ranked_unique_insights(
             [insight for _, insight in reliable]
         ):
             continue
-        candidate_by_id[insight_id] = min(reliable, key=_insight_rank_key)
+        if insight_id in final_by_id:
+            candidate_alternatives_by_id[insight_id] = sorted(
+                reliable, key=_insight_rank_key
+            )
+        else:
+            candidate_by_id[insight_id] = min(reliable, key=_insight_rank_key)
+
+    ambiguous_final_texts = _resolve_duplicate_final_wording(
+        final_by_id=final_by_id,
+        final_without_id=final_without_id,
+        candidate_alternatives_by_id=candidate_alternatives_by_id,
+    )
 
     ordered_items = [
         *final_by_id.values(),
@@ -1689,9 +1701,16 @@ def _ranked_unique_insights(
         *candidate_without_id,
     ]
     ordered_items.sort(key=_insight_rank_key)
+    ambiguous_public_texts = _ambiguous_public_duplicate_keys(ordered_items)
     ranked: List[tuple[int, Dict[str, Any]]] = []
     for source_order, insight in ordered_items:
         if not _s(insight.get("evidence_id")).strip():
+            continue
+        duplicate_key = _insight_duplicate_key(insight)
+        if (
+            duplicate_key in ambiguous_final_texts
+            or duplicate_key in ambiguous_public_texts
+        ):
             continue
         if any(
             _insights_semantically_equivalent(insight, retained)
@@ -1700,6 +1719,103 @@ def _ranked_unique_insights(
             continue
         ranked.append((source_order, dict(insight)))
     return ranked
+
+
+def _ambiguous_public_duplicate_keys(
+    items: list[tuple[int, Dict[str, Any]]],
+) -> set[str]:
+    """Return public-prose keys whose retained facts cannot be merged safely."""
+
+    grouped: dict[str, list[Dict[str, Any]]] = {}
+    for _source_order, insight in items:
+        duplicate_key = _insight_duplicate_key(insight)
+        if duplicate_key:
+            grouped.setdefault(duplicate_key, []).append(insight)
+    return {
+        duplicate_key
+        for duplicate_key, members in grouped.items()
+        if len(members) > 1
+        and len({_insight_metric_signature(member) for member in members}) > 1
+    }
+
+
+def _resolve_duplicate_final_wording(
+    *,
+    final_by_id: dict[str, tuple[int, Dict[str, Any]]],
+    final_without_id: list[tuple[int, Dict[str, Any]]],
+    candidate_alternatives_by_id: dict[str, list[tuple[int, Dict[str, Any]]]],
+) -> set[str]:
+    """Repair or abstain on duplicate final prose with different facts.
+
+    A candidate alternative is usable only for its matching stable ID and only
+    when every member of an ambiguous wording group has a distinct, bound
+    alternative.  Otherwise the whole group is omitted instead of choosing one
+    metric binding or publishing duplicate prose.
+    """
+
+    grouped: dict[str, list[tuple[int, Dict[str, Any]]]] = {}
+    for item in [*final_by_id.values(), *final_without_id]:
+        duplicate_key = _insight_duplicate_key(item[1])
+        if duplicate_key:
+            grouped.setdefault(duplicate_key, []).append(item)
+    occupied_keys = set(grouped)
+    ambiguous: set[str] = set()
+
+    for duplicate_key, members in grouped.items():
+        if len(members) < 2:
+            continue
+        if len({_insight_metric_signature(insight) for _, insight in members}) <= 1:
+            continue
+
+        replacements: list[tuple[str, Dict[str, Any]]] = []
+        replacement_keys: set[str] = set()
+        for _source_order, insight in members:
+            insight_id = _s(insight.get("id")).strip()
+            final_evidence_id = normalize_for_lookup(insight.get("evidence_id"))
+            alternative = next(
+                (
+                    candidate
+                    for _, candidate in candidate_alternatives_by_id.get(insight_id, [])
+                    if _insight_duplicate_key(candidate)
+                    and _insight_duplicate_key(candidate) != duplicate_key
+                    and normalize_for_lookup(candidate.get("evidence_id"))
+                    == final_evidence_id
+                    and _insight_metric_signature(candidate)
+                    == _insight_metric_signature(insight)
+                ),
+                None,
+            )
+            alternative_key = (
+                _insight_duplicate_key(alternative) if alternative is not None else None
+            )
+            if (
+                not insight_id
+                or alternative is None
+                or not alternative_key
+                or alternative_key in replacement_keys
+                or alternative_key in occupied_keys - {duplicate_key}
+            ):
+                replacements = []
+                break
+            replacement_keys.add(alternative_key)
+            replacements.append((insight_id, alternative))
+
+        if len(replacements) != len(members):
+            ambiguous.add(duplicate_key)
+            continue
+
+        for _source_order, insight in members:
+            insight_id = _s(insight.get("id")).strip()
+            alternative = next(
+                candidate
+                for candidate_id, candidate in replacements
+                if candidate_id == insight_id
+            )
+            replaced = dict(insight)
+            replaced["text"] = _s(alternative.get("text")).strip()
+            final_by_id[insight_id] = (_source_order, replaced)
+
+    return ambiguous
 
 
 def _best_ranked_insight(
@@ -1788,19 +1904,6 @@ def _insights_semantically_equivalent(
     right_metric = _insight_metric_signature(right)
     if left_metric != right_metric:
         return False
-    left_id = _s(left.get("id")).strip()
-    right_id = _s(right.get("id")).strip()
-    left_evidence_id = normalize_for_lookup(left.get("evidence_id"))
-    right_evidence_id = normalize_for_lookup(right.get("evidence_id"))
-    if (
-        left_id
-        and left_id == right_id
-        and left_evidence_id
-        and left_evidence_id == right_evidence_id
-    ):
-        # Stable ID plus the same source binding identifies a final rewrite of
-        # one candidate, even when the editorial wording is intentionally new.
-        return True
     left_proposition = normalize_for_lookup(left.get("text"))
     right_proposition = normalize_for_lookup(right.get("text"))
     # Evidence excerpts are source support, not propositions.  They are never
@@ -1814,6 +1917,8 @@ def _append_distinct_insight(
     insight: Dict[str, Any],
 ) -> None:
     duplicate_key = _insight_duplicate_key(insight)
+    if duplicate_key and duplicate_key in selected_keys:
+        return
     if any(
         _insights_semantically_equivalent(insight, retained) for retained in selected
     ):

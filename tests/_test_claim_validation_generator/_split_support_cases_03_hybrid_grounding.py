@@ -37,7 +37,11 @@ def _ambiguous_claim(
     evidence = {
         "findings": {
             "findings": [
-                {"id": "f1", "text": "Wallet use is becoming a common checkout method."}
+                {
+                    "id": "f1",
+                    "text": "Wallet use is becoming a common checkout method.",
+                    "evidence": "Wallet use is becoming a common checkout method.",
+                }
             ]
         }
     }

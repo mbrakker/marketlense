@@ -21,13 +21,13 @@ Overall verdict: **PARTIAL**. The implementation and provider-free retained-arti
 
 - Ranking now uses retained evidence binding strength, existing relevance/metric/novelty/score fields, physical pages/spans, and editorial-plan theme priority/coverage. No keyword-based business-relevance score was added.
 - Final-stage records are resolved before ranking: a matching stable ID keeps final editorial wording, while candidate metric, evidence ID/text, physical pages, and evidence spans restore the retained factual binding.
-- Semantic deduplication is conservative: shared evidence IDs or excerpts alone never establish equivalence. It requires an explicit stable-ID/source match or identical public proposition with compatible protected metric bindings. Different conclusions, metrics, populations/cohorts, periods, or observation/forecast statuses remain distinct.
+- Semantic deduplication is conservative: shared evidence IDs or excerpts alone never establish equivalence. It requires an identical public proposition with compatible protected metric bindings; stable IDs are used to restore and resolve authoritative facts, never as a proposition-equivalence shortcut. Different conclusions, metrics, populations/cohorts, periods, or observation/forecast statuses remain distinct.
 - Missing evidence IDs and page-less finding fallbacks are not promoted. An explicit `evidence_fidelity.results` set admits only `supported` findings; absent fidelity data retains the existing findings-pack behavior.
 - Fallback pools first cover uncovered editorial themes, then fill from eligible alternatives while excluding source IDs already covered by the current candidate roster. Existing IDs, evidence IDs, pages, spans, and protected metric fields are copied from the winning retained record.
 - Same stable IDs are now grouped by compatible source identity and protected metric bindings before any editorial score is used. Conflicting evidence IDs, values, cohorts, periods, or observation statuses fail closed; equivalent source-consistent representations may still use the strongest existing retained signals.
 - Same stable IDs also fail closed when their physical page/span bindings are contradictory. Identical excerpts, overlapping spans, and source-consistent multi-page representations remain eligible; unrelated excerpts or disjoint physical bindings cannot be resolved by editorial score.
 - Final editorial wording remains authoritative, but the complete candidate protected metric binding is restored, including empty fields. Final-only metric, forecast, cohort, denominator, timeframe, geography, evidence, page, or span additions are removed; a matching final rewrite without a reliable candidate binding is rejected.
-- Artifact cache metadata now carries `evidence_backed_shortlisting:4`; the cache matcher rejects the prior `evidence_backed_shortlisting:3`, `evidence_backed_shortlisting:2`, `evidence_backed_shortlisting:1`, and `stable_id_unique_selection:2` versions.
+- Artifact cache metadata now carries `evidence_backed_shortlisting:5`; the cache matcher rejects the prior `evidence_backed_shortlisting:4`, `evidence_backed_shortlisting:3`, `evidence_backed_shortlisting:2`, `evidence_backed_shortlisting:1`, and `stable_id_unique_selection:2` versions.
 - Two independent insights remain a valid generated artifact family result; the downstream report-payload contract still rejects fewer than five populated insight slots unless the family is explicitly abstained.
 
 ## Frozen-five before/after replay (initial Step 1 baseline)
@@ -95,6 +95,29 @@ Commit `2ce49d69` compares the selector with baseline `953555f` on the exact ret
 | Adjust | unchanged, 6→6 | 6/6→6/6 | unchanged | unchanged | 0→0 / 0→0 | unchanged | None |
 
 Aggregate final replay: **29→29** selected identities and editorial wordings unchanged; theme coverage, evidence IDs, physical pages/spans, protected metric bindings, metric-spine/key-figure counts, fallback availability, validation outcomes, and publication-readiness safeguards were unchanged. The retained cohort has no duplicate stable-ID candidate groups, so the new defect is demonstrated by focused regressions rather than a live-frozen collision. No provider calls or publication writes were made. Overall Step 1 remains **PARTIAL** because retained post-selection replay cannot establish fresh live selection effectiveness or repeated-run stability; no further Step 1 corrective work is indicated by this verification, and Step 2 remains unstarted.
+
+## Final P1 factual/editorial-integrity correction
+
+The latest correction closes two independent validation/selection gaps without changing the Step 2 or publication boundaries:
+
+- A finding's generated `text` is no longer indexed as its own direct evidence. Findings require an independent `evidence`, `quote`, `quote_text`, `snippet`, or `excerpt`, or an independently bound PDF source span during evidence-fidelity validation. `quote_candidates.text` remains source quotation text, and `quote_text` aliases remain supported.
+- Duplicate public prose with different protected metric signatures is never resolved by editorial score. Matching stable IDs can use a distinct, same-binding source-backed candidate formulation; when no safe formulation exists, the conflicting prose group is omitted. Candidate-only conflicts fail closed as well. Exact public propositions with compatible protected bindings still deduplicate, while distinct same-source propositions remain separate.
+
+Provider-free replay of the exact retained five-report pack at the current working tree selected **29 insights** with **29/29 editorial-plan theme slots**, zero repeated normalized public texts, and zero repeated evidence IDs:
+
+| Report | Selected count | Theme slots | Duplicate text / evidence IDs | Difference from recorded `953555f` baseline |
+|---|---:|---:|---|---|
+| Capgemini | 5 | 5/5 | 0 / 0 | No identity, wording, page/span, metric, or fallback change |
+| Activate | 7 | 7/7 | 0 / 0 | No change |
+| KPMG | 5 | 5/5 | 0 / 0 | No change |
+| Reuters Institute | 6 | 6/6 | 0 / 0 | No change |
+| Adjust | 6 | 6/6 | 0 / 0 | No change |
+
+The retained Step 0 manifest remains the exact five-report, five-hash cohort. This replay read retained artifacts only; it made no provider calls, publication writes, canonical claim writes, or PDF changes. The cohort contains no same-ID collision or duplicate-metric candidate, so the new behavior is measured by focused adversarial regressions rather than a claim of fresh live-selection improvement. The 15-case / 39-variant Step 0 reference fixture remains unchanged and was not dispatched through Step 2 in this correction.
+
+Focused regressions now cover generated-finding self-support, independent source-page support, source-quotation preservation, duplicate final wording with distinct metric bindings, candidate-only duplicate wording, stable-ID/factual restoration, and existing public-quality blocking. The two-insight artifact-family behavior remains generated without padding; the existing report-payload completeness gate remains authoritative.
+
+Current verification batches pass with **108 claim-validation**, **88 artifact-selection/normalization**, **218 regeneration/contract**, **133 combined public-editorial-quality and Step 2**, and **2,423 contract/schema/prompt** tests. Targeted Ruff check and format checks pass for both changed production modules and the directly edited regression modules. The repository type gate remains blocked only by 11 pre-existing unbaselined errors in `verified_claims_visual_generator.py`; neither changed production module adds a type error. Step 1 remains **PARTIAL**: the retained-artifact replay proves no frozen-cohort regression and fail-closed behavior, but not live pre-selector recall, collision prevalence, or repeated-run selection stability.
 
 ## Fifteen frozen reference cases
 

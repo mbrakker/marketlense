@@ -11,6 +11,9 @@ from src.generators.artifact_normalization import (
     fallback_artifact_insights_from_findings,
     select_artifact_insights,
 )
+from src.generators.public_editorial_quality_generator import (
+    evaluate_public_editorial_quality,
+)
 
 
 def _plan(*evidence_ids: str) -> dict[str, object]:
@@ -842,7 +845,9 @@ def test_selector_deduplicates_identical_public_claims_across_evidence_ids() -> 
     assert [item["id"] for item in selected] == ["second"]
 
 
-def test_selector_keeps_identical_public_claim_when_metric_binding_differs() -> None:
+def test_selector_replaces_duplicate_final_wording_with_bound_candidate_wording() -> (
+    None
+):
     claim = "The strategy segment recorded a 57% increase."
     first = _insight(
         "installs",
@@ -858,14 +863,154 @@ def test_selector_keeps_identical_public_claim_when_metric_binding_differs() -> 
         score=0.79,
         metric={"label": "Sessions", "value": "57%", "unit": "%"},
     )
+    first_candidate = _insight(
+        "installs",
+        "f1",
+        "Install share rose 57% among strategy apps.",
+        score=0.7,
+        metric={"label": "Installs", "value": "57%", "unit": "%"},
+        evidence="The source reports install share rose 57% among strategy apps.",
+        pages=[4],
+    )
+    second_candidate = _insight(
+        "sessions",
+        "f2",
+        "Session volume rose 57% for the strategy cohort.",
+        score=0.7,
+        metric={"label": "Sessions", "value": "57%", "unit": "%"},
+        evidence="The source reports session volume rose 57% for the strategy cohort.",
+        pages=[5],
+    )
 
     selected = select_artifact_insights(
         final_insights=[first, second],
-        candidate_insights=[],
+        candidate_insights=[first_candidate, second_candidate],
         editorial_plan=_plan("f1", "f2"),
     )
 
     assert [item["id"] for item in selected] == ["installs", "sessions"]
+    assert [item["text"] for item in selected] == [
+        "Install share rose 57% among strategy apps.",
+        "Session volume rose 57% for the strategy cohort.",
+    ]
+    assert [item["metric"]["label"] for item in selected] == [
+        "Installs",
+        "Sessions",
+    ]
+    quality = evaluate_public_editorial_quality(
+        report_id="duplicate-wording-regression",
+        artifacts={"insights_final": selected},
+    )
+    assert "public_editorial_quality.duplicate_insight" not in {
+        issue.rule_id for issue in quality.issues
+    }
+
+
+def test_selector_fails_closed_for_duplicate_wording_with_conflicting_metrics() -> None:
+    claim = "The strategy segment recorded a 57% increase."
+    selected = select_artifact_insights(
+        final_insights=[
+            _insight(
+                "installs",
+                "f1",
+                claim,
+                score=0.8,
+                metric={"label": "Installs", "value": "57%", "unit": "%"},
+            ),
+            _insight(
+                "sessions",
+                "f2",
+                claim,
+                score=0.79,
+                metric={"label": "Sessions", "value": "57%", "unit": "%"},
+            ),
+        ],
+        candidate_insights=[],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert selected == []
+
+
+def test_selector_does_not_use_differently_bound_candidate_wording() -> None:
+    claim = "The strategy segment recorded a 57% increase."
+    selected = select_artifact_insights(
+        final_insights=[
+            _insight(
+                "installs",
+                "f1",
+                claim,
+                score=0.8,
+                metric={"label": "Installs", "value": "57%", "unit": "%"},
+            ),
+            _insight(
+                "sessions",
+                "f2",
+                claim,
+                score=0.79,
+                metric={"label": "Sessions", "value": "57%", "unit": "%"},
+            ),
+        ],
+        candidate_insights=[
+            _insight(
+                "installs",
+                "f1",
+                claim,
+                score=0.9,
+                metric={"label": "Installs", "value": "57%", "unit": "%"},
+            ),
+            _insight(
+                "installs",
+                "f1",
+                "Install share rose 57% among strategy apps.",
+                score=0.7,
+                metric={},
+            ),
+            _insight(
+                "sessions",
+                "f2",
+                claim,
+                score=0.89,
+                metric={"label": "Sessions", "value": "57%", "unit": "%"},
+            ),
+            _insight(
+                "sessions",
+                "f2",
+                "Session volume rose 57% for the strategy cohort.",
+                score=0.7,
+                metric={},
+            ),
+        ],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert selected == []
+
+
+def test_selector_fails_closed_for_candidate_only_duplicate_wording() -> None:
+    claim = "The strategy segment recorded a 57% increase."
+    selected = select_artifact_insights(
+        final_insights=[],
+        candidate_insights=[
+            _insight(
+                "installs",
+                "f1",
+                claim,
+                score=0.8,
+                metric={"label": "Installs", "value": "57%", "unit": "%"},
+            ),
+            _insight(
+                "sessions",
+                "f2",
+                claim,
+                score=0.79,
+                metric={"label": "Sessions", "value": "57%", "unit": "%"},
+            ),
+        ],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert selected == []
 
 
 def test_selector_keeps_same_page_topic_when_metric_binding_differs() -> None:
@@ -1109,7 +1254,7 @@ def test_finding_fallback_covers_uncovered_themes_before_filling_capacity() -> N
 
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION == (
-        "evidence_backed_shortlisting:4"
+        "evidence_backed_shortlisting:5"
     )
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
         "stable_id_unique_selection:2"
@@ -1125,6 +1270,7 @@ def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> N
         "stable_id_unique_selection:2",
         "evidence_backed_shortlisting:2",
         "evidence_backed_shortlisting:3",
+        "evidence_backed_shortlisting:4",
     ],
 )
 def test_old_selection_version_cannot_match_a_new_cache_key(old_version: str) -> None:

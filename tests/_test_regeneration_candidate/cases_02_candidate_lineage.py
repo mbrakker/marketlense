@@ -163,7 +163,11 @@ def test_candidate_preflight_leaves_ambiguous_claim_for_shared_grounding() -> No
     evidence_packs = {
         "findings": {
             "findings": [
-                {"id": "f1", "text": "Wallet use is becoming a common checkout method."}
+                {
+                    "id": "f1",
+                    "text": "Wallet use is becoming a common checkout method.",
+                    "evidence": "Wallet use is becoming a common checkout method.",
+                }
             ]
         }
     }

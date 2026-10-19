@@ -29,8 +29,13 @@ def test_promoted_repair_candidate_materializes_against_promoted_artifact() -> N
                 {
                     "id": "f1",
                     "text": "Wallet use is becoming a common checkout method.",
+                    "evidence": "Wallet use is becoming a common checkout method.",
                 },
-                {"id": "f2", "text": "Wallet adoption reached 42% in 2026."},
+                {
+                    "id": "f2",
+                    "text": "Wallet adoption reached 42% in 2026.",
+                    "evidence": "Wallet adoption reached 42% in 2026.",
+                },
             ]
         }
     }
@@ -117,7 +122,11 @@ def test_rolled_back_candidate_cannot_become_the_final_package() -> None:
             ]
         }
     }
-    evidence = {"findings": {"findings": [{"id": "f1", "text": final_claim}]}}
+    evidence = {
+        "findings": {
+            "findings": [{"id": "f1", "text": final_claim, "evidence": final_claim}]
+        }
+    }
     rolled_back_candidate = claim_validation.attach_claim_validation_execution_identity(
         validate_retained_claims(
             repair_candidate_artifacts, evidence, source_identity="source-1"
@@ -176,6 +185,7 @@ def test_merchant_risk_council_final_figures_survive_candidate_projection_drift(
                 {
                     "id": "f1",
                     "text": "43% of merchants accept real-time payments.",
+                    "evidence": "43% of merchants accept real-time payments.",
                     "page": 2,
                 }
             ]

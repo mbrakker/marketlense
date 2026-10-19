@@ -40,8 +40,8 @@ def test_retained_claim_validation_uses_soft_copy_factual_provenance() -> None:
             },
         },
         _evidence(),
-        semantic_batch_validator=lambda *_: (
-            (_ for _ in ()).throw(AssertionError("unused"))
+        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
+            AssertionError("unused")
         ),
     )
 
@@ -94,7 +94,11 @@ def test_retained_claim_validation_uses_canonical_abbreviation_sentence_grid(
     }
     package = validate_retained_claims(
         artifacts,
-        {"findings": {"findings": [{"id": "f1", "text": evidence}]}},
+        {
+            "findings": {
+                "findings": [{"id": "f1", "text": evidence, "evidence": evidence}]
+            }
+        },
     )
 
     assert len(package.results) == 1
@@ -175,8 +179,8 @@ def test_retained_claim_validation_rejects_invented_soft_copy_quantity() -> None
             },
         },
         _evidence(),
-        semantic_batch_validator=lambda *_: (
-            (_ for _ in ()).throw(AssertionError("unused"))
+        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
+            AssertionError("unused")
         ),
     )
 

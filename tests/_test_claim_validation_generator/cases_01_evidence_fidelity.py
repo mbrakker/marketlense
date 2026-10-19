@@ -168,6 +168,7 @@ def test_key_figure_claim_includes_its_canonical_display_value() -> None:
                     {
                         "id": "survey-basis",
                         "text": "The annual survey included 1,200+ merchants.",
+                        "evidence": "The annual survey included 1,200+ merchants.",
                     }
                 ]
             }

@@ -224,10 +224,12 @@ def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | Non
                     item.get("id") or item.get("evidence_id") or ""
                 ).strip()
                 if pack_name in {"findings", "quote_candidates"}:
-                    # The generated finding is a claim, not additional source
-                    # evidence. Keep its direct excerpt authoritative and avoid
-                    # duplicating it when text and evidence repeat a sentence.
-                    text = _item_direct_evidence_text(item)
+                    # A finding's ``text`` is generated copy, not additional
+                    # source evidence. A quote candidate is different: its
+                    # contract defines ``text`` as the source quotation.
+                    text = _item_direct_evidence_text(
+                        item, include_text=pack_name == "quote_candidates"
+                    )
                 else:
                     text = " ".join(
                         str(item.get(key) or "").strip()
@@ -2263,6 +2265,8 @@ def _source_pages_support_numeric_claim(
 def _source_references(
     raw: dict,
     source_evidence: dict[str, tuple[str, str, int | None]],
+    *,
+    include_text: bool = False,
 ) -> list[ClaimEvidenceReference]:
     pages_raw = raw.get("pages", raw.get("page"))
     pages = pages_raw if isinstance(pages_raw, list) else [pages_raw]
@@ -2272,7 +2276,7 @@ def _source_references(
         if isinstance(value, int) and not isinstance(value, bool) and value > 0
     ]
     exact_evidence_pages = _exact_evidence_pages(
-        _item_direct_evidence_text(raw), source_evidence
+        _item_direct_evidence_text(raw, include_text=include_text), source_evidence
     )
     if exact_evidence_pages:
         page_values = [page for page in page_values if page in exact_evidence_pages]
@@ -2325,15 +2329,25 @@ def _source_references(
     ]
 
 
-def _item_direct_evidence_text(raw: dict) -> str:
+def _item_direct_evidence_text(raw: dict, *, include_text: bool = False) -> str:
     """Return only the retained direct excerpt for a finding or quotation.
 
-    The finding ``text`` is generated copy, so appending it to an excerpt would
-    let an unsupported value prove itself during deterministic validation.
+    The finding ``text`` is generated copy, so it is excluded by default. A
+    quote candidate may opt in because its contract defines ``text`` as the
+    source quotation rather than generated finding prose.
     """
 
     primary = ""
-    for key in ("evidence", "quote", "quote_text", "snippet", "excerpt", "text"):
+    keys: tuple[str, ...] = (
+        "evidence",
+        "quote",
+        "quote_text",
+        "snippet",
+        "excerpt",
+    )
+    if include_text:
+        keys += ("text",)
+    for key in keys:
         value = raw.get(key)
         if isinstance(value, str) and value.strip():
             primary = value.strip()
@@ -2561,7 +2575,11 @@ def _evidence_fidelity_candidates(
                         text_hash=_hash(text),
                         kind=kind,
                         factual=_factual(kind),
-                        evidence_references=_source_references(item, source_evidence),
+                        evidence_references=_source_references(
+                            item,
+                            source_evidence,
+                            include_text=pack_name == "quote_candidates",
+                        ),
                     ),
                     text=text,
                 )

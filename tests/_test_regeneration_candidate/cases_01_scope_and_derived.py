@@ -8,9 +8,7 @@ def test_scope_validation_rejects_tampered_derived_artifact_despite_allowed_depe
     None
 ):
     plan = SimpleNamespace(
-        targets=[
-            SimpleNamespace(allowed_paths=["summary.tldr[claim_index=0]"])
-        ]
+        targets=[SimpleNamespace(allowed_paths=["summary.tldr[claim_index=0]"])]
     )
     before = {
         "summary": {"tldr": "Before."},
@@ -174,13 +172,9 @@ def test_scope_allows_only_the_claim_map_row_derived_from_summary_copy_removal()
         evidence_id="finding-2",
         page=7,
     )
-    ambiguous_before["soft_copy_claim_provenance"]["claims"].append(
-        ambiguous_claim
-    )
+    ambiguous_before["soft_copy_claim_provenance"]["claims"].append(ambiguous_claim)
     ambiguous_after = deepcopy(after)
-    ambiguous_after["soft_copy_claim_provenance"]["claims"].append(
-        ambiguous_claim
-    )
+    ambiguous_after["soft_copy_claim_provenance"]["claims"].append(ambiguous_claim)
     ambiguous_paths = _verified_deterministic_mutation_paths(
         paths=[removed_map_path],
         before=ambiguous_before,
@@ -288,9 +282,7 @@ def test_candidate_audit_retains_planned_and_applied_summary_leaf_paths() -> Non
     copy_path = "summary.executive_summary[claim_index=0]"
     before = {
         "summary": {
-            "claim_evidence_map": [
-                {"id": "claim-one", "claim": "Old source claim."}
-            ],
+            "claim_evidence_map": [{"id": "claim-one", "claim": "Old source claim."}],
             "executive_summary": "Old public claim. Stable sibling.",
         }
     }
@@ -316,9 +308,7 @@ def test_candidate_audit_retains_planned_and_applied_summary_leaf_paths() -> Non
             repair_strategy="current_evidence",
             evidence_ids_used=["evidence-1"],
             changed_paths=[path],
-            minimal_patch=[
-                RepairPatchOperation(op="replace", path=path, value=value)
-            ],
+            minimal_patch=[RepairPatchOperation(op="replace", path=path, value=value)],
         )
         for path, value in (
             (claim_path, "New source claim."),
@@ -429,6 +419,7 @@ def test_retained_claim_diagnostics_are_structured_before_and_after_repair() -> 
                 {
                     "id": "finding-1",
                     "text": "European loyalty reached 49% in 2024.",
+                    "evidence": "European loyalty reached 49% in 2024.",
                 }
             ]
         },
@@ -489,6 +480,7 @@ def _retained_claim_severity_fixture() -> tuple[dict, dict]:
                     {
                         "id": "finding-1",
                         "text": "European loyalty reached 49% in 2024.",
+                        "evidence": "European loyalty reached 49% in 2024.",
                     }
                 ]
             }
@@ -527,16 +519,13 @@ def test_changed_retained_claim_with_new_unsupported_fact_is_an_error() -> None:
     artifacts, evidence_packs = _retained_claim_severity_fixture()
     baseline_diagnostics = retained_claim_repair_issues(artifacts, evidence_packs)
     baseline_severities = {
-        _failure_fingerprint(issue).key: "warning"
-        for issue in baseline_diagnostics
+        _failure_fingerprint(issue).key: "warning" for issue in baseline_diagnostics
     }
     candidate_artifacts = deepcopy(artifacts)
-    candidate_artifacts["summary"]["claim_evidence_map"][0][
-        "id"
-    ] = "summary-claim-2"
-    candidate_artifacts["summary"]["claim_evidence_map"][0][
-        "claim"
-    ] = "European loyalty reached 88% in 2022."
+    candidate_artifacts["summary"]["claim_evidence_map"][0]["id"] = "summary-claim-2"
+    candidate_artifacts["summary"]["claim_evidence_map"][0]["claim"] = (
+        "European loyalty reached 88% in 2022."
+    )
 
     candidate = validate_regeneration_candidate(
         current_artifacts=artifacts,
@@ -557,9 +546,7 @@ def test_changed_retained_claim_with_new_unsupported_fact_is_an_error() -> None:
         ValidationReport(
             schema_version="1.1", status="fail", issues=baseline_diagnostics
         ),
-        ValidationReport(
-            schema_version="1.1", status="fail", issues=candidate.issues
-        ),
+        ValidationReport(schema_version="1.1", status="fail", issues=candidate.issues),
     )
     assert _failure_fingerprint(introduced_claim_issue).key in {
         fingerprint.key for fingerprint in delta.introduced
@@ -574,9 +561,9 @@ def test_repaired_retained_claim_fingerprint_moves_to_resolved() -> None:
         for issue in baseline_diagnostics
     }
     repaired_artifacts = deepcopy(artifacts)
-    repaired_artifacts["summary"]["claim_evidence_map"][0][
-        "claim"
-    ] = "European loyalty reached 49% in 2024."
+    repaired_artifacts["summary"]["claim_evidence_map"][0]["claim"] = (
+        "European loyalty reached 49% in 2024."
+    )
     candidate_diagnostics = retained_claim_repair_issues(
         repaired_artifacts,
         evidence_packs,
@@ -718,9 +705,7 @@ def test_insight_repair_allows_only_verified_derived_projection() -> None:
         evidence_packs={},
     )
     plan = SimpleNamespace(
-        targets=[
-            SimpleNamespace(allowed_paths=["insights_final[item=one].text"])
-        ]
+        targets=[SimpleNamespace(allowed_paths=["insights_final[item=one].text"])]
     )
 
     assert not issues
@@ -757,9 +742,7 @@ def test_insight_repair_rebuilds_only_source_proven_topics() -> None:
     before = {
         "toc_entries": toc,
         "summary": {},
-        "insights_final": [
-            {"id": "one", "evidence_id": "old-evidence", "pages": [3]}
-        ],
+        "insights_final": [{"id": "one", "evidence_id": "old-evidence", "pages": [3]}],
         "topics_covered": [
             {
                 "schema_version": "1.0",
@@ -779,9 +762,7 @@ def test_insight_repair_rebuilds_only_source_proven_topics() -> None:
     candidate["topics_covered"][0]["status"] = "source_backed"
     plan = SimpleNamespace(
         targets=[
-            SimpleNamespace(
-                allowed_paths=["insights_final[item=one].evidence_id"]
-            )
+            SimpleNamespace(allowed_paths=["insights_final[item=one].evidence_id"])
         ]
     )
 
@@ -823,9 +804,7 @@ def test_summary_repair_allows_only_verified_chart_projection() -> None:
         "chart_insight_cards": [],
     }
     plan = SimpleNamespace(
-        targets=[
-            SimpleNamespace(allowed_paths=["summary.tldr[claim_index=0]"])
-        ]
+        targets=[SimpleNamespace(allowed_paths=["summary.tldr[claim_index=0]"])]
     )
 
     verified, issues = _verify_derived_artifact_roots(
@@ -873,9 +852,7 @@ def test_summary_repair_rebuilds_exact_key_figure_and_chart_dependents() -> None
     }
     evidence_packs = {
         "findings": {
-            "findings": [
-                {"id": "f1", "text": evidence_text, "evidence": evidence_text}
-            ]
+            "findings": [{"id": "f1", "text": evidence_text, "evidence": evidence_text}]
         }
     }
     before = {
@@ -913,9 +890,7 @@ def test_summary_repair_rebuilds_exact_key_figure_and_chart_dependents() -> None
 
     plan = SimpleNamespace(
         targets=[
-            SimpleNamespace(
-                allowed_paths=["summary.executive_summary[claim_index=0]"]
-            )
+            SimpleNamespace(allowed_paths=["summary.executive_summary[claim_index=0]"])
         ]
     )
     assert (

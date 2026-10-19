@@ -45,7 +45,14 @@ def _inputs(
 ):
     evidence_packs = {
         "findings": {
-            "findings": [{"id": "evidence-1", "text": evidence_text, "page": 4}]
+            "findings": [
+                {
+                    "id": "evidence-1",
+                    "text": evidence_text,
+                    "evidence": evidence_text,
+                    "page": 4,
+                }
+            ]
         }
     }
     artifacts = {

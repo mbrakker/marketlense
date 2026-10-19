@@ -20,9 +20,17 @@ def _evidence() -> dict:
                         "Wallet adoption reached 42% in Global enterprise merchants in "
                         "2026."
                     ),
+                    "evidence": (
+                        "Wallet adoption reached 42% in Global enterprise merchants in "
+                        "2026."
+                    ),
                     "page": 4,
                 },
-                {"id": "q1", "text": "Wallets are now core checkout infrastructure."},
+                {
+                    "id": "q1",
+                    "text": "Wallets are now core checkout infrastructure.",
+                    "evidence": "Wallets are now core checkout infrastructure.",
+                },
             ]
         }
     }
