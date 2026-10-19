@@ -236,3 +236,15 @@ MERGE** until that failure is resolved or explicitly accepted by the release
 owner. The full repository type gate and focused checks are green on the
 correction SHA, and the known Algolia, Bain-denominator, Bigcommerce-cover,
 and Bigcommerce-wallet defects have regression evidence.
+
+The repository aggregate command
+`python scripts/ci/run_quality_gate.py` was also executed. Its full pytest
+stage selected 7,755 tests and completed with **7,717 passed, 1 skipped, 37
+failed, and 31 deselected**. The failures were outside the changed production
+boundary: one native wheelhouse test requires CPython 3.12 while this runner
+is CPython 3.14; the grounding/retained-claim and two report-analysis failures
+are in untouched suites; and the long-test-file ownership check still reports
+existing oversized test modules. The crop regression was split so this change
+does not add a new long-file violation. The aggregate therefore remains
+non-green, despite the changed-boundary suite, type, format, Ruff,
+documentation, backlog, architecture, and contract gates passing.
