@@ -46,6 +46,11 @@ _COPYRIGHT_RE = re.compile(
 _TRAILING_LABEL_RE = re.compile(
     rf"(?:[•·|]|[-–—])\s*(?P<label>{_PAGE_TOKEN})$", re.IGNORECASE
 )
+_STRUCTURED_FOOTER_RE = re.compile(
+    r"^(?P<marker>[A-Za-z0-9][A-Za-z0-9 &'\-]{2,80}\bREPORT)\s*\|\s*"
+    r"(?P<label>\d{1,4})?$",
+    re.IGNORECASE,
+)
 _MAX_INFERENCE_PHYSICAL_GAP = 4
 _MAX_MARGIN_LINE_LENGTH = 120
 
@@ -72,6 +77,13 @@ class _PageObservation:
     native_pdf_label: str | None
     candidates: tuple[_Candidate, ...]
     unreadable: bool = False
+
+
+@dataclass(frozen=True)
+class _TextLine:
+    text: str
+    line_bbox: tuple[float, float, float, float]
+    block_bbox: tuple[float, float, float, float]
 
 
 @dataclass(frozen=True)
@@ -217,6 +229,15 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
                 not candidate.strong and len(block_lines) > 2
             ):
                 candidates.append(candidate)
+    candidates.extend(
+        candidate
+        for candidate in _structured_footer_candidates(pairs, height)
+        if not any(
+            existing.token.style == candidate.token.style
+            and existing.token.number == candidate.token.number
+            for existing in candidates
+        )
+    )
     unique: dict[tuple[str, str, bool], _Candidate] = {}
     for candidate in candidates:
         unique[(candidate.token.label, candidate.band, candidate.strong)] = candidate
@@ -225,6 +246,59 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
         native_pdf_label=native_pdf_label,
         candidates=tuple(unique.values()),
     )
+
+
+def _structured_footer_candidates(
+    text_blocks: list[tuple[Any, str]], height: float
+) -> tuple[_Candidate, ...]:
+    if height <= 0:
+        return ()
+
+    lines: list[_TextLine] = []
+    for rect, block_text in text_blocks:
+        block_bbox = (float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1))
+        if block_bbox[3] / height < 0.86:
+            continue
+        for raw_line in str(block_text or "").splitlines():
+            text = re.sub(r"\s+", " ", raw_line).strip()
+            if text:
+                lines.append(_TextLine(text, block_bbox, block_bbox))
+
+    candidates: list[_Candidate] = []
+    for marker_line in lines:
+        match = _STRUCTURED_FOOTER_RE.fullmatch(marker_line.text)
+        if match is None:
+            continue
+        label = match.group("label")
+        if label is None:
+            matching_numeric_lines = [
+                line
+                for line in lines
+                if _ARABIC_RE.fullmatch(line.text)
+                and line.line_bbox[2] >= marker_line.line_bbox[2] - 2.0
+                and abs(
+                    (line.line_bbox[1] + line.line_bbox[3]) / 2
+                    - (marker_line.line_bbox[1] + marker_line.line_bbox[3]) / 2
+                )
+                <= 3.5
+            ]
+            if len(matching_numeric_lines) != 1:
+                continue
+            numeric_line = matching_numeric_lines[0]
+            label = numeric_line.text
+            detail = numeric_line.text
+            bounding_box = numeric_line.block_bbox
+        else:
+            detail = marker_line.text
+            bounding_box = marker_line.block_bbox
+
+        token = _parse_label_token(label)
+        if token is None or (token.style == "arabic" and 1900 <= token.number <= 2100):
+            continue
+        candidates.append(
+            _Candidate(token, "visible_footer", detail[:240], True, bounding_box)
+        )
+    return tuple(candidates)
 
 
 def _native_pdf_label(page: Any) -> str | None:

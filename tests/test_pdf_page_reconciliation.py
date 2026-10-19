@@ -601,6 +601,73 @@ def test_chart_card_number_does_not_hide_sequence_supported_footer(
     assert mapping.status == "verified"
 
 
+def test_ias_footer_labels_embedded_in_long_text_blocks_are_verified(
+    run_context,
+) -> None:
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
+            path=(
+                "tests/fixtures/pdf_benchmark/golden/"
+                "IAS - Industry_Pulse_Report_2026_ACIG.pdf"
+            ),
+        ),
+        run_context,
+    )
+
+    assert [response.mappings[page - 1].printed_label for page in range(8, 12)] == [
+        "8",
+        "9",
+        "10",
+        "11",
+    ]
+    assert [response.mappings[page - 1].status for page in range(8, 12)] == [
+        "verified",
+        "verified",
+        "verified",
+        "verified",
+    ]
+    assert all(
+        response.mappings[page - 1].method == "visible_footer"
+        and response.mappings[page - 1].source_geometry is not None
+        for page in range(8, 12)
+    )
+    assert [response.mappings[page - 1].status for page in (16, 17)] == [
+        "verified",
+        "verified",
+    ]
+    assert all(
+        response.mappings[page - 1].source_geometry is not None for page in (16, 17)
+    )
+    assert response.mappings[0].status == "unresolved"
+
+
+def test_footer_marker_without_unique_numeric_label_remains_unresolved(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "footer-marker-without-label.pdf"
+    _make_pdf(
+        pdf_path,
+        [
+            {
+                "body": "2024 25 50 75 100",
+                "footer": "THE 2026 INDUSTRY PULSE REPORT |",
+            }
+        ],
+    )
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
+            path=str(pdf_path),
+        ),
+        run_context,
+    )
+
+    assert response.mappings[0].status == "unresolved"
+    assert response.mappings[0].printed_label is None
+
+
 def test_native_labels_are_supplementary_to_visible_evidence(
     tmp_path, run_context
 ) -> None:
