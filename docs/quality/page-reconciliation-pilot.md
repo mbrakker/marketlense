@@ -139,6 +139,94 @@ chart numeral `04` is not used as a page label. The 71 verified outcomes are
 labels (physical pages 7 and 13) remain sequence-supported but not visibly
 independent. No incorrect inference was identified.
 
+## Frozen 20-report cohort validation
+
+The existing frozen cohort at
+`scripts/quality/frozen_reliability_cohort_20.json` was evaluated without
+running the broader frozen-reliability workflow. All 20 canonical source paths
+resolved locally, all 20 paths were unique, and every PDF MD5 matched the
+frozen `content_md5`; no member was substituted or unavailable. The matrix used
+the same source bytes for v4 baseline commit `fe0f26e` and v5 candidate commit
+`aed19aa`. Raw JSON outputs and rendered contact sheets were retained outside
+Git under the temporary evaluation root; no PDFs or bulky images were added to
+the repository.
+
+V/I/U means verified/inferred/unresolved. Fresh columns are the median of three
+forced executions in milliseconds; warm columns are the valid cache-hit run
+against the third fresh output directory.
+
+| # | Report identity | Frozen MD5 | Pages | v4 V/I/U | v5 V/I/U | v4 fresh / warm ms | v5 fresh / warm ms |
+| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | Final Web Version Report Consumer Trends 2026 | `81af3890cd84ece81ef16e1aabda8027` | 82 | 80/0/2 | 80/0/2 | 1888.58 / 50.73 | 1908.23 / 39.15 |
+| 2 | Activate `d8ca0bf6efb9c703343867f6df0f26a2553aa78f` | `cbb6e7df67412186b8bc094a424ac890` | 140 | 0/0/140 | 0/0/140 | 4845.64 / 286.39 | 4896.66 / 33.92 |
+| 3 | DV QualityandAttentionBenchmark Q1 2026 | `e854b71d6fb10333b47fd518a6e51cf9` | 12 | 12/0/0 | 12/0/0 | 382.43 / 19.79 | 433.22 / 10.32 |
+| 4 | 2026 Global M&A Outlook | `2acb4a56e14add5d7717f34c378f9091` | 42 | 40/0/2 | 40/0/2 | 1319.11 / 30.28 | 1530.34 / 22.50 |
+| 5 | Trends and Predictions 2026 | `4b763ae2286ca69fe8acb63b17508dfb` | 47 | 45/0/2 | 45/0/2 | 440.57 / 34.96 | 397.23 / 25.38 |
+| 6 | 2026 global payments and fraud report | `11b0b55157f7d0636815ad72435e1cf5` | 4 | 0/0/4 | 0/0/4 | 179.21 / 8.72 | 167.44 / 6.08 |
+| 7 | mobile-app-trends-2026-pdf | `b638414df0b1fccea1cd8a93eaf8f5aa` | 41 | 39/0/2 | 39/0/2 | 192.52 / 26.98 | 211.74 / 21.36 |
+| 8 | Algolia `2026%20B2C%20ecommerce%20AI%20trends eBook EN 2` | `86858bdcb370266f26c29b40316a4db0` | 29 | 0/0/29 | 0/0/29 | 769.35 / 37.66 | 776.47 / 25.65 |
+| 9 | How to win with tech | `77bc67b2bc98187d9d589a4e69fd85f7` | 1 | 0/0/1 | 0/0/1 | 185.74 / 8.26 | 169.23 / 5.23 |
+| 10 | ebook 0225 future commerce new modes guide en us | `0a019f840c3f89ad0a9672e058d1ff83` | 10 | 0/0/10 | 0/0/10 | 230.22 / 19.57 | 236.54 / 12.36 |
+| 11 | The Advertiser Guide to New and Emerging Channels for 2023 | `979a63a1633a7f2ccc5123540a079d79` | 9 | 8/0/1 | 8/0/1 | 73.68 / 10.10 | 74.57 / 8.47 |
+| 12 | q1 2026 emerging retail and consumer trends | `b10ed6c82b76739a806a9f10ec0b9723` | 11 | 9/0/2 | 9/0/2 | 343.38 / 16.36 | 350.82 / 12.31 |
+| 13 | g0 ec trends report 2026 | `9b97626fc83c086961a7416d65e05faa` | 78 | 74/2/2 | 74/2/2 | 1676.91 / 53.88 | 1770.06 / 43.99 |
+| 14 | EMPLIFI Digital Authenticity AI 2026 | `f62048b469dd784e6e7c0349c8b92f9b` | 21 | 19/0/2 | 19/0/2 | 570.14 / 27.87 | 570.01 / 18.25 |
+| 15 | EX Trends AMR 020326 | `fb16d52bb8f60827077c38d6c3f22607` | 31 | 30/0/1 | 30/0/1 | 491.29 / 27.52 | 489.77 / 21.42 |
+| 16 | Retail Marketing Trends: How To Win in 2026 | `8ef1021c332aa85ba008da58ff8ec866` | 22 | 21/0/1 | 21/0/1 | 365.86 / 26.64 | 363.04 / 18.67 |
+| 17 | docu 202601 active ownership report q4 en | `5ceb3b4498de7288ce5a42546d137262` | 30 | 29/0/1 | 29/0/1 | 772.37 / 20.71 | 786.77 / 17.39 |
+| 18 | attachment The Sales Signals Playbook 4 | `f1652970000cfe246c944412e0b1e4fe` | 11 | 11/0/0 | 11/0/0 | 593.09 / 12.27 | 589.91 / 11.55 |
+| 19 | 2026 Global Connected Consumer Trends Report | `076eca6d31e0c1dcddf0f991b3000b40` | 21 | 0/0/21 | 0/0/21 | 121.41 / 14.18 | 130.51 / 14.12 |
+| 20 | 2026 Global Food and Drink Predictions | `b3cb5f66cccda4420be21b2b407b3c59` | 8 | 0/0/8 | 0/0/8 | 171.18 / 8.22 | 171.12 / 7.80 |
+| **Total** | **20 reports** |  | **650** | **417/2/231** | **417/2/231** |  |  |
+
+The cohort aggregate is 417 verified (`64.15%`), 2 inferred (`0.31%`), and
+231 unresolved (`35.54%`). Every response contains exactly one mapping for
+each physical page. All 40 fresh v4/v5 response sets passed schema `1.1`,
+algorithm-version, input-MD5, filename-MD5, and page-completeness checks.
+Each report produced byte-identical JSON across its three fresh runs. The
+corrected warm rerun produced 40/40 cache hits, 20 for each version; the first
+warm attempt used separate empty directories and was discarded as invalid cache
+evidence.
+
+The v5 aggregate fresh median was `415.23 ms` versus v4 `403.74 ms` (+2.85%).
+The valid warm medians were `17.82 ms` for v5 and `23.68 ms` for v4. Two small
+reports had relative fresh increases above 10% (DV +13.28%, +50.79 ms; M&A
+16.01%, +211.23 ms); the cohort-level absolute overhead is bounded and no
+material reliability or runtime regression was observed. No performance
+optimization is claimed.
+
+Accepted labels were decimal only: no Roman or prefixed labels were accepted.
+All verified numeric labels have physical-page offset `0` except Reuters
+physical pages 3–47, which visibly carry printed labels 1–45 (offset `-2`).
+No numbering restart was inferred. The two inferred mappings are DHL physical
+pages 49 and 60; both rendered pages visibly show the proposed footer labels,
+but they remain sequence-supported rather than promoted to direct verification.
+The 13 conflict pages and two native-metadata pages remain unresolved. In
+particular, DHL physical page 27 visibly contains footer `27` alongside `X`,
+and Contentstack physical pages 4 and 10–20 contain competing footer labels;
+none was promoted.
+
+The v4/v5 page-level comparison found zero changed label identities, statuses,
+methods, evidence records, or source geometry across all 650 pages. Therefore
+there were no changed mappings requiring a correction classification; the
+classification set is empty. The rendered v5 contact-sheet review covered all
+419 verified/inferred mappings and all 15 unresolved pages with visible,
+conflicting, or metadata evidence. The remaining 218 unresolved pages have
+explicit `no_visible_label` evidence and were not individually rendered. No
+incorrect verified or inferred mapping was identified in the inspected
+denominator. This is a bounded page-label accuracy statement, not a claim that
+every no-visible-label page has been exhaustively hand-reviewed.
+
+The four committed golden-PDF regressions remain unchanged at 71 verified, 2
+inferred, and 19 unresolved; their earlier rendered review and geometry
+evidence remain in this document. The 20-report cohort adds real source
+diversity and confirms fail-closed abstention on conflicts, but it does not
+replace the IAS-specific geometry fixtures.
+
+**20-report evaluation verdict: PASS for v5 detection, inference, and
+abstention within the stated visual-review denominator. Phase 2 approval
+remains blocked; no downstream integration is authorized.**
+
 ## Validation and Phase 2 hold
 
 TDD evidence:
