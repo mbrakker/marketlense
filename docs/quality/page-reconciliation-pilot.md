@@ -8,7 +8,9 @@ This is the standalone Phase 1 pilot on implementation commit
 physical PDF pages to visible printed labels using native PyMuPDF text and
 bounded local sequence inference. It does not add OCR, vision, LLMs, network
 calls, downstream consumers, production caches, checkpoints, or publication
-flows.
+flows. The exact-SHA verification head is
+`9c80a2f6204022248bbd6ef390692242870a3b1b`, which contains the dedicated
+geometry regression module and the implementation above.
 
 The v5 change is a correctness fix for structured lower-page footers. The
 previous helper split a text block into lines but assigned the containing block
@@ -165,8 +167,8 @@ python scripts/ci/check_architecture_imports.py
 python scripts/ci/check_role_io_boundaries.py
 python scripts/ci/check_service_boundary_map.py
 python scripts/ci/check_documentation.py --check-generated
-python -m ruff check src/services/_pdf/page_artifacts.py src/services/_pdf/page_reconciliation.py src/contracts/pdf_page_reconciliation.py tests/test_pdf_page_reconciliation.py
-python -m ruff format --check src/services/_pdf/page_artifacts.py src/services/_pdf/page_reconciliation.py src/contracts/pdf_page_reconciliation.py tests/test_pdf_page_reconciliation.py
+python -m ruff check src/services/_pdf/page_artifacts.py src/services/_pdf/page_reconciliation.py src/contracts/pdf_page_reconciliation.py tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py
+python -m ruff format --check src/services/_pdf/page_artifacts.py src/services/_pdf/page_reconciliation.py src/contracts/pdf_page_reconciliation.py tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py
 python -m mypy src/services/_pdf/page_artifacts.py src/services/_pdf/page_reconciliation.py src/contracts/pdf_page_reconciliation.py
 git diff --check
 ```
@@ -177,10 +179,22 @@ prompt, downstream consumer, or Phase 2 workflow changed.
 The authoritative v4 hosted test log for run `39210327978` reports
 `4/4 workers [7675 items]` and `7675 passed in 460.04s`; the earlier `7699`
 figure in the release summary was incorrect and is not used as the v4 test
-count here. The final v5 hosted run will be recorded below after the pushed
-implementation is checked on its exact SHA.
+count here. The final v5 hosted run
+[`39216527888`](https://github.com/mbrakker/marketlense/actions/runs/39216527888)
+passed on exact SHA
+`9c80a2f6204022248bbd6ef390692242870a3b1b`: `7681 passed in 433.60s`,
+global coverage `86.31%` (`85932/99564`), and all configured coverage gates
+passed. Both mutation partitions passed with 17 targets, 68 mutants, and 67
+killed (98.53%). The ten quality-command stages passed, and the release
+manifest/review passed all 11 required artifacts with 0 issues and 0 waivers.
+The conditional WordPress staging REST gate was skipped because it was not
+configured for this push. An earlier v5 attempt
+([`39215380878`](https://github.com/mbrakker/marketlense/actions/runs/39215380878))
+failed only the first-party test-file ownership threshold after the six new
+geometry tests were initially placed in the existing module; the tests were
+moved to the dedicated module above and the exact-SHA rerun passed.
 
-Hosted exact-SHA v5 evidence: pending final push.
+Hosted exact-SHA v5 evidence: passed; release evidence ID `39216527888-1`.
 
 Phase 2 downstream adoption and duplicated-logic removal remains **Blocked
 pending measured approval**. Stop after this Phase 1 correction; do not change
