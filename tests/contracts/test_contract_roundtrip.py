@@ -123,6 +123,11 @@ def _build_value(annotation: Any, field_name: str, stack: tuple[type, ...]) -> A
 def _build_dataclass(contract_cls: type, stack: tuple[type, ...]) -> Any:
     hints = get_type_hints(contract_cls, include_extras=True)
     values: dict[str, Any] = {}
+    pdf_contract_module = (
+        importlib.import_module(contract_cls.__module__)
+        if contract_cls.__module__ == "src.contracts.pdf_page_reconciliation"
+        else None
+    )
     for field in fields(contract_cls):
         if field.default is not MISSING:
             values[field.name] = field.default
@@ -145,6 +150,43 @@ def _build_dataclass(contract_cls: type, stack: tuple[type, ...]) -> Any:
             if isinstance(declared_schema_version, str):
                 values[field.name] = declared_schema_version
                 continue
+        if pdf_contract_module is not None:
+            if field.name == "algorithm_version":
+                values[field.name] = (
+                    pdf_contract_module.PDF_PAGE_RECONCILIATION_ALGORITHM_VERSION
+                )
+                continue
+            if field.name == "input_pdf_md5":
+                values[field.name] = "0" * 32
+                continue
+            if contract_cls.__name__ == "PdfPageLabelMapping":
+                if field.name == "printed_label":
+                    values[field.name] = "1"
+                    continue
+                if field.name == "status":
+                    values[field.name] = "verified"
+                    continue
+                if field.name == "method":
+                    values[field.name] = "visible_header"
+                    continue
+                if field.name == "source_geometry":
+                    geometry_cls = pdf_contract_module.PdfPageReconciliationGeometry
+                    values[field.name] = _build_dataclass(
+                        geometry_cls, stack + (geometry_cls,)
+                    )
+                    continue
+            if contract_cls.__name__ == "PdfPageReconciliationCoverage":
+                coverage_values = {
+                    "verified_count": 1,
+                    "inferred_count": 0,
+                    "unresolved_count": 0,
+                    "verified_percentage": 100.0,
+                    "inferred_percentage": 0.0,
+                    "unresolved_percentage": 0.0,
+                }
+                if field.name in coverage_values:
+                    values[field.name] = coverage_values[field.name]
+                    continue
         if field.name in {
             "bbox",
             "original_bbox",
