@@ -32,11 +32,13 @@ source geometry remains the containing text block with
 version moved from v4 to v5, invalidating v4 caches.
 
 The v6 recovery is deliberately narrower than a general sequence fallback: it
-normalizes only `U+FFFC`/`U+FFFD` extraction artifacts when they directly prefix
-a valid page token in a margin line. That artifact is retained as a strong
-direct-evidence signal, including when the containing text block also contains
-source notes. The algorithm version moved from v5 to v6, invalidating v5
-caches. No downstream behavior changed.
+normalizes only a complete margin line whose `U+FFFC`/`U+FFFD` extraction
+artifact directly prefixes an Arabic page token. That artifact is retained as
+a strong direct-evidence signal, including when the containing text block also
+contains source notes. A non-complete artifact-prefixed margin line is treated
+as an unresolved conflict and cannot be sequence-inferred; ordinary copyright
+footers remain on the existing parser path. The algorithm version moved from
+v5 to v6, invalidating v5 caches. No downstream behavior changed.
 
 ## Native geometry evidence
 
@@ -297,10 +299,10 @@ only the algorithm-version field, with no label, status, method, evidence, or
 geometry changes.
 
 Three forced v6 outputs per report were byte-identical and the valid warm run
-produced 20/20 cache hits. The median of per-report fresh medians was
-`409.56 ms` for v6 versus `415.23 ms` for v5. Valid warm-cache median was
-`28.67 ms` for v6 versus `17.82 ms` for v5; the absolute difference was
-`10.85 ms`, and no performance optimization is claimed.
+produced 20/20 cache hits. The final corrected v6 run's median of per-report
+fresh medians was `440.11 ms` versus `415.23 ms` for v5. Valid warm-cache median was
+`28.66 ms` for v6 versus `17.82 ms` for v5; the absolute difference was
+`10.84 ms`, and no performance optimization is claimed.
 
 **v6 recovery verdict: PASS for the deterministic Activate recovery and
 fail-closed abstention on Algolia, Contentstack, Mintel, and DHL edge cases.
@@ -316,6 +318,10 @@ RED: python -m pytest -q tests/test_pdf_page_reconciliation.py -k replacement_ch
 1 failed, 30 deselected before the production change
 GREEN: python -m pytest -q tests/test_pdf_page_reconciliation.py -k replacement_character_prefixed_footer_labels
 1 passed, 30 deselected
+SAFETY RED: python -m pytest -q tests/test_pdf_page_reconciliation.py -k replacement_character
+2 failed, 1 passed before the safety correction
+SAFETY GREEN: python -m pytest -q tests/test_pdf_page_reconciliation.py -k replacement_character
+4 passed
 ```
 
 Local validation:
@@ -325,7 +331,7 @@ python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_re
 37 passed in 3.06s
 
 python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py tests/test_pdf_text_service.py tests/test_pdf_contents_service.py tests/test_claim_validation_source_pages.py tests/_test_evidence_pack_generator/cases_05_findings_targeted_retrieval.py
-73 passed in 8.37s
+76 passed in 5.82s
 
 python -m pytest -q tests/contracts/test_contract_roundtrip.py
 2351 passed in 8.70s

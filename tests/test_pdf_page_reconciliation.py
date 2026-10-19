@@ -50,31 +50,67 @@ def _make_pdf(
         document.close()
 
 
-def _make_replacement_character_footer_pdf(path) -> None:
+def _make_replacement_character_footer_pdf(
+    path, actual_text: bytes = b"\xfe\xff\xff\xfc"
+) -> None:
     base_path = path.with_name(f"{path.stem}-base{path.suffix}")
     _make_pdf(
         base_path,
         [{"footer": str(page_number)} for page_number in range(1, 4)],
     )
-    document = fitz.open(base_path)
+    replacements = {}
+    for page_number in range(1, 4):
+        encoded_label = str(page_number).encode().hex().upper().encode()
+        original = b"[<" + encoded_label + b">]TJ"
+        replacement = (
+            b"/Span <</ActualText (" + actual_text + b")>> BDC ( )Tj EMC " + original
+        )
+        replacements[page_number] = (original, replacement)
+    _patch_page_streams(base_path, path, replacements)
+
+
+def _patch_page_streams(source_path, target_path, replacements) -> None:
+    document = fitz.open(source_path)
     try:
-        for page_number, page in enumerate(document, start=1):
+        for page_number, (original, replacement) in replacements.items():
+            page = document[page_number - 1]
             stream_xref = next(
                 xref
                 for xref in page.get_contents()
                 if b"TJ" in document.xref_stream(xref)
             )
             stream = document.xref_stream(stream_xref)
-            encoded_label = str(page_number).encode().hex().upper().encode()
-            original = b"[<" + encoded_label + b">]TJ"
-            replacement = (
-                b"/Span <</ActualText (\xfe\xff\xff\xfc)>> BDC ( )Tj EMC " + original
-            )
             assert original in stream
             document.update_stream(stream_xref, stream.replace(original, replacement))
-        document.save(path)
+        document.save(target_path)
     finally:
         document.close()
+
+
+def _make_replacement_character_copyright_pdf(path) -> None:
+    base_path = path.with_name(f"{path.stem}-base{path.suffix}")
+    text = "5 2024 copyright"
+    _make_pdf(base_path, [{"footer": text}])
+    encoded_text = text.encode().hex().encode()
+    original = b"[<" + encoded_text + b">]TJ"
+    replacement = (
+        b"[<35>]TJ /Span <</ActualText (\xfe\xff\xff\xfd)>> BDC "
+        b"( )Tj EMC [<3230323420636f70797269676874>]TJ"
+    )
+    _patch_page_streams(base_path, path, {1: (original, replacement)})
+
+
+def _make_ambiguous_replacement_character_footer_pdf(path) -> None:
+    base_path = path.with_name(f"{path.stem}-base{path.suffix}")
+    _make_pdf(
+        base_path,
+        [{"footer": "Page 5"}, {"footer": "5 | 6"}, {"footer": "Page 7"}],
+    )
+    text = "5 | 6"
+    encoded_text = text.encode().hex().encode()
+    original = b"[<" + encoded_text + b">]TJ"
+    replacement = b"/Span <</ActualText (\xfe\xff\xff\xfc)>> BDC ( )Tj EMC " + original
+    _patch_page_streams(base_path, path, {2: (original, replacement)})
 
 
 def test_response_rejects_missing_physical_page_mapping() -> None:
@@ -239,6 +275,61 @@ def test_reconciles_replacement_character_prefixed_footer_labels(
     assert all(
         mapping.evidence[0].anchor_physical_pages == () for mapping in response.mappings
     )
+
+
+def test_reconciles_replacement_character_fffd_prefixed_footer_labels(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "replacement-character-fffd-footers.pdf"
+    _make_replacement_character_footer_pdf(pdf_path, actual_text=b"\xfe\xff\xff\xfd")
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert [mapping.printed_label for mapping in response.mappings] == [
+        "1",
+        "2",
+        "3",
+    ]
+    assert all(mapping.status == "verified" for mapping in response.mappings)
+
+
+def test_preserves_replacement_character_copyright_footer(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "replacement-character-copyright.pdf"
+    _make_replacement_character_copyright_pdf(pdf_path)
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert response.mappings[0].printed_label == "5"
+    assert response.mappings[0].status == "verified"
+    assert response.mappings[0].method == "visible_footer"
+
+
+def test_rejects_ambiguous_replacement_character_footer(tmp_path, run_context) -> None:
+    pdf_path = tmp_path / "ambiguous-replacement-character-footer.pdf"
+    _make_ambiguous_replacement_character_footer_pdf(pdf_path)
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert response.mappings[1].printed_label is None
+    assert response.mappings[1].status == "unresolved"
+    assert response.mappings[1].evidence[0].kind == "conflict"
 
 
 def test_reconciles_printed_page_42_at_physical_page_44(tmp_path, run_context) -> None:

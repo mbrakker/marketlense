@@ -51,12 +51,9 @@ _STRUCTURED_FOOTER_RE = re.compile(
     r"(?P<label>\d{1,4})?$",
     re.IGNORECASE,
 )
-_EXTRACTION_ARTIFACT_PREFIX_RE = re.compile(
-    rf"^\s*[\uFFFC\uFFFD](?=\s*{_PAGE_TOKEN}(?![A-Za-z0-9]))",
-    re.IGNORECASE,
-)
-_EXTRACTION_ARTIFACT_RE = re.compile(
-    rf"[\uFFFC\uFFFD](?=\s*{_PAGE_TOKEN}(?![A-Za-z0-9]))", re.IGNORECASE
+_EXTRACTION_ARTIFACT_START_RE = re.compile(r"^\s*[\uFFFC\uFFFD]")
+_EXTRACTION_ARTIFACT_TOKEN_RE = re.compile(
+    r"^\s*[\uFFFC\uFFFD]\s*(?P<label>\d{1,4})\s*$", re.IGNORECASE
 )
 _MAX_INFERENCE_PHYSICAL_GAP = 4
 _MAX_MARGIN_LINE_LENGTH = 120
@@ -84,6 +81,7 @@ class _PageObservation:
     native_pdf_label: str | None
     candidates: tuple[_Candidate, ...]
     unreadable: bool = False
+    artifact_ambiguous: bool = False
 
 
 @dataclass(frozen=True)
@@ -92,6 +90,7 @@ class _TextLine:
     line_bbox: tuple[float, float, float, float]
     block_bbox: tuple[float, float, float, float]
     artifact_prefixed: bool = False
+    artifact_ambiguous: bool = False
 
 
 @dataclass(frozen=True)
@@ -225,7 +224,11 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
                 float(block_rect.x1),
                 float(block_rect.y1),
             ),
-            _EXTRACTION_ARTIFACT_PREFIX_RE.match(text) is not None,
+            _EXTRACTION_ARTIFACT_TOKEN_RE.fullmatch(text) is not None,
+            (
+                _EXTRACTION_ARTIFACT_START_RE.match(text) is not None
+                and _EXTRACTION_ARTIFACT_TOKEN_RE.fullmatch(text) is None
+            ),
         )
         for line_rect, block_rect, text in line_records
     )
@@ -241,6 +244,8 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
         if band is None:
             continue
         artifact_prefixed = line.artifact_prefixed
+        if line.artifact_ambiguous:
+            continue
         line_text = re.sub(r"\s+", " ", line.text).strip()
         if not line_text or len(line_text) > _MAX_MARGIN_LINE_LENGTH:
             continue
@@ -283,13 +288,21 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
         physical_page=physical_page,
         native_pdf_label=native_pdf_label,
         candidates=tuple(unique.values()),
+        artifact_ambiguous=any(
+            line.artifact_ambiguous
+            and _margin_band(line.line_bbox[1], line.line_bbox[3], height) is not None
+            for line in lines
+        ),
     )
 
 
 def _normalize_extracted_line_text(text: str) -> str:
     """Remove known marked-content artifacts before page-token parsing."""
 
-    return re.sub(r"\s+", " ", _EXTRACTION_ARTIFACT_RE.sub("", text)).strip()
+    artifact_match = _EXTRACTION_ARTIFACT_TOKEN_RE.fullmatch(text)
+    if artifact_match is not None:
+        text = artifact_match.group("label")
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _structured_footer_candidates(
@@ -574,7 +587,11 @@ def _infer_missing_labels(
                 continue
             for physical_page in range(left_page + 1, right_page):
                 observation = observations[physical_page - 1]
-                if observation.candidates or observation.unreadable:
+                if (
+                    observation.candidates
+                    or observation.unreadable
+                    or observation.artifact_ambiguous
+                ):
                     continue
                 number = left.candidate.token.number + (physical_page - left_page)
                 label = _format_inferred_label(
@@ -708,6 +725,14 @@ def _mapping_for_observation(
             0,
             PdfPageReconciliationEvidence(
                 kind="unreadable", detail="page text or geometry was unreadable"
+            ),
+        )
+    elif observation.artifact_ambiguous:
+        evidence.insert(
+            0,
+            PdfPageReconciliationEvidence(
+                kind="conflict",
+                detail="ambiguous marked-content margin token",
             ),
         )
     elif len({candidate.token.label for candidate in observation.candidates}) > 1:
