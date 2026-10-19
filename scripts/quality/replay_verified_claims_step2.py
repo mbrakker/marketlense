@@ -590,16 +590,6 @@ def _editorial_duplicate_status(
     return "ambiguous"
 
 
-def _editorially_duplicate(
-    left: Mapping[str, Any],
-    right: Mapping[str, Any],
-    duplicate_pairs: set[tuple[str, str]],
-) -> bool:
-    """Return the existing duplicate signal, including pairs needing review."""
-
-    return _editorial_duplicate_status(left, right, duplicate_pairs) != "distinct"
-
-
 def _verified_corrected_insight(
     row: Mapping[str, Any],
     baseline_by_id: Mapping[str, dict[str, Any]],

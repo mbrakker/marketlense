@@ -6,13 +6,13 @@ import json
 import pymupdf as fitz
 import pytest
 
+from scripts.quality import replay_verified_claims_step2 as replay_step2
 from scripts.quality.replay_verified_claims_step2 import (
     REFERENCE_PATH,
     _assert_outcome_count_arithmetic,
     _editorial_duplicate_pairs,
     _editorial_duplicate_status,
     _editorial_quality_report,
-    _editorially_duplicate,
     _load_json,
     _outcome_counts,
     _page_is_likely_divider,
@@ -26,6 +26,10 @@ from scripts.quality.replay_verified_claims_step2 import (
 )
 from src.contracts.run_context import RunContext
 from src.generators.verified_claims_recovery import build_verified_claims_shadow_request
+
+
+def test_replay_uses_explicit_duplicate_status_without_boolean_alias() -> None:
+    assert not hasattr(replay_step2, "_editorially_duplicate")
 
 
 def test_step2_replay_reports_provider_unavailable_without_fabricated_claims():
@@ -385,7 +389,7 @@ def test_exact_corrected_duplicate_is_detected_before_metric_conflicts() -> None
         "metric": {"value": "73", "cohort": "current cohort"},
     }
 
-    assert _editorially_duplicate(left, right, set()) is True
+    assert _editorial_duplicate_status(left, right, set()) == "duplicate"
 
 
 def test_same_id_provenance_repair_is_not_rejected_as_self_duplicate() -> None:
@@ -441,7 +445,7 @@ def test_same_id_provenance_repair_is_not_rejected_as_self_duplicate() -> None:
     assert selection["selected"][0]["candidate_id"] == "candidate-1"
 
 
-def test_near_duplicate_propositions_are_removed_across_provisional_evidence_ids(
+def test_unbound_near_duplicate_propositions_remain_ambiguous(
 ) -> None:
     left = {
         "id": "candidate-1",
@@ -460,7 +464,12 @@ def test_near_duplicate_propositions_are_removed_across_provisional_evidence_ids
         "evidence_id": "provisional-page:candidate-2",
     }
 
-    assert _editorially_duplicate(left, right, {("candidate-1", "candidate-2")})
+    assert (
+        _editorial_duplicate_status(
+            left, right, {("candidate-1", "candidate-2")}
+        )
+        == "ambiguous"
+    )
 
 
 def test_near_duplicate_guard_preserves_distinct_metric_bindings() -> None:
@@ -477,8 +486,11 @@ def test_near_duplicate_guard_preserves_distinct_metric_bindings() -> None:
         "metric": {"value": "58", "geography": "Americas"},
     }
 
-    assert not _editorially_duplicate(
-        left, right, {("candidate-1", "candidate-2")}
+    assert (
+        _editorial_duplicate_status(
+            left, right, {("candidate-1", "candidate-2")}
+        )
+        == "distinct"
     )
 
 
