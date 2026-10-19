@@ -721,12 +721,14 @@ def test_write_report_card_manifest_persists_validated_payload_and_logs(
 def test_write_report_card_manifest_uses_a_windows_safe_temp_path_near_limit(
     tmp_path: Path,
 ) -> None:
-    target_parent_length = 219
+    target_parent_length = 226
     padding_length = target_parent_length - len(str(tmp_path.resolve())) - 1
     assert 0 < padding_length < 255
     output_dir = tmp_path / ("p" * padding_length)
     target_path = output_dir / "report-card-manifest.json"
 
+    legacy_temp_path_length = len(str(target_path.resolve().parent)) + 1 + 34
+    assert legacy_temp_path_length > 260
     assert atomic_write_temp_path_length(target_path) <= 260
 
     response = write_report_card_manifest(

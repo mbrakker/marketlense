@@ -92,6 +92,7 @@ _ATOMIC_WRITE_TEMP_TAG = "."
 _LEGACY_ATOMIC_WRITE_TEMP_TAG = ".tmp-write-"
 _ATOMIC_WRITE_TARGET_HASH_LENGTH = 16
 _ATOMIC_WRITE_TEMP_TOKEN_LENGTH = 16
+_COMPACT_ATOMIC_WRITE_TEMP_TOKEN_LENGTH = 12
 _ATOMIC_REPLACE_MAX_ATTEMPTS = 3
 _ATOMIC_REPLACE_RETRY_DELAY_SECONDS = 0.01
 _WINDOWS_REPLACE_RETRYABLE_ERRORS = {5, 32}
@@ -1247,7 +1248,8 @@ def _is_retryable_windows_replace_error(error: OSError) -> bool:
 
 
 def _atomic_temp_path(path: Path) -> Path:
-    token = uuid.uuid4().hex[:_ATOMIC_WRITE_TEMP_TOKEN_LENGTH]
+    token_length = _atomic_temp_token_length(path)
+    token = uuid.uuid4().hex[:token_length]
     name_hash = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[
         :_ATOMIC_WRITE_TARGET_HASH_LENGTH
     ]
@@ -1257,7 +1259,24 @@ def _atomic_temp_path(path: Path) -> Path:
 def atomic_write_temp_path_length(path: Path) -> int:
     """Return the maximum absolute path length used by an atomic-write temp file."""
 
-    return len(str(path.resolve().parent)) + 1 + _ATOMIC_TEMP_NAME_LENGTH
+    return (
+        len(str(path.resolve().parent))
+        + 1
+        + 1
+        + _ATOMIC_WRITE_TARGET_HASH_LENGTH
+        + len(_ATOMIC_WRITE_TEMP_TAG)
+        + _atomic_temp_token_length(path)
+    )
+
+
+def _atomic_temp_token_length(path: Path) -> int:
+    """Use a shorter unique token only when the normal sibling would exceed MAX_PATH."""
+
+    parent_length = len(str(path.resolve().parent))
+    normal_name_length = _ATOMIC_TEMP_NAME_LENGTH
+    if parent_length + 1 + normal_name_length > WINDOWS_MAX_PATH_LENGTH:
+        return _COMPACT_ATOMIC_WRITE_TEMP_TOKEN_LENGTH
+    return _ATOMIC_WRITE_TEMP_TOKEN_LENGTH
 
 
 def _cleanup_stale_atomic_temp_files(path: Path) -> None:
