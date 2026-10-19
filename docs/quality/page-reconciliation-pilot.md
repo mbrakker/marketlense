@@ -323,6 +323,8 @@ SAFETY RED: python -m pytest -q tests/test_pdf_page_reconciliation.py -k replace
 2 failed, 1 passed before the safety correction
 SAFETY GREEN: python -m pytest -q tests/test_pdf_page_reconciliation.py -k replacement_character
 4 passed
+FINAL SAFETY EDGE GREEN: python -m pytest -q tests/test_pdf_page_reconciliation_marked_content_safety.py
+1 passed
 ```
 
 Local validation:
@@ -331,8 +333,8 @@ Local validation:
 python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py
 37 passed in 3.06s
 
-python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py tests/test_pdf_text_service.py tests/test_pdf_contents_service.py tests/test_claim_validation_source_pages.py tests/_test_evidence_pack_generator/cases_05_findings_targeted_retrieval.py
-77 passed in 6.30s
+python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_marked_content_safety.py tests/test_pdf_page_reconciliation_geometry.py tests/test_pdf_text_service.py tests/test_pdf_contents_service.py tests/test_claim_validation_source_pages.py tests/_test_evidence_pack_generator/cases_05_findings_targeted_retrieval.py
+77 passed in 6.88s
 
 python -m pytest -q tests/contracts/test_contract_roundtrip.py
 2351 passed in 8.70s
