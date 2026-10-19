@@ -2,8 +2,9 @@
 
 Date: 2026-10-19
 Branch: `codex/fix-retained-insight-evidence-validation`
-Tested implementation SHA: `d9823f5a69cd8934df90c663f94714d98c22f377`
-Verdict: **NO-GO for merge and Step 3**
+Historical implementation SHA: `d9823f5a69cd8934df90c663f94714d98c22f377`
+Latest correction SHA: `259cbaf18616497334d3d71c6988a7408d4bedc5`
+Latest verdict: **NOT READY TO MERGE; Step 3 remains blocked**
 
 This is an acceptance record, not a production change. The replay used the
 original 20-report manifest, selected the next five members in manifest order
@@ -51,6 +52,67 @@ batch or cache substitution was used.
 The raw result is retained at
 `tmp/verified-claims-premerge-20261019/frozen-reliability-rwum7m8u/cohort_result.json`.
 All five reports were admitted. No report was published.
+
+## Superseding corrected rerun
+
+The production runner was rerun from a clean isolated state at correction SHA
+`259cbaf18616497334d3d71c6988a7408d4bedc5`, using the same five source
+manifest members, unchanged source PDFs, the normal provider policy, and
+publication disabled. The complete result is
+`tmp/verified-claims-premerge-20261019/frozen-reliability-i20737yc/cohort_result.json`.
+All five source identities remained hash-matched. No WordPress, canonical
+verified-claim, readiness-approval, or publication write occurred.
+
+| Report | Selected identities in final artifact | Terminal state | Validation / readiness | Repairs / workflow retries | Calls | Input / output tokens | Cost | Duration | Terminal issue |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| DoubleVerify | `attention_index_normalization_reference`, `q1_2026_regional_fraud_sivt_rates`, `q1_2026_north_america_video_attention_by_device`, `q1_2026_regional_ad_interaction_index`, `q1_2026_regional_quality_tradeoff` | `awaiting_review` | pass / pass | 3 / 0 | 44 | 456,085 / 87,626 | $0.093173 | 548.187s | none |
+| Merchant Risk Council | `realtime-payment-acceptance`, `post-purchase-fraud-coverage`, `survey-merchant-sample`, `survey-country-coverage`, `survey-business-size-coverage` | `awaiting_review` | pass / pass | 0 / 0 | 25 | 174,572 / 40,654 | $0.052024 | 296.730s | none |
+| Algolia | `agentic-search-implemented`, `ai-search-purchase-likelihood-by-market`, `search-sourcing-approaches`, `agentic-search-integration-factor`, `agentic-search-roi-factor`, `agentic-search-retailer-control-factor` | `awaiting_review` | pass / pass | 0 / 0 | 33 | 351,917 / 63,508 | $0.081023 | 665.176s | none |
+| Bain & Company | `born-tech-growth-share`, `tech-value-creators-cross-sector`, `market-value-growth-share-breakdown`, `cloud-platform-guidance`, `sector-market-value-technology-materials` | `failed` | fail / fail | 3 / 0 | 41 | 407,023 / 99,380 | $0.102652 | 568.343s | `validation_failed`: `metadata.title` grounding after bounded targeted repair |
+| Bigcommerce | `preferred-wallet-cart-abandonment`, `contact-details-discount-walkaway`, `scroll-set-experience-friction`, `ai-relevance-and-discovery`, `guest-checkout-abandonment` | `awaiting_review` | pass / pass | 3 / 0 | 36 | 440,898 / 77,980 | $0.096723 | 523.088s | none |
+| **Total** | **26 selected identities** | **4 pass-ready / 1 failed** | — | **9 / 0** | **179** | **1,830,495 / 369,148** | **$0.425595** | **2,601.524s** | **one independent semantic-validation failure** |
+
+The Algolia failure chain is now resolved at its originating filesystem
+boundaries. The first correction bounded the crop-refine report component
+before fingerprint sidecars were written; the second correction makes the
+shared atomic writer use a shorter unique temporary token only when the
+normal sibling would exceed Windows `MAX_PATH`. The final Algolia artifact,
+six selected insights, three cover PNGs, and report-card manifest were all
+written and readiness passed. The manifest path was 252 characters on the
+corrected run.
+
+Bain's protected metric content is present in the corrected artifact: the
+52% metric spine and Key Figure retain the `top 20 gainers across sectors`
+cohort and `total market-value growth for the top 20 gainers across sectors`
+denominator. Its terminal failure is instead a provider-produced
+`metadata.title` grounding failure after three bounded targeted repairs; it
+did not promote unsupported retained factual claims. This is a live
+generation/readiness limitation, not evidence that the denominator fix
+regressed.
+
+Bigcommerce produced and reopened all three required cover sizes. The
+report-card manifest references `assets/report-card-small.png`,
+`assets/report-card-medium.png`, and `assets/report-card-large.png`; all three
+files exist and their SHA-256 values match the manifest. The final artifact
+retains the preferred-wallet 40% finding on physical page 4. The separate
+real-report recovery regression still proves that an irrelevant methodology
+page 2 cannot displace independently supported page 4 evidence.
+
+The clean rerun's final states are mutually exclusive and contain zero
+report-level workflow retries. Automatic repair counts are reported per
+report and are not double-counted as retries. The aggregate cost, token, call,
+and duration values come directly from the runner's terminal ledger.
+
+The provider-free frozen-five regression was rerun at this correction SHA:
+
+```powershell
+python scripts/quality/replay_verified_claims_step2.py --provider-free --output tmp/verified-claims-premerge-20261019/step2-provider-free-259cbaf1.json
+```
+
+It again confirmed all 15 cases / 39 variants, all five PDF hashes, 29
+retained frozen-five insights, and no fabricated fixture substitution. It
+performed zero correction or verification calls by design, so it does not
+claim live Step 2 quality or fresh selection effectiveness.
 
 ## Independent source and editorial review
 
@@ -165,3 +227,12 @@ page binding, the Step 2 recovery path has a confirmed source-supported false
 negative, and the repository type gate remains red. Step 1 and Step 2 remain
 **PARTIAL**. This report records the evidence and limitations; it does not
 claim improved live selection effectiveness from post-selection replay.
+
+The recommendation above is historical for the superseded run. The latest
+corrected rerun changes the measured result to four of five pass-ready reports
+and one independently diagnosed Bain semantic-validation failure; it does not
+justify a merge or Step 3 start. The current verdict remains **NOT READY TO
+MERGE** until that failure is resolved or explicitly accepted by the release
+owner. The full repository type gate and focused checks are green on the
+correction SHA, and the known Algolia, Bain-denominator, Bigcommerce-cover,
+and Bigcommerce-wallet defects have regression evidence.
