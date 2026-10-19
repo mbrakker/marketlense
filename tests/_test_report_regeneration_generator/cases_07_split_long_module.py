@@ -117,8 +117,11 @@ def test_summary_repair_rebuilds_key_figures_from_final_atomic_artifacts(tmp_pat
     assert candidate["insights_final"][0]["evidence"] == (
         "Retail media adoption was reported at 42%."
     )
-    assert candidate["key_figures"] == []
-    assert candidate["chart_insight_cards"] == []
+    # The evidence pack is authoritative for the retained evidence identity;
+    # a generated rewrite must not replace it or make the valid figure vanish.
+    assert [figure["figure"] for figure in candidate["key_figures"]] == ["42 percent"]
+    assert candidate["key_figures"][0]["evidence_id"] == "f1"
+    assert candidate["chart_insight_cards"][0]["status"] == "weak_evidence"
     integrity = validate_regeneration_candidate(
         current_artifacts=current,
         candidate_artifacts=candidate,
@@ -132,7 +135,8 @@ def test_summary_repair_rebuilds_key_figures_from_final_atomic_artifacts(tmp_pat
         and issue.affected_section in {"key_figures", "chart_insight_cards"}
         for issue in integrity.issues
     )
-    assert {"key_figures", "chart_insight_cards"} <= integrity.verified_derived_roots
+    assert candidate["key_figures"] == current["key_figures"]
+    assert candidate["chart_insight_cards"] == current["chart_insight_cards"]
     projection_scope = _scope_validation_report(
         before={
             root: current[root]
@@ -454,9 +458,10 @@ def test_summary_claim_map_no_change_is_returned_to_validation_planner(tmp_path)
     )
 
     assert len(openai_client.calls) == 1
-    assert response.updated_artifacts["summary"]["claim_evidence_map"] == artifacts[
-        "summary"
-    ]["claim_evidence_map"]
+    assert (
+        response.updated_artifacts["summary"]["claim_evidence_map"]
+        == artifacts["summary"]["claim_evidence_map"]
+    )
 
 
 def test_summary_claim_map_repair_resolves_idless_claim_by_stable_index(tmp_path):
@@ -566,7 +571,8 @@ def test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row(
     artifacts["summary"]["tldr"] = summary_sentences[0][1]
     artifacts["summary"]["card_tldr_compact"] = summary_sentences[1][1]
     artifacts["summary"]["executive_summary"] = " ".join(
-        sentence for family, sentence, _evidence_id in summary_sentences
+        sentence
+        for family, sentence, _evidence_id in summary_sentences
         if family == "executive_summary"
     )
     artifacts["summary"]["claim_evidence_map"] = [
@@ -625,9 +631,7 @@ def test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row(
                     "repair_strategy": repair_context["repair_strategy"],
                     "evidence_ids_used": [],
                     "changed_paths": [path],
-                    "minimal_patch": [
-                        {"op": "replace", "path": path, "value": ""}
-                    ],
+                    "minimal_patch": [{"op": "replace", "path": path, "value": ""}],
                 }
             }
             return OpenAIResponseResult(
@@ -692,9 +696,7 @@ def test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row(
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     }
     expected_map = (
-        summary_sentences
-        if shared_evidence_binding
-        else summary_sentences[:-1]
+        summary_sentences if shared_evidence_binding else summary_sentences[:-1]
     )
     assert [item["claim"] for item in repaired_summary["claim_evidence_map"]] == [
         sentence for _family, sentence, _evidence_id in expected_map

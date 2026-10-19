@@ -1234,6 +1234,9 @@ def run_report_pipeline(
             # otherwise intact source. Convert that OS-level transient into
             # the pipeline's bounded, observable retry contract. A persistent
             # missing source still fails closed after the configured attempts.
+            missing_path = str(
+                getattr(exc, "filename", None) or getattr(exc, "filename2", None) or ""
+            )
             raise AppError(
                 code="report_pipeline_artifact_missing",
                 message=(
@@ -1244,7 +1247,13 @@ def run_report_pipeline(
                 retryable=True,
                 context={
                     "file_id": file.file_id,
-                    "missing_path": str(exc.filename or ""),
+                    "stage": "report_pipeline_materialization",
+                    "task": str(ctx.task_id or ""),
+                    "filename": missing_path,
+                    "missing_path": missing_path,
+                    "source_path": str(local_pdf_path or ""),
+                    "errno": exc.errno,
+                    "os_error": str(exc),
                 },
             ) from exc
         doc_map_reason = _doc_map_reason(outcome)

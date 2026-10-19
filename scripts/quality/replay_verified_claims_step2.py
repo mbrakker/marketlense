@@ -37,6 +37,7 @@ from src.generators.verified_claims_recovery import (
     page_is_likely_divider as _recovery_page_is_likely_divider,
 )
 from src.generators.verified_claims_visual_generator import (
+    _source_page_supports_corrected_claim,
     evaluate_shortlisted_claims,
 )
 from src.services.config_service import load_settings
@@ -533,9 +534,7 @@ def _editorial_duplicate_pairs(quality_report: Any) -> set[tuple[str, str]]:
 def _proposition_temporal_signature(text: str) -> tuple[frozenset[str], frozenset[str]]:
     """Return existing temporal bindings without treating years as quantities."""
 
-    years = frozenset(
-        re.findall(r"\b(?:19|20)\d{2}e?\b", text.casefold())
-    )
+    years = frozenset(re.findall(r"\b(?:19|20)\d{2}e?\b", text.casefold()))
     return frozenset(_temporal_qualifiers(text)), years
 
 
@@ -660,9 +659,7 @@ def _shadow_quality_assessment(
     """Separate deterministic editorial blockers from visual-evidence pending work."""
 
     quality = _editorial_quality_report(report, [insight])
-    errors = [
-        issue.rule_id for issue in quality.issues if issue.severity == "error"
-    ]
+    errors = [issue.rule_id for issue in quality.issues if issue.severity == "error"]
     visual_pending_rules = {
         "public_editorial_quality.material_claim_evidence_missing",
         "public_editorial_quality.unsupported_numeric_claim",
@@ -674,17 +671,15 @@ def _shadow_quality_assessment(
     )
     blockers = [rule for rule in errors if rule not in pending]
     status = (
-        "abstained"
-        if blockers
-        else "pending_visual_source_text"
-        if pending
-        else "pass"
+        "abstained" if blockers else "pending_visual_source_text" if pending else "pass"
     )
     return errors, blockers, status
 
 
 def _valid_supporting_pages(
-    row: Mapping[str, Any], recovery_candidates: list[dict[str, Any]] | None = None
+    row: Mapping[str, Any],
+    recovery_candidates: list[dict[str, Any]] | None = None,
+    source_page_text_by_page: Mapping[Any, Any] | None = None,
 ) -> tuple[list[int], str]:
     raw_pages = row.get("supporting_physical_pages")
     inspected = {
@@ -706,7 +701,29 @@ def _valid_supporting_pages(
         for page in [candidate.get("physical_page") or candidate.get("page")]
         if type(page) is int and page > 0
     }
-    if recovery_pages and any(page not in recovery_pages for page in pages):
+    original_pages = {
+        page
+        for page in row.get("original_physical_pages")
+        or row.get("physical_pages")
+        or []
+        if type(page) is int and page > 0
+    }
+    retained_page_support = {
+        page
+        for page in pages
+        if page not in recovery_pages
+        and page in original_pages
+        and isinstance(source_page_text_by_page, Mapping)
+        and _source_page_supports_corrected_claim(
+            corrected_claim=str(row.get("final_claim") or "").strip(),
+            claim=row,
+            page_text=source_page_text_by_page.get(page, ""),
+        )
+    }
+    if recovery_pages and any(
+        page not in recovery_pages and page not in retained_page_support
+        for page in pages
+    ):
         return [], "supporting_page_not_recovery_candidate"
     notes = row.get("source_truth_notes_by_page")
     if not isinstance(notes, dict):
@@ -803,7 +820,9 @@ def _shadow_replacement_selection(
         candidate_id = str(row.get("candidate_id") or "").strip()
         candidate_count += 1
         supporting_pages, support_error = _valid_supporting_pages(
-            row, [item for item in recovery_candidates if isinstance(item, dict)]
+            row,
+            [item for item in recovery_candidates if isinstance(item, dict)],
+            source_page_text_by_page,
         )
         if support_error:
             pre_rejected.append(
@@ -932,11 +951,14 @@ def _shadow_replacement_selection(
             pair_quality = _editorial_quality_report(
                 report, [editorial_insight, dict(baseline)]
             )
-            if _editorial_duplicate_status(
-                editorial_insight,
-                baseline,
-                _editorial_duplicate_pairs(pair_quality),
-            ) == "duplicate":
+            if (
+                _editorial_duplicate_status(
+                    editorial_insight,
+                    baseline,
+                    _editorial_duplicate_pairs(pair_quality),
+                )
+                == "duplicate"
+            ):
                 duplicate_of = candidate_id
         if not duplicate_of:
             duplicates: list[str] = []

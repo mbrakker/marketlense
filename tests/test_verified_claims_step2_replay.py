@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 
 import pymupdf as fitz
 import pytest
@@ -445,8 +446,79 @@ def test_same_id_provenance_repair_is_not_rejected_as_self_duplicate() -> None:
     assert selection["selected"][0]["candidate_id"] == "candidate-1"
 
 
-def test_unbound_near_duplicate_propositions_remain_ambiguous(
-) -> None:
+def test_bigcommerce_real_pdf_retains_supported_wallet_page_during_recovery() -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    source_pdf = repository_root / (
+        "out/browser_downloads/www.bigcommerce.com/e72f39fe19e5/"
+        "ebook_0225_future_commerce_new_modes_guide_en_us.pdf"
+    )
+    retained_artifact = repository_root / (
+        "tmp/verified-claims-premerge-20261019/"
+        "frozen-reliability-rwum7m8u/members/"
+        "cohort-0a019f840c3f89ad0a96/ias-first-attempt-l36ozkkv/"
+        "output/e-997cc1cccd6a/report_analysis/artifacts.json"
+    )
+    if not source_pdf.is_file() or not retained_artifact.is_file():
+        pytest.skip("retained BigCommerce PDF/artifact is unavailable")
+
+    with fitz.open(source_pdf) as document:
+        page_four_text = document[3].get_text()
+    artifact = _load_json(retained_artifact)
+    claim = next(
+        item
+        for item in artifact["insights_final"]
+        if item.get("id") == "mobile-wallet-cart-abandonment"
+    )
+    row = {
+        "candidate_id": claim["id"],
+        "original_claim": claim["text"],
+        "final_claim": claim["text"],
+        "source_identity": "BigCommerce|pdf-sha256:" + "a" * 64,
+        "evidence_ids": [claim["evidence_id"]],
+        "evidence_spans": claim["evidence_spans"],
+        "outcome": "verified",
+        "original_physical_pages": [4],
+        "inspected_physical_pages": [4, 2],
+        "recovered_physical_pages": [2],
+        "supporting_physical_pages": [4],
+        "source_truth_notes_by_page": {
+            "4": (
+                "Page 4 reports 40% cart abandonment when the preferred wallet "
+                "method is unavailable."
+            )
+        },
+        "recovery_candidates": [
+            {
+                "physical_page": 2,
+                "evidence_id": "provisional-methodology",
+                "source_pack": "findings",
+                "score": 90,
+            }
+        ],
+    }
+
+    selection = _shadow_replacement_selection(
+        report="BigCommerce",
+        baseline_insights=[claim],
+        retained_rows=[row],
+        editorial_plan={
+            "themes": [
+                {
+                    "priority": 1,
+                    "theme": "Digital payments and wallets",
+                    "evidence_ids": ["f11"],
+                }
+            ]
+        },
+        source_page_text_by_page={4: page_four_text},
+    )
+
+    assert selection["selected_count"] == 1
+    assert selection["selected"][0]["candidate_id"] == "mobile-wallet-cart-abandonment"
+    assert selection["selected"][0]["supporting_physical_pages"] == [4]
+
+
+def test_unbound_near_duplicate_propositions_remain_ambiguous() -> None:
     left = {
         "id": "candidate-1",
         "text": (
@@ -465,9 +537,7 @@ def test_unbound_near_duplicate_propositions_remain_ambiguous(
     }
 
     assert (
-        _editorial_duplicate_status(
-            left, right, {("candidate-1", "candidate-2")}
-        )
+        _editorial_duplicate_status(left, right, {("candidate-1", "candidate-2")})
         == "ambiguous"
     )
 
@@ -487,9 +557,7 @@ def test_near_duplicate_guard_preserves_distinct_metric_bindings() -> None:
     }
 
     assert (
-        _editorial_duplicate_status(
-            left, right, {("candidate-1", "candidate-2")}
-        )
+        _editorial_duplicate_status(left, right, {("candidate-1", "candidate-2")})
         == "distinct"
     )
 
@@ -559,9 +627,7 @@ def test_verified_corrected_insight_uses_replacement_page_not_retained_facts() -
 
     assert insight is not None
     assert insight["text"] == row["final_claim"]
-    assert insight["evidence"] == (
-        "The source reports 73% adoption among video users."
-    )
+    assert insight["evidence"] == ("The source reports 73% adoption among video users.")
     assert insight["evidence_id"] == "provisional-page:candidate-1"
     assert insight["pages"] == [2]
     assert "metric" not in insight
@@ -627,8 +693,9 @@ def test_shadow_selection_keeps_visual_replacement_pending_canonical_approval() 
     assert selected["canonical_approval_status"] == "not_approved"
 
 
-def test_shadow_selection_keeps_visually_verified_chart_fact_pending_text_quality(
-) -> None:
+def test_shadow_selection_keeps_visually_verified_chart_fact_pending_text_quality() -> (
+    None
+):
     row = {
         "candidate_id": "candidate-chart",
         "original_claim": "The report discusses newsroom priorities.",
@@ -679,9 +746,10 @@ def test_shadow_selection_keeps_visually_verified_chart_fact_pending_text_qualit
     selected = selection["selected"][0]
     assert selected["editorial_quality_status"] == "pending_visual_source_text"
     assert selected["editorial_quality_blockers"] == []
-    assert "public_editorial_quality.unsupported_numeric_claim" in selected[
-        "editorial_quality_issues"
-    ]
+    assert (
+        "public_editorial_quality.unsupported_numeric_claim"
+        in selected["editorial_quality_issues"]
+    )
 
 
 def test_usage_summary_isolated_to_current_replay_run(tmp_path) -> None:
@@ -792,6 +860,44 @@ def test_shadow_replacement_rejects_support_outside_recovery_candidates() -> Non
     assert selection["rejected_or_abstained"][0]["selection_reason"] == (
         "supporting_page_not_recovery_candidate"
     )
+
+
+def test_shadow_replacement_keeps_source_supported_retained_page() -> None:
+    row = {
+        "candidate_id": "candidate-1",
+        "original_claim": "Old direction",
+        "source_identity": "report|pdf-sha256:" + "a" * 64,
+        "evidence_ids": ["theme-a"],
+        "evidence_spans": [],
+        "outcome": "verified",
+        "final_claim": "The source reports a 61% adoption result for video users.",
+        "original_physical_pages": [5],
+        "recovered_physical_pages": [7],
+        "inspected_physical_pages": [5, 7],
+        "supporting_physical_pages": [5],
+        "source_truth_notes_by_page": {
+            "5": "The page reports the 61% adoption result for video users."
+        },
+        "recovery_candidates": [{"physical_page": 7, "evidence_id": "finding-7"}],
+    }
+
+    selection = _shadow_replacement_selection(
+        report="Report",
+        baseline_insights=[
+            {"id": "candidate-1", "text": "Old direction", "evidence_id": "theme-a"}
+        ],
+        retained_rows=[row],
+        editorial_plan={
+            "themes": [{"priority": 1, "theme": "Theme A", "evidence_ids": ["theme-a"]}]
+        },
+        source_page_text_by_page={
+            5: "The source reports a 61% adoption result for video users.",
+            7: "Methodology and definitions.",
+        },
+    )
+
+    assert selection["selected_count"] == 1
+    assert selection["selected"][0]["supporting_physical_pages"] == [5]
 
 
 def test_shadow_replacement_checks_complete_verified_set_without_metadata() -> None:

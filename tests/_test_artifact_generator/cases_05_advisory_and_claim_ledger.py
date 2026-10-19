@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from src.generators._artifact_generator.storage import (
+    _key_figure_evidence_text_by_id,
     _sanitize_key_figure_ranking_language,
 )
 
@@ -200,6 +201,64 @@ def test_key_figure_why_it_matters_drops_unverified_ranking_language() -> None:
     assert figures[0]["why_it_matters"].startswith(
         "Share starting beauty/grooming shopping at Amazon: 38%"
     )
+
+
+def test_key_figure_ranking_context_preserves_cohort_and_denominator() -> None:
+    insight = {
+        "id": "born-tech-growth",
+        "text": (
+            "Born-tech companies were among the top contributors to market-value "
+            "growth."
+        ),
+        "evidence_id": "born-tech-growth",
+        "evidence": (
+            "Born-tech companies created 52% of total market-value growth for the "
+            "top 20 gainers across sectors since 2015."
+        ),
+        "metric": {
+            "label": "Born-tech contribution to market-value growth",
+            "value": "52%",
+            "segment": "Born-tech companies",
+            "cohort": "Top 20 gainers across sectors",
+            "denominator": (
+                "Total market-value growth for the top 20 gainers across sectors"
+            ),
+            "timeframe": "since 2015",
+            "observation_status": "observed",
+        },
+    }
+    metric_spine = derive_metric_spine_from_insights([insight])
+
+    figures = build_key_figures(
+        metric_spine=metric_spine,
+        evidence_packs={
+            "findings": {
+                "findings": [{"id": insight["id"], "text": insight["evidence"]}]
+            }
+        },
+        insights_final=[insight],
+    )
+
+    assert figures
+    assert "Top 20 gainers across sectors" in figures[0]["why_it_matters"]
+    assert (
+        "Total market-value growth for the top 20 gainers across sectors"
+        in figures[0]["why_it_matters"]
+    )
+
+
+def test_key_figure_source_evidence_is_not_replaced_by_generated_copy() -> None:
+    source_evidence = "Source evidence: 52% of total market-value growth."
+    generated_copy = "Generated rewrite: 52% of growth."
+
+    evidence_text = _key_figure_evidence_text_by_id(
+        evidence_packs={
+            "findings": {"findings": [{"id": "f1", "text": source_evidence}]}
+        },
+        insights_final=[{"id": "i1", "evidence_id": "f1", "evidence": generated_copy}],
+    )
+
+    assert evidence_text == {"f1": source_evidence}
 
 
 def test_restored_key_figure_projection_is_sanitized_too() -> None:

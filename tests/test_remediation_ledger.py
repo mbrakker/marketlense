@@ -591,6 +591,43 @@ def test_terminal_failure_retains_only_bounded_actionable_error_context(
     assert "schema_errors" not in json.dumps(record.diagnostics)
 
 
+def test_terminal_artifact_failure_retains_bounded_filesystem_diagnostics(
+    tmp_path,
+) -> None:
+    missing_path = str(tmp_path / "report" / "crop_refine_pages" / "page-4.png")
+
+    record = record_workflow_failure(
+        state_db=str(tmp_path / "state.sqlite"),
+        workflow="report_generation",
+        stage="report_selection",
+        operation="generate_report",
+        error=AppError(
+            code="report_pipeline_artifact_missing",
+            message="artifact missing",
+            retryable=True,
+            context={
+                "file_id": "report-1",
+                "stage": "report_selection",
+                "task": "report_selection:crop_refine",
+                "missing_path": missing_path,
+                "errno": 2,
+            },
+        ),
+        ctx=_ctx(),
+        workflow_run_id="run-diagnostic",
+        report_id="report-1",
+    )
+
+    assert record is not None
+    assert record.diagnostics["error_context"] == {
+        "errno": 2,
+        "file_id": "report-1",
+        "missing_path": missing_path,
+        "stage": "report_selection",
+        "task": "report_selection:crop_refine",
+    }
+
+
 def test_wordpress_readback_alias_is_auto_enqueued_only_with_preflight_proof(
     tmp_path,
 ) -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import random
 import re
@@ -528,7 +529,13 @@ def _draw_background_planes(
 
 def _save_png(image: Image.Image, output_path: str) -> None:
     path = Path(output_path)
-    temporary_path = path.with_suffix(path.suffix + ".tmp")
+    # Keep the atomic sibling short enough for deeply isolated Windows runs.
+    # The content path remains the cache/manifest identity; only the transient
+    # staging name is compacted.
+    temporary_name = (
+        "." + hashlib.sha256(str(path).encode("utf-8")).hexdigest()[:10] + ".t"
+    )
+    temporary_path = path.with_name(temporary_name)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         image.convert("RGB").save(temporary_path, format="PNG")

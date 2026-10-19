@@ -49,20 +49,30 @@ _FAILURE_CONTEXT_KEYS = {
     "artifact_family",
     "claim_id",
     "component",
+    "errno",
     "entity_id",
     "error_class",
     "evidence_id",
     "field",
+    "file_id",
+    "filename",
     "missing_claim_count",
     "missing_claim_ids",
     "missing_evidence_ids",
+    "missing_path",
     "missing_references",
     "missing_reference_ids",
+    "os_error",
+    "output_path",
+    "path",
     "reason",
     "repair_attempt",
     "rule_id",
     "schema_name",
     "schema_root_key",
+    "source_path",
+    "stage",
+    "task",
 }
 _SAFE_FAILURE_CONTEXT_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
@@ -319,6 +329,10 @@ def _bounded_failure_context(context: object) -> dict[str, object]:
     for key, value in context.items():
         if key not in _FAILURE_CONTEXT_KEYS:
             continue
+        if key == "errno":
+            if isinstance(value, int) and not isinstance(value, bool):
+                result[key] = value
+            continue
         if key == "repair_attempt":
             if isinstance(value, int) and not isinstance(value, bool):
                 result[key] = max(0, min(9, value))
@@ -335,7 +349,8 @@ def _bounded_failure_context(context: object) -> dict[str, object]:
         }:
             identifiers = [
                 token
-                for item in value if isinstance(value, list)
+                for item in value
+                if isinstance(value, list)
                 if (token := str(item or "").strip())
                 and len(token) <= 128
                 and set(token) <= _SAFE_FAILURE_CONTEXT_CHARS
@@ -344,11 +359,18 @@ def _bounded_failure_context(context: object) -> dict[str, object]:
                 result[key] = identifiers[:3]
             continue
         token = str(value or "").strip()
-        if (
-            token
-            and len(token) <= 128
-            and set(token) <= _SAFE_FAILURE_CONTEXT_CHARS
-        ):
+        if key in {
+            "filename",
+            "missing_path",
+            "os_error",
+            "output_path",
+            "path",
+            "source_path",
+        }:
+            if token and len(token) <= 512 and "\x00" not in token:
+                result[key] = token
+            continue
+        if token and len(token) <= 128 and set(token) <= _SAFE_FAILURE_CONTEXT_CHARS:
             result[key] = token
     return result
 

@@ -2,6 +2,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from src.contracts.cover_images import (
     CoverImageGenerationRequest,
@@ -12,6 +13,7 @@ from src.contracts.report_cards import CoverFingerprint
 from src.contracts.run_context import RunContext
 from src.generators.cover_image_generator import generate_cover_images
 from src.services import cover_image_service
+from src.utils.cover_path_utils import build_report_card_asset_path
 from src.utils.errors import AppError
 
 
@@ -93,6 +95,45 @@ def test_generate_cover_images_renders_complete_asset_set(
     assert outcome.assets.small.output_path == requests[0].output_path
     assert outcome.assets.medium.output_path == requests[1].output_path
     assert outcome.assets.large.output_path == requests[2].output_path
+
+
+def test_generate_cover_images_handles_real_bigcommerce_path_length(tmp_path):
+    source = _request(tmp_path)
+    report = replace(
+        source.reports[0],
+        file_id="e72f39fe19e5",
+        title="New Modes: Redefining Personalization in the Age of AI",
+        publisher="BigCommerce x Future Commerce Insights",
+        report_slug="ebook-0225-future-commerce-new-modes-guide-en-us-pdf",
+        time_period="August 2024",
+    )
+    output_dir = tmp_path
+    while (
+        len(
+            str(
+                build_report_card_asset_path(
+                    str(output_dir),
+                    report.file_id,
+                    report.title,
+                    report.report_slug,
+                    "small",
+                )
+            )
+        )
+        < 256
+    ):
+        output_dir = output_dir / "x"
+    request = replace(source, output_dir=str(output_dir), reports=[report])
+
+    outcomes = generate_cover_images(request, _ctx())
+
+    assert outcomes[0].status == "generated"
+    assert outcomes[0].assets is not None
+    for size in ("small", "medium", "large"):
+        asset = getattr(outcomes[0].assets, size)
+        assert Path(asset.output_path).is_file()
+        with Image.open(asset.output_path) as image:
+            assert image.width > 0 and image.height > 0
 
 
 def test_generate_cover_images_propagates_retryable_render_error(

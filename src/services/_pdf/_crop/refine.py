@@ -21,6 +21,7 @@ from src.contracts.report_assets import (
 from src.contracts.run_context import RunContext
 from src.services._pdf._crop.geometry import _crop_refine_edge_guard_rect
 from src.services._pdf._crop.image_ops import _png_safe_pixmap
+from src.services._pdf._crop.regions import _bounded_crop_report_name
 from src.services._pdf.fingerprint_cache import (
     CROP_REFINE_PAGE_ARTIFACT_VERSION,
     PdfArtifactFingerprintDescriptor,
@@ -131,9 +132,15 @@ def render_page_for_crop_refine(
             )
         page = local_doc[request.page]
         safe_report_name = safe_path_segment(request.report_name, fallback="report")
+        filename = f"page-{request.page}.png"
+        safe_report_name = _bounded_crop_report_name(
+            Path(request.out_dir),
+            safe_report_name,
+            "crop_refine_pages",
+            filename,
+        )
         out_dir = Path(request.out_dir) / safe_report_name / "crop_refine_pages"
         out_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"page-{request.page}.png"
         abs_path = out_dir / filename
         rel = (Path(safe_report_name) / "crop_refine_pages" / filename).as_posix()
         descriptor = PdfArtifactFingerprintDescriptor(

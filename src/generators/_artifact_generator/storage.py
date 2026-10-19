@@ -1705,7 +1705,10 @@ def _key_figure_evidence_text_by_id(
         evidence_id = _s(insight.get("evidence_id")).strip()
         text = _s(insight.get("evidence")).strip()
         if evidence_id and text:
-            texts[evidence_id] = text
+            # A retained insight may carry a generated copy of the evidence.
+            # Once the canonical evidence pack has supplied text for the same
+            # identity, keep that source-backed text authoritative.
+            texts.setdefault(evidence_id, text)
     return texts
 
 
@@ -2501,9 +2504,26 @@ def _key_figure_why_it_matters(
             label = _s(metric.get("label")).strip()
             value = _s(metric.get("value")).strip()
             segment = _s(metric.get("segment")).strip()
+            geography = _s(metric.get("geography")).strip()
             timeframe = _s(metric.get("timeframe")).strip()
+            subject = _s(metric.get("subject")).strip()
+            cohort = _s(metric.get("cohort")).strip()
+            denominator = _s(metric.get("denominator")).strip()
+            observation_status = _s(metric.get("observation_status")).strip()
             if label and value:
-                context = ", ".join(item for item in (segment, timeframe) if item)
+                context = ", ".join(
+                    item
+                    for item in (
+                        segment,
+                        geography,
+                        timeframe,
+                        subject,
+                        cohort,
+                        denominator,
+                        observation_status,
+                    )
+                    if item
+                )
                 return f"{label}: {value}" + (f" ({context})" if context else "")
         return insight_text
     label = _s(metric.get("label")).strip()
@@ -2545,7 +2565,15 @@ def _sanitize_key_figure_ranking_language(figures: Any) -> None:
             continue
         context = ", ".join(
             _s(figure.get(field)).strip()
-            for field in ("segment", "geography", "timeframe")
+            for field in (
+                "segment",
+                "geography",
+                "timeframe",
+                "subject",
+                "cohort",
+                "denominator",
+                "observation_status",
+            )
             if _s(figure.get(field)).strip()
         )
         figure["why_it_matters"] = f"{label}: {value}" + (

@@ -1112,6 +1112,59 @@ def test_recovery_cannot_verify_using_only_retained_page_support(tmp_path):
     )
 
 
+def test_recovery_preserves_source_supported_retained_page(tmp_path):
+    claims = [_claim("candidate-1", "Original direction")]
+    claims[0]["_visual_replacement_policy"] = "report_level_replacement_allowed"
+    request = _request(tmp_path, claims)
+    request.recovery_enabled = True
+    request.recovery_candidates = {
+        "candidate-1": [
+            {"physical_page": 7, "reason": "retained_page_is_section_divider"}
+        ]
+    }
+    request.source_page_text_by_physical_page = {
+        5: "The source reports a 61% adoption result for video users.",
+        7: "Methodology and definitions.",
+    }
+    responses = iter(
+        [
+            {
+                "claim": "The source reports a 61% adoption result for video users.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The retained physical page reports the 61% adoption result "
+                    "for the named video-user cohort."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": "The page reports the 61% adoption result for video users."
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified"
+    assert item.supporting_physical_pages == [5]
+    assert item.recovered_physical_pages == [7]
+    assert all(
+        "verification_supporting_page_not_recovery_candidate" not in attempt.diagnostics
+        for attempt in item.verification_attempts
+    )
+
+
 def test_recovery_is_disabled_for_reference_style_requests(tmp_path):
     claims = [_claim("candidate-1", "Original direction")]
     claims[0]["_visual_replacement_policy"] = "strict_original_direction"

@@ -24,6 +24,10 @@ from src.contracts.verified_claims import (
     VisualClaimEvaluationResult,
     VisualClaimVerificationAttempt,
 )
+from src.generators.claim_validation_generator import (
+    _recovery_quantity_values,
+    _recovery_tokens,
+)
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import llm_service
 from src.services.file_service import hash_file_bundle as service_hash_file_bundle
@@ -92,6 +96,18 @@ def _positive_int(value: Any) -> int | None:
     return parsed if parsed > 0 else None
 
 
+def _unique_positive_pages(values: list[int | None]) -> list[int]:
+    pages: list[int] = []
+    for page in values:
+        if page is not None and page not in pages:
+            pages.append(page)
+    return pages
+
+
+def _numeric_score(value: Any) -> float:
+    return float(value) if isinstance(value, (int, float)) else 0.0
+
+
 def _physical_pages(claim: Mapping[str, Any]) -> list[int]:
     explicit_pages: list[int] = []
     for key in ("physical_page", "physical_pdf_page"):
@@ -99,22 +115,21 @@ def _physical_pages(claim: Mapping[str, Any]) -> list[int]:
         if page is not None:
             explicit_pages.append(page)
     pages = claim.get("pages")
-    page_values = (
+    raw_page_values = (
         [_positive_int(value) for value in pages] if isinstance(pages, list) else []
     )
-    page_values = [value for value in page_values if value is not None]
+    page_values = _unique_positive_pages(raw_page_values)
     if page_values:
-        return list(dict.fromkeys(page_values))
+        return page_values
     if explicit_pages:
         return list(dict.fromkeys(explicit_pages))
     spans = claim.get("evidence_spans")
-    span_pages = (
+    raw_span_pages = (
         [_positive_int(span.get("page")) for span in spans if isinstance(span, dict)]
         if isinstance(spans, list)
         else []
     )
-    span_pages = [value for value in span_pages if value is not None]
-    return list(dict.fromkeys(span_pages))
+    return _unique_positive_pages(raw_span_pages)
 
 
 def _physical_page(claim: Mapping[str, Any]) -> int | None:
@@ -141,9 +156,7 @@ def _material_quantity_values(text: str) -> set[float]:
         float(quantity.value)
         for quantity in extract_quantities(text)
         if quantity.unit_family != "time"
-        and not (
-            quantity.value.is_integer() and 1900 <= int(quantity.value) <= 2100
-        )
+        and not (quantity.value.is_integer() and 1900 <= int(quantity.value) <= 2100)
     }
 
 
@@ -182,6 +195,35 @@ def _supporting_page_attribution_diagnostics(
         if missing_values.issubset(alternate_values):
             return ["verification_supporting_page_attribution_conflict"]
     return []
+
+
+def _source_page_supports_corrected_claim(
+    *,
+    corrected_claim: str,
+    claim: Mapping[str, Any],
+    page_text: str,
+) -> bool:
+    """Accept a retained page only when its extracted text supports the claim."""
+
+    normalized_page_text = _text(page_text)
+    if not normalized_page_text:
+        return False
+    claim_quantities = _recovery_quantity_values(corrected_claim)
+    page_quantities = _recovery_quantity_values(normalized_page_text)
+    if claim_quantities and not claim_quantities.issubset(page_quantities):
+        return False
+    claim_tokens = _recovery_tokens(corrected_claim)
+    page_tokens = _recovery_tokens(normalized_page_text)
+    token_overlap = len(claim_tokens & page_tokens)
+    if token_overlap >= 5:
+        return True
+    if claim_quantities and claim_quantities.issubset(page_quantities):
+        return token_overlap >= 3
+    original_evidence = _text(claim.get("evidence"))
+    return bool(
+        original_evidence
+        and len(_recovery_tokens(original_evidence) & page_tokens) >= 5
+    )
 
 
 def _source_pdf_sha256(source_identity: str) -> str:
@@ -374,9 +416,7 @@ def _recovery_candidates(
         accepted.append(dict(raw))
     accepted.sort(
         key=lambda item: (
-            -float(item.get("score"))
-            if isinstance(item.get("score"), (int, float))
-            else 0.0,
+            -_numeric_score(item.get("score")),
             _positive_int(item.get("physical_page") or item.get("page")) or 0,
         )
     )
@@ -813,6 +853,7 @@ def _correction_attempt(
             ),
             "",
         )
+    issues: list[str] | None
     if not isinstance(payload.get("claim"), str) or not isinstance(
         payload.get("status"), str
     ):
@@ -927,6 +968,7 @@ def _verification_attempt(
             request_id=request_id,
             model=model,
         )
+    diagnostics: list[str] | None
     if not isinstance(payload.get("outcome"), str) or not isinstance(
         payload.get("source_truth_notes"), str
     ):
@@ -953,8 +995,25 @@ def _verification_attempt(
             )
         )
         recovery_support_pages = _recovery_support_pages(recovery_candidates)
+        retained_pages = set(original_physical_pages)
+        unsupported_pages = [
+            page for page in supporting_pages if page not in recovery_support_pages
+        ]
+        source_page_text = getattr(request, "source_page_text_by_physical_page", {})
+        retained_page_support = {
+            page
+            for page in unsupported_pages
+            if page in retained_pages
+            and isinstance(source_page_text, Mapping)
+            and _source_page_supports_corrected_claim(
+                corrected_claim=corrected_claim,
+                claim=claim,
+                page_text=source_page_text.get(page, ""),
+            )
+        }
         if recovery_support_pages and any(
-            page not in recovery_support_pages for page in supporting_pages
+            page not in recovery_support_pages and page not in retained_page_support
+            for page in supporting_pages
         ):
             support_diagnostics.append(
                 "verification_supporting_page_not_recovery_candidate"
@@ -1348,11 +1407,11 @@ def evaluate_shortlisted_claims(
             )
             continue
         recovery_candidates = _recovery_candidates(request, claim)
-        recovered_pages = [
+        raw_recovered_pages = [
             _positive_int(item.get("physical_page") or item.get("page"))
             for item in recovery_candidates
         ]
-        recovered_pages = [page for page in recovered_pages if page is not None]
+        recovered_pages = _unique_positive_pages(raw_recovered_pages)
         inspected_physical_pages = list(
             dict.fromkeys([*physical_pages, *recovered_pages])
         )
