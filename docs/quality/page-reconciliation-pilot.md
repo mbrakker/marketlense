@@ -77,6 +77,10 @@ ordering, missing numbers, explicit `REPORT | N`, and mixed strong/weak
 fail-closed conflicts. Existing tests retain IAS 8–11/16–17 verification and
 Capgemini physical page 12 as label 12 rather than chart numeral 04.
 
+The six new geometry regressions live in the dedicated
+`tests/test_pdf_page_reconciliation_geometry.py` module so the repository's
+first-party test-file ownership threshold remains satisfied.
+
 ## Golden-PDF cohort and changed mappings
 
 Source hashes are from the committed files under
@@ -140,18 +144,18 @@ TDD evidence:
 ```text
 RED: python -m pytest -q tests/test_pdf_page_reconciliation.py -k "structured_footer or crossing_footer"
 2 failed, 3 passed before the production change
-GREEN: same focused selection
-6 passed, 30 deselected
+GREEN: python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py
+36 passed
 ```
 
 Local validation:
 
 ```text
-python -m pytest -q tests/test_pdf_page_reconciliation.py
-36 passed in 2.94s
+python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py
+36 passed in 2.78s
 
-python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_text_service.py tests/test_pdf_contents_service.py tests/test_claim_validation_source_pages.py tests/_test_evidence_pack_generator/cases_05_findings_targeted_retrieval.py
-72 passed in 6.15s
+python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py tests/test_pdf_text_service.py tests/test_pdf_contents_service.py tests/test_claim_validation_source_pages.py tests/_test_evidence_pack_generator/cases_05_findings_targeted_retrieval.py
+72 passed in 5.98s
 
 python -m pytest -q tests/contracts/test_contract_roundtrip.py
 2351 passed in 5.67s
