@@ -340,4 +340,3 @@ git diff --check origin/codex/pdf-page-reconciliation-phase1-corrected..HEAD
 ~~~
 
 Expected: clean pushed branch, no merge, and a final PASS/FAIL recommendation based on evidence. Stop without implementing Phase 2.
-
