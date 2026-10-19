@@ -451,6 +451,8 @@ def _confirm_direct_labels(
     candidates_by_page: dict[int, tuple[_Candidate, ...]] = {}
     weak_candidates: dict[int, tuple[_Candidate, ...]] = {}
     for observation in observations:
+        if observation.artifact_ambiguous:
+            continue
         labels = {
             (candidate.token.style, candidate.token.number)
             for candidate in observation.candidates
@@ -667,6 +669,9 @@ def _mapping_for_observation(
     inferred: _Confirmed | None,
 ) -> PdfPageLabelMapping:
     evidence: list[PdfPageReconciliationEvidence] = []
+    if observation.artifact_ambiguous:
+        direct = None
+        inferred = None
     if observation.native_pdf_label:
         evidence.append(
             PdfPageReconciliationEvidence(

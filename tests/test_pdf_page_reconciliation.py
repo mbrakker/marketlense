@@ -77,7 +77,7 @@ def _patch_page_streams(source_path, target_path, replacements) -> None:
             stream_xref = next(
                 xref
                 for xref in page.get_contents()
-                if b"TJ" in document.xref_stream(xref)
+                if original in document.xref_stream(xref)
             )
             stream = document.xref_stream(stream_xref)
             assert original in stream
@@ -111,6 +111,23 @@ def _make_ambiguous_replacement_character_footer_pdf(path) -> None:
     original = b"[<" + encoded_text + b">]TJ"
     replacement = b"/Span <</ActualText (\xfe\xff\xff\xfc)>> BDC ( )Tj EMC " + original
     _patch_page_streams(base_path, path, {2: (original, replacement)})
+
+
+def _make_direct_and_ambiguous_replacement_character_footer_pdf(path) -> None:
+    base_path = path.with_name(f"{path.stem}-base{path.suffix}")
+    intermediate_path = path.with_name(f"{path.stem}-intermediate{path.suffix}")
+    _make_pdf(base_path, [{"footer": "Page 5"}])
+    document = fitz.open(base_path)
+    try:
+        document[0].insert_text((72, 750), "5 | 6", fontsize=10)
+        document.save(intermediate_path)
+    finally:
+        document.close()
+    text = "5 | 6"
+    encoded_text = text.encode().hex().encode()
+    original = b"[<" + encoded_text + b">]TJ"
+    replacement = b"/Span <</ActualText (\xfe\xff\xff\xfc)>> BDC ( )Tj EMC " + original
+    _patch_page_streams(intermediate_path, path, {1: (original, replacement)})
 
 
 def test_response_rejects_missing_physical_page_mapping() -> None:
@@ -330,6 +347,24 @@ def test_rejects_ambiguous_replacement_character_footer(tmp_path, run_context) -
     assert response.mappings[1].printed_label is None
     assert response.mappings[1].status == "unresolved"
     assert response.mappings[1].evidence[0].kind == "conflict"
+
+
+def test_ambiguous_replacement_character_blocks_direct_footer_confirmation(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "direct-and-ambiguous-replacement-character-footer.pdf"
+    _make_direct_and_ambiguous_replacement_character_footer_pdf(pdf_path)
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert response.mappings[0].printed_label is None
+    assert response.mappings[0].status == "unresolved"
+    assert response.mappings[0].evidence[0].kind == "conflict"
 
 
 def test_reconciles_printed_page_42_at_physical_page_44(tmp_path, run_context) -> None:
