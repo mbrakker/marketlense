@@ -14,6 +14,7 @@ from scripts.quality.replay_verified_claims_step2 import (
     _editorial_duplicate_pairs,
     _editorial_duplicate_status,
     _editorial_quality_report,
+    _load_explicit_cohort_inputs,
     _load_json,
     _outcome_counts,
     _page_is_likely_divider,
@@ -89,6 +90,249 @@ def test_retained_shortlist_replay_assembles_exact_frozen_five_claims():
         )
         total += len(claims)
     assert total == 29
+
+
+def test_explicit_cohort_inventory_preserves_page_less_selected_insights(tmp_path):
+    pdf_path = tmp_path / "source.pdf"
+    document = fitz.open()
+    page = document.new_page()
+    page.insert_text((72, 72), "A source-backed retained finding.")
+    document.save(pdf_path)
+    document.close()
+
+    artifact_path = (
+        tmp_path / "run" / "output" / "artifact" / "report_analysis" / "artifacts.json"
+    )
+    artifact_path.parent.mkdir(parents=True)
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "insights_final": [
+                    {
+                        "id": "eligible-1",
+                        "text": "A source-backed retained finding.",
+                        "evidence_id": "finding-1",
+                        "evidence_spans": [{"page": 1, "source_pack": "findings"}],
+                        "pages": [1],
+                    },
+                    {
+                        "id": "page-less-1",
+                        "text": "A selected finding without a physical page.",
+                        "evidence_id": "finding-2",
+                        "evidence_spans": [{"source_pack": "findings"}],
+                        "pages": [],
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    source_hash = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
+    cohort_path = tmp_path / "cohort_result.json"
+    cohort_path.write_text(
+        json.dumps(
+            {
+                "git_sha": "cohort-commit",
+                "reports": [
+                    {
+                        "publisher_id": "Test Report",
+                        "git_sha": "producer-commit",
+                        "run_directory": str(tmp_path / "run"),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "sources.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "source_pdfs": {
+                    "Test Report": {
+                        "path": str(pdf_path),
+                        "sha256": source_hash,
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = _load_explicit_cohort_inputs(cohort_path, manifest_path)
+
+    report = loaded["reports"][0]
+    assert report["producer_commit"] == "producer-commit"
+    assert report["source"]["sha256_matches"] is True
+    assert report["artifact"]["sha256"]
+    assert [claim["candidate_id"] for claim in report["eligible_claims"]] == [
+        "eligible-1"
+    ]
+    assert report["unavailable"] == [
+        {
+            "candidate_id": "page-less-1",
+            "evidence_id": "finding-2",
+            "evidence_spans": [{"source_pack": "findings"}],
+            "pages": [],
+            "position": 1,
+            "reason": "retained_claim_missing_id_text_or_pages",
+            "report": "Test Report",
+        }
+    ]
+
+
+def test_explicit_cohort_inventory_allows_exact_provisional_binding(
+    tmp_path,
+):
+    pdf_path = tmp_path / "one-page.pdf"
+    document = fitz.open()
+    page = document.new_page()
+    page.insert_text((72, 72), "An exact one-page source passage for inspection.")
+    document.save(pdf_path)
+    document.close()
+    artifact_path = (
+        tmp_path / "run" / "output" / "artifact" / "report_analysis" / "artifacts.json"
+    )
+    artifact_path.parent.mkdir(parents=True)
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "insights_final": [
+                    {
+                        "id": "page-less-exact-1",
+                        "text": "The passage supports an operating implication.",
+                        "evidence_id": "quote-1",
+                        "evidence": "An exact one-page source passage for inspection.",
+                        "evidence_spans": [
+                            {
+                                "evidence_id": "quote-1",
+                                "text": (
+                                    "An exact one-page source passage for inspection."
+                                ),
+                            }
+                        ],
+                        "pages": [],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_hash = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
+    cohort_path = tmp_path / "cohort_result.json"
+    cohort_path.write_text(
+        json.dumps(
+            {
+                "git_sha": "cohort-commit",
+                "reports": [
+                    {
+                        "publisher_id": "One Page Report",
+                        "git_sha": "producer-commit",
+                        "run_directory": str(tmp_path / "run"),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "sources.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "source_pdfs": {
+                    "One Page Report": {
+                        "path": str(pdf_path),
+                        "sha256": source_hash,
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = _load_explicit_cohort_inputs(cohort_path, manifest_path)
+
+    report = loaded["reports"][0]
+    assert [claim["candidate_id"] for claim in report["eligible_claims"]] == [
+        "page-less-exact-1"
+    ]
+    claim = report["eligible_claims"][0]
+    assert claim["pages"] == [1]
+    metadata = report["claim_metadata"]["page-less-exact-1"]
+    assert metadata["original_physical_pages"] == []
+    assert metadata["provisional_input_pages"] == [1]
+    assert metadata["source_binding_resolution"] == "bounded_exact_evidence_page_match"
+
+
+def test_explicit_cohort_inventory_resolves_unique_exact_evidence_page(tmp_path):
+    pdf_path = tmp_path / "multi-page.pdf"
+    document = fitz.open()
+    document.new_page().insert_text((72, 72), "An unrelated page.")
+    document.new_page().insert_text((72, 72), "A unique retained evidence passage.")
+    document.save(pdf_path)
+    document.close()
+    artifact_path = (
+        tmp_path / "run" / "output" / "artifact" / "report_analysis" / "artifacts.json"
+    )
+    artifact_path.parent.mkdir(parents=True)
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "insights_final": [
+                    {
+                        "id": "page-less-exact-2",
+                        "text": "A source-backed finding.",
+                        "evidence_id": "quote-2",
+                        "evidence_spans": [
+                            {
+                                "evidence_id": "quote-2",
+                                "text": "A unique retained evidence passage.",
+                            }
+                        ],
+                        "pages": [],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_hash = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
+    cohort_path = tmp_path / "cohort_result.json"
+    cohort_path.write_text(
+        json.dumps(
+            {
+                "reports": [
+                    {
+                        "publisher_id": "Multi Page Report",
+                        "run_directory": str(tmp_path / "run"),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "sources.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "source_pdfs": {
+                    "Multi Page Report": {
+                        "path": str(pdf_path),
+                        "sha256": source_hash,
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = _load_explicit_cohort_inputs(cohort_path, manifest_path)["reports"][0]
+
+    assert [claim["candidate_id"] for claim in report["eligible_claims"]] == [
+        "page-less-exact-2"
+    ]
+    assert report["eligible_claims"][0]["pages"] == [2]
 
 
 def test_retained_replay_keeps_doc_map_pages_as_provisional_source_context() -> None:
@@ -829,7 +1073,8 @@ def test_shadow_replacement_uses_independently_verified_support_page() -> None:
     assert "evidence_id" not in selected
 
 
-def test_shadow_replacement_rejects_support_outside_recovery_candidates() -> None:
+def test_shadow_replacement_accepts_inspected_original_support_during_recovery(
+) -> None:
     row = {
         "candidate_id": "candidate-1",
         "original_claim": "Old direction",
@@ -856,10 +1101,8 @@ def test_shadow_replacement_rejects_support_outside_recovery_candidates() -> Non
         },
     )
 
-    assert selection["selected_count"] == 0
-    assert selection["rejected_or_abstained"][0]["selection_reason"] == (
-        "supporting_page_not_recovery_candidate"
-    )
+    assert selection["selected_count"] == 1
+    assert selection["selected"][0]["supporting_physical_pages"] == [5]
 
 
 def test_shadow_replacement_keeps_source_supported_retained_page() -> None:

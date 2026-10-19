@@ -30,6 +30,7 @@ from src.generators.public_editorial_quality_generator import (
     _temporal_qualifiers,
 )
 from src.generators.verified_claims_recovery import (
+    build_verified_claims_shadow_request,
     load_verified_claims_recovery_context,
     recovery_candidates_for_claim,
 )
@@ -37,7 +38,6 @@ from src.generators.verified_claims_recovery import (
     page_is_likely_divider as _recovery_page_is_likely_divider,
 )
 from src.generators.verified_claims_visual_generator import (
-    _source_page_supports_corrected_claim,
     evaluate_shortlisted_claims,
 )
 from src.services.config_service import load_settings
@@ -66,6 +66,411 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _resolve_repository_path(raw_path: Any) -> Path:
+    path = Path(str(raw_path or ""))
+    return path if path.is_absolute() else REPOSITORY_ROOT / path
+
+
+def _relative_repository_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPOSITORY_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _explicit_source_records(
+    source_manifest: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    raw_sources = source_manifest.get("source_pdfs")
+    if not isinstance(raw_sources, Mapping):
+        return {}
+    records: dict[str, dict[str, Any]] = {}
+    for report, raw_source in raw_sources.items():
+        report_name = str(report or "").strip()
+        source = raw_source if isinstance(raw_source, Mapping) else {}
+        raw_path = str(source.get("path") or "").strip()
+        expected_sha = str(source.get("sha256") or "").strip().lower()
+        path = _resolve_repository_path(raw_path)
+        exists = path.is_file()
+        actual_sha = ""
+        page_count = 0
+        hash_error = ""
+        if exists:
+            try:
+                actual_sha = _sha256(path)
+                with fitz.open(path) as document:
+                    page_count = int(document.page_count)
+            except (OSError, RuntimeError, ValueError) as error:
+                hash_error = type(error).__name__
+        records[report_name] = {
+            "path": raw_path,
+            "resolved_path": str(path),
+            "exists": exists,
+            "sha256_expected": expected_sha,
+            "sha256_actual": actual_sha,
+            "sha256_matches": bool(
+                exists and bool(expected_sha) and actual_sha == expected_sha
+            ),
+            "page_count": page_count,
+            "hash_error": hash_error,
+        }
+    return records
+
+
+def _artifact_candidates(run_directory: Path) -> list[Path]:
+    if not run_directory.is_dir():
+        return []
+    output_root = run_directory / "output"
+    search_root = output_root if output_root.is_dir() else run_directory
+    return sorted(
+        path
+        for path in search_root.rglob("artifacts.json")
+        if path.is_file() and path.parent.name == "report_analysis"
+    )
+
+
+def _claim_source_binding(claim: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "evidence_id": str(claim.get("evidence_id") or ""),
+        "evidence_ids": [
+            str(value).strip()
+            for value in claim.get("evidence_ids") or []
+            if str(value).strip()
+        ],
+        "evidence_spans": list(claim.get("evidence_spans") or []),
+        "evidence": str(claim.get("evidence") or ""),
+        "pages": list(claim.get("pages") or []),
+    }
+
+
+def _bounded_exact_evidence_pages(
+    claim: Mapping[str, Any], source: Mapping[str, Any]
+) -> list[int]:
+    """Return uniquely matched pages for exact evidence text only."""
+
+    if (
+        not source.get("sha256_matches")
+        or not source.get("resolved_path")
+    ):
+        return []
+    evidence_texts = [str(claim.get("evidence") or "").strip()]
+    evidence_texts.extend(
+        str(span.get("text") or "").strip()
+        for span in claim.get("evidence_spans") or []
+        if isinstance(span, Mapping)
+    )
+    evidence_texts = [
+        normalize_for_lookup(text)
+        for text in evidence_texts
+        if len(normalize_for_lookup(text)) >= 32
+    ]
+    if not evidence_texts:
+        return []
+    try:
+        with fitz.open(str(source["resolved_path"])) as document:
+            page_texts = {
+                page_number: normalize_for_lookup(page.get_text())
+                for page_number, page in enumerate(document, start=1)
+            }
+    except (OSError, RuntimeError, ValueError):
+        return []
+    matched_pages: set[int] = set()
+    for evidence_text in evidence_texts:
+        pages = [
+            page_number
+            for page_number, page_text in page_texts.items()
+            if evidence_text in page_text
+        ]
+        if len(pages) != 1:
+            return []
+        matched_pages.add(pages[0])
+    return sorted(matched_pages)
+
+
+def _load_explicit_cohort_inputs(
+    cohort_result_path: Path | None,
+    source_manifest_path: Path,
+    artifact_paths: Mapping[str, Path] | None = None,
+) -> dict[str, Any]:
+    """Inventory a retained cohort without inferring or repairing provenance."""
+
+    cohort_result_path = (
+        _resolve_repository_path(cohort_result_path)
+        if cohort_result_path is not None
+        else None
+    )
+    source_manifest_path = _resolve_repository_path(source_manifest_path)
+    source_manifest = _load_json(source_manifest_path)
+    source_records = _explicit_source_records(source_manifest)
+    cohort_result = (
+        _load_json(cohort_result_path) if cohort_result_path is not None else {}
+    )
+    raw_reports = cohort_result.get("reports")
+    report_entries = raw_reports if isinstance(raw_reports, list) else []
+    explicit_paths = {
+        str(report).strip(): Path(path)
+        for report, path in (artifact_paths or {}).items()
+        if str(report).strip()
+    }
+    if not report_entries and explicit_paths:
+        report_entries = [
+            {
+                "publisher_id": report,
+                "run_directory": str(path.parent.parent.parent.parent),
+            }
+            for report, path in sorted(explicit_paths.items())
+        ]
+
+    reports: list[dict[str, Any]] = []
+    for raw_entry in report_entries:
+        if not isinstance(raw_entry, Mapping):
+            continue
+        report = str(
+            raw_entry.get("publisher_id") or raw_entry.get("report") or ""
+        ).strip()
+        if not report:
+            continue
+        producer_commit = str(
+            raw_entry.get("git_sha") or cohort_result.get("git_sha") or ""
+        ).strip()
+        raw_run_directory = str(raw_entry.get("run_directory") or "").strip()
+        run_directory = (
+            _resolve_repository_path(raw_run_directory)
+            if raw_run_directory
+            else Path()
+        )
+        artifact_path = explicit_paths.get(report)
+        if artifact_path is None:
+            candidates = (
+                _artifact_candidates(run_directory) if raw_run_directory else []
+            )
+            artifact_path = candidates[0] if len(candidates) == 1 else None
+            artifact_selection_reason = (
+                "retained_artifact_missing"
+                if not candidates
+                else "retained_artifact_ambiguous"
+            )
+        else:
+            artifact_selection_reason = ""
+
+        source = source_records.get(
+            report,
+            {
+                "path": "",
+                "resolved_path": "",
+                "exists": False,
+                "sha256_expected": "",
+                "sha256_actual": "",
+                "sha256_matches": False,
+                "page_count": 0,
+                "hash_error": "source_manifest_entry_missing",
+            },
+        )
+        row: dict[str, Any] = {
+            "report": report,
+            "producer_commit": producer_commit,
+            "run_directory": str(run_directory),
+            "source": source,
+            "artifact": {},
+            "selected_count": 0,
+            "eligible_claims": [],
+            "claim_metadata": {},
+            "unavailable": [],
+        }
+        if artifact_path is None:
+            row["unavailable"].append(
+                {
+                    "report": report,
+                    "reason": artifact_selection_reason,
+                    "artifact_path": str(
+                        artifact_path or run_directory / "output/**/artifacts.json"
+                    ),
+                }
+            )
+            reports.append(row)
+            continue
+
+        artifact_path = _resolve_repository_path(artifact_path)
+        artifact_identity = {
+            "path": _relative_repository_path(artifact_path),
+            "resolved_path": str(artifact_path),
+            "sha256": "",
+            "producer_commit": producer_commit,
+        }
+        row["artifact"] = artifact_identity
+        if not artifact_path.is_file():
+            row["unavailable"].append(
+                {
+                    "report": report,
+                    "reason": "retained_artifact_missing",
+                    "artifact_path": str(artifact_path),
+                }
+            )
+            reports.append(row)
+            continue
+        try:
+            artifact_identity["sha256"] = _sha256(artifact_path)
+            artifact = _load_json(artifact_path)
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as error:
+            row["unavailable"].append(
+                {
+                    "report": report,
+                    "reason": "retained_artifact_unreadable",
+                    "artifact_path": str(artifact_path),
+                    "error_type": type(error).__name__,
+                }
+            )
+            reports.append(row)
+            continue
+
+        insights = artifact.get("insights_final")
+        if not isinstance(insights, list):
+            row["unavailable"].append(
+                {
+                    "report": report,
+                    "reason": "retained_insights_final_missing",
+                    "artifact_path": str(artifact_path),
+                }
+            )
+            reports.append(row)
+            continue
+        row["selected_count"] = len(insights)
+        seen_ids: set[str] = set()
+        source_valid = bool(source.get("sha256_matches"))
+        source_reason = (
+            "source_pdf_hash_mismatch"
+            if source.get("exists") and source.get("sha256_expected")
+            else "source_pdf_hash_missing_or_unavailable"
+        )
+        for position, insight in enumerate(insights):
+            if not isinstance(insight, Mapping):
+                row["unavailable"].append(
+                    {
+                        "report": report,
+                        "position": position,
+                        "reason": "retained_insight_not_an_object",
+                    }
+                )
+                continue
+            candidate_id = str(
+                insight.get("id") or insight.get("candidate_id") or ""
+            ).strip()
+            text = str(insight.get("text") or "").strip()
+            pages = insight.get("pages")
+            physical_pages = (
+                [
+                    int(page)
+                    for page in pages
+                    if type(page) is int and page > 0
+                ]
+                if isinstance(pages, list)
+                else []
+            )
+            provisional_pages = (
+                _bounded_exact_evidence_pages(insight, source)
+                if not physical_pages
+                else []
+            )
+            input_pages = physical_pages or (
+                provisional_pages
+            )
+            base_unavailable = {
+                "report": report,
+                "position": position,
+                "candidate_id": candidate_id,
+                "evidence_id": str(insight.get("evidence_id") or ""),
+                "evidence_spans": list(insight.get("evidence_spans") or []),
+                "pages": physical_pages,
+            }
+            if not candidate_id or not text or not input_pages:
+                row["unavailable"].append(
+                    {
+                        **base_unavailable,
+                        "reason": "retained_claim_missing_id_text_or_pages",
+                    }
+                )
+                continue
+            if candidate_id in seen_ids:
+                row["unavailable"].append(
+                    {**base_unavailable, "reason": "duplicate_candidate_id"}
+                )
+                continue
+            seen_ids.add(candidate_id)
+            if not source_valid:
+                row["unavailable"].append({**base_unavailable, "reason": source_reason})
+                continue
+            if any(page > int(source.get("page_count") or 0) for page in input_pages):
+                row["unavailable"].append(
+                    {
+                        **base_unavailable,
+                        "reason": "retained_claim_page_out_of_range",
+                    }
+                )
+                continue
+            claim = dict(insight)
+            claim["candidate_id"] = candidate_id
+            claim["text"] = text
+            claim["pages"] = input_pages
+            claim["_visual_replacement_policy"] = (
+                "report_level_replacement_allowed"
+            )
+            row["eligible_claims"].append(claim)
+            row["claim_metadata"][candidate_id] = {
+                "evaluation_set": "real_shortlisted",
+                "report": report,
+                "position": position,
+                "original_claim": text,
+                "original_evidence_ids": [
+                    str(insight.get("evidence_id") or "").strip()
+                ]
+                if str(insight.get("evidence_id") or "").strip()
+                else [
+                    str(value).strip()
+                    for value in insight.get("evidence_ids") or []
+                    if str(value).strip()
+                ],
+                "original_evidence_spans": list(insight.get("evidence_spans") or []),
+                "original_physical_pages": physical_pages,
+                "source_binding_before": _claim_source_binding(insight),
+                "source_binding_resolution": "retained",
+                "retained_artifact_path": _relative_repository_path(artifact_path),
+                "artifact_sha256": artifact_identity["sha256"],
+                "producer_commit": producer_commit,
+            }
+            if provisional_pages:
+                row["claim_metadata"][candidate_id].update(
+                    {
+                        "provisional_input_pages": provisional_pages,
+                        "source_binding_resolution": (
+                            "bounded_exact_evidence_page_match"
+                        ),
+                    }
+                )
+        reports.append(row)
+
+    return {
+        "schema_version": "1.0",
+        "cohort_result_path": (
+            _relative_repository_path(cohort_result_path)
+            if cohort_result_path is not None
+            else ""
+        ),
+        "cohort_result_sha256": (
+            _sha256(cohort_result_path)
+            if cohort_result_path is not None and cohort_result_path.is_file()
+            else ""
+        ),
+        "producer_commit": str(cohort_result.get("git_sha") or ""),
+        "source_manifest_path": _relative_repository_path(source_manifest_path),
+        "source_manifest_sha256": (
+            _sha256(source_manifest_path)
+            if source_manifest_path.is_file()
+            else ""
+        ),
+        "reports": reports,
+    }
 
 
 def _source_pdf_status(reference: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -694,37 +1099,6 @@ def _valid_supporting_pages(
         return [], "supporting_page_provenance_invalid"
     if not set(pages).issubset(inspected):
         return [], "supporting_page_provenance_uninspected"
-    recovery_pages = {
-        page
-        for candidate in recovery_candidates or []
-        if isinstance(candidate, dict)
-        for page in [candidate.get("physical_page") or candidate.get("page")]
-        if type(page) is int and page > 0
-    }
-    original_pages = {
-        page
-        for page in row.get("original_physical_pages")
-        or row.get("physical_pages")
-        or []
-        if type(page) is int and page > 0
-    }
-    retained_page_support = {
-        page
-        for page in pages
-        if page not in recovery_pages
-        and page in original_pages
-        and isinstance(source_page_text_by_page, Mapping)
-        and _source_page_supports_corrected_claim(
-            corrected_claim=str(row.get("final_claim") or "").strip(),
-            claim=row,
-            page_text=source_page_text_by_page.get(page, ""),
-        )
-    }
-    if recovery_pages and any(
-        page not in recovery_pages and page not in retained_page_support
-        for page in pages
-    ):
-        return [], "supporting_page_not_recovery_candidate"
     notes = row.get("source_truth_notes_by_page")
     if not isinstance(notes, dict):
         return [], "supporting_page_notes_missing"
@@ -1358,6 +1732,291 @@ def replay_live_step2(
     return report
 
 
+def _explicit_evidence_packs(artifact_path: Path) -> tuple[dict[str, Any], str]:
+    """Load retained recovery packs, keeping missing packs non-authoritative."""
+
+    analysis_directory = artifact_path.parent
+    paths = {
+        "doc_map": analysis_directory / "doc_map.json",
+        "findings": analysis_directory / "findings.json",
+    }
+    if not all(path.is_file() for path in paths.values()):
+        return {}, "recovery_evidence_packs_unavailable"
+    try:
+        packs = {name: _load_json(path) for name, path in paths.items()}
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as error:
+        return {}, f"recovery_evidence_packs_unreadable:{type(error).__name__}"
+    if not all(isinstance(value, dict) for value in packs.values()):
+        return {}, "recovery_evidence_packs_invalid"
+    return packs, ""
+
+
+def replay_live_explicit_cohort(
+    *,
+    cohort_result_path: Path | None,
+    source_manifest_path: Path,
+    output_root: Path | None = None,
+    artifact_paths: Mapping[str, Path] | None = None,
+) -> dict[str, Any]:
+    """Evaluate selected retained insights from an explicit frozen snapshot."""
+
+    inputs = _load_explicit_cohort_inputs(
+        cohort_result_path,
+        source_manifest_path,
+        artifact_paths=artifact_paths,
+    )
+    root = output_root or (REPOSITORY_ROOT / "out" / "verified_claims_step2_live")
+    root.mkdir(parents=True, exist_ok=True)
+    live_run_id = f"verified-claims-step2-explicit-{int(time.time())}"
+    context = RunContext(
+        schema_version="1.0",
+        run_id=live_run_id,
+        task_id=live_run_id,
+        span_id=live_run_id,
+    )
+    settings = load_settings(
+        ConfigLoadRequest(schema_version="1.0", path="src/config/app.yaml"),
+        context,
+    )
+    if not settings.openai_api_key:
+        raise RuntimeError("OPENAI_API_KEY is not configured")
+    settings = replace(
+        settings,
+        output_dir=str(root),
+        cache_dir=str(root / "cache"),
+        cost_ledger_path=str(root / "cost-ledger.jsonl"),
+        cost_daily_path=str(root / "cost-daily.json"),
+        usage_db_path=str(root / "usage.sqlite"),
+    )
+
+    started = time.perf_counter()
+    rows: list[dict[str, Any]] = []
+    rendered_page_count = 0
+    inventory: list[dict[str, Any]] = []
+    replacement_selection: dict[str, dict[str, Any]] = {}
+    for input_report in inputs["reports"]:
+        report = str(input_report["report"])
+        eligible_claims = list(input_report.get("eligible_claims") or [])
+        claim_metadata = input_report.get("claim_metadata") or {}
+        source = input_report.get("source") or {}
+        artifact = input_report.get("artifact") or {}
+        report_rows: list[dict[str, Any]] = []
+        report_skipped: list[dict[str, Any]] = []
+        recovery_context_reason = ""
+        recovery_candidates: dict[str, list[dict[str, Any]]] = {}
+        source_page_text_by_page: dict[int, str] = {}
+        baseline_insights: list[dict[str, Any]] = []
+        artifact_path = Path(str(artifact.get("resolved_path") or ""))
+        if artifact_path.is_file():
+            try:
+                artifact_data = _load_json(artifact_path)
+                baseline_insights = (
+                    artifact_data.get("insights_final")
+                    if isinstance(artifact_data.get("insights_final"), list)
+                    else []
+                )
+                editorial_plan = (
+                    artifact_data.get("editorial_plan")
+                    if isinstance(artifact_data.get("editorial_plan"), dict)
+                    else {}
+                )
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                editorial_plan = {}
+        else:
+            editorial_plan = {}
+
+        if eligible_claims:
+            pdf_path = Path(str(source.get("resolved_path") or ""))
+            evidence_packs, evidence_pack_reason = _explicit_evidence_packs(
+                artifact_path
+            )
+            request, request_audit = build_verified_claims_shadow_request(
+                source_identity=(
+                    f"{report}|pdf-sha256:{source.get('sha256_expected', '')}"
+                ),
+                pdf_path=str(pdf_path),
+                output_dir=str(root),
+                report_name=_safe_report_name(report),
+                evidence_packs=evidence_packs,
+                shortlisted_insights=eligible_claims,
+                ctx=RunContext(
+                    schema_version="1.0",
+                    run_id=live_run_id,
+                    task_id=f"{live_run_id}:{_safe_report_name(report)}",
+                    span_id=f"{live_run_id}:{_safe_report_name(report)}",
+                ),
+                dpi=216,
+                recovery_enabled=True,
+            )
+            recovery_context_reason = str(
+                request_audit.get("recovery_context", {}).get("reason")
+                or evidence_pack_reason
+                or ""
+            )
+            source_page_text_by_page = {
+                int(page): str(text).strip()
+                for page, text in request.source_page_text_by_physical_page.items()
+                if type(page) is int and page > 0 and str(text).strip()
+            }
+            recovery_candidates = request_audit.get("recovery_candidates") or {}
+            response = evaluate_shortlisted_claims(
+                request=request,
+                settings=settings,
+                ctx=RunContext(
+                    schema_version="1.0",
+                    run_id=live_run_id,
+                    task_id=f"{live_run_id}:{_safe_report_name(report)}",
+                    span_id=f"{live_run_id}:{_safe_report_name(report)}",
+                ),
+            )
+            rendered_page_count += len(response.rendered_pages)
+            for result in response.claims:
+                result_payload = asdict(result)
+                metadata = claim_metadata.get(result.candidate_id, {})
+                result_payload.update(
+                    {
+                        "report_name": report,
+                        "evaluation_set": "real_shortlisted",
+                        "retained_artifact_path": metadata.get(
+                            "retained_artifact_path", ""
+                        ),
+                        "artifact_sha256": metadata.get("artifact_sha256", ""),
+                        "producer_commit": metadata.get("producer_commit", ""),
+                        "source_pdf_sha256_expected": source.get(
+                            "sha256_expected", ""
+                        ),
+                        "source_pdf_sha256_actual": source.get("sha256_actual", ""),
+                        "source_binding_before": metadata.get(
+                            "source_binding_before", {}
+                        ),
+                        "source_binding_after": metadata.get(
+                            "source_binding_before", {}
+                        ),
+                        "source_binding_resolution": metadata.get(
+                            "source_binding_resolution", "retained"
+                        ),
+                        "provisional_input_pages": metadata.get(
+                            "provisional_input_pages", []
+                        ),
+                        "original_physical_pages": metadata.get(
+                            "original_physical_pages",
+                            result_payload.get("original_physical_pages", []),
+                        ),
+                        "recovery_context_reason": recovery_context_reason,
+                        "recovery_candidates": [
+                            {
+                                key: value
+                                for key, value in candidate.items()
+                                if key != "page_text"
+                            }
+                            | {
+                                "page_text_excerpt": str(
+                                    candidate.get("page_text") or ""
+                                )[:600]
+                            }
+                            for candidate in recovery_candidates.get(
+                                result.candidate_id, []
+                            )
+                        ],
+                    }
+                )
+                report_rows.append(result_payload)
+                if result.outcome == "skipped":
+                    report_skipped.append(
+                        {
+                            "candidate_id": result.candidate_id,
+                            "reason": result.failure_reason or "skipped",
+                        }
+                    )
+        replacement_selection[report] = _shadow_replacement_selection(
+            report=report,
+            baseline_insights=baseline_insights,
+            retained_rows=report_rows,
+            editorial_plan=editorial_plan,
+            source_page_text_by_page=source_page_text_by_page,
+        )
+        unavailable = list(input_report.get("unavailable") or [])
+        inventory.append(
+            {
+                "report": report,
+                "producer_commit": input_report.get("producer_commit", ""),
+                "artifact": artifact,
+                "source": source,
+                "selected_count": int(input_report.get("selected_count") or 0),
+                "eligible_claim_count": len(eligible_claims),
+                "evaluated_claim_count": len(report_rows),
+                "skipped_claim_count": len(report_skipped),
+                "unavailable_claim_count": len(unavailable),
+                "eligible_candidate_ids": [
+                    str(claim.get("candidate_id") or "")
+                    for claim in eligible_claims
+                ],
+                "evaluated_candidate_ids": [
+                    str(row.get("candidate_id") or "") for row in report_rows
+                ],
+                "skipped": report_skipped,
+                "unavailable": unavailable,
+            }
+        )
+        rows.extend(report_rows)
+
+    outcomes = _outcome_counts(rows)
+    _assert_outcome_count_arithmetic(rows, outcomes)
+    selected_count = sum(item["selected_count"] for item in inventory)
+    eligible_count = sum(item["eligible_claim_count"] for item in inventory)
+    unavailable = [
+        item
+        for report in inventory
+        for item in report["unavailable"]
+    ]
+    skipped = [
+        item
+        for report in inventory
+        for item in report["skipped"]
+    ]
+    usage = _usage_summary(root / "cost-ledger.jsonl", run_id=live_run_id)
+    return {
+        "schema_version": "1.0",
+        "stage": "verified_claims_step2_visual_live",
+        "mode": "explicit_cohort_snapshot",
+        "provider_status": "dispatched",
+        "model": settings.openai_model,
+        "reasoning_effort": "high",
+        "shadow_only": True,
+        "canonical_mutation": False,
+        "publication_write": False,
+        "cohort_snapshot": {
+            key: value
+            for key, value in inputs.items()
+            if key != "reports"
+        },
+        "reports": [item["report"] for item in inventory],
+        "input_claim_count": selected_count,
+        "real_shortlisted_set": {
+            "selected_claim_count": selected_count,
+            "eligible_claim_count": eligible_count,
+            "evaluated_claim_count": len(rows),
+            "skipped_claim_count": len(skipped),
+            "unavailable_claim_count": len(unavailable),
+            "unavailable": unavailable,
+            "skipped": skipped,
+            "outcomes": outcomes,
+        },
+        "shortlist_inventory": inventory,
+        "rendered_page_count": rendered_page_count,
+        "outcomes": outcomes,
+        "shadow_replacement_selection": replacement_selection,
+        "usage": usage,
+        "wall_time_seconds": round(time.perf_counter() - started, 3),
+        "cache": {
+            "enabled": True,
+            "cache_dir": str(root / "cache"),
+            "reuse_measured": False,
+        },
+        "claims": rows,
+    }
+
+
 def replay_frozen_step2(
     *, provider_available: bool | None = None, provider_free: bool = True
 ) -> dict[str, Any]:
@@ -1457,6 +2116,20 @@ def replay_frozen_step2(
     }
 
 
+def _parse_artifact_arguments(values: list[str]) -> dict[str, Path]:
+    artifacts: dict[str, Path] = {}
+    for value in values:
+        report, separator, path = value.partition("=")
+        report = report.strip()
+        path = path.strip()
+        if not separator or not report or not path:
+            raise ValueError("--artifact values must use REPORT=PATH")
+        if report in artifacts:
+            raise ValueError(f"duplicate --artifact report: {report}")
+        artifacts[report] = _resolve_repository_path(path)
+    return artifacts
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1475,12 +2148,48 @@ def main() -> int:
         action="store_true",
         help="Dispatch the bounded GPT-6 Luna High shadow evaluation.",
     )
-    args = parser.parse_args()
-    report = (
-        replay_live_step2(output_root=args.output.parent if args.output else None)
-        if args.live
-        else replay_frozen_step2(provider_free=bool(args.provider_free))
+    parser.add_argument(
+        "--cohort-result",
+        type=Path,
+        default=None,
+        help="Explicit frozen cohort_result.json for retained-shortlist replay.",
     )
+    parser.add_argument(
+        "--sources-manifest",
+        type=Path,
+        default=None,
+        help="Source manifest containing expected PDF SHA-256 values.",
+    )
+    parser.add_argument(
+        "--artifact",
+        action="append",
+        default=[],
+        metavar="REPORT=PATH",
+        help="Explicit retained artifacts.json path; may be repeated.",
+    )
+    args = parser.parse_args()
+    explicit_inputs = args.cohort_result is not None or bool(args.artifact)
+    if explicit_inputs and not args.live:
+        parser.error("explicit retained inputs require --live")
+    if explicit_inputs and args.sources_manifest is None:
+        parser.error("explicit retained inputs require --sources-manifest")
+    if explicit_inputs:
+        try:
+            artifact_paths = _parse_artifact_arguments(args.artifact)
+        except ValueError as error:
+            parser.error(str(error))
+        report = replay_live_explicit_cohort(
+            cohort_result_path=args.cohort_result,
+            source_manifest_path=args.sources_manifest,
+            output_root=args.output.parent if args.output else None,
+            artifact_paths=artifact_paths,
+        )
+    else:
+        report = (
+            replay_live_step2(output_root=args.output.parent if args.output else None)
+            if args.live
+            else replay_frozen_step2(provider_free=bool(args.provider_free))
+        )
     serialized = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)

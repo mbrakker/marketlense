@@ -73,8 +73,11 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "nested cohort" in verification.system.text.lower()
     assert "recovery_sources" in verification.system.text
     assert "recovered physical pages" in verification.system.text
+    assert "every inspected original or recovered PDF page" in verification.system.text
+    assert "recovery candidate ranking" in verification.system.text.lower()
     assert "component totals" in correction.system.text.lower()
     assert "image-to-page" in verification.user.text.lower()
+    assert "inspected original or recovered PDF page" in verification.user.text
 
 
 def _settings(tmp_path):
@@ -1055,7 +1058,79 @@ def test_real_recovery_inspects_new_pages_but_keeps_original_binding(tmp_path):
     ]
 
 
-def test_recovery_cannot_verify_using_only_retained_page_support(tmp_path):
+def test_recovery_accepts_visually_supported_original_page_with_irrelevant_candidate(
+    tmp_path,
+):
+    claims = [
+        _claim(
+            "mobile-wallet-cart-abandonment",
+            "40% of shoppers abandoned a cart when their preferred wallet method "
+            "was unavailable.",
+            page=4,
+        )
+    ]
+    claims[0]["_visual_replacement_policy"] = "report_level_replacement_allowed"
+    claims[0]["metric"] = {"value": "40%", "cohort": "shoppers"}
+    request = _request(tmp_path, claims)
+    request.recovery_enabled = True
+    request.recovery_candidates = {
+        "mobile-wallet-cart-abandonment": [
+            {
+                "physical_page": 2,
+                "source_identity": request.source_identity,
+                "reason": "retained_page_irrelevant_or_insufficient",
+                "evidence_id": "provisional-methodology",
+            }
+        ]
+    }
+    request.source_page_text_by_physical_page = {
+        4: "4",
+        2: "Methodology and respondent segments.",
+    }
+    responses = iter(
+        [
+            {
+                "claim": claims[0]["text"],
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "Physical page 4 reports the 40% cart-abandonment result for "
+                    "shoppers who could not use their preferred wallet method."
+                ),
+                "supporting_physical_pages": [4],
+                "source_truth_notes_by_page": {
+                    "4": (
+                        "Physical page 4 reports the 40% cart-abandonment result "
+                        "for shoppers who could not use their preferred wallet method."
+                    )
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified"
+    assert item.supporting_physical_pages == [4]
+    assert item.original_physical_pages == [4]
+    assert item.recovered_physical_pages == [2]
+    assert all(
+        "verification_supporting_page_not_recovery_candidate" not in attempt.diagnostics
+        for attempt in item.verification_attempts
+    )
+
+
+def test_recovery_rejects_uninspected_support_page(tmp_path):
     claims = [_claim("candidate-1", "Original direction")]
     claims[0]["_visual_replacement_policy"] = "report_level_replacement_allowed"
     request = _request(tmp_path, claims)
@@ -1072,12 +1147,12 @@ def test_recovery_cannot_verify_using_only_retained_page_support(tmp_path):
                 "outcome": "verified",
                 "diagnostics": [],
                 "source_truth_notes": (
-                    "The retained page reports the corrected value and cohort "
+                    "An uninspected page reports the corrected value and cohort "
                     "relationship."
                 ),
-                "supporting_physical_pages": [5],
+                "supporting_physical_pages": [6],
                 "source_truth_notes_by_page": {
-                    "5": "Page 5 reports the corrected value and cohort relationship."
+                    "6": "Page 6 reports the corrected value and cohort relationship."
                 },
             },
             {"claim": "Corrected claim", "status": "corrected", "issues": []},
@@ -1085,12 +1160,12 @@ def test_recovery_cannot_verify_using_only_retained_page_support(tmp_path):
                 "outcome": "verified",
                 "diagnostics": [],
                 "source_truth_notes": (
-                    "The retained page reports the corrected value and cohort "
+                    "An uninspected page reports the corrected value and cohort "
                     "relationship."
                 ),
-                "supporting_physical_pages": [5],
+                "supporting_physical_pages": [6],
                 "source_truth_notes_by_page": {
-                    "5": "Page 5 reports the corrected value and cohort relationship."
+                    "6": "Page 6 reports the corrected value and cohort relationship."
                 },
             },
         ]
@@ -1107,7 +1182,7 @@ def test_recovery_cannot_verify_using_only_retained_page_support(tmp_path):
     assert item.outcome == "failed_verification"
     assert item.supporting_physical_pages == []
     assert all(
-        "verification_supporting_page_not_recovery_candidate" in attempt.diagnostics
+        "verification_supporting_pages_invalid" in attempt.diagnostics
         for attempt in item.verification_attempts
     )
 

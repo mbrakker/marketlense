@@ -41,10 +41,14 @@ text: |
   that support the final claim. For a qualitative claim, name the observed
   source relationship or bounded pattern and explain the defensible implication;
   a generic statement that the claim is merely supported is insufficient.
-  When provisional recovery_sources are present for a report-level replacement,
-  every supporting_physical_pages entry must be one of those recovered physical pages.
-  The retained page was already judged insufficient for recovery and
-  cannot be used as replacement provenance merely because it was inspected.
+  When provisional recovery_sources are present, every inspected original or recovered PDF page is eligible as source evidence.
+  Independently identify which inspected pages visibly support the final corrected
+  claim. Recovery candidate ranking is only a bounded inspection aid; it does not
+  establish factual authority or prove that an original page is incorrect.
+  A visibly irrelevant original page must still be rejected, and source-specific
+  notes must justify every cited page. Preserve the retained evidence binding;
+  The recovered physical pages remain provisional and do not become authoritative
+  merely because they are cited.
 
   Return JSON only:
   {"outcome":"verified|rejected|unresolved","diagnostics":["..."],"source_truth_notes":"...","supporting_physical_pages":[12],"source_truth_notes_by_page":{"12":"..."}}

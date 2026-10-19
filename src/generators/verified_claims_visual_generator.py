@@ -24,10 +24,6 @@ from src.contracts.verified_claims import (
     VisualClaimEvaluationResult,
     VisualClaimVerificationAttempt,
 )
-from src.generators.claim_validation_generator import (
-    _recovery_quantity_values,
-    _recovery_tokens,
-)
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import llm_service
 from src.services.file_service import hash_file_bundle as service_hash_file_bundle
@@ -195,35 +191,6 @@ def _supporting_page_attribution_diagnostics(
         if missing_values.issubset(alternate_values):
             return ["verification_supporting_page_attribution_conflict"]
     return []
-
-
-def _source_page_supports_corrected_claim(
-    *,
-    corrected_claim: str,
-    claim: Mapping[str, Any],
-    page_text: str,
-) -> bool:
-    """Accept a retained page only when its extracted text supports the claim."""
-
-    normalized_page_text = _text(page_text)
-    if not normalized_page_text:
-        return False
-    claim_quantities = _recovery_quantity_values(corrected_claim)
-    page_quantities = _recovery_quantity_values(normalized_page_text)
-    if claim_quantities and not claim_quantities.issubset(page_quantities):
-        return False
-    claim_tokens = _recovery_tokens(corrected_claim)
-    page_tokens = _recovery_tokens(normalized_page_text)
-    token_overlap = len(claim_tokens & page_tokens)
-    if token_overlap >= 5:
-        return True
-    if claim_quantities and claim_quantities.issubset(page_quantities):
-        return token_overlap >= 3
-    original_evidence = _text(claim.get("evidence"))
-    return bool(
-        original_evidence
-        and len(_recovery_tokens(original_evidence) & page_tokens) >= 5
-    )
 
 
 def _source_pdf_sha256(source_identity: str) -> str:
@@ -568,20 +535,6 @@ def _supporting_page_notes(
         if any(not _substantive_source_truth_notes(note) for note in notes.values()):
             diagnostics.append("verification_page_explanation_missing")
     return supporting_pages, notes, list(dict.fromkeys(diagnostics))
-
-
-def _recovery_support_pages(
-    recovery_candidates: list[dict[str, Any]],
-) -> set[int]:
-    return {
-        page
-        for candidate in recovery_candidates
-        if isinstance(candidate, Mapping)
-        for page in [
-            _positive_int(candidate.get("physical_page") or candidate.get("page"))
-        ]
-        if page is not None
-    }
 
 
 def _provider_error_details(prefix: str, error: Exception) -> list[str]:
@@ -994,32 +947,6 @@ def _verification_attempt(
                 ),
             )
         )
-        recovery_support_pages = _recovery_support_pages(recovery_candidates)
-        retained_pages = set(original_physical_pages)
-        unsupported_pages = [
-            page for page in supporting_pages if page not in recovery_support_pages
-        ]
-        source_page_text = getattr(request, "source_page_text_by_physical_page", {})
-        retained_page_support = {
-            page
-            for page in unsupported_pages
-            if page in retained_pages
-            and isinstance(source_page_text, Mapping)
-            and _source_page_supports_corrected_claim(
-                corrected_claim=corrected_claim,
-                claim=claim,
-                page_text=source_page_text.get(page, ""),
-            )
-        }
-        if recovery_support_pages and any(
-            page not in recovery_support_pages and page not in retained_page_support
-            for page in supporting_pages
-        ):
-            support_diagnostics.append(
-                "verification_supporting_page_not_recovery_candidate"
-            )
-            supporting_pages = []
-            notes_by_page = {}
         diagnostics = (
             [*diagnostics, *support_diagnostics] if diagnostics is not None else None
         )

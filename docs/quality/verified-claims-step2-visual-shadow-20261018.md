@@ -714,3 +714,174 @@ completeness, or independent editorial acceptance. Canonical promotion and
 Step 3 visual factualisation remain intentionally unstarted; Step 3 should
 wait for canonical source-binding/selection approval and independent editorial
 review.
+
+## Current explicit retained-cohort replay and recovery correction (2026-10-20)
+
+This section supersedes the stale additional-five shadow result for Step 2
+evaluation. The implementation was inspected from `740ba5c` and the retained
+artifact producer is `410f186b26f372c6b8eb5a82af16dc5b8740c4af`. The requested
+cohort snapshot was used directly:
+
+`tmp/verified-claims-premerge-20261019/frozen-reliability-28p518bm/cohort_result.json`
+
+The source manifest was
+`tmp/verified-claims-premerge-20261019/step2-new-cohort-reference.json`.
+Its SHA-256 is `5868d6b8b62f4d97be8ed1f8160738f17d00ec1ccc3d7ab5b8e31bef360ff93e`;
+the cohort-result SHA-256 is
+`b9da85567108998bda61b3bb236183b912d9c475c05fa4085abf7e1d65158a9f`.
+
+### Root cause and bounded correction
+
+The Bigcommerce false negative was at the existing Step 2 provenance boundary.
+Recovery correctly ranked methodology page 2 as a provisional inspection
+candidate because the retained page-4 text did not meet the deterministic
+native-text similarity threshold; the retained page's evidence spans and
+visual content were not thereby disproved. The prompts, generator, and replay
+selector nevertheless treated the recovery candidate list as an exhaustive
+set of eligible supporting pages. That caused an independently visible page-4
+wallet finding to fail closed.
+
+The correction now allows any inspected original or recovered full PDF page to
+support the final claim when the verifier independently cites it and provides
+page-specific substantive notes. Recovery ranking remains an inspection aid,
+not factual authority; recovered evidence remains provisional. Existing
+inspected-page, page-note, numeric-attribution, source-hash, malformed-response,
+and shadow-only guards were retained. The native-text positive-support helper
+was removed only from the recovery-only acceptance shortcut; native text is
+still used by the existing conservative attribution diagnostics.
+
+The replay script now has explicit retained-input mode. It enumerates every
+`insights_final` entry from the supplied cohort result, checks each source PDF
+SHA-256 before dispatch, records artifact SHA-256 and producer commit, and
+separates selected, eligible, evaluated, skipped, and unavailable claims. It
+also accepts repeated `--artifact REPORT=PATH` inputs for a selected artifact
+set. No page-less claim is omitted from the inventory. Exact evidence text is
+given a bounded provisional physical page only when it occurs on exactly one
+page of the hash-matched PDF; this is inspection context, never an authoritative
+binding. The Merchant Risk Council section-level claim has no such safe
+location and remains unavailable.
+
+The exact current-cohort command was:
+
+```powershell
+python scripts/quality/replay_verified_claims_step2.py --live `
+  --cohort-result tmp/verified-claims-premerge-20261019/frozen-reliability-28p518bm/cohort_result.json `
+  --sources-manifest tmp/verified-claims-premerge-20261019/step2-new-cohort-reference.json `
+  --output tmp/verified-claims-premerge-20261019/step2-current-cohort-shadow-v2/result.json
+```
+
+The raw report is retained at
+`tmp/verified-claims-premerge-20261019/step2-current-cohort-shadow-v2/result.json`.
+All five source hashes matched, all five retained artifacts were found, the
+producer commit was recorded for every report, and `shadow_only=true`,
+`canonical_mutation=false`, and `publication_write=false` were recorded.
+
+| Report | Selected | Eligible | Evaluated | First pass / retry | Failed / unresolved / skipped | Unavailable |
+|---|---:|---:|---:|---:|---:|---:|
+| DoubleVerify | 5 | 5 | 5 | 5 / 0 | 0 / 0 / 0 | 0 |
+| Merchant Risk Council | 5 | 4 | 4 | 3 / 1 | 0 / 0 / 0 | 1: `post-purchase-fraud-section-scope` |
+| Algolia | 5 | 5 | 5 | 4 / 1 | 0 / 0 / 0 | 0 |
+| Bain & Company | 5 | 5 | 5 | 5 / 0 | 0 / 0 / 0 | 0 |
+| Bigcommerce | 5 | 5 | 5 | 5 / 0 | 0 / 0 / 0 | 0 |
+| **Total** | **25** | **24** | **24** | **22 / 2** | **0 / 0 / 0** | **1** |
+
+The complete source and artifact identities are in the raw JSON. The source
+PDF SHA-256 values, artifact SHA-256 values, and common producer commit are:
+
+| Report | Source PDF SHA-256 | Retained artifact SHA-256 | Producer commit |
+|---|---|---|---|
+| DoubleVerify | `99f0cc4f7787cac52b7f89eefa7659053b3703ea100b9e0522fa500c64463d7e` | `e0361e2e3aae1ef0e3cae6fb30b45ed205235b1d7d0b8d982ed4037a7fb79643` | `410f186b26f372c6b8eb5a82af16dc5b8740c4af` |
+| Merchant Risk Council | `29c01d042b7020b3e43de3c6eb12c84e1fd7b960be6c73b877170fdec12932e6` | `2530c4ef6a8cc2a68b4250acffc711c7af73e6e93e5ffdad5278d950e4f24feb` | `410f186b26f372c6b8eb5a82af16dc5b8740c4af` |
+| Algolia | `d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50` | `8d5a71b087337e92cfc3f05658bc20de03b8eca1098e6efd405604003da3d611` | `410f186b26f372c6b8eb5a82af16dc5b8740c4af` |
+| Bain & Company | `07541f3433b72007010ff604a93d0c560b6c6709ffd7bb5a58fefa81908f86c7` | `dfd089ab3ade716abe7134022a2b0085729833fc5ee054ef1adde665e39e5968` | `410f186b26f372c6b8eb5a82af16dc5b8740c4af` |
+| Bigcommerce | `29ffb53b9818460066c86e8d954bdd904bd0e11d2360d90dac040a5d33b9e7c3` | `71b83f2c96d0f367f1d8dd4e660942542084082c7b0f593190416cc249b2e868` | `410f186b26f372c6b8eb5a82af16dc5b8740c4af` |
+
+The v2 live run made **52 provider calls** (52 ledger rows selected and
+seen), used **829,972 input tokens** and **33,255 output tokens** (**863,227
+total**), cost **$0.099628 estimated**, rendered **15** full physical pages,
+and took **464.414 seconds**. Cache was enabled but fresh-run reuse was not
+measured. The earlier current-snapshot pass is retained for comparison (22
+eligible, 22 first-pass verified, 44 calls, $0.079482, 361.613 seconds); it
+preceded the two exact Algolia page recoveries and is not the final result.
+
+### Current per-claim ledger
+
+The raw JSON retains the complete original and corrected text, stable ID,
+evidence IDs, evidence spans, original pages, inspected pages, supporting
+pages, recovery candidates, source notes, attempt records, artifact identity,
+and PDF hashes. The compact ledger below records the material before/after
+binding and terminal outcome; `? -> page` means the artifact had no original
+physical page and the exact-text lookup supplied only a provisional inspection
+page.
+
+| Report | Stable ID | Terminal outcome | Original -> supporting page(s) | Review result |
+|---|---|---|---|---|
+| DoubleVerify | `attention-index-normalization-q1-2026` | verified | 9 -> 9 | Normalization, 28-day window, Q1 2026 and vertical context remained source-backed. |
+| DoubleVerify | `quality-brand-suitability-regional-q1-2026` | verified | 3 -> 3 | APAC/EMEA/LATAM/North America values and ranking remained source-backed. |
+| DoubleVerify | `regional-inapp-video-attention-q1-2026` | verified | 10 -> 10 | In-App Video regional values remained correctly labeled. |
+| DoubleVerify | `quality-fraud-sivt-regional-q1-2026` | verified | 3 -> 3 | Global and regional Fraud/SIVT values, period and direction remained supported. |
+| DoubleVerify | `global-video-benchmarks-ctv-scope-q1-2026` | verified | 4 -> 4 | CTV exclusion and device/video benchmark labels remained supported. |
+| Merchant Risk Council | `realtime-payments-merchant-acceptance` | verified | 2 -> 2 | 43%, merchant population, geography and growth characterization remained supported. |
+| Merchant Risk Council | `agentic-ai-payments-exploration-plans` | verified after retry | 2 -> 2 | 63% and the near-term exploration/implementation status remained supported. |
+| Merchant Risk Council | `annual-survey-merchant-base` | verified | 2 -> 2 | Survey size, business sizes and 35+ country scope remained supported. |
+| Merchant Risk Council | `realtime-payments-growth-characterization` | verified | 2 -> 2 | The qualitative growth statement stayed tied to the 43% acceptance finding. |
+| Merchant Risk Council | `post-purchase-fraud-section-scope` | unavailable | — -> — | DocMap section-context span has no physical page; it was not inferred or evaluated. |
+| Algolia | `ai-intent-revenue-link-perception` | verified | ? -> 12 provisional | Exact retained quote is uniquely on p.12; final wording distinguishes perceptions from measured effects. |
+| Algolia | `revenue-investment-incentive` | verified | 5 -> 5 | Unsupported original incentive framing was replaced with p.5 search-investment values; relevant but materially different. |
+| Algolia | `regional-ai-purchase-likelihood-agreement` | verified after retry | 12 -> 12 | US, total and Australia/NZ values retained with respondent bases. |
+| Algolia | `agentic-search-integration-consideration` | verified | 27 -> 27 | Integration influence values and Top-2 relationship remained supported. |
+| Algolia | `agentic-search-deployment-and-plans` | verified | ? -> 26 provisional | Exact retained quote is uniquely on p.26; 17% implemented and 61% planned remained supported. |
+| Bain & Company | `born-tech-growth-share` | verified | 1 -> 1 | 52%, top-20-gainer cohort and 2015–20 comparison remained supported. |
+| Bain & Company | `tech-value-creators-types` | verified | 1 -> 1 | 52%/20%/28% categories and denominator remained supported. |
+| Bain & Company | `market-growth-share-breakdown` | verified | 1 -> 1 | Market-value growth split and period remained supported. |
+| Bain & Company | `asset-light-scaling-recommendation` | verified | 1 -> 1 | Four source-listed actions remained defensible recommendations. |
+| Bain & Company | `cloud-platform-catalysts` | verified | ? -> 1 provisional | Exact quote is on the one-page PDF; final claim uses source-backed 52%/20% plus the four actions. |
+| Bigcommerce | `preferred-wallet-abandonment` | verified | 4 -> 2,4 | Former false negative fixed: p.4 finding and p.2 survey context were independently cited. |
+| Bigcommerce | `discount-message-opt-in-out` | verified | 7 -> 7 | 74%, same-day opt-in/out and discount purpose remained supported. |
+| Bigcommerce | `shopping-discovery-apps` | verified | 5 -> 5 | Algorithm narrative was kept distinct from the chart's platform-journey percentages. |
+| Bigcommerce | `reviews-validate-purchase-decisions` | verified | 4 -> 4 | Two-in-three, review benefit ranking and purchase-validation purpose remained supported. |
+| Bigcommerce | `guest-checkout-abandonment` | verified | 8 -> 8 | Guest-checkout percentage and the distinct 58% contact-detail condition remained supported. |
+
+Independent review of the original full pages found **zero independently
+confirmed unsupported material claims among the 24 verified rows**. Two
+replacements deserve editorial attention even though they are source-grounded:
+Algolia's `revenue-investment-incentive` moved from an unsupported revenue-
+incentive proposition to the page-5 search-investment distribution, and Bain's
+page-less `cloud-platform-catalysts` moved from a qualitative catalyst passage
+to a quantitative value-growth/action formulation. Both remain commercially
+related and are shadow-only, but neither is evidence that the model preserved
+the exact original proposition. The complete verified-set quality check also
+flagged near-duplicate final propositions for Bain's born-tech pair and
+Merchant's two real-time-payment rows; no row was silently promoted or
+deduplicated in this Step 2 replay.
+
+### Unchanged 39-variant reference gate
+
+The original five-report reference gate was run separately with retained real
+claims excluded. It evaluated all **39 variants**: **37 first-pass verified,
+1 verified after retry, 38 verified, 1 unresolved, 0 failed, 0 skipped**,
+with **39/39 expected outcome matches, 0 false accepts, and 0 false rejects**.
+`ACT-004-wrong-page` remained unresolved after its bounded attempts. The gate
+therefore did not force the known wrong-page case into a pass. Its live usage
+was **80 provider calls**, **676,546 input**, **38,176 output**, **714,722
+total tokens**, **$0.086743 estimated**, and **540.282 seconds**; cache reuse
+was not measured. The retained five-report reference expectations and 15-case
+fixture definitions were not changed.
+
+### Verification and remaining limitations
+
+Focused tests after the correction include **66 passing tests** across the
+visual generator and explicit/replay suites, plus the prompt, type, compile,
+and Ruff checks. The full-repo mypy gate passed with zero tracked errors. The
+provider-free inventory confirms the exact 25 selected identities and one
+unavailable Merchant claim without fabricated fixtures. No canonical artifact,
+publication-readiness state, or WordPress write was changed.
+
+This remains a retained-artifact replay. It does not establish fresh Step 1
+candidate recall, selection diversity, repeated-run stability, or canonical
+source-binding completeness. Exact-text provisional pages are not canonical
+evidence and do not authorize Step 3. The current Step 2 status is therefore
+**PARTIAL**: the demonstrated Bigcommerce false negative and explicit-input
+coverage defect are corrected and the reference gate remains green, but
+canonical source-binding completeness and independent editorial approval are
+still unresolved. Step 3 remains unstarted.

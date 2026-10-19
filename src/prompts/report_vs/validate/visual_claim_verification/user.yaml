@@ -17,9 +17,9 @@ text: |
   When outcome is verified, supporting_physical_pages must be a nonempty subset
   of inspected_physical_pages in source_json, and source_truth_notes_by_page
   must contain a substantive note for every listed page and no other page.
-  If recovery_sources are present, list only recovered physical pages from
-  recovery_sources as supporting pages; do not cite the retained page as
-  replacement support when recovery was requested.
+  Every inspected original or recovered PDF page is eligible to be cited when it visibly supports the corrected claim. Recovery candidates are inspection
+  aids, not factual authority; do not cite a visibly irrelevant page, and do
+  not promote provisional recovery evidence into the retained binding.
 
   Do not assume the claim is correct because another model produced it. Return
   only the verification JSON required by the system prompt. Diagnostics must
