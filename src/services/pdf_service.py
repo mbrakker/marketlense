@@ -9,6 +9,7 @@ from src.services._pdf.crop import (
 )
 from src.services._pdf.figures import collect_candidates, extract_best_figure
 from src.services._pdf.fingerprint_cache import verify_crop_publication_proof
+from src.services._pdf.page_reconciliation import reconcile_pdf_pages
 from src.services._pdf.text import (
     build_pdf_context,
     check_pdf_eof,
@@ -43,4 +44,5 @@ __all__ = [
     "split_pdf_for_ocr",
     "verify_crop_publication_proof",
     "sample_pdf_text",
+    "reconcile_pdf_pages",
 ]

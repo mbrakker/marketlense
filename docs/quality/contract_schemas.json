@@ -29713,6 +29713,248 @@
       ],
       "type": "object"
     },
+    "src.contracts.pdf_page_reconciliation.PdfPageLabelMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pdf_page_reconciliation.PdfPageReconciliationEvidence"
+          },
+          "type": "array"
+        },
+        "method": {
+          "enum": [
+            "visible_header",
+            "visible_footer",
+            "sequence_inference",
+            "unresolved"
+          ]
+        },
+        "native_pdf_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "physical_page": {
+          "type": "integer"
+        },
+        "printed_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_geometry": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.pdf_page_reconciliation.PdfPageReconciliationGeometry"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "verified",
+            "inferred",
+            "unresolved"
+          ]
+        }
+      },
+      "required": [
+        "physical_page",
+        "printed_label",
+        "status",
+        "method",
+        "native_pdf_label",
+        "evidence",
+        "source_geometry"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_page_reconciliation.PdfPageReconciliationCoverage": {
+      "additionalProperties": false,
+      "properties": {
+        "inferred_count": {
+          "type": "integer"
+        },
+        "inferred_percentage": {
+          "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "unresolved_count": {
+          "type": "integer"
+        },
+        "unresolved_percentage": {
+          "type": "number"
+        },
+        "verified_count": {
+          "type": "integer"
+        },
+        "verified_percentage": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "verified_count",
+        "inferred_count",
+        "unresolved_count",
+        "verified_percentage",
+        "inferred_percentage",
+        "unresolved_percentage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_page_reconciliation.PdfPageReconciliationEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_physical_pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "visible_header",
+            "visible_footer",
+            "native_pdf_metadata",
+            "sequence_inference",
+            "conflict",
+            "unreadable",
+            "no_visible_label"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "detail"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_page_reconciliation.PdfPageReconciliationGeometry": {
+      "additionalProperties": false,
+      "properties": {
+        "bounding_box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "bounding_box_scope": {
+          "enum": [
+            "text_block"
+          ]
+        },
+        "label_text": {
+          "type": "string"
+        },
+        "location": {
+          "enum": [
+            "visible_header",
+            "visible_footer"
+          ]
+        },
+        "physical_page": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "physical_page",
+        "label_text",
+        "location",
+        "bounding_box"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_page_reconciliation.PdfPageReconciliationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_page_reconciliation.PdfPageReconciliationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm_version": {
+          "type": "string"
+        },
+        "coverage_statistics": {
+          "$ref": "#/$defs/src.contracts.pdf_page_reconciliation.PdfPageReconciliationCoverage"
+        },
+        "input_pdf_md5": {
+          "type": "string"
+        },
+        "mappings": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pdf_page_reconciliation.PdfPageLabelMapping"
+          },
+          "type": "array"
+        },
+        "physical_page_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "algorithm_version",
+        "input_pdf_md5",
+        "physical_page_count",
+        "mappings",
+        "coverage_statistics"
+      ],
+      "type": "object"
+    },
     "src.contracts.pdf_text.PdfTextChartIdentityEvidence": {
       "additionalProperties": false,
       "properties": {

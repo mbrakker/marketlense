@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PdfPageReconciliationResponse",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "algorithm_version",
+    "input_pdf_md5",
+    "physical_page_count",
+    "mappings",
+    "coverage_statistics"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "1.1"},
+    "algorithm_version": {
+      "type": "string",
+      "const": "pdf-page-reconciliation-v7"
+    },
+    "input_pdf_md5": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "physical_page_count": {"type": "integer", "minimum": 1},
+    "mappings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "physical_page",
+          "printed_label",
+          "status",
+          "method",
+          "native_pdf_label",
+          "evidence",
+          "source_geometry"
+        ],
+        "properties": {
+          "schema_version": {"type": "string", "const": "1.1"},
+          "physical_page": {"type": "integer", "minimum": 1},
+          "printed_label": {"type": ["string", "null"], "minLength": 1},
+          "status": {
+            "type": "string",
+            "enum": ["verified", "inferred", "unresolved"]
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "visible_header",
+              "visible_footer",
+              "sequence_inference",
+              "unresolved"
+            ]
+          },
+          "native_pdf_label": {"type": ["string", "null"], "minLength": 1},
+          "source_geometry": {
+            "anyOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "required": [
+                  "schema_version",
+                  "physical_page",
+                  "label_text",
+                  "location",
+                  "bounding_box",
+                  "bounding_box_scope"
+                ],
+                "properties": {
+                  "schema_version": {"type": "string", "const": "1.1"},
+                  "physical_page": {"type": "integer", "minimum": 1},
+                  "label_text": {"type": "string", "minLength": 1, "maxLength": 240},
+                  "location": {
+                    "type": "string",
+                    "enum": ["visible_header", "visible_footer"]
+                  },
+                  "bounding_box": {
+                    "type": "array",
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "items": {"type": "number"}
+                  },
+                  "bounding_box_scope": {
+                    "type": "string",
+                    "const": "text_block"
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "required": [
+                "schema_version",
+                "kind",
+                "detail",
+                "anchor_physical_pages"
+              ],
+              "properties": {
+                "schema_version": {"type": "string", "const": "1.1"},
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "visible_header",
+                    "visible_footer",
+                    "native_pdf_metadata",
+                    "sequence_inference",
+                    "conflict",
+                    "unreadable",
+                    "no_visible_label"
+                  ]
+                },
+                "detail": {"type": "string", "minLength": 1, "maxLength": 240},
+                "anchor_physical_pages": {
+                  "type": "array",
+                  "maxItems": 2,
+                  "uniqueItems": true,
+                  "items": {"type": "integer", "minimum": 1}
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "coverage_statistics": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "verified_count",
+        "inferred_count",
+        "unresolved_count",
+        "verified_percentage",
+        "inferred_percentage",
+        "unresolved_percentage"
+      ],
+      "properties": {
+        "schema_version": {"type": "string", "const": "1.1"},
+        "verified_count": {"type": "integer", "minimum": 0},
+        "inferred_count": {"type": "integer", "minimum": 0},
+        "unresolved_count": {"type": "integer", "minimum": 0},
+        "verified_percentage": {"type": "number", "minimum": 0, "maximum": 100},
+        "inferred_percentage": {"type": "number", "minimum": 0, "maximum": 100},
+        "unresolved_percentage": {"type": "number", "minimum": 0, "maximum": 100}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
