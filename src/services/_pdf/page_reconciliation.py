@@ -24,7 +24,7 @@ from src.services import file_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
-from .page_artifacts import get_page_text_block_pairs
+from .page_artifacts import get_page_text_line_records
 from .shared import logger
 from .text import build_pdf_context
 
@@ -197,47 +197,68 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
 
     native_pdf_label = _native_pdf_label(page)
     try:
-        pairs = get_page_text_block_pairs(page, cache=None)
+        line_records = get_page_text_line_records(page, cache=None)
         height = float(page.rect.height)
     except (RuntimeError, ValueError, AttributeError, TypeError):
         return _PageObservation(physical_page, native_pdf_label, (), unreadable=True)
 
+    lines = tuple(
+        _TextLine(
+            re.sub(r"\s+", " ", text).strip(),
+            (
+                float(line_rect.x0),
+                float(line_rect.y0),
+                float(line_rect.x1),
+                float(line_rect.y1),
+            ),
+            (
+                float(block_rect.x0),
+                float(block_rect.y0),
+                float(block_rect.x1),
+                float(block_rect.y1),
+            ),
+        )
+        for line_rect, block_rect, text in line_records
+    )
+    line_counts_by_block: dict[tuple[float, float, float, float], int] = {}
+    for line in lines:
+        line_counts_by_block[line.block_bbox] = (
+            line_counts_by_block.get(line.block_bbox, 0) + 1
+        )
+
     candidates: list[_Candidate] = []
-    for rect, block_text in pairs:
-        band = _margin_band(rect.y0, rect.y1, height)
+    for line in lines:
+        band = _margin_band(line.line_bbox[1], line.line_bbox[3], height)
         if band is None:
             continue
-        block_lines = [
-            re.sub(r"\s+", " ", raw_line).strip()
-            for raw_line in str(block_text or "").splitlines()
-            if raw_line.strip()
-        ]
-        for line in block_lines:
-            if not line or len(line) > _MAX_MARGIN_LINE_LENGTH:
-                continue
-            candidate = _parse_candidate(
-                line,
-                band,
-                bounding_box=(
-                    float(rect.x0),
-                    float(rect.y0),
-                    float(rect.x1),
-                    float(rect.y1),
-                ),
-            )
-            if candidate is not None and not (
-                not candidate.strong and len(block_lines) > 2
-            ):
-                candidates.append(candidate)
-    candidates.extend(
-        candidate
-        for candidate in _structured_footer_candidates(pairs, height)
-        if not any(
-            existing.token.style == candidate.token.style
+        line_text = re.sub(r"\s+", " ", line.text).strip()
+        if not line_text or len(line_text) > _MAX_MARGIN_LINE_LENGTH:
+            continue
+        candidate = _parse_candidate(line_text, band, bounding_box=line.block_bbox)
+        if candidate is not None and not (
+            not candidate.strong and line_counts_by_block.get(line.block_bbox, 0) > 2
+        ):
+            candidates.append(candidate)
+
+    for candidate in _structured_footer_candidates(lines, height):
+        matching_indexes = [
+            index
+            for index, existing in enumerate(candidates)
+            if existing.token.style == candidate.token.style
             and existing.token.number == candidate.token.number
-            for existing in candidates
-        )
-    )
+        ]
+        if not matching_indexes:
+            candidates.append(candidate)
+        elif any(not candidates[index].strong for index in matching_indexes):
+            candidates[:] = [
+                existing
+                for existing in candidates
+                if not (
+                    existing.token.style == candidate.token.style
+                    and existing.token.number == candidate.token.number
+                )
+            ]
+            candidates.append(candidate)
     unique: dict[tuple[str, str, bool], _Candidate] = {}
     for candidate in candidates:
         unique[(candidate.token.label, candidate.band, candidate.strong)] = candidate
@@ -249,23 +270,20 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
 
 
 def _structured_footer_candidates(
-    text_blocks: list[tuple[Any, str]], height: float
+    lines: tuple[_TextLine, ...], height: float
 ) -> tuple[_Candidate, ...]:
     if height <= 0:
         return ()
 
-    lines: list[_TextLine] = []
-    for rect, block_text in text_blocks:
-        block_bbox = (float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1))
-        if block_bbox[3] / height < 0.86:
-            continue
-        for raw_line in str(block_text or "").splitlines():
-            text = re.sub(r"\s+", " ", raw_line).strip()
-            if text:
-                lines.append(_TextLine(text, block_bbox, block_bbox))
+    footer_lines = tuple(
+        line
+        for line in lines
+        if _margin_band(line.line_bbox[1], line.line_bbox[3], height)
+        == "visible_footer"
+    )
 
     candidates: list[_Candidate] = []
-    for marker_line in lines:
+    for marker_line in footer_lines:
         match = _STRUCTURED_FOOTER_RE.fullmatch(marker_line.text)
         if match is None:
             continue
@@ -273,14 +291,10 @@ def _structured_footer_candidates(
         if label is None:
             matching_numeric_lines = [
                 line
-                for line in lines
+                for line in footer_lines
                 if _ARABIC_RE.fullmatch(line.text)
-                and line.line_bbox[2] >= marker_line.line_bbox[2] - 2.0
-                and abs(
-                    (line.line_bbox[1] + line.line_bbox[3]) / 2
-                    - (marker_line.line_bbox[1] + marker_line.line_bbox[3]) / 2
-                )
-                <= 3.5
+                and line.line_bbox[0] >= marker_line.line_bbox[2] - 2.0
+                and abs(line.line_bbox[3] - marker_line.line_bbox[3]) <= 3.5
             ]
             if len(matching_numeric_lines) != 1:
                 continue

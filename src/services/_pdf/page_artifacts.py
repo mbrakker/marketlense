@@ -191,6 +191,44 @@ def get_page_text_block_pairs(
     return list(pairs)
 
 
+def get_page_text_line_records(
+    page: fitz.Page,
+    *,
+    cache: PdfPageArtifactCache | None = None,
+) -> list[tuple[fitz.Rect, fitz.Rect, str]]:
+    """Return line bbox, containing block bbox, and normalized line text."""
+
+    artifacts = get_page_artifacts(page, cache=cache)
+    records: list[tuple[fitz.Rect, fitz.Rect, str]] = []
+    for raw_block in artifacts.text_dict.get("blocks") or []:
+        if raw_block.get("type") != 0:
+            continue
+        block_bbox = raw_block.get("bbox") or []
+        if len(block_bbox) != 4:
+            continue
+        try:
+            block_rect = fitz.Rect(*map(float, block_bbox))
+        except (TypeError, ValueError):
+            continue
+        for raw_line in raw_block.get("lines") or []:
+            line_bbox = raw_line.get("bbox") or []
+            if len(line_bbox) != 4:
+                continue
+            try:
+                line_rect = fitz.Rect(*map(float, line_bbox))
+            except (TypeError, ValueError):
+                continue
+            span_texts = [
+                str(span.get("text") or "").strip()
+                for span in raw_line.get("spans") or []
+                if str(span.get("text") or "").strip()
+            ]
+            text = " ".join(span_texts).strip()
+            if text:
+                records.append((line_rect, block_rect, text))
+    return records
+
+
 def get_crop_refine_text_block_rects(
     page: fitz.Page,
     *,
