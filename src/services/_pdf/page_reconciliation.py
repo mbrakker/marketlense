@@ -326,7 +326,10 @@ def _confirm_direct_labels(
     candidates_by_page: dict[int, tuple[_Candidate, ...]] = {}
     weak_candidates: dict[int, tuple[_Candidate, ...]] = {}
     for observation in observations:
-        labels = {candidate.token.label for candidate in observation.candidates}
+        labels = {
+            (candidate.token.style, candidate.token.number)
+            for candidate in observation.candidates
+        }
         if not observation.candidates:
             continue
         ordered_candidates = list(observation.candidates)
@@ -338,6 +341,9 @@ def _confirm_direct_labels(
                 confirmed[observation.physical_page] = _Confirmed(candidate, "verified")
             else:
                 weak_candidates[observation.physical_page] = (candidate,)
+            continue
+
+        if any(candidate.strong for candidate in ordered_candidates):
             continue
 
         weak_options = tuple(

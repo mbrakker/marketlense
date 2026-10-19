@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, Mapping, cast
 
 PDF_PAGE_RECONCILIATION_SCHEMA_VERSION = "1.1"
-PDF_PAGE_RECONCILIATION_ALGORITHM_VERSION = "pdf-page-reconciliation-v2"
+PDF_PAGE_RECONCILIATION_ALGORITHM_VERSION = "pdf-page-reconciliation-v3"
 SCHEMA_VERSION = PDF_PAGE_RECONCILIATION_SCHEMA_VERSION
 _MD5_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 _STATUS_VALUES = {"verified", "inferred", "unresolved"}

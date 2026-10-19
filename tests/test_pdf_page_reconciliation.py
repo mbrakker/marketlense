@@ -429,6 +429,96 @@ def test_conflicting_margin_labels_remain_unresolved(tmp_path, run_context) -> N
     assert response.mappings[0].evidence[0].kind == "conflict"
 
 
+def test_conflicting_strong_and_weak_labels_remain_unresolved(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "strong-weak-conflict.pdf"
+    _make_pdf(
+        pdf_path,
+        [{"footer": "5"}, {"header": "Page 99", "footer": "6"}, {"footer": "7"}],
+    )
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    middle = response.mappings[1]
+    assert middle.status == "unresolved"
+    assert middle.printed_label is None
+    assert middle.evidence[0].kind == "conflict"
+
+
+def test_conflicted_page_cannot_corroborate_neighboring_weak_labels(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "conflicted-sequence.pdf"
+    _make_pdf(
+        pdf_path,
+        [{"footer": "5"}, {"header": "Page 99", "footer": "6"}, {"footer": "7"}],
+    )
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert [mapping.status for mapping in response.mappings] == [
+        "unresolved",
+        "unresolved",
+        "unresolved",
+    ]
+
+
+def test_same_printed_label_from_strong_and_weak_candidates_is_not_a_conflict(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "same-label-candidates.pdf"
+    _make_pdf(pdf_path, [{"header": "Page 7", "footer": "7"}])
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    mapping = response.mappings[0]
+    assert mapping.status == "verified"
+    assert mapping.printed_label == "7"
+    assert mapping.evidence[0].kind == "visible_header"
+
+
+def test_multiple_weak_candidates_use_a_unique_valid_local_sequence(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "unique-weak-sequence.pdf"
+    _make_pdf(
+        pdf_path,
+        [
+            {"footer": "Page 5"},
+            {"footer": "Section | 6\nSection | 7"},
+            {"footer": "Page 7"},
+        ],
+    )
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    mapping = response.mappings[1]
+    assert mapping.status == "verified"
+    assert mapping.printed_label == "6"
+    assert mapping.evidence[0].kind == "visible_footer"
+
+
 def test_duplicate_printed_labels_are_allowed(tmp_path, run_context) -> None:
     pdf_path = tmp_path / "duplicates.pdf"
     _make_pdf(pdf_path, [{"footer": "Page 1"}, {"footer": "Page 1"}])
