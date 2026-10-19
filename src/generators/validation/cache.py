@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
 from src.contracts.prompts import PromptLoadRequest
@@ -34,7 +35,7 @@ from src.utils.model_resolver import resolve_model
 
 from .shared import LOGGER_NAME, logger
 
-VALIDATION_RULESET_VERSION = "7"
+VALIDATION_RULESET_VERSION = "8"
 
 
 def validation_cache_meta(
@@ -68,6 +69,11 @@ def validation_cache_meta(
             "artifacts": request.artifacts,
             "evidence_packs": request.evidence_packs,
             "source_text_sha256": sha256_json(str(request.source_text or "")),
+            "source_title_resolution": (
+                asdict(request.source_title_resolution)
+                if request.source_title_resolution is not None
+                else {}
+            ),
             "vector_store_id": request.vector_store_id or "",
             "validation_mode": request.validation_mode,
             "data_gap_policy": getattr(settings, "validation_data_gap_policy", "warn"),

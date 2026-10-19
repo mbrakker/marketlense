@@ -86,6 +86,14 @@ _SOURCE_WEIGHTS = {
     "filename": 400.0,
     "document_metadata": 150.0,
 }
+_SOURCE_BACKED_TITLE_SOURCES = frozenset(
+    {
+        "cover_title_page",
+        "repeated_header_title",
+        "source_content",
+        "llm_identity_resolution",
+    }
+)
 
 
 def is_generic_report_title(value: object) -> bool:
@@ -99,6 +107,29 @@ def is_generic_report_title(value: object) -> bool:
         or _OPAQUE_ALPHANUMERIC_IDENTIFIER.fullmatch(normalized)
         or _NUMERIC_LED_OPAQUE_IDENTIFIER.fullmatch(normalized)
     )
+
+
+def source_backed_title(resolution: object) -> str:
+    """Return the approved public title from a source-title resolution.
+
+    Filename and document-metadata candidates are useful fallbacks for local
+    discovery, but they do not establish public report identity.  A visible
+    cover title remains authoritative if a later bounded resolver also
+    returned a conflicting value.
+    """
+
+    title = _clean(getattr(resolution, "title", ""))
+    explicit = _clean(getattr(resolution, "explicit_source_title", ""))
+    if explicit:
+        return "" if is_generic_report_title(explicit) else explicit
+    if (
+        title
+        and not is_generic_report_title(title)
+        and _normalized(getattr(resolution, "candidate_source", ""))
+        in _SOURCE_BACKED_TITLE_SOURCES
+    ):
+        return title
+    return ""
 
 
 def resolve_report_title(
@@ -226,11 +257,10 @@ def _candidates(
 ) -> list[ReportTitleCandidate]:
     candidates: list[ReportTitleCandidate] = []
     for page_number, page_text in pages:
-        lines = [
-            line for line in (_clean(line) for line in page_text.splitlines()) if line
-        ]
+        cover_lines = [_clean(line) for line in page_text.splitlines()]
+        lines = [line for line in cover_lines if line]
         if page_number == 1:
-            for title in _cover_titles(lines, publisher_name):
+            for title in _cover_titles(cover_lines, publisher_name):
                 candidates.append(
                     _candidate(title, "cover_title_page", page_number, publisher_name)
                 )
@@ -271,9 +301,7 @@ def _candidates(
         )
         if visible_page:
             candidates.append(
-                _candidate(
-                    source_title, "source_content", visible_page, publisher_name
-                )
+                _candidate(source_title, "source_content", visible_page, publisher_name)
             )
     filename_title = _filename_title(file_name)
     if filename_title:
@@ -293,6 +321,9 @@ def _cover_titles(lines: list[str], publisher_name: str) -> list[str]:
         line for line in lines[:6] if not re.match(r"(?:https?://|www\.)", line)
     ]
     values: list[str] = []
+    block_title = _first_cover_block_title(lines, publisher_name)
+    if block_title:
+        values.append(block_title)
     combined = ""
     for line in title_lines:
         if re.fullmatch(r"\d+", line) and not combined:
@@ -313,6 +344,38 @@ def _cover_titles(lines: list[str], publisher_name: str) -> list[str]:
         ):
             values.append(combined)
     return values
+
+
+def _first_cover_block_title(lines: list[str], publisher_name: str) -> str:
+    """Recognize a sentence-case title isolated at the top of a cover page.
+
+    Some reports use a large editorial sentence as their title.  Native PDF
+    extraction preserves its line breaks but not its typography, so the
+    separated first text block is the bounded source signal available here.
+    Require a blank separator and a title-shaped, non-terminal-punctuation
+    block so an opening paragraph cannot become report identity by accident.
+    """
+
+    try:
+        blank_index = next(index for index, line in enumerate(lines[:6]) if not line)
+    except StopIteration:
+        return ""
+    block = [line for line in lines[:blank_index] if line]
+    if not 2 <= len(block) <= 4:
+        return ""
+    value = _clean(" ".join(block))
+    if (
+        not 4 <= len(value.split()) <= 14
+        or len(value) > 120
+        or not re.match(r"[A-Z]", value)
+        or is_generic_report_title(value)
+        or _is_cover_brand_line(value, publisher_name)
+        or _DATE_BYLINE.search(value)
+        or _WEAK_TITLE.fullmatch(value)
+        or re.search(r"[.!?]$", value)
+    ):
+        return ""
+    return value
 
 
 def _source_titles(page_text: str, publisher_name: str) -> list[str]:
@@ -580,11 +643,12 @@ def _clean(value: object) -> str:
 
 
 def _page_text(value: object) -> str:
-    return "\n".join(
-        line
-        for line in (_clean(line) for line in str(value or "").splitlines())
-        if line
-    )
+    lines = [_clean(line) for line in str(value or "").splitlines()]
+    while lines and not lines[0]:
+        lines.pop(0)
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines)
 
 
 def _confidence(value: object) -> str:
@@ -592,4 +656,4 @@ def _confidence(value: object) -> str:
     return normalized if normalized in {"high", "medium", "low"} else "medium"
 
 
-__all__ = ["is_generic_report_title", "resolve_report_title"]
+__all__ = ["is_generic_report_title", "resolve_report_title", "source_backed_title"]

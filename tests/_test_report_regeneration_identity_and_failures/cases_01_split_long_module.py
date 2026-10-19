@@ -292,6 +292,71 @@ def test_report_identity_repair_copies_canonical_title_without_model_calls(
     assert after["linkedin_post"] == current_artifacts["linkedin_post"]
 
 
+def test_report_identity_repair_reads_unambiguous_nested_doc_map_title(
+    tmp_path,
+) -> None:
+    openai_client = _NoModelCallsAllowed()
+    current_artifacts = _source_backed_artifacts()
+    evidence_packs = _evidence_packs()
+    evidence_packs["doc_map"] = {"document": {"title": "Doc title"}}
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=_identity_plan(),
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert openai_client.calls == []
+    assert response.payload_overrides == {"title": "Doc title"}
+
+
+def test_report_identity_repair_abstains_on_conflicting_doc_map_title_aliases(
+    tmp_path,
+) -> None:
+    openai_client = _NoModelCallsAllowed()
+    current_artifacts = _source_backed_artifacts()
+    evidence_packs = _evidence_packs()
+    evidence_packs["doc_map"] = {
+        "title": "First title",
+        "document": {"title": "Conflicting title"},
+    }
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=_identity_plan(),
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert openai_client.calls == []
+    assert response.payload_overrides == {}
+
+
 def test_model_repair_changes_only_the_identified_final_insight(tmp_path) -> None:
     current_artifacts = _source_backed_artifacts()
     before_final = [dict(item) for item in current_artifacts["insights_final"]]

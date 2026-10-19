@@ -1,5 +1,6 @@
 from src.generators.report_title_resolution_generator import (
     resolve_report_title,
+    source_backed_title,
 )
 
 
@@ -34,6 +35,31 @@ def test_explicit_cover_title_beats_generic_powerpoint_metadata():
     assert resolution.explicit_source_title == "AdEx Benchmark 2025 Report"
 
 
+def test_bain_sentence_case_cover_title_beats_filename_slug():
+    resolution = _resolve(
+        file_name="tech-tonic-shifts.pdf",
+        source_report_name="tech-tonic-shifts",
+        pdf_metadata={"Title": "Tech-tonic-shifts"},
+        pages=[
+            (
+                1,
+                "Technology isn't just\n"
+                "an industry anymore.\n"
+                "It's everything\n\n"
+                "Most of the largest value creators in recent years were "
+                "technology companies or businesses with a tech-led strategy.",
+            )
+        ],
+        publisher_name="Bain & Company",
+    )
+
+    assert (
+        resolution.title == "Technology isn't just an industry anymore. It's everything"
+    )
+    assert resolution.candidate_source == "cover_title_page"
+    assert resolution.explicit_source_title == resolution.title
+
+
 def test_generic_word_metadata_never_beats_filename():
     resolution = _resolve(
         file_name="global-consumer-outlook-2026.pdf",
@@ -42,6 +68,13 @@ def test_generic_word_metadata_never_beats_filename():
 
     assert resolution.title == "global consumer outlook 2026"
     assert resolution.candidate_source == "filename"
+
+
+def test_filename_only_title_is_not_public_source_identity():
+    resolution = _resolve(file_name="tech-tonic-shifts.pdf")
+
+    assert resolution.candidate_source == "filename"
+    assert source_backed_title(resolution) == ""
 
 
 def test_missing_metadata_uses_clean_filename_title():

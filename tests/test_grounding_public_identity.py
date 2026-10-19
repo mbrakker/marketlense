@@ -5,6 +5,7 @@ from dataclasses import replace
 import pytest
 
 from src.contracts.pdf_text import PdfTextPage
+from src.contracts.report_identity import ReportTitleResolution
 from src.contracts.validation import ValidationRequest
 from src.generators.validation.grounding import grounding_payload, run_grounding_check
 from tests._test_validation_generator._shared import (
@@ -103,6 +104,67 @@ def test_explicit_source_title_establishes_identity_over_conflicting_doc_map():
     assert all(
         item["item_id"] != "metadata:title" for item in payload["public_factual_items"]
     )
+
+
+def test_bain_cover_title_establishes_identity_over_filename_slug():
+    artifacts = {"insights_final": []}
+    payload = grounding_payload(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="identity",
+            report=replace(
+                _report(),
+                title="Technology isn't just an industry anymore. It's everything",
+                publisher="",
+            ),
+            artifacts=artifacts,
+            evidence_packs={
+                "doc_map": {
+                    "title": "Technology isn't just an industry anymore. It's everything"
+                }
+            },
+            source_pages=[
+                PdfTextPage(
+                    page_number=1,
+                    text=(
+                        "Technology isn't just\n"
+                        "an industry anymore.\n"
+                        "It's everything\n\n"
+                        "Most of the largest value creators in recent years were "
+                        "technology companies or businesses with a tech-led strategy."
+                    ),
+                )
+            ],
+        ),
+        artifacts,
+    )
+
+    assert "title" not in payload
+    assert all(
+        item["item_id"] != "metadata:title" for item in payload["public_factual_items"]
+    )
+
+
+def test_grounding_uses_propagated_source_title_resolution_without_rebuilding_identity():
+    artifacts = {"insights_final": []}
+    source_title = "Technology isn't just an industry anymore. It's everything"
+    payload = grounding_payload(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="identity",
+            report=replace(_report(), title=source_title, publisher=""),
+            artifacts=artifacts,
+            evidence_packs={"doc_map": {"title": "Stale generated title"}},
+            source_title_resolution=ReportTitleResolution(
+                title=source_title,
+                candidate_source="cover_title_page",
+                explicit_source_title=source_title,
+            ),
+        ),
+        artifacts,
+    )
+
+    assert "title" not in payload
 
 
 @pytest.mark.parametrize("trusted", [True, False])

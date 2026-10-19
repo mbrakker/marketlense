@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from src.contracts.docpacks import DocPackPayloadMap
 from src.contracts.pdf_text import PdfTextPage
+from src.contracts.report_identity import ReportTitleResolution
 from src.contracts.report_models import ReportPayload
 from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
@@ -199,6 +200,15 @@ class ValidationRequest(SemanticIdContract):
             "doc": (
                 "Canonical extracted source-PDF pages with one-based page identity, "
                 "used only when a retained evidence reference names that page."
+            )
+        },
+    )
+    source_title_resolution: ReportTitleResolution | None = field(
+        default=None,
+        metadata={
+            "doc": (
+                "Canonical source-title resolution established during source preparation; "
+                "validation must not independently replace it."
             )
         },
     )

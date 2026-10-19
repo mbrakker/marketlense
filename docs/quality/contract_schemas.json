@@ -33511,6 +33511,16 @@
           "additionalProperties": {},
           "type": "object"
         },
+        "source_title_resolution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.report_identity.ReportTitleResolution"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "source_url": {
           "type": "string"
         },
@@ -45811,6 +45821,16 @@
         },
         "source_text": {
           "type": "string"
+        },
+        "source_title_resolution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.report_identity.ReportTitleResolution"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "source_url": {
           "type": "string"

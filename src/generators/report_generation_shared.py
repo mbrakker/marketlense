@@ -340,6 +340,19 @@ def pick_non_empty_text(*values: Any) -> str:
     return ""
 
 
+def _unambiguous_metadata_text(*values: Any) -> str:
+    candidates = [
+        str(value or "").strip() for value in values if str(value or "").strip()
+    ]
+    if not candidates:
+        return ""
+    keys = {
+        "".join(character.casefold() for character in value if character.isalnum())
+        for value in candidates
+    }
+    return candidates[0] if len(keys) == 1 else ""
+
+
 def resolve_doc_map_metadata(doc_map_pack: dict[str, Any]) -> tuple[str, str, str, str]:
     candidate: dict[str, Any] = doc_map_pack
     candidate_prefix = "doc_map"
@@ -352,15 +365,16 @@ def resolve_doc_map_metadata(doc_map_pack: dict[str, Any]) -> tuple[str, str, st
     raw_document = candidate.get("document")
     document: dict[str, Any] = raw_document if isinstance(raw_document, dict) else {}
 
-    title = pick_non_empty_text(
+    title = _unambiguous_metadata_text(
         candidate.get("title"),
+        candidate.get("report_title"),
         candidate.get("document_title"),
         candidate.get("document_name"),
         candidate.get("name"),
         document.get("title"),
         document.get("name"),
     )
-    publisher = pick_non_empty_text(
+    publisher = _unambiguous_metadata_text(
         candidate.get("publisher"),
         candidate.get("document_publisher"),
         candidate.get("document_organization"),
@@ -376,6 +390,8 @@ def resolve_doc_map_metadata(doc_map_pack: dict[str, Any]) -> tuple[str, str, st
     if title:
         if str(candidate.get("title") or "").strip():
             title_source = f"{candidate_prefix}.title"
+        elif str(candidate.get("report_title") or "").strip():
+            title_source = f"{candidate_prefix}.report_title"
         elif str(candidate.get("document_title") or "").strip():
             title_source = f"{candidate_prefix}.document_title"
         elif str(candidate.get("document_name") or "").strip():

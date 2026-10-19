@@ -35,6 +35,7 @@ from src.contracts.report_analysis import (
     AnalysisStorePackRequest,
 )
 from src.contracts.report_generation import ReportRuntimeState
+from src.contracts.report_identity import ReportTitleResolution
 from src.contracts.semantic_ids import ReportId
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
@@ -1752,6 +1753,7 @@ def _validate_regeneration_baseline(
     dependencies: ReportAnalysisDependencies,
     source_text: str = "",
     source_pages: Sequence[PdfTextPage] = (),
+    source_title_resolution: ReportTitleResolution | None = None,
     validation_openai_client=None,
 ) -> ValidationReport:
     """Run the current production validation stack on unchanged artifacts."""
@@ -1793,6 +1795,7 @@ def _validate_regeneration_baseline(
             source_url=runtime.source_url,
             source_text=source_text,
             source_pages=list(source_pages),
+            source_title_resolution=source_title_resolution,
         ),
         pack_name="validation_regen_baseline",
         openai_client=validation_openai_client,
@@ -1941,6 +1944,7 @@ def _run_validation_regeneration_loop(
     dependencies: ReportAnalysisDependencies,
     source_text: str = "",
     source_pages: Sequence[PdfTextPage] = (),
+    source_title_resolution: ReportTitleResolution | None = None,
     validation_openai_client=None,
     regeneration_openai_client=None,
 ) -> tuple[
@@ -2175,6 +2179,7 @@ def _run_validation_regeneration_loop(
                 md5=runtime.md5,
                 publisher_name=runtime.publisher_name,
                 source_url=runtime.source_url,
+                source_title_resolution=source_title_resolution,
                 repair_memory=list(repair_memory),
             ),
             **regeneration_kwargs,
@@ -2374,6 +2379,7 @@ def _run_validation_regeneration_loop(
                 source_url=runtime.source_url,
                 source_text=source_text,
                 source_pages=list(source_pages),
+                source_title_resolution=source_title_resolution,
             ),
             pack_name=validation_pack_name,
             openai_client=(

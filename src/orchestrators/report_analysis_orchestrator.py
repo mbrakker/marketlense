@@ -51,6 +51,7 @@ from src.generators.report_generation_shared import (
     resolve_doc_map_metadata,
     resolve_doc_map_primary_contributor,
 )
+from src.generators.report_title_resolution_generator import source_backed_title
 from src.orchestrators._report_analysis_orchestrator.artifact_batches import (
     ArtifactStepTaskScheduler,
     ArtifactTaskRenderer,
@@ -980,7 +981,10 @@ def run_report_analysis(
             resolve_doc_map_metadata(doc_map_pack)
         )
         source_title = str(getattr(source.title_resolution, "title", "") or "").strip()
-        if doc_map_title and not source_title:
+        approved_source_title = source_backed_title(source.title_resolution)
+        if approved_source_title:
+            data.title = approved_source_title
+        elif doc_map_title and not source_title:
             data.title = doc_map_title
         if source_publisher:
             data.publisher = source_publisher
@@ -1138,6 +1142,7 @@ def run_report_analysis(
             source_url=runtime.source_url,
             source_text=source.text_response.text,
             source_pages=source.text_response.pages,
+            source_title_resolution=source.title_resolution,
         ),
         pack_name="validation",
         openai_client=validation_openai_client,
@@ -1204,6 +1209,7 @@ def run_report_analysis(
             source_status=source.text_status,
             source_text=source.text_response.text,
             source_pages=source.text_response.pages,
+            source_title_resolution=source.title_resolution,
             category_labels=category_assignment.category_labels,
             vector_store_id=vector_state.vector_store_id,
             dependencies=dependencies,

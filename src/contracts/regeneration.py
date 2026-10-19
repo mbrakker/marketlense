@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from src.contracts.ingest import IngestSettings
+from src.contracts.report_identity import ReportTitleResolution
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
@@ -112,9 +113,7 @@ class RepairDelta:
     introduced: List[FailureFingerprint] = field(default_factory=list)
     introduced_hard_failures: List[FailureFingerprint] = field(
         default_factory=list,
-        metadata={
-            "doc": "New candidate failures whose validation severity is error."
-        },
+        metadata={"doc": "New candidate failures whose validation severity is error."},
     )
     introduced_hard_failure_count: int | None = None
     introduced_failure_categories: List[str] = field(
@@ -473,6 +472,15 @@ class ArtifactRegenerationRequest(SemanticIdContract):
         default="",
         metadata={
             "doc": "Source/report URL context recorded with downstream LLM usage."
+        },
+    )
+    source_title_resolution: ReportTitleResolution | None = field(
+        default=None,
+        metadata={
+            "doc": (
+                "Canonical source-title resolution used by validation and deterministic "
+                "report-identity repair."
+            )
         },
     )
     repair_memory: List[RepairDelta] = field(

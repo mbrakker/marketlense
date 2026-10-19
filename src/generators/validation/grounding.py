@@ -41,6 +41,7 @@ from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.report_title_resolution_generator import (
     is_generic_report_title,
     resolve_report_title,
+    source_backed_title,
 )
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
@@ -1479,7 +1480,14 @@ def _matches_explicit_source_title(
     """
 
     public_key = _identity_match_key(public_value)
-    if not public_key or not request.source_pages:
+    if not public_key:
+        return False
+    if request.source_title_resolution is not None:
+        approved_title = source_backed_title(request.source_title_resolution)
+        return bool(approved_title) and public_key == _identity_match_key(
+            approved_title
+        )
+    if not request.source_pages:
         return False
     resolution = resolve_report_title(
         file_name="",

@@ -75,6 +75,8 @@ from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
+from src.generators.report_generation_shared import resolve_doc_map_metadata
+from src.generators.report_title_resolution_generator import source_backed_title
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.services import prompt_service, report_analysis_store_service
@@ -551,6 +553,7 @@ def _prepare_grounding(
         publisher_name=request.publisher_name,
         report_name=request.report_name,
         source_url=request.source_url,
+        source_title_resolution=request.source_title_resolution,
     )
     return prepare_validation_inputs(
         validation_request,
@@ -5263,6 +5266,11 @@ def _handle_report_identity_regeneration(
     """
 
     identity = _public_report_identity(execution.runtime.safe_doc_map)
+    approved_title = source_backed_title(
+        execution.runtime.request.source_title_resolution
+    )
+    if approved_title:
+        identity["title"] = approved_title
     if execution.target.repair_action != "COPY_CANONICAL_SOURCE_VALUE":
         # The deterministic correction was already rejected for this failure
         # fingerprint: abstain under the planned terminal strategy instead of
@@ -6040,7 +6048,7 @@ def _without_quarantined_evidence(value: Any, excluded_evidence_ids: set[str]) -
 
 
 def _public_report_identity(doc_map: Dict[str, Any]) -> Dict[str, str]:
-    return {
+    identity = {
         key: _s(doc_map.get(key)).strip()
         for key in (
             "title",
@@ -6056,6 +6064,16 @@ def _public_report_identity(doc_map: Dict[str, Any]) -> Dict[str, str]:
         )
         if _s(doc_map.get(key)).strip()
     }
+    resolved_title, resolved_publisher, _, _ = resolve_doc_map_metadata(doc_map)
+    if resolved_title:
+        identity["title"] = resolved_title
+    else:
+        identity.pop("title", None)
+    if resolved_publisher:
+        identity["publisher"] = resolved_publisher
+    else:
+        identity.pop("publisher", None)
+    return identity
 
 
 def _topics_section_payload(artifacts: Dict[str, Any]) -> Dict[str, Any]:
