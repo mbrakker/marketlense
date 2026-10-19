@@ -14,7 +14,7 @@
     "schema_version": {"type": "string", "const": "1.1"},
     "algorithm_version": {
       "type": "string",
-      "const": "pdf-page-reconciliation-v6"
+      "const": "pdf-page-reconciliation-v7"
     },
     "input_pdf_md5": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
     "physical_page_count": {"type": "integer", "minimum": 1},

@@ -51,16 +51,19 @@ def _make_pdf(
 
 
 def _make_replacement_character_footer_pdf(
-    path, actual_text: bytes = b"\xfe\xff\xff\xfc"
+    path,
+    actual_text: bytes = b"\xfe\xff\xff\xfc",
+    labels: list[str] | None = None,
 ) -> None:
+    labels = labels or ["1", "2", "3"]
     base_path = path.with_name(f"{path.stem}-base{path.suffix}")
     _make_pdf(
         base_path,
-        [{"footer": str(page_number)} for page_number in range(1, 4)],
+        [{"footer": label} for label in labels],
     )
     replacements = {}
-    for page_number in range(1, 4):
-        encoded_label = str(page_number).encode().hex().upper().encode()
+    for page_number, label in enumerate(labels, start=1):
+        encoded_label = label.encode().hex().upper().encode()
         original = b"[<" + encoded_label + b">]TJ"
         replacement = (
             b"/Span <</ActualText (" + actual_text + b")>> BDC ( )Tj EMC " + original
@@ -273,7 +276,8 @@ def test_reconciles_replacement_character_prefixed_footer_labels(
     assert all(mapping.method == "visible_footer" for mapping in response.mappings)
     assert all(mapping.source_geometry is not None for mapping in response.mappings)
     assert all(
-        mapping.evidence[0].anchor_physical_pages == () for mapping in response.mappings
+        mapping.evidence[0].anchor_physical_pages == (1, 3)
+        for mapping in response.mappings
     )
 
 
@@ -296,6 +300,10 @@ def test_reconciles_replacement_character_fffd_prefixed_footer_labels(
         "3",
     ]
     assert all(mapping.status == "verified" for mapping in response.mappings)
+    assert all(
+        mapping.evidence[0].anchor_physical_pages == (1, 3)
+        for mapping in response.mappings
+    )
 
 
 def test_preserves_replacement_character_copyright_footer(
@@ -953,7 +961,7 @@ def test_runner_rejects_invalid_stale_and_checksum_mismatched_cache(
     assert "cache=miss" in capsys.readouterr().out
 
     payload = json.loads(cache_path.read_text(encoding="utf-8"))
-    payload["algorithm_version"] = "stale"
+    payload["algorithm_version"] = "pdf-page-reconciliation-v6"
     cache_path.write_text(json.dumps(payload), encoding="utf-8")
     assert reconcile_cli_main(args) == 0
     assert "cache=miss" in capsys.readouterr().out

@@ -253,7 +253,6 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
             line_text,
             band,
             bounding_box=line.block_bbox,
-            artifact_prefixed=artifact_prefixed,
         )
         if candidate is not None and not (
             not candidate.strong
@@ -377,7 +376,6 @@ def _parse_candidate(
     band: str,
     *,
     bounding_box: tuple[float, float, float, float] | None = None,
-    artifact_prefixed: bool = False,
 ) -> _Candidate | None:
     explicit = _EXPLICIT_PAGE_RE.fullmatch(line)
     if explicit:
@@ -399,7 +397,7 @@ def _parse_candidate(
             token,
             band,
             line[:240],
-            token.style == "roman" or artifact_prefixed,
+            token.style == "roman",
             bounding_box,
         )
 
@@ -481,32 +479,17 @@ def _confirm_direct_labels(
             weak_candidates[observation.physical_page] = weak_options
 
     for page_number, candidate_options in weak_candidates.items():
-        supported = [
-            (
-                candidate,
-                _weak_candidate_sequence_anchors(
-                    page_number, candidate, candidates_by_page
-                ),
-            )
-            for candidate in candidate_options
-            if _weak_candidate_has_adjacent_sequence(
+        supported = []
+        for candidate in candidate_options:
+            anchors = _weak_candidate_sequence_anchors(
                 page_number, candidate, candidates_by_page
             )
-        ]
+            if anchors:
+                supported.append((candidate, anchors))
         if len(supported) == 1:
             candidate, anchors = supported[0]
             confirmed[page_number] = _Confirmed(candidate, "verified", anchors)
     return confirmed
-
-
-def _weak_candidate_has_adjacent_sequence(
-    page_number: int,
-    candidate: _Candidate,
-    candidates_by_page: dict[int, tuple[_Candidate, ...]],
-) -> bool:
-    return bool(
-        _weak_candidate_sequence_anchors(page_number, candidate, candidates_by_page)
-    )
 
 
 def _weak_candidate_sequence_anchors(

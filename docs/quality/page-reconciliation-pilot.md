@@ -3,7 +3,7 @@
 ## Scope and implementation
 
 This is the standalone Phase 1 pilot on the current deterministic candidate
-(`pdf-page-reconciliation-v6`, schema `1.1`) in branch
+(`pdf-page-reconciliation-v7`, schema `1.1`) in branch
 `codex/pdf-page-reconciliation-deterministic-inference`. It maps one-based
 physical PDF pages to visible printed labels using native PyMuPDF text and
 bounded local sequence inference. It does not add OCR, vision, LLMs, network
@@ -31,7 +31,8 @@ source geometry remains the containing text block with
 `bounding_box_scope=text_block`; schema `1.1` is unchanged. The algorithm
 version moved from v4 to v5, invalidating v4 caches.
 
-The v6 recovery is deliberately narrower than a general sequence fallback: it
+The historical v6 recovery was deliberately narrower than a general sequence
+fallback: it
 normalizes only a complete margin line whose `U+FFFC`/`U+FFFD` extraction
 artifact directly prefixes an Arabic page token. That artifact is retained as
 a strong direct-evidence signal, including when the containing text block also
@@ -40,6 +41,14 @@ as an unresolved conflict and cannot be directly confirmed or sequence-inferred;
 ordinary copyright footers remain on the existing parser path. The algorithm
 version moved from v5 to v6, invalidating v5 caches. No downstream behavior
 changed.
+
+The v7 correction keeps the same normalization and multiline-block extraction
+exception, but no longer promotes an artifact-prefixed Arabic token to strong
+evidence. It is verified only when the existing weak-candidate sequence
+corroboration succeeds; an isolated token or two-token run remains unresolved.
+Roman, explicit `Page N`, publisher, copyright, geometry, and ambiguous
+marked-content rules are unchanged. The algorithm version moved from v6 to v7,
+invalidating v6 diagnostic caches; persisted schema `1.1` is unchanged.
 
 ## Native geometry evidence
 
@@ -310,6 +319,48 @@ fail-closed abstention on Algolia, Contentstack, Mintel, and DHL edge cases.
 Phase 2 remains blocked pending measured approval; no downstream integration
 is authorized.**
 
+## Deterministic artifact verification correction (v7)
+
+The v7 candidate was compared with the reviewed v6 head `6bd2a0c08a4c7c2f02a4604457947d6727f2fd03` using the same frozen cohort and
+MD5-matched source bytes. The production correction is surgical: `_parse_candidate()`
+now treats a normalized Arabic token as weak even when it was prefixed by a
+recognized extraction artifact. `_confirm_direct_labels()` reuses the existing
+local sequence corroboration and stores its anchor pages; the multiline source-
+note exception remains in `_observe_page()`. The redundant double computation of
+those anchors was removed after measurement.
+
+| Metric | v6 | v7 | Difference |
+| --- | ---: | ---: | ---: |
+| Reports / physical pages | 20 / 650 | 20 / 650 | unchanged |
+| Verified / inferred / unresolved | 555 / 2 / 93 | 555 / 2 / 93 | unchanged |
+| Mapping records changed | — | 138 | Activate evidence only |
+| Status, label, method, geometry changes | — | 0 | unchanged |
+
+All 138 Activate mappings remain physical pages 2–139 to printed labels 1–138,
+with nonempty sequence anchors `(2, 139)`. Pages 1 and 140 remain unresolved.
+The other 19 reports are mapping-identical to v6. The only intentional cohort
+difference is that the 138 Activate visible-footer evidence records now carry
+real sequence-anchor provenance instead of appearing independently verified by
+the extraction prefix. The four committed golden PDFs remain mapping-identical
+at 71 verified, 2 inferred, and 19 unresolved.
+
+The exact v7 protocol used three forced fresh executions per report and one
+warm-cache execution against the third fresh directory. All 60 fresh outputs
+were byte-identical per report and all 20 warm executions were cache hits.
+Using the same-run median of each report's three fresh `elapsed_ms` values, the
+v6 median was `409.56 ms` and v7 was `422.31 ms` (+3.11%). Warm median improved
+from `28.66 ms` to `27.63 ms` (-3.59%). This is a bounded cost of the required
+sequence corroboration; no new cache or sequence heuristic was introduced.
+
+The synthetic regression set covers isolated `U+FFFC42`, two consecutive weak
+tokens, three anchored tokens, broken `1/9/3`, multiline source-note blocks,
+ambiguous marked content, copyright conventions, explicit `Page N`, and the
+existing geometry cases. A stale v6 diagnostic cache is rejected by the runner
+and regenerated under v7.
+
+**v7 correction verdict: PASS.** The false-verification risk is closed without
+losing the 138 recovered Activate mappings. Phase 2 remains blocked.
+
 ## Validation and Phase 2 hold
 
 TDD evidence:
@@ -325,6 +376,13 @@ SAFETY GREEN: python -m pytest -q tests/test_pdf_page_reconciliation.py -k repla
 4 passed
 FINAL SAFETY EDGE GREEN: python -m pytest -q tests/test_pdf_page_reconciliation_marked_content_safety.py
 1 passed
+
+V7 RED: python -m pytest -q tests/test_pdf_page_reconciliation.py::test_reconciles_replacement_character_prefixed_footer_labels tests/test_pdf_page_reconciliation.py::test_reconciles_replacement_character_fffd_prefixed_footer_labels tests/test_pdf_page_reconciliation_marked_content_safety.py
+7 failed, 1 passed before the production correction
+V7 GREEN: python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py tests/test_pdf_page_reconciliation_marked_content_safety.py
+46 passed
+CONTRACT/GATE FOCUS: python -m pytest -q tests/contracts/test_contract_roundtrip.py tests/test_long_test_file_ownership.py
+2353 passed, 2 passed
 ```
 
 Local validation:
