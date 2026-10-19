@@ -434,3 +434,56 @@ Hosted exact-SHA v5 evidence: passed; release evidence ID `39216527888-1`.
 Phase 2 downstream adoption and duplicated-logic removal remains **Blocked
 pending measured approval**. Stop after this Phase 1 correction; do not change
 existing consumers.
+
+## Phase 1 Final Verification and Closure
+
+Phase 1 is complete at source HEAD `dcd4ad64a3e17cf7c985eac65f1f5dd9791ed78b`
+(`dcd4ad6`). The final standalone implementation is
+`pdf-page-reconciliation-v7`, schema `1.1`, exposed through the canonical
+`pdf_service.reconcile_pdf_pages()` entrypoint and its diagnostic CLI. It
+remains a standalone diagnostic: no production orchestrator, DocMap, findings,
+grounding, validation, extraction, cache, or WordPress consumer uses the
+reconciled printed-page mappings.
+
+The final frozen 20-report evaluation used the exact 20 source PDFs with all
+MD5 values verified: 650 physical pages, 555 verified, 2 inferred, and 93
+unresolved. Activate recovered 138 physical pages (2–139) with printed labels
+1–138. The accepted mappings in the documented visual-review scope had zero
+reported incorrect results. Compared with v6, there were no differences in
+printed labels, statuses, methods, or geometry; only the 138 Activate evidence
+records changed, and they now carry sequence-anchor provenance. The anchor
+value `(2, 139)` identifies the sequence endpoints supporting corroboration; it
+is not independent proof from two strong page labels. The four golden PDFs
+remain mapping-identical at 92 pages: 71 verified, 2 inferred, and 19
+unresolved.
+
+The retained v7 protocol used three deterministic fresh executions per report
+and one warm-cache execution. The fresh median was `422.31 ms` versus
+`409.56 ms` for comparable v6; the warm median was `27.63 ms`, with 20/20
+warm-cache hits. These measurements are reused evidence rather than a new
+cohort run for this documentation closure.
+
+The remaining unresolved outcomes are source limitations, not failures:
+
+- Algolia's vector-drawn digits do not provide reliably reconstructable native
+  text for the existing extraction path.
+- Contentstack places two logical printed pages on some physical spreads.
+- Mintel has no detected visible pagination.
+- Covers and ambiguous conflicts may remain unresolved.
+
+Physical PDF page references remain usable when a printed label cannot be
+uniquely supported. The v7 hosted exact-SHA run
+[`39286182043`](https://github.com/mbrakker/marketlense/actions/runs/39286182043)
+was independently verified as successful at the source SHA: 7,691 tests
+passed, approximately 86% coverage, and the mypy, architecture, contracts,
+documentation, mutation partitions, and release-evidence jobs passed. The
+conditional WordPress staging REST gate was skipped because it was not
+configured; the mutation partition's PDF candidate benchmark was skipped in
+its non-owning partition, while the owning partition passed it. This run is
+the final Phase 1 CI evidence; earlier v5 runs are historical only.
+
+The parent S3 outcome remains **Active** because its broader PDF visual-
+heuristics ownership, coupling, equivalence, and benchmarking criteria are not
+closed by this standalone reconciliation slice. The Phase 1 slice is complete;
+downstream Phase 2 adoption and removal of duplicated consumer logic require a
+separate approval and regression-tested change.
