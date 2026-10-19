@@ -2,201 +2,182 @@
 
 ## Scope and implementation
 
-This is the standalone Phase 1 pilot for implementation commit
-8ad17d9076c503559cae5c9cc81d4dffd4bcf4c0 (pdf-page-reconciliation-v4,
-schema 1.1). It maps one-based physical PDF pages to visible printed labels
-using positioned native PDF text and bounded local sequence inference. It does
-not call OCR, LLMs, File Search, vector stores, network services, report
-processing, evidence-pack generation, claim validation, production caches,
-checkpoints, or publication flows. The JSON output is written only by the
-diagnostic runner to its explicit output directory and is not consumed by any
-downstream producer.
+This is the standalone Phase 1 pilot on implementation commit
+`0f3bb5c3` (`pdf-page-reconciliation-v5`, schema `1.1`) in branch
+`codex/pdf-page-reconciliation-deterministic-inference`. It maps one-based
+physical PDF pages to visible printed labels using native PyMuPDF text and
+bounded local sequence inference. It does not add OCR, vision, LLMs, network
+calls, downstream consumers, production caches, checkpoints, or publication
+flows.
 
-The v3 fail-closed rules remain unchanged: a weak candidate must belong to a
-signed ascending physical-page/printed-label sequence of at least three stable
-margin pages, or have an independent strong visible anchor. Two weak labels
-cannot validate one another, descending sequences do not qualify, and weak
-numbering restarts remain unresolved. Explicit Page N/P. N, publisher
-copyright conventions, and valid Roman labels remain strong; ambiguous
-prefixed and separator-trailing tokens require the same corroboration rules.
-When a page has multiple weak candidates, only one candidate with a unique
-compatible sequence may be selected. A page with multiple distinct normalized
-labels and at least one strong label contributes no candidate to direct
-confirmation or sequence corroboration. Strong and weak candidates for the
-same normalized label remain compatible, and all-weak unique sequence
-disambiguation remains supported.
+The v5 change is a correctness fix for structured lower-page footers. The
+previous helper split a text block into lines but assigned the containing block
+bbox to every line. The footer-region check therefore treated body lines in a
+large multiline block as footer lines, and numeric matching used block geometry
+instead of the marker and number line geometry. A same-number weak candidate
+could also be retained instead of the stronger structured-footer candidate.
 
-The v4 change is a narrow extraction correction for structured lower-page
-footers. It reuses the existing extracted text-block pairs and recognizes a
-footer line ending in REPORT | N, or a footer marker ending in | with exactly
-one same-baseline numeric line to its right. The line must be in the existing
-visible-footer band; the label must be a unique positive Arabic token and not
-a year. A footer marker without a unique number remains unresolved. A
-structured candidate is not added when the existing extractor already found
-the same normalized label, so existing candidate provenance is preserved where
-possible. No inference gap bound or boundary extrapolation rule changed.
+The correction reuses one native `get_text("dict")` artifact per page and keeps
+both the actual line bbox and containing block bbox. Generic margin parsing and
+structured-footer parsing now use line geometry for the margin band. Structured
+marker/number matching requires a footer-band line, a unique positive Arabic
+label, no 1900–2100 year, numeric line `x0` to the right of marker `x1`, and
+bottom-edge baseline difference no greater than 3.5 points. `REPORT | N` remains
+valid on one line. A structured strong candidate replaces a same-number weak
+candidate; unrelated or ambiguous candidates remain unresolved. Persisted
+source geometry remains the containing text block with
+`bounding_box_scope=text_block`; schema `1.1` is unchanged. The algorithm
+version moved from v4 to v5, invalidating v4 caches.
 
-Every directly verified mapping retains bounded source geometry: physical page,
-extracted label line, visible header/footer band, source text-block bounding
-box, and bounding_box_scope=text_block. The schema remains 1.1; the algorithm
-is pdf-page-reconciliation-v4, so stale v3 caches are rejected.
+No sequence gap, restart, boundary extrapolation, inference, or downstream
+behavior changed.
 
-## Diagnosis of all 23 baseline unresolved pages
+## Native geometry evidence
 
-The baseline was the pushed v3 output at 1687cc1: 65 verified, 4 inferred,
-and 23 unresolved across the 92-page cohort. Each unresolved page was rendered
-with its nearest verified or inferred neighbors and inspected at full-page and
-footer/header resolution.
+The IAS fixture is a genuine PDF with mixed native grouping. All values below
+are PyMuPDF line bboxes; page height is 405 points and the footer threshold is
+`y0 / height >= 0.86`.
 
-| Report | Physical page | Diagnosis | Recoverability |
-| --- | ---: | --- | --- |
-| Global Food and Drink | 1 | Cover/web landing page; no printed pagination visible | No |
-| Global Food and Drink | 2 | Web landing/content page; no printed pagination visible | No |
-| Global Food and Drink | 3 | Web landing/content page; no printed pagination visible | No |
-| Global Food and Drink | 4 | Web landing/content page; no printed pagination visible | No |
-| Global Food and Drink | 5 | Consulting/contact page; no printed pagination visible | No |
-| Global Food and Drink | 6 | Analyst/contact page; no printed pagination visible | No |
-| Global Food and Drink | 7 | Form/contact page; no printed pagination visible | No |
-| Global Food and Drink | 8 | Closing web/contact page; no printed pagination visible | No |
-| Capgemini | 1 | Cover page; no printed pagination visible | No |
-| Capgemini | 15 | Closing cover page; no printed pagination visible | No |
-| IAS | 1 | Report cover; no printed pagination visible | No |
-| IAS | 8 | Footer label 8 visible, but merged with a long survey-question text block | Yes; structured footer extraction |
-| IAS | 9 | Footer label 9 visible, but native block extraction suppresses the long footer block | Yes; structured footer extraction |
-| IAS | 10 | Footer label 10 visible as a standalone token beside the footer marker; weak until neighboring labels are recovered | Yes; existing sequence corroboration |
-| IAS | 11 | Footer label 11 visible, but merged with a long source/question text block | Yes; structured footer extraction |
-| Julius Baer | 1 | Cover/marketing-material page; no printed pagination visible | No |
-| Julius Baer | 2 | Front-matter image page; no printed pagination visible | No |
-| Julius Baer | 31 | Photo/layout page; no printed pagination visible | No |
-| Julius Baer | 32 | Standalone footer token 32 visible at a document boundary, but no independent two-sided corroboration | No; ambiguous boundary label |
-| Julius Baer | 33 | Layout/photo page; no printed pagination visible | No |
-| Julius Baer | 34 | Standalone footer token 34 visible at a document boundary, but no independent two-sided corroboration | No; ambiguous boundary label |
-| Julius Baer | 35 | Section/legal layout page; no printed pagination visible | No |
-| Julius Baer | 36 | Legal closing page; no printed pagination visible | No |
+| Page | Marker line bbox | Number line bbox | Containing block evidence |
+| ---: | --- | --- | --- |
+| 8 | `(561.13, 378.35, 681.83, 387.17)` | `(687.36, 378.39, 691.21, 387.21)` | Number is in a multiline body block `(72.89, 375.43, 691.21, 390.19)`; bottom-edge delta `0.04`, number is right of marker |
+| 9 | `(561.13, 378.35, 691.21, 387.21)` with `| 9` | — | Footer line is inside multiline block `(72.89, 375.43, 691.21, 390.19)` |
+| 10 | `(561.13, 378.35, 681.83, 387.17)` | `(684.19, 378.39, 691.21, 387.21)` | Same containing footer block; bottom-edge delta `0.04`, number is right of marker |
+| 11 | `(561.13, 378.35, 691.21, 387.21)` with `| 11` | — | Footer line is inside multiline block `(72.89, 375.43, 691.21, 390.19)` |
+| 16 | `(561.13, 378.35, 691.21, 387.21)` with `| 16` | — | Footer line is inside multiline block `(72.89, 375.43, 691.21, 390.19)` |
+| 17 | `(561.13, 378.35, 691.21, 387.21)` with `| 17` | — | Footer line is inside multiline block `(72.89, 375.43, 691.21, 390.19)` |
 
-No longer interpolation or boundary extrapolation was justified. The only
-recoverable unresolved cases were IAS pages 8-11. IAS pages 16-17 were also
-visually inspected: their labels are visibly present in the same structured
-footer pattern and were promoted from sequence-inferred to directly verified.
-The Julius Baer 32/34 tokens were deliberately not promoted because the
-document ends after an incomplete/ambiguous sequence and there are no two
-direct anchors that establish continuity.
+This confirms that native block grouping cannot safely substitute for line
+geometry: page 8's printed number shares a block with body questions, while
+pages 9, 11, 16, and 17 have footer lines merged into multiline blocks and
+page 10 splits marker and number into separate lines in one block.
 
-## Cohort comparison
+## Diagnosis and recoverability
 
-Source hashes were computed from the committed files under
-tests/fixtures/pdf_benchmark/golden/. V/I/U means verified/inferred/unresolved.
+The original v3 cohort had 23 unresolved pages. The v4 correction recovered IAS
+8–11 and promoted IAS 16–17, leaving 19 intentionally unresolved pages. v5
+does not increase coverage; it makes the evidence for structured labels direct
+and prevents the remaining geometry false-positive class.
 
-| PDF | SHA-256 | MD5 | Pages | Before V/I/U | After V/I/U | Fresh v4 runs (ms) | v4 median (ms) | v4 warm cache (ms) | v3 median/warm (ms) |
+| Report | Physical pages | Diagnosis | Decision |
+| --- | --- | --- | --- |
+| Global Food and Drink | 1–8 | Covers, web/content, contact, and closing pages without printed pagination | Remain unresolved |
+| Capgemini | 1, 15 | Cover and closing cover without printed pagination | Remain unresolved |
+| IAS | 1 | Report cover without printed pagination | Remain unresolved |
+| IAS | 8–11 | Visible structured footer labels recovered from native line geometry | Verified; no status change from v4 |
+| IAS | 16–17 | Visible structured footer labels already promoted by v4 and rechecked | Verified; no status change |
+| Julius Baer | 1–2 | Cover/front matter without printed pagination | Remain unresolved |
+| Julius Baer | 31, 33, 35–36 | Photo/layout/legal pages without printed pagination | Remain unresolved |
+| Julius Baer | 32, 34 | Standalone boundary tokens without two-sided independent anchors | Remain unresolved |
+
+The v5 synthetic genuine-PDF tests additionally cover: valid same-baseline
+marker/number blocks, different-line rejection within one block, body numbers
+in a crossing multiline block, multiple numeric candidates, left-of-marker
+ordering, missing numbers, explicit `REPORT | N`, and mixed strong/weak
+fail-closed conflicts. Existing tests retain IAS 8–11/16–17 verification and
+Capgemini physical page 12 as label 12 rather than chart numeral 04.
+
+## Golden-PDF cohort and changed mappings
+
+Source hashes are from the committed files under
+`tests/fixtures/pdf_benchmark/golden/`. V/I/U means verified/inferred/unresolved.
+
+| PDF | SHA-256 | MD5 | Pages | v4 V/I/U | v5 V/I/U | Fresh v5 runs (ms) | v5 median (ms) | v5 warm (ms) | v4 median/warm (ms) |
 | --- | --- | --- | ---: | ---: | ---: | --- | ---: | ---: | ---: |
-| 2026_Global_Food_and_Drink_Predictions.pdf | 0d10fa30d4df83b8ec74a63db363b5bd98eb52497e5cc9a2300152d9713d6b16 | b3cb5f66cccda4420be21b2b407b3c59 | 8 | 0/0/8 | 0/0/8 | 168.70, 170.42, 171.53 | 170.42 | 10.19 | 247.13/18.90 |
-| CAPGEMINI - 2026-Retail-Trends_ACIG.pdf | 72a04abd394dfcb6b14288b97548669501e70c087eb6cee8bc8b9a66589cb0c7 | c1cbe57c96a1d81476730e83828d07d9 | 15 | 13/0/2 | 13/0/2 | 67.21, 67.27, 66.52 | 67.21 | 11.21 | 69.73/19.24 |
-| IAS - Industry_Pulse_Report_2026_ACIG.pdf | 8b05b13067748baebff51844a702a05dd6eb560706db5fa94b2ee5badbd672cd | fccf7f92dc7e14a27ee6a90daf16705a | 33 | 26/2/5 | 32/0/1 | 593.83, 600.67, 589.51 | 593.83 | 27.59 | 708.84/28.01 |
-| JULIUS BAER - Secular-outlook-2026_ACIG.pdf | 156032ae914753000d51085c5e1c6e2f2d4680b9d046bb18df6cefcb265ce193 | 468e8c08c83182f4803e07f5357c9160 | 36 | 26/2/8 | 26/2/8 | 137.04, 137.12, 137.86 | 137.12 | 26.94 | 203.72/32.71 |
-| **Cohort total** |  |  | **92** | **65/4/23** | **71/2/19** |  |  |  |  |
+| 2026_Global_Food_and_Drink_Predictions.pdf | `0d10fa30d4df83b8ec74a63db363b5bd98eb52497e5cc9a2300152d9713d6b16` | `b3cb5f66cccda4420be21b2b407b3c59` | 8 | 0/0/8 | 0/0/8 | 185.53, 171.27, 171.46 | 171.46 | 16.39 | 170.42/10.19 |
+| CAPGEMINI - 2026-Retail-Trends_ACIG.pdf | `72a04abd394dfcb6b14288b97548669501e70c087eb6cee8bc8b9a66589cb0c7` | `c1cbe57c96a1d81476730e83828d07d9` | 15 | 13/0/2 | 13/0/2 | 75.38, 73.65, 68.59 | 73.65 | 16.95 | 67.21/11.21 |
+| IAS - Industry_Pulse_Report_2026_ACIG.pdf | `8b05b13067748baebff51844a702a05dd6eb560706db5fa94b2ee5badbd672cd` | `fccf7f92dc7e14a27ee6a90daf16705a` | 33 | 32/0/1 | 32/0/1 | 687.30, 627.04, 587.15 | 627.04 | 42.38 | 593.83/27.59 |
+| JULIUS BAER - Secular-outlook-2026_ACIG.pdf | `156032ae914753000d51085c5e1c6e2f2d4680b9d046bb18df6cefcb265ce193` | `468e8c08c83182f4803e07f5357c9160` | 36 | 26/2/8 | 26/2/8 | 148.93, 151.12, 159.34 | 151.12 | 30.50 | 137.12/26.94 |
+| **Cohort total** |  |  | **92** | **71/2/19** | **71/2/19** |  |  |  |  |
 
-The v4 change improved or preserved the status counts on every PDF. It did
-not alter any printed label identity. IAS pages 8-11 changed from unresolved
-to verified; IAS pages 16-17 changed from inferred to verified because the
-rendered footer numerals were directly recovered. Existing IAS sequence
-evidence anchors became longer where the newly recovered pages extended the
-same verified sequence; no label or status outside those six IAS pages changed.
-The fresh median and warm-cache measurements are no slower than the retained
-v3 measurements for any PDF.
+The v5 change preserves every printed label, status, and method across the
+cohort. Fifteen IAS mappings changed only in evidence provenance:
+physical pages `2–7, 10, 12–15, 18–31` now use direct structured-footer
+evidence without v4 weak-sequence anchors. IAS 8, 9, 11, 16, and 17 were
+already direct in v4 and remain unchanged; IAS 10 is now direct rather than
+sequence-supported. Source block geometry remains identical in scope and
+contract shape. No Global, Capgemini, or Julius mapping changed.
 
-The three fresh v4 JSON outputs were byte-deterministic in separate output
-directories. Their SHA-256 identities were:
+The v4 JSON hashes were:
 
-| PDF | JSON SHA-256 |
+| PDF | v4 JSON SHA-256 |
 | --- | --- |
-| 2026_Global_Food_and_Drink_Predictions.pdf | 8334c9a6f955a6d97971c36bb0b292f5cf07ea5daceb9cdebe494e170e87bb16 |
-| CAPGEMINI - 2026-Retail-Trends_ACIG.pdf | a1e9a72374896b9c3b36960eaf2691ec319405281e4e78f4c6abd684b18f6c20 |
-| IAS - Industry_Pulse_Report_2026_ACIG.pdf | 042ae0e336bd52245b55d59a8b83b2f568530ca6975c7e525aedb78b870742ee |
-| JULIUS BAER - Secular-outlook-2026_ACIG.pdf | 3c0fbb59082fe70ced53bf61529384709a2dd478a6fd3e511b7867c246a0ebef |
+| Global | `8334c9a6f955a6d97971c36bb0b292f5cf07ea5daceb9cdebe494e170e87bb16` |
+| Capgemini | `a1e9a72374896b9c3b36960eaf2691ec319405281e4e78f4c6abd684b18f6c20` |
+| IAS | `042ae0e336bd52245b55d59a8b83b2f568530ca6975c7e525aedb78b870742ee` |
+| Julius | `3c0fbb59082fe70ced53bf61529384709a2dd478a6fd3e511b7867c246a0ebef` |
+
+The three final forced v5 runs per PDF produced byte-identical JSON. The v5
+JSON SHA-256 identities are:
+
+| PDF | v5 JSON SHA-256 |
+| --- | --- |
+| Global | `74c51b5def3bd499f5737dadd37251d145568713722793035f62e80a516aa7ec` |
+| Capgemini | `13a3466c414b8a8a2b63610a9bc861b468f2297b7b995cb6f199796a9951cfb2` |
+| IAS | `0b616b862fb74d4eb00ab465def21a136c09cbc74c48e3b616d137648cf7e79b` |
+| Julius | `b244f50d75e41564c2b86b8ed82f569802bf1b2e2e89dce586063ff93e0d8e62` |
+
+The line-record pass adds measurable local work: fresh medians range from
+`+0.6%` to `+10.2%` versus the retained v4 medians, and warm runs remain below
+`43 ms`. No performance optimization is claimed; this is an accuracy-first
+correction with bounded runtime cost.
 
 ## Rendered-page review
 
-The four newly recovered unresolved pages, IAS physical pages 8-11, were
-rendered and inspected with pages 7 and 12 as surrounding anchors. Each shows
-the expected visible footer label. Page 10 is the existing weak standalone
-candidate; once pages 8, 9, and 11 are extracted, the unchanged local sequence
-logic confirms 10. IAS physical pages 16 and 17 were also rendered with pages
-14, 15, and 18; both visibly show footer labels 16 and 17, so direct
-verification is now justified.
-
-The retained Capgemini review remains valid: physical page 12 still shows the
-actual footer 12, while chart card numeral 04 remains a misleading unrelated
-number. The v4 parser does not change that mapping.
-
-Final rendered outcomes:
-
-| Outcome | Denominator | Result |
-| --- | ---: | --- |
-| Verified labels matching the rendered page | 71 | **71 true positives, 0 false positives** |
-| Inferred labels with no incorrect sequence result identified | 2 | **0 incorrect inferences** |
-| Remaining unresolved physical pages | 19/92 | Intentional abstention for unnumbered covers/layout pages or unsupported boundary labels |
-
-The two remaining inferred labels are Julius Baer physical pages 7 and 13.
-They are sequence-consistent and show no conflicting labels, but their rendered
-pages do not independently display the numerals. No incorrect verified or
-inferred mapping was identified.
+Rendered full pages and footer strips were inspected for the changed IAS
+pattern, including pages 8–11 and 16–17. The footer marker and printed number
+are visibly aligned on the rendered pages. IAS p10 shows the footer `10`, and
+IAS p16/p17 show `16`/`17`. Capgemini p12 visibly shows footer `12`; the large
+chart numeral `04` is not used as a page label. The 71 verified outcomes are
+71 rendered true positives with 0 false positives. The 2 inferred Julius
+labels (physical pages 7 and 13) remain sequence-supported but not visibly
+independent. No incorrect inference was identified.
 
 ## Validation and Phase 2 hold
 
 TDD evidence:
 
-~~~text
-RED: python -m pytest -q tests/test_pdf_page_reconciliation.py -k "ias_footer_labels or footer_marker_without_unique"
-1 failed, 1 passed, 28 deselected
-
+```text
+RED: python -m pytest -q tests/test_pdf_page_reconciliation.py -k "structured_footer or crossing_footer"
+2 failed, 3 passed before the production change
 GREEN: same focused selection
-2 passed, 28 deselected
-~~~
+6 passed, 30 deselected
+```
 
-Focused and affected regressions passed:
+Local validation:
 
-Hosted exact-SHA CI evidence for 8ad17d9076c503559cae5c9cc81d4dffd4bcf4c0:
-
-~~~text
-https://github.com/mbrakker/marketlense/actions/runs/39208170106
-7699 passed; pytest exit code 0; coverage 85907/99537 lines (86.31%)
-17 mutation targets / 68 mutants / 67 killed; 2 mutation partitions passed
-10/10 quality stages passed; PDF candidate benchmark passed
-Release evidence passed: 11/11 required artifacts, 0 issues, 0 waivers
-~~~
-
-~~~text
+```text
 python -m pytest -q tests/test_pdf_page_reconciliation.py
-30 passed
+36 passed in 2.94s
 
 python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_text_service.py tests/test_pdf_contents_service.py tests/test_claim_validation_source_pages.py tests/_test_evidence_pack_generator/cases_05_findings_targeted_retrieval.py
-66 passed
+72 passed in 6.15s
 
 python -m pytest -q tests/contracts/test_contract_roundtrip.py
-2351 passed
-~~~
+2351 passed in 5.67s
 
-Local quality gates passed:
-
-~~~text
 python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json
 python scripts/ci/check_architecture_imports.py
 python scripts/ci/check_role_io_boundaries.py
 python scripts/ci/check_service_boundary_map.py
-python -m ruff check src/contracts/pdf_page_reconciliation.py src/services/_pdf/page_reconciliation.py scripts/quality/reconcile_pdf_pages.py tests/test_pdf_page_reconciliation.py
-python -m ruff format --check src/contracts/pdf_page_reconciliation.py src/services/_pdf/page_reconciliation.py scripts/quality/reconcile_pdf_pages.py tests/test_pdf_page_reconciliation.py
-python -m mypy src/contracts/pdf_page_reconciliation.py src/services/_pdf/page_reconciliation.py scripts/quality/reconcile_pdf_pages.py
-~~~
+python scripts/ci/check_documentation.py --check-generated
+python -m ruff check src/services/_pdf/page_artifacts.py src/services/_pdf/page_reconciliation.py src/contracts/pdf_page_reconciliation.py tests/test_pdf_page_reconciliation.py
+python -m ruff format --check src/services/_pdf/page_artifacts.py src/services/_pdf/page_reconciliation.py src/contracts/pdf_page_reconciliation.py tests/test_pdf_page_reconciliation.py
+python -m mypy src/services/_pdf/page_artifacts.py src/services/_pdf/page_reconciliation.py src/contracts/pdf_page_reconciliation.py
+git diff --check
+```
 
-No new dependency, LLM/provider call, production pipeline change, or downstream
-consumer was added. OCR, image-label recovery, boundary extrapolation, longer
-gap interpolation, and generic scoring remain intentionally out of scope.
+All listed local commands passed. No dependency, service, external client,
+prompt, downstream consumer, or Phase 2 workflow changed.
 
-The feature branch is codex/pdf-page-reconciliation-deterministic-inference.
-The code commit is 8ad17d9076c503559cae5c9cc81d4dffd4bcf4c0. Hosted CI run
-39208170106 passed on that exact SHA with 7699 tests, 86.31% coverage,
-17/68/67 mutation results, all ten quality stages, and 11/11 release-evidence
-artifacts with zero issues or waivers. Phase 2 downstream adoption and
-duplicated-logic removal remains blocked pending measured approval. No
-existing evidence-pack, claim-validation, DocMap, orchestrator, or publication
-consumer changed.
+The authoritative v4 hosted test log for run `39210327978` reports
+`4/4 workers [7675 items]` and `7675 passed in 460.04s`; the earlier `7699`
+figure in the release summary was incorrect and is not used as the v4 test
+count here. The final v5 hosted run will be recorded below after the pushed
+implementation is checked on its exact SHA.
+
+Hosted exact-SHA v5 evidence: pending final push.
+
+Phase 2 downstream adoption and duplicated-logic removal remains **Blocked
+pending measured approval**. Stop after this Phase 1 correction; do not change
+existing consumers.
