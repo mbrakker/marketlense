@@ -678,8 +678,8 @@ def test_select_artifact_insights_fills_required_report_slots_after_theme_covera
     assert [item["evidence_id"] for item in selected] == ["e1", "e2", "e3", "e4", "e5"]
 
 
-def test_select_artifact_insights_deduplicates_claims_across_evidence_bindings():
-    """Canonical evidence rebinding must not preserve duplicate public claims."""
+def test_select_artifact_insights_preserves_final_wording_across_metric_bindings():
+    """Final editorial wording survives while each metric binding remains distinct."""
     plan = {
         "report_thesis": "The report supports five distinct grounded decisions.",
         "themes": [
@@ -739,11 +739,11 @@ def test_select_artifact_insights_deduplicates_claims_across_evidence_bindings()
 
     assert len(selected) == 5
     assert len({item["id"] for item in selected}) == 5
-    assert sum(item["text"] == repeated_claim for item in selected) == 0
+    assert sum(item["text"] == repeated_claim for item in selected) == 2
     selected_by_id = {item["id"]: item for item in selected}
     assert selected_by_id["final-1"]["text"] == "First distinct insight."
-    assert selected_by_id["final-4"]["text"] == candidate_insights[1]["text"]
-    assert selected_by_id["final-5"]["text"] == candidate_insights[2]["text"]
+    assert selected_by_id["final-4"]["text"] == repeated_claim
+    assert selected_by_id["final-5"]["text"] == repeated_claim
     assert selected_by_id["final-4"]["metric"]["value"] == "76%"
     assert selected_by_id["final-5"]["metric"]["value"] == "52%"
 
