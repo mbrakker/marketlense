@@ -3,7 +3,7 @@
 Date: 2026-10-19
 Branch: `codex/fix-retained-insight-evidence-validation`
 Historical implementation SHA: `d9823f5a69cd8934df90c663f94714d98c22f377`
-Latest correction SHA: `259cbaf18616497334d3d71c6988a7408d4bedc5`
+Latest correction SHA: `410f186b26f372c6b8eb5a82af16dc5b8740c4af`
 Latest verdict: **NOT READY TO MERGE; Step 3 remains blocked**
 
 This is an acceptance record, not a production change. The replay used the
@@ -113,6 +113,97 @@ It again confirmed all 15 cases / 39 variants, all five PDF hashes, 29
 retained frozen-five insights, and no fabricated fixture substitution. It
 performed zero correction or verification calls by design, so it does not
 claim live Step 2 quality or fresh selection effectiveness.
+
+## Final Bain title correction replay (`410f186b`)
+
+The latest `main` changes, including PDF page reconciliation, were integrated
+at merge commit `727cef03` before this correction. The failing Bain source is
+the retained PDF
+`out/browser_downloads/www.bain.com/9e6d7f717c38/tech-tonic-shifts.pdf`:
+
+| Source check | Recorded value |
+| --- | --- |
+| MD5 | `77BC67B2BC98187D9D589A4E69FD85F7` |
+| SHA-256 | `07541F3433B72007010FF604A93D0C560B6C6709FFD7BB5A58FEFA81908F86C7` |
+| Size | `274071` bytes |
+| PDF metadata title | `Tech-tonic-shifts` |
+| Independently visible cover title | `Technology isn't just` / `an industry anymore.` / `It's everything` |
+
+The source-title resolver was previously selecting `tech tonic shifts` from
+the filename, with `candidate_source=filename`, empty
+`explicit_source_title`, and medium confidence. The corrected resolver selects
+`Technology isn't just an industry anymore. It's everything` from
+`candidate_source=cover_title_page`, with the same explicit source title and
+high confidence. The bounded cover-title rule preserves the visible sentence-
+case title while continuing to reject filename-only and generic candidates.
+
+| Identity boundary | Before correction | After correction |
+| --- | --- | --- |
+| Selection / normalization | `tech tonic shifts` | `Technology isn't just an industry anymore. It's everything` |
+| DocMap top-level title | inconsistent/short filename identity | `Technology isn't just an industry anymore. It's everything` |
+| DocMap section 0 title | not used as an authoritative source identity | `Technology isn't just an industry anymore. It's everything` |
+| Final HTML/report-card metadata | failed `metadata.title` grounding | same source-backed title in heading, title tag, meta description, JSON-LD, and manifest |
+
+The current DocMap has no conflicting document aliases. The deterministic
+identity-repair path was not invoked in the green Bain-only replay; the title
+was already consistent before validation. Validation now receives the exact
+source-title resolution established during ingestion instead of reconstructing
+a different identity from empty filename/metadata inputs. Filename and
+ambiguous alias fallbacks remain non-authoritative.
+
+The Bain-only live replay used the normal GPT-6 Luna High configuration with
+publication disabled. It completed at
+`tmp/verified-claims-premerge-20261019/frozen-reliability-lng3rd_y/` with
+`awaiting_review`, validation pass, readiness pass, `published=false`, zero
+unsupported or unresolved retained factual claims, zero automatic repairs, and
+zero workflow retries. It made 24 provider calls, used 190,897 input and
+45,991 output tokens, cost `$0.056590`, and took 335.06 seconds. The final
+HTML and report-card manifest both carry the corrected title. The selected
+identities were `born-tech-growth-share`, `tech-value-creators-types`,
+`market-growth-share-breakdown`, `asset-light-scaling-recommendation`, and
+`cloud-platform-catalysts`.
+
+The same additional-five cohort was then rerun at this SHA:
+`tmp/verified-claims-premerge-20261019/frozen-reliability-28p518bm/cohort_result.json`.
+Outcomes and measured usage were:
+
+| Report | Selected identities | Terminal state | Validation / readiness | Calls | Input / output tokens | Cost | Duration | Terminal issue |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| DoubleVerify | `attention-index-normalization-q1-2026`, `quality-brand-suitability-regional-q1-2026`, `regional-inapp-video-attention-q1-2026`, `quality-fraud-sivt-regional-q1-2026`, `global-video-benchmarks-ctv-scope-q1-2026` | failed | fail / fail | 47 | 432,564 / 104,260 | $0.100399 | 645.155s | `validation_failed`: `public_editorial_quality.metric_label_relationship` |
+| Merchant Risk Council | `realtime-payments-merchant-acceptance`, `post-purchase-fraud-section-scope`, `agentic-ai-payments-exploration-plans`, `annual-survey-merchant-base`, `realtime-payments-growth-characterization` | `awaiting_review` | pass / pass | 25 | 175,256 / 43,291 | $0.053412 | 327.222s | none |
+| Algolia | `ai-intent-revenue-link-perception`, `revenue-investment-incentive`, `regional-ai-purchase-likelihood-agreement`, `agentic-search-integration-consideration`, `agentic-search-deployment-and-plans` | `awaiting_review` | pass / pass | 34 | 353,185 / 68,300 | $0.083546 | 666.694s | none |
+| Bain & Company | `born-tech-growth-share`, `tech-value-creators-types`, `market-growth-share-breakdown`, `asset-light-scaling-recommendation`, `cloud-platform-catalysts` | `awaiting_review` | pass / pass | 25 | 174,283 / 63,864 | $0.061100 | 369.326s | none; one structured-output repair call |
+| Bigcommerce | `preferred-wallet-abandonment`, `discount-message-opt-in-out`, `shopping-discovery-apps`, `reviews-validate-purchase-decisions`, `guest-checkout-abandonment` | `awaiting_review` | pass / pass | 29 | 325,836 / 55,169 | $0.071746 | 501.673s | none |
+| **Total** | **25 slots** | **4 awaiting review / 1 failed** | — | **160** | **1,461,124 / 334,884** | **$0.370203** | **2,510.07s** | **no operator intervention** |
+
+The Bain title defect is therefore resolved in the real source-backed path.
+The aggregate remains non-green: the failure moved from Bain's title grounding
+to an unrelated DoubleVerify editorial-quality validation failure. The current
+fresh Bain run also materialized `metric_spine=[]` and `key_figures=[]`, versus
+one of each in the retained corrected baseline, although the source-backed
+52%/20% and asset-light content remains in findings and final text. This is
+run-dependent generation variance; no unsupported numeric enrichment is safe,
+so the limitation is recorded rather than repaired speculatively.
+
+The final provider-free replay at this SHA is
+`tmp/verified-claims-premerge-20261019/step2-provider-free-410f186b.json`.
+It confirms **15 reference cases / 39 variants**, all five expected PDF hashes,
+29 retained report insights, and complete page availability without fabricated
+fixtures. As designed, it made zero correction or verification calls and does
+not claim live visual quality or fresh Step 1 selection effectiveness.
+
+The full local quality command completed with **7,782 passed, 37 failed,
+1 skipped, and 31 deselected**. The failures include the CPython 3.14
+wheelhouse guard, known grounding/retained-claim and report-analysis suites,
+and the long-test-file threshold; the focused Bain/title/validation suites,
+formatting, Ruff, type, architecture, contract-schema, documentation, and
+backlog gates passed. No canonical artifact, readiness approval, publication,
+or WordPress write was performed.
+
+**Verdict:** Bain correction **PASS**; branch aggregate **NOT READY TO MERGE**.
+Step 3 remains blocked. The aggregate result is not evidence of improved live
+selection quality, and the unrelated DoubleVerify failure plus the observed
+metric-spine/key-figure variance must remain visible to reviewers.
 
 ## Independent source and editorial review
 
