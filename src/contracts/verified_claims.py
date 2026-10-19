@@ -48,6 +48,15 @@ class VisualClaimEvaluationRequest:
             )
         },
     )
+    source_page_text_by_physical_page: Dict[int, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Optional deterministic native text keyed by one-based physical "
+                "page for source-page attribution checks."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)

@@ -683,6 +683,7 @@ fixtures:
       claim_json: *selected_lead_insight_json
       attempt: 1
       retry_feedback: "[]"
+      image_page_map: "image 1 = physical PDF page 4"
   - namespace: "report_vs/validate/visual_claim_verification"
     family: "validation"
     model: "openai/gpt-5-mini"
@@ -692,3 +693,4 @@ fixtures:
     user_variables:
       source_json: '{"source_identity":"fixture-pdf","physical_page":4,"evidence_ids":["f1"]}'
       corrected_claim: "Digital wallets continue to expand in B2B and consumer checkout flows."
+      image_page_map: "image 1 = physical PDF page 4"

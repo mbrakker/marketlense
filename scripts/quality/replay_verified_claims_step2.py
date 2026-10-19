@@ -530,14 +530,16 @@ def _editorially_duplicate(
     right: Mapping[str, Any],
     duplicate_pairs: set[tuple[str, str]],
 ) -> bool:
+    left_id = str(left.get("id") or left.get("candidate_id") or "").strip()
+    right_id = str(right.get("id") or right.get("candidate_id") or "").strip()
+    if left_id and left_id == right_id:
+        return False
     left_text = normalize_for_lookup(left.get("text"))
     right_text = normalize_for_lookup(right.get("text"))
     if left_text and left_text == right_text:
         return True
     if _metric_bindings_conflict(left, right):
         return False
-    left_id = str(left.get("id") or left.get("candidate_id") or "").strip()
-    right_id = str(right.get("id") or right.get("candidate_id") or "").strip()
     if (
         left_id
         and right_id
@@ -545,11 +547,7 @@ def _editorially_duplicate(
         and _insights_semantically_equivalent(dict(left), dict(right))
     ):
         return True
-    if tuple(sorted((left_id, right_id))) not in duplicate_pairs:
-        return False
-    left_evidence = normalize_for_lookup(left.get("evidence_id"))
-    right_evidence = normalize_for_lookup(right.get("evidence_id"))
-    return bool(left_evidence and left_evidence == right_evidence)
+    return tuple(sorted((left_id, right_id))) in duplicate_pairs
 
 
 def _verified_corrected_insight(
@@ -1100,6 +1098,15 @@ def replay_live_step2(
                 retained_claims and recovery_context.get("available")
             ),
             recovery_candidates=recovery_candidates,
+            source_page_text_by_physical_page={
+                int(getattr(page, "page_number", 0)): str(
+                    getattr(page, "text", "") or ""
+                ).strip()
+                for page in recovery_context.get("pages") or []
+                if isinstance(getattr(page, "page_number", None), int)
+                and getattr(page, "page_number", 0) > 0
+                and str(getattr(page, "text", "") or "").strip()
+            },
         )
         report_context = RunContext(
             schema_version="1.0",

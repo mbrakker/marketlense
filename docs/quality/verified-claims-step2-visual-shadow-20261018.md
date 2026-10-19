@@ -1,6 +1,6 @@
 # MarketLense — Verified Claims Step 2 Visual Shadow Evidence
 
-**Date:** 2026-10-18
+**Date:** 2026-10-19
 **Branch:** `codex/fix-retained-insight-evidence-validation`
 **Step 1 comparison baseline:** `953555f`
 **Prior Step 2 regression commit:** `1e966def`
@@ -21,7 +21,7 @@ by the model, but it is not promoted to a canonical finding or authoritative
 evidence binding. The live result is therefore evidence about Step 2 correction
 and verification, not fresh Step 1 candidate-selection evidence.
 
-## Latest final-code v5 frozen-five evaluation
+## Prior v5 frozen-five evaluation (historical comparison)
 
 The latest final-code live output is
 `out/verified_claims_step2_live_recovery_final_v5_20261019/report.json`.
@@ -57,7 +57,140 @@ The cost ledger contained 144 selected and 144 seen rows; all five expected
 PDF hashes matched. These are live-run measurements, not estimates from the
 prior v4 output.
 
-### Final seven-case supporting-page ledger
+## Latest v6 page-attribution, deduplication, and chart replay
+
+This is the current evaluation for the reviewed baseline
+`a352209fbad34099b597171e55235b31ca86cba9`. It preserves the exact frozen
+manifest (`744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7`),
+the five retained PDFs and their expected SHA-256 identities, complete
+physical-page rendering, GPT-6 Luna High, separate correction and verification
+calls, and the existing two-attempt maximum for each. The replay remained
+shadow-only: no retained artifact, canonical claim, readiness state, or
+publication was written.
+
+The root causes were narrow and deterministic at existing boundaries:
+
+1. Correction and verification requests previously supplied an ordered image
+   list without an explicit one-based page association. The prompt payload now
+   carries `image N = physical PDF page P` for every image, and the binding
+   records the same map. When native page text is available, a conservative
+   deterministic check rejects a selected support page when the corrected
+   claim's material numeric values occur together only on another inspected
+   page. This keeps visual-only claims eligible while failing closed on the
+   reproduced Activate mismatch.
+2. Shadow replacement deduplication now treats a matching stable ID as the
+   same provenance-repair candidate rather than a self-duplicate. Cross-ID
+   near-duplicates use the existing public-editorial duplicate pairs without
+   requiring identical provisional evidence IDs; existing metric-binding
+   conflict checks still preserve distinct populations, metrics, periods and
+   business implications.
+3. The correction prompt now requires arithmetic and label reconciliation
+   before combining chart totals with component values. If a chart's aggregate
+   headline conflicts with its components, the model must narrow to a
+   supported proposition or remain unresolved. On the inspected KPMG physical
+   page 11, APAC's components are 12% + 46% = 58% against a displayed 62%
+   headline, and the Americas components are 14% + 48% = 62% against a
+   displayed 58% headline. Those incompatible values are not combined.
+
+### Targeted real-PDF regressions
+
+The Activate targeted run evaluated seven retained claims: 6 verified on the
+first pass and 1 after retry, with no failed or unresolved terminal rows. The
+first correction for `activate-super-user-time-and-spending` selected physical
+page 14 even though the chart is on page 15; the deterministic page/value
+guard rejected that verification. The bounded retry corrected the support to
+pages **15 and 16**, preserving the video and sports findings. The full replay
+also produced pages 15 and 16 for this stable ID.
+
+The KPMG targeted run evaluated five retained claims: 5 first-pass verified,
+with no retry, failed, or unresolved rows. `strategic-focus-capability-building`
+now remains a narrower narrative claim supported on physical page
+11; it does not combine the inconsistent chart headline totals with component
+splits. The original source inconsistency remains a source limitation, not a
+promoted factual relationship.
+
+### Frozen-five terminal outcomes and measured comparison
+
+Counts below are derived from terminal claim rows and are mutually exclusive;
+a retry success is counted once under `verified after retry`.
+
+| Evaluation set | v5 first pass | v5 retry | v5 verified | v5 unresolved | v5 failed | v6 first pass | v6 retry | v6 verified | v6 unresolved | v6 failed | Input |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Reference variants | 36 | 2 | 38 | 1 | 0 | 36 | 2 | 38 | 1 | 0 | 39 |
+| Real retained shortlist | 27 | 1 | 28 | 0 | 1 | 29 | 0 | 29 | 0 | 0 | 29 |
+| **All claims** | **63** | **3** | **66** | **1** | **1** | **65** | **2** | **67** | **1** | **0** | **68** |
+
+The reference gate matched **39/39** expected outcomes with **0 false accepts**
+and **0 false rejects**. `ACT-004-wrong-page` remained unresolved after its
+bounded attempts. `ADJ-001-unsupported-metric` was verified only after the
+final claim replaced unsupported churn/conversion wording with the
+source-supported strategy/casino/slots install and session metrics on physical
+page 19; its classification was not changed to make the model pass.
+
+| Measure | v5 | v6 | Observed change |
+|---|---:|---:|---|
+| Provider calls / selected ledger rows | 144 | 140 | 4 fewer; no hidden retry increase |
+| Input tokens | 2,431,356 | 2,277,696 | 153,660 fewer |
+| Output tokens | 90,879 | 78,729 | 12,150 fewer |
+| Total tokens | 2,522,235 | 2,356,425 | 165,810 fewer |
+| Estimated cost | $0.288577 | $0.267140 | $0.021437 lower |
+| Wall time | 1,275.670 s | 1,244.423 s | 31.247 s lower |
+| Full-page renders | 107 | 107 | unchanged |
+| Cache | enabled; reuse not measured | enabled; reuse not measured | no cache-efficiency claim |
+
+All five PDF hashes matched. The current live report is
+`out/verified_claims_step2_live_page_dedup_final_20261019/report.json`; the
+provider-free input replay is
+`out/verified_claims_step2_provider_free_page_dedup_20261019/report.json`.
+
+### Current 29-claim provenance and wording ledger
+
+Stable candidate IDs, retained source identities, evidence IDs, original
+physical pages, spans, protected factual fields, metric-spine inputs and
+key-figure inputs remained unchanged. Supporting pages below are visual
+verifier outputs, not canonical evidence replacements. The v6 final wording
+and page-specific notes are retained in the live report; rows marked “wording
+changed” reflect a fresh model paraphrase, not an upstream binding mutation.
+
+| Report | Stable ID | v5 terminal → v6 terminal | v6 supporting page(s) | Before/after observation |
+|---|---|---|---|---|
+| Capgemini | `value-fairness-transparency` | verified → verified | 4, 9 | wording changed; source binding unchanged |
+| Capgemini | `online-deal-searching` | verified → verified | 9 | wording changed; 62%/64% values preserved |
+| Capgemini | `consumer-control-of-ai` | verified → verified | 35, 36 | wording changed; provisional pages remain source-supported |
+| Capgemini | `human-support-remains-important` | verified → verified | 45 | wording changed; survey populations preserved |
+| Capgemini | `digital-assistants-engagement-recommendation` | verified → verified | 6 | wording changed; recommendation remains source-grounded |
+| Activate | `activate-outlook-revenue-models` | verified → verified | 4, 5 | wording changed; forecast status and segment values preserved |
+| Activate | `activate-super-user-time-and-spending` | verified → verified | **15, 16** | **p14 attribution corrected; video/sports binding preserved** |
+| Activate | `activate-digital-assistant-access-forecast` | verified → verified | 30 | wording changed; cohort comparison preserved |
+| Activate | `activate-platform-specific-web-video` | verified after retry → verified | 59 | model selected a different source-supported platform-topic proposition |
+| Activate | `activate-news-discovery-and-direct-visits` | verified → verified | 99 | model selected a narrower source-supported platform proposition |
+| Activate | `activate-ecommerce-capability-stack` | verified → verified | 115 | wording changed; GMV split and seller counts source-supported |
+| Activate | `activate-podcasting-engagement-rationale` | verified → verified | 136 | wording changed; forecast and 12+ population preserved |
+| KPMG | `buyer-standalone-platform-access` | verified → verified | 21, 6 | wording changed; multi-page qualification preserved |
+| KPMG | `execution-governance-value-creation` | verified → verified | 33 | wording changed; talent/governance interpretation bounded |
+| KPMG | `agentic-ai-deal-workflows` | verified → verified | 26 | wording changed; human-review condition preserved |
+| KPMG | `buyer-appetite-execution-approaches` | verified → verified | 15, 16, 17 | wording changed; buyer populations and percentages preserved |
+| KPMG | `strategic-focus-capability-building` | failed → verified | **11** | **narrowed away from contradictory chart totals** |
+| Reuters | `ai-search-platform-relationships` | verified → verified | 12 | wording changed; survey and Chartbeat populations kept separate |
+| Reuters | `distinctive-content-response` | verified → verified | 17 | wording changed; net percentage-point unit preserved |
+| Reuters | `video-platform-discovery-shift` | verified → verified | 18 | wording changed; response direction preserved |
+| Reuters | `newsroom-ai-uses-and-oversight` | verified → verified | 30 | wording changed; survey perceptions not treated as measured effects |
+| Reuters | `subscription-membership-priority` | verified → verified | 38 | wording changed; commercial-publisher denominator preserved |
+| Reuters | `ai-browsers-adaptable-content` | verified → verified | 41 | wording changed; 75% impact relationship preserved |
+| Adjust | `cross-channel-measurement-recommendation` | verified → verified | 11 | wording changed; recommendation remains qualified |
+| Adjust | `gaming-benchmark-coverage` | verified → verified | 17 | model selected a distinct region-level supported view |
+| Adjust | `ecommerce-benchmark-coverage` | verified → verified | 27 | wording changed; global/regional metric relationships preserved |
+| Adjust | `finance-benchmark-coverage` | verified → verified | 34, 37 | wording changed; retention/CPI fields remained source-supported |
+| Adjust | `ai-marketing-applications` | verified → verified | 9 | wording changed; qualitative interpretation bounded |
+| Adjust | `benchmark-methodology-context` | verified → verified | 13 | wording changed; period, regions and dataset limitations preserved |
+
+The eight changed supporting-page lists are model-selected visual support, not
+evidence-ID changes: `activate-super-user-time-and-spending` is the material
+provenance correction; the other differences are fresh, source-supported
+model selections or multi-page explanations. No live run can establish that
+all wording differences are deterministic improvements over v5.
+
+### v5 seven-case supporting-page ledger (historical)
 
 These are the seven targeted recovered real claims, using the final v4 rows.
 Original evidence IDs, spans and retained physical pages remained unchanged;
@@ -81,7 +214,7 @@ the retained locator. Recovered IDs remain provisional audit metadata and each
 selected shadow row is `source_binding_status=provisional_recovered` with
 `canonical_approval_status=not_approved`.
 
-### Final report-level shadow selection
+### v5 report-level shadow selection (historical)
 
 Selection used the complete verified corrected insight set per report, the
 existing public editorial-quality evaluator, and duplicate checks. It did not
@@ -459,6 +592,12 @@ for visual context and was not promoted.
 
 Passed in this worktree:
 
+- `py -m pytest tests/test_verified_claims_visual_generator.py tests/test_verified_claims_step2_replay.py tests/test_llm_routing_policy.py tests/test_llm_routing_retained_benchmark.py -q --disable-warnings --maxfail=10` — **69 passed**.
+- `py -m pytest tests/test_artifact_insight_shortlisting.py -q --disable-warnings --maxfail=10` — **32 passed**.
+- `py -m pytest tests/test_artifact_normalization_source_fidelity.py tests/test_public_editorial_quality_generator.py tests/test_public_editorial_quality_provenance.py tests/test_claim_validation_source_pages.py tests/test_claim_validation_source_excerpts.py tests/test_lineage_regeneration.py tests/test_regeneration_candidate.py tests/test_regeneration_finalization.py tests/test_contract_schema_gate.py -q --disable-warnings --maxfail=10` — **183 passed**.
+- `py -m pytest tests/test_prompt_service.py tests/test_prompt_dry_run_validation.py tests/test_prompt_fixture_corpus_regression.py -q --disable-warnings --maxfail=10` — **78 passed**.
+- `py scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3` — **passed** with the existing allowlist recording the measured **+783 validation-family tokens** for the explicit image/page map and chart-reconciliation instructions.
+- `py scripts/ci/check_contract_schemas.py`, `py scripts/ci/check_backlog_source.py`, `py scripts/ci/check_repository_hygiene.py`, and `git diff --check` — **passed**.
 - `python -m pytest -q tests/test_artifact_evidence_binding.py tests/test_artifact_normalization_source_fidelity.py tests/test_artifact_insight_shortlisting.py` — **50 passed**.
 - `python -m pytest -q tests/test_verified_claims_visual_generator.py tests/test_verified_claims_step2_replay.py tests/test_prompt_dry_run_validation.py` — **71 passed**.
 - `python -m pytest -q tests/test_artifact_generator.py tests/test_report_regeneration_generator.py tests/test_report_regeneration_identity_and_failures.py tests/test_llm_service.py tests/test_llm_routing_policy.py tests/test_pdf_crop_decomposition.py tests/test_public_editorial_quality_generator.py tests/test_public_report_quality_gate.py` — **342 passed**.
@@ -499,11 +638,13 @@ in the delivery message and must not be represented as passed here until run.
   replay. No live-selection effectiveness claim is made from post-selection
   replay alone.
 
-**Verdict: PARTIAL.** The Step 2 shadow implementation and frozen-five
-evaluation pass source-hash checking, bounded recovery, final-claim validation,
-reference accounting, and the physical-support fail-closed guard. The v4 run
-still has one unresolved real retained claim and conservative report-level
-abstentions where retained numeric evidence is insufficient. Canonical
-promotion and Step 3 visual factualisation remain intentionally unstarted;
-Step 3 should wait for canonical source-binding/selection approval and
-independent editorial review.
+**Verdict: PARTIAL.** The latest v6 shadow implementation and frozen-five
+evaluation pass source-hash checking, bounded correction/verification,
+final-claim validation, reference accounting, duplicate protection, and the
+physical-support fail-closed guard. All 29 real retained claims verified in
+this replay; the single unresolved row is the intentionally adversarial
+`ACT-004-wrong-page` reference variant. This does not prove fresh Step 1
+selection effectiveness, canonical source-binding completeness, or independent
+editorial acceptance. Canonical promotion and Step 3 visual factualisation
+remain intentionally unstarted; Step 3 should wait for canonical
+source-binding/selection approval and independent editorial review.

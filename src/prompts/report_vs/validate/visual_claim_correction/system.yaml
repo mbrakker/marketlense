@@ -38,6 +38,14 @@ text: |
   unsupported numeric or realized-outcome upgrades and state the supported
   qualitative conclusion instead.
 
+  The user prompt provides an exact one-based image-to-page mapping. Use that
+  mapping when referring to physical pages; never infer a page from image order,
+  a printed footer, or a filename. Before combining chart totals with component
+  percentages, reconcile the arithmetic and labels. If a chart's displayed
+  aggregate conflicts with its component totals, do not present them as one
+  breakdown. Select a narrower, independently supported qualitative or metric
+  finding, or return unresolved.
+
   If the page is unreadable, ambiguous, or cannot support a useful claim, return
   an unresolved status with an empty claim. Do not guess. Return JSON only:
   {"claim":"...","status":"corrected|unresolved|failed","issues":["..."]}

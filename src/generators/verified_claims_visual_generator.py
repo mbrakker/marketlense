@@ -31,6 +31,7 @@ from src.services.pdf_service import render_page_for_crop_refine
 from src.services.prompt_service import load_prompt_set, render_prompt
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+from src.utils.quantity import extract_quantities
 
 LOGGER = logging.getLogger("market_lense.verified_claims_visual_generator")
 
@@ -119,6 +120,72 @@ def _physical_pages(claim: Mapping[str, Any]) -> list[int]:
 def _physical_page(claim: Mapping[str, Any]) -> int | None:
     pages = _physical_pages(claim)
     return pages[0] if pages else None
+
+
+def _image_page_map(inspected_physical_pages: list[int]) -> list[dict[str, int]]:
+    return [
+        {"image_index": index, "physical_page": page}
+        for index, page in enumerate(inspected_physical_pages, start=1)
+    ]
+
+
+def _image_page_map_text(inspected_physical_pages: list[int]) -> str:
+    return "\n".join(
+        f"image {index} = physical PDF page {page}"
+        for index, page in enumerate(inspected_physical_pages, start=1)
+    )
+
+
+def _material_quantity_values(text: str) -> set[float]:
+    return {
+        float(quantity.value)
+        for quantity in extract_quantities(text)
+        if quantity.unit_family != "time"
+        and not (
+            quantity.value.is_integer() and 1900 <= int(quantity.value) <= 2100
+        )
+    }
+
+
+def _supporting_page_attribution_diagnostics(
+    *,
+    corrected_claim: str,
+    supporting_pages: list[int],
+    inspected_physical_pages: list[int],
+    source_page_text_by_physical_page: Mapping[Any, Any],
+) -> list[str]:
+    """Reject a clear numeric page mismatch while allowing visual-only facts."""
+
+    if not supporting_pages or not source_page_text_by_physical_page:
+        return []
+    page_text = {
+        int(page): str(text).strip()
+        for page, text in source_page_text_by_physical_page.items()
+        if str(page).strip().isdigit() and str(text).strip()
+    }
+    claim_values = _material_quantity_values(corrected_claim)
+    if len(claim_values) < 2:
+        return []
+    support_values = set().union(
+        *(
+            _material_quantity_values(page_text.get(page, ""))
+            for page in supporting_pages
+        )
+    )
+    if claim_values.intersection(support_values):
+        return []
+    alternate_matches = [
+        len(
+            claim_values.intersection(
+                _material_quantity_values(page_text.get(page, ""))
+            )
+        )
+        for page in inspected_physical_pages
+        if page not in supporting_pages
+    ]
+    if alternate_matches and max(alternate_matches) >= 2:
+        return ["verification_supporting_page_attribution_conflict"]
+    return []
 
 
 def _source_pdf_sha256(source_identity: str) -> str:
@@ -368,6 +435,7 @@ def _claim_binding(
             or "strict_original_direction"
         ),
         "recovery_sources": _recovery_prompt_sources(recovery_candidates or []),
+        "image_page_map": _image_page_map(inspected_pages),
     }
 
 
@@ -708,6 +776,7 @@ def _correction_attempt(
                 "claim_json": json.dumps(binding, ensure_ascii=False, sort_keys=True),
                 "attempt": attempt,
                 "retry_feedback": json.dumps(retry_feedback, ensure_ascii=False),
+                "image_page_map": _image_page_map_text(inspected_physical_pages),
             },
         ),
         ctx,
@@ -817,6 +886,7 @@ def _verification_attempt(
             or "strict_original_direction"
         ),
         "recovery_sources": _recovery_prompt_sources(recovery_candidates),
+        "image_page_map": _image_page_map(inspected_physical_pages),
     }
     rendered = dependencies.render_prompt(
         PromptRenderRequest(
@@ -828,6 +898,7 @@ def _verification_attempt(
                 ),
                 "original_claim": _text(claim.get("text") or claim.get("claim")),
                 "corrected_claim": corrected_claim,
+                "image_page_map": _image_page_map_text(inspected_physical_pages),
             },
         ),
         ctx,
@@ -875,6 +946,16 @@ def _verification_attempt(
         supporting_pages, notes_by_page, support_diagnostics = _supporting_page_notes(
             payload, inspected_physical_pages
         )
+        support_diagnostics.extend(
+            _supporting_page_attribution_diagnostics(
+                corrected_claim=corrected_claim,
+                supporting_pages=supporting_pages,
+                inspected_physical_pages=inspected_physical_pages,
+                source_page_text_by_physical_page=getattr(
+                    request, "source_page_text_by_physical_page", {}
+                ),
+            )
+        )
         recovery_support_pages = _recovery_support_pages(recovery_candidates)
         if recovery_support_pages and any(
             page not in recovery_support_pages for page in supporting_pages
@@ -905,6 +986,7 @@ def _verification_attempt(
                 "verification_source_truth_notes_by_page_invalid",
                 "verification_source_truth_notes_by_page_incomplete",
                 "verification_page_explanation_missing",
+                "verification_supporting_page_attribution_conflict",
             }
             for diagnostic in diagnostics
         ):
@@ -1144,6 +1226,31 @@ def _evaluate_claim(
                 "provisional_recovered" if recovery_candidates else "retained"
             ),
         )
+    if verification_attempts and any(
+        "verification_supporting_page_attribution_conflict" in diagnostic
+        for diagnostic in verification_attempts[-1].diagnostics
+    ):
+        return _record_result(
+            claim=claim,
+            request=request,
+            physical_page=physical_page,
+            outcome="unresolved",
+            failure_reason="verification_supporting_page_attribution_conflict",
+            correction_attempts=correction_attempts,
+            verification_attempts=verification_attempts,
+            inspected_physical_pages=inspected_physical_pages,
+            recovered_physical_pages=[
+                page
+                for page in inspected_physical_pages
+                if page not in _physical_pages(claim)
+            ],
+            recovery_reason=_text(recovery_candidates[0].get("reason"))
+            if recovery_candidates
+            else "",
+            source_binding_status=(
+                "provisional_recovered" if recovery_candidates else "retained"
+            ),
+        )
     return _record_result(
         claim=claim,
         request=request,
@@ -1194,14 +1301,23 @@ def evaluate_shortlisted_claims(
     )
     correction_bundle = _bundle(
         namespace=CORRECTION_NAMESPACE,
-        variables={"claim_json": "", "attempt": 1, "retry_feedback": "[]"},
+        variables={
+            "claim_json": "",
+            "attempt": 1,
+            "retry_feedback": "[]",
+            "image_page_map": "",
+        },
         settings=settings,
         ctx=evaluation_ctx,
         dependencies=dependencies,
     )
     verification_bundle = _bundle(
         namespace=VERIFICATION_NAMESPACE,
-        variables={"source_json": "{}", "corrected_claim": ""},
+        variables={
+            "source_json": "{}",
+            "corrected_claim": "",
+            "image_page_map": "",
+        },
         settings=settings,
         ctx=evaluation_ctx,
         dependencies=dependencies,

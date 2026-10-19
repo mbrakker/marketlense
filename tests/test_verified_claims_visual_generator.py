@@ -73,6 +73,8 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "nested cohort" in verification.system.text.lower()
     assert "recovery_sources" in verification.system.text
     assert "recovered physical pages" in verification.system.text
+    assert "component totals" in correction.system.text.lower()
+    assert "image-to-page" in verification.user.text.lower()
 
 
 def _settings(tmp_path):
@@ -436,6 +438,121 @@ def test_multi_page_binding_renders_and_sends_each_complete_page(tmp_path):
         str(tmp_path / "report/crop_refine_pages/page-5.png"),
     ]
     assert requests[1].image_paths == requests[0].image_paths
+
+
+def test_visual_prompt_labels_each_image_with_one_based_physical_page(tmp_path):
+    claim = _claim("candidate-1", "Original claim")
+    claim["pages"] = [14, 15]
+    claim["evidence_spans"] = [
+        {"evidence_id": "f1", "page": 14, "start": 10, "end": 20},
+        {"evidence_id": "f1", "page": 15, "start": 10, "end": 20},
+    ]
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The chart page confirms the corrected value and cohort "
+                    "relationship."
+                ),
+                "supporting_physical_pages": [15],
+                "source_truth_notes_by_page": {
+                    "15": (
+                        "The chart page confirms the corrected value and cohort "
+                        "relationship."
+                    )
+                },
+            },
+        ]
+    )
+    requests = []
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [claim]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], requests),
+    )
+
+    assert result.claims[0].outcome == "verified"
+    assert "image 1 = physical PDF page 14" in requests[0].user_prompt
+    assert "image 2 = physical PDF page 15" in requests[0].user_prompt
+    assert "image 1 = physical PDF page 14" in requests[1].user_prompt
+    assert "image 2 = physical PDF page 15" in requests[1].user_prompt
+
+
+def test_wrong_support_page_fails_closed_when_another_inspected_page_has_claim_values(
+    tmp_path,
+):
+    claim = _claim("candidate-1", "Original claim", page=14)
+    claim["pages"] = [14, 15]
+    claim["evidence_spans"] = [
+        {"evidence_id": "f1", "page": 14, "start": 10, "end": 20},
+        {"evidence_id": "f1", "page": 15, "start": 10, "end": 20},
+    ]
+    request = _request(tmp_path, [claim])
+    request.source_page_text_by_physical_page = {
+        14: "Targeting Super Users will be critical to growth strategies.",
+        15: (
+            "Video time and spend relative to share of users, U.S., 2017. "
+            "Top 25% of users 61% of time and 34% of consumer spend. "
+            "All other users 39% of time and 66% of consumer spend."
+        ),
+    }
+    responses = iter(
+        [
+            {
+                "claim": "The top 25% account for 61% of time and 34% of spend.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The chart values support the corrected cohort comparison."
+                ),
+                "supporting_physical_pages": [14],
+                "source_truth_notes_by_page": {
+                    "14": "The chart values support the corrected cohort comparison."
+                },
+            },
+            {
+                "claim": "The top 25% account for 61% of time and 34% of spend.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The chart values support the corrected cohort comparison."
+                ),
+                "supporting_physical_pages": [14],
+                "source_truth_notes_by_page": {
+                    "14": "The chart values support the corrected cohort comparison."
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "unresolved"
+    assert item.failure_reason == "verification_supporting_page_attribution_conflict"
+    assert len(item.verification_attempts) == 2
+    assert all(
+        "verification_supporting_page_attribution_conflict" in attempt.diagnostics
+        for attempt in item.verification_attempts
+    )
 
 
 def test_empty_render_path_fails_closed_without_model_call(tmp_path):

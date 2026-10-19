@@ -323,6 +323,100 @@ def test_exact_corrected_duplicate_is_detected_before_metric_conflicts() -> None
     assert _editorially_duplicate(left, right, set()) is True
 
 
+def test_same_id_provenance_repair_is_not_rejected_as_self_duplicate() -> None:
+    row = {
+        "candidate_id": "candidate-1",
+        "original_claim": "The same final source-grounded conclusion.",
+        "source_identity": "Report|pdf-sha256:" + "a" * 64,
+        "evidence_ids": ["old-evidence"],
+        "outcome": "verified",
+        "final_claim": "The same final source-grounded conclusion.",
+        "recovered_physical_pages": [7],
+        "inspected_physical_pages": [5, 7],
+        "supporting_physical_pages": [7],
+        "source_truth_notes_by_page": {
+            "7": "Page 7 contains the source relationship supporting the conclusion."
+        },
+        "recovery_candidates": [
+            {
+                "physical_page": 7,
+                "evidence_id": "replacement-evidence",
+                "source_pack": "findings",
+                "score": 80,
+            }
+        ],
+    }
+
+    selection = _shadow_replacement_selection(
+        report="Report",
+        baseline_insights=[
+            {
+                "id": "candidate-1",
+                "text": row["final_claim"],
+                "evidence_id": "old-evidence",
+                "evidence": "The retained source relationship.",
+            }
+        ],
+        retained_rows=[row],
+        editorial_plan={
+            "themes": [
+                {
+                    "priority": 1,
+                    "theme": "Theme A",
+                    "evidence_ids": ["old-evidence"],
+                }
+            ]
+        },
+        source_page_text_by_page={
+            7: "Page 7 contains the source relationship supporting the conclusion."
+        },
+    )
+
+    assert selection["selected_count"] == 1
+    assert selection["selected"][0]["candidate_id"] == "candidate-1"
+
+
+def test_near_duplicate_propositions_are_removed_across_provisional_evidence_ids(
+) -> None:
+    left = {
+        "id": "candidate-1",
+        "text": (
+            "Dealmakers prioritize transactions that deepen capabilities and "
+            "strengthen strategic position in 2026."
+        ),
+        "evidence_id": "provisional-page:candidate-1",
+    }
+    right = {
+        "id": "candidate-2",
+        "text": (
+            "Dealmakers increasingly prioritize transactions deepening capabilities "
+            "and strengthening strategic position during 2026."
+        ),
+        "evidence_id": "provisional-page:candidate-2",
+    }
+
+    assert _editorially_duplicate(left, right, {("candidate-1", "candidate-2")})
+
+
+def test_near_duplicate_guard_preserves_distinct_metric_bindings() -> None:
+    left = {
+        "id": "candidate-1",
+        "text": "The APAC pipeline outlook is higher than lower in 2026.",
+        "evidence_id": "provisional-page:candidate-1",
+        "metric": {"value": "62", "geography": "APAC"},
+    }
+    right = {
+        "id": "candidate-2",
+        "text": "The Americas pipeline outlook is higher than lower in 2026.",
+        "evidence_id": "provisional-page:candidate-2",
+        "metric": {"value": "58", "geography": "Americas"},
+    }
+
+    assert not _editorially_duplicate(
+        left, right, {("candidate-1", "candidate-2")}
+    )
+
+
 def test_verified_corrected_insight_uses_replacement_page_not_retained_facts() -> None:
     row = {
         "candidate_id": "candidate-1",

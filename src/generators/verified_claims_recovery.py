@@ -468,6 +468,11 @@ def build_verified_claims_shadow_request(
         dpi=dpi,
         recovery_enabled=bool(recovery_candidates),
         recovery_candidates=recovery_candidates,
+        source_page_text_by_physical_page={
+            _page_number(page): _page_text(page)
+            for page in context.get("pages") or []
+            if _page_number(page) > 0 and _page_text(page)
+        },
     )
     return request, {
         "recovery_context": {

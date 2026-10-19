@@ -6,6 +6,11 @@ allowlist:
     expires_on: "2026-12-31"
     max_delta_absolute: 54
     max_delta_percent: 0.0138
+  - pattern: "families.validation.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "Step 2 validation prompts now carry an explicit image-to-physical-page map and require arithmetic reconciliation before combining chart totals with component values."
+    expires_on: "2026-12-31"
+    max_delta_absolute: 783
   - pattern: "totals.total_tokens"
     owner: "MarketLense engineering"
     reason: "Grounded editorial and source-fidelity prompt corrections are approved within the measured 1.5% corpus token ceiling."

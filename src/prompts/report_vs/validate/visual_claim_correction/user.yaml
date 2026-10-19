@@ -5,6 +5,9 @@ text: |
   Original claim and retained binding:
   {{ claim_json }}
 
+  Image-to-page mapping (one-based physical PDF pages, in attachment order):
+  {{ image_page_map }}
+
   This is correction attempt {{ attempt }}. If present, the independent verifier
   rejected the previous attempt for these source-based reasons. Repair only what
   the page supports and reread the complete page:

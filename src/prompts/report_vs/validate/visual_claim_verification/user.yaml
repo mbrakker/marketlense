@@ -5,6 +5,9 @@ text: |
   Source identity and retained binding context:
   {{ source_json }}
 
+  Image-to-page mapping (one-based physical PDF pages, in attachment order):
+  {{ image_page_map }}
+
   Original claim (analytical direction only; not factual authority):
   {{ original_claim | default("") }}
 
