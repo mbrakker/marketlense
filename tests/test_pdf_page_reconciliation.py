@@ -50,6 +50,33 @@ def _make_pdf(
         document.close()
 
 
+def _make_replacement_character_footer_pdf(path) -> None:
+    base_path = path.with_name(f"{path.stem}-base{path.suffix}")
+    _make_pdf(
+        base_path,
+        [{"footer": str(page_number)} for page_number in range(1, 4)],
+    )
+    document = fitz.open(base_path)
+    try:
+        for page_number, page in enumerate(document, start=1):
+            stream_xref = next(
+                xref
+                for xref in page.get_contents()
+                if b"TJ" in document.xref_stream(xref)
+            )
+            stream = document.xref_stream(stream_xref)
+            encoded_label = str(page_number).encode().hex().upper().encode()
+            original = b"[<" + encoded_label + b">]TJ"
+            replacement = (
+                b"/Span <</ActualText (\xfe\xff\xff\xfc)>> BDC ( )Tj EMC " + original
+            )
+            assert original in stream
+            document.update_stream(stream_xref, stream.replace(original, replacement))
+        document.save(path)
+    finally:
+        document.close()
+
+
 def test_response_rejects_missing_physical_page_mapping() -> None:
     mapping = PdfPageLabelMapping(
         schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
@@ -182,6 +209,36 @@ def test_reconciles_a_visible_footer_and_infers_one_missing_footer(
     assert geometry.bounding_box_scope == "text_block"
     assert geometry.bounding_box[1] >= 750.0
     assert response.mappings[1].evidence[0].anchor_physical_pages == (1, 3)
+
+
+def test_reconciles_replacement_character_prefixed_footer_labels(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "replacement-character-footers.pdf"
+    _make_replacement_character_footer_pdf(pdf_path)
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert [mapping.printed_label for mapping in response.mappings] == [
+        "1",
+        "2",
+        "3",
+    ]
+    assert [mapping.status for mapping in response.mappings] == [
+        "verified",
+        "verified",
+        "verified",
+    ]
+    assert all(mapping.method == "visible_footer" for mapping in response.mappings)
+    assert all(mapping.source_geometry is not None for mapping in response.mappings)
+    assert all(
+        mapping.evidence[0].anchor_physical_pages == () for mapping in response.mappings
+    )
 
 
 def test_reconciles_printed_page_42_at_physical_page_44(tmp_path, run_context) -> None:

@@ -51,6 +51,13 @@ _STRUCTURED_FOOTER_RE = re.compile(
     r"(?P<label>\d{1,4})?$",
     re.IGNORECASE,
 )
+_EXTRACTION_ARTIFACT_PREFIX_RE = re.compile(
+    rf"^\s*[\uFFFC\uFFFD](?=\s*{_PAGE_TOKEN}(?![A-Za-z0-9]))",
+    re.IGNORECASE,
+)
+_EXTRACTION_ARTIFACT_RE = re.compile(
+    rf"[\uFFFC\uFFFD](?=\s*{_PAGE_TOKEN}(?![A-Za-z0-9]))", re.IGNORECASE
+)
 _MAX_INFERENCE_PHYSICAL_GAP = 4
 _MAX_MARGIN_LINE_LENGTH = 120
 
@@ -84,6 +91,7 @@ class _TextLine:
     text: str
     line_bbox: tuple[float, float, float, float]
     block_bbox: tuple[float, float, float, float]
+    artifact_prefixed: bool = False
 
 
 @dataclass(frozen=True)
@@ -204,7 +212,7 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
 
     lines = tuple(
         _TextLine(
-            re.sub(r"\s+", " ", text).strip(),
+            _normalize_extracted_line_text(text),
             (
                 float(line_rect.x0),
                 float(line_rect.y0),
@@ -217,6 +225,7 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
                 float(block_rect.x1),
                 float(block_rect.y1),
             ),
+            _EXTRACTION_ARTIFACT_PREFIX_RE.match(text) is not None,
         )
         for line_rect, block_rect, text in line_records
     )
@@ -231,12 +240,20 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
         band = _margin_band(line.line_bbox[1], line.line_bbox[3], height)
         if band is None:
             continue
+        artifact_prefixed = line.artifact_prefixed
         line_text = re.sub(r"\s+", " ", line.text).strip()
         if not line_text or len(line_text) > _MAX_MARGIN_LINE_LENGTH:
             continue
-        candidate = _parse_candidate(line_text, band, bounding_box=line.block_bbox)
+        candidate = _parse_candidate(
+            line_text,
+            band,
+            bounding_box=line.block_bbox,
+            artifact_prefixed=artifact_prefixed,
+        )
         if candidate is not None and not (
-            not candidate.strong and line_counts_by_block.get(line.block_bbox, 0) > 2
+            not candidate.strong
+            and not artifact_prefixed
+            and line_counts_by_block.get(line.block_bbox, 0) > 2
         ):
             candidates.append(candidate)
 
@@ -267,6 +284,12 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
         native_pdf_label=native_pdf_label,
         candidates=tuple(unique.values()),
     )
+
+
+def _normalize_extracted_line_text(text: str) -> str:
+    """Remove known marked-content artifacts before page-token parsing."""
+
+    return re.sub(r"\s+", " ", _EXTRACTION_ARTIFACT_RE.sub("", text)).strip()
 
 
 def _structured_footer_candidates(
@@ -341,6 +364,7 @@ def _parse_candidate(
     band: str,
     *,
     bounding_box: tuple[float, float, float, float] | None = None,
+    artifact_prefixed: bool = False,
 ) -> _Candidate | None:
     explicit = _EXPLICIT_PAGE_RE.fullmatch(line)
     if explicit:
@@ -362,7 +386,7 @@ def _parse_candidate(
             token,
             band,
             line[:240],
-            token.style == "roman",
+            token.style == "roman" or artifact_prefixed,
             bounding_box,
         )
 

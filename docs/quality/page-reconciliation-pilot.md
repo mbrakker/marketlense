@@ -2,15 +2,15 @@
 
 ## Scope and implementation
 
-This is the standalone Phase 1 pilot on implementation commit
-`0f3bb5c3` (`pdf-page-reconciliation-v5`, schema `1.1`) in branch
+This is the standalone Phase 1 pilot on the current deterministic candidate
+(`pdf-page-reconciliation-v6`, schema `1.1`) in branch
 `codex/pdf-page-reconciliation-deterministic-inference`. It maps one-based
 physical PDF pages to visible printed labels using native PyMuPDF text and
 bounded local sequence inference. It does not add OCR, vision, LLMs, network
 calls, downstream consumers, production caches, checkpoints, or publication
-flows. The exact-SHA verification head is
-`9c80a2f6204022248bbd6ef390692242870a3b1b`, which contains the dedicated
-geometry regression module and the implementation above.
+flows. The v5 implementation and its exact-SHA verification head
+`9c80a2f6204022248bbd6ef390692242870a3b1b` remain the comparison baseline for
+the recovery documented below.
 
 The v5 change is a correctness fix for structured lower-page footers. The
 previous helper split a text block into lines but assigned the containing block
@@ -31,8 +31,12 @@ source geometry remains the containing text block with
 `bounding_box_scope=text_block`; schema `1.1` is unchanged. The algorithm
 version moved from v4 to v5, invalidating v4 caches.
 
-No sequence gap, restart, boundary extrapolation, inference, or downstream
-behavior changed.
+The v6 recovery is deliberately narrower than a general sequence fallback: it
+normalizes only `U+FFFC`/`U+FFFD` extraction artifacts when they directly prefix
+a valid page token in a margin line. That artifact is retained as a strong
+direct-evidence signal, including when the containing text block also contains
+source notes. The algorithm version moved from v5 to v6, invalidating v5
+caches. No downstream behavior changed.
 
 ## Native geometry evidence
 
@@ -179,9 +183,13 @@ against the third fresh output directory.
 | 20 | 2026 Global Food and Drink Predictions | `b3cb5f66cccda4420be21b2b407b3c59` | 8 | 0/0/8 | 0/0/8 | 171.18 / 8.22 | 171.12 / 7.80 |
 | **Total** | **20 reports** |  | **650** | **417/2/231** | **417/2/231** |  |  |
 
-The cohort aggregate is 417 verified (`64.15%`), 2 inferred (`0.31%`), and
-231 unresolved (`35.54%`). Every response contains exactly one mapping for
-each physical page. All 40 fresh v4/v5 response sets passed schema `1.1`,
+The historical v5 cohort aggregate is 417 verified (`64.15%`), 2 inferred
+(`0.31%`), and 231 unresolved (`35.54%`). The mutually exclusive unresolved
+classification is 13 conflict pages, 2 native-metadata pages, and 216
+no-visible-label pages. The raw evidence-kind counts were 13 conflict, 2
+native metadata, and 218 `no_visible_label` records because the two metadata
+pages also carry `no_visible_label` evidence. Every response contains exactly
+one mapping for each physical page. All 40 fresh v4/v5 response sets passed schema `1.1`,
 algorithm-version, input-MD5, filename-MD5, and page-completeness checks.
 Each report produced byte-identical JSON across its three fresh runs. The
 corrected warm rerun produced 40/40 cache hits, 20 for each version; the first
@@ -211,8 +219,10 @@ methods, evidence records, or source geometry across all 650 pages. Therefore
 there were no changed mappings requiring a correction classification; the
 classification set is empty. The rendered v5 contact-sheet review covered all
 419 verified/inferred mappings and all 15 unresolved pages with visible,
-conflicting, or metadata evidence. The remaining 218 unresolved pages have
-explicit `no_visible_label` evidence and were not individually rendered. No
+conflicting, or metadata evidence. The remaining 216 mutually exclusive
+no-visible-label pages were not individually rendered; the raw
+`no_visible_label` count was 218 because it overlapped the two metadata pages.
+No
 incorrect verified or inferred mapping was identified in the inspected
 denominator. This is a bounded page-label accuracy statement, not a claim that
 every no-visible-label page has been exhaustively hand-reviewed.
@@ -227,28 +237,98 @@ replace the IAS-specific geometry fixtures.
 abstention within the stated visual-review denominator. Phase 2 approval
 remains blocked; no downstream integration is authorized.**
 
+## Deterministic unresolved-page recovery (v6 candidate)
+
+The v6 candidate was evaluated against the same 20 frozen PDFs and the same
+650 source pages. All 20 frozen MD5 values matched; no PDF was substituted.
+The only recoverable defect was in Activate: physical pages 2–139 visibly
+carry labels 1–138, but PyMuPDF exposed the marked-content `ActualText`
+prefix (`U+FFFC`) immediately before each numeric glyph. The v6 change removes
+that artifact only when it prefixes a valid margin page token and promotes
+that artifact-prefixed token to strong direct footer evidence. It does not
+infer a label from page position alone.
+
+| # | Report | Pages | v5 V/I/U | v6 V/I/U | Changed pages |
+| ---: | --- | ---: | ---: | ---: | ---: |
+| 1 | Final Web Version Report Consumer Trends 2026 | 82 | 80/0/2 | 80/0/2 | 0 |
+| 2 | Activate | 140 | 0/0/140 | 138/0/2 | 138 |
+| 3 | DV QualityandAttentionBenchmark Q1 2026 | 12 | 12/0/0 | 12/0/0 | 0 |
+| 4 | 2026 Global M&A Outlook | 42 | 40/0/2 | 40/0/2 | 0 |
+| 5 | Trends and Predictions 2026 | 47 | 45/0/2 | 45/0/2 | 0 |
+| 6 | 2026 global payments and fraud report | 4 | 0/0/4 | 0/0/4 | 0 |
+| 7 | mobile-app-trends-2026-pdf | 41 | 39/0/2 | 39/0/2 | 0 |
+| 8 | Algolia | 29 | 0/0/29 | 0/0/29 | 0 |
+| 9 | How to win with tech | 1 | 0/0/1 | 0/0/1 | 0 |
+| 10 | ebook 0225 future commerce new modes guide en us | 10 | 0/0/10 | 0/0/10 | 0 |
+| 11 | The Advertiser Guide to New and Emerging Channels for 2023 | 9 | 8/0/1 | 8/0/1 | 0 |
+| 12 | q1 2026 emerging retail and consumer trends | 11 | 9/0/2 | 9/0/2 | 0 |
+| 13 | DHL eCommerce | 78 | 74/2/2 | 74/2/2 | 0 |
+| 14 | EMPLIFI Digital Authenticity AI 2026 | 21 | 19/0/2 | 19/0/2 | 0 |
+| 15 | EX Trends AMR 020326 | 31 | 30/0/1 | 30/0/1 | 0 |
+| 16 | Retail Marketing Trends: How To Win in 2026 | 22 | 21/0/1 | 21/0/1 | 0 |
+| 17 | docu 202601 active ownership report q4 en | 30 | 29/0/1 | 29/0/1 | 0 |
+| 18 | attachment The Sales Signals Playbook 4 | 11 | 11/0/0 | 11/0/0 | 0 |
+| 19 | Contentstack | 21 | 0/0/21 | 0/0/21 | 0 |
+| 20 | Mintel | 8 | 0/0/8 | 0/0/8 | 0 |
+| **Total** | **20 reports** | **650** | **417/2/231** | **555/2/93** | **138** |
+
+The v6 unresolved pages are mutually exclusive: 13 conflicts, 2 native PDF
+metadata pages, and 78 pages with no visible label. The two metadata pages
+also retain `no_visible_label` as a second evidence record. Activate physical
+pages 1 and 140 remain unresolved because they have no printed label. DHL is
+unchanged: physical page 27 remains a conflict beside the `X` marks, physical
+page 1 has no visible label, and physical pages 49 and 60 remain inferred.
+
+The remaining named blockers are intentional. Algolia's visible multi-digit
+footer suffixes use vector artwork for the second digit, so text extraction
+does not provide a safe complete token and no OCR/vision fallback is allowed.
+Contentstack places two logical page labels on each physical spread (for
+example `04/05`), so one-label-per-physical-page reconciliation would invent
+an assignment. Mintel's eight pages have no visible pagination. These pages
+remain unresolved rather than being mathematically extrapolated.
+
+All 138 new Activate mappings were rendered in six footer contact sheets and
+visually inspected; every physical page 2–139 shows the matching visible
+footer number 1–138, including the pages whose footer shares a source-note
+text block. No existing 20-report mapping changed, and no false positive was
+identified. The four committed golden PDFs remain exactly 71 verified, 2
+inferred, and 19 unresolved: v6 JSON matches v5 byte-for-byte after removing
+only the algorithm-version field, with no label, status, method, evidence, or
+geometry changes.
+
+Three forced v6 outputs per report were byte-identical and the valid warm run
+produced 20/20 cache hits. The median of per-report fresh medians was
+`409.56 ms` for v6 versus `415.23 ms` for v5. Valid warm-cache median was
+`28.67 ms` for v6 versus `17.82 ms` for v5; the absolute difference was
+`10.85 ms`, and no performance optimization is claimed.
+
+**v6 recovery verdict: PASS for the deterministic Activate recovery and
+fail-closed abstention on Algolia, Contentstack, Mintel, and DHL edge cases.
+Phase 2 remains blocked pending measured approval; no downstream integration
+is authorized.**
+
 ## Validation and Phase 2 hold
 
 TDD evidence:
 
 ```text
-RED: python -m pytest -q tests/test_pdf_page_reconciliation.py -k "structured_footer or crossing_footer"
-2 failed, 3 passed before the production change
-GREEN: python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py
-36 passed
+RED: python -m pytest -q tests/test_pdf_page_reconciliation.py -k replacement_character_prefixed_footer_labels
+1 failed, 30 deselected before the production change
+GREEN: python -m pytest -q tests/test_pdf_page_reconciliation.py -k replacement_character_prefixed_footer_labels
+1 passed, 30 deselected
 ```
 
 Local validation:
 
 ```text
 python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py
-36 passed in 2.78s
+37 passed in 3.06s
 
 python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py tests/test_pdf_text_service.py tests/test_pdf_contents_service.py tests/test_claim_validation_source_pages.py tests/_test_evidence_pack_generator/cases_05_findings_targeted_retrieval.py
-72 passed in 5.98s
+73 passed in 8.37s
 
 python -m pytest -q tests/contracts/test_contract_roundtrip.py
-2351 passed in 5.67s
+2351 passed in 8.70s
 
 python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json
 python scripts/ci/check_architecture_imports.py
