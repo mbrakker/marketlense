@@ -36,9 +36,10 @@ normalizes only a complete margin line whose `U+FFFC`/`U+FFFD` extraction
 artifact directly prefixes an Arabic page token. That artifact is retained as
 a strong direct-evidence signal, including when the containing text block also
 contains source notes. A non-complete artifact-prefixed margin line is treated
-as an unresolved conflict and cannot be sequence-inferred; ordinary copyright
-footers remain on the existing parser path. The algorithm version moved from
-v5 to v6, invalidating v5 caches. No downstream behavior changed.
+as an unresolved conflict and cannot be directly confirmed or sequence-inferred;
+ordinary copyright footers remain on the existing parser path. The algorithm
+version moved from v5 to v6, invalidating v5 caches. No downstream behavior
+changed.
 
 ## Native geometry evidence
 
@@ -331,7 +332,7 @@ python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_re
 37 passed in 3.06s
 
 python -m pytest -q tests/test_pdf_page_reconciliation.py tests/test_pdf_page_reconciliation_geometry.py tests/test_pdf_text_service.py tests/test_pdf_contents_service.py tests/test_claim_validation_source_pages.py tests/_test_evidence_pack_generator/cases_05_findings_targeted_retrieval.py
-76 passed in 5.82s
+77 passed in 6.30s
 
 python -m pytest -q tests/contracts/test_contract_roundtrip.py
 2351 passed in 8.70s
