@@ -1334,7 +1334,12 @@ visual suite passed **83**, with **1 deselected**. The long-test-file ownership
 test passed 2/2, formatting, Ruff, compile, and the three-iteration prompt
 fixture gate passed. The prompt gate measured 105,296 current corpus tokens
 versus 104,024 baseline (+1,272; +$0.000127), within the existing allowlist;
-no baseline or threshold changed.
+no baseline or threshold changed. Hosted CI [run 39483813670](https://github.com/mbrakker/marketlense/actions/runs/39483813670)
+for implementation commit `c8082e3a764b07f78d9dc21ead26ae8baa2e59ce`
+completed successfully: the Python 3.12 tests/coverage job, both mutation
+partitions, and the release-evidence bundle passed. The optional WordPress
+staging REST check was skipped by configuration. This confirms repository
+gates, not fresh Luna semantic quality.
 
 No new live semantic result, token/cost/latency measurement, canonical
 promotion, publication-readiness change, or WordPress write is claimed. Step 2
