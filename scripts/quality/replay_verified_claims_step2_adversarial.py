@@ -6,7 +6,9 @@ import argparse
 import json
 import sys
 from collections import defaultdict
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -16,8 +18,250 @@ from scripts.quality.replay_verified_claims_step2 import (
     _load_json,
     _resolve_repository_path,
     _safe_report_name,
+    _valid_supporting_pages,
     replay_live_explicit_cohort,
 )
+
+_POSITIVE_EXPECTATION = "verified_or_corrected"
+_NEGATIVE_EXPECTATION = "unresolved_or_failed"
+_VERIFIED_OUTCOMES = {"verified", "verified_after_retry"}
+_FAILED_OUTCOMES = {"unresolved", "failed_verification"}
+
+
+def _acceptance_mismatch(
+    *,
+    code: str,
+    detail: str,
+    candidate_id: str = "",
+    case_id: str = "",
+) -> dict[str, str]:
+    return {
+        "code": code,
+        "candidate_id": candidate_id,
+        "case_id": case_id,
+        "detail": detail,
+    }
+
+
+def _source_provenance_is_valid(row: Mapping[str, Any]) -> tuple[bool, str]:
+    source_identity = row.get("source_identity")
+    if not isinstance(source_identity, str) or not source_identity.strip():
+        return False, "source_identity is missing"
+
+    expected_hash = row.get("source_pdf_sha256_expected")
+    actual_hash = row.get("source_pdf_sha256_actual")
+    if not isinstance(expected_hash, str) or not expected_hash.strip():
+        return False, "expected source PDF hash is missing"
+    if not isinstance(actual_hash, str) or not actual_hash.strip():
+        return False, "actual source PDF hash is missing"
+    if expected_hash.strip().lower() != actual_hash.strip().lower():
+        return False, "source PDF hash does not match expected identity"
+
+    pages, reason = _valid_supporting_pages(row)
+    if not pages:
+        return False, reason or "supporting physical pages are invalid"
+    return True, ""
+
+
+def compare_adversarial_outcomes(
+    corpus: Mapping[str, Any], result: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Compare one replay result with the adversarial corpus contract.
+
+    The comparator is deliberately independent of model scoring.  It checks
+    only the terminal outcome contract, candidate identity cardinality, and
+    the source provenance required before a positive result can be accepted.
+    """
+
+    mismatches: list[dict[str, str]] = []
+    expected_by_id: dict[str, tuple[str, str]] = {}
+    raw_cases = corpus.get("cases")
+    if not isinstance(raw_cases, list):
+        mismatches.append(
+            _acceptance_mismatch(
+                code="malformed_expected_cases",
+                detail="corpus cases must be a list",
+            )
+        )
+        raw_cases = []
+
+    expected_terminal_counts: dict[str, int] = defaultdict(int)
+    for raw_case in raw_cases:
+        if not isinstance(raw_case, Mapping):
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="malformed_expected_case",
+                    detail="each corpus case must be an object",
+                )
+            )
+            continue
+        candidate_id = raw_case.get("candidate_id")
+        case_id = raw_case.get("case_id")
+        expected = raw_case.get("expected_terminal")
+        if not isinstance(candidate_id, str) or not candidate_id.strip():
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="malformed_expected_identity",
+                    detail="corpus candidate_id must be a non-empty string",
+                    case_id=str(case_id or ""),
+                )
+            )
+            continue
+        candidate_id = candidate_id.strip()
+        case_id = str(case_id or "")
+        if candidate_id in expected_by_id:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="duplicate_expected_identity",
+                    detail="corpus contains more than one case for the candidate_id",
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+            continue
+        if expected not in {_POSITIVE_EXPECTATION, _NEGATIVE_EXPECTATION}:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="malformed_expected_terminal",
+                    detail=f"unsupported expected terminal {expected!r}",
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+            continue
+        expected_by_id[candidate_id] = (case_id, str(expected))
+        expected_terminal_counts[str(expected)] += 1
+
+    raw_rows = result.get("claims")
+    rows: list[Mapping[str, Any]] = []
+    if not isinstance(raw_rows, list):
+        mismatches.append(
+            _acceptance_mismatch(
+                code="malformed_result",
+                detail="replay claims must be a list",
+            )
+        )
+        raw_rows = []
+
+    rows_by_id: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    actual_outcome_counts: dict[str, int] = defaultdict(int)
+    for raw_row in raw_rows:
+        if not isinstance(raw_row, Mapping):
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="malformed_result",
+                    detail="each replay claim must be an object",
+                )
+            )
+            continue
+        rows.append(raw_row)
+        candidate_id = raw_row.get("candidate_id")
+        if not isinstance(candidate_id, str) or not candidate_id.strip():
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="malformed_result",
+                    detail="replay candidate_id must be a non-empty string",
+                )
+            )
+            continue
+        candidate_id = candidate_id.strip()
+        outcome = raw_row.get("outcome")
+        if isinstance(outcome, str) and outcome:
+            actual_outcome_counts[outcome] += 1
+        if candidate_id not in expected_by_id:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="unknown_result",
+                    detail="replay returned a candidate absent from the corpus",
+                    candidate_id=candidate_id,
+                )
+            )
+            continue
+        rows_by_id[candidate_id].append(raw_row)
+
+    matched_count = 0
+    for candidate_id, (case_id, expected) in expected_by_id.items():
+        candidate_rows = rows_by_id.get(candidate_id, [])
+        if not candidate_rows:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="missing_result",
+                    detail="corpus candidate has no replay result",
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+            continue
+        if len(candidate_rows) != 1:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="duplicate_result",
+                    detail="corpus candidate must have exactly one replay result",
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+            continue
+
+        matched_count += 1
+        row = candidate_rows[0]
+        outcome = row.get("outcome")
+        allowed = (
+            _VERIFIED_OUTCOMES
+            if expected == _POSITIVE_EXPECTATION
+            else _FAILED_OUTCOMES
+        )
+        if outcome not in allowed:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="unexpected_outcome",
+                    detail=(
+                        f"expected {sorted(allowed)} for {expected}, got {outcome!r}"
+                    ),
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+            continue
+
+        if expected != _POSITIVE_EXPECTATION:
+            continue
+
+        final_claim = row.get("final_claim")
+        if not isinstance(final_claim, str) or not final_claim.strip():
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="missing_final_claim",
+                    detail="positive terminal outcome has no final corrected claim",
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+        provenance_valid, provenance_reason = _source_provenance_is_valid(row)
+        if not provenance_valid:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="invalid_source_provenance",
+                    detail=provenance_reason,
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+
+    return {
+        "passed": not mismatches,
+        "case_count": len(expected_by_id),
+        "matched_count": matched_count,
+        "expected_terminal_counts": dict(expected_terminal_counts),
+        "actual_outcome_counts": dict(actual_outcome_counts),
+        "mismatches": mismatches,
+    }
+
+
+def adversarial_acceptance_exit_code(report: Mapping[str, Any]) -> int:
+    """Return the process status for the persisted adversarial acceptance report."""
+
+    return 0 if report.get("passed") is True else 1
 
 
 def _write_snapshot(
@@ -110,6 +354,8 @@ def replay_adversarial_corpus(
         if isinstance(case, dict)
     }
     for row in result.get("claims", []):
+        if not isinstance(row, dict):
+            continue
         case = cases_by_id.get(str(row.get("candidate_id") or ""))
         if case is None:
             continue
@@ -122,6 +368,7 @@ def replay_adversarial_corpus(
                 "manual_factual_assessment": "pending_independent_review",
             }
         )
+    acceptance = compare_adversarial_outcomes(corpus, result)
     result["adversarial_corpus"] = {
         "path": str(corpus_path),
         "case_count": len(cases_by_id),
@@ -136,6 +383,7 @@ def replay_adversarial_corpus(
         "manual_review_required": True,
         "canonical_mutation": False,
         "publication_write": False,
+        "acceptance": acceptance,
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
@@ -164,7 +412,11 @@ def main() -> int:
         output_path=_resolve_repository_path(args.output),
     )
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0
+    return adversarial_acceptance_exit_code(
+        result.get("adversarial_corpus", {}).get("acceptance", {})
+        if isinstance(result.get("adversarial_corpus"), Mapping)
+        else {}
+    )
 
 
 if __name__ == "__main__":

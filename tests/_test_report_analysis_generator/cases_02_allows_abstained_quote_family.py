@@ -322,6 +322,7 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
                 {
                     "id": "f1",
                     "text": "European loyalty reached 49% in 2024.",
+                    "evidence": "European loyalty reached 49% in 2024.",
                     "pages": [1],
                 },
                 *[{"id": f"f{index}", "pages": [index]} for index in range(2, 6)],

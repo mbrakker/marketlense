@@ -48,10 +48,15 @@ def test_deterministic_retained_claim_failure_enters_candidate_repair_plan() -> 
     assert package.unsupported_factual_count == 1
     assert "quote_not_matched" in package.results[0].reasons
     issues = _deterministic_claim_validation_issues(package)
-    assert len(issues) == 1
-    assert issues[0].rule_id == "retained_claim.quote_match"
-    assert issues[0].entity_id == package.results[0].candidate.claim_id
-    assert issues[0].evidence_ids == ["f1"]
+    assert {issue.rule_id for issue in issues} == {
+        "retained_claim.evidence_reference_completeness",
+        "retained_claim.quote_match",
+    }
+    quote_issue = next(
+        issue for issue in issues if issue.rule_id == "retained_claim.quote_match"
+    )
+    assert quote_issue.entity_id == package.results[0].candidate.claim_id
+    assert quote_issue.evidence_ids == ["f1"]
 
     plan = _build_regeneration_plan(
         issues=issues,
@@ -159,7 +164,8 @@ def test_grounding_payload_attaches_only_unresolved_claims_to_exact_evidence() -
     assert retained_evidence[0]["source_pack"] == "findings"
     assert retained_evidence[0]["page"] is None
     assert retained_evidence[0]["text"] == (
-        "Wallet use is becoming a common checkout method."
+        "The source describes wallet availability as a common checkout "
+        "consideration across retailers."
     )
     assert len(retained_evidence[0]["text_hash"]) == 64
 
@@ -191,7 +197,14 @@ def test_public_soft_copy_and_retained_claim_use_distinct_grounding_item_ids() -
         evidence_packs={
             "findings": {
                 "findings": [
-                    {"id": "f1", "text": "Retailer wallet use grew across channels."}
+                    {
+                        "id": "f1",
+                        "text": "Retailer wallet use grew across channels.",
+                        "evidence": (
+                            "The source reports that retailer wallet use grew "
+                            "across channels."
+                        ),
+                    }
                 ]
             }
         },
@@ -353,7 +366,14 @@ def test_namespaced_retained_grounding_identity_maps_to_claim_lineage(tmp_path) 
         evidence_packs={
             "findings": {
                 "findings": [
-                    {"id": "f1", "text": "Retailer wallet use grew across channels."}
+                    {
+                        "id": "f1",
+                        "text": "Retailer wallet use grew across channels.",
+                        "evidence": (
+                            "The source reports that retailer wallet use grew "
+                            "across channels."
+                        ),
+                    }
                 ]
             }
         },
@@ -431,10 +451,18 @@ def test_semantic_fallback_payload_omits_proven_and_failed_claims() -> None:
         evidence_packs={
             "findings": {
                 "findings": [
-                    {"id": "f1", "text": "Wallet adoption reached 42% in 2026."},
+                    {
+                        "id": "f1",
+                        "text": "Wallet adoption reached 42% in 2026.",
+                        "evidence": "Wallet adoption reached 42% in 2026.",
+                    },
                     {
                         "id": "f2",
                         "text": "Wallet use is becoming a common checkout method.",
+                        "evidence": (
+                            "The source reports that wallet use is becoming a "
+                            "common checkout method across retailers."
+                        ),
                     },
                 ]
             }
@@ -590,8 +618,19 @@ def test_conflicting_claim_identity_fails_before_provider_call(tmp_path) -> None
                     {
                         "id": "f1",
                         "text": "Wallet use is becoming a common checkout method.",
+                        "evidence": (
+                            "The source reports that wallet use is becoming a "
+                            "common checkout method across retailers."
+                        ),
                     },
-                    {"id": "f2", "text": "Wallet checkout has grown among retailers."},
+                    {
+                        "id": "f2",
+                        "text": "Wallet checkout has grown among retailers.",
+                        "evidence": (
+                            "The source reports that wallet checkout has grown "
+                            "among retailers."
+                        ),
+                    },
                 ]
             }
         },

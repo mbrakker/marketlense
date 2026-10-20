@@ -1020,3 +1020,43 @@ the demonstrated provenance, explicit-page, portable-fixture and factual
 quality defects are corrected and the reference gate is green, but fresh
 selection evidence and independent editorial approval remain unavailable.
 Step 3 remains unstarted.
+
+### CI acceptance-gate correction — 2026-10-20
+
+The reviewed `d3ec52a0` branch reproduced all **35** reported failures against
+the current environment: 18 retained-claim grounding, 15 frozen-cohort
+grounding, and 2 report-analysis tests. An isolated `origin/main` worktree at
+`bf736b47695605a9a00a1a8355c0d27ab0b0ab88` passed the same 139-test group,
+so these were branch-only fixture-contract regressions, not a production
+validator regression. The common root cause was positive fixtures using
+generated `findings[].text` as authoritative evidence after the existing
+validator correctly stopped treating that field as source proof. Positive
+fixtures now carry independent source excerpts through the existing
+`evidence` contract; generated-text-only negative cases remain fail-closed.
+The two report-analysis failures had the same missing independent `f1`
+excerpt and were corrected without changing source-title authority.
+
+The Step 2 adversarial runner now enforces its nine-case expected-terminal
+contract: exactly one known result per candidate ID, accepted terminal states,
+nonempty positive final text, and existing supporting-page/hash/note
+provenance. Missing, duplicate, unknown, malformed, skipped, wrong-terminal,
+or invalid-provenance rows produce per-case diagnostics and a nonzero exit;
+raw replay output is still written before the exit decision. Provider-free
+comparator coverage passed all **9/9** corpus identities and rejected a
+deliberately corrupted strict-negative row. No live provider replay was run in
+this CI-correction slice; the prior **39-variant** PDF evaluation remains the
+source of live model measurements, and manual review remains separate.
+
+The focused final suite passed **151 tests**, with **1 expected integration
+skip** and **1 deselected test**. Formatting, Ruff, type checking, architecture,
+policy, documentation, schema, hygiene, and the long-test-file gate passed.
+The aggregate run executed **7,846** selected tests and reported **7,842
+passed, 2 skipped, 32 deselected, and 2 failures** before the final test-file
+split: the introduced 1,012-line split-module failure was fixed by moving
+existing key-figure cases into a third owned module; the remaining
+`test_existing_wheelhouse_reports_missing_active_artifact` failure reproduces
+unchanged on `origin/main` and fails because this host is CPython 3.14 while
+the native wheelhouse audit requires CPython 3.12. Therefore the repository
+quality gate is **PARTIAL**, not green in this environment. No canonical
+artifact, publication-readiness state, provider call, or WordPress write was
+performed. Step 2 remains **PARTIAL** and Step 3 remains unstarted.

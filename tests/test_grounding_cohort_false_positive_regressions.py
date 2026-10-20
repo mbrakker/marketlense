@@ -168,8 +168,16 @@ def test_compact_observation_year_range_matches_its_linked_evidence() -> None:
 
     assert comparison.dimension("timeframe").status == "compatible"
     package = validate_retained_claims(
-        {"summary": {"claim_evidence_map": [{"claim": claim, "evidence_ids": ["growth"]}]}},
-        {"findings": {"findings": [{"id": "growth", "text": evidence}]}},
+        {
+            "summary": {
+                "claim_evidence_map": [{"claim": claim, "evidence_ids": ["growth"]}]
+            }
+        },
+        {
+            "findings": {
+                "findings": [{"id": "growth", "text": evidence, "evidence": evidence}]
+            }
+        },
         semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
             AssertionError("deterministic grounding should support this claim")
         ),
@@ -196,10 +204,15 @@ def test_independently_linked_metrics_can_use_distinct_units() -> None:
         {
             "findings": {
                 "findings": [
-                    {"id": "spend", "text": "Average retailer spend reached $500."},
+                    {
+                        "id": "spend",
+                        "text": "Average retailer spend reached $500.",
+                        "evidence": "Average retailer spend reached $500.",
+                    },
                     {
                         "id": "reviews",
                         "text": "Seventy-nine percent read three or more reviews.",
+                        "evidence": "Seventy-nine percent read three or more reviews.",
                     },
                 ]
             }
@@ -230,10 +243,15 @@ def test_independently_linked_metric_mutation_remains_blocked() -> None:
         {
             "findings": {
                 "findings": [
-                    {"id": "spend", "text": "Average retailer spend reached $500."},
+                    {
+                        "id": "spend",
+                        "text": "Average retailer spend reached $500.",
+                        "evidence": "Average retailer spend reached $500.",
+                    },
                     {
                         "id": "reviews",
                         "text": "Seventy-nine percent read three or more reviews.",
+                        "evidence": "Seventy-nine percent read three or more reviews.",
                     },
                 ]
             }
@@ -476,14 +494,14 @@ def test_frozen_cohort_unlinked_sample_sizes_remain_unresolved(
     package = validate_retained_claims(
         {
             "summary": {
-                "claim_evidence_map": [
-                    {"claim": claim, "evidence_ids": [evidence_id]}
-                ]
+                "claim_evidence_map": [{"claim": claim, "evidence_ids": [evidence_id]}]
             }
         },
         {
             evidence_pack: {
-                evidence_pack: [{"id": evidence_id, "text": evidence}]
+                evidence_pack: [
+                    {"id": evidence_id, "text": evidence, "evidence": evidence}
+                ]
             }
         },
     )
@@ -538,7 +556,17 @@ def test_frozen_cohort_quoted_spans_are_matched_without_accepting_paraphrase(
 ) -> None:
     package = validate_retained_claims(
         {"quotes_final": [{"text": case["claim"], "evidence_id": case["case_id"]}]},
-        {"findings": {"findings": [{"id": case["case_id"], "text": case["evidence"]}]}},
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": case["case_id"],
+                        "text": case["evidence"],
+                        "evidence": case["evidence"],
+                    }
+                ]
+            }
+        },
     )
 
     assert package.results[0].status == "supported"
@@ -651,8 +679,16 @@ def test_algolia_multi_evidence_links_ground_sample_and_distinct_percentages() -
                             "Notably, 42% of respondents are focusing on using AI "
                             "to better understand user intent, up from 34% in 2024."
                         ),
+                        "evidence": (
+                            "Notably, 42% of respondents are focusing on using AI "
+                            "to better understand user intent, up from 34% in 2024."
+                        ),
                     },
-                    {"id": "sample", "text": "Total n=110 respondents."},
+                    {
+                        "id": "sample",
+                        "text": "Total n=110 respondents.",
+                        "evidence": "Total n=110 respondents.",
+                    },
                 ]
             }
         },
@@ -672,9 +708,7 @@ def test_algolia_unlinked_sample_size_remains_unresolved() -> None:
     package = validate_retained_claims(
         {
             "summary": {
-                "claim_evidence_map": [
-                    {"claim": claim, "evidence_ids": ["intent"]}
-                ]
+                "claim_evidence_map": [{"claim": claim, "evidence_ids": ["intent"]}]
             }
         },
         {
@@ -683,6 +717,10 @@ def test_algolia_unlinked_sample_size_remains_unresolved() -> None:
                     {
                         "id": "intent",
                         "text": (
+                            "42% of respondents focused on AI to understand user "
+                            "intent, up from 34% in 2024."
+                        ),
+                        "evidence": (
                             "42% of respondents focused on AI to understand user "
                             "intent, up from 34% in 2024."
                         ),
@@ -726,6 +764,8 @@ def test_algolia_multi_evidence_mutation_keeps_the_changed_percent_blocked() -> 
                         "id": "intent",
                         "text": "42% of respondents focused on user intent, "
                         "up from 34% in 2024.",
+                        "evidence": "42% of respondents focused on user intent, "
+                        "up from 34% in 2024.",
                     }
                 ]
             }
@@ -751,6 +791,8 @@ def test_algolia_multi_evidence_mutation_keeps_the_changed_percent_blocked() -> 
                     {
                         "id": "intent",
                         "text": "42% of respondents focused on user intent, "
+                        "up from 34% in 2024.",
+                        "evidence": "42% of respondents focused on user intent, "
                         "up from 34% in 2024.",
                     }
                 ]

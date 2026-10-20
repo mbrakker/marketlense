@@ -62,6 +62,10 @@ def _retained_request() -> ValidationRequest:
                     {
                         "id": "f1",
                         "text": "Wallet use is becoming a common checkout method.",
+                        "evidence": (
+                            "The source describes wallet availability as a common "
+                            "checkout consideration across retailers."
+                        ),
                     }
                 ]
             }

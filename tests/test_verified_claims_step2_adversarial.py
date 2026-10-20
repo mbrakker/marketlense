@@ -7,6 +7,10 @@ from pathlib import Path
 import pymupdf as fitz
 import pytest
 
+from scripts.quality.replay_verified_claims_step2_adversarial import (
+    adversarial_acceptance_exit_code,
+    compare_adversarial_outcomes,
+)
 from src.utils.text_normalization import normalize_for_lookup
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +22,161 @@ CORPUS_PATH = (
 
 def _corpus() -> dict[str, object]:
     return json.loads(CORPUS_PATH.read_text(encoding="utf-8"))
+
+
+def _acceptance_corpus() -> dict[str, object]:
+    return {
+        "cases": [
+            {
+                "case_id": "positive-case",
+                "candidate_id": "candidate-positive",
+                "expected_terminal": "verified_or_corrected",
+            },
+            {
+                "case_id": "negative-case",
+                "candidate_id": "candidate-negative",
+                "expected_terminal": "unresolved_or_failed",
+            },
+        ]
+    }
+
+
+def _accepted_positive_row() -> dict[str, object]:
+    return {
+        "candidate_id": "candidate-positive",
+        "outcome": "verified",
+        "final_claim": "The source-supported corrected claim is specific.",
+        "source_identity": "sha256:source",
+        "source_pdf_sha256_expected": "source",
+        "source_pdf_sha256_actual": "source",
+        "inspected_physical_pages": [3],
+        "supporting_physical_pages": [3],
+        "source_truth_notes_by_page": {"3": "The source page supports this claim."},
+    }
+
+
+def _accepted_negative_row() -> dict[str, object]:
+    return {
+        "candidate_id": "candidate-negative",
+        "outcome": "unresolved",
+        "final_claim": "",
+        "source_identity": "sha256:source",
+        "source_pdf_sha256_expected": "source",
+        "source_pdf_sha256_actual": "source",
+        "inspected_physical_pages": [4],
+        "supporting_physical_pages": [4],
+        "source_truth_notes_by_page": {"4": "The source page was inspected."},
+    }
+
+
+def test_adversarial_acceptance_comparator_accepts_exact_terminal_outcomes() -> None:
+    result = {"claims": [_accepted_positive_row(), _accepted_negative_row()]}
+
+    report = compare_adversarial_outcomes(_acceptance_corpus(), result)
+
+    assert report["passed"] is True
+    assert report["mismatches"] == []
+    assert adversarial_acceptance_exit_code(report) == 0
+
+
+@pytest.mark.parametrize(
+    ("result", "diagnostic_code"),
+    [
+        (
+            {"claims": [_accepted_negative_row()]},
+            "missing_result",
+        ),
+        (
+            {
+                "claims": [
+                    _accepted_positive_row(),
+                    _accepted_positive_row(),
+                    _accepted_negative_row(),
+                ]
+            },
+            "duplicate_result",
+        ),
+        (
+            {
+                "claims": [
+                    _accepted_positive_row(),
+                    _accepted_negative_row(),
+                    {"candidate_id": "unknown", "outcome": "unresolved"},
+                ]
+            },
+            "unknown_result",
+        ),
+        (
+            {
+                "claims": [
+                    _accepted_positive_row(),
+                    _accepted_negative_row(),
+                    "malformed-row",
+                ]
+            },
+            "malformed_result",
+        ),
+    ],
+)
+def test_adversarial_acceptance_comparator_rejects_identity_contract_violations(
+    result: dict[str, object], diagnostic_code: str
+) -> None:
+    report = compare_adversarial_outcomes(_acceptance_corpus(), result)
+
+    assert report["passed"] is False
+    assert diagnostic_code in {item["code"] for item in report["mismatches"]}
+    assert adversarial_acceptance_exit_code(report) == 1
+
+
+@pytest.mark.parametrize(
+    ("positive_row", "negative_row", "diagnostic_code"),
+    [
+        (
+            {
+                **_accepted_positive_row(),
+                "outcome": "unresolved",
+            },
+            _accepted_negative_row(),
+            "unexpected_outcome",
+        ),
+        (
+            {
+                **_accepted_positive_row(),
+                "supporting_physical_pages": [],
+            },
+            _accepted_negative_row(),
+            "invalid_source_provenance",
+        ),
+        (
+            _accepted_positive_row(),
+            {
+                **_accepted_negative_row(),
+                "outcome": "verified",
+            },
+            "unexpected_outcome",
+        ),
+        (
+            {
+                **_accepted_positive_row(),
+                "outcome": "skipped",
+            },
+            _accepted_negative_row(),
+            "unexpected_outcome",
+        ),
+    ],
+)
+def test_adversarial_acceptance_comparator_rejects_bad_terminal_or_provenance(
+    positive_row: dict[str, object],
+    negative_row: dict[str, object],
+    diagnostic_code: str,
+) -> None:
+    report = compare_adversarial_outcomes(
+        _acceptance_corpus(), {"claims": [positive_row, negative_row]}
+    )
+
+    assert report["passed"] is False
+    assert diagnostic_code in {item["code"] for item in report["mismatches"]}
+    assert adversarial_acceptance_exit_code(report) == 1
 
 
 def test_adversarial_corpus_covers_each_required_mutation_boundary() -> None:
