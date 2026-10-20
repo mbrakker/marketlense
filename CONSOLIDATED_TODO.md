@@ -292,6 +292,22 @@ acceptance is demonstrated.
 
 [Full R8 specification](docs/backlog/R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse).
 
+**PATH-02 implementation evidence — 2026-10-20:** Commit
+`524aadf46f8977180426f9fed0543843ae2bfdf0` adds one browser-owned path policy
+for URL download directories, `PDF/.part` destinations, external artifact
+copies, rendered/onsite captures, CDP fixed names, worker protocol files,
+managed profiles, and persistent session-reuse metadata. It preserves clean
+short names and the existing URL hash/cache/session identities, while adding
+UTF-16-unit/component validation, deterministic identity variants for occupied
+basenames, typed non-retryable path failures, and preflight propagation before
+browser/model escalation. Native Windows focused validation passed 17 PATH-02
+tests plus 104 browser acquisition tests; formatting, Ruff, forbidden-patching,
+architecture/import, role-I/O, service-boundary, contract, and full-repository
+mypy gates passed. The full repository run passed 7,705 tests with one
+environment-only failure in the existing CPython-3.12 wheelhouse audit under
+CPython 3.14.2; live `browser_use` runtime validation was unavailable. R8
+remains Active while PATH-03–06 remain open.
+
 #### R9. Accelerate CI validation fivefold without weakening release gates
 
 [Full R9 specification](docs/backlog/R-engineering.md#r9-accelerate-ci-validation-fivefold-without-weakening-release-gates).
