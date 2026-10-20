@@ -70,8 +70,10 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "replacement_policy" in correction.system.text
     assert "report_level_replacement_allowed" in correction.system.text
     assert "neighboring proposition" in correction.system.text
-    assert "preferred-wallet abandonment" in correction.system.text
     assert "same-subject qualitative narrowing" in correction.system.text
+    assert "causal/metric condition" in correction.system.text
+    assert "preferred-wallet abandonment" not in correction.system.text
+    assert "portfolio-reconfiguration" not in correction.system.text
     assert "bounded pattern" in verification.system.text.lower()
     assert "nested cohort" in verification.system.text.lower()
     assert "recovery_sources" in verification.system.text
@@ -79,8 +81,10 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "every inspected original or recovered PDF page" in verification.system.text
     assert "recovery candidate ranking" in verification.system.text.lower()
     assert "wrong-locator rescue" in verification.system.text.lower()
-    assert "guest-checkout" in verification.system.text.lower()
     assert "same-subject" in verification.system.text.lower()
+    assert "different causal or metric condition" in verification.system.text.lower()
+    assert "guest-checkout" not in verification.system.text.lower()
+    assert "portfolio-reconfiguration" not in verification.system.text.lower()
     assert "component totals" in correction.system.text.lower()
     assert "image-to-page" in verification.user.text.lower()
     assert "inspected original or recovered PDF page" in verification.user.text

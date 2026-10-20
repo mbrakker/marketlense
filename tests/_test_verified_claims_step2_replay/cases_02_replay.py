@@ -247,18 +247,44 @@ def test_visual_verification_defers_source_text_metric_relationship_checks() -> 
     assert status == "pending_visual_source_text"
 
 
-def test_authoritative_metric_conflict_remains_a_shadow_blocker() -> None:
+@pytest.mark.parametrize(
+    "metric",
+    [
+        {"label": "Adoption", "value": "40%", "cohort": "legacy cohort"},
+        {"label": "Adoption"},
+    ],
+)
+def test_stale_retained_metric_does_not_block_visual_claim(metric) -> None:
     insight = {
         "id": "candidate-authoritative-metric",
         "text": "Q1 2025: 50%.",
         "evidence_id": "retained-evidence",
         "evidence": "Q1 2025: 40%; Q2 2025: 50%.",
-        "metric": {"label": "Adoption", "value": "40%"},
+        "metric": metric,
         "evidence_status": "visual_verified_provisional",
     }
 
     errors, blockers, status = _shadow_quality_assessment(
         "Report", insight, visually_verified=True
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" in errors
+    assert blockers == []
+    assert status == "pending_visual_source_text"
+
+
+def test_unverified_input_does_not_receive_visual_source_exemption() -> None:
+    insight = {
+        "id": "candidate-unverified",
+        "text": "Q1 2025: 50%.",
+        "evidence_id": "retained-evidence",
+        "evidence": "Q1 2025: 40%; Q2 2025: 50%.",
+        "metric": {"label": "Adoption"},
+        "evidence_status": "retained",
+    }
+
+    errors, blockers, status = _shadow_quality_assessment(
+        "Report", insight, visually_verified=False
     )
 
     assert "public_editorial_quality.metric_label_relationship" in errors

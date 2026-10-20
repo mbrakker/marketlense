@@ -136,6 +136,35 @@ def _accepted_negative_row() -> dict[str, object]:
     }
 
 
+def _safe_abstention_row(
+    candidate_id: str = "candidate-safe-abstention",
+) -> dict[str, object]:
+    row = _accepted_negative_row()
+    row.update(
+        {
+            "candidate_id": candidate_id,
+            "outcome": "unresolved",
+            "failure_reason": "correction_unresolved",
+            "verification_attempts": [],
+            "correction_attempts": [
+                {
+                    "attempt": 1,
+                    "claim": "",
+                    "status": "unresolved",
+                    "issues": ["The retained locator is not sufficient for the claim."],
+                },
+                {
+                    "attempt": 2,
+                    "claim": "",
+                    "status": "unresolved",
+                    "issues": ["The retained locator is not sufficient for the claim."],
+                },
+            ],
+        }
+    )
+    return row
+
+
 def test_adversarial_acceptance_comparator_accepts_exact_terminal_outcomes() -> None:
     result = {"claims": [_accepted_positive_row(), _accepted_negative_row()]}
 
@@ -288,38 +317,7 @@ def test_adversarial_acceptance_rejects_negative_without_verification_attempt() 
 
 
 def test_adversarial_acceptance_accepts_bounded_source_mismatch_abstention() -> None:
-    negative = _accepted_negative_row()
-    negative.update(
-        {
-            "outcome": "unresolved",
-            "failure_reason": "correction_unresolved",
-            "verification_attempts": [],
-            "correction_attempts": [
-                {
-                    "attempt": 1,
-                    "claim": "",
-                    "status": "unresolved",
-                    "issues": [
-                        (
-                            "The page supports guest checkout, not the retained "
-                            "wallet proposition."
-                        )
-                    ],
-                },
-                {
-                    "attempt": 2,
-                    "claim": "",
-                    "status": "unresolved",
-                    "issues": [
-                        (
-                            "The page supports guest checkout, not the retained "
-                            "wallet proposition."
-                        )
-                    ],
-                },
-            ],
-        }
-    )
+    negative = _safe_abstention_row("candidate-negative")
 
     report = compare_adversarial_outcomes(
         _acceptance_corpus(),
@@ -328,6 +326,55 @@ def test_adversarial_acceptance_accepts_bounded_source_mismatch_abstention() -> 
 
     assert report["passed"] is True
     assert report["mismatches"] == []
+
+
+def test_adversarial_acceptance_reports_negative_terminal_categories() -> None:
+    safe = _safe_abstention_row()
+    corpus = {
+        "cases": [
+            {
+                "case_id": "positive-case",
+                "candidate_id": "candidate-positive",
+                "expected_terminal": "verified_or_corrected",
+                "physical_pages": [3],
+            },
+            {
+                "case_id": "verified-rejection-case",
+                "candidate_id": "candidate-negative",
+                "expected_terminal": "unresolved_or_failed",
+                "physical_pages": [4],
+            },
+            {
+                "case_id": "safe-abstention-case",
+                "candidate_id": "candidate-safe-abstention",
+                "expected_terminal": "unresolved_or_failed",
+                "physical_pages": [4],
+            },
+        ]
+    }
+
+    report = compare_adversarial_outcomes(
+        corpus,
+        {
+            "claims": [
+                _accepted_positive_row(),
+                _accepted_negative_row(),
+                safe,
+            ]
+        },
+    )
+
+    assert report["passed"] is True
+    assert report["negative_acceptance_categories"] == {
+        "independently_verified_rejection": {
+            "count": 1,
+            "candidate_ids": ["candidate-negative"],
+        },
+        "safe_correction_abstention": {
+            "count": 1,
+            "candidate_ids": ["candidate-safe-abstention"],
+        },
+    }
 
 
 def test_adversarial_acceptance_rejects_provider_failure_as_negative_evidence() -> None:
@@ -355,6 +402,104 @@ def test_adversarial_acceptance_rejects_provider_failure_as_negative_evidence() 
 
     assert report["passed"] is False
     assert "missing_genuine_verification_rejection" in _diagnostic_codes(report)
+
+
+def test_adversarial_acceptance_rejects_malformed_correction_abstention() -> None:
+    negative = _safe_abstention_row("candidate-negative")
+    negative["correction_attempts"][0]["status"] = "failed"
+
+    report = compare_adversarial_outcomes(
+        _acceptance_corpus(),
+        {"claims": [_accepted_positive_row(), negative]},
+    )
+
+    assert report["passed"] is False
+    assert "missing_verification_rejection" in _diagnostic_codes(report)
+
+
+def test_adversarial_acceptance_rejects_provider_correction_as_abstention() -> None:
+    negative = _safe_abstention_row("candidate-negative")
+    negative["correction_attempts"][1]["issues"] = [
+        "correction_provider_error",
+        "error_code:provider_timeout",
+        "retryable:false",
+    ]
+
+    report = compare_adversarial_outcomes(
+        _acceptance_corpus(),
+        {"claims": [_accepted_positive_row(), negative]},
+    )
+
+    assert report["passed"] is False
+    assert "missing_verification_rejection" in _diagnostic_codes(report)
+
+
+def test_adversarial_acceptance_requires_ordered_correction_abstention() -> None:
+    negative = _safe_abstention_row("candidate-negative")
+    negative["correction_attempts"] = list(reversed(negative["correction_attempts"]))
+
+    report = compare_adversarial_outcomes(
+        _acceptance_corpus(),
+        {"claims": [_accepted_positive_row(), negative]},
+    )
+
+    assert report["passed"] is False
+    assert "missing_correction_attempts" in _diagnostic_codes(report)
+
+
+def test_adversarial_acceptance_rejects_conflicting_verification_trail() -> None:
+    negative = _safe_abstention_row("candidate-negative")
+    negative["verification_attempts"] = [
+        {
+            "attempt": 1,
+            "outcome": "verified",
+            "diagnostics": [],
+            "source_truth_notes": "The page supports a different claim.",
+            "supporting_physical_pages": [],
+            "source_truth_notes_by_page": {},
+        }
+    ]
+
+    report = compare_adversarial_outcomes(
+        _acceptance_corpus(),
+        {"claims": [_accepted_positive_row(), negative]},
+    )
+
+    assert report["passed"] is False
+    assert "missing_genuine_verification_rejection" in _diagnostic_codes(report)
+
+
+def test_adversarial_acceptance_rejects_strict_page_four_recovery_for_abstention() -> (
+    None
+):
+    corpus = {
+        "cases": [
+            {
+                "case_id": "BIG-ADV-002",
+                "candidate_id": "candidate-safe-abstention",
+                "expected_terminal": "unresolved_or_failed",
+                "physical_pages": [8],
+            }
+        ]
+    }
+    negative = _safe_abstention_row()
+    negative.update(
+        {
+            "physical_page": 8,
+            "physical_pages": [8],
+            "original_physical_pages": [8],
+            "inspected_physical_pages": [8, 4],
+            "recovered_physical_pages": [4],
+        }
+    )
+
+    report = compare_adversarial_outcomes(corpus, {"claims": [negative]})
+
+    assert report["passed"] is False
+    assert {
+        "strict_inspected_binding_not_preserved",
+        "strict_recovery_binding_present",
+    }.issubset(_diagnostic_codes(report))
 
 
 def test_adversarial_acceptance_rejects_strict_wrong_page_rescued_by_page_four() -> (

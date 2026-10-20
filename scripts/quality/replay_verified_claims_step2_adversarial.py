@@ -48,6 +48,13 @@ _NON_REJECTION_FAILURE_MARKERS = (
     "correction_",
     "verification_non_retryable",
 )
+_CORRECTION_NON_SEMANTIC_MARKERS = (
+    "correction_provider_error",
+    "correction_response_invalid",
+    "error_code:",
+    "error_type:",
+    "retryable:",
+)
 
 
 def _acceptance_mismatch(
@@ -139,6 +146,80 @@ def _row_binding_matches_case(
     return True, ""
 
 
+def _strict_case_binding_issues(
+    row: Mapping[str, Any], case: Mapping[str, Any]
+) -> list[tuple[str, str]]:
+    """Return structural violations for the immutable strict-page case."""
+
+    if str(case.get("case_id") or "") != "BIG-ADV-002":
+        return []
+
+    issues: list[tuple[str, str]] = []
+    expected_pages = _expected_physical_pages(case)
+    original_pages = _strict_page_list(row.get("original_physical_pages"))
+    inspected_pages = _strict_page_list(row.get("inspected_physical_pages"))
+    recovered_pages = _strict_page_list(row.get("recovered_physical_pages") or [])
+    if expected_pages != [8] or original_pages != [8]:
+        issues.append(
+            (
+                "strict_original_binding_not_preserved",
+                "BIG-ADV-002 must retain original physical page [8]",
+            )
+        )
+    if inspected_pages != [8]:
+        issues.append(
+            (
+                "strict_inspected_binding_not_preserved",
+                "BIG-ADV-002 must inspect only physical page [8]",
+            )
+        )
+    if recovered_pages is None or recovered_pages:
+        issues.append(
+            (
+                "strict_recovery_binding_present",
+                "BIG-ADV-002 must not retain recovered physical pages",
+            )
+        )
+    if 4 in (_strict_page_list(row.get("supporting_physical_pages")) or []):
+        issues.append(
+            (
+                "strict_original_binding_rescued",
+                "BIG-ADV-002 accepted an unrelated supporting page 4",
+            )
+        )
+    notes = row.get("source_truth_notes_by_page")
+    if isinstance(notes, dict) and any(str(key) == "4" for key in notes):
+        issues.append(
+            (
+                "strict_original_binding_rescued",
+                "BIG-ADV-002 retained an unrelated page-4 support note",
+            )
+        )
+    raw_verifications = row.get("verification_attempts")
+    if isinstance(raw_verifications, list):
+        for attempt in raw_verifications:
+            if not isinstance(attempt, Mapping):
+                continue
+            if 4 in (_strict_page_list(attempt.get("supporting_physical_pages")) or []):
+                issues.append(
+                    (
+                        "strict_original_binding_rescued",
+                        "BIG-ADV-002 accepted an unrelated supporting page 4",
+                    )
+                )
+            attempt_notes = attempt.get("source_truth_notes_by_page")
+            if isinstance(attempt_notes, dict) and any(
+                str(key) == "4" for key in attempt_notes
+            ):
+                issues.append(
+                    (
+                        "strict_original_binding_rescued",
+                        "BIG-ADV-002 retained an unrelated page-4 support note",
+                    )
+                )
+    return list(dict.fromkeys(issues))
+
+
 def _bounded_attempts(
     row: Mapping[str, Any], field: str
 ) -> tuple[list[Mapping[str, Any]] | None, str]:
@@ -157,6 +238,7 @@ def _bounded_attempts(
             type(attempt_number) is not int
             or attempt_number not in {1, 2}
             or attempt_number in seen_numbers
+            or attempt_number != len(attempts) + 1
         ):
             return None, f"{field} contain an invalid or duplicate attempt number"
         seen_numbers.add(attempt_number)
@@ -261,16 +343,22 @@ def _safe_correction_abstention(
         "correction_unresolved"
     ):
         return False, "terminal result is not a bounded correction abstention"
-    if (
-        row.get("final_claim")
-        or row.get("supporting_physical_pages")
-        or row.get("source_truth_notes_by_page")
-    ):
+    raw_verifications = row.get("verification_attempts")
+    if not isinstance(raw_verifications, list) or raw_verifications:
+        return False, "correction abstention has a conflicting verification trail"
+    if str(row.get("final_claim") or "").strip():
         return False, "correction abstention retains accepted claim evidence"
-    if len(corrections) != 2:
+    if row.get("supporting_physical_pages") not in (None, []):
+        return False, "correction abstention retains accepted support pages"
+    if row.get("source_truth_notes_by_page") not in (None, {}):
+        return False, "correction abstention retains accepted source notes"
+    if len(corrections) != 2 or [item.get("attempt") for item in corrections] != [1, 2]:
         return False, "correction abstention did not use two unresolved attempts"
     for correction in corrections:
-        if correction.get("status") != "unresolved":
+        if (
+            correction.get("status") != "unresolved"
+            or str(correction.get("claim") or "").strip()
+        ):
             return False, "correction abstention contains a non-unresolved attempt"
         issues = correction.get("issues")
         if (
@@ -281,12 +369,12 @@ def _safe_correction_abstention(
             return False, "correction abstention has no source-based issue"
         normalized_issues = [issue.strip().casefold() for issue in issues]
         if any(
-            any(marker in issue for marker in _NON_GENUINE_REJECTION_MARKERS)
+            any(marker in issue for marker in _CORRECTION_NON_SEMANTIC_MARKERS)
             for issue in normalized_issues
         ):
             return (
                 False,
-                "correction abstention is only a provider or malformed response",
+                "correction abstention contains a provider or malformed response",
             )
     return True, ""
 
@@ -408,6 +496,10 @@ def compare_adversarial_outcomes(
         rows_by_id[candidate_id].append(raw_row)
 
     matched_count = 0
+    negative_acceptance_categories = {
+        "independently_verified_rejection": [],
+        "safe_correction_abstention": [],
+    }
     for candidate_id, (case_id, expected, case) in expected_by_id.items():
         candidate_rows = rows_by_id.get(candidate_id, [])
         if not candidate_rows:
@@ -453,6 +545,7 @@ def compare_adversarial_outcomes(
             continue
 
         binding_matches, binding_reason = _row_binding_matches_case(row, case)
+        case_structurally_valid = binding_matches
         if not binding_matches:
             mismatches.append(
                 _acceptance_mismatch(
@@ -464,11 +557,23 @@ def compare_adversarial_outcomes(
             )
 
         identity_valid, identity_reason = _source_identity_is_valid(row)
+        case_structurally_valid = case_structurally_valid and identity_valid
         if not identity_valid:
             mismatches.append(
                 _acceptance_mismatch(
                     code="invalid_source_provenance",
                     detail=identity_reason,
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+
+        for strict_code, strict_detail in _strict_case_binding_issues(row, case):
+            case_structurally_valid = False
+            mismatches.append(
+                _acceptance_mismatch(
+                    code=strict_code,
+                    detail=strict_detail,
                     candidate_id=candidate_id,
                     case_id=case_id,
                 )
@@ -487,7 +592,6 @@ def compare_adversarial_outcomes(
                     case_id=case_id,
                 )
             )
-        if corrections is None:
             if verifications is None:
                 mismatches.append(
                     _acceptance_mismatch(
@@ -504,10 +608,15 @@ def compare_adversarial_outcomes(
             continue
 
         if expected == _NEGATIVE_EXPECTATION and verifications is None:
+            if not case_structurally_valid:
+                continue
             abstention_valid, abstention_reason = _safe_correction_abstention(
                 row=row, corrections=corrections
             )
             if abstention_valid:
+                negative_acceptance_categories["safe_correction_abstention"].append(
+                    candidate_id
+                )
                 continue
             mismatches.append(
                 _acceptance_mismatch(
@@ -626,6 +735,7 @@ def compare_adversarial_outcomes(
                 )
             continue
 
+        negative_mismatch_start = len(mismatches)
         failure_reason = row.get("failure_reason")
         if not isinstance(failure_reason, str) or not failure_reason.strip():
             mismatches.append(
@@ -711,28 +821,9 @@ def compare_adversarial_outcomes(
                     case_id=case_id,
                 )
             )
-
+        if not correction_matches:
+            continue
         if case_id == "BIG-ADV-002":
-            expected_pages = _expected_physical_pages(case)
-            original_pages = _strict_page_list(row.get("original_physical_pages"))
-            if expected_pages != [8] or original_pages != [8]:
-                mismatches.append(
-                    _acceptance_mismatch(
-                        code="strict_original_binding_not_preserved",
-                        detail="BIG-ADV-002 must retain original physical page [8]",
-                        candidate_id=candidate_id,
-                        case_id=case_id,
-                    )
-                )
-            if 4 in (last_verification.get("supporting_physical_pages") or []):
-                mismatches.append(
-                    _acceptance_mismatch(
-                        code="strict_original_binding_rescued",
-                        detail="BIG-ADV-002 accepted an unrelated supporting page 4",
-                        candidate_id=candidate_id,
-                        case_id=case_id,
-                    )
-                )
             source_assessment = str(
                 last_verification.get("source_truth_notes") or ""
             ).casefold()
@@ -745,6 +836,10 @@ def compare_adversarial_outcomes(
                         case_id=case_id,
                     )
                 )
+        if case_structurally_valid and len(mismatches) == negative_mismatch_start:
+            negative_acceptance_categories["independently_verified_rejection"].append(
+                candidate_id
+            )
 
     return {
         "passed": not mismatches,
@@ -752,6 +847,13 @@ def compare_adversarial_outcomes(
         "matched_count": matched_count,
         "expected_terminal_counts": dict(expected_terminal_counts),
         "actual_outcome_counts": dict(actual_outcome_counts),
+        "negative_acceptance_categories": {
+            category: {
+                "count": len(candidate_ids),
+                "candidate_ids": candidate_ids,
+            }
+            for category, candidate_ids in negative_acceptance_categories.items()
+        },
         "mismatches": mismatches,
     }
 

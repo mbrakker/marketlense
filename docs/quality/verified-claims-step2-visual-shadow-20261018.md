@@ -1285,3 +1285,58 @@ contract, provenance, retry, and shadow-only safeguards. Step 2 remains
 **PARTIAL**: live provider variance, incomplete retained source bindings,
 limited replacement-path coverage, and independent editorial approval remain
 open. Step 3 has not started.
+
+### Final Phase 2 corrections — 2026-10-20
+
+Baseline: `30b6070ad758f515c180441f0c4eed8eea70f769`. The hosted failure was
+the existing 1,000-line ownership gate: `cases_02_visual.py` had 1,072 lines.
+The coherent semantic-authority and wrong-page tests were moved to
+`cases_03_visual.py`; the entrypoint imports both modules, all 21 original test
+symbols remain present exactly once, and the resulting modules are 507 and 572
+lines. The threshold and its policy were unchanged.
+
+The adversarial comparator now has two mutually distinct negative categories.
+An independently verified rejection requires a completed, source-grounded
+verification rejection with a valid attempt trail and retained binding. A safe
+correction-stage abstention requires exactly two ordered unresolved correction
+attempts with nonempty issue details, no typed provider/malformed failure, no
+verification trail, and empty final/support metadata; it is non-acceptance, not
+independent factual rejection. Strict `BIG-ADV-002` page-8/original-page,
+inspected-page, recovery and page-4 rescue checks execute before correction-only
+early exits. The nine-case provider-free result-shaped comparator passed 9/9:
+one independently verified rejection (`big-adv-wrong-page`) and zero safe
+abstentions in that corpus. Focused synthetic regressions cover the safe path,
+malformed/provider corrections, strict page-4 recovery, and category separation.
+
+The replay quality adapter no longer treats any retained `metric` field as
+factual authority. Visually verified rows keep the four native-source rules
+(`unsupported_numeric_claim`, `metric_label_relationship`,
+`temporal_integrity`, and `incomplete_numeric_expression`) pending/advisory;
+unverified rows still block, and structural/provenance/mechanical blockers are
+unchanged. Verified replacement inputs continue to omit the retained metric
+object. The correction and verification prompt examples were generalized to
+same-subject direction, causal/metric-condition preservation, qualitative
+narrowing, and explicit report-level replacement policy; publisher-specific
+wallet/checkout and portfolio examples were removed.
+
+Verification on this correction used no provider or publication calls. The
+provider-free replay
+`out/verified_claims_step2_provider_free_final_phase2_20261020/report.json`
+confirmed 15 source cases, 39 variants, all 29 retained IDs across
+Capgemini/Activate/KPMG/Reuters Institute/Adjust, all five expected PDF hashes,
+five report theme sets (5/7/5/6/6), and
+`fabricated_fixture_substitution: false`. Compared with the retained replay
+baseline, selected IDs, theme coverage, source identities, and physical-page
+inputs were unchanged; this replay does not evaluate Luna correction quality.
+The affected visual/replay/adversarial suite passed **229 tests**, with **1
+expected integration skip** and **1 deselected**; the focused comparator/replay/
+visual suite passed **83**, with **1 deselected**. The long-test-file ownership
+test passed 2/2, formatting, Ruff, compile, and the three-iteration prompt
+fixture gate passed. The prompt gate measured 105,296 current corpus tokens
+versus 104,024 baseline (+1,272; +$0.000127), within the existing allowlist;
+no baseline or threshold changed.
+
+No new live semantic result, token/cost/latency measurement, canonical
+promotion, publication-readiness change, or WordPress write is claimed. Step 2
+remains **PARTIAL**, E18 remains Active, and Step 3 remains unstarted pending
+fresh selection-effectiveness evidence and independent editorial approval.
