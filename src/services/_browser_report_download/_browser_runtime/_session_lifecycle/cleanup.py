@@ -15,9 +15,13 @@ from src.services._browser_report_download._browser_runtime import (
     _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS,
     _TEMP_CLEANUP_LOG_SAMPLE_LIMIT,
 )
+from src.services._browser_report_download.artifact_paths import (
+    validate_browser_profile_path,
+)
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
+
 
 def _log_browser_cleanup_failure(
     *,
@@ -61,9 +65,10 @@ def _cleanup_browser_profile_dir(
 
 
 def _new_managed_browser_profile_dir(download_dir: Path) -> Path:
-    return download_dir / (
+    profile_dir = download_dir / (
         f"{_BROWSER_PROFILE_DIR_PREFIX}-{os.getpid()}-{int(time.time() * 1000)}"
     )
+    return validate_browser_profile_path(profile_dir)
 
 
 def _default_session_reuse_base_dir(

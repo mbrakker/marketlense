@@ -18,6 +18,11 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.artifact_paths import (
+    resolve_browser_artifact_path,
+    validate_browser_artifact_path,
+    validate_browser_download_directory,
+)
 from src.utils.errors import AppError
 from src.utils.url_utils import normalize_url
 
@@ -28,6 +33,8 @@ from .evidence import (
     _resolve_observed_document_urls,
     _resolve_visited_url_timeline,
 )
+
+_MAX_EXTERNAL_ARTIFACT_COLLISION_ATTEMPTS = 100
 
 
 def _complete_pdf_artifact(
@@ -128,7 +135,20 @@ def _try_fetch_pdf_target(
     ):
         return None
     destination_name = Path(urlsplit(target_url).path).name or "download.pdf"
-    destination_path = download_dir / destination_name
+    destination_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name=destination_name,
+        identity=target_url,
+        temporary_suffixes=(".part",),
+    )
+    if destination_path.exists():
+        destination_path = resolve_browser_artifact_path(
+            parent_dir=download_dir,
+            source_name=destination_name,
+            identity=target_url,
+            force_identity_hash=True,
+            temporary_suffixes=(".part",),
+        )
     try:
         http_runtime.download_pdf_from_url(
             pdf_url=target_url,
@@ -153,8 +173,10 @@ def _try_fetch_pdf_target(
             normalized_url=normalized_url,
         )
         return ensured_path
-    except AppError:
+    except AppError as exc:
         destination_path.unlink(missing_ok=True)
+        if exc.code == "browser_download_artifact_path_invalid":
+            raise
         return None
 
 
@@ -467,27 +489,60 @@ def _adopt_external_downloaded_file(
     source_path: Path,
     download_dir: Path,
 ) -> Path | None:
+    download_dir = validate_browser_download_directory(download_dir)
     download_dir.mkdir(parents=True, exist_ok=True)
-    target_path = download_dir / source_path.name
+    target_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name=source_path.name,
+        identity=str(source_path),
+        temporary_suffixes=(".part",),
+    )
     counter = 1
     while target_path.exists():
+        if counter > _MAX_EXTERNAL_ARTIFACT_COLLISION_ATTEMPTS:
+            raise AppError(
+                code="browser_download_artifact_collision_exhausted",
+                message="External browser artifact destinations remain ambiguous",
+                retryable=False,
+                context={
+                    "path_role": "external browser artifact",
+                    "next_action": (
+                        "Remove stale duplicate artifacts or choose a shorter "
+                        "browser output directory"
+                    ),
+                },
+            )
         try:
             if source_path.samefile(target_path):
-                return target_path.resolve()
+                return validate_browser_artifact_path(
+                    target_path,
+                    temporary_suffixes=(".part",),
+                )
         except OSError:
-            target_path = (
-                download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
+            target_path = resolve_browser_artifact_path(
+                parent_dir=download_dir,
+                source_name=f"{source_path.stem}_{counter}{source_path.suffix}",
+                identity=f"{source_path}:{counter}",
+                temporary_suffixes=(".part",),
             )
             counter += 1
             continue
-        target_path = download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
+        target_path = resolve_browser_artifact_path(
+            parent_dir=download_dir,
+            source_name=f"{source_path.stem}_{counter}{source_path.suffix}",
+            identity=f"{source_path}:{counter}",
+            temporary_suffixes=(".part",),
+        )
         counter += 1
     try:
         shutil.copy2(source_path, target_path)
     except OSError:
         return None
     try:
-        resolved = target_path.resolve()
+        resolved = validate_browser_artifact_path(
+            target_path,
+            temporary_suffixes=(".part",),
+        )
     except OSError:
         return None
     if not resolved.exists() or not resolved.is_file():

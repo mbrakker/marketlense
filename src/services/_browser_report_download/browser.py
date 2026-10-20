@@ -226,6 +226,11 @@ from src.services._browser_report_download._browser_runtime.worker_protocol impo
 from src.services._browser_report_download._http.config import (
     _TERMINAL_NOT_FOUND_BODY_MARKERS,
 )
+from src.services._browser_report_download.artifact_paths import (
+    ensure_browser_directory,
+    resolve_browser_artifact_path,
+    validate_browser_profile_path,
+)
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     capture_print_pdf_via_cdp_async,
@@ -353,11 +358,11 @@ def start_browser_preflight_session(
         normalized_url=normalized_url,
     )
     profile_dir = (
-        Path(session_reuse_decision.profile_path).resolve()
+        validate_browser_profile_path(Path(session_reuse_decision.profile_path))
         if session_reuse_decision.accepted and session_reuse_decision.profile_path
         else _new_managed_browser_profile_dir(download_dir)
     )
-    profile_dir.mkdir(parents=True, exist_ok=True)
+    ensure_browser_directory(profile_dir, profile=True)
     browser_kwargs: dict[str, Any] = {
         "downloads_path": str(download_dir),
         "user_data_dir": str(profile_dir),
@@ -1699,7 +1704,11 @@ class _DeterministicPlaybookPageDriver:
     def save_as_pdf(self, target_url: str) -> str:
         if self._download_dir is None or self._ctx is None:
             raise RuntimeError("deterministic_playbook_pdf_capture_unavailable")
-        pdf_path = self._download_dir / "browser-route-playbook-rendered.pdf"
+        pdf_path = resolve_browser_artifact_path(
+            parent_dir=self._download_dir,
+            source_name="browser-route-playbook-rendered.pdf",
+            fixed_name="browser-route-playbook-rendered.pdf",
+        )
         if not capture_print_pdf_via_cdp(
             browser=self._browser,
             pdf_path=pdf_path,
@@ -1938,7 +1947,11 @@ class _AsyncDeterministicPlaybookPageDriver:
     async def save_as_pdf(self, target_url: str) -> str:
         if self._download_dir is None or self._ctx is None:
             raise RuntimeError("deterministic_playbook_pdf_capture_unavailable")
-        pdf_path = self._download_dir / "browser-route-playbook-rendered.pdf"
+        pdf_path = resolve_browser_artifact_path(
+            parent_dir=self._download_dir,
+            source_name="browser-route-playbook-rendered.pdf",
+            fixed_name="browser-route-playbook-rendered.pdf",
+        )
         if not capture_print_pdf_via_cdp(
             browser=self._browser,
             pdf_path=pdf_path,
@@ -2450,7 +2463,11 @@ async def _run_cdp_rendered_pdf_playbook(
         timeout_seconds=30.0,
     ):
         return None
-    pdf_path = download_dir / "browser-route-playbook-rendered.pdf"
+    pdf_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="browser-route-playbook-rendered.pdf",
+        fixed_name="browser-route-playbook-rendered.pdf",
+    )
     if not await capture_print_pdf_via_cdp_async(
         browser=browser,
         pdf_path=pdf_path,
@@ -2729,11 +2746,11 @@ def run_browser_report_download_agent(
             normalized_url=normalized_url,
         )
         profile_dir = (
-            Path(session_reuse_decision.profile_path).resolve()
+            validate_browser_profile_path(Path(session_reuse_decision.profile_path))
             if session_reuse_decision.accepted and session_reuse_decision.profile_path
             else _new_managed_browser_profile_dir(download_dir)
         )
-        profile_dir.mkdir(parents=True, exist_ok=True)
+        ensure_browser_directory(profile_dir, profile=True)
     else:
         preexisting_temp_dirs = preflight_session.preexisting_temp_dirs
         session_reuse_decision = preflight_session.session_reuse_decision

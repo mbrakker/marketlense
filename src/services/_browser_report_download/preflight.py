@@ -49,6 +49,7 @@ from src.services._browser_report_download.http import (
 from src.services._browser_report_download.logging import (
     browser_preflight_probe_log_fields,
 )
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service.preflight")
@@ -255,10 +256,10 @@ def _run_browser_preflight_probe(
             network_event_count=len(runtime_evidence["event_urls"]),
             evidence_labels=[
                 *_evidence_labels(
-                page_info_html_size=int(runtime_evidence["html_size"]),
-                rendered=runtime_evidence,
-                event_urls=runtime_evidence["event_urls"],
-                selected_pdf_url=selected_pdf_url,
+                    page_info_html_size=int(runtime_evidence["html_size"]),
+                    rendered=runtime_evidence,
+                    event_urls=runtime_evidence["event_urls"],
+                    selected_pdf_url=selected_pdf_url,
                 ),
                 *(["preflight_terminal_not_found"] if terminal_not_found else []),
                 *(
@@ -335,6 +336,26 @@ def _run_browser_preflight_probe(
         )
         terminal_outcome = "completed"
         verified_artifact_count = 1
+        return BrowserPreflightProbeExecution(
+            response=response,
+            browser_session=None,
+        )
+    except AppError as exc:
+        if exc.code in {
+            "browser_download_artifact_path_invalid",
+            "browser_download_output_dir_invalid",
+            "browser_download_session_reuse_path_invalid",
+        }:
+            raise
+        probe = _probe_result(
+            status="failed",
+            started_url=target_url,
+            duration_seconds=round(time.monotonic() - started, 3),
+            escalation_reason=f"preflight_failed:{phase}:{type(exc).__name__}",
+            evidence_labels=["preflight_failed", f"preflight_phase_{phase}"],
+        )
+        _log_probe_complete(ctx=ctx, normalized_url=normalized_url, probe=probe)
+        response = BrowserPreflightProbeResponse(schema_version="1.0", probe=probe)
         return BrowserPreflightProbeExecution(
             response=response,
             browser_session=None,

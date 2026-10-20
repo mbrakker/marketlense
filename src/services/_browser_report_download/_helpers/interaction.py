@@ -19,6 +19,9 @@ from src.contracts.browser_download import (
     BrowserHelperStandardFormSubmitResult,
 )
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download.artifact_paths import (
+    validate_browser_artifact_path,
+)
 from src.services._browser_report_download.cdp import (
     capture_terminal_screenshot_via_cdp,
 )
@@ -58,6 +61,7 @@ def browser_helper_capture_screenshot(
     normalized_url: str,
     required: bool = False,
 ) -> BrowserHelperScreenshot:
+    screenshot_path = validate_browser_artifact_path(screenshot_path)
     logger.info(
         log_event(
             ctx,

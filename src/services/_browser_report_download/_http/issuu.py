@@ -27,6 +27,9 @@ from src.contracts.http_acquisition import (
 from src.contracts.pdf_ocr import PdfImageRenderRequest
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download._http.config import _HTML_FETCH_HEADERS
+from src.services._browser_report_download.artifact_paths import (
+    resolve_browser_artifact_path,
+)
 from src.services._browser_report_download.logging import (
     browser_download_result_log_fields,
 )
@@ -185,7 +188,11 @@ def try_embedded_issuu_capture(
             page_images.append(image)
     except AppError:
         return None
-    capture_path = download_dir / "issuu_rendered_report.pdf"
+    capture_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="issuu_rendered_report.pdf",
+        fixed_name="issuu_rendered_report.pdf",
+    )
     if not _write_rendered_pdf(
         capture_path=capture_path,
         page_images=page_images,

@@ -16,8 +16,14 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.artifact_paths import (
+    ensure_browser_directory,
+    resolve_browser_artifact_path,
+    validate_browser_artifact_path,
+    validate_browser_download_directory,
+)
 from src.services._browser_report_download.models import BrowserUseAgentResult
-from src.services._browser_report_download.request import prepare_download_dir
+from src.services._browser_report_download.request import resolve_download_dir_path
 from src.utils.errors import AppError
 
 from .classification import (
@@ -286,17 +292,31 @@ def _safe_onsite_capture_path(
     final_url: str,
     suffix: str,
 ) -> Path:
-    download_root = download_dir.resolve()
+    download_root = validate_browser_download_directory(download_dir)
     if claimed_path:
         candidate = Path(claimed_path).expanduser()
         try:
-            resolved_candidate = candidate.resolve()
+            resolved_candidate = validate_browser_artifact_path(candidate)
             if resolved_candidate.is_relative_to(download_root):
                 return resolved_candidate
         except OSError:
             claimed_path = ""
     stem = Path(urlsplit(final_url or "onsite_report").path).stem or "onsite_report"
-    return download_root / f"{stem}{suffix}"
+    capture_path = resolve_browser_artifact_path(
+        parent_dir=download_root,
+        source_name=stem,
+        extension=suffix,
+        identity=final_url or "onsite_report",
+    )
+    if capture_path.exists():
+        return resolve_browser_artifact_path(
+            parent_dir=download_root,
+            source_name=capture_path.name,
+            extension=suffix,
+            identity=final_url or "onsite_report",
+            force_identity_hash=True,
+        )
+    return capture_path
 
 
 def _looks_like_onsite_report_text(
@@ -566,13 +586,17 @@ def _capture_salvaged_onsite_html(
     final_url: str,
     html: str,
 ) -> Path:
-    capture_root = prepare_download_dir(
+    capture_root = resolve_download_dir_path(
         root_dir=request.settings.output_dir,
         normalized_url=normalized_url,
     )
-    capture_path = (
-        capture_root
-        / f"{Path(urlsplit(final_url or normalized_url).path).stem or 'onsite-report'}.html"
+    ensure_browser_directory(capture_root)
+    capture_path = resolve_browser_artifact_path(
+        parent_dir=capture_root,
+        source_name=Path(urlsplit(final_url or normalized_url).path).stem
+        or "onsite-report",
+        extension=".html",
+        identity=final_url or normalized_url,
     )
     capture_path.write_text(str(html or ""), encoding="utf-8")
     return capture_path

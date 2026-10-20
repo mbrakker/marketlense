@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import asyncio
 import inspect
 import logging
@@ -6,7 +7,11 @@ import shutil
 from pathlib import Path
 from threading import Thread
 from typing import Any
+
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download.artifact_paths import (
+    resolve_browser_artifact_path,
+)
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
 )
@@ -41,7 +46,11 @@ def _copy_history_screenshot(*, history: Any, download_dir: Path) -> str:
         return ""
     if not source_path.exists() or not source_path.is_file():
         return ""
-    target_path = download_dir / "terminal_screenshot.png"
+    target_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="terminal_screenshot.png",
+        fixed_name="terminal_screenshot.png",
+    )
     try:
         if source_path.resolve() != target_path.resolve():
             shutil.copy2(source_path, target_path)
@@ -170,7 +179,11 @@ def _write_terminal_html_snapshot(
     token = str(final_page_html or "")
     if not token.strip():
         return ""
-    snapshot_path = download_dir / "terminal_snapshot.html"
+    snapshot_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="terminal_snapshot.html",
+        fixed_name="terminal_snapshot.html",
+    )
     try:
         snapshot_path.write_text(token, encoding="utf-8")
     except OSError:
@@ -186,7 +199,11 @@ def _write_terminal_screenshot(
     ctx: RunContext,
     normalized_url: str,
 ) -> str:
-    screenshot_path = download_dir / "terminal_screenshot.png"
+    screenshot_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="terminal_screenshot.png",
+        fixed_name="terminal_screenshot.png",
+    )
     result = browser_helper_capture_screenshot(
         browser=browser,
         page=page,

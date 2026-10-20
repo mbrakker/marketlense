@@ -23,14 +23,18 @@ from src.contracts.http_acquisition import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download._http.config import (
-    _PDF_FETCH_FALLBACK_HEADERS,
     _HTML_FETCH_HEADERS,
     _HTML_FETCH_MAX_BYTES,
+    _PDF_FETCH_FALLBACK_HEADERS,
     _PDF_FETCH_HEADERS,
     _PDF_FETCH_MAX_BYTES,
 )
 from src.services._browser_report_download._http.html_evidence import (
     _extract_embedded_pdf_url,
+)
+from src.services._browser_report_download.artifact_paths import (
+    resolve_browser_artifact_path,
+    validate_browser_artifact_path,
 )
 from src.services._browser_report_download.logging import (
     browser_download_result_log_fields,
@@ -65,7 +69,20 @@ def try_direct_pdf_download(
 ) -> BrowserReportDownloadResult | None:
     target_url = str(probe_url or normalized_url).strip() or normalized_url
     destination_name = Path(urlsplit(target_url).path).name or "download.pdf"
-    destination_path = download_dir / destination_name
+    destination_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name=destination_name,
+        identity=target_url,
+        temporary_suffixes=(".part",),
+    )
+    if destination_path.exists():
+        destination_path = resolve_browser_artifact_path(
+            parent_dir=download_dir,
+            source_name=destination_name,
+            identity=target_url,
+            force_identity_hash=True,
+            temporary_suffixes=(".part",),
+        )
     logger.info(
         log_event(
             ctx,
@@ -436,6 +453,10 @@ def download_pdf_from_url(
     ctx: RunContext,
     normalized_url: str,
 ) -> None:
+    destination_path = validate_browser_artifact_path(
+        destination_path,
+        temporary_suffixes=(".part",),
+    )
     logger.info(
         log_event(
             ctx,

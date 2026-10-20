@@ -9,6 +9,9 @@ from typing import Any
 
 from src.contracts.browser_download import BrowserDownloadDialogEvidence
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download.artifact_paths import (
+    validate_browser_artifact_path,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -319,6 +322,7 @@ def capture_terminal_screenshot_via_cdp(
     normalized_url: str,
     required: bool = False,
 ) -> bool:
+    screenshot_path = validate_browser_artifact_path(screenshot_path)
     call_result = call_browser_download_cdp(
         browser=browser,
         method="Page.captureScreenshot",
@@ -462,6 +466,7 @@ def capture_print_pdf_via_cdp(
     target_url: str = "",
     prefer_transient_session: bool = False,
 ) -> bool:
+    pdf_path = validate_browser_artifact_path(pdf_path)
     call_result = call_browser_download_cdp(
         browser=browser,
         method="Page.printToPDF",
@@ -497,6 +502,7 @@ async def capture_print_pdf_via_cdp_async(
 ) -> bool:
     """Capture a rendered PDF on Browser Use's already-running event loop."""
 
+    pdf_path = validate_browser_artifact_path(pdf_path)
     target_id = ""
     session_id = ""
     logger.info(

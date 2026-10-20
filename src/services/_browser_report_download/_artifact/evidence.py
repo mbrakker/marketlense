@@ -19,6 +19,9 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.artifact_paths import (
+    resolve_browser_artifact_path,
+)
 from src.services._browser_report_download.models import (
     BrowserAgentRunResult,
     BrowserUseAgentResult,
@@ -27,7 +30,7 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
 
-from . import ARTIFACT_LOGGER_NAME, _VERIFIED_EMAIL_SIGNAL_MARKERS
+from . import _VERIFIED_EMAIL_SIGNAL_MARKERS, ARTIFACT_LOGGER_NAME
 
 logger = logging.getLogger(ARTIFACT_LOGGER_NAME)
 
@@ -629,7 +632,11 @@ def _write_terminal_html_snapshot(
     token = str(html or "")
     if not token.strip():
         return ""
-    snapshot_path = download_dir / "terminal_snapshot.html"
+    snapshot_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="terminal_snapshot.html",
+        fixed_name="terminal_snapshot.html",
+    )
     try:
         snapshot_path.write_text(token, encoding="utf-8")
     except OSError:

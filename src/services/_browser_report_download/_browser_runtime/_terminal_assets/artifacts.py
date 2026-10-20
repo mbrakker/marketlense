@@ -1,20 +1,30 @@
 from __future__ import annotations
+
 import json
 import logging
 import shutil
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
+
 from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.artifact_paths import (
+    ensure_browser_directory,
+    resolve_browser_artifact_path,
+    validate_browser_artifact_path,
+    validate_browser_download_directory,
+)
 from src.services._browser_report_download.http import is_pdf_file
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
+
+_MAX_EXTERNAL_ARTIFACT_COLLISION_ATTEMPTS = 100
 
 
 def _parse_raw_model_response(raw_model_response: str) -> dict[str, Any]:
@@ -60,6 +70,15 @@ def _prefetch_structured_pdf_artifact(
         )
         if destination_path.exists() and is_pdf_file(destination_path):
             return str(destination_path)
+        if destination_path.exists():
+            destination_path = resolve_browser_artifact_path(
+                parent_dir=download_dir,
+                source_name=destination_path.name,
+                extension=".pdf",
+                identity=target_url,
+                force_identity_hash=True,
+                temporary_suffixes=(".part",),
+            )
         try:
             http_runtime.download_pdf_from_url(
                 pdf_url=target_url,
@@ -69,6 +88,8 @@ def _prefetch_structured_pdf_artifact(
                 normalized_url=normalized_url,
             )
         except AppError as exc:
+            if exc.code == "browser_download_artifact_path_invalid":
+                raise
             logger.info(
                 log_event(
                     ctx,
@@ -121,7 +142,8 @@ def _materialize_external_artifacts(
     )
     if not candidate_paths:
         return []
-    download_dir.mkdir(parents=True, exist_ok=True)
+    download_dir = validate_browser_download_directory(download_dir)
+    ensure_browser_directory(download_dir)
     resolved_download_dir = _safe_resolve_path(download_dir)
     materialized_paths: list[str] = []
     seen_targets: set[str] = set()
@@ -213,25 +235,59 @@ def _copy_external_artifact(
     source_path: Path,
     download_dir: Path,
 ) -> Path | None:
-    target_path = download_dir / source_path.name
+    download_dir = validate_browser_download_directory(download_dir)
+    ensure_browser_directory(download_dir)
+    target_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name=source_path.name,
+        identity=str(source_path),
+        temporary_suffixes=(".part",),
+    )
     counter = 1
     while target_path.exists():
+        if counter > _MAX_EXTERNAL_ARTIFACT_COLLISION_ATTEMPTS:
+            raise AppError(
+                code="browser_download_artifact_collision_exhausted",
+                message="External browser artifact destinations remain ambiguous",
+                retryable=False,
+                context={
+                    "path_role": "external browser artifact",
+                    "next_action": (
+                        "Remove stale duplicate artifacts or choose a shorter "
+                        "browser output directory"
+                    ),
+                },
+            )
         try:
             if source_path.samefile(target_path):
-                return _safe_resolve_path(target_path)
+                return validate_browser_artifact_path(
+                    target_path,
+                    temporary_suffixes=(".part",),
+                )
         except OSError:
-            target_path = (
-                download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
+            target_path = resolve_browser_artifact_path(
+                parent_dir=download_dir,
+                source_name=f"{source_path.stem}_{counter}{source_path.suffix}",
+                identity=f"{source_path}:{counter}",
+                temporary_suffixes=(".part",),
             )
             counter += 1
             continue
-        target_path = download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
+        target_path = resolve_browser_artifact_path(
+            parent_dir=download_dir,
+            source_name=f"{source_path.stem}_{counter}{source_path.suffix}",
+            identity=f"{source_path}:{counter}",
+            temporary_suffixes=(".part",),
+        )
         counter += 1
     try:
         shutil.copy2(source_path, target_path)
     except OSError:
         return None
-    resolved_target = _safe_resolve_path(target_path)
+    resolved_target = validate_browser_artifact_path(
+        target_path,
+        temporary_suffixes=(".part",),
+    )
     if (
         resolved_target is None
         or not resolved_target.exists()
@@ -305,7 +361,13 @@ def _pdf_prefetch_destination_path(
     file_name = url_name or downloaded_file_name or "download.pdf"
     if not file_name.lower().endswith(".pdf"):
         file_name = f"{file_name}.pdf"
-    return download_dir / file_name
+    return resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name=file_name,
+        extension=".pdf",
+        identity=target_url,
+        temporary_suffixes=(".part",),
+    )
 
 
 __all__ = [

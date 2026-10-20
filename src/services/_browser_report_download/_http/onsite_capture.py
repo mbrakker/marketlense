@@ -42,6 +42,10 @@ from src.services._browser_report_download._http.html_evidence import (
 from src.services._browser_report_download._http.issuu import (
     try_embedded_issuu_capture,
 )
+from src.services._browser_report_download.artifact_paths import (
+    resolve_browser_artifact_path,
+    validate_browser_artifact_path,
+)
 from src.services._browser_report_download.logging import (
     browser_download_result_log_fields,
 )
@@ -346,11 +350,20 @@ def try_direct_onsite_capture(
             )
         )
         return None
-    html_capture_path = download_dir / "onsite_capture.html"
+    html_capture_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="onsite_capture.html",
+        fixed_name="onsite_capture.html",
+    )
+    rendered_pdf_output_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="onsite_capture.rendered.pdf",
+        fixed_name="onsite_capture.rendered.pdf",
+    )
     html_capture_path.write_text(html, encoding="utf-8")
     rendered_pdf_path = _render_onsite_html_to_pdf(
         html=html,
-        output_path=download_dir / "onsite_capture.rendered.pdf",
+        output_path=rendered_pdf_output_path,
         ctx=ctx,
     )
     capture_path = rendered_pdf_path or html_capture_path
@@ -459,6 +472,7 @@ def _render_onsite_html_to_pdf(
     *, html: str, output_path: Path, ctx: RunContext
 ) -> Path | None:
     """Create a bounded local PDF from a verified direct on-site HTML capture."""
+    output_path = validate_browser_artifact_path(output_path)
     output_path.unlink(missing_ok=True)
     process = multiprocessing.get_context("spawn").Process(
         target=_write_onsite_html_pdf,

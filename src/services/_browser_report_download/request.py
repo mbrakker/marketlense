@@ -10,6 +10,11 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentityField,
     BrowserReportDownloadRequest,
 )
+from src.services._browser_report_download.artifact_paths import (
+    bounded_browser_directory_component,
+    ensure_browser_directory,
+    validate_browser_download_directory,
+)
 from src.services._config_service.identity import (
     identity_field_match_tokens,
     normalize_browser_download_identity_key,
@@ -205,9 +210,27 @@ def _identity_families_for_field(field: BrowserDownloadIdentityField) -> set[str
 
 
 def resolve_download_dir_path(*, root_dir: str, normalized_url: str) -> Path:
-    root = Path(root_dir).expanduser().resolve()
-    host = urlsplit(normalized_url).netloc.replace(":", "_") or "unknown_host"
+    try:
+        root = Path(root_dir).expanduser().resolve()
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise AppError(
+            code="browser_download_output_dir_invalid",
+            message="Browser download output directory could not be resolved safely",
+            cause=exc,
+            retryable=False,
+            context={
+                "windows_path_budget": 240,
+                "next_action": "Set a shorter writable browser output_dir",
+            },
+        ) from exc
+    raw_host = (urlsplit(normalized_url).netloc or "unknown_host").casefold()
     url_hash = sha1(normalized_url.encode("utf-8")).hexdigest()[:12]
+    host = bounded_browser_directory_component(
+        parent_dir=root,
+        raw_name=raw_host,
+        identity=raw_host or normalized_url,
+        trailing_components=(url_hash,),
+    )
     download_dir = (root / host / url_hash).resolve()
     if download_dir != root and root not in download_dir.parents:
         raise AppError(
@@ -216,7 +239,7 @@ def resolve_download_dir_path(*, root_dir: str, normalized_url: str) -> Path:
             retryable=False,
             context={"root_dir": str(root), "download_dir": str(download_dir)},
         )
-    return download_dir
+    return validate_browser_download_directory(download_dir)
 
 
 def prepare_download_dir(*, root_dir: str, normalized_url: str) -> Path:
@@ -231,7 +254,7 @@ def prepare_download_dir(*, root_dir: str, normalized_url: str) -> Path:
             else:
                 child.unlink()
     else:
-        download_dir.mkdir(parents=True, exist_ok=True)
+        ensure_browser_directory(download_dir)
     return download_dir
 
 
