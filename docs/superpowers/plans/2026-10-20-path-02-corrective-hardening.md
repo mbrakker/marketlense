@@ -30,11 +30,11 @@
 - \`_bounded_filename(source_name, extension, identity, force_identity_hash, max_name_units)\` returns a deterministic readable-stem plus 12-hex identity suffix whenever the clean filename is lossy, reserved, explicitly forced, hash-looking with a different identity, or exceeds the available name budget.
 - \`validate_browser_artifact_path(path, temporary_suffixes=(), parent_dir=None)\` validates the lexical destination against the resolved intended parent, rejects external final symlinks, and validates final and temporary paths.
 
-- [ ] **Step 1: Write failing identity and containment tests.**
+- [x] **Step 1: Write failing identity and containment tests.**
 
 Add tests for two long identical basenames with different URLs, same URL replay, long Unicode names, a literal \`report-<12 hex>.pdf\` versus a generated identity name, and existing/missing external destination symlinks. Assert distinct names, stable replay, full-path and \`.part\` budgets, typed non-retryable errors, and unchanged external bytes.
 
-- [ ] **Step 2: Run the focused tests to verify the defects.**
+- [x] **Step 2: Run the focused tests to verify the defects.**
 
 Run:
 
@@ -44,11 +44,11 @@ python -m pytest -q tests/test_browser_artifact_paths.py
 
 Expected: the new long-name identity and symlink-containment tests fail against the current helper.
 
-- [ ] **Step 3: Implement the smallest helper correction.**
+- [x] **Step 3: Implement the smallest helper correction.**
 
 Compute the identity digest before compaction, reserve \`-\` plus 12 hexadecimal characters and the extension, truncate only the readable stem, and raise \`browser_download_artifact_path_invalid\` when the suffix cannot fit. Recognize an existing generated suffix only when it matches the supplied identity digest, so a literal hash-looking source name is re-identified instead of impersonating another URL. Pass the resolved intended parent into validation; reject resolved candidates outside it and existing final symlinks that redirect outside it.
 
-- [ ] **Step 4: Run the focused helper tests and existing path tests.**
+- [x] **Step 4: Run the focused helper tests and existing path tests.**
 
 Run the command from Step 2 and:
 
@@ -58,7 +58,7 @@ python -m pytest -q tests/test_browser_artifact_paths.py tests/test_browser_capt
 
 Expected: all pass with no directory creation before impossible-root failures.
 
-- [ ] **Step 5: Commit the isolated helper correction.**
+- [x] **Step 5: Commit the isolated helper correction.**
 
 \`\`\`powershell
 git add tests/test_browser_artifact_paths.py src/services/_browser_report_download/artifact_paths.py
@@ -79,11 +79,11 @@ git commit -m "Fix browser artifact identity and containment"
 - Add \`select_browser_pdf_destination_path(parent_dir, source_name, target_url)\` beside the existing browser path helpers. It returns the normal bounded destination when free; otherwise it returns the deterministic URL-identity destination. It never treats an ordinary occupied basename as source proof.
 - All three callers use the same selector and reuse an existing identity-specific regular PDF without another HTTP request. An invalid or ambiguous identity destination remains a failed acquisition, not a successful reuse.
 
-- [ ] **Step 1: Write failing shared-directory prefetch tests.**
+- [x] **Step 1: Write failing shared-directory prefetch tests.**
 
 Add deterministic tests that stream bytes A from \`https://publisher.example/2025/report.pdf\` and bytes B from \`https://publisher.example/2026/report.pdf\` through structured prefetch in one directory. Assert distinct paths and exact bytes, B replay reuse without a duplicate, and the same behavior for long identical basenames. Add direct/target selection tests proving a normal occupied \`report.pdf\` is not reused for a different URL.
 
-- [ ] **Step 2: Run the new tests to verify wrong-source reuse.**
+- [x] **Step 2: Run the new tests to verify wrong-source reuse.**
 
 \`\`\`powershell
 python -m pytest -q tests/test_browser_artifact_materialization_paths.py tests/test_browser_pdf_transfer.py
@@ -91,11 +91,11 @@ python -m pytest -q tests/test_browser_artifact_materialization_paths.py tests/t
 
 Expected: the current prefetch returns the first shared \`report.pdf\` or constructs a non-canonical second hash, so the new tests fail.
 
-- [ ] **Step 3: Implement and route the shared selector.**
+- [x] **Step 3: Implement and route the shared selector.**
 
 Use the original URL basename and canonical target URL for both normal and forced-identity candidates. Avoid re-hashing a filename already compacted for that URL. In prefetch, direct download, and target fetch, skip network work only for an existing regular identity-specific PDF; otherwise invoke the existing downloader and preserve provenance as the candidate URL.
 
-- [ ] **Step 4: Run focused materialization and affected acquisition tests.**
+- [x] **Step 4: Run focused materialization and affected acquisition tests.**
 
 \`\`\`powershell
 python -m pytest -q tests/test_browser_artifact_materialization_paths.py tests/test_browser_pdf_transfer.py tests/test_browser_report_download_service/_test_prompt_and_probe/cases_04_recovers_embedded_pdf_from_encoded.py tests/test_browser_report_download_service/_test_prompt_and_probe/cases_05_email_gate_and_terminal_results.py tests/test_browser_report_download_service/_test_onsite_and_terminal/cases_02_fetches_relative_observed_pdf_candidate.py
@@ -103,7 +103,7 @@ python -m pytest -q tests/test_browser_artifact_materialization_paths.py tests/t
 
 Expected: all existing wrapper, embedded-PDF, relative-target, fallback-header, and new source-isolation tests pass.
 
-- [ ] **Step 5: Commit the selector correction.**
+- [x] **Step 5: Commit the selector correction.**
 
 \`\`\`powershell
 git add tests/test_browser_artifact_materialization_paths.py tests/test_browser_pdf_transfer.py src/services/_browser_report_download/artifact_paths.py src/services/_browser_report_download/_browser_runtime/_terminal_assets/artifacts.py src/services/_browser_report_download/_artifact/pdf.py src/services/_browser_report_download/_http/pdf_transfer.py
@@ -123,11 +123,11 @@ git commit -m "Prevent browser PDF source aliasing"
 - \`download_pdf_from_url()\` keeps streaming to \`.part\`, deletes only the failed attempt's temporary file, and commits without replacing an unexpected destination. It accepts an explicit same-attempt wrapper-replacement mode used only by \`ensure_downloaded_pdf()\`.
 - Caller error handlers no longer unlink final destinations. New invalid output is rejected or removed only when the current attempt demonstrably owns it; competing or pre-existing bytes remain unchanged.
 
-- [ ] **Step 1: Write failing byte-preservation and commit-conflict tests.**
+- [x] **Step 1: Write failing byte-preservation and commit-conflict tests.**
 
 Add tests for a valid existing identity PDF followed by a failing transfer, a valid ordinary PDF occupied by another source, partial \`.part\` cleanup, invalid response content, and a destination appearing immediately before commit. Assert exact old bytes, no final success, cleaned \`.part\`, unchanged competing bytes, and preserved wrapper recovery.
 
-- [ ] **Step 2: Run the tests to verify destructive cleanup.**
+- [x] **Step 2: Run the tests to verify destructive cleanup.**
 
 \`\`\`powershell
 python -m pytest -q tests/test_browser_pdf_transfer.py tests/test_browser_artifact_materialization_paths.py
@@ -135,11 +135,11 @@ python -m pytest -q tests/test_browser_pdf_transfer.py tests/test_browser_artifa
 
 Expected: current caller cleanup removes the existing final file or \`Path.replace()\` overwrites the injected competing file, so the new tests fail.
 
-- [ ] **Step 3: Implement staged no-clobber publication.**
+- [x] **Step 3: Implement staged no-clobber publication.**
 
 Retain the two-header fetch and size limits. Clean \`.part\` in the transfer-level exception path. Publish with the repository’s create-if-absent pattern or an equivalent platform-safe no-clobber operation; raise a typed retryable conflict when a competing destination appears. Allow replacement only for the non-PDF wrapper path owned by the same \`ensure_downloaded_pdf()\` attempt. Remove unconditional final \`unlink()\` calls from the three PDF callers and leave PDF signature/metadata validation authoritative.
 
-- [ ] **Step 4: Run wrapper and PDF validation regressions.**
+- [x] **Step 4: Run wrapper and PDF validation regressions.**
 
 \`\`\`powershell
 python -m pytest -q tests/test_browser_pdf_transfer.py tests/test_browser_report_download_service/_test_prompt_and_probe/cases_04_recovers_embedded_pdf_from_encoded.py tests/test_browser_report_download_service/_test_prompt_and_probe/cases_05_email_gate_and_terminal_results.py
@@ -147,7 +147,7 @@ python -m pytest -q tests/test_browser_pdf_transfer.py tests/test_browser_report
 
 Expected: all pass with exact recovered PDF bytes and no valid artifact loss.
 
-- [ ] **Step 5: Commit the transfer-safety correction.**
+- [x] **Step 5: Commit the transfer-safety correction.**
 
 \`\`\`powershell
 git add tests/test_browser_pdf_transfer.py tests/test_browser_artifact_materialization_paths.py src/services/_browser_report_download/_http/pdf_transfer.py src/services/_browser_report_download/_artifact/pdf.py src/services/_browser_report_download/_browser_runtime/_terminal_assets/artifacts.py
@@ -167,11 +167,11 @@ git commit -m "Preserve browser PDFs across failed transfers"
 - One shared \`materialize_external_browser_artifact(source_path, download_dir)\` routine uses bounded-memory byte comparison, deterministic identity/content variants, bounded collision attempts, regular-file checks, temporary staging, and no-clobber publication.
 - Both existing callers retain their current names and return types and delegate to that routine. Local browser files are validated for root containment, regular/readable status, and full path budget; an over-budget local file is compacted/copied before it is returned.
 
-- [ ] **Step 1: Write failing idempotence, conflict, and bypass tests.**
+- [x] **Step 1: Write failing idempotence, conflict, and bypass tests.**
 
 Add tests for copying the same PDF twice, two same-basename PDFs with different bytes, replaying both without new destinations, a changed source path preserving the earlier copy, a midway copy failure leaving no partial destination, and a long local browser file being compacted before return. Assert exact bytes, destination counts, root containment, and no false successful result.
 
-- [ ] **Step 2: Run the new materialization tests.**
+- [x] **Step 2: Run the new materialization tests.**
 
 \`\`\`powershell
 python -m pytest -q tests/test_browser_artifact_materialization_paths.py
@@ -179,11 +179,11 @@ python -m pytest -q tests/test_browser_artifact_materialization_paths.py
 
 Expected: the current implementations create numbered duplicates and return over-budget local paths, so the new tests fail.
 
-- [ ] **Step 3: Implement one shared bounded-memory materializer.**
+- [x] **Step 3: Implement one shared bounded-memory materializer.**
 
 Compare regular existing files by size and streaming chunks. Use the ordinary filename first, then a source-identity candidate, then a content-aware identity candidate when the same source path changed bytes. Copy to a validated \`.part\` sibling, publish without clobbering a competing destination, clean only attempt-owned temporary files, and return only an existing regular readable file within the validated root.
 
-- [ ] **Step 4: Run materialization, capture, and decomposition tests.**
+- [x] **Step 4: Run materialization, capture, and decomposition tests.**
 
 \`\`\`powershell
 python -m pytest -q tests/test_browser_artifact_materialization_paths.py tests/test_browser_capture_paths.py tests/test_browser_report_download_runtime_decomposition.py tests/test_browser_report_download_artifact_decomposition.py
@@ -191,7 +191,7 @@ python -m pytest -q tests/test_browser_artifact_materialization_paths.py tests/t
 
 Expected: existing bounded-path behavior remains green and both adoption entry points now agree on replay semantics.
 
-- [ ] **Step 5: Commit the idempotence and bypass correction.**
+- [x] **Step 5: Commit the idempotence and bypass correction.**
 
 \`\`\`powershell
 git add tests/test_browser_artifact_materialization_paths.py tests/test_browser_artifact_paths.py src/services/_browser_report_download/_artifact/pdf.py src/services/_browser_report_download/_browser_runtime/_terminal_assets/artifacts.py
@@ -206,7 +206,7 @@ git commit -m "Make browser artifact materialization idempotent"
 - Modify: \`CONSOLIDATED_TODO.md\` PATH-02 evidence only
 - Test: all focused PATH-02 suites and affected browser acquisition suites
 
-- [ ] **Step 1: Run the complete focused verification.**
+- [x] **Step 1: Run the complete focused verification.**
 
 \`\`\`powershell
 python -m pytest -q tests/test_browser_artifact_paths.py tests/test_browser_artifact_materialization_paths.py tests/test_browser_capture_paths.py tests/test_browser_profile_paths.py tests/test_browser_pdf_transfer.py tests/test_browser_report_download_http_decomposition.py tests/test_browser_report_download_artifact_decomposition.py tests/test_browser_report_download_runtime_decomposition.py tests/test_browser_report_download_cdp.py tests/test_browser_report_download_cdp_decomposition.py tests/test_browser_download_helpers.py
@@ -215,7 +215,7 @@ python -m pytest -q tests/test_browser_report_download_service/test_onsite_and_t
 
 The second command uses the repository’s established \`tests/test_browser_report_download_service\` layout.
 
-- [ ] **Step 2: Run static and contract gates.**
+- [x] **Step 2: Run static and contract gates.**
 
 \`\`\`powershell
 python scripts/ci/check_formatting.py
@@ -229,19 +229,19 @@ python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_sch
 git diff --check
 \`\`\`
 
-- [ ] **Step 3: Run the complete pytest suite and retain environment evidence.**
+- [x] **Step 3: Run the complete pytest suite and retain environment evidence.**
 
 Run \`python -m pytest -q\`. If the CPython-3.12 wheelhouse gate still fails under CPython 3.14.2, do not change dependency or CI logic; report it and use the supported CI environment for that gate if available.
 
-- [ ] **Step 4: Run native Windows byte/path measurements.**
+- [x] **Step 4: Run native Windows byte/path measurements.**
 
 Verify both colliding URL paths, long Unicode names, \`.part\` cleanup, external-copy replay, exact readback bytes, and complete UTF-16 path lengths. Check whether the vendored/live \`browser_use\` runtime is available; if not, report live browser launch as unverified.
 
-- [ ] **Step 5: Inspect scope and update only PATH-02 evidence.**
+- [x] **Step 5: Inspect scope and update only PATH-02 evidence.**
 
 Review \`git diff --stat\`, \`git diff --check\`, changed-file ownership, and secret exposure. Record root cause, exact changed functions, tests/counts, before/after paths and bytes, native Windows status, remaining risk, corrective commit SHAs, and that R8 remains Active for PATH-03–06.
 
-- [ ] **Step 6: Commit and push the corrective branch without merging.**
+- [x] **Step 6: Commit and push the corrective branch without merging.**
 
 \`\`\`powershell
 git add src tests docs/backlog/R-engineering.md docs/backlog/proposal-index.md CONSOLIDATED_TODO.md
