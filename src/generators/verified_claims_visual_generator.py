@@ -24,6 +24,7 @@ from src.contracts.verified_claims import (
     VisualClaimEvaluationResult,
     VisualClaimVerificationAttempt,
 )
+from src.generators.claim_validation_generator import _recovery_tokens
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import llm_service
 from src.services.file_service import hash_file_bundle as service_hash_file_bundle
@@ -98,6 +99,16 @@ def _unique_positive_pages(values: list[int | None]) -> list[int]:
         if page is not None and page not in pages:
             pages.append(page)
     return pages
+
+
+def _source_binding_status(
+    original_physical_pages: list[int], supporting_physical_pages: list[int]
+) -> str:
+    """Classify only pages that independently support the final claim."""
+
+    if any(page not in original_physical_pages for page in supporting_physical_pages):
+        return "provisional_recovered"
+    return "retained"
 
 
 def _numeric_score(value: Any) -> float:
@@ -190,6 +201,33 @@ def _supporting_page_attribution_diagnostics(
         alternate_values = _material_quantity_values(page_text.get(page, ""))
         if missing_values.issubset(alternate_values):
             return ["verification_supporting_page_attribution_conflict"]
+    return []
+
+
+def _strict_direction_diagnostics(
+    *, claim: Mapping[str, Any], corrected_claim: str
+) -> list[str]:
+    """Keep strict claims tied to their retained evidence proposition.
+
+    Strict reference bindings cannot consume report-level replacement freedom.
+    When a retained evidence span is available, require more than a generic
+    overlap with the corrected wording before accepting a verified result.  The
+    check is intentionally limited to the existing strict policy; report-level
+    replacement claims remain free to use an independently supported finding.
+    """
+
+    if _text(claim.get("_visual_replacement_policy")) != ("strict_original_direction"):
+        return []
+    source_texts = [_text(claim.get("evidence"))]
+    spans = claim.get("evidence_spans")
+    if isinstance(spans, list):
+        source_texts.extend(
+            _text(span.get("text")) for span in spans if isinstance(span, Mapping)
+        )
+    source_tokens = _recovery_tokens(" ".join(text for text in source_texts if text))
+    corrected_tokens = _recovery_tokens(corrected_claim)
+    if source_tokens and len(source_tokens & corrected_tokens) < 3:
+        return ["verification_strict_direction_drift"]
     return []
 
 
@@ -709,6 +747,7 @@ def _record_result(
     canonical_approval_status: str = "not_approved",
 ) -> VisualClaimEvaluationResult:
     original_physical_pages = _physical_pages(claim) if physical_page > 0 else []
+    supporting_pages = list(supporting_physical_pages or [])
     return VisualClaimEvaluationResult(
         schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
         candidate_id=_candidate_id(claim),
@@ -729,8 +768,10 @@ def _record_result(
         ),
         recovered_physical_pages=list(recovered_physical_pages or []),
         recovery_reason=recovery_reason,
-        source_binding_status=source_binding_status,
-        supporting_physical_pages=list(supporting_physical_pages or []),
+        source_binding_status=_source_binding_status(
+            original_physical_pages, supporting_pages
+        ),
+        supporting_physical_pages=supporting_pages,
         source_truth_notes_by_page=dict(source_truth_notes_by_page or {}),
         canonical_approval_status=canonical_approval_status,
     )
@@ -753,7 +794,10 @@ def _correction_attempt(
     binding = _claim_binding(
         claim=claim,
         source_identity=request.source_identity,
-        physical_page=_physical_page(claim) or 0,
+        physical_page=(
+            _physical_page(claim)
+            or (inspected_physical_pages[0] if inspected_physical_pages else 0)
+        ),
         inspected_physical_pages=inspected_physical_pages,
         recovery_candidates=recovery_candidates,
     )
@@ -860,7 +904,10 @@ def _verification_attempt(
     original_physical_pages = _physical_pages(claim)
     source_payload = {
         "source_identity": request.source_identity,
-        "physical_page": _physical_page(claim),
+        "physical_page": (
+            _physical_page(claim)
+            or (inspected_physical_pages[0] if inspected_physical_pages else None)
+        ),
         "physical_pages": original_physical_pages,
         "original_physical_pages": original_physical_pages,
         "inspected_physical_pages": inspected_physical_pages,
@@ -947,6 +994,12 @@ def _verification_attempt(
                 ),
             )
         )
+        support_diagnostics.extend(
+            _strict_direction_diagnostics(
+                claim=claim,
+                corrected_claim=corrected_claim,
+            )
+        )
         diagnostics = (
             [*diagnostics, *support_diagnostics] if diagnostics is not None else None
         )
@@ -969,6 +1022,7 @@ def _verification_attempt(
                 "verification_source_truth_notes_by_page_incomplete",
                 "verification_page_explanation_missing",
                 "verification_supporting_page_attribution_conflict",
+                "verification_strict_direction_drift",
             }
             for diagnostic in diagnostics
         ):
@@ -1007,7 +1061,10 @@ def _evaluate_claim(
     inspected_physical_pages: list[int],
     recovery_candidates: list[dict[str, Any]],
 ) -> VisualClaimEvaluationResult:
-    physical_page = _physical_page(claim)
+    original_physical_page = _physical_page(claim)
+    physical_page = original_physical_page or (
+        inspected_physical_pages[0] if inspected_physical_pages else None
+    )
     if not _candidate_id(claim):
         return _record_result(
             claim=claim,
@@ -1309,8 +1366,19 @@ def evaluate_shortlisted_claims(
     for index, raw_claim in enumerate(request.claims):
         claim = raw_claim if isinstance(raw_claim, Mapping) else {}
         physical_pages = _physical_pages(claim)
-        physical_page = physical_pages[0] if physical_pages else None
-        if not physical_pages:
+        recovery_candidates = _recovery_candidates(request, claim)
+        raw_recovered_pages = [
+            _positive_int(item.get("physical_page") or item.get("page"))
+            for item in recovery_candidates
+        ]
+        recovered_pages = _unique_positive_pages(raw_recovered_pages)
+        inspected_physical_pages = list(
+            dict.fromkeys([*physical_pages, *recovered_pages])
+        )
+        physical_page = (
+            inspected_physical_pages[0] if inspected_physical_pages else None
+        )
+        if not inspected_physical_pages:
             results.append(
                 _record_result(
                     claim=claim,
@@ -1333,15 +1401,6 @@ def evaluate_shortlisted_claims(
                 )
             )
             continue
-        recovery_candidates = _recovery_candidates(request, claim)
-        raw_recovered_pages = [
-            _positive_int(item.get("physical_page") or item.get("page"))
-            for item in recovery_candidates
-        ]
-        recovered_pages = _unique_positive_pages(raw_recovered_pages)
-        inspected_physical_pages = list(
-            dict.fromkeys([*physical_pages, *recovered_pages])
-        )
         missing_page = False
         for page in inspected_physical_pages:
             if page in rendered_pages:

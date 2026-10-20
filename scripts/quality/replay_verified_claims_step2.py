@@ -145,15 +145,85 @@ def _claim_source_binding(claim: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _explicit_physical_pages(
+    insight: Mapping[str, Any], page_count: int
+) -> tuple[list[int], str]:
+    """Resolve only already-established physical page fields.
+
+    ``pages`` and evidence-span ``page`` values are existing physical-page
+    bindings in retained artifacts.  Printed/logical labels are intentionally
+    not accepted as physical pages at this boundary.
+    """
+
+    raw_pages = insight.get("pages")
+    if raw_pages is not None and not isinstance(raw_pages, list):
+        return [], "retained_claim_physical_page_invalid"
+    declared_pages = list(raw_pages or [])
+    if any(type(page) is not int or page <= 0 for page in declared_pages):
+        return [], "retained_claim_physical_page_invalid"
+    if len(set(declared_pages)) != len(declared_pages):
+        return [], "retained_claim_physical_page_conflict"
+
+    explicit_pages: list[int] = []
+    for key in ("physical_page", "physical_pdf_page"):
+        if key not in insight or insight.get(key) is None:
+            continue
+        page = insight.get(key)
+        if type(page) is not int or page <= 0:
+            return [], "retained_claim_physical_page_invalid"
+        explicit_pages.append(page)
+    if len(set(explicit_pages)) > 1:
+        return [], "retained_claim_physical_page_conflict"
+
+    raw_spans = insight.get("evidence_spans")
+    if raw_spans is not None and not isinstance(raw_spans, list):
+        return [], "retained_claim_evidence_span_invalid"
+    span_pages: list[int] = []
+    for span in raw_spans or []:
+        if not isinstance(span, Mapping):
+            return [], "retained_claim_evidence_span_invalid"
+        span_values: list[int] = []
+        for key in ("physical_page", "physical_pdf_page", "page"):
+            if key not in span or span.get(key) is None:
+                continue
+            page = span.get(key)
+            if type(page) is not int or page <= 0:
+                return [], "retained_claim_evidence_span_page_invalid"
+            span_values.append(page)
+        if len(set(span_values)) > 1:
+            return [], "retained_claim_physical_page_conflict"
+        if span_values and span_values[0] not in span_pages:
+            span_pages.append(span_values[0])
+
+    declared_set = set(declared_pages)
+    explicit_set = set(explicit_pages)
+    span_set = set(span_pages)
+    if declared_set and not explicit_set.issubset(declared_set):
+        return [], "retained_claim_physical_page_conflict"
+    if declared_set and not span_set.issubset(declared_set):
+        return [], "retained_claim_physical_page_conflict"
+    if (
+        not declared_set
+        and explicit_set
+        and span_set
+        and not explicit_set.issubset(span_set)
+    ):
+        return [], "retained_claim_physical_page_conflict"
+
+    resolved_pages = declared_pages or list(
+        dict.fromkeys([*explicit_pages, *span_pages])
+    )
+    if page_count > 0 and any(page > page_count for page in resolved_pages):
+        return [], "retained_claim_page_out_of_range"
+    return resolved_pages, ""
+
+
 def _bounded_exact_evidence_pages(
     claim: Mapping[str, Any], source: Mapping[str, Any]
 ) -> list[int]:
     """Return uniquely matched pages for exact evidence text only."""
 
-    if (
-        not source.get("sha256_matches")
-        or not source.get("resolved_path")
-    ):
+    if not source.get("sha256_matches") or not source.get("resolved_path"):
         return []
     evidence_texts = [str(claim.get("evidence") or "").strip()]
     evidence_texts.extend(
@@ -237,9 +307,7 @@ def _load_explicit_cohort_inputs(
         ).strip()
         raw_run_directory = str(raw_entry.get("run_directory") or "").strip()
         run_directory = (
-            _resolve_repository_path(raw_run_directory)
-            if raw_run_directory
-            else Path()
+            _resolve_repository_path(raw_run_directory) if raw_run_directory else Path()
         )
         artifact_path = explicit_paths.get(report)
         if artifact_path is None:
@@ -358,23 +426,13 @@ def _load_explicit_cohort_inputs(
                 insight.get("id") or insight.get("candidate_id") or ""
             ).strip()
             text = str(insight.get("text") or "").strip()
-            pages = insight.get("pages")
-            physical_pages = (
-                [
-                    int(page)
-                    for page in pages
-                    if type(page) is int and page > 0
-                ]
-                if isinstance(pages, list)
-                else []
+            physical_pages, page_binding_error = _explicit_physical_pages(
+                insight, int(source.get("page_count") or 0)
             )
             provisional_pages = (
                 _bounded_exact_evidence_pages(insight, source)
                 if not physical_pages
                 else []
-            )
-            input_pages = physical_pages or (
-                provisional_pages
             )
             base_unavailable = {
                 "report": report,
@@ -384,6 +442,12 @@ def _load_explicit_cohort_inputs(
                 "evidence_spans": list(insight.get("evidence_spans") or []),
                 "pages": physical_pages,
             }
+            if page_binding_error:
+                row["unavailable"].append(
+                    {**base_unavailable, "reason": page_binding_error}
+                )
+                continue
+            input_pages = physical_pages or provisional_pages
             if not candidate_id or not text or not input_pages:
                 row["unavailable"].append(
                     {
@@ -412,9 +476,17 @@ def _load_explicit_cohort_inputs(
             claim = dict(insight)
             claim["candidate_id"] = candidate_id
             claim["text"] = text
-            claim["pages"] = input_pages
+            claim["pages"] = physical_pages
+            if provisional_pages:
+                claim["_provisional_input_pages"] = provisional_pages
+            replacement_policy = str(
+                insight.get("_visual_replacement_policy") or ""
+            ).strip()
             claim["_visual_replacement_policy"] = (
-                "report_level_replacement_allowed"
+                replacement_policy
+                if replacement_policy
+                in {"strict_original_direction", "report_level_replacement_allowed"}
+                else "report_level_replacement_allowed"
             )
             row["eligible_claims"].append(claim)
             row["claim_metadata"][candidate_id] = {
@@ -422,9 +494,7 @@ def _load_explicit_cohort_inputs(
                 "report": report,
                 "position": position,
                 "original_claim": text,
-                "original_evidence_ids": [
-                    str(insight.get("evidence_id") or "").strip()
-                ]
+                "original_evidence_ids": [str(insight.get("evidence_id") or "").strip()]
                 if str(insight.get("evidence_id") or "").strip()
                 else [
                     str(value).strip()
@@ -465,9 +535,7 @@ def _load_explicit_cohort_inputs(
         "producer_commit": str(cohort_result.get("git_sha") or ""),
         "source_manifest_path": _relative_repository_path(source_manifest_path),
         "source_manifest_sha256": (
-            _sha256(source_manifest_path)
-            if source_manifest_path.is_file()
-            else ""
+            _sha256(source_manifest_path) if source_manifest_path.is_file() else ""
         ),
         "reports": reports,
     }
@@ -1751,6 +1819,55 @@ def _explicit_evidence_packs(artifact_path: Path) -> tuple[dict[str, Any], str]:
     return packs, ""
 
 
+def _with_explicit_provisional_pages(
+    request: VisualClaimEvaluationRequest,
+    claims: list[dict[str, Any]],
+) -> VisualClaimEvaluationRequest:
+    """Pass bounded exact-page matches as inspection context only."""
+
+    candidates_by_id = {
+        str(candidate_id): [dict(candidate) for candidate in candidates]
+        for candidate_id, candidates in request.recovery_candidates.items()
+    }
+    for claim in claims:
+        candidate_id = str(claim.get("candidate_id") or "").strip()
+        provisional_pages = [
+            page
+            for page in claim.get("_provisional_input_pages") or []
+            if type(page) is int and page > 0
+        ]
+        if not candidate_id or not provisional_pages:
+            continue
+        candidates = candidates_by_id.setdefault(candidate_id, [])
+        existing_pages = {
+            candidate.get("physical_page") or candidate.get("page")
+            for candidate in candidates
+            if isinstance(candidate, Mapping)
+        }
+        for page in provisional_pages:
+            if page in existing_pages:
+                continue
+            candidates.insert(
+                0,
+                {
+                    "physical_page": page,
+                    "source_identity": request.source_identity,
+                    "source_pack": "source_pdf_exact_text",
+                    "reason": "bounded_exact_evidence_page_match",
+                    "page_text": request.source_page_text_by_physical_page.get(
+                        page, ""
+                    ),
+                    "score": 1_000_000.0,
+                },
+            )
+            existing_pages.add(page)
+    return replace(
+        request,
+        recovery_enabled=bool(candidates_by_id),
+        recovery_candidates=candidates_by_id,
+    )
+
+
 def replay_live_explicit_cohort(
     *,
     cohort_result_path: Path | None,
@@ -1848,6 +1965,12 @@ def replay_live_explicit_cohort(
                 dpi=216,
                 recovery_enabled=True,
             )
+            request = _with_explicit_provisional_pages(request, eligible_claims)
+            # Keep the audit/ledger view aligned with the request actually sent
+            # to the evaluator.  Exact page matches are inspection-only
+            # recovery candidates; omitting them here would make the replay
+            # report contradict the evidence context used for evaluation.
+            recovery_candidates = request.recovery_candidates
             recovery_context_reason = str(
                 request_audit.get("recovery_context", {}).get("reason")
                 or evidence_pack_reason
@@ -1858,7 +1981,6 @@ def replay_live_explicit_cohort(
                 for page, text in request.source_page_text_by_physical_page.items()
                 if type(page) is int and page > 0 and str(text).strip()
             }
-            recovery_candidates = request_audit.get("recovery_candidates") or {}
             response = evaluate_shortlisted_claims(
                 request=request,
                 settings=settings,
@@ -1882,16 +2004,32 @@ def replay_live_explicit_cohort(
                         ),
                         "artifact_sha256": metadata.get("artifact_sha256", ""),
                         "producer_commit": metadata.get("producer_commit", ""),
-                        "source_pdf_sha256_expected": source.get(
-                            "sha256_expected", ""
-                        ),
+                        "source_pdf_sha256_expected": source.get("sha256_expected", ""),
                         "source_pdf_sha256_actual": source.get("sha256_actual", ""),
                         "source_binding_before": metadata.get(
                             "source_binding_before", {}
                         ),
-                        "source_binding_after": metadata.get(
-                            "source_binding_before", {}
-                        ),
+                        "source_binding_after": {
+                            "source_identity": result_payload.get(
+                                "source_identity", ""
+                            ),
+                            "evidence_ids": list(
+                                result_payload.get("evidence_ids") or []
+                            ),
+                            "evidence_spans": list(
+                                result_payload.get("evidence_spans") or []
+                            ),
+                            "original_physical_pages": list(
+                                result_payload.get("original_physical_pages") or []
+                            ),
+                            "supporting_physical_pages": list(
+                                result_payload.get("supporting_physical_pages") or []
+                            ),
+                            "source_binding_status": result_payload.get(
+                                "source_binding_status", "retained"
+                            ),
+                            "canonical_promotion": False,
+                        },
                         "source_binding_resolution": metadata.get(
                             "source_binding_resolution", "retained"
                         ),
@@ -1948,8 +2086,7 @@ def replay_live_explicit_cohort(
                 "skipped_claim_count": len(report_skipped),
                 "unavailable_claim_count": len(unavailable),
                 "eligible_candidate_ids": [
-                    str(claim.get("candidate_id") or "")
-                    for claim in eligible_claims
+                    str(claim.get("candidate_id") or "") for claim in eligible_claims
                 ],
                 "evaluated_candidate_ids": [
                     str(row.get("candidate_id") or "") for row in report_rows
@@ -1964,16 +2101,8 @@ def replay_live_explicit_cohort(
     _assert_outcome_count_arithmetic(rows, outcomes)
     selected_count = sum(item["selected_count"] for item in inventory)
     eligible_count = sum(item["eligible_claim_count"] for item in inventory)
-    unavailable = [
-        item
-        for report in inventory
-        for item in report["unavailable"]
-    ]
-    skipped = [
-        item
-        for report in inventory
-        for item in report["skipped"]
-    ]
+    unavailable = [item for report in inventory for item in report["unavailable"]]
+    skipped = [item for report in inventory for item in report["skipped"]]
     usage = _usage_summary(root / "cost-ledger.jsonl", run_id=live_run_id)
     return {
         "schema_version": "1.0",
@@ -1986,9 +2115,7 @@ def replay_live_explicit_cohort(
         "canonical_mutation": False,
         "publication_write": False,
         "cohort_snapshot": {
-            key: value
-            for key, value in inputs.items()
-            if key != "reports"
+            key: value for key, value in inputs.items() if key != "reports"
         },
         "reports": [item["report"] for item in inventory],
         "input_claim_count": selected_count,

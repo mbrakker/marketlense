@@ -885,3 +885,138 @@ evidence and do not authorize Step 3. The current Step 2 status is therefore
 coverage defect are corrected and the reference gate remains green, but
 canonical source-binding completeness and independent editorial approval are
 still unresolved. Step 3 remains unstarted.
+
+### Correction evidence — 2026-10-20 (provisional provenance, portable replay, and adversarial quality gate)
+
+This close-out correction keeps retained physical pages and evidence spans
+unchanged throughout explicit replay. A uniquely matched exact-text page is
+now stored only as private inspection context and an existing recovery
+candidate; it is not copied into the retained claim's `pages` field or
+reported as an authoritative binding. `source_binding_status` is derived from
+the pages that actually support the final claim: retained-only support is
+`retained`, support from a recovered page is `provisional_recovered`, and
+mixed retained/recovered support is also provisional. A retained page with an
+unused recovery candidate therefore remains retained. Explicit physical-page
+fields and evidence-span pages are accepted only when consistent, physical,
+positive and in range; conflicting or ambiguous locations are unavailable.
+The visual evaluator can inspect a page-less claim only when an existing
+bounded recovery candidate supplies the page, without canonical promotion.
+
+The Merchant Risk Council claim `post-purchase-fraud-section-scope` remains
+unavailable. Its retained evidence is a DocMap section-context span with no
+candidate text, finding evidence span or safe physical page in the four-page
+PDF. The retained pool did not contain a stronger eligible alternative, so
+the replay records one unavailable selected identity rather than inferring a
+page or forcing 25/25 coverage.
+
+#### Actual-PDF adversarial corpus
+
+The corpus is committed at
+`docs/quality/verified-claims-step2-adversarial-corpus-20261020.json` and the
+replay harness is
+`scripts/quality/replay_verified_claims_step2_adversarial.py`. It used the
+existing evaluator, GPT-6 Luna High, the exact hash-matched PDFs from the
+additional frozen-five manifest, and full rendered pages. The result is
+`tmp/verified-claims-premerge-20261019/step2-adversarial-shadow-v4/result.json`.
+The nine cases below were independently checked against the cited full PDF
+pages; the final wording, not the intentionally mutated original wording, was
+scored.
+
+| Case | Mutation and expected source truth | Final corrected wording / terminal result | Pages | Manual assessment |
+|---|---|---|---:|---|
+| `ALG-ADV-001` | Geography: 68% is the USA result, while 63% is the overall result. | “Across 1,100 respondents, 63% say shoppers are more likely to complete a purchase using gen-AI-supported systems”; USA 68% and Australia/New Zealand 57% are labelled by market. **Verified.** | 12 | Correct population, total and market mapping. |
+| `BAIN-ADV-001` | Chart components must total 100%: 52% born-tech, 20% tech-led strategy, 28% other. | Reports the 52%/20%/28% split for the top-20-gainer cohort and 2015–2020 period. **Verified.** | 1 | Components, denominator and period are source-supported. |
+| `BIG-ADV-001` | The source observes 40% abandonment after a preferred-wallet failure; it does not prove sole causation or the main checkout driver. | States the observed 40% response and that wallet availability “can be a checkout friction point,” explicitly disclaiming causation and main-driver status. **Verified.** | 4 | Defensible qualitative interpretation without causal overclaim. |
+| `BIG-ADV-002` | The preferred-wallet finding is on page 4; wrong page 8 must not rescue this strict claim. | No accepted final claim after two verification attempts; `verification_failed_twice`. **Failed closed.** | 8 original; none supporting | Strict source binding rejected unrelated page material. |
+| `DV-ADV-001` | Values are percentages, not points: North America 3.7% and APAC 8.0% in Q1 2026. | Reports the Q1 2026 violation rates as 8.0% APAC and 3.7% North America, with a 4.3 percentage-point difference. **Verified.** | 3 | Unit and derived difference are correct. |
+| `DV-ADV-002` | Attention values are geographically bound: APAC 131, EMEA 130, North America 128. | Labels all three regional values and identifies APAC as highest. **Verified.** | 10 | Metric-to-region relationships are preserved. |
+| `DV-ADV-003` | The reporting period is Q1 2026, not Q2 2026. | Reports the four regional violation rates for Q1 2026 and their ordering. **Verified.** | 3 | Period, values and comparison are correct. |
+| `MRC-ADV-001` | The population is 1,200+ eCommerce merchants, not consumers. | Attributes 43% real-time-payment acceptance to the annual survey of 1,200+ merchants across 35+ countries. **Verified.** | 2 | Cohort, denominator context and metric are correct. |
+| `MRC-ADV-002` | 63% describes active exploration or planned implementation, not current use. | States that 63% are exploring or plan to implement agentic-AI payments and explicitly says this is not current use. **Verified.** | 2 | Forecast/planning status is not promoted to observation. |
+
+The adversarial result was **8 verified first pass, 1 failed verification, 0
+verified after retry, 0 unresolved, and 0 skipped**. It used **20 provider
+calls**, **229,301 input tokens**, **8,915 output tokens**, **238,216 total
+tokens**, **$0.027388 estimated cost**, and **168.718 seconds**. All five
+source hashes matched. The eight accepted corrections were source-grounded
+and commercially meaningful; the strict wrong-page case was not rescued by an
+unrelated same-page replacement. No independently confirmed unsupported
+material claim was marked verified.
+
+#### Exact additional frozen-five replay
+
+The exact selected roster remained **25 stable IDs**: DoubleVerify 5,
+Merchant Risk Council 5, Algolia 5, Bain & Company 5, and Bigcommerce 5.
+The corrected accounting is mutually exclusive: **25 selected, 24 eligible,
+24 evaluated, 24 verified first pass, 0 verified after retry, 0 failed,
+0 unresolved, 0 skipped, and 1 unavailable**. The unavailable identity is the
+Merchant section-context claim documented above. All five source hashes
+matched, and all 24 evaluated rows retained `canonical_approval_status` as
+`not_approved`.
+
+| Report | Selected | Eligible / evaluated | Verified first pass | Unavailable |
+|---|---:|---:|---:|---:|
+| DoubleVerify | 5 | 5 / 5 | 5 | 0 |
+| Merchant Risk Council | 5 | 4 / 4 | 4 | 1 |
+| Algolia | 5 | 5 / 5 | 5 | 0 |
+| Bain & Company | 5 | 5 / 5 | 5 | 0 |
+| Bigcommerce | 5 | 5 / 5 | 5 | 0 |
+| **Total** | **25** | **24 / 24** | **24** | **1** |
+
+The actual run is
+`tmp/verified-claims-premerge-20261019/step2-current-cohort-shadow-v3/result.json`.
+It used **48 provider calls**, **955,105 input tokens**, **28,439 output
+tokens**, **983,544 total tokens**, **$0.109730 estimated cost**, **18
+rendered pages**, and **634.004 seconds**. Compared with the retained baseline
+(52 calls, 829,972 input tokens, 33,255 output tokens, **$0.099628**, and
+**464.414 seconds**), coverage and selected identities are unchanged; the
+call, token, cost and latency differences are provider/model-run variance, not
+a deterministic quality improvement claim. The current run had no retries,
+whereas the baseline had two retry successes.
+
+The three recovered-only claims are Algolia
+`ai-intent-revenue-link-perception` (support page 12), Algolia
+`agentic-search-deployment-and-plans` (page 26), and Bain
+`cloud-platform-catalysts` (page 1). They remain
+`provisional_recovered`; their retained original page arrays remain empty.
+Bigcommerce `preferred-wallet-abandonment` remains **retained** with original
+and supporting page 4; page 2 was inspected as recovery context but did not
+support the final claim. Independent review of all 24 final claims against the
+full pages found zero confirmed unsupported material claims. The review noted
+that Algolia's investment replacement and Bain's page-less catalyst
+replacement are source-grounded, commercially related replacements rather
+than proof that the original proposition was preserved exactly. Near-duplicate
+editorial propositions remain visible for later editorial review and were not
+silently deduplicated.
+
+#### 39-variant reference gate and CI
+
+The independent reference gate evaluated all **39 variants** with **38
+verified first pass, 0 verified after retry, 1 unresolved, 0 failed, 0
+skipped**, **39/39 expected-outcome matches**, **0 false accepts**, and **0
+false rejects**. `ACT-004-wrong-page` remained unresolved. Usage was **78
+provider calls**, **652,185 input tokens**, **34,567 output tokens**, **686,752
+total tokens**, **$0.082506 estimated**, and **811.364 seconds**. The changed
+retry distribution versus the prior run (37 first pass plus one retry) did not
+change the gate result.
+
+The four clean-CI replay fixtures now create compact artifacts/PDFs in the
+test process rather than depending on historical `tmp/` paths. The three
+oversized test modules were split into six owned case modules; every case file
+is below the repository's 1,000-line ownership threshold. The focused current
+suite passed **115 tests**, with **1 expected integration skip** and **1
+deselected test**; repository hygiene, compile, Ruff and formatting checks
+also pass. The earlier GitHub run's remaining **35 failures** are unrelated
+legacy grounding/report-analysis failures (18 retained-claim grounding, 15
+grounding-cohort regressions, and 2 report-analysis tests); the 4 historical
+replay-fixture failures and 1 ownership failure are addressed here without
+restoring unsafe generated-finding self-support.
+
+This is still a retained-artifact shadow evaluation. It does not establish
+fresh Step 1 selection recall, diversity, repeated-run stability, or canonical
+source-binding completeness, and no canonical artifact, publication-readiness
+state or WordPress write occurred. The final Step 2 verdict is **PARTIAL**:
+the demonstrated provenance, explicit-page, portable-fixture and factual
+quality defects are corrected and the reference gate is green, but fresh
+selection evidence and independent editorial approval remain unavailable.
+Step 3 remains unstarted.

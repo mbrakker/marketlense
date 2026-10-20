@@ -432,3 +432,33 @@ selection quality. Step 2 remains **PARTIAL / NOT READY FOR STEP 3**: source
 hashing, recovery provenance, terminal accounting and the 39-variant gate pass,
 but canonical source-binding completeness, repeated fresh selection evidence,
 and independent editorial approval remain out of scope.
+
+### Follow-up replay — 2026-10-20
+
+The corrected explicit replay supersedes the earlier v2 measurements without
+changing the selected roster. It again accounted for all **25 selected
+identities**: **24 eligible/evaluated and verified first pass**, **1
+unavailable**, and **0 failed, unresolved or skipped**. The unavailable
+Merchant Risk Council `post-purchase-fraud-section-scope` row remains a
+DocMap-only section-context binding with no safe physical page in the
+hash-matched four-page PDF; no stronger eligible retained alternative was
+available, so it remains fail-closed.
+
+The current raw result is
+`tmp/verified-claims-premerge-20261019/step2-current-cohort-shadow-v3/result.json`.
+The run used **48 provider calls**, **955,105 input tokens**, **28,439 output
+tokens**, **983,544 total tokens**, **$0.109730 estimated cost**, **18 full
+page renders**, and **634.004 seconds**. All five source hashes matched. The
+three exact-text page recoveries remain provisional (Algolia pages 12 and 26;
+Bain page 1), while Bigcommerce's wallet row is retained on page 4 even though
+page 2 was inspected as context. This corrects the prior risk of presenting
+recovered pages as retained evidence.
+
+The exact 39-variant reference gate also remains green: **38 first-pass
+verified, 1 unresolved (`ACT-004-wrong-page`), 0 false accepts and 0 false
+rejects**, with **39/39 expected matches**. The adversarial actual-PDF corpus
+added for this correction produced **8 verified first pass and 1 failed-close
+strict wrong-page case**, with zero confirmed unsupported verified claims. The
+results are a retained-artifact shadow evaluation, not evidence of fresh Step
+1 live-selection effectiveness; Step 2 remains **PARTIAL / NOT READY FOR STEP
+3** and no canonical or publication write occurred.
