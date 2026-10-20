@@ -16,6 +16,16 @@ allowlist:
     reason: "Step 2 recovery prompts now allow independently supported original pages while preserving inspected-page and provisional-recovery safeguards."
     expires_on: "2026-12-31"
     max_delta_absolute: 889
+  - pattern: "families.validation.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "Step 2 strict-locator prompts distinguish neighboring source propositions from valid same-direction corrections without adding a deterministic semantic veto."
+    expires_on: "2026-12-31"
+    max_delta_absolute: 1320
+  - pattern: "families.validation.estimated_cost_usd"
+    owner: "MarketLense engineering"
+    reason: "The strict-locator prompt clarification adds the measured validation-token cost required to preserve same-direction qualitative corrections and reject neighboring source locators."
+    expires_on: "2026-12-31"
+    max_delta_absolute: 0.000132
   - pattern: "totals.total_tokens"
     owner: "MarketLense engineering"
     reason: "Grounded editorial and source-fidelity prompt corrections are approved within the measured 1.5% corpus token ceiling."

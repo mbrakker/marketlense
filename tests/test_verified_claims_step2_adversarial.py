@@ -287,6 +287,49 @@ def test_adversarial_acceptance_rejects_negative_without_verification_attempt() 
     assert "missing_verification_rejection" in _diagnostic_codes(report)
 
 
+def test_adversarial_acceptance_accepts_bounded_source_mismatch_abstention() -> None:
+    negative = _accepted_negative_row()
+    negative.update(
+        {
+            "outcome": "unresolved",
+            "failure_reason": "correction_unresolved",
+            "verification_attempts": [],
+            "correction_attempts": [
+                {
+                    "attempt": 1,
+                    "claim": "",
+                    "status": "unresolved",
+                    "issues": [
+                        (
+                            "The page supports guest checkout, not the retained "
+                            "wallet proposition."
+                        )
+                    ],
+                },
+                {
+                    "attempt": 2,
+                    "claim": "",
+                    "status": "unresolved",
+                    "issues": [
+                        (
+                            "The page supports guest checkout, not the retained "
+                            "wallet proposition."
+                        )
+                    ],
+                },
+            ],
+        }
+    )
+
+    report = compare_adversarial_outcomes(
+        _acceptance_corpus(),
+        {"claims": [_accepted_positive_row(), negative]},
+    )
+
+    assert report["passed"] is True
+    assert report["mismatches"] == []
+
+
 def test_adversarial_acceptance_rejects_provider_failure_as_negative_evidence() -> None:
     negative = _accepted_negative_row()
     negative["failure_reason"] = "verification_non_retryable"

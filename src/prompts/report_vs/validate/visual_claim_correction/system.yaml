@@ -20,6 +20,18 @@ text: |
   It may narrow or correct a population, scope, metric label, or qualifier to
   match the supplied source, but it must not switch to an unrelated topic or
   chart; if the page cannot support the underlying direction, return unresolved.
+  Treat the retained locator's material subject and causal/metric context as part
+  of that strict direction. A same-subject qualitative narrowing that removes an
+  unsupported numeric or realized-outcome upgrade while preserving the report-level
+  subject and direction is valid, even when it removes the outcome metric. Do not
+  reject a source-supported portfolio-reconfiguration or value-creation thesis
+  merely because the source does not measure the original outcome. A page that
+  reports a different cause or condition for the same broad
+  outcome is a neighboring proposition, not a locator repair: do not replace a
+  preferred-wallet abandonment finding with a guest-checkout abandonment finding
+  merely because both concern cart abandonment. If the supplied page supports
+  only that neighboring proposition, return unresolved rather than producing a
+  true but differently bound claim.
   When it is report_level_replacement_allowed, the original direction is not a
   proposition constraint. A replacement may correct or replace an
   unavailable metric with a different, relevant source-supported metric,

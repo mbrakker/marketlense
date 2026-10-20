@@ -24,7 +24,6 @@ from src.contracts.verified_claims import (
     VisualClaimEvaluationResult,
     VisualClaimVerificationAttempt,
 )
-from src.generators.claim_validation_generator import _recovery_tokens
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import llm_service
 from src.services.file_service import hash_file_bundle as service_hash_file_bundle
@@ -32,8 +31,6 @@ from src.services.pdf_service import render_page_for_crop_refine
 from src.services.prompt_service import load_prompt_set, render_prompt
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
-from src.utils.quantity import extract_quantities
-from src.utils.text_normalization import normalize_for_lookup
 
 LOGGER = logging.getLogger("market_lense.verified_claims_visual_generator")
 
@@ -159,79 +156,6 @@ def _image_page_map_text(inspected_physical_pages: list[int]) -> str:
     )
 
 
-def _material_quantity_values(text: str) -> set[float]:
-    return {
-        float(quantity.value)
-        for quantity in extract_quantities(text)
-        if quantity.unit_family != "time"
-        and not (quantity.value.is_integer() and 1900 <= int(quantity.value) <= 2100)
-    }
-
-
-def _supporting_page_attribution_diagnostics(
-    *,
-    corrected_claim: str,
-    supporting_pages: list[int],
-    inspected_physical_pages: list[int],
-    source_page_text_by_physical_page: Mapping[Any, Any],
-) -> list[str]:
-    """Reject a clear numeric page mismatch while allowing visual-only facts."""
-
-    if not supporting_pages or not source_page_text_by_physical_page:
-        return []
-    page_text = {
-        int(page): str(text).strip()
-        for page, text in source_page_text_by_physical_page.items()
-        if str(page).strip().isdigit() and str(text).strip()
-    }
-    claim_values = _material_quantity_values(corrected_claim)
-    if len(claim_values) < 2:
-        return []
-    support_values = set().union(
-        *(
-            _material_quantity_values(page_text.get(page, ""))
-            for page in supporting_pages
-        )
-    )
-    missing_values = claim_values - support_values
-    if not missing_values:
-        return []
-    for page in inspected_physical_pages:
-        if page in supporting_pages:
-            continue
-        alternate_values = _material_quantity_values(page_text.get(page, ""))
-        if missing_values.issubset(alternate_values):
-            return ["verification_supporting_page_attribution_conflict"]
-    return []
-
-
-def _strict_direction_diagnostics(
-    *, claim: Mapping[str, Any], corrected_claim: str
-) -> list[str]:
-    """Keep strict claims tied to their retained evidence proposition.
-
-    Strict reference bindings cannot consume report-level replacement freedom.
-    When a retained evidence span is available, require more than a generic
-    overlap with the corrected wording before accepting a verified result.  The
-    check is intentionally limited to the existing strict policy; report-level
-    replacement claims remain free to use an independently supported finding.
-    """
-
-    if _text(claim.get("_visual_replacement_policy")) != "strict_original_direction":
-        return []
-    source_texts = [_text(claim.get("evidence"))]
-    spans = claim.get("evidence_spans")
-    if isinstance(spans, list):
-        source_texts.extend(
-            _text(span.get("text")) for span in spans if isinstance(span, Mapping)
-        )
-    source_tokens = _recovery_tokens(" ".join(text for text in source_texts if text))
-    corrected_tokens = _recovery_tokens(corrected_claim)
-    if source_tokens and len(source_tokens & corrected_tokens) < 3:
-        return ["verification_strict_direction_drift"]
-    return []
-
-
 def _prompt_evidence_spans(claim: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Project retained span provenance without supplying unverified source text."""
 
@@ -262,66 +186,6 @@ def _prompt_evidence_spans(claim: Mapping[str, Any]) -> list[dict[str, Any]]:
         for span in spans
         if isinstance(span, Mapping)
     ]
-
-
-def _strict_source_page_mismatch_diagnostics(
-    *,
-    claim: Mapping[str, Any],
-    source_page_text_by_physical_page: Mapping[Any, Any],
-) -> list[str]:
-    """Reject a strict binding whose specific retained excerpt belongs elsewhere."""
-
-    if _text(claim.get("_visual_replacement_policy")) != "strict_original_direction":
-        return []
-    original_pages = set(_physical_pages(claim))
-    if not original_pages or not source_page_text_by_physical_page:
-        return []
-
-    page_text: dict[int, str] = {}
-    for raw_page, raw_text in source_page_text_by_physical_page.items():
-        page = _positive_int(raw_page)
-        text = _text(raw_text)
-        if page is not None and text:
-            page_text[page] = text
-    # A missing original page makes a negative page-location conclusion unsafe.
-    if any(
-        page not in page_text
-        or len(normalize_for_lookup(page_text[page])) < 40
-        or len(_recovery_tokens(page_text[page])) < 6
-        for page in original_pages
-    ):
-        return []
-
-    spans = claim.get("evidence_spans")
-    if not isinstance(spans, list):
-        return []
-    for span in spans:
-        if not isinstance(span, Mapping):
-            continue
-        span_page = _positive_int(span.get("page"))
-        excerpt = _text(span.get("text"))
-        excerpt_tokens = _recovery_tokens(excerpt)
-        normalized_excerpt = normalize_for_lookup(excerpt)
-        if (
-            span_page not in original_pages
-            or len(normalized_excerpt) < 40
-            or len(excerpt_tokens) < 6
-        ):
-            continue
-
-        matching_pages = []
-        for page, text in page_text.items():
-            normalized_page = normalize_for_lookup(text)
-            page_tokens = _recovery_tokens(text)
-            token_threshold = max(5, (len(excerpt_tokens) * 3 + 3) // 4)
-            if (
-                normalized_excerpt in normalized_page
-                or len(excerpt_tokens & page_tokens) >= token_threshold
-            ):
-                matching_pages.append(page)
-        if len(matching_pages) == 1 and matching_pages[0] not in original_pages:
-            return ["verification_strict_source_page_mismatch"]
-    return []
 
 
 def _source_pdf_sha256(source_identity: str) -> str:
@@ -664,8 +528,6 @@ def _supporting_page_notes(
             diagnostics.append("verification_source_truth_notes_by_page_incomplete")
         if any(page not in inspected_physical_pages for page in map(int, notes)):
             diagnostics.append("verification_source_truth_notes_by_page_invalid")
-        if any(not _substantive_source_truth_notes(note) for note in notes.values()):
-            diagnostics.append("verification_page_explanation_missing")
     return supporting_pages, notes, list(dict.fromkeys(diagnostics))
 
 
@@ -684,61 +546,16 @@ def _attempt_is_non_retryable(details: list[str]) -> bool:
     return any(detail.strip().casefold() == "retryable:false" for detail in details)
 
 
-def _substantive_source_truth_notes(notes: str) -> bool:
-    normalized = " ".join(notes.split()).casefold()
-    if len(normalized.split()) < 8 or normalized in {
-        "matches",
-        "source matches",
-        "the source matches",
-    }:
-        return False
-    generic_opening = (
-        "the claim is plausible",
-        "the claim is supported",
-        "the claim matches",
-        "the source page supports the claim",
-        "the source supports the claim",
-    )
-    source_specific_detail = re.search(
-        r"\b(?:value|metric|cohort|population|denominator|period|timeframe|"
-        r"forecast|observed|trend|relationship|comparison|share|revenue|"
-        r"traffic|users|consumers|publishers|buyers|respondents|automation|"
-        r"oversight|chart|table|figure|survey|percent|percentage)\b|\d",
-        normalized,
-    )
-    if normalized.startswith(generic_opening) and not source_specific_detail:
-        return False
-    insufficient_page_language = (
-        "section divider",
-        "no explanatory text",
-        "does not specify",
-        "only a heading",
-    )
-    return not any(marker in normalized for marker in insufficient_page_language)
+def _source_truth_notes_present(notes: str) -> bool:
+    """Validate the response shape; Luna owns semantic source assessment.
 
+    The verification prompt requires a substantive source-grounded explanation.
+    Deterministic code can enforce that the field is present and non-empty, but
+    it cannot safely decide whether a paraphrase is substantively grounded
+    without reimplementing the visual verifier's semantic judgment.
+    """
 
-def _verified_claim_has_substantive_content(claim: str) -> bool:
-    """Reject a verified result that only restates a page heading."""
-
-    normalized = " ".join(claim.split()).casefold()
-    if not normalized:
-        return False
-    heading_like = re.match(
-        r"^(?:the )?(?:page|report) "
-        r"(?:frames|describes|presents|states)\b.+$",
-        normalized,
-    )
-    if not heading_like:
-        return True
-    source_specific_detail = re.search(
-        r"\b(?:value|metric|cohort|population|denominator|period|timeframe|"
-        r"forecast|observed|trend|relationship|comparison|share|revenue|"
-        r"traffic|users|consumers|publishers|buyers|respondents|automation|"
-        r"oversight|chart|table|figure|survey|percent|percentage|risk|"
-        r"increase|decrease|decline|growth|recommend)\b|\d",
-        normalized,
-    )
-    return bool(source_specific_detail)
+    return isinstance(notes, str) and bool(notes.strip())
 
 
 def _require_visual_policy(bundle: Any) -> None:
@@ -1079,30 +896,6 @@ def _verification_attempt(
         supporting_pages, notes_by_page, support_diagnostics = _supporting_page_notes(
             payload, inspected_physical_pages
         )
-        support_diagnostics.extend(
-            _supporting_page_attribution_diagnostics(
-                corrected_claim=corrected_claim,
-                supporting_pages=supporting_pages,
-                inspected_physical_pages=inspected_physical_pages,
-                source_page_text_by_physical_page=getattr(
-                    request, "source_page_text_by_physical_page", {}
-                ),
-            )
-        )
-        support_diagnostics.extend(
-            _strict_direction_diagnostics(
-                claim=claim,
-                corrected_claim=corrected_claim,
-            )
-        )
-        support_diagnostics.extend(
-            _strict_source_page_mismatch_diagnostics(
-                claim=claim,
-                source_page_text_by_physical_page=getattr(
-                    request, "source_page_text_by_physical_page", {}
-                ),
-            )
-        )
         diagnostics = (
             [*diagnostics, *support_diagnostics] if diagnostics is not None else None
         )
@@ -1114,7 +907,7 @@ def _verification_attempt(
         diagnostics = [*diagnostics, "verification_response_invalid"]
     elif outcome == "verified":
         quality_issues: list[str] = []
-        if not _substantive_source_truth_notes(notes):
+        if not _source_truth_notes_present(notes):
             quality_issues.append("verification_explanation_missing")
         if not supporting_pages:
             quality_issues.append("verification_supporting_pages_invalid")
@@ -1123,16 +916,10 @@ def _verification_attempt(
             in {
                 "verification_source_truth_notes_by_page_invalid",
                 "verification_source_truth_notes_by_page_incomplete",
-                "verification_page_explanation_missing",
-                "verification_supporting_page_attribution_conflict",
-                "verification_strict_direction_drift",
-                "verification_strict_source_page_mismatch",
             }
             for diagnostic in diagnostics
         ):
             quality_issues.append("verification_source_truth_notes_by_page_invalid")
-        if not _verified_claim_has_substantive_content(corrected_claim):
-            quality_issues.append("verification_claim_not_substantive")
         if quality_issues:
             outcome = "rejected"
             diagnostics = [*diagnostics, *quality_issues]
@@ -1347,56 +1134,6 @@ def _evaluate_claim(
                 ),
             )
         retry_feedback = verification.diagnostics
-    if verification_attempts and any(
-        "verification_claim_not_substantive" in diagnostic
-        for diagnostic in verification_attempts[-1].diagnostics
-    ):
-        return _record_result(
-            claim=claim,
-            request=request,
-            physical_page=physical_page,
-            outcome="unresolved",
-            failure_reason="verification_claim_not_substantive",
-            correction_attempts=correction_attempts,
-            verification_attempts=verification_attempts,
-            inspected_physical_pages=inspected_physical_pages,
-            recovered_physical_pages=[
-                page
-                for page in inspected_physical_pages
-                if page not in _physical_pages(claim)
-            ],
-            recovery_reason=_text(recovery_candidates[0].get("reason"))
-            if recovery_candidates
-            else "",
-            source_binding_status=(
-                "provisional_recovered" if recovery_candidates else "retained"
-            ),
-        )
-    if verification_attempts and any(
-        "verification_supporting_page_attribution_conflict" in diagnostic
-        for diagnostic in verification_attempts[-1].diagnostics
-    ):
-        return _record_result(
-            claim=claim,
-            request=request,
-            physical_page=physical_page,
-            outcome="unresolved",
-            failure_reason="verification_supporting_page_attribution_conflict",
-            correction_attempts=correction_attempts,
-            verification_attempts=verification_attempts,
-            inspected_physical_pages=inspected_physical_pages,
-            recovered_physical_pages=[
-                page
-                for page in inspected_physical_pages
-                if page not in _physical_pages(claim)
-            ],
-            recovery_reason=_text(recovery_candidates[0].get("reason"))
-            if recovery_candidates
-            else "",
-            source_binding_status=(
-                "provisional_recovered" if recovery_candidates else "retained"
-            ),
-        )
     return _record_result(
         claim=claim,
         request=request,

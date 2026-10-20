@@ -8,7 +8,7 @@ from src.utils.errors import AppError
 from .cases_01_visual import _claim, _ctx, _dependencies, _request, _settings
 
 
-def test_verified_outcome_requires_substantive_source_truth_notes(tmp_path):
+def test_verified_outcome_requires_structural_source_truth_notes(tmp_path):
     claims = [_claim("candidate-1", "Original claim")]
     responses = iter(
         [
@@ -19,9 +19,17 @@ def test_verified_outcome_requires_substantive_source_truth_notes(tmp_path):
                 "source_truth_notes": (
                     "The claim is plausible and supported by the source page."
                 ),
+                "supporting_physical_pages": [],
+                "source_truth_notes_by_page": {},
             },
             {"claim": "Corrected claim again", "status": "corrected", "issues": []},
-            {"outcome": "verified", "diagnostics": [], "source_truth_notes": ""},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": "",
+                "supporting_physical_pages": [],
+                "source_truth_notes_by_page": {},
+            },
         ]
     )
 
@@ -34,9 +42,14 @@ def test_verified_outcome_requires_substantive_source_truth_notes(tmp_path):
 
     assert result.claims[0].outcome == "failed_verification"
     assert len(result.claims[0].verification_attempts) == 2
-    assert all(
-        "verification_explanation_missing" in attempt.diagnostics
-        for attempt in result.claims[0].verification_attempts
+    assert result.claims[0].failure_reason == "verification_failed_twice"
+    assert (
+        "verification_supporting_pages_invalid"
+        in result.claims[0].verification_attempts[0].diagnostics
+    )
+    assert (
+        "verification_explanation_missing"
+        in result.claims[0].verification_attempts[1].diagnostics
     )
 
 
@@ -68,6 +81,8 @@ def test_heading_only_qualitative_rewrite_is_not_verified(tmp_path):
                 "source_truth_notes": (
                     "The page is only a section divider with no explanatory text."
                 ),
+                "supporting_physical_pages": [],
+                "source_truth_notes_by_page": {},
             },
             {
                 "claim": "The page frames this as a strategic priority.",
@@ -80,6 +95,8 @@ def test_heading_only_qualitative_rewrite_is_not_verified(tmp_path):
                 "source_truth_notes": (
                     "The page is only a section divider with no explanatory text."
                 ),
+                "supporting_physical_pages": [],
+                "source_truth_notes_by_page": {},
             },
         ]
     )
@@ -92,14 +109,14 @@ def test_heading_only_qualitative_rewrite_is_not_verified(tmp_path):
     )
 
     item = result.claims[0]
-    assert item.outcome == "unresolved"
-    assert item.failure_reason == "verification_claim_not_substantive"
+    assert item.outcome == "failed_verification"
+    assert item.failure_reason == "verification_failed_twice"
     assert item.inspected_physical_pages == [5, 7]
     assert item.recovered_physical_pages == [7]
     assert item.source_binding_status == "retained"
     assert len(item.verification_attempts) == 2
     assert all(
-        "verification_claim_not_substantive" in attempt.diagnostics
+        "verification_supporting_pages_invalid" in attempt.diagnostics
         for attempt in item.verification_attempts
     )
 
@@ -490,7 +507,7 @@ def test_recovery_is_disabled_for_reference_style_requests(tmp_path):
     ]
 
 
-def test_strict_policy_rejects_unrelated_corrected_metric(tmp_path):
+def test_strict_policy_uses_visual_verification_for_relevance(tmp_path):
     claim = _claim(
         "strict-drift",
         "40% of shoppers abandoned a cart after losing their preferred wallet method.",
@@ -515,15 +532,13 @@ def test_strict_policy_rejects_unrelated_corrected_metric(tmp_path):
                 "issues": [],
             },
             {
-                "outcome": "verified",
-                "diagnostics": [],
+                "outcome": "rejected",
+                "diagnostics": ["visual_relevance_conflict"],
                 "source_truth_notes": (
                     "The page reports a different checkout metric and population."
                 ),
-                "supporting_physical_pages": [5],
-                "source_truth_notes_by_page": {
-                    "5": "The page reports a different checkout metric and population."
-                },
+                "supporting_physical_pages": [],
+                "source_truth_notes_by_page": {},
             },
             {
                 "claim": "63% abandoned carts when unable to check out as a guest.",
@@ -531,15 +546,13 @@ def test_strict_policy_rejects_unrelated_corrected_metric(tmp_path):
                 "issues": [],
             },
             {
-                "outcome": "verified",
-                "diagnostics": [],
+                "outcome": "rejected",
+                "diagnostics": ["visual_relevance_conflict"],
                 "source_truth_notes": (
                     "The page reports a different checkout metric and population."
                 ),
-                "supporting_physical_pages": [5],
-                "source_truth_notes_by_page": {
-                    "5": "The page reports a different checkout metric and population."
-                },
+                "supporting_physical_pages": [],
+                "source_truth_notes_by_page": {},
             },
         ]
     )
@@ -554,7 +567,64 @@ def test_strict_policy_rejects_unrelated_corrected_metric(tmp_path):
     item = result.claims[0]
     assert item.outcome == "failed_verification"
     assert all(
-        "verification_strict_direction_drift" in attempt.diagnostics
+        "verification_strict_direction_drift" not in attempt.diagnostics
+        for attempt in item.verification_attempts
+    )
+
+
+def test_visual_verifier_decides_strict_claim_relevance(tmp_path):
+    """A Luna verification pass is not replaced by token-overlap scoring."""
+
+    claim = _claim("strict-visual-authority", "Retained analytical direction")
+    claim["_visual_replacement_policy"] = "strict_original_direction"
+    claim["evidence_spans"] = [
+        {
+            "evidence_id": "f1",
+            "page": 5,
+            "text": "The retained source describes a market transition.",
+        }
+    ]
+    responses = iter(
+        [
+            {
+                "claim": (
+                    "The source-supported market transition creates a focused action."
+                ),
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The complete page shows the market transition and the stated "
+                    "relationship supports the corrected analytical conclusion."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": (
+                        "The complete page shows the market transition and the "
+                        "stated relationship supports the conclusion."
+                    )
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [claim]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified"
+    assert item.final_claim == (
+        "The source-supported market transition creates a focused action."
+    )
+    assert all(
+        "verification_strict_direction_drift" not in attempt.diagnostics
         for attempt in item.verification_attempts
     )
 
@@ -796,7 +866,7 @@ def _verified_wallet_response(page=8):
     }
 
 
-def test_strict_wrong_page_excerpt_cannot_be_verified_from_another_page(tmp_path):
+def test_visual_verifier_rejects_wrong_page_without_native_text_veto(tmp_path):
     claim = _strict_wallet_claim()
     request = _request(tmp_path, [claim])
     request.source_page_text_by_physical_page = {
@@ -809,12 +879,22 @@ def test_strict_wrong_page_excerpt_cannot_be_verified_from_another_page(tmp_path
             "preferred wallet method."
         ),
     }
+    rejection = {
+        "outcome": "rejected",
+        "diagnostics": ["visual_source_page_conflict"],
+        "source_truth_notes": (
+            "The inspected page supports guest checkout abandonment, not the "
+            "retained preferred-wallet finding."
+        ),
+        "supporting_physical_pages": [],
+        "source_truth_notes_by_page": {},
+    }
     responses = iter(
         [
             {"claim": claim["text"], "status": "corrected", "issues": []},
-            _verified_wallet_response(),
+            rejection,
             {"claim": claim["text"], "status": "corrected", "issues": []},
-            _verified_wallet_response(),
+            rejection,
         ]
     )
 
@@ -828,14 +908,12 @@ def test_strict_wrong_page_excerpt_cannot_be_verified_from_another_page(tmp_path
     item = result.claims[0]
     assert item.outcome == "failed_verification"
     assert item.failure_reason == "verification_failed_twice"
-    assert len(item.verification_attempts) == 2
     assert all(
-        "verification_strict_source_page_mismatch" in attempt.diagnostics
+        "verification_strict_source_page_mismatch" not in attempt.diagnostics
         for attempt in item.verification_attempts
     )
     assert item.original_physical_pages == [8]
     assert item.evidence_spans == claim["evidence_spans"]
-    assert item.supporting_physical_pages == []
 
 
 def test_strict_verifier_rejection_remains_fail_closed_with_original_binding(
@@ -856,7 +934,7 @@ def test_strict_verifier_rejection_remains_fail_closed_with_original_binding(
     )
     rejection = {
         "outcome": "rejected",
-        "diagnostics": ["verification_strict_source_page_mismatch"],
+        "diagnostics": ["visual_source_page_conflict"],
         "source_truth_notes": rejection_note,
         "supporting_physical_pages": [8],
         "source_truth_notes_by_page": {

@@ -1179,3 +1179,109 @@ correction establishes the BigCommerce strict-page boundary and actual-PDF
 behavior, but does not prove fresh Step 1 selection effectiveness,
 repeated-run stability or independent editorial approval. E18 remains Active
 and Step 3 remains unstarted.
+
+### Phase 2 — Restore Luna semantic authority — 2026-10-20
+
+The visual verifier no longer applies deterministic lexical or native-text
+semantic vetoes to a claim that GPT-6 Luna High has corrected and verified.
+The removed helpers and terminal diagnostic paths were
+`_strict_source_page_mismatch_diagnostics`, `_strict_direction_diagnostics`,
+and `_supporting_page_attribution_diagnostics`; `_source_truth_notes_present`
+now checks only the structural presence of non-empty notes. Luna remains the
+semantic authority for whether the final corrected claim is factually supported,
+preserves the relevant population/metric/timeframe/forecast relationship, and
+has a defensible analytical interpretation. Production still hard-fails on
+malformed or incomplete contracts, source-hash/source-identity conflicts,
+ambiguous physical bindings, invalid pages/spans, and authoritative metric
+conflicts. Correction and verification remain separate and bounded at two
+attempts each.
+
+The replay adapter now defers the four native-text quality rules
+(`unsupported_numeric_claim`, `metric_label_relationship`,
+`temporal_integrity`, and `incomplete_numeric_expression`) for visually
+verified rows that have no authoritative retained metric binding. Mechanical
+quality blockers and exact retained metric-binding conflicts remain hard
+failures. The adversarial comparator independently checks serialized attempts,
+source pages, page notes, hashes, and terminal outcomes; its only bounded
+correction-only exception is a two-attempt, typed `correction_unresolved`
+abstention with no final claim or support metadata.
+
+#### Exact frozen-five live replay
+
+The fresh canonical replay is
+`tmp/verified-claims-step2-phase2-luna-20261020-v5/result.json`. It used the
+exact frozen five reports, exact local PDFs, GPT-6 Luna High with high
+reasoning, and shadow-only inputs:
+
+| Report | Reference variants | Reference outcome | Real retained insights | Real outcome |
+|---|---:|---|---:|---|
+| Capgemini Research Institute | 9 | 9 verified | 5 | 5 verified |
+| Activate | 11 | 10 verified, 1 unresolved (`ACT-004-wrong-page`) | 7 | 7 verified |
+| KPMG | 7 | 7 verified | 5 | 5 verified |
+| Reuters Institute | 8 | 8 verified | 6 | 6 verified |
+| Adjust | 4 | 4 verified | 6 | 6 verified |
+| **Total** | **39** | **38 verified, 1 expected unresolved** | **29** | **29 verified** |
+
+All 39 reference outcomes matched their frozen expected classifications, with
+zero false accepts and zero false rejects. Every real retained ID was evaluated
+and retained; all 29 were verified first pass. The run made **136 provider
+calls**, used **2,249,156 input tokens**, **83,324 output tokens**,
+**2,332,480 total tokens**, cost **$0.266580 estimated**, rendered **107
+pages**, and took **1,242.403 seconds**. The run ledger had 136 selected
+rows; image-response caching was enabled, but measured cache reuse was false.
+All 68 rows remained `canonical_approval_status: not_approved`.
+
+The final-claim review covered the corrected outputs and their actual PDF page
+bindings. `KPM-002-quantified-mutation` now accepts the source-supported
+qualitative portfolio-reconfiguration/value-creation thesis on pages 12–13,
+without preserving the unsupported 20% realized-outcome claim. The exact
+seven-variant KPMG rerun independently produced **7/7 verified**, including
+KPM-002, with 14 calls, 120,996 total tokens, and $0.013962 estimated cost.
+`ADJ-001-unsupported-metric` is accepted only after replacing churn/conversion
+labels with the page-19 install/session metrics (strategy sessions +57% YoY,
+casino installs +22%, slots sessions −5%). `ACT-004-wrong-page` remains
+unresolved after two correction attempts and has no final support pages. The
+BigCommerce adversarial wrong-page case likewise remained unresolved in the
+corrected v2 replay: **8 verified / 1 unresolved**, 18 provider calls,
+224,598 total tokens, $0.025157 estimated, 136.169 seconds; the corrected
+comparator recheck passed **9/9**.
+
+The v5 results are better than the preceding v3 snapshot on the observed
+reference gate (two KPMG reference semantic/provider mixed mismatches in v3
+versus only the expected Activate wrong-page abstention in v5) and on the
+observed real retry distribution (29 first-pass verified versus 25 first-pass
+and 4 retry successes). These are provider/model-run observations, not a
+claim of improved live Step 1 selection effectiveness. The final replay also
+preserved report-specific source identity, physical-page arrays, evidence IDs
+and retained spans; the provider-free hash check confirms all five expected
+PDF SHA-256 values. No canonical artifact, metric-spine mutation, publication
+readiness transition, or WordPress write occurred.
+
+Shadow replacement selection remains only partially measurable: the retained
+artifact/editorial-plan path produced complete replacement rows for Capgemini,
+KPMG, and Reuters, but no candidate rows for Activate or Adjust. This is an
+input/artifact limitation, not evidence that those reports lacked useful
+replacements. Manual review of the final KPM-002, ADJ-001, ACT-004, BigCommerce
+strict-page, and representative Capgemini/Reuters rows found no independently
+confirmed unsupported material claim marked verified; it is not a substitute
+for fresh editorial sign-off or a new Step 1 generation.
+
+#### Provider-free and local verification
+
+`python scripts/quality/replay_verified_claims_step2.py --provider-free
+--output tmp/verified-claims-step2-phase2-provider-free-20261020/result.json`
+passed with **15 cases / 39 variants**, all **29 retained IDs**, all five
+expected/actual PDF hashes matching, and `fabricated_fixture_substitution:
+false`. It deliberately makes no semantic/provider-quality claim. The focused
+affected suite passed **82 tests** with **1 deselected**; prompt/routing tests
+passed **95**; the prompt fixture regression gate passed after recording the
+measured validation-prompt delta of **+1,310 tokens / +$0.000131**. Ruff and
+compile checks passed. The complete repository gate remains subject to the
+previously documented CPython 3.14 wheelhouse limitation and is not claimed
+green here.
+
+This phase restores model authority for semantic truth while preserving
+contract, provenance, retry, and shadow-only safeguards. Step 2 remains
+**PARTIAL**: live provider variance, incomplete retained source bindings,
+limited replacement-path coverage, and independent editorial approval remain
+open. Step 3 has not started.

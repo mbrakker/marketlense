@@ -69,12 +69,18 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "relevant source-supported metric" in correction.system.text.lower()
     assert "replacement_policy" in correction.system.text
     assert "report_level_replacement_allowed" in correction.system.text
+    assert "neighboring proposition" in correction.system.text
+    assert "preferred-wallet abandonment" in correction.system.text
+    assert "same-subject qualitative narrowing" in correction.system.text
     assert "bounded pattern" in verification.system.text.lower()
     assert "nested cohort" in verification.system.text.lower()
     assert "recovery_sources" in verification.system.text
     assert "recovered physical pages" in verification.system.text
     assert "every inspected original or recovered PDF page" in verification.system.text
     assert "recovery candidate ranking" in verification.system.text.lower()
+    assert "wrong-locator rescue" in verification.system.text.lower()
+    assert "guest-checkout" in verification.system.text.lower()
+    assert "same-subject" in verification.system.text.lower()
     assert "component totals" in correction.system.text.lower()
     assert "image-to-page" in verification.user.text.lower()
     assert "inspected original or recovered PDF page" in verification.user.text
@@ -486,7 +492,7 @@ def test_visual_prompt_labels_each_image_with_one_based_physical_page(tmp_path):
     assert "image 2 = physical PDF page 15" in requests[1].user_prompt
 
 
-def test_wrong_support_page_fails_closed_when_another_inspected_page_has_claim_values(
+def test_native_page_text_does_not_veto_visual_support_page(
     tmp_path,
 ):
     claim = _claim("candidate-1", "Original claim", page=14)
@@ -549,16 +555,15 @@ def test_wrong_support_page_fails_closed_when_another_inspected_page_has_claim_v
     )
 
     item = result.claims[0]
-    assert item.outcome == "unresolved"
-    assert item.failure_reason == "verification_supporting_page_attribution_conflict"
-    assert len(item.verification_attempts) == 2
+    assert item.outcome == "verified"
+    assert item.supporting_physical_pages == [14]
     assert all(
-        "verification_supporting_page_attribution_conflict" in attempt.diagnostics
+        "verification_supporting_page_attribution_conflict" not in attempt.diagnostics
         for attempt in item.verification_attempts
     )
 
 
-def test_partial_numeric_overlap_does_not_bypass_page_attribution_conflict(tmp_path):
+def test_partial_native_text_does_not_veto_visual_support_page(tmp_path):
     claim = _claim("candidate-1", "Original claim", page=14)
     claim["pages"] = [14, 15]
     claim["evidence_spans"] = [
@@ -623,8 +628,63 @@ def test_partial_numeric_overlap_does_not_bypass_page_attribution_conflict(tmp_p
     )
 
     item = result.claims[0]
-    assert item.outcome == "unresolved"
-    assert item.failure_reason == "verification_supporting_page_attribution_conflict"
+    assert item.outcome == "verified"
+    assert item.supporting_physical_pages == [14]
+
+
+def test_visual_verifier_decides_numeric_page_attribution(tmp_path):
+    """Native extraction must not veto a complete-page visual decision."""
+
+    claim = _claim("candidate-visual-page", "Original claim", page=14)
+    claim["pages"] = [14, 15]
+    claim["evidence_spans"] = [
+        {"evidence_id": "f1", "page": 14, "start": 10, "end": 20},
+        {"evidence_id": "f1", "page": 15, "start": 10, "end": 20},
+    ]
+    request = _request(tmp_path, [claim])
+    request.source_page_text_by_physical_page = {
+        14: "A section heading omits the displayed spend split.",
+        15: "Top users account for 61% of time and 34% of consumer spend.",
+    }
+    responses = iter(
+        [
+            {
+                "claim": "The top users account for 61% of time and 34% of spend.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The complete page shows the two shares for the named cohort, "
+                    "and the visual relationship supports the corrected claim."
+                ),
+                "supporting_physical_pages": [14],
+                "source_truth_notes_by_page": {
+                    "14": (
+                        "The complete page shows the two shares for the named "
+                        "cohort, and the visual relationship supports the claim."
+                    )
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified"
+    assert item.supporting_physical_pages == [14]
+    assert all(
+        "verification_supporting_page_attribution_conflict" not in attempt.diagnostics
+        for attempt in item.verification_attempts
+    )
 
 
 def test_multi_page_numeric_attribution_uses_combined_cited_pages(tmp_path):

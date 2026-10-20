@@ -55,6 +55,44 @@ REPORT_ORDER = [
     "Adjust",
 ]
 
+_VISUAL_SOURCE_TEXT_RULES = frozenset(
+    {
+        "public_editorial_quality.unsupported_numeric_claim",
+        "public_editorial_quality.metric_label_relationship",
+        "public_editorial_quality.temporal_integrity",
+        "public_editorial_quality.incomplete_numeric_expression",
+    }
+)
+
+
+def _has_authoritative_metric_binding(insight: Mapping[str, Any]) -> bool:
+    """Return whether the quality input carries a retained metric contract.
+
+    A visual replacement is intentionally built without retained metric fields:
+    the verifier establishes its meaning from the PDF page, while this replay
+    adapter only checks the resulting public text.  If a caller supplies a
+    complete authoritative metric binding, source-text contradictions remain
+    hard failures rather than being waived as native-extraction noise.
+    """
+
+    metric = insight.get("metric")
+    if not isinstance(metric, Mapping):
+        return False
+    return any(
+        str(metric.get(field) or "").strip()
+        for field in (
+            "label",
+            "value",
+            "unit",
+            "subject",
+            "cohort",
+            "denominator",
+            "timeframe",
+            "geography",
+            "observation_status",
+        )
+    )
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -1133,15 +1171,14 @@ def _shadow_quality_assessment(
 
     quality = _editorial_quality_report(report, [insight])
     errors = [issue.rule_id for issue in quality.issues if issue.severity == "error"]
-    visual_pending_rules = {
-        "public_editorial_quality.material_claim_evidence_missing",
-        "public_editorial_quality.unsupported_numeric_claim",
-    }
-    pending = (
-        [rule for rule in errors if rule in visual_pending_rules]
-        if visually_verified
-        else []
-    )
+    pending: list[str] = []
+    if visually_verified:
+        has_authoritative_metric = _has_authoritative_metric_binding(insight)
+        for rule in errors:
+            if rule == "public_editorial_quality.material_claim_evidence_missing" or (
+                rule in _VISUAL_SOURCE_TEXT_RULES and not has_authoritative_metric
+            ):
+                pending.append(rule)
     blockers = [rule for rule in errors if rule not in pending]
     status = (
         "abstained" if blockers else "pending_visual_source_text" if pending else "pass"

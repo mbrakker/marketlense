@@ -23,9 +23,7 @@ from scripts.quality.replay_verified_claims_step2 import (
     replay_live_explicit_cohort,
 )
 from src.generators.verified_claims_recovery import source_pdf_sha256
-from src.generators.verified_claims_visual_generator import (
-    _substantive_source_truth_notes,
-)
+from src.generators.verified_claims_visual_generator import _source_truth_notes_present
 
 _POSITIVE_EXPECTATION = "verified_or_corrected"
 _NEGATIVE_EXPECTATION = "unresolved_or_failed"
@@ -195,10 +193,10 @@ def _attempt_binding_is_valid(
         if not pages:
             return False, reason or "verification attempt supporting pages are invalid"
         if any(
-            not isinstance(note, str) or not _substantive_source_truth_notes(note)
+            not isinstance(note, str) or not _source_truth_notes_present(note)
             for note in attempt_notes.values()
         ):
-            return False, "verification attempt page notes are not substantive"
+            return False, "verification attempt page notes are missing"
     elif attempt_pages or attempt_notes:
         return False, "negative verification attempt carries supporting pages"
     return True, ""
@@ -239,13 +237,58 @@ def _genuine_rejection(
     ):
         return False, "verification rejection is only a provider or malformed response"
     source_truth_notes = attempt.get("source_truth_notes")
-    if not isinstance(source_truth_notes, str) or not _substantive_source_truth_notes(
+    if not isinstance(source_truth_notes, str) or not _source_truth_notes_present(
         source_truth_notes
     ):
-        return False, "verification rejection has no substantive source assessment"
+        return False, "verification rejection has no source assessment"
     return _attempt_binding_is_valid(
         row=row, attempt=attempt, require_supporting_pages=False
     )
+
+
+def _safe_correction_abstention(
+    *, row: Mapping[str, Any], corrections: list[Mapping[str, Any]]
+) -> tuple[bool, str]:
+    """Accept a model's bounded source-mismatch abstention as a negative terminal.
+
+    A correction can terminate before verification when Luna returns ``unresolved``
+    twice because the retained page supports only a neighboring proposition.  This
+    is a safe negative outcome, but malformed, provider, or generic failed
+    corrections must not satisfy the adversarial acceptance gate.
+    """
+
+    if row.get("outcome") != "unresolved" or row.get("failure_reason") != (
+        "correction_unresolved"
+    ):
+        return False, "terminal result is not a bounded correction abstention"
+    if (
+        row.get("final_claim")
+        or row.get("supporting_physical_pages")
+        or row.get("source_truth_notes_by_page")
+    ):
+        return False, "correction abstention retains accepted claim evidence"
+    if len(corrections) != 2:
+        return False, "correction abstention did not use two unresolved attempts"
+    for correction in corrections:
+        if correction.get("status") != "unresolved":
+            return False, "correction abstention contains a non-unresolved attempt"
+        issues = correction.get("issues")
+        if (
+            not isinstance(issues, list)
+            or not issues
+            or any(not isinstance(issue, str) or not issue.strip() for issue in issues)
+        ):
+            return False, "correction abstention has no source-based issue"
+        normalized_issues = [issue.strip().casefold() for issue in issues]
+        if any(
+            any(marker in issue for marker in _NON_GENUINE_REJECTION_MARKERS)
+            for issue in normalized_issues
+        ):
+            return (
+                False,
+                "correction abstention is only a provider or malformed response",
+            )
+    return True, ""
 
 
 def compare_adversarial_outcomes(
@@ -444,6 +487,38 @@ def compare_adversarial_outcomes(
                     case_id=case_id,
                 )
             )
+        if corrections is None:
+            if verifications is None:
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code=(
+                            "missing_successful_verification_attempt"
+                            if expected == _POSITIVE_EXPECTATION
+                            else "missing_verification_rejection"
+                        ),
+                        detail=verification_reason,
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
+            continue
+
+        if expected == _NEGATIVE_EXPECTATION and verifications is None:
+            abstention_valid, abstention_reason = _safe_correction_abstention(
+                row=row, corrections=corrections
+            )
+            if abstention_valid:
+                continue
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="missing_verification_rejection",
+                    detail=abstention_reason,
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+            continue
+
         if verifications is None:
             mismatches.append(
                 _acceptance_mismatch(
@@ -457,7 +532,6 @@ def compare_adversarial_outcomes(
                     case_id=case_id,
                 )
             )
-        if corrections is None or verifications is None:
             continue
 
         if expected == _POSITIVE_EXPECTATION:

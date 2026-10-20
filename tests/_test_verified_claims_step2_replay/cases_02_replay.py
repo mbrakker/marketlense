@@ -10,6 +10,7 @@ from scripts.quality.replay_verified_claims_step2 import (
     _editorial_duplicate_pairs,
     _editorial_duplicate_status,
     _editorial_quality_report,
+    _shadow_quality_assessment,
     _shadow_replacement_selection,
     _usage_summary,
     _verified_corrected_insight,
@@ -226,6 +227,43 @@ def test_shadow_selection_keeps_visually_verified_chart_fact_pending_text_qualit
         "public_editorial_quality.unsupported_numeric_claim"
         in selected["editorial_quality_issues"]
     )
+
+
+def test_visual_verification_defers_source_text_metric_relationship_checks() -> None:
+    insight = {
+        "id": "candidate-relationship",
+        "text": "Q1 2025: 50%.",
+        "evidence_id": "provisional-page:candidate-relationship",
+        "evidence": "Q1 2025: 40%; Q2 2025: 50%.",
+        "evidence_status": "visual_verified_provisional",
+    }
+
+    errors, blockers, status = _shadow_quality_assessment(
+        "Report", insight, visually_verified=True
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" in errors
+    assert blockers == []
+    assert status == "pending_visual_source_text"
+
+
+def test_authoritative_metric_conflict_remains_a_shadow_blocker() -> None:
+    insight = {
+        "id": "candidate-authoritative-metric",
+        "text": "Q1 2025: 50%.",
+        "evidence_id": "retained-evidence",
+        "evidence": "Q1 2025: 40%; Q2 2025: 50%.",
+        "metric": {"label": "Adoption", "value": "40%"},
+        "evidence_status": "visual_verified_provisional",
+    }
+
+    errors, blockers, status = _shadow_quality_assessment(
+        "Report", insight, visually_verified=True
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" in errors
+    assert "public_editorial_quality.metric_label_relationship" in blockers
+    assert status == "abstained"
 
 
 def test_usage_summary_isolated_to_current_replay_run(tmp_path) -> None:
