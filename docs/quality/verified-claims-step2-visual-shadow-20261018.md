@@ -1345,3 +1345,77 @@ No new live semantic result, token/cost/latency measurement, canonical
 promotion, publication-readiness change, or WordPress write is claimed. Step 2
 remains **PARTIAL**, E18 remains Active, and Step 3 remains unstarted pending
 fresh selection-effectiveness evidence and independent editorial approval.
+
+### Final provenance fix and targeted live regression — 2026-10-20
+
+Commit `27b09ed2` fixes the remaining strict supporting-page validation defect
+at the replay/adversarial comparison boundary. `_valid_supporting_pages()` no
+longer filters malformed list elements into a seemingly valid subset; it now
+reuses the existing strict physical-page validator. The complete list must be
+nonempty, unique, positive, and composed of actual integers (booleans are
+rejected), every page must be inspected, and the existing exact page-note
+validation remains in force. Because the adversarial comparator uses this same
+boundary, identical malformed result and verification-attempt lists now fail
+closed. Valid inspected multi-page bindings and existing recovery/negative
+handling remain unchanged.
+
+Focused red/green regressions covered `[3, "invalid"]`, `[3, true]`, `[3, 0]`,
+duplicate pages, an uninspected page in `[3, 4]`, a valid inspected `[3, 4]`
+binding, and malformed result/verification-attempt lists. The focused
+visual/replay/adversarial/provenance suite passed **123 tests**, with **1
+expected integration skip** and **1 deselected**. Formatting, Ruff, compile,
+backlog, documentation, repository-hygiene, forbidden-patching and the full
+repository mypy gate passed. No semantic veto or false metric authority was
+reintroduced.
+
+#### Five-case actual-PDF GPT-6 Luna High regression
+
+The isolated regression used the current correction and verification prompts,
+`gpt-6-luna` with high reasoning, complete pages, the four hash-matched local
+PDFs, and a fresh cache at
+`out/verified_claims_step2_phase2_final_live_20261020/cache`.
+The source-manifest SHA-256 is
+`64bbeb67351864bd47f1cb0ba2142e367d2dbc2271a709f7370c1bfeb89302c`.
+Prompt identities were recorded in the cost ledger:
+`report_vs/validate/visual_claim_correction` hash
+`7072823e732c280109b008e744c18dfa67e57af967ac9352facc23d046cfbe97` and
+`report_vs/validate/visual_claim_verification` hash
+`68de26cfbf4f5dfe60989b83671d25a52ab5ddb1c34b0ff979cebd727a9279d3`.
+All actual PDF hashes matched their manifest identities; cache reuse was
+measured as false. The run was shadow-only and made no canonical, readiness,
+publication, or WordPress writes.
+
+| Case | Terminal result | Source-grounded review |
+|---|---|---|
+| `BIG-ADV-002` / `big-adv-wrong-page` | **unresolved** after two correction attempts | Page 8 supports guest-checkout/email requirements, not the preferred-wallet 40% finding on page 4; strict policy did not rescue the claim. |
+| `BIG-VALID-001` / `big-valid-wallet-page` | **verified, first pass** | Page 4 supports the self-reported 40% preferred-wallet cart-abandonment finding; no broader causal or denominator claim was added. |
+| `KPM-002-quantified-mutation` | **verified, first pass** | The unsupported 20% realized-outcome claim was replaced with a same-subject, page-12-supported current-approach comparison (56% corporates; 71% private equity). This is a valid source-supported quantitative replacement; the prior retained baseline produced a qualitative page-13 wording, so this is documented model wording variance rather than treated as an identical editorial output. |
+| `ADJ-001-unsupported-metric` | **verified, first pass** | Page 19 supports installs/sessions, not churn/conversion: strategy sessions +57% with installs −1%, casino installs +22% with sessions −5%, and slots installs +46% with sessions −5%, for global 2024–2025. |
+| `ACT-004` / `ACT-004-wrong-page` | **unresolved** after two correction attempts | Page 15 is the U.S. video time/spend cohort, not the global creator/platform visual; no silent fallback to page 53 occurred. |
+
+The five terminal outcomes are mutually exclusive: **3 verified first pass,
+0 verified after retry, 2 unresolved, 0 failed, 0 skipped**. The labeled
+acceptance comparator matched **5/5** with **0 mismatches**. The two negative
+cases were safe correction-stage abstentions, not independently completed
+verification rejections; neither was accepted. The run made **10 provider
+calls**, used **103,935 input**, **4,493 output**, and **108,428 total tokens**,
+with estimated cost **$0.012639** and wall time **89.771 seconds**. It rendered
+**7 full pages** and recorded run ID
+`verified-claims-step2-explicit-1792527626`.
+
+Compared with retained prior evidence, the valid BigCommerce page-4 case
+remained verified and the Activate wrong-page case remained unresolved. The
+historical BigCommerce page-8 replay that had accepted guest-checkout evidence
+is now represented by the current unresolved result; no page-4 wallet evidence
+was promoted into the strict row. Adjust remained source-grounded after the
+unsupported metric replacement. KPMG remained source-grounded but its current
+run chose a quantitative current-approach chart on page 12 instead of the
+previous qualitative page-13 wording. These are targeted actual-PDF results,
+not a claim that Step 1 live selection effectiveness or overall editorial
+quality has improved.
+
+Step 2 remains **PARTIAL**: the strict provenance fix and targeted live cases
+pass, but the five-case run is not the full 29-claim frozen-five semantic
+evaluation, and independent editorial approval, repeated live stability, and
+Step 3 visual factualisation remain open. E18 remains Active and Step 3 is
+unstarted.
