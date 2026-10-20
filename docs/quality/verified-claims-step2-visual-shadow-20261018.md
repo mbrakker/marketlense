@@ -1419,3 +1419,63 @@ pass, but the five-case run is not the full 29-claim frozen-five semantic
 evaluation, and independent editorial approval, repeated live stability, and
 Step 3 visual factualisation remain open. E18 remains Active and Step 3 is
 unstarted.
+
+### KPMG semantic continuity review — 2026-10-20
+
+The prior five-case KPMG row requires a policy distinction. Its retained input
+used `report_level_replacement_allowed`, not `strict_original_direction`. The
+reported correction — “KPMG’s comparison of current portfolio-separation
+approaches shows that 56% of corporates (32% open to but not actively seeking,
+24% actively pursuing) and 71% of private equity (46% and 25%, respectively)
+fall into one of those two categories.” — is factually supported by the full
+physical page 12 chart: 32% + 24% = 56% for corporate organizations and 46% +
+25% = 71% for private equity. The chart measures current approach categories,
+not realized value creation, and the values are not unsupported.
+
+It is nevertheless a different proposition from the KPM-002 reference
+direction: portfolio separation and carve-outs as qualitative structural
+mechanisms for portfolio reconfiguration and value creation/execution. Under
+strict policy, the 56%/71% current-approach distribution would be a neighboring
+quantitative proposition rather than the required same-subject qualitative
+narrowing. Because the prior row explicitly allowed report-level replacement,
+this is a fixture-policy mismatch in the targeted regression, not evidence of a
+strict-policy production failure.
+
+#### Fresh strict-policy KPMG replay
+
+A fresh isolated one-case replay used the exact KPMG PDF
+(`a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589`), full
+physical pages 12–13, current GPT-6 Luna High prompts, and
+`strict_original_direction`. The source-manifest SHA-256 was
+`64bbeb67351864bd47f1cb0ba2142e367d2dbc2271a709f7370c1bfeb89302c`; cache
+reuse was false. The exact corrected claim was:
+
+> KPMG says organizations are increasingly willing to separate assets that no longer align with long-term growth priorities, as portfolio-level strategic decisions replace incremental asset-level optimization; the page does not report a 20% realized value-creation outcome.
+
+The correction retained the qualitative portfolio-separation direction and
+removed the unsupported realized-outcome percentage. The independent verifier
+explicitly confirmed the page-12 strategic-direction text and distinguished the
+chart’s corporate **20% “Holding due to strategic focus”** category from a
+realized value-creation outcome. Supporting physical page **12** was retained;
+page 13 was inspected as context but not cited as necessary support. The
+canonical evidence ID and source identity remained unchanged:
+`portfolio-separation-qualitative-thesis` and
+`KPMG|pdf-sha256:a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589`.
+
+The strict run produced **1 verified first-pass outcome**, **2 provider calls**,
+**26,908 total tokens**, estimated cost **$0.003630**, **31.097 seconds**, and
+**2 rendered pages**. The correction and verification prompt hashes were the
+current recorded hashes `7072823e732c280109b008e744c18dfa67e57af967ac9352facc23d046cfbe97`
+and `68de26cfbf4f5dfe60989b83671d25a52ab5ddb1c34b0ff979cebd727a9279d3`.
+The provider-free acceptance comparator matched **1/1**; no canonical,
+publication-readiness, or WordPress write occurred. The focused visual/replay/
+adversarial/provenance suite remained **123 passed, 1 skipped, 1 deselected**.
+
+Assessment: factual accuracy **PASS**; strict analytical continuity **PASS**;
+deterministic provenance **PASS**; editorial quality **acceptable for shadow
+verification but not canonical approval**, because the model included an
+explicit explanation of what the original page did not report. No production
+prompt or code correction is justified by the evidence. The existing
+report-level replacement behavior remains intentionally flexible, while the
+strict prompt and verifier preserve the qualitative narrowing boundary. Step 2
+remains **PARTIAL**, E18 remains Active, and Step 3 remains unstarted.
