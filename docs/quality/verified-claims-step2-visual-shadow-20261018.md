@@ -1060,3 +1060,42 @@ the native wheelhouse audit requires CPython 3.12. Therefore the repository
 quality gate is **PARTIAL**, not green in this environment. No canonical
 artifact, publication-readiness state, provider call, or WordPress write was
 performed. Step 2 remains **PARTIAL** and Step 3 remains unstarted.
+
+### Final acceptance-integrity correction — 2026-10-20
+
+The acceptance comparator now validates the serialized attempt history rather
+than trusting a terminal label alone. A positive result must contain a
+matching corrected claim, a successful verification attempt for the terminal
+attempt number, and identical supporting pages plus substantive page-specific
+notes. A negative result must contain a bounded correction/verification trail
+whose terminal verification attempt is a substantive source-grounded
+rejection; skipped, provider-error, malformed-response, missing-input, and
+correction-only failures are not accepted as source rejections. The strict
+`BIG-ADV-002` case must retain original physical page **8**, explicitly assess
+that binding, and cannot accept page **4** as a replacement.
+
+The comparator also requires valid 64-character hexadecimal SHA-256 values,
+equal expected/actual hashes, and the same hash embedded in `source_identity`.
+The existing source-identity parser and supporting-page validator remain the
+authorities; no production visual verifier was changed.
+
+The provider-free regression now constructs result-shaped attempts for all
+**9/9** corpus identities and passes. Deliberately changing `BIG-ADV-002` to
+accept page 4 fails closed. Comparing the retained adversarial replay from
+the prior live run now correctly reports one mismatch (`BIG-ADV-002` returned
+`verified` against its strict negative expectation); this is an audit of
+retained output, not a new provider replay.
+
+The hosted full-CI result for baseline commit `225d603e8ffbd3c26b587ee6516e85992a01f444`
+is [run 39407483027](https://github.com/mbrakker/marketlense/actions/runs/39407483027):
+Python 3.12 completed with **7,845 pytest passes and 1 skip**, both mutation
+jobs and release evidence passing. The actual local `origin/main` merge-base
+used for comparison is
+`bf736b47695605a9a00a1a8355c0d27ab0b0ab88`; the earlier one-character-short
+hash was corrected. The separate local CPython 3.14 wheelhouse limitation is
+not a hosted-CI failure.
+
+This correction adds no live LLM calls, canonical mutations, publication
+writes, or WordPress writes. Step 2 remains **PARTIAL**: fresh Step 1
+selection effectiveness, canonical integration, and independent editorial
+approval remain unproven; E18 remains Active and Step 3 remains unstarted.

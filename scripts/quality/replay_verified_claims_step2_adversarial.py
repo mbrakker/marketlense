@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import defaultdict
 from collections.abc import Mapping
@@ -21,11 +22,34 @@ from scripts.quality.replay_verified_claims_step2 import (
     _valid_supporting_pages,
     replay_live_explicit_cohort,
 )
+from src.generators.verified_claims_recovery import source_pdf_sha256
+from src.generators.verified_claims_visual_generator import (
+    _substantive_source_truth_notes,
+)
 
 _POSITIVE_EXPECTATION = "verified_or_corrected"
 _NEGATIVE_EXPECTATION = "unresolved_or_failed"
 _VERIFIED_OUTCOMES = {"verified", "verified_after_retry"}
 _FAILED_OUTCOMES = {"unresolved", "failed_verification"}
+_SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$", re.IGNORECASE)
+_NON_GENUINE_REJECTION_MARKERS = (
+    "verification_provider_error",
+    "correction_provider_error",
+    "verification_response_invalid",
+    "verification_diagnostics_missing",
+    "error_code:",
+    "error_type:",
+    "retryable:",
+)
+_NON_REJECTION_FAILURE_MARKERS = (
+    "candidate_id_missing",
+    "claim_text_missing",
+    "physical_page_missing",
+    "page_render_failed",
+    "source_binding_conflict",
+    "correction_",
+    "verification_non_retryable",
+)
 
 
 def _acceptance_mismatch(
@@ -43,24 +67,185 @@ def _acceptance_mismatch(
     }
 
 
-def _source_provenance_is_valid(row: Mapping[str, Any]) -> tuple[bool, str]:
+def _strict_page_list(value: Any) -> list[int] | None:
+    if not isinstance(value, list):
+        return None
+    pages: list[int] = []
+    for page in value:
+        if type(page) is not int or page <= 0 or page in pages:
+            return None
+        pages.append(page)
+    return pages
+
+
+def _source_identity_is_valid(row: Mapping[str, Any]) -> tuple[bool, str]:
     source_identity = row.get("source_identity")
     if not isinstance(source_identity, str) or not source_identity.strip():
         return False, "source_identity is missing"
 
     expected_hash = row.get("source_pdf_sha256_expected")
     actual_hash = row.get("source_pdf_sha256_actual")
-    if not isinstance(expected_hash, str) or not expected_hash.strip():
-        return False, "expected source PDF hash is missing"
-    if not isinstance(actual_hash, str) or not actual_hash.strip():
-        return False, "actual source PDF hash is missing"
-    if expected_hash.strip().lower() != actual_hash.strip().lower():
+    if not isinstance(expected_hash, str) or not _SHA256_PATTERN.fullmatch(
+        expected_hash.strip()
+    ):
+        return False, "expected source PDF hash is not a SHA-256 value"
+    if not isinstance(actual_hash, str) or not _SHA256_PATTERN.fullmatch(
+        actual_hash.strip()
+    ):
+        return False, "actual source PDF hash is not a SHA-256 value"
+    expected = expected_hash.strip().lower()
+    actual = actual_hash.strip().lower()
+    if expected != actual:
         return False, "source PDF hash does not match expected identity"
+    embedded = source_pdf_sha256(source_identity)
+    if not embedded:
+        return False, "source_identity does not contain one PDF SHA-256 value"
+    if embedded != expected or embedded != actual:
+        return False, "source_identity PDF hash does not match result hashes"
+    return True, ""
+
+
+def _source_provenance_is_valid(row: Mapping[str, Any]) -> tuple[bool, str]:
+    identity_valid, identity_reason = _source_identity_is_valid(row)
+    if not identity_valid:
+        return False, identity_reason
+
+    inspected = _strict_page_list(row.get("inspected_physical_pages"))
+    if not inspected:
+        return False, "inspected physical pages are invalid"
 
     pages, reason = _valid_supporting_pages(row)
     if not pages:
         return False, reason or "supporting physical pages are invalid"
     return True, ""
+
+
+def _expected_physical_pages(case: Mapping[str, Any]) -> list[int] | None:
+    raw_pages = case.get("physical_pages")
+    return _strict_page_list(raw_pages) if raw_pages is not None else None
+
+
+def _row_binding_matches_case(
+    row: Mapping[str, Any], case: Mapping[str, Any]
+) -> tuple[bool, str]:
+    expected_pages = _expected_physical_pages(case)
+    if expected_pages is None:
+        return True, ""
+    for field in ("physical_pages", "original_physical_pages"):
+        actual_pages = _strict_page_list(row.get(field))
+        if actual_pages != expected_pages:
+            return False, f"{field} does not preserve the corpus physical pages"
+    inspected = _strict_page_list(row.get("inspected_physical_pages"))
+    if not inspected or not set(expected_pages).issubset(inspected):
+        return False, "inspected physical pages omit the retained binding"
+    return True, ""
+
+
+def _bounded_attempts(
+    row: Mapping[str, Any], field: str
+) -> tuple[list[Mapping[str, Any]] | None, str]:
+    raw_attempts = row.get(field)
+    if not isinstance(raw_attempts, list) or not raw_attempts:
+        return None, f"{field} are missing"
+    if len(raw_attempts) > 2:
+        return None, f"{field} exceed the two-attempt bound"
+    attempts: list[Mapping[str, Any]] = []
+    seen_numbers: set[int] = set()
+    for raw_attempt in raw_attempts:
+        if not isinstance(raw_attempt, Mapping):
+            return None, f"{field} contain a malformed attempt"
+        attempt_number = raw_attempt.get("attempt")
+        if (
+            type(attempt_number) is not int
+            or attempt_number not in {1, 2}
+            or attempt_number in seen_numbers
+        ):
+            return None, f"{field} contain an invalid or duplicate attempt number"
+        seen_numbers.add(attempt_number)
+        attempts.append(raw_attempt)
+    return attempts, ""
+
+
+def _matching_attempt(
+    attempts: list[Mapping[str, Any]], attempt_number: int
+) -> Mapping[str, Any] | None:
+    return next(
+        (attempt for attempt in attempts if attempt.get("attempt") == attempt_number),
+        None,
+    )
+
+
+def _attempt_binding_is_valid(
+    *,
+    row: Mapping[str, Any],
+    attempt: Mapping[str, Any],
+    require_supporting_pages: bool,
+) -> tuple[bool, str]:
+    attempt_pages = attempt.get("supporting_physical_pages")
+    attempt_notes = attempt.get("source_truth_notes_by_page")
+    if not isinstance(attempt_pages, list) or not isinstance(attempt_notes, dict):
+        return False, "verification attempt page evidence is malformed"
+    if require_supporting_pages:
+        attempt_row = {
+            "inspected_physical_pages": row.get("inspected_physical_pages"),
+            "supporting_physical_pages": attempt_pages,
+            "source_truth_notes_by_page": attempt_notes,
+        }
+        pages, reason = _valid_supporting_pages(attempt_row)
+        if not pages:
+            return False, reason or "verification attempt supporting pages are invalid"
+        if any(
+            not isinstance(note, str) or not _substantive_source_truth_notes(note)
+            for note in attempt_notes.values()
+        ):
+            return False, "verification attempt page notes are not substantive"
+    elif attempt_pages or attempt_notes:
+        return False, "negative verification attempt carries supporting pages"
+    return True, ""
+
+
+def _correction_matches_attempt(
+    corrections: list[Mapping[str, Any]],
+    attempt_number: int,
+    expected_claim: str = "",
+) -> tuple[bool, str]:
+    correction = _matching_attempt(corrections, attempt_number)
+    if correction is None or correction.get("status") != "corrected":
+        return False, "verification attempt has no matching corrected claim"
+    claim = correction.get("claim")
+    if not isinstance(claim, str) or not claim.strip():
+        return False, "matching correction attempt has no claim"
+    if expected_claim and claim.strip() != expected_claim.strip():
+        return False, "final claim does not match the successful correction attempt"
+    return True, ""
+
+
+def _genuine_rejection(
+    *, row: Mapping[str, Any], attempt: Mapping[str, Any]
+) -> tuple[bool, str]:
+    if attempt.get("outcome") != "rejected":
+        return False, "verification attempt did not reject the claim"
+    diagnostics = attempt.get("diagnostics")
+    if (
+        not isinstance(diagnostics, list)
+        or not diagnostics
+        or any(not isinstance(item, str) or not item.strip() for item in diagnostics)
+    ):
+        return False, "verification rejection diagnostics are missing"
+    normalized_diagnostics = [item.strip().casefold() for item in diagnostics]
+    if any(
+        any(marker in diagnostic for marker in _NON_GENUINE_REJECTION_MARKERS)
+        for diagnostic in normalized_diagnostics
+    ):
+        return False, "verification rejection is only a provider or malformed response"
+    source_truth_notes = attempt.get("source_truth_notes")
+    if not isinstance(source_truth_notes, str) or not _substantive_source_truth_notes(
+        source_truth_notes
+    ):
+        return False, "verification rejection has no substantive source assessment"
+    return _attempt_binding_is_valid(
+        row=row, attempt=attempt, require_supporting_pages=False
+    )
 
 
 def compare_adversarial_outcomes(
@@ -74,7 +259,7 @@ def compare_adversarial_outcomes(
     """
 
     mismatches: list[dict[str, str]] = []
-    expected_by_id: dict[str, tuple[str, str]] = {}
+    expected_by_id: dict[str, tuple[str, str, Mapping[str, Any]]] = {}
     raw_cases = corpus.get("cases")
     if not isinstance(raw_cases, list):
         mismatches.append(
@@ -129,7 +314,7 @@ def compare_adversarial_outcomes(
                 )
             )
             continue
-        expected_by_id[candidate_id] = (case_id, str(expected))
+        expected_by_id[candidate_id] = (case_id, str(expected), raw_case)
         expected_terminal_counts[str(expected)] += 1
 
     raw_rows = result.get("claims")
@@ -180,7 +365,7 @@ def compare_adversarial_outcomes(
         rows_by_id[candidate_id].append(raw_row)
 
     matched_count = 0
-    for candidate_id, (case_id, expected) in expected_by_id.items():
+    for candidate_id, (case_id, expected, case) in expected_by_id.items():
         candidate_rows = rows_by_id.get(candidate_id, [])
         if not candidate_rows:
             mismatches.append(
@@ -224,29 +409,268 @@ def compare_adversarial_outcomes(
             )
             continue
 
-        if expected != _POSITIVE_EXPECTATION:
-            continue
-
-        final_claim = row.get("final_claim")
-        if not isinstance(final_claim, str) or not final_claim.strip():
+        binding_matches, binding_reason = _row_binding_matches_case(row, case)
+        if not binding_matches:
             mismatches.append(
                 _acceptance_mismatch(
-                    code="missing_final_claim",
-                    detail="positive terminal outcome has no final corrected claim",
+                    code="source_binding_mismatch",
+                    detail=binding_reason,
                     candidate_id=candidate_id,
                     case_id=case_id,
                 )
             )
-        provenance_valid, provenance_reason = _source_provenance_is_valid(row)
-        if not provenance_valid:
+
+        identity_valid, identity_reason = _source_identity_is_valid(row)
+        if not identity_valid:
             mismatches.append(
                 _acceptance_mismatch(
                     code="invalid_source_provenance",
-                    detail=provenance_reason,
+                    detail=identity_reason,
                     candidate_id=candidate_id,
                     case_id=case_id,
                 )
             )
+
+        corrections, correction_reason = _bounded_attempts(row, "correction_attempts")
+        verifications, verification_reason = _bounded_attempts(
+            row, "verification_attempts"
+        )
+        if corrections is None:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="missing_correction_attempts",
+                    detail=correction_reason,
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+        if verifications is None:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code=(
+                        "missing_successful_verification_attempt"
+                        if expected == _POSITIVE_EXPECTATION
+                        else "missing_verification_rejection"
+                    ),
+                    detail=verification_reason,
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+        if corrections is None or verifications is None:
+            continue
+
+        if expected == _POSITIVE_EXPECTATION:
+            final_claim = row.get("final_claim")
+            if not isinstance(final_claim, str) or not final_claim.strip():
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code="missing_final_claim",
+                        detail="positive terminal outcome has no final corrected claim",
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
+                continue
+            provenance_valid, provenance_reason = _source_provenance_is_valid(row)
+            if not provenance_valid:
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code="invalid_source_provenance",
+                        detail=provenance_reason,
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
+
+            terminal_attempt_number = 1 if outcome == "verified" else 2
+            verification = _matching_attempt(verifications, terminal_attempt_number)
+            if verification is None or verification.get("outcome") != "verified":
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code="missing_successful_verification_attempt",
+                        detail=(
+                            "positive terminal outcome has no matching successful "
+                            "verification attempt"
+                        ),
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
+                continue
+            if verification is not verifications[-1]:
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code="verification_attempt_sequence_mismatch",
+                        detail=(
+                            "a positive terminal result has a later verification "
+                            "attempt"
+                        ),
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
+            correction_matches, correction_reason = _correction_matches_attempt(
+                corrections, terminal_attempt_number, final_claim
+            )
+            if not correction_matches:
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code="final_claim_attempt_mismatch",
+                        detail=correction_reason,
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
+            attempt_binding_valid, attempt_binding_reason = _attempt_binding_is_valid(
+                row=row, attempt=verification, require_supporting_pages=True
+            )
+            if not attempt_binding_valid:
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code="verification_binding_mismatch",
+                        detail=attempt_binding_reason,
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
+            if row.get("supporting_physical_pages") != verification.get(
+                "supporting_physical_pages"
+            ) or row.get("source_truth_notes_by_page") != verification.get(
+                "source_truth_notes_by_page"
+            ):
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code="verification_binding_mismatch",
+                        detail=(
+                            "result supporting pages or page notes disagree with "
+                            "the successful verification attempt"
+                        ),
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
+            continue
+
+        failure_reason = row.get("failure_reason")
+        if not isinstance(failure_reason, str) or not failure_reason.strip():
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="negative_failure_reason_missing",
+                    detail="negative terminal outcome has no terminal failure reason",
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+        elif any(
+            marker in failure_reason.casefold()
+            for marker in _NON_REJECTION_FAILURE_MARKERS
+        ):
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="non_rejection_failure",
+                    detail="negative terminal outcome is not a verification rejection",
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+
+        if row.get("final_claim"):
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="negative_final_claim_present",
+                    detail="negative terminal outcome must not retain a final claim",
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+        if row.get("supporting_physical_pages") or row.get(
+            "source_truth_notes_by_page"
+        ):
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="negative_supporting_pages_present",
+                    detail=(
+                        "negative terminal outcome must not accept supporting pages "
+                        "or page-specific support notes"
+                    ),
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+
+        last_verification = verifications[-1]
+        if any(attempt.get("outcome") == "verified" for attempt in verifications):
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="negative_successful_verification_present",
+                    detail=(
+                        "negative terminal outcome contains a successful verification"
+                    ),
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+        rejection_valid, rejection_reason = _genuine_rejection(
+            row=row, attempt=last_verification
+        )
+        if not rejection_valid:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="missing_genuine_verification_rejection",
+                    detail=rejection_reason,
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+            continue
+        last_attempt_number = last_verification.get("attempt")
+        correction_matches, correction_reason = _correction_matches_attempt(
+            corrections, last_attempt_number
+        )
+        if not correction_matches:
+            mismatches.append(
+                _acceptance_mismatch(
+                    code="correction_only_failure",
+                    detail=correction_reason,
+                    candidate_id=candidate_id,
+                    case_id=case_id,
+                )
+            )
+
+        if case_id == "BIG-ADV-002":
+            expected_pages = _expected_physical_pages(case)
+            original_pages = _strict_page_list(row.get("original_physical_pages"))
+            if expected_pages != [8] or original_pages != [8]:
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code="strict_original_binding_not_preserved",
+                        detail="BIG-ADV-002 must retain original physical page [8]",
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
+            if 4 in (last_verification.get("supporting_physical_pages") or []):
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code="strict_original_binding_rescued",
+                        detail="BIG-ADV-002 accepted an unrelated supporting page 4",
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
+            source_assessment = str(
+                last_verification.get("source_truth_notes") or ""
+            ).casefold()
+            if not re.search(r"\bpage\s+8\b", source_assessment):
+                mismatches.append(
+                    _acceptance_mismatch(
+                        code="strict_original_binding_not_assessed",
+                        detail="BIG-ADV-002 rejection does not assess physical page 8",
+                        candidate_id=candidate_id,
+                        case_id=case_id,
+                    )
+                )
 
     return {
         "passed": not mismatches,
