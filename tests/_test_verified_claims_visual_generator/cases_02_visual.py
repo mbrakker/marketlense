@@ -752,3 +752,243 @@ def test_recovery_requires_explicit_report_level_replacement_policy(tmp_path):
     )
 
     assert result.claims[0].inspected_physical_pages == [5]
+
+
+def _strict_wallet_claim(candidate_id="strict-wallet", page=8):
+    return {
+        "candidate_id": candidate_id,
+        "text": (
+            "40% of shoppers abandoned a cart after finding they could not use "
+            "their preferred wallet method."
+        ),
+        "evidence_id": "preferred-wallet-abandonment",
+        "evidence": (
+            "40% have abandoned a cart after finding they cannot use their "
+            "preferred wallet method."
+        ),
+        "evidence_spans": [
+            {
+                "evidence_id": "preferred-wallet-abandonment",
+                "source_pack": "findings",
+                "page": page,
+                "text": (
+                    "40% have abandoned a cart after finding they cannot use "
+                    "their preferred wallet method."
+                ),
+            }
+        ],
+        "pages": [page],
+        "_visual_replacement_policy": "strict_original_direction",
+    }
+
+
+def _verified_wallet_response(page=8):
+    note = (
+        "The page reports the 40% wallet-abandonment response for the stated "
+        "shopper population and checkout condition."
+    )
+    return {
+        "outcome": "verified",
+        "diagnostics": [],
+        "source_truth_notes": note,
+        "supporting_physical_pages": [page],
+        "source_truth_notes_by_page": {str(page): note},
+    }
+
+
+def test_strict_wrong_page_excerpt_cannot_be_verified_from_another_page(tmp_path):
+    claim = _strict_wallet_claim()
+    request = _request(tmp_path, [claim])
+    request.source_page_text_by_physical_page = {
+        8: (
+            "Digital Natives report that 63% abandoned a cart when unable to "
+            "check out as a guest."
+        ),
+        4: (
+            "40% have abandoned a cart after finding they cannot use their "
+            "preferred wallet method."
+        ),
+    }
+    responses = iter(
+        [
+            {"claim": claim["text"], "status": "corrected", "issues": []},
+            _verified_wallet_response(),
+            {"claim": claim["text"], "status": "corrected", "issues": []},
+            _verified_wallet_response(),
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "failed_verification"
+    assert item.failure_reason == "verification_failed_twice"
+    assert len(item.verification_attempts) == 2
+    assert all(
+        "verification_strict_source_page_mismatch" in attempt.diagnostics
+        for attempt in item.verification_attempts
+    )
+    assert item.original_physical_pages == [8]
+    assert item.evidence_spans == claim["evidence_spans"]
+    assert item.supporting_physical_pages == []
+
+
+def test_strict_verifier_rejection_remains_fail_closed_with_original_binding(
+    tmp_path,
+):
+    claim = _strict_wallet_claim()
+    request = _request(tmp_path, [claim])
+    request.source_page_text_by_physical_page = {
+        8: "63% abandoned a cart when unable to check out as a guest.",
+        4: (
+            "40% have abandoned a cart after finding they cannot use their "
+            "preferred wallet method."
+        ),
+    }
+    rejection_note = (
+        "Page 8 supports guest checkout abandonment, while the retained wallet "
+        "excerpt is located on page 4."
+    )
+    rejection = {
+        "outcome": "rejected",
+        "diagnostics": ["verification_strict_source_page_mismatch"],
+        "source_truth_notes": rejection_note,
+        "supporting_physical_pages": [8],
+        "source_truth_notes_by_page": {
+            "8": "Page 8 supports guest checkout abandonment, not wallet abandonment."
+        },
+    }
+    responses = iter(
+        [
+            {"claim": claim["text"], "status": "corrected", "issues": []},
+            rejection,
+            {"claim": claim["text"], "status": "corrected", "issues": []},
+            rejection,
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "failed_verification"
+    assert item.original_physical_pages == [8]
+    assert item.evidence_ids == ["preferred-wallet-abandonment"]
+    assert item.evidence_spans == claim["evidence_spans"]
+    assert item.supporting_physical_pages == []
+    assert all(
+        not attempt.supporting_physical_pages and not attempt.source_truth_notes_by_page
+        for attempt in item.verification_attempts
+    )
+
+
+def test_strict_claim_supported_on_retained_page_remains_verified(tmp_path):
+    claim = _strict_wallet_claim()
+    request = _request(tmp_path, [claim])
+    request.source_page_text_by_physical_page = {
+        8: (
+            "40% have abandoned a cart after finding they cannot use their "
+            "preferred wallet method."
+        )
+    }
+    responses = iter(
+        [
+            {"claim": claim["text"], "status": "corrected", "issues": []},
+            _verified_wallet_response(),
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    assert result.claims[0].outcome == "verified"
+    assert result.claims[0].supporting_physical_pages == [8]
+
+
+def test_strict_page_mismatch_guard_is_conservative_when_native_text_is_incomplete(
+    tmp_path,
+):
+    claim = _strict_wallet_claim()
+    request = _request(tmp_path, [claim])
+    request.source_page_text_by_physical_page = {
+        4: (
+            "40% have abandoned a cart after finding they cannot use their "
+            "preferred wallet method."
+        )
+    }
+    responses = iter(
+        [
+            {"claim": claim["text"], "status": "corrected", "issues": []},
+            _verified_wallet_response(),
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    assert result.claims[0].outcome == "verified"
+
+
+def test_visual_prompts_do_not_present_retained_span_text_as_source_proof(tmp_path):
+    claim = _claim("prompt-binding", "Original direction")
+    claim["evidence_spans"] = [
+        {
+            "evidence_id": "f1",
+            "source_pack": "findings",
+            "page": 5,
+            "start": 10,
+            "end": 20,
+            "text": "unverified retained excerpt must not be source proof",
+        }
+    ]
+    requests = []
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The page reports the corrected value for the named cohort."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": "The page reports the corrected value for the named cohort."
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [claim]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], requests),
+    )
+
+    assert result.claims[0].outcome == "verified"
+    assert result.claims[0].evidence_spans == claim["evidence_spans"]
+    assert len(requests) == 2
+    assert all(
+        "unverified retained excerpt must not be source proof"
+        not in request.user_prompt
+        for request in requests
+    )
+    assert all('"evidence_id": "f1"' in request.user_prompt for request in requests)

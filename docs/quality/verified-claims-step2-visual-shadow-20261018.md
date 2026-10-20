@@ -1099,3 +1099,83 @@ This correction adds no live LLM calls, canonical mutations, publication
 writes, or WordPress writes. Step 2 remains **PARTIAL**: fresh Step 1
 selection effectiveness, canonical integration, and independent editorial
 approval remain unproven; E18 remains Active and Step 3 remains unstarted.
+
+### BigCommerce strict-page reconciliation and span-contamination correction — 2026-10-20
+
+This correction was developed from branch `85e3a9d094a855ea582f44b48cf2530fad7ed90a`.
+The actual local `origin/main` merge-base is
+`bf736b47695605a9a00a1a8355c0d27ab0b0ab88`. The two retained adversarial
+snapshots below are immutable and were not overwritten or combined.
+
+| Snapshot | Immutable result and SHA-256 | Producer / ledger run | BigCommerce wrong-page row |
+|---|---|---|---|
+| v1 | `tmp/verified-claims-premerge-20261019/step2-adversarial-shadow-v1/result.json` / `00b00a1d01f376ed5a31c3b4d28596ad40ff3ce07f3e647d27e4cde9ac221710` | `adversarial-corpus` / `verified-claims-step2-explicit-1792476737` | Original `[8]`; inspected `[8,4,2,7]`; recovered `[4,2,7]`; supporting `[4]`; 1 correction and 1 verification attempt; **verified**. |
+| v4 | `tmp/verified-claims-premerge-20261019/step2-adversarial-shadow-v4/result.json` / `6164b405af3ff094b618abb13e87dfd464226503a5abd561b098fa89cc96d157` | `adversarial-corpus` / `verified-claims-step2-explicit-1792477748` | Original and inspected `[8]`; recovered/supporting `[]`; 2 correction and 2 verification attempts; **failed_verification**. |
+
+Both snapshots identify the same BigCommerce PDF by SHA-256
+`29ffb53b9818460066c86e8d954bdd904bd0e11d2360d90dac040a5d33b9e7c3`:
+`out/browser_downloads/www.bigcommerce.com/e72f39fe19e5/ebook_0225_future_commerce_new_modes_guide_en_us.pdf`.
+The v1 retained span was the stale text “Page 8 discusses guest checkout and
+does not contain the preferred-wallet 40% finding.” It accepted the page-4
+wallet recovery. v4 used the current wallet excerpt while retaining original
+page 8, had no strict recovery candidates, and rejected both guest-checkout
+rewrites with `verification_strict_direction_drift` and
+`verification_source_truth_notes_by_page_invalid`. The contradiction is
+therefore an input/cache and policy-path difference: v1 is a historical false
+acceptance, while v4 is the current strict fail-closed behavior. Neither
+artifact is evidence that one result should replace the other.
+
+The production correction is intentionally at the existing visual-verification
+boundary. `_claim_binding()` and `_verification_attempt()` now project page,
+ID, span-coordinate and source-identity provenance to the model without
+passing retained `evidence_spans[].text` as source proof; the complete spans
+remain in the internal/result binding. Under strict original-direction policy,
+the verifier also compares a sufficiently specific retained excerpt with the
+available native PDF page text. If the excerpt uniquely matches a different
+physical page while the original page is present and sufficiently populated,
+the outcome receives `verification_strict_source_page_mismatch` and cannot be
+accepted or promoted from that other page. Missing, sparse, scanned, repeated
+or ambiguous text remains conservative. Strict recovery remains disabled;
+report-level recovery is unchanged. Non-verified attempts no longer retain
+model-supplied supporting-page or page-note metadata as if it were accepted
+evidence.
+
+#### Actual-PDF narrow validation
+
+Three isolated GPT-6 Luna High runs used the exact BigCommerce PDF and only
+the two adversarial BigCommerce cases. They made no canonical, publication,
+readiness or WordPress writes. Every run kept the valid page-4 wallet case
+verified and the strict page-8 wrong-page case failed closed; the strict case
+never recovered or inspected page 4. The replay helper returned the report in
+memory and persisted caches, usage ledgers, renders and input snapshots, but
+does not emit a single `result.json` for these narrow runs, so no fabricated
+live-result hash is reported.
+
+| Run | Provider calls | Input / output / total tokens | Est. cost | Wall time | BIG-ADV-001 valid page-4 wallet | BIG-ADV-002 strict page-8 wrong page |
+|---|---:|---:|---:|---:|---|---|
+| `step2-bigcommerce-narrow-v1` | 6 | 50,382 / 3,068 / 53,450 | $0.006573 | 53.760 s | verified; original `[4]`, inspected `[4,2]`, recovered `[2]`, supporting `[4]` | failed verification; original/inspected `[8]`, recovered/supporting `[]` |
+| `step2-bigcommerce-narrow-v2` | 5 | 43,999 / 2,725 / 46,724 | $0.005763 | 44.546 s | verified; original `[4]`, inspected `[4,2]`, recovered `[2]`, supporting `[4]` | failed verification; original/inspected `[8]`, recovered/supporting `[]` |
+| `step2-bigcommerce-narrow-v3` | 6 | 50,387 / 3,662 / 54,049 | $0.006871 | 61.428 s | verified; original `[4]`, inspected `[4,2]`, recovered `[2]`, supporting `[4,2]` | failed verification; original/inspected `[8]`, recovered/supporting `[]` |
+
+The v3 extra supporting page 2 is report-level methodology context from the
+model; the authoritative wallet binding remains page 4 and was not promoted
+from page 2. The valid claim’s final wording remained source-grounded and
+qualified the result as checkout friction rather than causation or the main
+driver.
+
+The stored v1 result still fails the provider-free adversarial comparator with
+one expected historical mismatch (`BIG-ADV-002` was recorded as verified). The
+stored v4 result has the correct 8-verified/1-failed terminal outcomes, but its
+rejected attempts retain pre-correction supporting page-8 fields, so the new
+serialized-attempt comparator reports the historical metadata mismatch. An
+in-memory normalization of those rejected-attempt fields passes **9/9** with
+8 verified and 1 failed. The stored v1/v4 files remain unchanged; no new
+nine-case provider replay was claimed.
+
+The affected visual, provenance, replay, adversarial and split-case suite
+passed **279 tests**, with 1 expected integration skip and 1 deselected; the
+prompt regression batch passed **78 tests**. Step 2 remains **PARTIAL**: this
+correction establishes the BigCommerce strict-page boundary and actual-PDF
+behavior, but does not prove fresh Step 1 selection effectiveness,
+repeated-run stability or independent editorial approval. E18 remains Active
+and Step 3 remains unstarted.

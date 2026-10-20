@@ -33,6 +33,7 @@ from src.services.prompt_service import load_prompt_set, render_prompt
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.quantity import extract_quantities
+from src.utils.text_normalization import normalize_for_lookup
 
 LOGGER = logging.getLogger("market_lense.verified_claims_visual_generator")
 
@@ -216,7 +217,7 @@ def _strict_direction_diagnostics(
     replacement claims remain free to use an independently supported finding.
     """
 
-    if _text(claim.get("_visual_replacement_policy")) != ("strict_original_direction"):
+    if _text(claim.get("_visual_replacement_policy")) != "strict_original_direction":
         return []
     source_texts = [_text(claim.get("evidence"))]
     spans = claim.get("evidence_spans")
@@ -228,6 +229,98 @@ def _strict_direction_diagnostics(
     corrected_tokens = _recovery_tokens(corrected_claim)
     if source_tokens and len(source_tokens & corrected_tokens) < 3:
         return ["verification_strict_direction_drift"]
+    return []
+
+
+def _prompt_evidence_spans(claim: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Project retained span provenance without supplying unverified source text."""
+
+    provenance_keys = {
+        "char_end",
+        "char_start",
+        "end",
+        "evidence_id",
+        "line_end",
+        "line_start",
+        "page",
+        "section_id",
+        "source_id",
+        "source_identity",
+        "source_pack",
+        "span_id",
+        "start",
+    }
+    spans = claim.get("evidence_spans")
+    if not isinstance(spans, list):
+        return []
+    return [
+        {
+            key: copy.deepcopy(value)
+            for key, value in span.items()
+            if key in provenance_keys
+        }
+        for span in spans
+        if isinstance(span, Mapping)
+    ]
+
+
+def _strict_source_page_mismatch_diagnostics(
+    *,
+    claim: Mapping[str, Any],
+    source_page_text_by_physical_page: Mapping[Any, Any],
+) -> list[str]:
+    """Reject a strict binding whose specific retained excerpt belongs elsewhere."""
+
+    if _text(claim.get("_visual_replacement_policy")) != "strict_original_direction":
+        return []
+    original_pages = set(_physical_pages(claim))
+    if not original_pages or not source_page_text_by_physical_page:
+        return []
+
+    page_text: dict[int, str] = {}
+    for raw_page, raw_text in source_page_text_by_physical_page.items():
+        page = _positive_int(raw_page)
+        text = _text(raw_text)
+        if page is not None and text:
+            page_text[page] = text
+    # A missing original page makes a negative page-location conclusion unsafe.
+    if any(
+        page not in page_text
+        or len(normalize_for_lookup(page_text[page])) < 40
+        or len(_recovery_tokens(page_text[page])) < 6
+        for page in original_pages
+    ):
+        return []
+
+    spans = claim.get("evidence_spans")
+    if not isinstance(spans, list):
+        return []
+    for span in spans:
+        if not isinstance(span, Mapping):
+            continue
+        span_page = _positive_int(span.get("page"))
+        excerpt = _text(span.get("text"))
+        excerpt_tokens = _recovery_tokens(excerpt)
+        normalized_excerpt = normalize_for_lookup(excerpt)
+        if (
+            span_page not in original_pages
+            or len(normalized_excerpt) < 40
+            or len(excerpt_tokens) < 6
+        ):
+            continue
+
+        matching_pages = []
+        for page, text in page_text.items():
+            normalized_page = normalize_for_lookup(text)
+            page_tokens = _recovery_tokens(text)
+            token_threshold = max(5, (len(excerpt_tokens) * 3 + 3) // 4)
+            if (
+                normalized_excerpt in normalized_page
+                or len(excerpt_tokens & page_tokens) >= token_threshold
+            ):
+                matching_pages.append(page)
+        if len(matching_pages) == 1 and matching_pages[0] not in original_pages:
+            return ["verification_strict_source_page_mismatch"]
     return []
 
 
@@ -470,7 +563,8 @@ def _claim_binding(
         "inspected_physical_pages": inspected_pages,
         "recovered_physical_pages": recovered_pages,
         "evidence_ids": _evidence_ids(claim),
-        "evidence_spans": _evidence_spans(claim),
+        "evidence_spans": _prompt_evidence_spans(claim),
+        "evidence_span_text_is_unverified": True,
         "replacement_policy": (
             _text(claim.get("_visual_replacement_policy"))
             or "strict_original_direction"
@@ -917,7 +1011,8 @@ def _verification_attempt(
             if page not in original_physical_pages
         ],
         "evidence_ids": _evidence_ids(claim),
-        "evidence_spans": _evidence_spans(claim),
+        "evidence_spans": _prompt_evidence_spans(claim),
+        "evidence_span_text_is_unverified": True,
         "replacement_policy": (
             _text(claim.get("_visual_replacement_policy"))
             or "strict_original_direction"
@@ -1000,6 +1095,14 @@ def _verification_attempt(
                 corrected_claim=corrected_claim,
             )
         )
+        support_diagnostics.extend(
+            _strict_source_page_mismatch_diagnostics(
+                claim=claim,
+                source_page_text_by_physical_page=getattr(
+                    request, "source_page_text_by_physical_page", {}
+                ),
+            )
+        )
         diagnostics = (
             [*diagnostics, *support_diagnostics] if diagnostics is not None else None
         )
@@ -1023,6 +1126,7 @@ def _verification_attempt(
                 "verification_page_explanation_missing",
                 "verification_supporting_page_attribution_conflict",
                 "verification_strict_direction_drift",
+                "verification_strict_source_page_mismatch",
             }
             for diagnostic in diagnostics
         ):
@@ -1035,6 +1139,9 @@ def _verification_attempt(
     elif outcome in {"rejected", "unresolved"} and not diagnostics:
         outcome = "rejected"
         diagnostics = ["verification_diagnostics_missing"]
+    if outcome != "verified":
+        supporting_pages = []
+        notes_by_page = {}
     return VisualClaimVerificationAttempt(
         schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
         attempt=attempt,
