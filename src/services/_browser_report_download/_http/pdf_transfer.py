@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import mimetypes
+import os
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -54,6 +55,7 @@ _PDF_BINARY_FALLBACK_MIME_TYPES = {
     "application/octet-stream",
     "binary/octet-stream",
 }
+_ArtifactSignature = tuple[int, int, int, int]
 
 
 def try_direct_pdf_download(
@@ -88,6 +90,7 @@ def try_direct_pdf_download(
             },
         )
     )
+    committed_signature: _ArtifactSignature | None = None
     try:
         if not (destination_path.exists() and is_pdf_file(destination_path)):
             download_pdf_from_url(
@@ -97,13 +100,17 @@ def try_direct_pdf_download(
                 ctx=ctx,
                 normalized_url=normalized_url,
             )
+            committed_signature = artifact_signature(destination_path)
         downloaded_path = ensure_downloaded_pdf(
             downloaded_path=destination_path,
             ctx=ctx,
             normalized_url=normalized_url,
             document_url=target_url,
             timeout_seconds=request.settings.timeout_seconds,
+            expected_existing_signature=committed_signature,
         )
+        if committed_signature is not None and downloaded_path is not None:
+            committed_signature = artifact_signature(downloaded_path)
         downloaded_mime_type = resolve_downloaded_mime_type(
             reported_mime_type=None,
             downloaded_path=downloaded_path,
@@ -114,7 +121,10 @@ def try_direct_pdf_download(
             normalized_url=normalized_url,
         )
     except AppError as exc:
-        destination_path.unlink(missing_ok=True)
+        cleanup_attempt_owned_pdf(
+            destination_path,
+            committed_signature=committed_signature,
+        )
         logger.info(
             log_event(
                 ctx,
@@ -212,6 +222,7 @@ def ensure_downloaded_pdf(
     normalized_url: str,
     document_url: str,
     timeout_seconds: float,
+    expected_existing_signature: _ArtifactSignature | None = None,
 ) -> Path | None:
     if downloaded_path is None:
         return None
@@ -243,6 +254,11 @@ def ensure_downloaded_pdf(
             timeout_seconds=timeout_seconds,
             ctx=ctx,
             normalized_url=normalized_url,
+            replace_existing=True,
+            expected_existing_signature=(
+                expected_existing_signature or artifact_signature(downloaded_path)
+            ),
+            require_pdf_signature=True,
         )
         if is_pdf_file(downloaded_path):
             return downloaded_path
@@ -444,6 +460,9 @@ def download_pdf_from_url(
     timeout_seconds: float,
     ctx: RunContext,
     normalized_url: str,
+    replace_existing: bool = False,
+    expected_existing_signature: _ArtifactSignature | None = None,
+    require_pdf_signature: bool = False,
 ) -> None:
     destination_path = validate_browser_artifact_path(
         destination_path,
@@ -511,10 +530,111 @@ def download_pdf_from_url(
                     "destination_path": str(destination_path),
                 },
             )
-        temp_path.replace(destination_path)
-    except AppError as exc:
+        if require_pdf_signature and not is_pdf_file(temp_path):
+            raise AppError(
+                code="browser_download_invalid_pdf",
+                message="Downloaded file is not a valid PDF",
+                retryable=True,
+                context={
+                    "normalized_url": normalized_url,
+                    "pdf_url": pdf_url,
+                    "destination_path": str(destination_path),
+                },
+            )
+        _commit_downloaded_pdf(
+            temp_path=temp_path,
+            destination_path=destination_path,
+            replace_existing=replace_existing,
+            expected_existing_signature=expected_existing_signature,
+        )
+    except AppError:
         temp_path.unlink(missing_ok=True)
-        raise exc
+        raise
+
+
+def artifact_signature(path: Path) -> _ArtifactSignature | None:
+    try:
+        stat_result = path.stat()
+    except OSError:
+        return None
+    if not path.is_file():
+        return None
+    return (
+        int(stat_result.st_dev),
+        int(stat_result.st_ino),
+        int(stat_result.st_size),
+        int(stat_result.st_mtime_ns),
+    )
+
+
+def cleanup_attempt_owned_pdf(
+    path: Path,
+    *,
+    committed_signature: _ArtifactSignature | None,
+) -> None:
+    if committed_signature is None:
+        return
+    if artifact_signature(path) != committed_signature:
+        return
+    try:
+        path.unlink()
+    except OSError:
+        return
+
+
+def _commit_downloaded_pdf(
+    *,
+    temp_path: Path,
+    destination_path: Path,
+    replace_existing: bool,
+    expected_existing_signature: _ArtifactSignature | None,
+) -> None:
+    if replace_existing:
+        if (
+            expected_existing_signature is None
+            or artifact_signature(destination_path) != expected_existing_signature
+        ):
+            raise _pdf_commit_conflict(destination_path)
+        try:
+            os.replace(temp_path, destination_path)
+        except OSError as exc:
+            raise AppError(
+                code="browser_download_pdf_commit_failed",
+                message="Failed to replace the owned downloaded PDF artifact",
+                cause=exc,
+                retryable=True,
+                context={"destination_path": str(destination_path)},
+            ) from exc
+        return
+
+    try:
+        if os.name == "nt":
+            os.rename(temp_path, destination_path)
+        else:
+            os.link(temp_path, destination_path)
+            temp_path.unlink()
+    except FileExistsError as exc:
+        raise _pdf_commit_conflict(destination_path) from exc
+    except OSError as exc:
+        raise AppError(
+            code="browser_download_pdf_commit_failed",
+            message="Failed to publish the downloaded PDF artifact",
+            cause=exc,
+            retryable=True,
+            context={"destination_path": str(destination_path)},
+        ) from exc
+
+
+def _pdf_commit_conflict(destination_path: Path) -> AppError:
+    return AppError(
+        code="browser_download_pdf_commit_conflict",
+        message="A competing file already occupies the PDF destination",
+        retryable=True,
+        context={
+            "destination_path": str(destination_path),
+            "next_action": "select an identity-specific artifact path and retry",
+        },
+    )
 
 
 def _execute_pdf_fetch(

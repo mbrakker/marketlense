@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-import shutil
+import stat
 from pathlib import Path
 from typing import Iterable
 from urllib.parse import unquote, urljoin, urlsplit
@@ -18,8 +18,10 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.artifact_materialization import (
+    materialize_external_browser_artifact,
+)
 from src.services._browser_report_download.artifact_paths import (
-    resolve_browser_artifact_path,
     select_browser_pdf_destination_path,
     validate_browser_artifact_path,
     validate_browser_download_directory,
@@ -34,8 +36,6 @@ from .evidence import (
     _resolve_observed_document_urls,
     _resolve_visited_url_timeline,
 )
-
-_MAX_EXTERNAL_ARTIFACT_COLLISION_ATTEMPTS = 100
 
 
 def _complete_pdf_artifact(
@@ -141,6 +141,7 @@ def _try_fetch_pdf_target(
         source_name=destination_name,
         target_url=target_url,
     )
+    committed_signature = None
     try:
         if not (
             destination_path.exists() and http_runtime.is_pdf_file(destination_path)
@@ -152,13 +153,17 @@ def _try_fetch_pdf_target(
                 ctx=ctx,
                 normalized_url=normalized_url,
             )
+            committed_signature = http_runtime.artifact_signature(destination_path)
         ensured_path = http_runtime.ensure_downloaded_pdf(
             downloaded_path=destination_path,
             ctx=ctx,
             normalized_url=normalized_url,
             document_url=target_url,
             timeout_seconds=request.settings.timeout_seconds,
+            expected_existing_signature=committed_signature,
         )
+        if committed_signature is not None and ensured_path is not None:
+            committed_signature = http_runtime.artifact_signature(ensured_path)
         http_runtime.validate_downloaded_pdf_artifact(
             downloaded_path=ensured_path,
             downloaded_mime_type=http_runtime.resolve_downloaded_mime_type(
@@ -169,7 +174,10 @@ def _try_fetch_pdf_target(
         )
         return ensured_path
     except AppError as exc:
-        destination_path.unlink(missing_ok=True)
+        http_runtime.cleanup_attempt_owned_pdf(
+            destination_path,
+            committed_signature=committed_signature,
+        )
         if exc.code == "browser_download_artifact_path_invalid":
             raise
         return None
@@ -415,8 +423,9 @@ def _resolve_downloaded_file(
     }
     external_candidates: list[Path] = []
     local_candidates: list[Path] = []
+    overbudget_local_candidates: set[Path] = set()
     seen: set[Path] = set()
-    resolved_download_dir = download_dir.expanduser().resolve()
+    resolved_download_dir = validate_browser_download_directory(download_dir)
 
     def add_candidate(raw_path: str | Path | None) -> None:
         if raw_path is None:
@@ -431,11 +440,21 @@ def _resolve_downloaded_file(
         if resolved in seen:
             return
         seen.add(resolved)
-        if not resolved.exists() or not resolved.is_file():
+        if not _is_regular_readable_file(resolved):
             return
         if resolved.name in ignored_runtime_files:
             return
         if _is_within_directory(path=resolved, directory=resolved_download_dir):
+            try:
+                validate_browser_artifact_path(
+                    resolved,
+                    parent_dir=resolved_download_dir,
+                    temporary_suffixes=(".part",),
+                )
+            except AppError as exc:
+                if exc.code != "browser_download_artifact_path_invalid":
+                    raise
+                overbudget_local_candidates.add(resolved)
             local_candidates.append(resolved)
             return
         external_candidates.append(resolved)
@@ -452,6 +471,11 @@ def _resolve_downloaded_file(
 
     selected = _select_download_candidate(local_candidates)
     if selected is not None:
+        if selected in overbudget_local_candidates:
+            return _adopt_external_downloaded_file(
+                source_path=selected,
+                download_dir=resolved_download_dir,
+            )
         return selected
     selected = _select_download_candidate(external_candidates)
     if selected is None:
@@ -484,62 +508,17 @@ def _adopt_external_downloaded_file(
     source_path: Path,
     download_dir: Path,
 ) -> Path | None:
-    download_dir = validate_browser_download_directory(download_dir)
-    download_dir.mkdir(parents=True, exist_ok=True)
-    target_path = resolve_browser_artifact_path(
-        parent_dir=download_dir,
-        source_name=source_path.name,
-        identity=str(source_path),
-        temporary_suffixes=(".part",),
+    return materialize_external_browser_artifact(
+        source_path=source_path,
+        download_dir=download_dir,
     )
-    counter = 1
-    while target_path.exists():
-        if counter > _MAX_EXTERNAL_ARTIFACT_COLLISION_ATTEMPTS:
-            raise AppError(
-                code="browser_download_artifact_collision_exhausted",
-                message="External browser artifact destinations remain ambiguous",
-                retryable=False,
-                context={
-                    "path_role": "external browser artifact",
-                    "next_action": (
-                        "Remove stale duplicate artifacts or choose a shorter "
-                        "browser output directory"
-                    ),
-                },
-            )
-        try:
-            if source_path.samefile(target_path):
-                return validate_browser_artifact_path(
-                    target_path,
-                    temporary_suffixes=(".part",),
-                )
-        except OSError:
-            target_path = resolve_browser_artifact_path(
-                parent_dir=download_dir,
-                source_name=f"{source_path.stem}_{counter}{source_path.suffix}",
-                identity=f"{source_path}:{counter}",
-                temporary_suffixes=(".part",),
-            )
-            counter += 1
-            continue
-        target_path = resolve_browser_artifact_path(
-            parent_dir=download_dir,
-            source_name=f"{source_path.stem}_{counter}{source_path.suffix}",
-            identity=f"{source_path}:{counter}",
-            temporary_suffixes=(".part",),
-        )
-        counter += 1
+
+
+def _is_regular_readable_file(path: Path) -> bool:
     try:
-        shutil.copy2(source_path, target_path)
+        if not stat.S_ISREG(path.stat().st_mode):
+            return False
+        with path.open("rb"):
+            return True
     except OSError:
-        return None
-    try:
-        resolved = validate_browser_artifact_path(
-            target_path,
-            temporary_suffixes=(".part",),
-        )
-    except OSError:
-        return None
-    if not resolved.exists() or not resolved.is_file():
-        return None
-    return resolved
+        return False

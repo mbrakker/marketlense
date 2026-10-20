@@ -20,6 +20,8 @@ from src.services._browser_report_download._http.page_pdf_probe import (
     try_report_page_pdf_link_download,
 )
 from src.services._browser_report_download._http.pdf_transfer import (
+    artifact_signature,
+    cleanup_attempt_owned_pdf,
     download_pdf_from_url,
     ensure_downloaded_pdf,
     fetch_html_from_url,
@@ -31,6 +33,8 @@ from src.services._browser_report_download._http.pdf_transfer import (
 
 __all__ = [
     "DirectOnsiteRecoveryDecision",
+    "artifact_signature",
+    "cleanup_attempt_owned_pdf",
     "download_pdf_from_url",
     "ensure_downloaded_pdf",
     "extract_embedded_pdf_urls",

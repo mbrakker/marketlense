@@ -6,9 +6,11 @@ from types import SimpleNamespace
 
 from src.services._browser_report_download._artifact.pdf import (
     _adopt_external_downloaded_file,
+    _resolve_downloaded_file,
 )
 from src.services._browser_report_download._browser_runtime._terminal_assets.artifacts import (
     _copy_external_artifact,
+    _materialize_external_artifacts,
     _prefetch_structured_pdf_artifact,
     _pdf_prefetch_destination_path,
 )
@@ -41,9 +43,129 @@ def test_external_pdf_materialization_is_bounded_and_readable(tmp_path: Path) ->
         download_dir=download_dir,
     )
     assert adopted is not None
-    assert adopted != copied
+    assert adopted == copied
     assert adopted.read_bytes().startswith(b"%PDF-")
     assert windows_path_units(adopted) <= 240
+
+
+def test_external_pdf_materialization_is_idempotent_across_same_basename_sources(
+    tmp_path: Path,
+) -> None:
+    first_source_dir = tmp_path / "first"
+    second_source_dir = tmp_path / "second"
+    first_source_dir.mkdir()
+    second_source_dir.mkdir()
+    first_source = first_source_dir / "report.pdf"
+    second_source = second_source_dir / "report.pdf"
+    first_bytes = b"%PDF-1.7\nfirst"
+    second_bytes = b"%PDF-1.7\nsecond"
+    first_source.write_bytes(first_bytes)
+    second_source.write_bytes(second_bytes)
+    download_dir = tmp_path / "browser-output"
+
+    first_copy = _copy_external_artifact(
+        source_path=first_source,
+        download_dir=download_dir,
+    )
+    second_copy = _copy_external_artifact(
+        source_path=second_source,
+        download_dir=download_dir,
+    )
+    first_replay = _adopt_external_downloaded_file(
+        source_path=first_source,
+        download_dir=download_dir,
+    )
+    second_replay = _adopt_external_downloaded_file(
+        source_path=second_source,
+        download_dir=download_dir,
+    )
+
+    assert first_copy is not None
+    assert second_copy is not None
+    assert first_copy != second_copy
+    assert first_replay == first_copy
+    assert second_replay == second_copy
+    assert first_copy.read_bytes() == first_bytes
+    assert second_copy.read_bytes() == second_bytes
+    assert sorted(path.name for path in download_dir.glob("*.pdf")) == sorted(
+        [first_copy.name, second_copy.name]
+    )
+
+
+def test_external_pdf_materialization_preserves_previous_bytes_when_source_changes(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "external" / "report.pdf"
+    source.parent.mkdir()
+    download_dir = tmp_path / "browser-output"
+    source.write_bytes(b"%PDF-1.7\noriginal")
+
+    original_copy = _copy_external_artifact(
+        source_path=source,
+        download_dir=download_dir,
+    )
+    source.write_bytes(b"%PDF-1.7\nupdated")
+    updated_copy = _copy_external_artifact(
+        source_path=source,
+        download_dir=download_dir,
+    )
+
+    assert original_copy is not None
+    assert updated_copy is not None
+    assert updated_copy != original_copy
+    assert original_copy.read_bytes() == b"%PDF-1.7\noriginal"
+    assert updated_copy.read_bytes() == b"%PDF-1.7\nupdated"
+
+
+def test_overbudget_local_browser_artifact_is_compacted_before_return(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    download_dir = tmp_path / "browser-output"
+    source_dir = download_dir / ("nested-artifact-directory-" * 3)
+    source_dir.mkdir(parents=True)
+    source = source_dir / (("published-market-report-" * 2) + ".pdf")
+    source.write_bytes(b"%PDF-1.7\nlocal")
+    assert windows_path_units(source) > 240
+
+    payload = json.dumps({"downloaded_file_path": str(source)})
+    materialized = _materialize_external_artifacts(
+        raw_model_response=payload,
+        attachment_paths=[],
+        downloaded_files=[],
+        download_dir=download_dir,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+    )
+
+    assert len(materialized) == 1
+    materialized_path = Path(materialized[0])
+    assert materialized_path != source
+    assert materialized_path.read_bytes() == b"%PDF-1.7\nlocal"
+    assert windows_path_units(materialized_path) <= 240
+
+
+def test_overbudget_local_download_candidate_is_compacted_before_return(
+    tmp_path: Path,
+) -> None:
+    download_dir = tmp_path / "browser-output"
+    source_dir = download_dir / ("nested-download-directory-" * 3)
+    source_dir.mkdir(parents=True)
+    source = source_dir / (("published-market-report-" * 2) + ".pdf")
+    source.write_bytes(b"%PDF-1.7\nlocal")
+    assert windows_path_units(source) > 240
+
+    selected = _resolve_downloaded_file(
+        explicit_path=str(source),
+        attachment_paths=[],
+        browser_downloaded_files=[],
+        download_dir=download_dir,
+    )
+
+    assert selected is not None
+    assert selected != source
+    assert selected.read_bytes() == b"%PDF-1.7\nlocal"
+    assert windows_path_units(selected) <= 240
 
 
 def test_structured_pdf_prefetch_path_preserves_short_name(tmp_path: Path) -> None:

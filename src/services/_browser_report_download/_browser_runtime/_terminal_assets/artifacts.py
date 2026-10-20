@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-import shutil
+import stat
 from pathlib import Path
 from typing import Any
 from src.contracts.browser_download import (
@@ -10,9 +10,11 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.artifact_materialization import (
+    materialize_external_browser_artifact,
+)
 from src.services._browser_report_download.artifact_paths import (
     ensure_browser_directory,
-    resolve_browser_artifact_path,
     select_browser_pdf_destination_path,
     validate_browser_artifact_path,
     validate_browser_download_directory,
@@ -22,8 +24,6 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
-
-_MAX_EXTERNAL_ARTIFACT_COLLISION_ATTEMPTS = 100
 
 
 def _parse_raw_model_response(raw_model_response: str) -> dict[str, Any]:
@@ -69,6 +69,7 @@ def _prefetch_structured_pdf_artifact(
         )
         if destination_path.exists() and is_pdf_file(destination_path):
             return str(destination_path)
+        committed_signature = None
         try:
             http_runtime.download_pdf_from_url(
                 pdf_url=target_url,
@@ -77,6 +78,7 @@ def _prefetch_structured_pdf_artifact(
                 ctx=ctx,
                 normalized_url=normalized_url,
             )
+            committed_signature = http_runtime.artifact_signature(destination_path)
         except AppError as exc:
             if exc.code == "browser_download_artifact_path_invalid":
                 raise
@@ -94,7 +96,10 @@ def _prefetch_structured_pdf_artifact(
                     },
                 )
             )
-            destination_path.unlink(missing_ok=True)
+            http_runtime.cleanup_attempt_owned_pdf(
+                destination_path,
+                committed_signature=committed_signature,
+            )
             continue
         if is_pdf_file(destination_path):
             logger.info(
@@ -111,7 +116,10 @@ def _prefetch_structured_pdf_artifact(
                 )
             )
             return str(destination_path)
-        destination_path.unlink(missing_ok=True)
+        http_runtime.cleanup_attempt_owned_pdf(
+            destination_path,
+            committed_signature=committed_signature,
+        )
     return ""
 
 
@@ -145,11 +153,22 @@ def _materialize_external_artifacts(
             path=resolved_source,
             directory=resolved_download_dir,
         ):
-            token = str(resolved_source)
-            if token not in seen_targets:
-                seen_targets.add(token)
-                materialized_paths.append(token)
-            continue
+            try:
+                validate_browser_artifact_path(
+                    resolved_source,
+                    parent_dir=resolved_download_dir,
+                    temporary_suffixes=(".part",),
+                )
+            except AppError as exc:
+                if exc.code != "browser_download_artifact_path_invalid":
+                    raise
+            else:
+                if _is_regular_readable_file(resolved_source):
+                    token = str(resolved_source)
+                    if token not in seen_targets:
+                        seen_targets.add(token)
+                        materialized_paths.append(token)
+                    continue
         target_path = _copy_external_artifact(
             source_path=resolved_source,
             download_dir=download_dir,
@@ -225,66 +244,20 @@ def _copy_external_artifact(
     source_path: Path,
     download_dir: Path,
 ) -> Path | None:
-    download_dir = validate_browser_download_directory(download_dir)
-    ensure_browser_directory(download_dir)
-    target_path = resolve_browser_artifact_path(
-        parent_dir=download_dir,
-        source_name=source_path.name,
-        identity=str(source_path),
-        temporary_suffixes=(".part",),
+    return materialize_external_browser_artifact(
+        source_path=source_path,
+        download_dir=download_dir,
     )
-    counter = 1
-    while target_path.exists():
-        if counter > _MAX_EXTERNAL_ARTIFACT_COLLISION_ATTEMPTS:
-            raise AppError(
-                code="browser_download_artifact_collision_exhausted",
-                message="External browser artifact destinations remain ambiguous",
-                retryable=False,
-                context={
-                    "path_role": "external browser artifact",
-                    "next_action": (
-                        "Remove stale duplicate artifacts or choose a shorter "
-                        "browser output directory"
-                    ),
-                },
-            )
-        try:
-            if source_path.samefile(target_path):
-                return validate_browser_artifact_path(
-                    target_path,
-                    temporary_suffixes=(".part",),
-                )
-        except OSError:
-            target_path = resolve_browser_artifact_path(
-                parent_dir=download_dir,
-                source_name=f"{source_path.stem}_{counter}{source_path.suffix}",
-                identity=f"{source_path}:{counter}",
-                temporary_suffixes=(".part",),
-            )
-            counter += 1
-            continue
-        target_path = resolve_browser_artifact_path(
-            parent_dir=download_dir,
-            source_name=f"{source_path.stem}_{counter}{source_path.suffix}",
-            identity=f"{source_path}:{counter}",
-            temporary_suffixes=(".part",),
-        )
-        counter += 1
+
+
+def _is_regular_readable_file(path: Path) -> bool:
     try:
-        shutil.copy2(source_path, target_path)
+        if not stat.S_ISREG(path.stat().st_mode):
+            return False
+        with path.open("rb"):
+            return True
     except OSError:
-        return None
-    resolved_target = validate_browser_artifact_path(
-        target_path,
-        temporary_suffixes=(".part",),
-    )
-    if (
-        resolved_target is None
-        or not resolved_target.exists()
-        or not resolved_target.is_file()
-    ):
-        return None
-    return resolved_target
+        return False
 
 
 def _safe_resolve_path(path: Path) -> Path | None:
