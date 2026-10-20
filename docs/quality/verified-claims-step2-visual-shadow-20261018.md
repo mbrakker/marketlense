@@ -1458,9 +1458,17 @@ explicitly confirmed the page-12 strategic-direction text and distinguished the
 chart’s corporate **20% “Holding due to strategic focus”** category from a
 realized value-creation outcome. Supporting physical page **12** was retained;
 page 13 was inspected as context but not cited as necessary support. The
-canonical evidence ID and source identity remained unchanged:
-`portfolio-separation-qualitative-thesis` and
+The authoritative source identity and PDF hash remained unchanged:
 `KPMG|pdf-sha256:a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589`.
+The Step 0 identity resolution for KPM-002 is `partial_doc_map_only`:
+`canonical_evidence_ids` and `persisted_findings_ids` are empty, `KPMG-2` is a
+source-reference ID, `strategic-focus-in-a-fragmented-world` is contextual
+DocMap metadata, and `strategic-focus-capability-building` is an editorial ID.
+The string `portfolio-separation-qualitative-thesis` occurs only in the
+isolated replay's retained `artifacts.json`; that replay snapshot has empty
+`findings.json` and `doc_map.json`. It is therefore a retained
+replay/evidence-span label, not canonical persisted evidence, a
+source-reference ID, or a DocMap ID, and it was not promoted.
 
 The strict run produced **1 verified first-pass outcome**, **2 provider calls**,
 **26,908 total tokens**, estimated cost **$0.003630**, **31.097 seconds**, and
@@ -1479,3 +1487,98 @@ prompt or code correction is justified by the evidence. The existing
 report-level replacement behavior remains intentionally flexible, while the
 strict prompt and verifier preserve the qualitative narrowing boundary. Step 2
 remains **PARTIAL**, E18 remains Active, and Step 3 remains unstarted.
+
+### Complete Step 2 acceptance review — 2026-10-20
+
+This acceptance review uses the current branch at
+`ef962589bcb0aaf49a4275eaa1df6b01c7764cb0` and the latest retained,
+hash-bound replay artifacts. No production code, prompt, canonical artifact,
+publication-readiness state, or WordPress write was changed for this review.
+The KPMG correction above is a provenance/documentation classification fix:
+the replay label is not promoted as canonical evidence.
+
+#### Gate matrix
+
+| Gate | Status | Evidence and limitation |
+|---|---|---|
+| Source identity and PDF hash | **PASS** | The frozen-five manifest `744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7` and all five source hashes matched in the v5 replay; the additional-five replay also matched all five hashes. |
+| Physical-page safety (automated) | **PASS** | Wrong-page reference/adversarial cases remained unresolved or failed closed; valid multi-page cases survived. This is an automated safety result, not independent approval of every retained binding. |
+| Reference factual/semantic gate | **PASS** | All 39 reference variants matched their expected terminal classification: 38 verified first pass and `ACT-004-wrong-page` unresolved, with zero false accepts or false rejects. The result is a regression gate, not a human adjudication. |
+| Real-claim terminal verification | **PASS** | The v5 replay recorded 29/29 retained real insights as terminal verified first pass; terminal verification is distinct from independent factual correctness. |
+| Additional-five terminal verification | **PASS** | 24/24 eligible selected claims verified first pass and one Merchant Risk Council claim was unavailable because no safe physical page or stronger alternative existed; no failed or unresolved eligible rows. |
+| Independent correction/verification contract | **PASS** | Correction and verification remained separate bounded calls, with no more than two attempts each; malformed, contradictory, wrong-page, and permanent-failure paths remain fail-closed. This is not P6 human review. |
+| Negative safety and abstention | **PASS** | The current adversarial comparator recheck passed 9/9: eight verified outcomes and `BIG-ADV-002` unresolved through safe correction-stage abstention; no unsupported material claim was independently confirmed as verified. The immutable raw result retains an earlier stale embedded `passed: false` field from the pre-comparator state and was not overwritten. |
+| Replacement-policy correctness | **PASS** | The KPMG strict replay was 1/1 verified with the same-subject qualitative correction; the earlier 56%/71% result is retained only as a report-level replacement-policy result, not a strict-direction result. |
+| Canonical evidence provenance | **BLOCKED** | Step 0 still has partial/unresolved direct bindings, and KPM-002 has no canonical evidence ID. Retained/provisional replay labels and pages were not promoted. |
+| Fresh shortlist quality and recall | **BLOCKED** | The retained Step 2 inputs contain post-selection artifacts only; raw pre-selector pools, fidelity decisions, and editorial-plan candidate alternatives are unavailable, so fresh selection effectiveness cannot be measured. |
+| Editorial quality | **BLOCKED** | The replay contains source-grounded corrections and useful commercial interpretations, but P6 has no independent reviewer decision for these 29 claims. Near-duplicate propositions remain visible for human review rather than being silently removed. |
+| Repeatability/autonomy | **BLOCKED** | Provider-free replay is reproducible, but no current-HEAD three-run generation/validator repeatability cohort is retained; E18 remains Active. |
+| Regression and operational safety | **PASS** | No canonical promotion, publication, readiness mutation, or WordPress write occurred; retained IDs, source hashes, bounded retries, and downstream schemas remained intact in the replay gates. |
+
+The overall acceptance status is therefore **BLOCKED/PARTIAL**, not PASS:
+automated factual, provenance-safety, negative, retry, and regression gates are
+green, while canonical-source completeness, fresh Step 1 evidence, repeatability,
+and independent editorial acceptance remain open.
+
+#### Frozen-five and additional-five measurements
+
+The latest frozen-five v5 result evaluated all **15 cases / 39 reference
+variants** and all **29 real retained insights**. Reference outcomes were **38
+verified first pass and 1 unresolved**, with **0 false accepts/rejects**. Real
+terminal outcomes were **29 verified first pass, 0 retry, 0 unresolved, 0
+failed, and 0 skipped**. The run made **136 provider calls**, used **2,332,480
+total tokens** (2,249,156 input and 83,324 output), estimated cost
+**$0.266580**, and rendered **107 full pages**; cache reuse was false and no
+writes occurred. The five source identities were hash-matched and every row
+remained `canonical_approval_status: not_approved`.
+
+The latest explicit additional-five v3 replay selected **25** identities,
+evaluated **24** eligible claims, verified **24 first pass**, and marked **1
+unavailable** (Merchant Risk Council); it had **0 retry, failed, unresolved, or
+skipped** eligible outcomes. It made **48 provider calls**, used **983,544 total
+tokens**, estimated cost **$0.109730**, rendered **18 full pages**, and took
+**634.004 seconds**. Its provisional exact-page inspections remain inspection
+context only and are not canonical evidence.
+
+The KPMG strict one-case replay remains **1/1 verified first pass**, with two
+provider calls, 26,908 total tokens, estimated cost $0.003630, 31.097 seconds,
+and page 12 as the necessary supporting page. The source hash passed; the
+replay evidence ID was not canonical and was not promoted.
+
+#### Adversarial and repeatability interpretation
+
+The nine-case actual-PDF adversarial result is immutable at
+`tmp/verified-claims-step2-phase2-adversarial-20261020-v2/result.json`. Its
+terminal rows are eight verified and one unresolved (`BIG-ADV-002`). The
+embedded acceptance field was produced by an older comparator and is false
+because it required a verification attempt for the safe correction-stage
+abstention. Re-running the current comparator against that unchanged result and
+corpus returns **9/9 matched**, with the same eight verified rows and one
+bounded unresolved abstention. This correction is reported rather than written
+back into the immutable raw artifact.
+
+No retained input contains the raw Step 1 candidate pool or three independent
+current-HEAD runs. Consequently this review does not claim improved live
+shortlist recall, collision prevalence, or repeated-run stability from
+post-selection replay alone.
+
+#### Hash-bound P6 review packet
+
+The smallest review packet is the v5 `result.json` plus its manifest SHA
+(`744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7`), the
+five frozen source PDFs and their recorded SHA-256 values, and the 29 claim
+rows containing stable ID, original claim, final corrected claim, inspected and
+supporting physical pages, evidence identity, and terminal verification
+explanation. The additional-five and adversarial result paths above are
+separate regression supplements. No reviewer identity or approval is invented:
+P6 remains **Active** and its human-review tables remain open.
+
+#### Decision
+
+**Step 2: PARTIAL — implementation and automated regression gates pass; full
+acceptance is blocked.** The evidence supports retaining the current shadow-only
+implementation and does not support Step 3. The minimum remaining acceptance
+work is an attributed independent review of the 29 final claims against the
+hash-bound PDFs, a fresh run retaining pre-selector evidence, and the E18
+three-run repeatability baseline. Step 1 remains **PARTIAL**, E18 and P6 remain
+**Active**, and Step 3 remains **unstarted**.
