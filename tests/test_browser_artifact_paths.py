@@ -91,6 +91,121 @@ def test_long_filename_is_compacted_from_actual_parent_budget(tmp_path: Path) ->
     assert helper.windows_path_units(path.name) <= 255
 
 
+def test_long_same_basename_urls_keep_distinct_identity_paths(tmp_path: Path) -> None:
+    helper = _artifact_paths_module()
+    source_name = ("same-long-report-name-" * 30) + ".pdf"
+
+    first = helper.resolve_browser_artifact_path(
+        parent_dir=tmp_path,
+        source_name=source_name,
+        extension=".pdf",
+        identity="https://publisher.example/2025/report.pdf",
+        temporary_suffixes=(".part",),
+    )
+    second = helper.resolve_browser_artifact_path(
+        parent_dir=tmp_path,
+        source_name=source_name,
+        extension=".pdf",
+        identity="https://publisher.example/2026/report.pdf",
+        temporary_suffixes=(".part",),
+    )
+
+    assert first != second
+    assert first == helper.resolve_browser_artifact_path(
+        parent_dir=tmp_path,
+        source_name=source_name,
+        extension=".pdf",
+        identity="https://publisher.example/2025/report.pdf",
+        temporary_suffixes=(".part",),
+    )
+    assert helper.windows_path_units(first) <= 240
+    assert helper.windows_path_units(
+        first.with_suffix(first.suffix + ".part")
+    ) <= 240
+    assert helper.windows_path_units(second) <= 240
+
+
+def test_literal_hash_looking_name_cannot_alias_generated_identity_name(
+    tmp_path: Path,
+) -> None:
+    helper = _artifact_paths_module()
+    source_name = ("report-" * 30) + ".pdf"
+    identity = "https://publisher.example/2025/report.pdf"
+
+    generated = helper.resolve_browser_artifact_path(
+        parent_dir=tmp_path,
+        source_name=source_name,
+        extension=".pdf",
+        identity=identity,
+        temporary_suffixes=(".part",),
+    )
+    literal = helper.resolve_browser_artifact_path(
+        parent_dir=tmp_path,
+        source_name=generated.name,
+        extension=".pdf",
+        identity="https://publisher.example/2026/report.pdf",
+        temporary_suffixes=(".part",),
+    )
+
+    assert generated != literal
+    assert literal.suffix == ".pdf"
+
+
+def _create_symlink_or_skip(link: Path, target: Path) -> None:
+    try:
+        link.symlink_to(target)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"destination symlink capability unavailable: {exc}")
+
+
+def test_external_destination_symlink_is_rejected_without_touching_target(
+    tmp_path: Path,
+) -> None:
+    helper = _artifact_paths_module()
+    download_dir = tmp_path / "downloads"
+    external_dir = tmp_path / "external"
+    download_dir.mkdir()
+    external_dir.mkdir()
+    external_pdf = external_dir / "outside.pdf"
+    external_pdf.write_bytes(b"%PDF-1.7\noutside")
+    _create_symlink_or_skip(download_dir / "report.pdf", external_pdf)
+
+    with pytest.raises(AppError) as error:
+        helper.resolve_browser_artifact_path(
+            parent_dir=download_dir,
+            source_name="report.pdf",
+            extension=".pdf",
+            identity="https://publisher.example/report.pdf",
+        )
+
+    assert error.value.code == "browser_download_artifact_path_invalid"
+    assert error.value.retryable is False
+    assert external_pdf.read_bytes() == b"%PDF-1.7\noutside"
+
+
+def test_external_missing_destination_symlink_is_rejected(
+    tmp_path: Path,
+) -> None:
+    helper = _artifact_paths_module()
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    external_path = tmp_path / "external" / "missing.pdf"
+    external_path.parent.mkdir()
+    _create_symlink_or_skip(download_dir / "report.pdf", external_path)
+
+    with pytest.raises(AppError) as error:
+        helper.resolve_browser_artifact_path(
+            parent_dir=download_dir,
+            source_name="report.pdf",
+            extension=".pdf",
+            identity="https://publisher.example/report.pdf",
+        )
+
+    assert error.value.code == "browser_download_artifact_path_invalid"
+    assert error.value.retryable is False
+    assert not external_path.exists()
+
+
 def test_fixed_name_is_validated_without_being_renamed(tmp_path: Path) -> None:
     helper = _artifact_paths_module()
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import urlsplit
 
 from src.utils.errors import AppError
 from src.utils.path_utils import bounded_artifact_filename, safe_path_segment
@@ -82,10 +83,12 @@ def resolve_browser_artifact_path(
             identity=identity,
             force_identity_hash=force_identity_hash,
             max_name_units=max_name_units,
+            parent=parent,
         )
 
     return validate_browser_artifact_path(
         parent / filename,
+        parent_dir=parent,
         temporary_suffixes=temporary_suffixes,
     )
 
@@ -94,10 +97,25 @@ def validate_browser_artifact_path(
     path: Path,
     *,
     temporary_suffixes: tuple[str, ...] = (),
+    parent_dir: Path | None = None,
 ) -> Path:
     """Validate an already-selected artifact path without creating it."""
 
-    resolved = _resolve_path(path, role="browser artifact path")
+    lexical_path = Path(path).expanduser()
+    intended_parent = _resolve_path(
+        parent_dir if parent_dir is not None else lexical_path.parent,
+        role="browser artifact parent directory",
+    )
+    resolved = _resolve_path(lexical_path, role="browser artifact path")
+    try:
+        resolved.relative_to(intended_parent)
+    except ValueError as exc:
+        raise _path_error(
+            role="browser artifact path",
+            path=resolved,
+            cause=exc,
+            next_action="Use a destination beneath the browser output directory",
+        ) from exc
     _validate_component(resolved.name, path=resolved, role="browser artifact")
     _validate_path_budget(resolved, role="browser artifact")
     for suffix in temporary_suffixes:
@@ -220,6 +238,37 @@ def bounded_browser_directory_component(
     return candidate
 
 
+def select_browser_pdf_destination_path(
+    *,
+    parent_dir: Path,
+    source_name: str,
+    target_url: str,
+) -> Path:
+    """Select a deterministic PDF path without trusting an ordinary basename."""
+
+    url_name = Path(urlsplit(str(target_url).strip()).path).name
+    original_name = url_name or str(source_name or "").strip() or "download.pdf"
+    if not original_name.casefold().endswith(".pdf"):
+        original_name = f"{original_name}.pdf"
+    normal_path = resolve_browser_artifact_path(
+        parent_dir=parent_dir,
+        source_name=original_name,
+        extension=".pdf",
+        identity=target_url,
+        temporary_suffixes=(".part",),
+    )
+    if not normal_path.exists():
+        return normal_path
+    return resolve_browser_artifact_path(
+        parent_dir=parent_dir,
+        source_name=original_name,
+        extension=".pdf",
+        identity=target_url,
+        force_identity_hash=True,
+        temporary_suffixes=(".part",),
+    )
+
+
 def validate_browser_download_directory(download_dir: Path) -> Path:
     """Validate fixed artifacts and managed-profile descendants below a URL dir."""
 
@@ -297,6 +346,7 @@ def _bounded_filename(
     identity: str,
     force_identity_hash: bool,
     max_name_units: int,
+    parent: Path,
 ) -> str:
     raw = str(source_name or "").strip()
     raw_basename = raw.replace("\\", "/").rsplit("/", maxsplit=1)[-1]
@@ -316,22 +366,102 @@ def _bounded_filename(
     else:
         compact_stem = _filename_stem(safe_name, normalized_extension)
     actual_extension = _filename_extension(safe_name, normalized_extension)
-    needs_hash = force_identity_hash or lossy or reserved
+    generated_identity = _generated_identity_matches(
+        safe_name,
+        actual_extension,
+        identity,
+    )
+    hash_like = _has_hash_suffix(safe_name, actual_extension)
+    needs_hash = (
+        force_identity_hash
+        or lossy
+        or reserved
+        or (hash_like and not generated_identity)
+        or windows_path_units(safe_name) > max_name_units
+    )
+    if generated_identity and not (lossy or reserved):
+        if windows_path_units(safe_name) <= max_name_units:
+            return safe_name
+        compact_stem = compact_stem[: -(IDENTITY_HASH_LENGTH + 1)].rstrip(" ._-")
     if needs_hash:
         digest_source = str(identity or raw_basename or safe_name)
         digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()[
             :IDENTITY_HASH_LENGTH
         ]
-        safe_name = f"{compact_stem}-{digest}{actual_extension}"
+        if identity:
+            safe_name = _identity_bounded_filename(
+                compact_stem,
+                digest=digest,
+                extension=actual_extension,
+                max_name_units=max_name_units,
+                parent=parent,
+            )
+        else:
+            safe_name = bounded_artifact_filename(
+                compact_stem,
+                compact_stem=compact_stem or "artifact",
+                extension=actual_extension,
+                max_length=max_name_units,
+            )
 
     if windows_path_units(safe_name) <= max_name_units:
         return safe_name
+    if identity:
+        return _identity_bounded_filename(
+            _filename_stem(safe_name, actual_extension),
+            digest=hashlib.sha256(identity.encode("utf-8")).hexdigest()[
+                :IDENTITY_HASH_LENGTH
+            ],
+            extension=actual_extension,
+            max_name_units=max_name_units,
+            parent=parent,
+        )
     return bounded_artifact_filename(
         _filename_stem(safe_name, actual_extension),
         compact_stem=compact_stem or "artifact",
         extension=actual_extension,
         max_length=max_name_units,
     )
+
+
+def _identity_bounded_filename(
+    stem: str,
+    *,
+    digest: str,
+    extension: str,
+    max_name_units: int,
+    parent: Path,
+) -> str:
+    suffix = f"-{digest}{extension}"
+    prefix_budget = max_name_units - windows_path_units(suffix)
+    if prefix_budget <= 0:
+        raise _path_error(
+            role="browser artifact path",
+            path=parent / suffix,
+            next_action="Set a shorter writable browser output directory",
+        )
+    safe_stem = safe_path_segment(stem, fallback="artifact")
+    bounded_stem = _truncate_path_units(
+        safe_stem,
+        max_units=prefix_budget,
+    ).rstrip(" ._-")
+    if not bounded_stem:
+        bounded_stem = "a"
+    return f"{bounded_stem}{suffix}"
+
+
+def _truncate_path_units(value: str, *, max_units: int) -> str:
+    if max_units <= 0:
+        return ""
+    total = 0
+    result: list[str] = []
+    for character in value:
+        units = windows_path_units(character)
+        if total + units > max_units:
+            break
+        result.append(character)
+        total += units
+    return "".join(result)
 
 
 def _fixed_filename(
@@ -412,6 +542,32 @@ def _filename_extension(filename: str, extension: str) -> str:
         return filename[-len(extension) :]
     suffix = Path(filename).suffix
     return suffix if suffix and suffix != filename else ""
+
+
+def _has_hash_suffix(filename: str, extension: str) -> bool:
+    stem = _filename_stem(filename, extension)
+    if len(stem) < IDENTITY_HASH_LENGTH + 1:
+        return False
+    candidate = stem[-IDENTITY_HASH_LENGTH:]
+    return (
+        stem[-IDENTITY_HASH_LENGTH - 1] == "-"
+        and len(candidate) == IDENTITY_HASH_LENGTH
+        and all(character in "0123456789abcdefABCDEF" for character in candidate)
+    )
+
+
+def _generated_identity_matches(
+    filename: str,
+    extension: str,
+    identity: str,
+) -> bool:
+    if not identity or not _has_hash_suffix(filename, extension):
+        return False
+    stem = _filename_stem(filename, extension)
+    expected = hashlib.sha256(identity.encode("utf-8")).hexdigest()[
+        :IDENTITY_HASH_LENGTH
+    ]
+    return stem[-IDENTITY_HASH_LENGTH:].casefold() == expected.casefold()
 
 
 def _normalize_extension(extension: str | None) -> str:
@@ -507,6 +663,7 @@ __all__ = [
     "bounded_browser_directory_component",
     "ensure_browser_directory",
     "resolve_browser_artifact_path",
+    "select_browser_pdf_destination_path",
     "validate_browser_artifact_path",
     "validate_browser_download_directory",
     "validate_browser_profile_path",

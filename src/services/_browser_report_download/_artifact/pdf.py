@@ -20,6 +20,7 @@ from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
 from src.services._browser_report_download.artifact_paths import (
     resolve_browser_artifact_path,
+    select_browser_pdf_destination_path,
     validate_browser_artifact_path,
     validate_browser_download_directory,
 )
@@ -135,28 +136,22 @@ def _try_fetch_pdf_target(
     ):
         return None
     destination_name = Path(urlsplit(target_url).path).name or "download.pdf"
-    destination_path = resolve_browser_artifact_path(
+    destination_path = select_browser_pdf_destination_path(
         parent_dir=download_dir,
         source_name=destination_name,
-        identity=target_url,
-        temporary_suffixes=(".part",),
+        target_url=target_url,
     )
-    if destination_path.exists():
-        destination_path = resolve_browser_artifact_path(
-            parent_dir=download_dir,
-            source_name=destination_name,
-            identity=target_url,
-            force_identity_hash=True,
-            temporary_suffixes=(".part",),
-        )
     try:
-        http_runtime.download_pdf_from_url(
-            pdf_url=target_url,
-            destination_path=destination_path,
-            timeout_seconds=request.settings.timeout_seconds,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
+        if not (
+            destination_path.exists() and http_runtime.is_pdf_file(destination_path)
+        ):
+            http_runtime.download_pdf_from_url(
+                pdf_url=target_url,
+                destination_path=destination_path,
+                timeout_seconds=request.settings.timeout_seconds,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
         ensured_path = http_runtime.ensure_downloaded_pdf(
             downloaded_path=destination_path,
             ctx=ctx,

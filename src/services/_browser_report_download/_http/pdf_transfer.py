@@ -33,7 +33,7 @@ from src.services._browser_report_download._http.html_evidence import (
     _extract_embedded_pdf_url,
 )
 from src.services._browser_report_download.artifact_paths import (
-    resolve_browser_artifact_path,
+    select_browser_pdf_destination_path,
     validate_browser_artifact_path,
 )
 from src.services._browser_report_download.logging import (
@@ -69,20 +69,11 @@ def try_direct_pdf_download(
 ) -> BrowserReportDownloadResult | None:
     target_url = str(probe_url or normalized_url).strip() or normalized_url
     destination_name = Path(urlsplit(target_url).path).name or "download.pdf"
-    destination_path = resolve_browser_artifact_path(
+    destination_path = select_browser_pdf_destination_path(
         parent_dir=download_dir,
         source_name=destination_name,
-        identity=target_url,
-        temporary_suffixes=(".part",),
+        target_url=target_url,
     )
-    if destination_path.exists():
-        destination_path = resolve_browser_artifact_path(
-            parent_dir=download_dir,
-            source_name=destination_name,
-            identity=target_url,
-            force_identity_hash=True,
-            temporary_suffixes=(".part",),
-        )
     logger.info(
         log_event(
             ctx,
@@ -98,13 +89,14 @@ def try_direct_pdf_download(
         )
     )
     try:
-        download_pdf_from_url(
-            pdf_url=target_url,
-            destination_path=destination_path,
-            timeout_seconds=request.settings.timeout_seconds,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
+        if not (destination_path.exists() and is_pdf_file(destination_path)):
+            download_pdf_from_url(
+                pdf_url=target_url,
+                destination_path=destination_path,
+                timeout_seconds=request.settings.timeout_seconds,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
         downloaded_path = ensure_downloaded_pdf(
             downloaded_path=destination_path,
             ctx=ctx,

@@ -5,8 +5,6 @@ import logging
 import shutil
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
-
 from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
 )
@@ -15,6 +13,7 @@ from src.services._browser_report_download import http as http_runtime
 from src.services._browser_report_download.artifact_paths import (
     ensure_browser_directory,
     resolve_browser_artifact_path,
+    select_browser_pdf_destination_path,
     validate_browser_artifact_path,
     validate_browser_download_directory,
 )
@@ -70,15 +69,6 @@ def _prefetch_structured_pdf_artifact(
         )
         if destination_path.exists() and is_pdf_file(destination_path):
             return str(destination_path)
-        if destination_path.exists():
-            destination_path = resolve_browser_artifact_path(
-                parent_dir=download_dir,
-                source_name=destination_path.name,
-                extension=".pdf",
-                identity=target_url,
-                force_identity_hash=True,
-                temporary_suffixes=(".part",),
-            )
         try:
             http_runtime.download_pdf_from_url(
                 pdf_url=target_url,
@@ -357,16 +347,10 @@ def _pdf_prefetch_destination_path(
     target_url: str,
     downloaded_file_name: str,
 ) -> Path:
-    url_name = Path(urlsplit(target_url).path).name
-    file_name = url_name or downloaded_file_name or "download.pdf"
-    if not file_name.lower().endswith(".pdf"):
-        file_name = f"{file_name}.pdf"
-    return resolve_browser_artifact_path(
+    return select_browser_pdf_destination_path(
         parent_dir=download_dir,
-        source_name=file_name,
-        extension=".pdf",
-        identity=target_url,
-        temporary_suffixes=(".part",),
+        source_name=downloaded_file_name,
+        target_url=target_url,
     )
 
 
