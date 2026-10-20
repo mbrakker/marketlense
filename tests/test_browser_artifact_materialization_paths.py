@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from src.services._browser_report_download._artifact.pdf import (
     _adopt_external_downloaded_file,
     _resolve_downloaded_file,
@@ -19,6 +21,20 @@ from src.services._browser_report_download.artifact_paths import windows_path_un
 from src.services._browser_report_download.artifact_paths import (
     resolve_browser_artifact_path,
 )
+
+
+def _create_overbudget_source(
+    *,
+    download_dir: Path,
+    directory_prefix: str,
+) -> Path:
+    source_dir = download_dir / (directory_prefix * 3)
+    source_dir.mkdir(parents=True)
+    for repeat_count in range(2, 8):
+        candidate = source_dir / (("published-market-report-" * repeat_count) + ".pdf")
+        if 240 < windows_path_units(candidate) <= 258:
+            return candidate
+    pytest.skip("test root cannot represent a safe over-budget local path")
 
 
 def test_external_pdf_materialization_is_bounded_and_readable(tmp_path: Path) -> None:
@@ -122,9 +138,10 @@ def test_overbudget_local_browser_artifact_is_compacted_before_return(
     run_context,
 ) -> None:
     download_dir = tmp_path / "browser-output"
-    source_dir = download_dir / ("nested-artifact-directory-" * 3)
-    source_dir.mkdir(parents=True)
-    source = source_dir / (("published-market-report-" * 2) + ".pdf")
+    source = _create_overbudget_source(
+        download_dir=download_dir,
+        directory_prefix="nested-artifact-directory-",
+    )
     source.write_bytes(b"%PDF-1.7\nlocal")
     assert windows_path_units(source) > 240
 
@@ -149,9 +166,10 @@ def test_overbudget_local_download_candidate_is_compacted_before_return(
     tmp_path: Path,
 ) -> None:
     download_dir = tmp_path / "browser-output"
-    source_dir = download_dir / ("nested-download-directory-" * 3)
-    source_dir.mkdir(parents=True)
-    source = source_dir / (("published-market-report-" * 2) + ".pdf")
+    source = _create_overbudget_source(
+        download_dir=download_dir,
+        directory_prefix="nested-download-directory-",
+    )
     source.write_bytes(b"%PDF-1.7\nlocal")
     assert windows_path_units(source) > 240
 
