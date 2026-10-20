@@ -721,6 +721,34 @@ def test_provider_free_comparator_covers_all_nine_corpus_identities() -> None:
     assert "negative_supporting_pages_present" in _diagnostic_codes(corrupted_report)
 
 
+@pytest.mark.parametrize(
+    "malformed_pages",
+    [[3, "invalid"], [3, True], [3, 0], [3, 3]],
+)
+def test_adversarial_comparator_rejects_identical_malformed_supporting_pages(
+    malformed_pages: list[object],
+) -> None:
+    row = _accepted_positive_row()
+    row["supporting_physical_pages"] = malformed_pages
+    row["source_truth_notes_by_page"] = {
+        str(page): "Physical page 3 reports the 42% metric for the surveyed population."
+        for page in malformed_pages
+        if type(page) is int and page > 0
+    }
+    row["verification_attempts"][0]["supporting_physical_pages"] = malformed_pages
+    row["verification_attempts"][0]["source_truth_notes_by_page"] = dict(
+        row["source_truth_notes_by_page"]
+    )
+
+    report = compare_adversarial_outcomes(
+        _acceptance_corpus(),
+        {"claims": [row, _accepted_negative_row()]},
+    )
+
+    assert report["passed"] is False
+    assert report["mismatches"]
+
+
 def test_adversarial_corpus_covers_each_required_mutation_boundary() -> None:
     corpus = _corpus()
     cases = corpus.get("cases")

@@ -13,10 +13,66 @@ from scripts.quality.replay_verified_claims_step2 import (
     _shadow_quality_assessment,
     _shadow_replacement_selection,
     _usage_summary,
+    _valid_supporting_pages,
     _verified_corrected_insight,
 )
 from src.contracts.run_context import RunContext
 from src.generators.verified_claims_recovery import build_verified_claims_shadow_request
+
+
+@pytest.mark.parametrize(
+    "supporting_pages",
+    [[3, "invalid"], [3, True], [3, 0], [3, 3]],
+)
+def test_valid_supporting_pages_rejects_malformed_complete_lists(
+    supporting_pages: list[object],
+) -> None:
+    pages, reason = _valid_supporting_pages(
+        {
+            "inspected_physical_pages": [3, 4],
+            "supporting_physical_pages": supporting_pages,
+            "source_truth_notes_by_page": {
+                str(page): "The page contains the supporting source finding."
+                for page in supporting_pages
+                if type(page) is int and page > 0
+            },
+        }
+    )
+
+    assert pages == []
+    assert reason == "supporting_page_provenance_invalid"
+
+
+def test_valid_supporting_pages_rejects_uninspected_page_in_complete_list() -> None:
+    pages, reason = _valid_supporting_pages(
+        {
+            "inspected_physical_pages": [3],
+            "supporting_physical_pages": [3, 4],
+            "source_truth_notes_by_page": {
+                "3": "Page 3 contains the supporting source finding.",
+                "4": "Page 4 contains the supporting source finding.",
+            },
+        }
+    )
+
+    assert pages == []
+    assert reason == "supporting_page_provenance_uninspected"
+
+
+def test_valid_supporting_pages_accepts_inspected_multi_page_binding() -> None:
+    pages, reason = _valid_supporting_pages(
+        {
+            "inspected_physical_pages": [3, 4],
+            "supporting_physical_pages": [3, 4],
+            "source_truth_notes_by_page": {
+                "3": "Page 3 contains the first part of the source finding.",
+                "4": "Page 4 contains the second part of the source finding.",
+            },
+        }
+    )
+
+    assert pages == [3, 4]
+    assert reason == ""
 
 
 def test_near_duplicate_guard_preserves_distinct_metric_bindings() -> None:

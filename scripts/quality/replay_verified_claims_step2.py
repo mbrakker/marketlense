@@ -38,6 +38,7 @@ from src.generators.verified_claims_recovery import (
     page_is_likely_divider as _recovery_page_is_likely_divider,
 )
 from src.generators.verified_claims_visual_generator import (
+    _strict_physical_page_list,
     evaluate_shortlisted_claims,
 )
 from src.services.config_service import load_settings
@@ -1170,8 +1171,8 @@ def _valid_supporting_pages(
     }
     if not isinstance(raw_pages, list):
         return [], "supporting_page_provenance_missing"
-    pages = [page for page in raw_pages if type(page) is int and page > 0]
-    if not pages or len(set(pages)) != len(pages):
+    pages = _strict_physical_page_list(row, "supporting_physical_pages")
+    if not pages:
         return [], "supporting_page_provenance_invalid"
     if not set(pages).issubset(inspected):
         return [], "supporting_page_provenance_uninspected"
