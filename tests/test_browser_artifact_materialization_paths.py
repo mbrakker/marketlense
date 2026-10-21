@@ -17,6 +17,9 @@ from src.services._browser_report_download._browser_runtime._terminal_assets.art
     _pdf_prefetch_destination_path,
 )
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.artifact_materialization import (
+    materialize_external_browser_artifact,
+)
 from src.services._browser_report_download.artifact_paths import windows_path_units
 from src.services._browser_report_download.artifact_paths import (
     resolve_browser_artifact_path,
@@ -131,6 +134,42 @@ def test_external_pdf_materialization_preserves_previous_bytes_when_source_chang
     assert updated_copy != original_copy
     assert original_copy.read_bytes() == b"%PDF-1.7\noriginal"
     assert updated_copy.read_bytes() == b"%PDF-1.7\nupdated"
+
+
+def test_materialization_preferred_filename_keeps_html_extension_and_no_clobber(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "external" / "report.pdf"
+    source.parent.mkdir()
+    source.write_bytes(b"<html><body>source A</body></html>")
+    download_dir = tmp_path / "browser-output"
+    preferred = download_dir / "report.html"
+    preferred.parent.mkdir()
+    preferred.write_bytes(b"<html><body>existing B</body></html>")
+
+    first = materialize_external_browser_artifact(
+        source_path=source,
+        download_dir=download_dir,
+        preferred_filename="report.html",
+        source_identity="https://example.com/research/report",
+    )
+
+    source.write_bytes(b"<html><body>source C</body></html>")
+    second = materialize_external_browser_artifact(
+        source_path=source,
+        download_dir=download_dir,
+        preferred_filename="report.html",
+        source_identity="https://example.com/research/report",
+    )
+
+    assert first is not None
+    assert second is not None
+    assert first.suffix == second.suffix == ".html"
+    assert first not in {preferred, second}
+    assert second not in {preferred, first}
+    assert first.read_bytes() == b"<html><body>source A</body></html>"
+    assert second.read_bytes() == b"<html><body>source C</body></html>"
+    assert preferred.read_bytes() == b"<html><body>existing B</body></html>"
 
 
 def test_overbudget_local_browser_artifact_is_compacted_before_return(

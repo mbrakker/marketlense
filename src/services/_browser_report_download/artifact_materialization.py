@@ -26,6 +26,8 @@ def materialize_external_browser_artifact(
     *,
     source_path: Path,
     download_dir: Path,
+    preferred_filename: str | None = None,
+    source_identity: str | None = None,
 ) -> Path | None:
     """Copy one external artifact below the browser root without clobbering it."""
 
@@ -35,19 +37,20 @@ def materialize_external_browser_artifact(
     if source is None:
         return None
 
-    source_identity = str(source)
+    destination_name = str(preferred_filename or source.name).strip() or source.name
+    stable_source_identity = str(source_identity or source)
     candidates: list[Path] = []
     normal_path = resolve_browser_artifact_path(
         parent_dir=download_dir,
-        source_name=source.name,
-        identity=source_identity,
+        source_name=destination_name,
+        identity=stable_source_identity,
         temporary_suffixes=(".part",),
     )
     candidates.append(normal_path)
     identity_path = resolve_browser_artifact_path(
         parent_dir=download_dir,
-        source_name=source.name,
-        identity=source_identity,
+        source_name=destination_name,
+        identity=stable_source_identity,
         force_identity_hash=True,
         temporary_suffixes=(".part",),
     )
@@ -65,9 +68,9 @@ def materialize_external_browser_artifact(
                     return None
             target_path = resolve_browser_artifact_path(
                 parent_dir=download_dir,
-                source_name=source.name,
+                source_name=destination_name,
                 identity=(
-                    f"{source_identity}|sha256:{content_digest}"
+                    f"{stable_source_identity}|sha256:{content_digest}"
                     f"|collision:{attempt_index}"
                 ),
                 force_identity_hash=True,

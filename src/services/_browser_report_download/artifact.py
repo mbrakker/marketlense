@@ -134,10 +134,14 @@ def finalize_browser_report_download_result(
         browser_rendered_capture_path is not None
         and onsite_capture_path == str(browser_rendered_capture_path)
     )
+    onsite_capture_format_hint = str(
+        agent_result.onsite_capture_format or ""
+    ).strip() or ("browser_rendered_pdf" if browser_rendered_capture_path else None)
     if onsite_capture_path:
         resolved_onsite_capture_path = _resolve_existing_onsite_capture_path(
             claimed_path=onsite_capture_path,
             download_dir=download_dir,
+            onsite_capture_format=onsite_capture_format_hint,
         )
         onsite_capture_path = (
             str(resolved_onsite_capture_path)

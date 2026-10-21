@@ -5,6 +5,9 @@ from ._shared import *  # noqa: F401,F403
 from src.services._browser_report_download._artifact.onsite import (
     _ensure_onsite_capture_artifact,
 )
+from src.services._browser_report_download.artifact_paths import (
+    resolve_browser_artifact_path,
+)
 from src.services._browser_report_download.models import BrowserUseAgentResult
 from src.services._browser_report_download.models import BrowserAgentRunResult
 
@@ -592,6 +595,96 @@ def test_finalized_external_onsite_capture_stays_in_attempt_workspace(
     assert source_path.read_bytes() == source_bytes
 
 
+def test_onsite_html_capture_rejects_missing_pdf_claim_for_html_output(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    attempt_dir = tmp_path / "browser-workspace"
+    request_url = "https://example.com/research/report"
+    capture_path, capture_format = _ensure_onsite_capture_artifact(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=request_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        ctx=run_context,
+        normalized_url=request_url,
+        download_dir=attempt_dir,
+        agent_result=BrowserUseAgentResult(route_kind="onsite_report"),
+        final_url=request_url,
+        final_page_title="Research report",
+        terminal_text_excerpt="",
+        route_steps=[],
+        browser_html="<html><body><h1>Research report</h1></body></html>",
+        onsite_capture_path=str(attempt_dir / "report.pdf"),
+        onsite_capture_format="html",
+    )
+
+    assert capture_path is not None
+    assert Path(capture_path).suffix == ".html"
+    assert capture_format == "html"
+    assert Path(capture_path).read_text(encoding="utf-8").startswith("<html>")
+    assert not (attempt_dir / "report.pdf").exists()
+
+
+def test_onsite_markdown_capture_preserves_occupied_identity_artifacts(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    attempt_dir = tmp_path / "browser-workspace"
+    request_url = "https://example.com/research/report"
+    normal_path = resolve_browser_artifact_path(
+        parent_dir=attempt_dir,
+        source_name="report",
+        extension=".md",
+        identity=request_url,
+        temporary_suffixes=(".part",),
+    )
+    identity_path = resolve_browser_artifact_path(
+        parent_dir=attempt_dir,
+        source_name="report",
+        extension=".md",
+        identity=request_url,
+        force_identity_hash=True,
+        temporary_suffixes=(".part",),
+    )
+    normal_path.parent.mkdir(parents=True)
+    normal_path.write_bytes(b"previous normal markdown")
+    identity_path.write_bytes(b"previous identity markdown")
+
+    capture_path, capture_format = _ensure_onsite_capture_artifact(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=request_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        ctx=run_context,
+        normalized_url=request_url,
+        download_dir=attempt_dir,
+        agent_result=BrowserUseAgentResult(route_kind="onsite_report"),
+        final_url=request_url,
+        final_page_title="Research report",
+        terminal_text_excerpt=("Research report analysis. " * 40),
+        route_steps=[],
+        browser_html="",
+        onsite_capture_path="",
+        onsite_capture_format="markdown",
+    )
+
+    assert capture_path is not None
+    assert Path(capture_path).suffix == ".md"
+    assert capture_format == "markdown"
+    assert (
+        Path(capture_path)
+        .read_text(encoding="utf-8")
+        .startswith("Research report analysis.")
+    )
+    assert normal_path.read_bytes() == b"previous normal markdown"
+    assert identity_path.read_bytes() == b"previous identity markdown"
+
+
 def test_download_report_with_browser_use_fetches_terminal_html_for_missing_onsite_capture(
     tmp_path: Path,
     run_context,
@@ -793,6 +886,8 @@ __all__ = [
     "test_download_report_with_browser_use_materializes_claimed_onsite_capture",
     "test_existing_external_onsite_capture_is_materialized_into_attempt_workspace",
     "test_finalized_external_onsite_capture_stays_in_attempt_workspace",
+    "test_onsite_html_capture_rejects_missing_pdf_claim_for_html_output",
+    "test_onsite_markdown_capture_preserves_occupied_identity_artifacts",
     "test_download_report_with_browser_use_fetches_terminal_html_for_missing_onsite_capture",
     "test_download_report_with_browser_use_ignores_worker_metadata_when_materializing_onsite_extract",
 ]
