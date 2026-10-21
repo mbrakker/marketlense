@@ -523,6 +523,22 @@ def _valid_page_adjudication(
     explanation = _text(adjudication.get("source_grounded_explanation"))
     if len(explanation) < _MIN_SOURCE_GROUNDED_EXPLANATION_LENGTH:
         return False, None, "page_adjudication_explanation_not_substantive"
+    recorded_step2_pages = _strict_pages(
+        adjudication.get("step2_supporting_physical_pages")
+    )
+    current_step2_pages = _strict_pages(record.get("step2_supporting_physical_pages"))
+    if not recorded_step2_pages or not current_step2_pages:
+        return False, None, "page_adjudication_step2_pages_invalid"
+    if set(recorded_step2_pages) != set(current_step2_pages):
+        return False, None, "page_adjudication_step2_pages_mismatch"
+    recorded_reviewer_pages = _strict_pages(
+        adjudication.get("reviewer_supporting_physical_pages")
+    )
+    current_reviewer_pages = _strict_pages(record.get("supporting_physical_pages"))
+    if not recorded_reviewer_pages or not current_reviewer_pages:
+        return False, None, "page_adjudication_reviewer_pages_invalid"
+    if set(recorded_reviewer_pages) != set(current_reviewer_pages):
+        return False, None, "page_adjudication_reviewer_pages_mismatch"
     pages = _strict_pages(adjudication.get("adjudicated_physical_pages"))
     inspected = _strict_pages(record.get("inspected_physical_pages"))
     if not pages or not inspected or not set(pages).issubset(inspected):
@@ -1422,6 +1438,258 @@ def _validate_cohort_identity_coverage(
     }
 
 
+def _review_record_identity(record: Any) -> tuple[str, str, str, str] | None:
+    if not isinstance(record, Mapping):
+        return None
+    cohort = _text(record.get("cohort"))
+    report = _text(record.get("report_name") or record.get("report"))
+    candidate_id = _text(record.get("candidate_id"))
+    availability = _text(record.get("availability"))
+    if (
+        not cohort
+        or not report
+        or not candidate_id
+        or availability not in {"eligible", "unavailable"}
+    ):
+        return None
+    return cohort, report, candidate_id, availability
+
+
+def _validate_review_record_coverage(
+    records: Sequence[Any],
+    cohort_validations: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Validate the immutable review-record roster, not only its inputs."""
+
+    expected: list[dict[str, str]] = []
+    expected_by_identity: dict[tuple[str, str, str, str], dict[str, str]] = {}
+    expected_by_candidate: dict[tuple[str, str], dict[str, str]] = {}
+    issue_codes: list[str] = []
+    issues: list[dict[str, str]] = []
+
+    def add_issue(code: str, detail: str) -> None:
+        _append_identity_issue(issue_codes, issues, code, detail)
+
+    for validation in cohort_validations:
+        cohort = _text(validation.get("cohort"))
+        raw_expected = validation.get("expected_records")
+        if not cohort or not isinstance(raw_expected, list):
+            add_issue(
+                "review_record_expected_roster_unavailable",
+                f"cohort={cohort!r}",
+            )
+            continue
+        for raw_expected_record in raw_expected:
+            if not isinstance(raw_expected_record, Mapping):
+                add_issue(
+                    "review_record_expected_roster_malformed",
+                    f"cohort={cohort!r}",
+                )
+                continue
+            expected_record = {
+                "cohort": cohort,
+                "report_name": _text(raw_expected_record.get("report_name")),
+                "candidate_id": _text(raw_expected_record.get("candidate_id")),
+                "availability": _text(raw_expected_record.get("availability")),
+            }
+            identity = (
+                expected_record["cohort"],
+                expected_record["report_name"],
+                expected_record["candidate_id"],
+                expected_record["availability"],
+            )
+            if not all(identity) or identity[3] not in {"eligible", "unavailable"}:
+                add_issue(
+                    "review_record_expected_roster_malformed",
+                    f"identity={identity!r}",
+                )
+                continue
+            if identity in expected_by_identity:
+                add_issue(
+                    "review_record_expected_roster_duplicate",
+                    f"identity={identity!r}",
+                )
+                continue
+            expected.append(expected_record)
+            expected_by_identity[identity] = expected_record
+            expected_by_candidate[(identity[0], identity[2])] = expected_record
+
+    actual_counts: Counter[tuple[str, str, str, str]] = Counter()
+    actual_count = 0
+    missing: list[dict[str, str]] = []
+    duplicates: list[dict[str, Any]] = []
+    unexpected: list[dict[str, Any]] = []
+
+    for index, raw_record in enumerate(records):
+        actual_identity = _review_record_identity(raw_record)
+        if actual_identity is None:
+            add_issue(
+                "review_record_malformed",
+                f"index={index} identity_fields_invalid",
+            )
+            continue
+        actual_count += 1
+        actual_counts[actual_identity] += 1
+        if actual_counts[actual_identity] > 1:
+            duplicate = {
+                "cohort": actual_identity[0],
+                "report_name": actual_identity[1],
+                "candidate_id": actual_identity[2],
+                "availability": actual_identity[3],
+                "count": actual_counts[actual_identity],
+            }
+            duplicates.append(duplicate)
+            add_issue("review_record_duplicate", f"identity={actual_identity!r}")
+        if actual_identity not in expected_by_identity:
+            unexpected_record = {
+                "cohort": actual_identity[0],
+                "report_name": actual_identity[1],
+                "candidate_id": actual_identity[2],
+                "availability": actual_identity[3],
+            }
+            unexpected.append(unexpected_record)
+            expected_candidate = expected_by_candidate.get(
+                (actual_identity[0], actual_identity[2])
+            )
+            if expected_candidate is not None:
+                if expected_candidate["report_name"] != actual_identity[1]:
+                    add_issue(
+                        "review_record_wrong_report",
+                        f"identity={actual_identity!r} expected_report="
+                        f"{expected_candidate['report_name']!r}",
+                    )
+                if expected_candidate["availability"] != actual_identity[3]:
+                    add_issue(
+                        "review_record_availability_mismatch",
+                        f"identity={actual_identity!r} expected_availability="
+                        f"{expected_candidate['availability']!r}",
+                    )
+            elif any(
+                candidate_id == actual_identity[2]
+                for (
+                    _cohort,
+                    _report,
+                    candidate_id,
+                    _availability,
+                ) in expected_by_identity
+            ):
+                add_issue(
+                    "review_record_wrong_cohort",
+                    f"identity={actual_identity!r}",
+                )
+            else:
+                add_issue("review_record_unexpected", f"identity={actual_identity!r}")
+
+    for expected_record in expected:
+        identity = (
+            expected_record["cohort"],
+            expected_record["report_name"],
+            expected_record["candidate_id"],
+            expected_record["availability"],
+        )
+        if actual_counts[identity] == 0:
+            missing.append(dict(expected_record))
+            add_issue("review_record_missing", f"identity={identity!r}")
+
+    coverage_status = "PASS" if expected and not issue_codes else "BLOCKED"
+    return {
+        "coverage_status": coverage_status,
+        "expected_count": len(expected),
+        "actual_count": actual_count,
+        "record_count": len(records),
+        "expected_records": expected,
+        "missing": missing,
+        "duplicates": duplicates,
+        "unexpected": unexpected,
+        "issue_codes": issue_codes,
+        "issues": issues,
+    }
+
+
+def _binding_value(value: Any) -> Any:
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, Mapping):
+        return dict(value)
+    return value
+
+
+def _binding_values_equal(left: Any, right: Any) -> bool:
+    return json.dumps(
+        _binding_value(left), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ) == json.dumps(
+        _binding_value(right), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+
+
+def _validate_review_record_source_binding(
+    record: Mapping[str, Any],
+    source_row: Mapping[str, Any],
+    source: Mapping[str, Any],
+) -> list[str]:
+    """Reject reuse of a review response for changed Step 2 source inputs."""
+
+    diagnostics: list[str] = []
+
+    def compare(code: str, actual: Any, expected: Any) -> None:
+        if not _binding_values_equal(actual, expected):
+            diagnostics.append(code)
+
+    compare(
+        "stale_review_candidate_identity",
+        _text(record.get("candidate_id")),
+        _text(source_row.get("candidate_id")),
+    )
+    compare(
+        "stale_review_report_identity",
+        _text(record.get("report_name") or record.get("report")),
+        _text(source_row.get("report_name") or source_row.get("report")),
+    )
+    compare(
+        "stale_review_final_claim",
+        _text(record.get("final_claim")),
+        _text(source_row.get("final_claim")),
+    )
+    compare(
+        "stale_review_source_identity",
+        _text(record.get("source_identity")),
+        _text(source_row.get("source_identity")),
+    )
+    compare(
+        "stale_review_source_pdf_sha256",
+        _text(record.get("source_pdf_sha256_expected")).lower(),
+        _text(source.get("sha256_expected")).lower(),
+    )
+    compare(
+        "stale_review_source_pdf_actual_sha256",
+        _text(record.get("source_pdf_sha256_actual")).lower(),
+        _text(source.get("sha256_actual")).lower(),
+    )
+    compare(
+        "stale_review_inspected_physical_pages",
+        _binding_value(record.get("inspected_physical_pages") or []),
+        _binding_value(source_row.get("inspected_physical_pages") or []),
+    )
+    for field in (
+        "evidence_ids",
+        "evidence_spans",
+        "physical_pages",
+        "original_physical_pages",
+    ):
+        actual = record.get(field)
+        expected = source_row.get(field)
+        actual = actual or []
+        expected = expected or []
+        compare(f"stale_review_{field}", actual, expected)
+    compare(
+        "stale_review_source_binding_status",
+        _text(record.get("source_binding_status")),
+        _text(source_row.get("source_binding_status")),
+    )
+
+    return ["stale_review_source_binding", *diagnostics] if diagnostics else []
+
+
 def _load_review_inputs(
     *, result_path: Path, source_manifest_path: Path, cohort: str
 ) -> tuple[
@@ -1517,17 +1785,33 @@ def _record_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _acceptance_summary(
-    *, records: list[dict[str, Any]], cohort_validations: Sequence[Mapping[str, Any]]
+    *,
+    records: list[dict[str, Any]],
+    cohort_validations: Sequence[Mapping[str, Any]],
+    review_record_coverage: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Summarize execution, exact identity coverage, and editorial acceptance."""
 
-    coverage_status = (
+    review_record_coverage = review_record_coverage or _validate_review_record_coverage(
+        records, cohort_validations
+    )
+    input_coverage_status = (
         "PASS"
         if cohort_validations
         and all(
             validation.get("coverage_status") == "PASS"
             for validation in cohort_validations
         )
+        else "BLOCKED"
+    )
+    review_coverage_status = (
+        _text(review_record_coverage.get("coverage_status"))
+        if isinstance(review_record_coverage, Mapping)
+        else "BLOCKED"
+    )
+    coverage_status = (
+        "PASS"
+        if input_coverage_status == "PASS" and review_coverage_status == "PASS"
         else "BLOCKED"
     )
     execution_reasons: list[str] = []
@@ -1552,6 +1836,10 @@ def _acceptance_summary(
         for issue_code in validation.get("issue_codes") or []:
             if issue_code not in reasons:
                 reasons.append(str(issue_code))
+    for issue_code in review_record_coverage.get("issue_codes") or []:
+        reason = f"review_record_coverage:{issue_code}"
+        if reason not in reasons:
+            reasons.append(reason)
     for decision in ("rejected", "revision_required", "unresolved"):
         if eligible_decisions.get(decision):
             reasons.append(f"{decision}:{eligible_decisions[decision]}")
@@ -1564,15 +1852,27 @@ def _acceptance_summary(
     ]
     for candidate_id in page_reconciliation_blocks:
         reasons.append(f"source_page_reconciliation_required:{candidate_id}")
+    stale_review_blocks = [
+        _text(record.get("candidate_id")) or "unknown"
+        for record in records
+        if record.get("availability") != "unavailable"
+        and record.get("editorial_acceptance_status") == "blocked_by_stale_review"
+    ]
+    for candidate_id in stale_review_blocks:
+        reasons.append(f"stale_review_source_binding_required:{candidate_id}")
     if any(record.get("availability") == "unavailable" for record in records):
         reasons.append("expected_unavailable_present")
     reasons = list(dict.fromkeys(reasons))
 
-    eligible_nonapprovals = sum(
-        decision_count
-        for decision, decision_count in eligible_decisions.items()
-        if decision in {"rejected", "revision_required", "unresolved"}
-    ) + len(page_reconciliation_blocks)
+    eligible_nonapprovals = (
+        sum(
+            decision_count
+            for decision, decision_count in eligible_decisions.items()
+            if decision in {"rejected", "revision_required", "unresolved"}
+        )
+        + len(page_reconciliation_blocks)
+        + len(stale_review_blocks)
+    )
     if coverage_status != "PASS":
         editorial_acceptance_status = "FAIL"
         reasons.insert(0, "identity_coverage_incomplete")
@@ -1598,6 +1898,14 @@ def _acceptance_summary(
             _record_summary([record])["material_defect_count"] for record in records
         ),
         "source_page_reconciliation_block_count": len(page_reconciliation_blocks),
+        "stale_review_source_binding_block_count": len(stale_review_blocks),
+        "review_record_coverage_status": review_coverage_status,
+        "review_record_expected_count": int(
+            review_record_coverage.get("expected_count") or 0
+        ),
+        "review_record_actual_count": int(
+            review_record_coverage.get("actual_count") or 0
+        ),
         "execution_reasons": list(dict.fromkeys(execution_reasons)),
     }
 
@@ -1886,6 +2194,14 @@ def run_editorial_review(
     report_summaries = {
         key: _record_summary(value) for key, value in sorted(report_records.items())
     }
+    review_record_coverage = _validate_review_record_coverage(
+        records, cohort_validations
+    )
+    acceptance = _acceptance_summary(
+        records=records,
+        cohort_validations=cohort_validations,
+        review_record_coverage=review_record_coverage,
+    )
     manifest: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "artifact_kind": "verified_claims_step2_independent_editorial_review",
@@ -1921,13 +2237,10 @@ def run_editorial_review(
             }
             for validation in cohort_validations
         },
-        "acceptance": _acceptance_summary(
-            records=records, cohort_validations=cohort_validations
-        ),
+        "review_record_coverage": review_record_coverage,
+        "acceptance": acceptance,
         "summary": {
-            **_acceptance_summary(
-                records=records, cohort_validations=cohort_validations
-            ),
+            **acceptance,
             "rendered_page_count": sum(bool(path) for path in rendered_pages.values()),
             "render_failure_count": len(render_failures),
             "cache_reused_count": sum(
@@ -1992,11 +2305,15 @@ def reconcile_editorial_manifest(
 
     rows_by_key: dict[tuple[str, str], dict[str, Any]] = {}
     sources_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+    ambiguous_source_keys: set[tuple[str, str]] = set()
     for cohort, _result, sources, rows, _validation in loaded:
         for row in rows:
             candidate_id = _text(row.get("candidate_id"))
             report = _text(row.get("report_name") or row.get("report"))
             key = (cohort, candidate_id)
+            if key in rows_by_key:
+                ambiguous_source_keys.add(key)
+                continue
             rows_by_key[key] = row
             sources_by_key[key] = _source_record_for_report(sources, report)
 
@@ -2004,13 +2321,28 @@ def reconcile_editorial_manifest(
         page_adjudication_path
     )
     records: list[dict[str, Any]] = []
+    review_record_coverage = _validate_review_record_coverage(
+        raw_records,
+        [entry[4] for entry in loaded],
+    )
     for raw_record in raw_records:
         if not isinstance(raw_record, Mapping):
             continue
         record = dict(raw_record)
         key = (_text(record.get("cohort")), _text(record.get("candidate_id")))
-        source_row = rows_by_key.get(key)
-        if source_row is not None:
+        source_row = rows_by_key.get(key) if key not in ambiguous_source_keys else None
+        stale_diagnostics: list[str] = []
+        if key in ambiguous_source_keys:
+            stale_diagnostics = [
+                "stale_review_source_binding",
+                "step2_source_binding_ambiguous",
+            ]
+        elif source_row is not None:
+            stale_diagnostics = _validate_review_record_source_binding(
+                record,
+                source_row,
+                sources_by_key.get(key, {}),
+            )
             base = _base_record(
                 cohort=key[0],
                 row=source_row,
@@ -2023,7 +2355,15 @@ def reconcile_editorial_manifest(
                 record[field] = base[field]
         else:
             _append_record_diagnostic(record, "step2_source_binding_unavailable")
+            stale_diagnostics = [
+                "stale_review_source_binding",
+                "step2_source_binding_unavailable",
+            ]
         _reconcile_source_pages(record, source_row or {}, adjudications=adjudications)
+        for diagnostic in stale_diagnostics:
+            _append_record_diagnostic(record, diagnostic)
+        if stale_diagnostics:
+            record["editorial_acceptance_status"] = "blocked_by_stale_review"
         records.append(record)
 
     cohort_validations = [entry[4] for entry in loaded]
@@ -2034,6 +2374,7 @@ def reconcile_editorial_manifest(
     acceptance = _acceptance_summary(
         records=records,
         cohort_validations=cohort_validations,
+        review_record_coverage=review_record_coverage,
     )
     manifest = dict(existing)
     manifest["records"] = records
@@ -2046,6 +2387,7 @@ def reconcile_editorial_manifest(
         }
         for validation in cohort_validations
     }
+    manifest["review_record_coverage"] = review_record_coverage
     manifest["acceptance"] = acceptance
     old_summary = existing.get("summary")
     summary = dict(old_summary) if isinstance(old_summary, Mapping) else {}

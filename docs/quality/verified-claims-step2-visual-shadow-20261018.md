@@ -1906,3 +1906,68 @@ revision-required (including the known Activate, Bigcommerce, and Bain quality
 findings), one retained identity is unavailable, fresh full-cohort selection
 effectiveness and P6 human acceptance remain open, and no canonical promotion,
 publication-readiness mutation, or WordPress write occurred.
+
+### Review-manifest acceptance-integrity gap closure — 2026-10-21
+
+The final acceptance corrections are limited to deterministic continuity and
+coverage checks; correction/verification prompts, the LLM factual boundary, and
+all canonical/publication behavior are unchanged. Acceptance now validates the
+actual review manifest against the existing exact roster from both cohort
+validations: **29 frozen-five + 25 additional-five = 54 identities**, including
+the explicit unavailable Merchant Risk Council row. Missing, duplicate,
+unexpected, wrong-report, wrong-cohort, availability-mismatched, and malformed
+review records block coverage. The 39 reference variants remain accounted for
+separately and are not part of the 54-record review denominator.
+
+An accepted page adjudication is now bound to the exact Step 2 and reviewer
+page sets recorded when it was created. Page order may differ, but invalid,
+missing, or changed sets fail closed; Step 2 and reviewer sets are not required
+to equal one another. The three existing accepted adjudications remain valid:
+Reuters `ai-search-platform-relationships` (12 versus 10), Reuters
+`ai-browsers-adaptable-content` (41 versus 39), and Adjust
+`finance-benchmark-coverage` (34–38 versus 35–38). Activate
+`activate-outlook-revenue-models` remains held because its rejected
+adjudication cannot authorize the materially reversed segment bindings.
+
+Reconciliation also compares each historical review row with its current Step 2
+row before reusing the decision: candidate/report identity, exact final claim,
+source identity, expected and actual PDF hashes, inspected pages, evidence IDs
+and spans, physical-page fields, and binding status. A mismatch is recorded as
+`stale_review_source_binding` and blocks editorial acceptance without changing
+the historical decision or inventing a new review. Duplicate source rows are
+treated as ambiguous rather than silently overwritten.
+
+#### Provider-free before/after ledger
+
+The retained v3 corrected review was reconciled with no provider calls using the
+existing result manifests and committed page-adjudication packet. The updated
+manifest is
+`out/verified-claims-step2-editorial-review-20261021-v4-integrity-2/manifest.json`
+(SHA-256
+`e790dc58233f32daf413c95c39392a6147954e77732a59acb8deb8cc8d1fe51c`).
+
+| Measure | v3 corrected baseline | v4 integrity reconciliation | Observed change |
+|---|---:|---:|---|
+| Review records | 54 | 54 | Exact identity set unchanged. |
+| Review roster coverage | Not independently checked | 54 expected / 54 actual, PASS | Missing/duplicate/substitution protection added. |
+| Decisions | 49 approved / 4 revision-required / 1 unresolved | 49 / 4 / 1 | No historical decision changed. |
+| Final claim wording | Unchanged | Unchanged | No stale claim reuse detected. |
+| Accepted page adjudications | Not continuity-checked | 3 retained | Reuters/Adjust adjudications remain valid. |
+| Editorial acceptance | PARTIAL | PARTIAL | Activate Outlook remains the one page-reconciliation block. |
+
+The 39 reference variants remain **39/39** accounted for in the frozen cohort
+metadata. The reconciled record set preserved stable identities, final wording,
+source identities/hashes, evidence IDs and spans, protected fields, and all
+review decisions; the only deterministic additions are the retained Step 2
+page/notes fields and acceptance diagnostics. No provider calls, canonical
+mutations, readiness changes, publication writes, or WordPress writes occurred.
+
+Focused acceptance regressions pass (**53 passed**), including missing or
+duplicate review identities, the explicit unavailable identity, malformed
+records, changed Step 2/reviewer adjudication page sets, valid page reordering,
+and stale final-claim rejection. This correction is **PASS within its
+deterministic integrity scope**. Overall Step 2 remains **PARTIAL / NO-GO for
+Step 3** because the held Activate row, four revision-required editorial rows,
+the unavailable retained identity, fresh Step 1 effectiveness evidence, and P6
+human acceptance remain unresolved. This provider-free replay does not claim a
+live semantic-quality improvement.
