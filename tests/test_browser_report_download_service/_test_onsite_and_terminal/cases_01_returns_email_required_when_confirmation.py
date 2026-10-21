@@ -72,6 +72,8 @@ def test_embedded_issuu_capture_builds_complete_rendered_pdf(
             body_bytes=jpeg_bytes((page_number * 40, 20, 30)),
         )
 
+    existing_capture = tmp_path / "issuu_rendered_report.pdf"
+    existing_capture.write_bytes(b"%PDF-1.7 existing-verified-artifact")
     result = try_embedded_issuu_capture(
         request=BrowserReportDownloadRequest(
             schema_version="1.0",
@@ -93,6 +95,27 @@ def test_embedded_issuu_capture_builds_complete_rendered_pdf(
     assert result.outcome == "captured"
     assert result.onsite_capture_format == "rendered_onsite_pdf"
     assert result.onsite_page_count == 2
+    assert Path(str(result.onsite_capture_path)) != existing_capture
+    assert existing_capture.read_bytes() == b"%PDF-1.7 existing-verified-artifact"
+    replay_result = try_embedded_issuu_capture(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://publisher.example/reports/report",
+            settings=_settings(tmp_path),
+        ),
+        ctx=run_context,
+        normalized_url="https://publisher.example/reports/report",
+        download_dir=tmp_path,
+        source_page_url="https://publisher.example/reports/report-pdf/",
+        source_page_html=(
+            '<iframe src="https://e.issuu.com/embed.html?'
+            'd=report-2026&amp;u=publisher"></iframe>'
+        ),
+        http_acquisition_executor=execute,
+    )
+    assert replay_result is not None
+    assert Path(str(replay_result.onsite_capture_path)) != existing_capture
+    assert existing_capture.read_bytes() == b"%PDF-1.7 existing-verified-artifact"
     with fitz.open(result.onsite_capture_path) as document:
         assert document.page_count == 2
 
@@ -380,6 +403,10 @@ def test_embedded_adobe_indesign_capture_requires_complete_public_content(
             text_body=body,
         )
 
+    existing_html = tmp_path / "adobe_indesign_capture.html"
+    existing_json = tmp_path / "adobe_indesign_content.json"
+    existing_html.write_bytes(b"<html>existing-verified-artifact</html>")
+    existing_json.write_bytes(b'{"existing": true}')
     result = try_embedded_adobe_indesign_capture(
         request=BrowserReportDownloadRequest(
             schema_version="1.0",
@@ -399,8 +426,9 @@ def test_embedded_adobe_indesign_capture_requires_complete_public_content(
     assert result is not None
     assert result.outcome == "captured"
     assert result.onsite_page_count == 2
-    assert (tmp_path / "adobe_indesign_capture.html").is_file()
-    assert (tmp_path / "adobe_indesign_content.json").is_file()
+    assert Path(str(result.onsite_capture_path)) != existing_html
+    assert existing_html.read_bytes() == b"<html>existing-verified-artifact</html>"
+    assert existing_json.read_bytes() == b'{"existing": true}'
 
 
 def test_report_detail_without_route_hint_is_eligible_for_public_embed_capture(
@@ -445,6 +473,10 @@ def test_direct_onsite_capture_renders_public_detail_without_candidate_trace(
             ),
         )
 
+    existing_html = tmp_path / "onsite_capture.html"
+    existing_pdf = tmp_path / "onsite_capture.rendered.pdf"
+    existing_html.write_bytes(b"<html>existing-verified-artifact</html>")
+    existing_pdf.write_bytes(b"%PDF-1.7 existing-verified-artifact")
     result = try_direct_onsite_capture(
         request=BrowserReportDownloadRequest(
             schema_version="1.0",
@@ -462,7 +494,11 @@ def test_direct_onsite_capture_renders_public_detail_without_candidate_trace(
     assert result is not None
     assert result.outcome == "captured"
     assert result.onsite_capture_format == "rendered_onsite_pdf"
-    assert Path(str(result.onsite_capture_path)).read_bytes().startswith(b"%PDF")
+    capture_path = Path(str(result.onsite_capture_path))
+    assert capture_path != existing_pdf
+    assert capture_path.read_bytes().startswith(b"%PDF")
+    assert existing_html.read_bytes() == b"<html>existing-verified-artifact</html>"
+    assert existing_pdf.read_bytes() == b"%PDF-1.7 existing-verified-artifact"
 
 
 def test_direct_onsite_capture_does_not_choose_an_ambiguous_listing_hub(
@@ -573,6 +609,7 @@ __all__ = [
     "test_html_for_pdf_rendering_removes_external_assets_but_keeps_report_text",
     "test_adobe_indesign_capture_counts_distinct_published_pages",
     "test_embedded_adobe_indesign_capture_requires_complete_public_content",
+    "test_embedded_issuu_capture_builds_complete_rendered_pdf",
     "test_extract_embedded_adobe_indesign_publication_requires_public_view_url",
     "test_report_detail_without_route_hint_is_eligible_for_public_embed_capture",
     "test_direct_onsite_capture_renders_public_detail_without_candidate_trace",

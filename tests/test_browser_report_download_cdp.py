@@ -596,11 +596,7 @@ def test_browser_download_cdp_writes_print_pdf_capture(
 ) -> None:
     pdf_bytes = b"%PDF-1.7 browser-rendered"
     client = FakeCdpClient(
-        {
-            "Page.printToPDF": {
-                "data": base64.b64encode(pdf_bytes).decode("ascii")
-            }
-        }
+        {"Page.printToPDF": {"data": base64.b64encode(pdf_bytes).decode("ascii")}}
     )
     pdf_path = tmp_path / "rendered.pdf"
 
@@ -618,6 +614,60 @@ def test_browser_download_cdp_writes_print_pdf_capture(
     assert client.calls[0]["params"]["printBackground"] is True
 
 
+def test_browser_download_cdp_print_pdf_does_not_clobber_existing_capture(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    existing_bytes = b"%PDF-1.7 existing-verified-artifact"
+    replacement_bytes = b"%PDF-1.7 replacement-artifact"
+    pdf_path = tmp_path / "rendered.pdf"
+    pdf_path.write_bytes(existing_bytes)
+    client = FakeCdpClient(
+        {
+            "Page.printToPDF": {
+                "data": base64.b64encode(replacement_bytes).decode("ascii")
+            }
+        }
+    )
+
+    captured = capture_print_pdf_via_cdp(
+        browser=FakeBrowser(client),
+        pdf_path=pdf_path,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        required=True,
+    )
+
+    assert captured is True
+    assert pdf_path.read_bytes() == existing_bytes
+    published = [path for path in tmp_path.glob("*.pdf") if path != pdf_path]
+    assert len(published) == 1
+    assert published[0].read_bytes() == replacement_bytes
+
+
+def test_browser_download_cdp_print_pdf_invalid_attempt_preserves_existing_capture(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    existing_bytes = b"%PDF-1.7 existing-verified-artifact"
+    pdf_path = tmp_path / "rendered.pdf"
+    pdf_path.write_bytes(existing_bytes)
+    client = FakeCdpClient(
+        {"Page.printToPDF": {"data": base64.b64encode(b"not-a-pdf").decode("ascii")}}
+    )
+
+    captured = capture_print_pdf_via_cdp(
+        browser=FakeBrowser(client),
+        pdf_path=pdf_path,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        required=False,
+    )
+
+    assert captured is False
+    assert pdf_path.read_bytes() == existing_bytes
+
+
 def test_browser_download_cdp_print_pdf_bridges_from_browser_event_loop(
     tmp_path: Path,
     run_context,
@@ -627,11 +677,7 @@ def test_browser_download_cdp_print_pdf_bridges_from_browser_event_loop(
     async def run_capture() -> tuple[bool, bytes]:
         pdf_bytes = b"%PDF-1.7 browser-event-loop"
         client = FakeCdpClient(
-            {
-                "Page.printToPDF": {
-                    "data": base64.b64encode(pdf_bytes).decode("ascii")
-                }
-            }
+            {"Page.printToPDF": {"data": base64.b64encode(pdf_bytes).decode("ascii")}}
         )
         client._message_handler_task = asyncio.current_task()
         pdf_path = tmp_path / "event-loop-rendered.pdf"
@@ -668,9 +714,7 @@ def test_browser_download_cdp_async_print_pdf_uses_the_active_browser_loop(
                 ]
             },
             "Target.attachToTarget": {"sessionId": "report-session"},
-            "Page.printToPDF": {
-                "data": base64.b64encode(pdf_bytes).decode("ascii")
-            },
+            "Page.printToPDF": {"data": base64.b64encode(pdf_bytes).decode("ascii")},
             "Target.detachFromTarget": {},
         }
     )
@@ -832,9 +876,7 @@ def test_browser_download_cdp_print_pdf_uses_matching_target_url(
                 ]
             },
             "Target.attachToTarget": {"sessionId": "report-session"},
-            "Page.printToPDF": {
-                "data": base64.b64encode(pdf_bytes).decode("ascii")
-            },
+            "Page.printToPDF": {"data": base64.b64encode(pdf_bytes).decode("ascii")},
             "Target.detachFromTarget": {},
         }
     )

@@ -218,6 +218,10 @@ from src.services._browser_report_download._browser_runtime.worker_protocol impo
 from src.services._browser_report_download._http.config import (
     _TERMINAL_NOT_FOUND_BODY_MARKERS,
 )
+from src.services._browser_report_download.artifact_materialization import (
+    allocate_browser_artifact_stage,
+    materialize_external_browser_artifact,
+)
 from src.services._browser_report_download.artifact_paths import (
     ensure_browser_directory,
     resolve_browser_artifact_path,
@@ -347,11 +351,22 @@ def start_browser_preflight_session(
         normalized_url=normalized_url,
     )
     profile_dir = (
-        validate_browser_profile_path(Path(session_reuse_decision.profile_path))
+        validate_browser_profile_path(
+            Path(session_reuse_decision.profile_path),
+            parent_dir=Path(session_reuse_decision.profile_path).expanduser().parent,
+        )
         if session_reuse_decision.accepted and session_reuse_decision.profile_path
         else _new_managed_browser_profile_dir(download_dir)
     )
-    ensure_browser_directory(profile_dir, profile=True)
+    ensure_browser_directory(
+        profile_dir,
+        profile=True,
+        parent_dir=(
+            Path(session_reuse_decision.profile_path).expanduser().parent
+            if session_reuse_decision.accepted and session_reuse_decision.profile_path
+            else download_dir
+        ),
+    )
     browser_kwargs: dict[str, Any] = {
         "downloads_path": str(download_dir),
         "user_data_dir": str(profile_dir),
@@ -1682,10 +1697,9 @@ class _DeterministicPlaybookPageDriver:
     def save_as_pdf(self, target_url: str) -> str:
         if self._download_dir is None or self._ctx is None:
             raise RuntimeError("deterministic_playbook_pdf_capture_unavailable")
-        pdf_path = resolve_browser_artifact_path(
-            parent_dir=self._download_dir,
-            source_name="browser-route-playbook-rendered.pdf",
-            fixed_name="browser-route-playbook-rendered.pdf",
+        pdf_path = _select_rendered_pdf_destination(
+            download_dir=self._download_dir,
+            target_url=target_url or self._normalized_url,
         )
         if not capture_print_pdf_via_cdp(
             browser=self._browser,
@@ -1925,10 +1939,9 @@ class _AsyncDeterministicPlaybookPageDriver:
     async def save_as_pdf(self, target_url: str) -> str:
         if self._download_dir is None or self._ctx is None:
             raise RuntimeError("deterministic_playbook_pdf_capture_unavailable")
-        pdf_path = resolve_browser_artifact_path(
-            parent_dir=self._download_dir,
-            source_name="browser-route-playbook-rendered.pdf",
-            fixed_name="browser-route-playbook-rendered.pdf",
+        pdf_path = _select_rendered_pdf_destination(
+            download_dir=self._download_dir,
+            target_url=target_url or self._normalized_url,
         )
         if not capture_print_pdf_via_cdp(
             browser=self._browser,
@@ -2135,18 +2148,19 @@ def run_deterministic_browser_route_playbook(
     }
     if not _playbook_renders_current_page_to_pdf(playbook):
         _dismiss_explicit_cookie_banner(page)
+    page_driver = _DeterministicPlaybookPageDriver(
+        browser=browser,
+        page=page,
+        download_dir=download_dir,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     execution = execute_browser_route_playbook(
         BrowserRoutePlaybookExecutionRequest(
             schema_version="1.0",
             playbook=playbook,
             normalized_url=normalized_url,
-            page_driver=_DeterministicPlaybookPageDriver(
-                browser=browser,
-                page=page,
-                download_dir=download_dir,
-                ctx=ctx,
-                normalized_url=normalized_url,
-            ),
+            page_driver=page_driver,
             identity_values=identity_values,
         ),
         ctx,
@@ -2237,14 +2251,16 @@ def run_deterministic_browser_route_playbook(
     local_files = [
         str(path) for path in sorted(download_dir.iterdir()) if path.is_file()
     ]
-    rendered_pdf_path = next(
-        (
-            path
-            for path in local_files
-            if Path(path).name == "browser-route-playbook-rendered.pdf"
-        ),
-        "",
-    )
+    rendered_pdf_path = str(getattr(page_driver, "_rendered_pdf_path", "") or "")
+    if not rendered_pdf_path:
+        rendered_pdf_path = next(
+            (
+                path
+                for path in local_files
+                if Path(path).name.startswith("browser-route-playbook-rendered")
+            ),
+            "",
+        )
     return BrowserAgentRunResult(
         schema_version="1.0",
         raw_model_response=json.dumps(raw_result, ensure_ascii=True),
@@ -2298,18 +2314,19 @@ async def _run_async_deterministic_browser_route_playbook(
     }
     if not _playbook_renders_current_page_to_pdf(playbook):
         await _dismiss_explicit_cookie_banner_async(page)
+    page_driver = _AsyncDeterministicPlaybookPageDriver(
+        browser=browser,
+        page=page,
+        download_dir=download_dir,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     execution = await execute_browser_route_playbook_async(
         BrowserRoutePlaybookExecutionRequest(
             schema_version="1.0",
             playbook=playbook,
             normalized_url=normalized_url,
-            page_driver=_AsyncDeterministicPlaybookPageDriver(
-                browser=browser,
-                page=page,
-                download_dir=download_dir,
-                ctx=ctx,
-                normalized_url=normalized_url,
-            ),
+            page_driver=page_driver,
             identity_values=identity_values,
         ),
         ctx,
@@ -2380,14 +2397,16 @@ async def _run_async_deterministic_browser_route_playbook(
     local_files = [
         str(path) for path in sorted(download_dir.iterdir()) if path.is_file()
     ]
-    rendered_pdf_path = next(
-        (
-            path
-            for path in local_files
-            if Path(path).name == "browser-route-playbook-rendered.pdf"
-        ),
-        "",
-    )
+    rendered_pdf_path = str(getattr(page_driver, "_rendered_pdf_path", "") or "")
+    if not rendered_pdf_path:
+        rendered_pdf_path = next(
+            (
+                path
+                for path in local_files
+                if Path(path).name.startswith("browser-route-playbook-rendered")
+            ),
+            "",
+        )
     return BrowserAgentRunResult(
         schema_version="1.0",
         raw_model_response=json.dumps(raw_result, ensure_ascii=True),
@@ -2441,24 +2460,37 @@ async def _run_cdp_rendered_pdf_playbook(
         timeout_seconds=30.0,
     ):
         return None
-    pdf_path = resolve_browser_artifact_path(
-        parent_dir=download_dir,
-        source_name="browser-route-playbook-rendered.pdf",
-        fixed_name="browser-route-playbook-rendered.pdf",
-    )
-    if not await capture_print_pdf_via_cdp_async(
-        browser=browser,
-        pdf_path=pdf_path,
-        ctx=ctx,
-        normalized_url=normalized_url,
+    pdf_path = _select_rendered_pdf_destination(
+        download_dir=download_dir,
         target_url=target_url,
-    ):
-        return None
-    if step.expected_text.strip() and not _rendered_pdf_contains_text(
-        pdf_path, step.expected_text, ctx
-    ):
-        pdf_path.unlink(missing_ok=True)
-        return None
+    )
+    stage_path = allocate_browser_artifact_stage(pdf_path)
+    try:
+        captured = await capture_print_pdf_via_cdp_async(
+            browser=browser,
+            pdf_path=stage_path,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            target_url=target_url,
+            publish=False,
+        )
+        if not captured:
+            return None
+        if step.expected_text.strip() and not _rendered_pdf_contains_text(
+            stage_path, step.expected_text, ctx
+        ):
+            return None
+        published_path = materialize_external_browser_artifact(
+            source_path=stage_path,
+            download_dir=download_dir,
+            preferred_filename=pdf_path.name,
+            source_identity=f"{normalized_url}|{target_url}",
+        )
+        if published_path is None:
+            return None
+        pdf_path = published_path
+    finally:
+        stage_path.unlink(missing_ok=True)
     raw_result = {
         "route_kind": "onsite_report",
         "route_family": playbook.route_family,
@@ -2522,6 +2554,27 @@ async def _run_cdp_rendered_pdf_playbook(
         print_pdf_capture_provenance="browser_route_playbook_print_to_pdf",
         dialog_evidence=[],
         execution_route_steps=[route_step],
+    )
+
+
+def _select_rendered_pdf_destination(*, download_dir: Path, target_url: str) -> Path:
+    """Select a collision-safe PDF path before a capture writer starts."""
+
+    normal_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="browser-route-playbook-rendered.pdf",
+        fixed_name="browser-route-playbook-rendered.pdf",
+        temporary_suffixes=(".part",),
+    )
+    if not normal_path.exists():
+        return normal_path
+    return resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="browser-route-playbook-rendered.pdf",
+        fixed_name="browser-route-playbook-rendered.pdf",
+        identity=target_url,
+        force_identity_hash=True,
+        temporary_suffixes=(".part",),
     )
 
 
@@ -2722,11 +2775,25 @@ def run_browser_report_download_agent(
             normalized_url=normalized_url,
         )
         profile_dir = (
-            validate_browser_profile_path(Path(session_reuse_decision.profile_path))
+            validate_browser_profile_path(
+                Path(session_reuse_decision.profile_path),
+                parent_dir=Path(session_reuse_decision.profile_path)
+                .expanduser()
+                .parent,
+            )
             if session_reuse_decision.accepted and session_reuse_decision.profile_path
             else _new_managed_browser_profile_dir(download_dir)
         )
-        ensure_browser_directory(profile_dir, profile=True)
+        ensure_browser_directory(
+            profile_dir,
+            profile=True,
+            parent_dir=(
+                Path(session_reuse_decision.profile_path).expanduser().parent
+                if session_reuse_decision.accepted
+                and session_reuse_decision.profile_path
+                else download_dir
+            ),
+        )
     else:
         session_reuse_decision = preflight_session.session_reuse_decision
         profile_dir = preflight_session.profile_dir

@@ -140,12 +140,26 @@ def validate_browser_artifact_path(
 def validate_browser_profile_path(
     profile_dir: Path,
     *,
+    parent_dir: Path | None = None,
     profile_directory: str = "Default",
     include_session_ledger: bool = False,
 ) -> Path:
     """Validate a Chromium user-data directory and important descendants."""
 
     resolved = _resolve_path(profile_dir, role="browser profile directory")
+    intended_parent = _resolve_path(
+        parent_dir if parent_dir is not None else Path(profile_dir).expanduser().parent,
+        role="browser profile parent directory",
+    )
+    try:
+        resolved.relative_to(intended_parent)
+    except ValueError as exc:
+        raise _path_error(
+            role="browser profile directory",
+            path=resolved,
+            cause=exc,
+            next_action="Use a browser profile beneath its managed directory",
+        ) from exc
     _validate_component(
         resolved.name,
         path=resolved,
@@ -280,7 +294,10 @@ def validate_browser_download_directory(download_dir: Path) -> Path:
                 resolved / fixed_name,
                 temporary_suffixes=(".part",),
             )
-        validate_browser_profile_path(resolved / _MANAGED_PROFILE_COMPONENT)
+        validate_browser_profile_path(
+            resolved / _MANAGED_PROFILE_COMPONENT,
+            parent_dir=resolved,
+        )
     except AppError as exc:
         raise AppError(
             code="browser_download_output_dir_invalid",
@@ -313,6 +330,7 @@ def ensure_browser_directory(
     *,
     role: str = "browser artifact directory",
     profile: bool = False,
+    parent_dir: Path | None = None,
     include_session_ledger: bool = False,
 ) -> Path:
     """Validate and create a browser-owned directory with typed failures."""
@@ -320,6 +338,7 @@ def ensure_browser_directory(
     resolved = (
         validate_browser_profile_path(
             path,
+            parent_dir=parent_dir,
             include_session_ledger=include_session_ledger,
         )
         if profile

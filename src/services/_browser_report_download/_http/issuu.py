@@ -27,6 +27,10 @@ from src.contracts.http_acquisition import (
 from src.contracts.pdf_ocr import PdfImageRenderRequest
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download._http.config import _HTML_FETCH_HEADERS
+from src.services._browser_report_download.artifact_materialization import (
+    allocate_browser_artifact_stage,
+    materialize_external_browser_artifact,
+)
 from src.services._browser_report_download.artifact_paths import (
     resolve_browser_artifact_path,
 )
@@ -193,13 +197,15 @@ def try_embedded_issuu_capture(
         source_name="issuu_rendered_report.pdf",
         fixed_name="issuu_rendered_report.pdf",
     )
-    if not _write_rendered_pdf(
+    rendered_capture_path = _write_rendered_pdf(
         capture_path=capture_path,
         page_images=page_images,
         ctx=ctx,
-    ):
-        capture_path.unlink(missing_ok=True)
+        source_identity=f"{normalized_url}|{document_url}",
+    )
+    if rendered_capture_path is None:
         return None
+    capture_path = rendered_capture_path
     final_page_url = (
         str(document_response.final_url or document_url).strip() or document_url
     )
@@ -333,20 +339,36 @@ def _extract_issuu_metadata(html_source: str) -> tuple[str, str, int] | None:
 
 
 def _write_rendered_pdf(
-    *, capture_path: Path, page_images: list[bytes], ctx: RunContext
-) -> bool:
+    *,
+    capture_path: Path,
+    page_images: list[bytes],
+    ctx: RunContext,
+    source_identity: str,
+) -> Path | None:
+    stage_path = allocate_browser_artifact_stage(capture_path)
     try:
         response = render_image_pdf(
             PdfImageRenderRequest(
                 schema_version="1.0",
-                output_path=capture_path.as_posix(),
+                output_path=stage_path.as_posix(),
                 image_bytes=page_images,
             ),
             ctx,
         )
-        return response.rendered_page_count == len(page_images) and bool(page_images)
+        if response.rendered_page_count != len(page_images) or not page_images:
+            return None
+        if not stage_path.is_file() or not stage_path.read_bytes().startswith(b"%PDF-"):
+            return None
+        return materialize_external_browser_artifact(
+            source_path=stage_path,
+            download_dir=capture_path.parent,
+            preferred_filename=capture_path.name,
+            source_identity=source_identity,
+        )
     except AppError:
-        return False
+        return None
+    finally:
+        stage_path.unlink(missing_ok=True)
 
 
 __all__ = ["try_embedded_issuu_capture"]

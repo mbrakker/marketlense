@@ -34,6 +34,9 @@ from src.services._browser_report_download._http.html_evidence import (
     _extract_text_excerpt,
     _html_to_text,
 )
+from src.services._browser_report_download.artifact_materialization import (
+    materialize_browser_artifact_bytes,
+)
 from src.services._browser_report_download.artifact_paths import (
     resolve_browser_artifact_path,
 )
@@ -203,8 +206,22 @@ def try_embedded_adobe_indesign_capture(
         source_name="adobe_indesign_capture.html",
         fixed_name="adobe_indesign_capture.html",
     )
-    raw_capture_path.write_text(raw_content, encoding="utf-8")
-    capture_path.write_text(rendered_html, encoding="utf-8")
+    materialized_raw_capture_path = materialize_browser_artifact_bytes(
+        content=raw_content.encode("utf-8"),
+        download_dir=download_dir,
+        preferred_filename=raw_capture_path.name,
+        source_identity=f"{normalized_url}|{content_url}|raw",
+    )
+    materialized_capture_path = materialize_browser_artifact_bytes(
+        content=rendered_html.encode("utf-8"),
+        download_dir=download_dir,
+        preferred_filename=capture_path.name,
+        source_identity=f"{normalized_url}|{content_url}|html",
+    )
+    if materialized_raw_capture_path is None or materialized_capture_path is None:
+        return None
+    raw_capture_path = materialized_raw_capture_path
+    capture_path = materialized_capture_path
     final_page_url = str(viewer_response.final_url or viewer_url).strip() or viewer_url
     result = BrowserReportDownloadResult(
         schema_version="1.0",

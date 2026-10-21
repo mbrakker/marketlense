@@ -117,6 +117,7 @@ def resolve_browser_session_reuse(
     )
     profile_dir = validate_browser_profile_path(
         profile_dir,
+        parent_dir=base_dir,
         include_session_ledger=True,
     )
     profile_reused = _is_fresh_profile(profile_dir)
@@ -126,6 +127,7 @@ def resolve_browser_session_reuse(
         profile_dir,
         role="browser session-reuse profile directory",
         profile=True,
+        parent_dir=base_dir,
         include_session_ledger=True,
     )
     _write_session_ledger(
@@ -173,6 +175,7 @@ def finalize_browser_session_reuse(
         return
     profile_dir = validate_browser_profile_path(
         Path(decision.profile_path),
+        parent_dir=Path(decision.profile_path).expanduser().parent,
         include_session_ledger=True,
     )
     ledger = _read_json(profile_dir / _SESSION_REUSE_LEDGER_FILE)

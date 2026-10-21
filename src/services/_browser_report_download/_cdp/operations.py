@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import base64
 import asyncio
+import binascii
 import inspect
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
 from src.contracts.browser_download import BrowserDownloadDialogEvidence
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download.artifact_materialization import (
+    materialize_browser_artifact_bytes,
+)
 from src.services._browser_report_download.artifact_paths import (
     validate_browser_artifact_path,
 )
@@ -499,6 +504,7 @@ async def capture_print_pdf_via_cdp_async(
     ctx: RunContext,
     normalized_url: str,
     target_url: str,
+    publish: bool = True,
 ) -> bool:
     """Capture a rendered PDF on Browser Use's already-running event loop."""
 
@@ -609,6 +615,7 @@ async def capture_print_pdf_via_cdp_async(
         ctx=ctx,
         normalized_url=normalized_url,
         required=False,
+        publish=publish,
     )
 
 
@@ -788,6 +795,7 @@ def _write_print_pdf_capture(
     ctx: RunContext,
     normalized_url: str,
     required: bool,
+    publish: bool = True,
 ) -> bool:
     data = str(result.get("data") or "").strip()
     if not data:
@@ -801,9 +809,58 @@ def _write_print_pdf_capture(
             )
         return False
     try:
-        pdf_path.parent.mkdir(parents=True, exist_ok=True)
-        pdf_path.write_bytes(base64.b64decode(data))
-    except Exception as exc:
+        pdf_bytes = base64.b64decode(data, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        if required:
+            raise AppError(
+                code="browser_download_cdp_print_pdf_invalid",
+                message="CDP print-to-PDF output was not valid base64 data",
+                cause=exc,
+                retryable=True,
+                severity="error",
+                context={"normalized_url": normalized_url},
+            ) from exc
+        return False
+    if not pdf_bytes or not pdf_bytes.startswith(b"%PDF"):
+        if required:
+            raise AppError(
+                code="browser_download_cdp_print_pdf_invalid",
+                message="CDP print-to-PDF output was not a PDF artifact",
+                retryable=True,
+                severity="error",
+                context={"normalized_url": normalized_url},
+            )
+        return False
+    if not publish:
+        try:
+            pdf_path.parent.mkdir(parents=True, exist_ok=True)
+            with pdf_path.open("wb") as handle:
+                handle.write(pdf_bytes)
+                handle.flush()
+                os.fsync(handle.fileno())
+        except OSError as exc:
+            if required:
+                raise AppError(
+                    code="browser_download_cdp_print_pdf_write_failed",
+                    message="CDP print-to-PDF output could not be staged",
+                    cause=exc,
+                    retryable=True,
+                    severity="error",
+                    context={
+                        "normalized_url": normalized_url,
+                        "pdf_path": str(pdf_path),
+                    },
+                ) from exc
+            return False
+        return True
+    try:
+        published_path = materialize_browser_artifact_bytes(
+            content=pdf_bytes,
+            download_dir=pdf_path.parent,
+            preferred_filename=pdf_path.name,
+            source_identity=normalized_url,
+        )
+    except AppError as exc:
         if required:
             raise AppError(
                 code="browser_download_cdp_print_pdf_write_failed",
@@ -814,20 +871,15 @@ def _write_print_pdf_capture(
                 context={"normalized_url": normalized_url, "pdf_path": str(pdf_path)},
             ) from exc
         return False
-    if not pdf_path.exists() or pdf_path.stat().st_size <= 0:
-        return False
-    if not pdf_path.read_bytes().startswith(b"%PDF"):
-        pdf_path.unlink(missing_ok=True)
-        if required:
-            raise AppError(
-                code="browser_download_cdp_print_pdf_invalid",
-                message="CDP print-to-PDF output was not a PDF artifact",
-                retryable=True,
-                severity="error",
-                context={"normalized_url": normalized_url, "pdf_path": str(pdf_path)},
-            )
-        return False
-    return True
+    if published_path is None and required:
+        raise AppError(
+            code="browser_download_cdp_print_pdf_write_failed",
+            message="CDP print-to-PDF output could not be written to disk",
+            retryable=True,
+            severity="error",
+            context={"normalized_url": normalized_url, "pdf_path": str(pdf_path)},
+        )
+    return published_path is not None
 
 
 def _ensure_browser_download_target_hygiene_via_cdp(

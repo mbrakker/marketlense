@@ -72,3 +72,16 @@ def test_session_reuse_base_rejects_impossible_parent_before_creation(
 
     assert error.value.retryable is False
     assert not base_dir.exists()
+
+
+def test_browser_profile_path_must_stay_below_its_managed_parent(
+    tmp_path: Path,
+) -> None:
+    managed_root = tmp_path / "attempt"
+    outside_profile = tmp_path / "outside-profile"
+
+    with pytest.raises(AppError):
+        validate_browser_profile_path(
+            outside_profile,
+            parent_dir=managed_root,
+        )

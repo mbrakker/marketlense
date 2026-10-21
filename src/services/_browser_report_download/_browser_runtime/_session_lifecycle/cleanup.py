@@ -18,6 +18,7 @@ from src.services._browser_report_download._browser_runtime import (
 from src.services._browser_report_download.artifact_paths import (
     validate_browser_profile_path,
 )
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
@@ -68,7 +69,7 @@ def _new_managed_browser_profile_dir(download_dir: Path) -> Path:
     profile_dir = download_dir / (
         f"{_BROWSER_PROFILE_DIR_PREFIX}-{os.getpid()}-{int(time.time() * 1000)}"
     )
-    return validate_browser_profile_path(profile_dir)
+    return validate_browser_profile_path(profile_dir, parent_dir=download_dir)
 
 
 def _default_session_reuse_base_dir(
@@ -92,6 +93,20 @@ def _cleanup_managed_browser_profile_dirs(
         return
     for candidate in download_dir.glob(f"{_BROWSER_PROFILE_DIR_PREFIX}*"):
         if active_profile_dir is not None and candidate == active_profile_dir:
+            continue
+        try:
+            candidate = validate_browser_profile_path(
+                candidate,
+                parent_dir=download_dir,
+            )
+        except AppError as exc:
+            if ctx is not None:
+                _log_browser_cleanup_failure(
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    operation="validate_browser_profile_dir",
+                    error=exc,
+                )
             continue
         _cleanup_browser_profile_dir(
             candidate,
