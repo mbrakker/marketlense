@@ -2460,9 +2460,11 @@ async def _run_cdp_rendered_pdf_playbook(
         timeout_seconds=30.0,
     ):
         return None
-    pdf_path = _select_rendered_pdf_destination(
-        download_dir=download_dir,
-        target_url=target_url,
+    pdf_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="browser-route-playbook-rendered.pdf",
+        fixed_name="browser-route-playbook-rendered.pdf",
+        temporary_suffixes=(".part",),
     )
     stage_path = allocate_browser_artifact_stage(pdf_path)
     try:
