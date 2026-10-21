@@ -921,6 +921,267 @@ def _outcome_counts(selected_rows: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
+def _targeted_replay_accounting(
+    *,
+    requested_ids: set[str] | None,
+    reports: list[Mapping[str, Any]],
+) -> dict[str, Any] | None:
+    """Validate a stable-ID subset before any provider dispatch.
+
+    The full retained roster is kept as context, while only unambiguous,
+    eligible requested IDs are dispatchable.  A candidate that is duplicated
+    across reports or also appears in an unavailable inventory entry is not
+    silently selected.
+    """
+
+    if requested_ids is None:
+        return None
+
+    normalized_requested = sorted(
+        {
+            str(candidate_id).strip()
+            for candidate_id in requested_ids
+            if str(candidate_id).strip()
+        }
+    )
+    eligible_locations: dict[str, list[dict[str, Any]]] = {}
+    unavailable_by_id: dict[str, list[dict[str, Any]]] = {}
+    full_selected_count = 0
+    full_eligible_count = 0
+    full_unavailable_count = 0
+    for report_entry in reports:
+        report = str(report_entry.get("report") or "").strip()
+        selected_count = report_entry.get("selected_count")
+        if isinstance(selected_count, int) and selected_count >= 0:
+            full_selected_count += selected_count
+        eligible_claims = report_entry.get("eligible_claims")
+        if not isinstance(eligible_claims, list):
+            eligible_claims = []
+        full_eligible_count += len(eligible_claims)
+        for claim in eligible_claims:
+            if not isinstance(claim, Mapping):
+                continue
+            candidate_id = str(
+                claim.get("candidate_id") or claim.get("id") or ""
+            ).strip()
+            if not candidate_id:
+                continue
+            eligible_locations.setdefault(candidate_id, []).append({"report": report})
+
+        report_unavailable = report_entry.get("unavailable")
+        if not isinstance(report_unavailable, list):
+            report_unavailable = []
+        full_unavailable_count += len(report_unavailable)
+        for item in report_unavailable:
+            if not isinstance(item, Mapping):
+                continue
+            candidate_id = str(item.get("candidate_id") or "").strip()
+            if candidate_id:
+                unavailable_by_id.setdefault(candidate_id, []).append(dict(item))
+
+    matched_ids: list[str] = []
+    ambiguous: list[dict[str, Any]] = []
+    requested_unavailable: list[dict[str, Any]] = []
+    unknown: list[dict[str, Any]] = []
+    for candidate_id in normalized_requested:
+        locations = eligible_locations.get(candidate_id, [])
+        unavailable_items = unavailable_by_id.get(candidate_id, [])
+        if len(locations) == 1 and not unavailable_items:
+            matched_ids.append(candidate_id)
+            continue
+        if locations:
+            ambiguous.append(
+                {
+                    "candidate_id": candidate_id,
+                    "reason": "requested_candidate_id_ambiguous",
+                    "eligible_matches": locations,
+                    "unavailable_matches": unavailable_items,
+                }
+            )
+            continue
+        if unavailable_items:
+            requested_unavailable.extend(unavailable_items)
+            continue
+        unknown.append(
+            {
+                "candidate_id": candidate_id,
+                "reason": "requested_candidate_id_not_in_retained_roster",
+            }
+        )
+
+    rejected_count = len(ambiguous) + len(requested_unavailable) + len(unknown)
+    status = (
+        "no_matched_eligible_ids"
+        if not matched_ids
+        else "subset_partial"
+        if rejected_count
+        else "subset_ready"
+    )
+    return {
+        "subset_only": True,
+        "coverage_scope": "subset_only",
+        "status": status,
+        "requested_ids": normalized_requested,
+        "requested_count": len(normalized_requested),
+        "matched_ids": matched_ids,
+        "matched_count": len(matched_ids),
+        "dispatched_ids": list(matched_ids),
+        "dispatched_count": len(matched_ids),
+        "evaluated_ids": [],
+        "evaluated_count": 0,
+        "skipped_ids": [],
+        "skipped_count": 0,
+        "unavailable_ids": sorted(
+            {
+                str(item.get("candidate_id") or "")
+                for item in requested_unavailable
+                if str(item.get("candidate_id") or "")
+            }
+        ),
+        "unavailable_count": len(requested_unavailable),
+        "unavailable": requested_unavailable,
+        "ambiguous_ids": [item["candidate_id"] for item in ambiguous],
+        "ambiguous_count": len(ambiguous),
+        "ambiguous": ambiguous,
+        "unknown_ids": [item["candidate_id"] for item in unknown],
+        "unknown_count": len(unknown),
+        "unknown": unknown,
+        "provider_calls": 0,
+        "full_cohort": {
+            "selected_count": full_selected_count,
+            "eligible_count": full_eligible_count,
+            "unavailable_count": full_unavailable_count,
+            "eligible_ids": sorted(eligible_locations),
+        },
+    }
+
+
+def _complete_targeted_replay_accounting(
+    accounting: dict[str, Any] | None,
+    rows: list[dict[str, Any]],
+    usage: Mapping[str, Any],
+) -> None:
+    """Record terminal claim IDs after a targeted evaluator run."""
+
+    if accounting is None:
+        return
+    dispatched = set(accounting.get("dispatched_ids") or [])
+    evaluated_ids = sorted(
+        {
+            str(row.get("candidate_id") or "")
+            for row in rows
+            if str(row.get("candidate_id") or "") in dispatched
+        }
+    )
+    skipped_ids = sorted(
+        {
+            str(row.get("candidate_id") or "")
+            for row in rows
+            if str(row.get("candidate_id") or "") in dispatched
+            and row.get("outcome") == "skipped"
+        }
+    )
+    accounting["evaluated_ids"] = evaluated_ids
+    accounting["evaluated_count"] = len(evaluated_ids)
+    accounting["skipped_ids"] = skipped_ids
+    accounting["skipped_count"] = len(skipped_ids)
+    accounting["provider_calls"] = int(usage.get("provider_calls") or 0)
+    accounting["execution_status"] = (
+        "no_provider_calls" if not accounting.get("provider_calls") else "completed"
+    )
+
+
+def _empty_usage_summary() -> dict[str, Any]:
+    return {
+        "provider_calls": 0,
+        "input_tokens": None,
+        "output_tokens": None,
+        "total_tokens": None,
+        "estimated_cost_usd": None,
+    }
+
+
+def _targeted_no_dispatch_report(
+    *,
+    reports: list[str],
+    root: Path,
+    accounting: dict[str, Any],
+    manifest_sha256: str = "",
+    mode: str = "",
+    cohort_snapshot: Mapping[str, Any] | None = None,
+    shortlist_inventory: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Return an actionable subset result without loading provider settings."""
+
+    empty_outcomes = _outcome_counts([])
+    full_cohort = accounting["full_cohort"]
+    report: dict[str, Any] = {
+        "schema_version": "1.0",
+        "stage": "verified_claims_step2_visual_live",
+        "provider_status": "not_dispatched",
+        "model": "",
+        "reasoning_effort": "high",
+        "reports": reports,
+        "input_claim_count": 0,
+        "real_shortlisted_set": {
+            "selected_claim_count": accounting["unavailable_count"],
+            "eligible_claim_count": 0,
+            "input_claim_count": 0,
+            "expected_claim_count": full_cohort["selected_count"],
+            "evaluated_claim_count": 0,
+            "skipped_claim_count": 0,
+            "unavailable_claim_count": accounting["unavailable_count"],
+            "unavailable": accounting["unavailable"],
+            "skipped": [],
+            "outcomes": empty_outcomes,
+        },
+        "rendered_page_count": 0,
+        "outcomes": empty_outcomes,
+        "targeted_replay": accounting,
+        "usage": _empty_usage_summary(),
+        "wall_time_seconds": 0.0,
+        "cache": {
+            "enabled": True,
+            "cache_dir": str(root / "cache"),
+            "reuse_measured": False,
+        },
+        "claims": [],
+    }
+    if mode:
+        report["mode"] = mode
+        report["shadow_only"] = True
+        report["canonical_mutation"] = False
+        report["publication_write"] = False
+        report["real_shortlisted_set"].update(
+            {
+                "selected_claim_count": full_cohort["selected_count"],
+                "eligible_claim_count": 0,
+                "skipped_claim_count": 0,
+                "unavailable_claim_count": accounting["unavailable_count"],
+                "skipped": [],
+            }
+        )
+    else:
+        report["manifest_sha256"] = manifest_sha256
+        report["reference_set"] = {
+            "case_count": 0,
+            "candidate_variant_count": 0,
+        }
+        report["reference_comparison"] = {
+            "evaluated_claim_count": 0,
+            "outcomes": empty_outcomes,
+            "outcome_matches": 0,
+            "false_accepts": 0,
+            "false_rejects": 0,
+        }
+        report["shadow_replacement_selection"] = {}
+    if cohort_snapshot is not None:
+        report["cohort_snapshot"] = dict(cohort_snapshot)
+    if shortlist_inventory is not None:
+        report["shortlist_inventory"] = shortlist_inventory
+    return report
+
+
 def _assert_outcome_count_arithmetic(
     selected_rows: list[dict[str, Any]], counts: Mapping[str, int]
 ) -> None:
@@ -1532,6 +1793,46 @@ def replay_live_step2(
     report_order = reports or REPORT_ORDER
     root = output_root or (REPOSITORY_ROOT / "out" / "verified_claims_step2_live")
     root.mkdir(parents=True, exist_ok=True)
+    targeted_accounting: dict[str, Any] | None = None
+    targeted_retained_inputs: dict[
+        str,
+        tuple[list[dict[str, Any]], dict[str, dict[str, Any]], list[dict[str, Any]]],
+    ] = {}
+    targeted_ids: set[str] = set()
+    targeted_unavailable_ids: set[str] = set()
+    if real_claim_ids is not None:
+        for report in REPORT_ORDER:
+            if report not in report_order:
+                continue
+            targeted_retained_inputs[report] = _retained_claims(reference, report)
+        accounting = _targeted_replay_accounting(
+            requested_ids=real_claim_ids,
+            reports=[
+                {
+                    "report": report,
+                    "selected_count": len(retained_claims) + len(unavailable),
+                    "eligible_claims": retained_claims,
+                    "unavailable": unavailable,
+                }
+                for report, (
+                    retained_claims,
+                    _retained_metadata,
+                    unavailable,
+                ) in targeted_retained_inputs.items()
+            ],
+        )
+        if accounting is None:
+            raise RuntimeError("targeted replay accounting was not initialized")
+        targeted_accounting = accounting
+        targeted_ids = set(accounting["matched_ids"])
+        targeted_unavailable_ids = set(accounting["unavailable_ids"])
+        if not targeted_ids:
+            return _targeted_no_dispatch_report(
+                reports=report_order,
+                root=root,
+                accounting=targeted_accounting,
+                manifest_sha256=reference.get("scope", {}).get("manifest_sha256", ""),
+            )
     live_run_id = f"verified-claims-step2-live-{int(time.time())}"
     context = RunContext(
         schema_version="1.0",
@@ -1564,16 +1865,18 @@ def replay_live_step2(
         if report not in report_order:
             continue
         reference_claims, reference_metadata = (
-            _reference_claims(reference, report) if include_reference else ([], {})
-        )
-        retained_claims, retained_metadata, unavailable = _retained_claims(
-            reference, report
+            _reference_claims(reference, report)
+            if include_reference and real_claim_ids is None
+            else ([], {})
         )
         if real_claim_ids is not None:
+            retained_claims, retained_metadata, unavailable = targeted_retained_inputs[
+                report
+            ]
             retained_claims = [
                 claim
                 for claim in retained_claims
-                if str(claim.get("candidate_id") or "") in real_claim_ids
+                if str(claim.get("candidate_id") or "") in targeted_ids
             ]
             retained_metadata = {
                 key: value
@@ -1581,6 +1884,15 @@ def replay_live_step2(
                 if key
                 in {str(claim.get("candidate_id") or "") for claim in retained_claims}
             }
+            unavailable = [
+                item
+                for item in unavailable
+                if str(item.get("candidate_id") or "") in targeted_unavailable_ids
+            ]
+        else:
+            retained_claims, retained_metadata, unavailable = _retained_claims(
+                reference, report
+            )
         retained_input_count += len(retained_claims)
         retained_unavailable.extend(unavailable)
         claims = reference_claims + retained_claims
@@ -1753,10 +2065,20 @@ def replay_live_step2(
     _assert_outcome_count_arithmetic(retained_rows, real_outcomes)
     _assert_outcome_count_arithmetic(reference_rows, reference_outcomes)
     _assert_outcome_count_arithmetic(rows, all_outcomes)
+    _complete_targeted_replay_accounting(
+        targeted_accounting,
+        retained_rows,
+        usage,
+    )
     report = {
         "schema_version": "1.0",
         "stage": "verified_claims_step2_visual_live",
-        "provider_status": "dispatched",
+        "provider_status": (
+            "not_dispatched"
+            if targeted_accounting is not None
+            and not int(usage.get("provider_calls") or 0)
+            else "dispatched"
+        ),
         "model": settings.openai_model,
         "reasoning_effort": "high",
         "manifest_sha256": reference.get("scope", {}).get("manifest_sha256", ""),
@@ -1768,10 +2090,14 @@ def replay_live_step2(
                     for case in reference.get("cases", [])
                     if isinstance(case, dict) and case.get("report") in report_order
                 )
-                if include_reference
+                if include_reference and real_claim_ids is None
                 else 0
             ),
-            "candidate_variant_count": len(reference_rows) if include_reference else 0,
+            "candidate_variant_count": (
+                len(reference_rows)
+                if include_reference and real_claim_ids is None
+                else 0
+            ),
         },
         "input_claim_count": len(rows),
         "real_shortlisted_set": {
@@ -1779,7 +2105,11 @@ def replay_live_step2(
             "expected_claim_count": (
                 29
                 if real_claim_ids is None and report_order == REPORT_ORDER
-                else retained_input_count
+                else (
+                    targeted_accounting["full_cohort"]["selected_count"]
+                    if targeted_accounting is not None
+                    else retained_input_count
+                )
             ),
             "evaluated_claim_count": len(retained_rows),
             "unavailable": retained_unavailable,
@@ -1810,6 +2140,8 @@ def replay_live_step2(
         },
         "claims": rows,
     }
+    if targeted_accounting is not None:
+        report["targeted_replay"] = targeted_accounting
     return report
 
 
@@ -1898,6 +2230,45 @@ def replay_live_explicit_cohort(
     )
     root = output_root or (REPOSITORY_ROOT / "out" / "verified_claims_step2_live")
     root.mkdir(parents=True, exist_ok=True)
+    targeted_accounting = (
+        _targeted_replay_accounting(
+            requested_ids=real_claim_ids,
+            reports=list(inputs["reports"]),
+        )
+        if real_claim_ids is not None
+        else None
+    )
+    targeted_ids: set[str] = set()
+    targeted_unavailable: list[dict[str, Any]] = []
+    if targeted_accounting is not None:
+        targeted_ids = set(targeted_accounting["matched_ids"])
+        targeted_unavailable = list(targeted_accounting["unavailable"])
+    if targeted_accounting is not None and not targeted_ids:
+        inventory = [
+            {
+                "report": str(input_report.get("report") or ""),
+                "selected_count": int(input_report.get("selected_count") or 0),
+                "eligible_claim_count": 0,
+                "evaluated_claim_count": 0,
+                "skipped_claim_count": 0,
+                "unavailable_claim_count": len(input_report.get("unavailable") or []),
+                "eligible_candidate_ids": [],
+                "evaluated_candidate_ids": [],
+                "skipped": [],
+                "unavailable": list(input_report.get("unavailable") or []),
+            }
+            for input_report in inputs["reports"]
+        ]
+        return _targeted_no_dispatch_report(
+            reports=[str(item.get("report") or "") for item in inputs["reports"]],
+            root=root,
+            accounting=targeted_accounting,
+            mode="explicit_cohort_snapshot",
+            cohort_snapshot={
+                key: value for key, value in inputs.items() if key != "reports"
+            },
+            shortlist_inventory=inventory,
+        )
     live_run_id = f"verified-claims-step2-explicit-{int(time.time())}"
     context = RunContext(
         schema_version="1.0",
@@ -1932,7 +2303,7 @@ def replay_live_explicit_cohort(
             eligible_claims = [
                 claim
                 for claim in eligible_claims
-                if str(claim.get("candidate_id") or "") in real_claim_ids
+                if str(claim.get("candidate_id") or "") in targeted_ids
             ]
         claim_metadata = input_report.get("claim_metadata") or {}
         source = input_report.get("source") or {}
@@ -2124,11 +2495,21 @@ def replay_live_explicit_cohort(
     unavailable = [item for report in inventory for item in report["unavailable"]]
     skipped = [item for report in inventory for item in report["skipped"]]
     usage = _usage_summary(root / "cost-ledger.jsonl", run_id=live_run_id)
+    _complete_targeted_replay_accounting(
+        targeted_accounting,
+        rows,
+        usage,
+    )
     return {
         "schema_version": "1.0",
         "stage": "verified_claims_step2_visual_live",
         "mode": "explicit_cohort_snapshot",
-        "provider_status": "dispatched",
+        "provider_status": (
+            "not_dispatched"
+            if targeted_accounting is not None
+            and not int(usage.get("provider_calls") or 0)
+            else "dispatched"
+        ),
         "model": settings.openai_model,
         "reasoning_effort": "high",
         "shadow_only": True,
@@ -2138,14 +2519,22 @@ def replay_live_explicit_cohort(
             key: value for key, value in inputs.items() if key != "reports"
         },
         "reports": [item["report"] for item in inventory],
-        "input_claim_count": selected_count,
+        "input_claim_count": len(rows)
+        if targeted_accounting is not None
+        else selected_count,
         "real_shortlisted_set": {
             "selected_claim_count": selected_count,
             "eligible_claim_count": eligible_count,
             "evaluated_claim_count": len(rows),
             "skipped_claim_count": len(skipped),
-            "unavailable_claim_count": len(unavailable),
-            "unavailable": unavailable,
+            "unavailable_claim_count": (
+                len(targeted_unavailable)
+                if targeted_accounting is not None
+                else len(unavailable)
+            ),
+            "unavailable": (
+                targeted_unavailable if targeted_accounting is not None else unavailable
+            ),
             "skipped": skipped,
             "outcomes": outcomes,
         },
@@ -2161,6 +2550,11 @@ def replay_live_explicit_cohort(
             "reuse_measured": False,
         },
         "claims": rows,
+        **(
+            {"targeted_replay": targeted_accounting}
+            if targeted_accounting is not None
+            else {}
+        ),
     }
 
 
@@ -2352,7 +2746,7 @@ def main() -> int:
             replay_live_step2(
                 output_root=args.output.parent if args.output else None,
                 real_claim_ids=real_claim_ids or None,
-                include_reference=False if real_claim_ids else True,
+                include_reference=not real_claim_ids,
             )
             if args.live
             else replay_frozen_step2(provider_free=bool(args.provider_free))

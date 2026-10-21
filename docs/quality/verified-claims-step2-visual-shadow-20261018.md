@@ -2150,7 +2150,7 @@ historical Step 2/review manifests and canonical artifacts were not modified.
 
 | Candidate | Corrected/verified result | Fresh editorial result | Source pages and material finding |
 |---|---|---|---|
-| `activate-outlook-revenue-models` | Verified first pass | Approved wording but **blocked** by page reconciliation | Visual verifier cited 4–5; independent review cited 5–6; the corrected values are source-supported but the page binding is not silently reconciled. Activate SHA `5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c85655ae9dd4f2`. |
+| `activate-outlook-revenue-models` | Verified first pass | Approved wording but **blocked** by page reconciliation | Visual verifier cited 4–5; independent review cited 5–6; the corrected values are source-supported but the page binding is not silently reconciled. Activate SHA `5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`. |
 | `activate-ecommerce-capability-stack` | Verified first pass | Accepted | Page 115; corrected claim retains exclusion of travel and tickets. |
 | `guest-checkout-abandonment` | Verified after retry | Accepted | Page 8; corrected claim retains Digital Natives and separates the promotional-discount relationship. BigCommerce SHA `29ffb53b9818460066c86e8d954bdd904bd0e11d2360d90dac040a5d33b9e7c3`. |
 | `market-growth-share-breakdown` | Verified first pass | Accepted | Page 1; corrected claim says top 20 gainers per sector and December 31, 2015–2020. |
@@ -2204,3 +2204,126 @@ this correction passed **682 affected tests (1 skipped, 1 deselected)**,
 **115 prompt/LLM tests**, formatting, Ruff, mypy, documentation, backlog,
 repository-hygiene, contract-schema, architecture-import, role-boundary, and
 prompt-fixture gates.
+
+### Targeted factual-acceptance and replay-integrity correction — 2026-10-21
+
+This correction addresses the two remaining material holds from the `83ee68e`
+baseline and the ambiguity in `--real-claim-id` accounting. It does not claim a
+new Step 1 selection result: the live work below is a targeted, post-selection
+replay over retained artifacts and explicitly corrected source bindings.
+
+#### Targeted replay accounting
+
+`replay_verified_claims_step2.py` now validates requested IDs against the
+loaded eligible/unavailable roster before loading provider settings. Filtered
+runs report `subset_only: true` and separate requested, matched, dispatched,
+evaluated, skipped, unavailable, ambiguous, and unknown IDs/counts from the
+full-cohort `selected_count`, `eligible_count`, and `unavailable_count`.
+Unknown, ambiguous, and unavailable-only requests return `not_dispatched` with
+an actionable reason and zero provider calls. Unfiltered execution retains the
+existing full-cohort behavior. Focused replay coverage is **46 passed, 1
+skipped**. The provider-free exact replay remains **15 cases / 39 variants**,
+**29 retained IDs**, and **29/29 theme slots**, with all five source hashes
+matching and no provider or publication writes.
+
+The isolated retained Activate replay demonstrated why the distinction matters:
+the first two-call replay was not accepted because the verifier produced only
+the aggregate forecast and cited physical page 4; that result is retained as a
+failed/insufficient targeted observation, not treated as evidence of improved
+selection. A request for `cloud-platform-catalysts` against the frozen 29-ID
+roster matched no eligible ID and made zero provider calls because that ID is in
+the separate additional cohort. The correct explicit additional snapshot
+reported **25 selected / 24 eligible / 1 unavailable**, and its targeted Bain
+request dispatched only the unambiguous requested ID.
+
+#### Activate Outlook corrected replay
+
+The original PDF was inspected directly. Physical page 5 is the aggregate
+forecast chart (`$1.7T` in 2017E, `$2.0T` in 2021E, `$302B`, `4.1%` CAGR and
+approximately `3%` global GDP CAGR); physical page 6 is the segment chart. The
+hash-matched source is
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`.
+
+A fresh corrected-input shadow replay retained candidate ID and evidence
+identity while binding inspection to pages **5–6**. The final verified claim
+states the forecast segment relationships exactly: **Internet access `$128B /
+5.7%`**, **ad revenue `$108B / 4.7%`**, and **paid content `$66B / 2.3%`**, with
+Internet access defined to include fixed broadband, wireless, and mobile
+Internet access. The visual stage was **verified first pass**, with 2 calls,
+36,665 input tokens, 1,413 output tokens, 38,078 total tokens, estimated cost
+`$0.004373`, 18.935 seconds, and zero cache reuse. The fresh independent
+editorial review cited the same physical pages and was **approved / accepted**
+with 1 call, 18,340 input tokens, 1,162 output tokens, 19,502 total tokens,
+estimated cost `$0.002415`, and 13.8 seconds observed process time. Its fresh
+review-response SHA is
+`b424e3cad046c7ebcecf3b0b53309f16261833f146c6a5d41eaaea8abb3883d9`.
+
+The new immutable source-grounded record
+`docs/quality/verified-claims-step2-page-adjudication-20261022.json` binds that
+response hash, the source hash, inspected pages `[5,6]`, verifier pages
+`[5,6]`, reviewer pages `[5,6]`, and authoritative pages `[5,6]`. The page sets
+match, so the record does not override a disagreement; it records the corrected
+source location and does not reuse the historical rejected Activate
+adjudication. The fresh visual and review manifests hash to
+`6de8a48fee18ec00601f98eeb03ce516b6612e3cb7c62930f7bae12146bcda42` and
+`329b773f5b3f7f894aa5fd7b18121a8144486e4b497ebc5a9b72b290aa0d30ce`.
+
+#### Bain Cloud corrected replay
+
+Physical page 1 of the hash-matched Bain PDF
+`07541f3433b72007010ff604a93d0c560b6c6709ffd7bb5a58fefa81908f86c7` visibly
+defines the chart as the top 20 gainers **per sector**, compares December 31,
+2015 with December 31, 2020, and separately names cloud technology and platform
+business models as catalysts with four actions. The fresh corrected claim says
+that born-tech companies accounted for 52% of market-value growth among the top
+20 gainers per sector from December 31, 2015 to December 31, 2020, while
+tech-led strategy contributed another 20%, then preserves the distinct
+cloud/platform strategic recommendation and actions. It is not merely a
+paraphrase of accepted `market-growth-share-breakdown`: that insight is the
+quantitative market-mix finding, while this one retains the operational
+cloud/platform response.
+
+The visual stage was **verified first pass**, with 2 calls, 70,158 input tokens,
+2,272 output tokens, 72,430 total tokens, estimated cost `$0.008152`, 31.264
+seconds, and zero cache reuse. The fresh independent editorial review cited
+physical page 1 and was **approved / accepted** with 1 call, 35,103 input
+tokens, 1,322 output tokens, 36,425 total tokens, estimated cost `$0.004171`,
+and 17.7 seconds observed process time. Its fresh review-response SHA is
+`13d7a45e83779ee6efda5b940356d7927b921990113e12212faf197e9a82f90b`. The
+visual and review manifests hash to
+`7dcfd5280e94d16d1eef1f36c6df711fc79a779527972f03507888bbc5594db6` and
+`9d74cd6e5c520baa68d15f24011726cb7b8df44dbec4db68521906daa4f3aa37`.
+
+Across these two corrected targeted cycles there were **6 provider calls**,
+**160,266 input tokens**, **6,169 output tokens**, **166,435 total tokens**, and
+`$0.019111` estimated cost. These measurements cover only the two corrected
+claims and their independent reviews; they are not full-cohort cost or
+selection-effectiveness measurements.
+
+For completeness, two preliminary retained-input probes preceded the corrected
+cycles: Activate used 2 calls, 69,842 input tokens, 2,987 output tokens,
+72,829 total tokens, `$0.008478`, and 48.628 seconds; Bain used 2 calls,
+70,854 input tokens, 2,096 output tokens, 72,950 total tokens, `$0.008133`,
+and 34.422 seconds. The Activate probe produced only the aggregate claim with
+the wrong physical-page citation, and the Bain probe retained the unqualified
+“across sectors” wording; neither was accepted. Including those diagnostic
+probes, the observed work used **10 calls**, **300,962 input tokens**, **11,252
+output tokens**, **312,214 total tokens**, and **$0.035722** estimated cost.
+Provider/cache reuse was not measured as a reuse hit in these isolated output
+roots.
+
+#### Preserved safeguards and verdict
+
+The accepted eCommerce, guest-checkout, and market-growth outcomes were not
+reprocessed. Reuters browser page 41, Reuters AI-search page 12, the existing
+Adjust finance adjudication, the wrong-page fail-closed behavior, and the
+Merchant Risk Council unavailable identity remain unchanged. No canonical claim,
+readiness state, publication artifact, or WordPress content was written.
+
+Targeted factual acceptance and subset accounting are **PASS** for the focused
+correction. Overall Step 2 remains **PARTIAL**: the corrected Activate and Bain
+holds are now source-grounded and independently accepted, but these are
+post-selection targeted replays and do not establish fresh Step 1 selection
+effectiveness, repeated-run stability, P6 human acceptance, or canonical
+source-binding completeness. Step 3 remains **NO-GO / unstarted** until those
+independent gates are satisfied.

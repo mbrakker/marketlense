@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "artifact_kind": "verified_claims_step2_page_adjudication",
+  "immutable": true,
+  "created_at": "2026-10-21",
+  "reason": "Fresh corrected Activate claim replayed with the complete source-supported physical page set; the prior rejected adjudication is not reused.",
+  "adjudications": [
+    {
+      "adjudication_id": "page-adjudication-activate-outlook-20261022-corrected",
+      "status": "accepted",
+      "cohort": "frozen_five",
+      "report_name": "Activate",
+      "candidate_id": "activate-outlook-revenue-models",
+      "source_pdf_sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
+      "review_response_sha256": "b424e3cad046c7ebcecf3b0b53309f16261833f146c6a5d41eaaea8abb3883d9",
+      "inspected_physical_pages": [5, 6],
+      "step2_supporting_physical_pages": [5, 6],
+      "reviewer_supporting_physical_pages": [5, 6],
+      "adjudicated_physical_pages": [5, 6],
+      "source_grounded_explanation": "The fresh verifier and independent reviewer both inspected physical pages 5 and 6 of the hash-matched Activate PDF. Page 5 supports the $1.7T to $2.0T forecast, $302B growth, 4.1% CAGR, and approximately 3% global GDP CAGR. Page 6 supports $128B at 5.7% for cost of Internet access, $108B at 4.7% for advertising, and $66B at 2.3% for paid content, including the fixed-broadband, wireless, and mobile-Internet-access definition. The page sets match, so this adjudication records the corrected source location without reusing the historical rejected binding."
+    }
+  ]
+}

@@ -12,12 +12,107 @@ from scripts.quality.replay_verified_claims_step2 import (
     _editorial_quality_report,
     _shadow_quality_assessment,
     _shadow_replacement_selection,
+    _targeted_replay_accounting,
     _usage_summary,
     _valid_supporting_pages,
     _verified_corrected_insight,
 )
 from src.contracts.run_context import RunContext
 from src.generators.verified_claims_recovery import build_verified_claims_shadow_request
+
+
+def test_targeted_replay_accounting_keeps_full_roster_separate_from_subset() -> None:
+    accounting = _targeted_replay_accounting(
+        requested_ids={
+            "valid-1",
+            "valid-2",
+            "duplicate-id",
+            "unavailable-1",
+            "unknown-1",
+        },
+        reports=[
+            {
+                "report": "Activate",
+                "selected_count": 2,
+                "eligible_claims": [{"candidate_id": "valid-1"}],
+                "unavailable": [
+                    {
+                        "candidate_id": "unavailable-1",
+                        "reason": "retained_claim_missing_id_text_or_pages",
+                    }
+                ],
+            },
+            {
+                "report": "Bain & Company",
+                "selected_count": 2,
+                "eligible_claims": [
+                    {"candidate_id": "valid-2"},
+                    {"candidate_id": "duplicate-id"},
+                ],
+                "unavailable": [],
+            },
+            {
+                "report": "Reuters Institute",
+                "selected_count": 1,
+                "eligible_claims": [{"candidate_id": "duplicate-id"}],
+                "unavailable": [],
+            },
+        ],
+    )
+
+    assert accounting["subset_only"] is True
+    assert accounting["requested_ids"] == sorted(
+        {
+            "valid-1",
+            "valid-2",
+            "duplicate-id",
+            "unavailable-1",
+            "unknown-1",
+        }
+    )
+    assert accounting["matched_ids"] == ["valid-1", "valid-2"]
+    assert accounting["dispatched_ids"] == ["valid-1", "valid-2"]
+    assert accounting["ambiguous_ids"] == ["duplicate-id"]
+    assert accounting["unavailable_ids"] == ["unavailable-1"]
+    assert accounting["unknown_ids"] == ["unknown-1"]
+    assert accounting["full_cohort"]["selected_count"] == 5
+    assert accounting["full_cohort"]["eligible_count"] == 4
+    assert accounting["full_cohort"]["unavailable_count"] == 1
+
+
+def test_targeted_replay_accounting_reports_no_dispatch_for_invalid_ids() -> None:
+    accounting = _targeted_replay_accounting(
+        requested_ids={"unknown-1", "unavailable-1"},
+        reports=[
+            {
+                "report": "Activate",
+                "selected_count": 1,
+                "eligible_claims": [],
+                "unavailable": [
+                    {"candidate_id": "unavailable-1", "reason": "source_unavailable"}
+                ],
+            }
+        ],
+    )
+
+    assert accounting["matched_ids"] == []
+    assert accounting["dispatched_ids"] == []
+    assert accounting["status"] == "no_matched_eligible_ids"
+    assert accounting["provider_calls"] == 0
+    assert accounting["unavailable"][0]["reason"] == "source_unavailable"
+    assert accounting["unknown"][0]["reason"] == (
+        "requested_candidate_id_not_in_retained_roster"
+    )
+
+
+def test_unfiltered_replay_has_no_targeted_subset_accounting() -> None:
+    assert (
+        _targeted_replay_accounting(
+            requested_ids=None,
+            reports=[],
+        )
+        is None
+    )
 
 
 @pytest.mark.parametrize(
