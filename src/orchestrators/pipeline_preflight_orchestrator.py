@@ -3282,7 +3282,11 @@ def _persist_resolved_policy_matrix(
         compact_run_id = hashlib.sha256(
             str(ctx.run_id).encode("utf-8")
         ).hexdigest()[:16]
-        path = path.with_name(f"{compact_run_id}.llm_policy_matrix.json")
+        path = (
+            Path(str(request.settings.output_dir))
+            / "pf"
+            / f"{compact_run_id}.llm_policy_matrix.json"
+        )
     payload = {
         "schema_version": "1.0",
         "run_id": str(ctx.run_id),

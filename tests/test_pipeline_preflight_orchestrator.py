@@ -365,7 +365,7 @@ def test_pipeline_preflight_persists_policy_matrix_under_a_deep_windows_safe_roo
         dependencies=replace(_deps(tmp_path), write_bytes=file_service.write_bytes),
     )
 
-    matrix_files = list((output_dir / "preflight").glob("*.json"))
+    matrix_files = list((output_dir / "pf").glob("*.json"))
     assert report.passed is True
     assert len(matrix_files) == 1
     payload = json.loads(matrix_files[0].read_text(encoding="utf-8"))
