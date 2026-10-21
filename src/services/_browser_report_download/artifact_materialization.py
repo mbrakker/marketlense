@@ -22,18 +22,37 @@ _MAX_MATERIALIZATION_ATTEMPTS = 100
 _PublishResult = Literal["published", "conflict", "failed"]
 
 
-def allocate_browser_artifact_stage(destination_path: Path) -> Path:
+def allocate_browser_artifact_stage(
+    destination_path: Path,
+    *,
+    stage_suffix: str = ".part",
+) -> Path:
     """Allocate one private, validated staging file beside an artifact."""
 
     destination = validate_browser_artifact_path(
         destination_path,
         temporary_suffixes=(".part",),
     )
+    if (
+        not stage_suffix
+        or "/" in stage_suffix
+        or "\\" in stage_suffix
+        or stage_suffix in {".", ".."}
+    ):
+        raise AppError(
+            code="browser_download_artifact_stage_failed",
+            message="Browser artifact staging suffix is invalid",
+            retryable=False,
+            context={
+                "path_role": "browser artifact staging file",
+                "destination_path": str(destination),
+            },
+        )
     try:
         destination.parent.mkdir(parents=True, exist_ok=True)
         file_descriptor, stage_name = tempfile.mkstemp(
             prefix="capture-",
-            suffix=".part",
+            suffix=stage_suffix,
             dir=str(destination.parent),
         )
         os.close(file_descriptor)

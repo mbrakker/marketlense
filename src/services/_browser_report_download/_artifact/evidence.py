@@ -19,8 +19,8 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
-from src.services._browser_report_download.artifact_paths import (
-    resolve_browser_artifact_path,
+from src.services._browser_report_download.artifact_materialization import (
+    materialize_browser_artifact_bytes,
 )
 from src.services._browser_report_download.models import (
     BrowserAgentRunResult,
@@ -576,6 +576,7 @@ def _resolve_terminal_html_and_snapshot(
         return current_html, _write_terminal_html_snapshot(
             download_dir=download_dir,
             html=current_html,
+            source_identity=final_url or resolved_target_url or normalized_url,
         )
     if route_kind == "pdf_download":
         return "", current_snapshot
@@ -592,6 +593,7 @@ def _resolve_terminal_html_and_snapshot(
         return fetched_html, _write_terminal_html_snapshot(
             download_dir=download_dir,
             html=fetched_html,
+            source_identity=fetch_target,
         )
     return "", current_snapshot
 
@@ -628,20 +630,21 @@ def _write_terminal_html_snapshot(
     *,
     download_dir: Path,
     html: str,
+    source_identity: str = "",
 ) -> str:
     token = str(html or "")
     if not token.strip():
         return ""
-    snapshot_path = resolve_browser_artifact_path(
-        parent_dir=download_dir,
-        source_name="terminal_snapshot.html",
-        fixed_name="terminal_snapshot.html",
-    )
     try:
-        snapshot_path.write_text(token, encoding="utf-8")
-    except OSError:
+        published_path = materialize_browser_artifact_bytes(
+            content=token.encode("utf-8"),
+            download_dir=download_dir,
+            preferred_filename="terminal_snapshot.html",
+            source_identity=str(source_identity or "terminal_snapshot.html"),
+        )
+    except (AppError, OSError):
         return ""
-    return str(snapshot_path)
+    return str(published_path or "")
 
 
 def _extract_html_title(html: str) -> str:

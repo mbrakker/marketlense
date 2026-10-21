@@ -326,7 +326,8 @@ def capture_terminal_screenshot_via_cdp(
     ctx: RunContext,
     normalized_url: str,
     required: bool = False,
-) -> bool:
+    return_path: bool = False,
+) -> bool | Path | None:
     screenshot_path = validate_browser_artifact_path(screenshot_path)
     call_result = call_browser_download_cdp(
         browser=browser,
@@ -337,7 +338,7 @@ def capture_terminal_screenshot_via_cdp(
         required=required,
     )
     if call_result.status != "ok":
-        return False
+        return None if return_path else False
     data = str(call_result.result.get("data") or "").strip()
     if not data:
         if required:
@@ -348,7 +349,7 @@ def capture_terminal_screenshot_via_cdp(
                 severity="error",
                 context={"normalized_url": normalized_url},
             )
-        return False
+        return None if return_path else False
     try:
         screenshot_bytes = base64.b64decode(data, validate=True)
         published_path = materialize_browser_artifact_bytes(
@@ -370,8 +371,10 @@ def capture_terminal_screenshot_via_cdp(
                     "screenshot_path": str(screenshot_path),
                 },
             ) from exc
-        return False
-    if published_path is None and required:
+        return None if return_path else False
+    if published_path is None:
+        if not required:
+            return None if return_path else False
         raise AppError(
             code="browser_download_cdp_screenshot_write_failed",
             message="CDP screenshot capture could not be written to disk",
@@ -382,7 +385,7 @@ def capture_terminal_screenshot_via_cdp(
                 "screenshot_path": str(screenshot_path),
             },
         )
-    return published_path is not None
+    return published_path if return_path else True
 
 
 def collect_terminal_dialog_evidence_via_cdp(

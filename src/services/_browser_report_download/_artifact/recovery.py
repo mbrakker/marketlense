@@ -286,7 +286,11 @@ def _recover_salvaged_terminal_html(
             return current_html, current_snapshot, recovered_final_url
         return (
             current_html,
-            _write_terminal_html_snapshot(download_dir=download_dir, html=current_html),
+            _write_terminal_html_snapshot(
+                download_dir=download_dir,
+                html=current_html,
+                source_identity=recovered_final_url or normalized_url,
+            ),
             recovered_final_url,
         )
     fetch_targets = _normalize_string_list(
@@ -307,7 +311,11 @@ def _recover_salvaged_terminal_html(
             continue
         return (
             fetched_html,
-            _write_terminal_html_snapshot(download_dir=download_dir, html=fetched_html),
+            _write_terminal_html_snapshot(
+                download_dir=download_dir,
+                html=fetched_html,
+                source_identity=fetch_target,
+            ),
             fetch_target,
         )
     return "", current_snapshot, recovered_final_url

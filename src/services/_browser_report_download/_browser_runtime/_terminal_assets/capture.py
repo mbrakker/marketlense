@@ -75,6 +75,7 @@ def _capture_terminal_assets(
     html_snapshot_path = _write_terminal_html_snapshot(
         download_dir=download_dir,
         final_page_html=final_page_html,
+        source_identity=final_page_url or normalized_url,
     )
     screenshot_path = _write_terminal_screenshot(
         browser=browser,

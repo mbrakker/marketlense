@@ -3,18 +3,23 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-import shutil
 from pathlib import Path
 from threading import Thread
 from typing import Any
 
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download.artifact_materialization import (
+    allocate_browser_artifact_stage,
+    materialize_browser_artifact_bytes,
+    materialize_external_browser_artifact,
+)
 from src.services._browser_report_download.artifact_paths import (
     resolve_browser_artifact_path,
 )
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
 )
+from src.utils.errors import AppError
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
@@ -52,13 +57,15 @@ def _copy_history_screenshot(*, history: Any, download_dir: Path) -> str:
         fixed_name="terminal_screenshot.png",
     )
     try:
-        if source_path.resolve() != target_path.resolve():
-            shutil.copy2(source_path, target_path)
-        else:
-            target_path = source_path
-    except OSError:
-        return str(source_path)
-    return str(target_path)
+        published_path = materialize_external_browser_artifact(
+            source_path=source_path,
+            download_dir=download_dir,
+            preferred_filename=target_path.name,
+            source_identity=str(source_path),
+        )
+    except (AppError, OSError):
+        return ""
+    return str(published_path or "")
 
 
 def _read_history_final_state(history: Any) -> Any:
@@ -175,20 +182,21 @@ def _write_terminal_html_snapshot(
     *,
     download_dir: Path,
     final_page_html: str,
+    source_identity: str = "",
 ) -> str:
     token = str(final_page_html or "")
     if not token.strip():
         return ""
-    snapshot_path = resolve_browser_artifact_path(
-        parent_dir=download_dir,
-        source_name="terminal_snapshot.html",
-        fixed_name="terminal_snapshot.html",
-    )
     try:
-        snapshot_path.write_text(token, encoding="utf-8")
-    except OSError:
+        published_path = materialize_browser_artifact_bytes(
+            content=token.encode("utf-8"),
+            download_dir=download_dir,
+            preferred_filename="terminal_snapshot.html",
+            source_identity=str(source_identity or "terminal_snapshot.html"),
+        )
+    except (AppError, OSError):
         return ""
-    return str(snapshot_path)
+    return str(published_path or "")
 
 
 def _write_terminal_screenshot(
@@ -219,19 +227,34 @@ def _try_screenshot_call(*, candidate: Any, screenshot_path: Path) -> bool:
     if not callable(candidate):
         return False
     try:
-        result = candidate(path=str(screenshot_path), full_page=True)
-        if inspect.isawaitable(result):
-            _run_awaitable(result)
-    except TypeError:
+        stage_path = allocate_browser_artifact_stage(
+            screenshot_path,
+            stage_suffix=".png",
+        )
+    except (AppError, OSError):
+        return False
+    try:
         try:
-            result = candidate(str(screenshot_path))
+            result = candidate(path=str(stage_path), full_page=True)
             if inspect.isawaitable(result):
                 _run_awaitable(result)
-        except Exception:
+        except TypeError:
+            result = candidate(str(stage_path))
+            if inspect.isawaitable(result):
+                _run_awaitable(result)
+        if not stage_path.exists() or stage_path.stat().st_size <= 0:
             return False
-    except Exception:
+        published_path = materialize_external_browser_artifact(
+            source_path=stage_path,
+            download_dir=screenshot_path.parent,
+            preferred_filename=screenshot_path.name,
+            source_identity=str(screenshot_path),
+        )
+        return published_path is not None
+    except (AppError, OSError):
         return False
-    return screenshot_path.exists()
+    finally:
+        stage_path.unlink(missing_ok=True)
 
 
 def _maybe_await(value: Any) -> Any:

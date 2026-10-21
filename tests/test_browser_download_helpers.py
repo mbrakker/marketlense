@@ -426,6 +426,28 @@ def test_screenshot_positive_and_required_failure(
     )
 
 
+def test_screenshot_collision_preserves_verified_capture_and_reports_new_path(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    screenshot_path = tmp_path / "terminal_screenshot.png"
+    existing_bytes = b"verified-existing-screenshot"
+    screenshot_path.write_bytes(existing_bytes)
+
+    result = browser_helper_capture_screenshot(
+        browser=FakeBrowser(),
+        page=FakePage(),
+        screenshot_path=screenshot_path,
+        ctx=run_context,
+        normalized_url="https://publisher.example/report",
+    )
+
+    assert result.status == "ok"
+    assert Path(result.path) != screenshot_path
+    assert screenshot_path.read_bytes() == existing_bytes
+    assert Path(result.path).read_bytes() == b"fake-png"
+
+
 def test_js_positive_and_required_failure(
     run_context,
     assert_no_defaulted_required_fields,

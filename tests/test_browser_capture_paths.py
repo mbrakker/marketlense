@@ -5,6 +5,9 @@ from pathlib import Path
 import pytest
 
 from src.services._browser_report_download._artifact import onsite as onsite_runtime
+from src.services._browser_report_download._artifact.evidence import (
+    _write_terminal_html_snapshot as _write_artifact_terminal_html_snapshot,
+)
 from src.services._browser_report_download._artifact.onsite import (
     _capture_salvaged_onsite_html,
     _generated_onsite_capture_format,
@@ -59,6 +62,44 @@ def test_fixed_terminal_capture_name_remains_unchanged(tmp_path: Path) -> None:
     )
 
     assert Path(path).name == "terminal_snapshot.html"
+
+
+def test_terminal_html_snapshot_collision_preserves_verified_capture(
+    tmp_path: Path,
+) -> None:
+    snapshot_path = tmp_path / "terminal_snapshot.html"
+    existing_bytes = b"<html><body>verified-existing</body></html>"
+    snapshot_path.write_bytes(existing_bytes)
+
+    path = _write_terminal_html_snapshot(
+        download_dir=tmp_path,
+        final_page_html="<html><body>replacement</body></html>",
+    )
+
+    assert Path(path) != snapshot_path
+    assert snapshot_path.read_bytes() == existing_bytes
+    assert Path(path).read_text(encoding="utf-8") == (
+        "<html><body>replacement</body></html>"
+    )
+
+
+def test_artifact_terminal_html_snapshot_collision_preserves_verified_capture(
+    tmp_path: Path,
+) -> None:
+    snapshot_path = tmp_path / "terminal_snapshot.html"
+    existing_bytes = b"<html><body>verified-existing</body></html>"
+    snapshot_path.write_bytes(existing_bytes)
+
+    path = _write_artifact_terminal_html_snapshot(
+        download_dir=tmp_path,
+        html="<html><body>replacement</body></html>",
+    )
+
+    assert Path(path) != snapshot_path
+    assert snapshot_path.read_bytes() == existing_bytes
+    assert Path(path).read_text(encoding="utf-8") == (
+        "<html><body>replacement</body></html>"
+    )
 
 
 def test_salvage_capture_does_not_delete_existing_download_artifact(
