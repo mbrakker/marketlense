@@ -196,12 +196,34 @@ def validate_browser_profile_path(
             )
         )
     for descendant in descendants:
+        allowed_parent = (
+            resolved.parent
+            if include_session_ledger
+            and descendant == resolved.parent / "session_key_index.json"
+            else resolved
+        )
+        resolved_descendant = _resolve_path(
+            descendant,
+            role="browser profile descendant",
+        )
+        try:
+            resolved_descendant.relative_to(allowed_parent)
+        except ValueError as exc:
+            raise _path_error(
+                role="browser profile descendant",
+                path=resolved_descendant,
+                cause=exc,
+                next_action="Remove profile redirects outside the managed directory",
+            ) from exc
         _validate_component(
             descendant.name,
             path=descendant,
             role="browser profile descendant",
         )
-        _validate_path_budget(descendant, role="browser profile descendant")
+        _validate_path_budget(
+            resolved_descendant,
+            role="browser profile descendant",
+        )
     return resolved
 
 

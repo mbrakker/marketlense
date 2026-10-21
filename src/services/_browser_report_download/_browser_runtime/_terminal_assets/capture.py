@@ -220,15 +220,18 @@ def _maybe_capture_print_pdf_fallback(
         download_dir=download_dir,
         final_page_url=final_page_url or normalized_url,
     )
-    if not capture_print_pdf_via_cdp(
+    captured_path = capture_print_pdf_via_cdp(
         browser=browser,
         pdf_path=pdf_path,
         ctx=ctx,
         normalized_url=normalized_url,
         required=False,
         target_url=final_page_url or normalized_url,
-    ):
+        return_path=True,
+    )
+    if not isinstance(captured_path, Path):
         return ""
+    pdf_path = captured_path
     logger.info(
         log_event(
             ctx,

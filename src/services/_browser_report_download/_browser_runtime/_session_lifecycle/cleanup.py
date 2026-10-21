@@ -53,9 +53,13 @@ def _cleanup_browser_profile_dir(
     normalized_url: str = "",
 ) -> None:
     try:
-        if profile_dir.exists():
-            shutil.rmtree(profile_dir, ignore_errors=True)
-    except OSError as exc:
+        validated_profile_dir = validate_browser_profile_path(
+            profile_dir,
+            parent_dir=profile_dir.expanduser().parent,
+        )
+        if validated_profile_dir.exists():
+            shutil.rmtree(validated_profile_dir, ignore_errors=True)
+    except (AppError, OSError) as exc:
         if ctx is not None:
             _log_browser_cleanup_failure(
                 ctx=ctx,

@@ -590,6 +590,37 @@ def test_browser_download_cdp_writes_terminal_screenshot(
     assert screenshot_path.read_bytes() == image_bytes
 
 
+def test_browser_download_cdp_screenshot_does_not_clobber_existing_capture(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    existing_bytes = b"\x89PNG\r\n\x1a\nexisting-verified-artifact"
+    replacement_bytes = b"\x89PNG\r\n\x1a\nreplacement-artifact"
+    screenshot_path = tmp_path / "terminal_screenshot.png"
+    screenshot_path.write_bytes(existing_bytes)
+    client = FakeCdpClient(
+        {
+            "Page.captureScreenshot": {
+                "data": base64.b64encode(replacement_bytes).decode("ascii")
+            }
+        }
+    )
+
+    captured = capture_terminal_screenshot_via_cdp(
+        browser=FakeBrowser(client),
+        screenshot_path=screenshot_path,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        required=True,
+    )
+
+    assert captured is True
+    assert screenshot_path.read_bytes() == existing_bytes
+    published = [path for path in tmp_path.glob("*.png") if path != screenshot_path]
+    assert len(published) == 1
+    assert published[0].read_bytes() == replacement_bytes
+
+
 def test_browser_download_cdp_writes_print_pdf_capture(
     tmp_path: Path,
     run_context,
@@ -636,13 +667,13 @@ def test_browser_download_cdp_print_pdf_does_not_clobber_existing_capture(
         ctx=run_context,
         normalized_url="https://example.com/report",
         required=True,
+        return_path=True,
     )
 
-    assert captured is True
+    assert isinstance(captured, Path)
     assert pdf_path.read_bytes() == existing_bytes
-    published = [path for path in tmp_path.glob("*.pdf") if path != pdf_path]
-    assert len(published) == 1
-    assert published[0].read_bytes() == replacement_bytes
+    assert captured != pdf_path
+    assert captured.read_bytes() == replacement_bytes
 
 
 def test_browser_download_cdp_print_pdf_invalid_attempt_preserves_existing_capture(

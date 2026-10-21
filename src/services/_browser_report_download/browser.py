@@ -1701,17 +1701,19 @@ class _DeterministicPlaybookPageDriver:
             download_dir=self._download_dir,
             target_url=target_url or self._normalized_url,
         )
-        if not capture_print_pdf_via_cdp(
+        captured_path = capture_print_pdf_via_cdp(
             browser=self._browser,
             pdf_path=pdf_path,
             ctx=self._ctx,
             normalized_url=self._normalized_url,
             required=True,
             target_url=target_url or self._normalized_url,
-        ):
+            return_path=True,
+        )
+        if not isinstance(captured_path, Path):
             raise RuntimeError("deterministic_playbook_pdf_capture_failed")
-        self._rendered_pdf_path = pdf_path
-        return str(pdf_path)
+        self._rendered_pdf_path = captured_path
+        return str(captured_path)
 
     def _click_expression(self, element_expression: str) -> str:
         return self._evaluate_action(
@@ -1943,17 +1945,19 @@ class _AsyncDeterministicPlaybookPageDriver:
             download_dir=self._download_dir,
             target_url=target_url or self._normalized_url,
         )
-        if not capture_print_pdf_via_cdp(
+        captured_path = capture_print_pdf_via_cdp(
             browser=self._browser,
             pdf_path=pdf_path,
             ctx=self._ctx,
             normalized_url=self._normalized_url,
             required=True,
             target_url=target_url or self._normalized_url,
-        ):
+            return_path=True,
+        )
+        if not isinstance(captured_path, Path):
             raise RuntimeError("deterministic_playbook_pdf_capture_failed")
-        self._rendered_pdf_path = pdf_path
-        return str(pdf_path)
+        self._rendered_pdf_path = captured_path
+        return str(captured_path)
 
     async def _click_expression(self, element_expression: str) -> str:
         return await self._evaluate_action(

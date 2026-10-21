@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -85,3 +86,19 @@ def test_browser_profile_path_must_stay_below_its_managed_parent(
             outside_profile,
             parent_dir=managed_root,
         )
+
+
+def test_browser_profile_path_rejects_redirected_profile_descendant(
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "profile"
+    outside = tmp_path / "outside"
+    profile.mkdir()
+    outside.mkdir()
+    try:
+        os.symlink(outside, profile / "Default", target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("directory symlink creation is unavailable")
+
+    with pytest.raises(AppError):
+        validate_browser_profile_path(profile, parent_dir=tmp_path)
