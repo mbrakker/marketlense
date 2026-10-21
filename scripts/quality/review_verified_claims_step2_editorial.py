@@ -2091,10 +2091,17 @@ def run_editorial_review(
     input_specs: Sequence[tuple[str, Path, Path]] | None = None,
 ) -> dict[str, Any]:
     started = time.perf_counter()
-    inputs = list(input_specs or [
-        ("frozen_five", frozen_result_path, frozen_source_manifest_path),
-        ("additional_five", additional_result_path, additional_source_manifest_path),
-    ])
+    inputs = list(
+        input_specs
+        or [
+            ("frozen_five", frozen_result_path, frozen_source_manifest_path),
+            (
+                "additional_five",
+                additional_result_path,
+                additional_source_manifest_path,
+            ),
+        ]
+    )
     loaded: list[
         tuple[
             str,
@@ -2600,8 +2607,7 @@ def main() -> int:
     if any(value is not None for value in single_inputs):
         if any(value is None for value in single_inputs):
             parser.error(
-                "--single-result and --single-source-manifest must be supplied "
-                "together"
+                "--single-result and --single-source-manifest must be supplied together"
             )
         if any(
             value is not None

@@ -43,10 +43,44 @@
     "limitation": "The shared-batch run terminated with eight ias_canary_timeout and two validation_failed reports and reused one run directory, so it is not a valid independent ten-report selector repetition."
   },
   "supplemental_isolated_run": {
-    "available": false,
-    "summary": null,
-    "artifact_selection_reports": 0,
-    "scope": []
+    "available": true,
+    "summary": {
+      "admitted_report_count": 5,
+      "bounded_repair_rate": 0.2,
+      "cohort_admission_rate": 1.0,
+      "cohort_bounded_automatic_repair": true,
+      "cohort_cost_usd": 0.431351,
+      "cohort_duration_seconds": 2929.71,
+      "cohort_input_tokens": 1896381,
+      "cohort_model_provider_calls": 168,
+      "cohort_output_tokens": 352004,
+      "failure_code_pareto": {},
+      "first_attempt_awaiting_review_rate": 1.0,
+      "first_attempt_published_rate": 0.0,
+      "mean_cost": 0.08627,
+      "mean_duration_seconds": 585.942,
+      "median_cost": 0.074496,
+      "median_duration_seconds": 465.256,
+      "missing_terminal_report_count": 0,
+      "missing_terminal_report_ids": [],
+      "operator_intervention_count": 0,
+      "per_report_metric_scope": "report_scoped_excludes_shared_handoffs",
+      "publication_readiness_rate": 1.0,
+      "published_report_count": 0,
+      "report_count": 5,
+      "terminal_outcome_complete": true,
+      "typed_terminal_rate": 1.0,
+      "workflow_denominator": 5,
+      "workflow_failure_rate": 0.0
+    },
+    "artifact_selection_reports": 5,
+    "scope": [
+      "Algolia",
+      "Criteo",
+      "Deloitte",
+      "KPMG",
+      "Reuters Institute"
+    ]
   },
   "comparisons": [
     {
@@ -64,7 +98,7 @@
     },
     {
       "report": "Algolia",
-      "status": "not_comparable",
+      "status": "comparable",
       "first_selected_ids": [
         "agentic-adoption-considerations",
         "agentic-search-deployment-and-plans",
@@ -72,7 +106,29 @@
         "revenue-incentive-58",
         "search-capability-development-approaches",
         "search-investment-and-adoption-activity"
-      ]
+      ],
+      "second_selected_ids": [
+        "insight-agentic-integration-consideration",
+        "insight-agentic-roi-consideration",
+        "insight-agentic-search-adoption",
+        "insight-consumer-search-preferences",
+        "insight-revenue-investment-incentive"
+      ],
+      "identity_intersection": [],
+      "identity_union": [
+        "agentic-adoption-considerations",
+        "agentic-search-deployment-and-plans",
+        "ai-search-purchase-agreement-regional-range",
+        "insight-agentic-integration-consideration",
+        "insight-agentic-roi-consideration",
+        "insight-agentic-search-adoption",
+        "insight-consumer-search-preferences",
+        "insight-revenue-investment-incentive",
+        "revenue-incentive-58",
+        "search-capability-development-approaches",
+        "search-investment-and-adoption-activity"
+      ],
+      "identity_overlap_jaccard": 0.0
     },
     {
       "report": "Bain & Company",
@@ -87,18 +143,40 @@
     },
     {
       "report": "Criteo",
-      "status": "not_comparable",
+      "status": "comparable",
       "first_selected_ids": [
         "agency-recommendations-performance-retention",
         "ctv-smaller-brand-access-concern",
         "incrementality-metrics-retail-media",
         "newer-channels-perceived-roi",
         "omnichannel-management-next-year-focus"
-      ]
+      ],
+      "second_selected_ids": [
+        "ctv-smaller-brand-pricing-concern",
+        "incrementality-metrics-retail-media",
+        "new-channels-media-strategy-factors",
+        "omnichannel-management-focus",
+        "retail-media-perceived-roi"
+      ],
+      "identity_intersection": [
+        "incrementality-metrics-retail-media"
+      ],
+      "identity_union": [
+        "agency-recommendations-performance-retention",
+        "ctv-smaller-brand-access-concern",
+        "ctv-smaller-brand-pricing-concern",
+        "incrementality-metrics-retail-media",
+        "new-channels-media-strategy-factors",
+        "newer-channels-perceived-roi",
+        "omnichannel-management-focus",
+        "omnichannel-management-next-year-focus",
+        "retail-media-perceived-roi"
+      ],
+      "identity_overlap_jaccard": 0.1111
     },
     {
       "report": "Deloitte",
-      "status": "not_comparable",
+      "status": "comparable",
       "first_selected_ids": [
         "ai-shopping-default-plan-2026",
         "ai-shopping-use-plan-2026",
@@ -106,7 +184,29 @@
         "brand-data-control-versus-reach",
         "genai-retail-traffic-2025-holiday",
         "trust-in-ai-ordering"
-      ]
+      ],
+      "second_selected_ids": [
+        "ai-discovery-use-and-speed",
+        "ai-referral-traffic-surge",
+        "qualified-ai-conversion-signal",
+        "retailer-ai-commerce-strategy-action",
+        "trust-in-ai-order-placement"
+      ],
+      "identity_intersection": [],
+      "identity_union": [
+        "ai-discovery-use-and-speed",
+        "ai-referral-traffic-surge",
+        "ai-shopping-default-plan-2026",
+        "ai-shopping-use-plan-2026",
+        "ai-visibility-data-interpretation",
+        "brand-data-control-versus-reach",
+        "genai-retail-traffic-2025-holiday",
+        "qualified-ai-conversion-signal",
+        "retailer-ai-commerce-strategy-action",
+        "trust-in-ai-order-placement",
+        "trust-in-ai-ordering"
+      ],
+      "identity_overlap_jaccard": 0.0
     },
     {
       "report": "DoubleVerify",
@@ -132,7 +232,7 @@
     },
     {
       "report": "KPMG",
-      "status": "not_comparable",
+      "status": "comparable",
       "first_selected_ids": [
         "ai-adoption-across-deal-stages",
         "ai-expands-analytical-scope",
@@ -140,11 +240,35 @@
         "carveouts-proactive-portfolio-action",
         "execution-capability-and-value-capture",
         "execution-risk-focus-areas"
-      ]
+      ],
+      "second_selected_ids": [
+        "ai_as_deal_team_infrastructure",
+        "carveouts_portfolio_reshaping",
+        "execution_capability_in_ma_outcomes",
+        "global_survey_scope",
+        "pipeline_expansion_expectations_2026",
+        "regional_confidence_and_outlook"
+      ],
+      "identity_intersection": [],
+      "identity_union": [
+        "ai-adoption-across-deal-stages",
+        "ai-expands-analytical-scope",
+        "ai_as_deal_team_infrastructure",
+        "carveout-activity-expectations",
+        "carveouts-proactive-portfolio-action",
+        "carveouts_portfolio_reshaping",
+        "execution-capability-and-value-capture",
+        "execution-risk-focus-areas",
+        "execution_capability_in_ma_outcomes",
+        "global_survey_scope",
+        "pipeline_expansion_expectations_2026",
+        "regional_confidence_and_outlook"
+      ],
+      "identity_overlap_jaccard": 0.0
     },
     {
       "report": "Reuters Institute",
-      "status": "not_comparable",
+      "status": "comparable",
       "first_selected_ids": [
         "commercial-revenue-priorities",
         "creator-response-plans",
@@ -153,7 +277,34 @@
         "publisher-view-ai-misinformation",
         "search-traffic-forecast",
         "social-referral-decline-facebook-x"
-      ]
+      ],
+      "second_selected_ids": [
+        "agentic-browser-impact-expectations",
+        "commercial-publisher-revenue-priorities",
+        "content-focus-net-shift",
+        "creator-response-initiatives",
+        "exec-journalism-confidence",
+        "newsroom-ai-results-mixed",
+        "platform-effort-plans"
+      ],
+      "identity_intersection": [],
+      "identity_union": [
+        "agentic-browser-impact-expectations",
+        "commercial-publisher-revenue-priorities",
+        "commercial-revenue-priorities",
+        "content-focus-net-shift",
+        "creator-response-initiatives",
+        "creator-response-plans",
+        "exec-journalism-confidence",
+        "focus-original-reporting",
+        "newsroom-ai-initiatives-assessment",
+        "newsroom-ai-results-mixed",
+        "platform-effort-plans",
+        "publisher-view-ai-misinformation",
+        "search-traffic-forecast",
+        "social-referral-decline-facebook-x"
+      ],
+      "identity_overlap_jaccard": 0.0
     },
     {
       "report": "StackAdapt Inc",
