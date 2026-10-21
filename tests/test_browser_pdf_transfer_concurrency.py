@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import multiprocessing
+import os
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -17,6 +18,13 @@ from src.services._browser_report_download.request import (
     prepare_download_dir,
 )
 from src.utils.errors import AppError
+
+
+def _canonical_windows_path(path: Path) -> str:
+    normalized = os.path.normcase(os.path.normpath(str(path)))
+    if normalized.startswith("\\\\?\\"):
+        normalized = normalized[4:]
+    return normalized.rstrip("\\/")
 
 
 class _GatedPdfHandler(BaseHTTPRequestHandler):
@@ -173,21 +181,22 @@ def test_concurrent_same_url_workspace_allocations_are_independent(
 
     for process in processes:
         process.start()
-    for process in processes:
-        process.join(timeout=30)
-
     results = []
     for _ in processes:
         try:
             results.append(result_queue.get(timeout=10))
         except Empty:
             results.append(("missing", ""))
+    for process in processes:
+        process.join(timeout=30)
 
     assert all(process.exitcode == 0 for process in processes)
     workspace_paths = [Path(path) for kind, path in results if kind == "ok"]
     assert len(workspace_paths) == 2
     assert workspace_paths[0] != workspace_paths[1]
-    assert workspace_paths[0].parent == workspace_paths[1].parent
+    assert _canonical_windows_path(
+        workspace_paths[0].parent
+    ) == _canonical_windows_path(workspace_paths[1].parent)
     assert all(
         windows_path_units(path) <= 240 and (path / "owned.txt").read_text() == "owned"
         for path in workspace_paths

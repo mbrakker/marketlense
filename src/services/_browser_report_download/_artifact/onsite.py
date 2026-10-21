@@ -16,6 +16,9 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.artifact_materialization import (
+    materialize_external_browser_artifact,
+)
 from src.services._browser_report_download.artifact_paths import (
     ensure_browser_directory,
     resolve_browser_artifact_path,
@@ -217,8 +220,13 @@ def _ensure_onsite_capture_artifact(
     onsite_capture_format: str | None,
 ) -> tuple[str | None, str | None]:
     existing_path = str(onsite_capture_path or "").strip()
-    if existing_path and Path(existing_path).is_file():
-        return existing_path, onsite_capture_format
+    if existing_path:
+        existing_capture_path = _resolve_existing_onsite_capture_path(
+            claimed_path=existing_path,
+            download_dir=download_dir,
+        )
+        if existing_capture_path is not None and existing_capture_path.is_file():
+            return str(existing_capture_path), onsite_capture_format
     capture_html = str(browser_html or "")
     if not capture_html.strip():
         fetched_html = _try_fetch_onsite_capture_html(
@@ -254,7 +262,7 @@ def _ensure_onsite_capture_artifact(
         final_page_title=final_page_title,
         terminal_text_excerpt=capture_text,
     ):
-        return onsite_capture_path, onsite_capture_format
+        return (None if existing_path else onsite_capture_path), onsite_capture_format
     capture_path = _safe_onsite_capture_path(
         download_dir=download_dir,
         claimed_path=existing_path,
@@ -266,6 +274,39 @@ def _ensure_onsite_capture_artifact(
     return str(capture_path), str(
         onsite_capture_format or "markdown"
     ).strip() or "markdown"
+
+
+def _resolve_existing_onsite_capture_path(
+    *,
+    claimed_path: str,
+    download_dir: Path,
+) -> Path | None:
+    """Resolve a contained claim or materialize an existing external capture."""
+    download_root = validate_browser_download_directory(download_dir)
+    try:
+        source_path = Path(claimed_path).expanduser().resolve()
+    except OSError:
+        return None
+    try:
+        source_is_within_workspace = source_path.is_relative_to(download_root)
+    except OSError:
+        return None
+    if source_is_within_workspace:
+        try:
+            validated_path = validate_browser_artifact_path(
+                source_path,
+                parent_dir=download_root,
+                temporary_suffixes=(".part",),
+            )
+        except AppError:
+            return None
+        return validated_path
+    if not source_path.is_file():
+        return None
+    return materialize_external_browser_artifact(
+        source_path=source_path,
+        download_dir=download_root,
+    )
 
 
 def _extract_onsite_capture_text_from_steps(

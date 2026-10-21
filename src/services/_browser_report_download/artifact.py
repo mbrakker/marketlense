@@ -64,6 +64,7 @@ from ._artifact.onsite import (
     _onsite_capture_evidence_labels,
     _prefer_onsite_capture_over_optional_form_submission,
     _resolve_existing_browser_rendered_capture,
+    _resolve_existing_onsite_capture_path,
 )
 from ._artifact.pdf import (
     _complete_pdf_artifact,
@@ -129,6 +130,20 @@ def finalize_browser_report_download_result(
     onsite_capture_path = str(agent_result.onsite_capture_path or "").strip() or None
     if onsite_capture_path is None and browser_rendered_capture_path is not None:
         onsite_capture_path = str(browser_rendered_capture_path)
+    onsite_capture_is_browser_rendered = (
+        browser_rendered_capture_path is not None
+        and onsite_capture_path == str(browser_rendered_capture_path)
+    )
+    if onsite_capture_path:
+        resolved_onsite_capture_path = _resolve_existing_onsite_capture_path(
+            claimed_path=onsite_capture_path,
+            download_dir=download_dir,
+        )
+        onsite_capture_path = (
+            str(resolved_onsite_capture_path)
+            if resolved_onsite_capture_path is not None
+            else None
+        )
     if onsite_capture_path and downloaded_path is not None:
         try:
             if (
@@ -362,11 +377,7 @@ def finalize_browser_report_download_result(
     onsite_capture_format = (
         str(agent_result.onsite_capture_format or "").strip() or None
     )
-    if (
-        onsite_capture_format is None
-        and browser_rendered_capture_path is not None
-        and onsite_capture_path == str(browser_rendered_capture_path)
-    ):
+    if onsite_capture_format is None and onsite_capture_is_browser_rendered:
         onsite_capture_format = "browser_rendered_pdf"
     if (
         route_kind == "onsite_report"
