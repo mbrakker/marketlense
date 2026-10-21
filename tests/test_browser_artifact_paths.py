@@ -119,9 +119,7 @@ def test_long_same_basename_urls_keep_distinct_identity_paths(tmp_path: Path) ->
         temporary_suffixes=(".part",),
     )
     assert helper.windows_path_units(first) <= 240
-    assert helper.windows_path_units(
-        first.with_suffix(first.suffix + ".part")
-    ) <= 240
+    assert helper.windows_path_units(first.with_suffix(first.suffix + ".part")) <= 240
     assert helper.windows_path_units(second) <= 240
 
 
