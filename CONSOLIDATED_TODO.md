@@ -292,45 +292,41 @@ acceptance is demonstrated.
 
 [Full R8 specification](docs/backlog/R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse).
 
-**PATH-02 implementation evidence — 2026-10-21:** Commits
+**PATH-02 implementation evidence — 2026-10-21:** Baseline commits
 `117613fc3ba3ac30234357271ad463bd3601af29` and review-driven ownership fix
-`3fb07955c1c483bc81eee09e74dc4bfe8ef47c74` complete the corrective ownership
-fix. HTTP downloads allocate unique attempt-owned `mkstemp` `.part` stages and
-publish with no clobber after staged-byte validation; final PDFs are never
-destructively cleaned. Cache lookup precedes preparation, a miss creates one
-short exclusive workspace reused for the complete attempt, and stale workspaces
-are not swept. Wrapper recovery uses a separate bounded destination, preserves
-the local wrapper, and stops bounded cycles. Materialization compares staged
-bytes before publication and rechecks conflicts without unlinking an existing
-final. Existing external onsite-capture claims are materialized into the
-attempt workspace before finalization, while missing in-workspace claims retain
-their safe basename for fallback capture. Onsite salvage and rendered-terminal
-preflight receive the current workspace, and unowned global browser temp
-directories are preserved while current managed-profile cleanup remains.
+`3fb07955c1c483bc81eee09e74dc4bfe8ef47c74` established attempt-owned,
+path-budgeted browser transfer. Final integrity commits `2ab809dc` and
+`a31780e8` extend the existing materializer with optional preferred filename and
+source identity, replace destructive PDF-to-HTML rename and direct HTML/Markdown
+writes with uniquely staged no-clobber publication, preserve occupied and
+source artifacts, verify exact bytes on readback, and normalize recovered format
+labels to the actual extension. Cache-first stable namespaces, one exclusive
+workspace per attempt, bounded wrapper recovery with cycle protection,
+no-destructive final cleanup, onsite/preflight workspace propagation, and
+preservation of unowned global browser temp directories remain unchanged.
 
 Native Windows focused validation passed 31 PATH-02 tests with 2
 symlink-privilege skips; the affected browser acquisition, preflight, session,
-cache and wrapper-recovery command passed 205 tests with 2 skips and 1
-deselection. Formatting, Ruff, forbidden-patching, architecture/import,
-role-I/O, service-boundary, contract and full-repository mypy gates passed (`0`
-tracked errors across 782 source files). The native Windows two-process
-regressions cover different-payload destination races and same-URL workspace
-allocation. The native HTTP readback returned 44 exact bytes with SHA-256 prefix
+cache and wrapper-recovery command passed 216 tests with 2 skips and 1
+deselection. The final on-site/materializer suite passed 84 tests covering
+occupied and identity-hashed collisions, exact replay, changed bytes,
+original-source preservation, `.html`/`.md` compatibility, long Unicode path
+budgeting, typed failure cleanup, and the actual service recovery route.
+Formatting, Ruff, forbidden-patching, architecture/import, role-I/O,
+service-boundary, contract snapshot, bounded-logging, test-file ownership and
+full-repository mypy gates passed (`0` tracked errors across 782 source files).
+The native HTTP readback returned 44 exact bytes with SHA-256 prefix
 `8a11a347421a6dda`, stable/workspace/destination path lengths of `86/94/105`
 UTF-16 units, and no residual `.part` files.
 
-Hosted full CI passed in
-[run 39562352428](https://github.com/mbrakker/marketlense/actions/runs/39562352428)
-on the corrected implementation, including full pytest/coverage, both mutation
-partitions and release evidence; the WordPress staging REST gate was skipped
-because its prerequisite was unavailable. A pre-final-wrapper-guard local full
-run of the ownership/caching tree reported 2 failures, 7,720 passed, 3 skipped,
-31 deselected, 22 warnings and 24 subtests: one installed-versus-vendored
-browser-runtime mismatch across worktrees and one CPython-3.14 failure of the
-existing CPython-3.12 wheelhouse audit. The final wrapper-cycle guard and
-external onsite-capture ownership fix are covered by the affected suite and
-hosted run. Live `browser_use` launch was not run;
-POSIX hard-link behavior and multi-file crash atomicity are not claimed. R8
+Hosted full CI passed on exact SHA `a31780e8` in
+[run 39591082284](https://github.com/mbrakker/marketlense/actions/runs/39591082284),
+including default pytest/coverage, both mutation partitions, release evidence
+and all repository quality gates; the WordPress staging REST gate was skipped
+because its prerequisite was unavailable. The two external-symlink tests were
+skipped because this Windows account lacks `SeCreateSymbolicLinkPrivilege`.
+Live `browser_use` launch, POSIX hard-link behavior and multi-file crash
+atomicity are not claimed; automatic workspace GC remains out of scope. R8
 remains Active while PATH-03–06 remain open.
 
 #### R9. Accelerate CI validation fivefold without weakening release gates
