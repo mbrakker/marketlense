@@ -140,6 +140,7 @@ def _build_cached_timed_out_browser_run(
     html_snapshot_path = _write_terminal_html_snapshot(
         download_dir=download_dir,
         final_page_html=final_page_html,
+        source_identity=final_page_url or normalized_url,
     )
     logger.info(
         log_event(

@@ -26,12 +26,16 @@ from src.services._browser_report_download._browser_runtime.runtime import (
 from src.services._browser_report_download._http.config import (
     _TERMINAL_NOT_FOUND_BODY_MARKERS,
 )
+from src.services._browser_report_download.artifact_paths import (
+    validate_browser_download_directory,
+)
 from src.services._browser_report_download.browser import (
     _STANDARD_BROWSER_USER_AGENT,
     _finalize_browser_launch,
     _reserve_browser_launch,
 )
 from src.services._browser_report_download.preflight import _run_coroutine_in_thread
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger(
@@ -50,6 +54,7 @@ def try_rendered_terminal_preflight(
     ctx: RunContext,
     normalized_url: str,
     execution_url: str,
+    download_dir: Path,
     browser_session_class: Any | None = None,
 ) -> BrowserPreflightProbeResponse | None:
     """Return terminal evidence only for an observed rendered not-found page.
@@ -93,6 +98,7 @@ def try_rendered_terminal_preflight(
                 browser_session_class=runtime_class,
                 request=request,
                 target_url=target_url,
+                download_dir=download_dir,
             ),
             timeout_seconds=_RENDERED_TERMINAL_PREFLIGHT_TIMEOUT_SECONDS,
             grace_seconds=2.0,
@@ -129,6 +135,30 @@ def try_rendered_terminal_preflight(
                 false_negative_rate_sample=0.0,
             ),
         )
+    except AppError as exc:
+        if exc.code in {
+            "browser_download_artifact_path_invalid",
+            "browser_download_output_dir_invalid",
+            "browser_download_session_reuse_path_invalid",
+        }:
+            raise
+        outcome = "failed"
+        error_code = "rendered_terminal_preflight_failed"
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_rendered_terminal_preflight_failed",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "phase": _failure_phase(exc),
+                    "error_type": type(exc).__name__,
+                    "duration_seconds": round(time.monotonic() - started, 3),
+                },
+            )
+        )
+        return None
     except Exception as exc:
         outcome = "failed"
         error_code = "rendered_terminal_preflight_failed"
@@ -184,10 +214,12 @@ async def _observe_rendered_page(
     browser_session_class: Any,
     request: Any,
     target_url: str,
+    download_dir: Path,
 ) -> dict[str, str | bool]:
     browser_session = _new_browser_session(
         browser_session_class=browser_session_class,
         request=request,
+        download_dir=download_dir,
     )
     started = False
     try:
@@ -225,10 +257,16 @@ async def _observe_rendered_page(
         await _stop_browser_session(browser_session)
 
 
-def _new_browser_session(*, browser_session_class: Any, request: Any) -> Any:
+def _new_browser_session(
+    *,
+    browser_session_class: Any,
+    request: Any,
+    download_dir: Path,
+) -> Any:
+    output_dir = validate_browser_download_directory(download_dir)
     kwargs = {
         "headless": not bool(request.settings.headed),
-        "downloads_path": str(Path(request.settings.output_dir)),
+        "downloads_path": str(output_dir),
         "user_agent": _STANDARD_BROWSER_USER_AGENT,
     }
     return browser_session_class(**kwargs)

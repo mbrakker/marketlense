@@ -30,6 +30,46 @@ from src.contracts.browser_download import (
     BrowserRoutePlaybook,
 )
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download._browser_runtime import (
+    _AGENT_COMPLETED_HISTORY_POLL_SECONDS,
+    _AGENT_RUN_TIMEOUT_MAX_BUFFER_SECONDS,
+    _AGENT_RUN_TIMEOUT_MIN_BUFFER_SECONDS,
+    _AGENT_RUN_TIMEOUT_STEP_BUFFER_SECONDS,
+    _ANSI_ESCAPE_PATTERN,
+    _BROWSER_AGENT_USE_JUDGE,
+    _BROWSER_AGENT_WORKER_ENV,
+    _BROWSER_AGENT_WORKER_OUTPUT_MAX_CHARS,
+    _BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS,
+    _BROWSER_CLEANUP_GRACE_SECONDS,
+    _BROWSER_KILL_TIMEOUT_SECONDS,
+    _BROWSER_PROFILE_DIR_PREFIX,
+    _BROWSER_RESET_TIMEOUT_SECONDS,
+    _BROWSER_USE_TEMP_DIR_PATTERNS,
+    _EMAIL_DOMAIN_BLOCK_MARKERS,
+    _EMAIL_DOMAIN_FAILURE_MARKERS,
+    _LOOKUP_FAILURE_MARKERS,
+    _LOOKUP_FIELD_MARKERS,
+    _LOOKUP_SUBMIT_MARKERS,
+    _PARTIAL_HISTORY_TEXT_MAX_CHARS,
+    _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS,
+    _TEMP_CLEANUP_LOG_SAMPLE_LIMIT,
+    _TERMINAL_REPORT_TEXT_MARKERS,
+    _TERMINAL_STABILIZATION_DEFAULT_POLL_SCHEDULE_SECONDS,
+    _TERMINAL_STABILIZATION_EMAIL_POLL_SCHEDULE_SECONDS,
+    _TERMINAL_SUCCESS_TEXT_MARKERS,
+    _TERMINAL_SUCCESS_URL_MARKERS,
+    _TERMINAL_TEXT_EXCERPT_MAX_CHARS,
+    _TERMINAL_TRANSIENT_MARKERS,
+    _TIMED_OUT_COMPLETED_HISTORY_GRACE_SECONDS,
+    _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
+)
+from src.services._browser_report_download._browser_runtime.session_lifecycle import (
+    _resolve_agent_run_timeout_seconds,
+)
+from src.services._browser_report_download.artifact_paths import (
+    ensure_browser_directory,
+    resolve_browser_artifact_path,
+)
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
@@ -65,42 +105,6 @@ from src.services._browser_report_download.session_reuse import (
 from src.utils.coercion import normalize_optional_bool_signal
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-from src.services._browser_report_download._browser_runtime import (
-    _TERMINAL_TRANSIENT_MARKERS,
-    _TERMINAL_SUCCESS_URL_MARKERS,
-    _TERMINAL_SUCCESS_TEXT_MARKERS,
-    _TERMINAL_REPORT_TEXT_MARKERS,
-    _TERMINAL_TEXT_EXCERPT_MAX_CHARS,
-    _TERMINAL_STABILIZATION_DEFAULT_POLL_SCHEDULE_SECONDS,
-    _TERMINAL_STABILIZATION_EMAIL_POLL_SCHEDULE_SECONDS,
-    _AGENT_RUN_TIMEOUT_MIN_BUFFER_SECONDS,
-    _AGENT_RUN_TIMEOUT_STEP_BUFFER_SECONDS,
-    _AGENT_RUN_TIMEOUT_MAX_BUFFER_SECONDS,
-    _BROWSER_KILL_TIMEOUT_SECONDS,
-    _BROWSER_RESET_TIMEOUT_SECONDS,
-    _BROWSER_CLEANUP_GRACE_SECONDS,
-    _BROWSER_PROFILE_DIR_PREFIX,
-    _BROWSER_USE_TEMP_DIR_PATTERNS,
-    _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS,
-    _TEMP_CLEANUP_LOG_SAMPLE_LIMIT,
-    _TIMED_OUT_COMPLETED_HISTORY_GRACE_SECONDS,
-    _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
-    _AGENT_COMPLETED_HISTORY_POLL_SECONDS,
-    _BROWSER_AGENT_WORKER_ENV,
-    _BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS,
-    _BROWSER_AGENT_WORKER_OUTPUT_MAX_CHARS,
-    _ANSI_ESCAPE_PATTERN,
-    _BROWSER_AGENT_USE_JUDGE,
-    _LOOKUP_FIELD_MARKERS,
-    _LOOKUP_FAILURE_MARKERS,
-    _LOOKUP_SUBMIT_MARKERS,
-    _EMAIL_DOMAIN_BLOCK_MARKERS,
-    _EMAIL_DOMAIN_FAILURE_MARKERS,
-    _PARTIAL_HISTORY_TEXT_MAX_CHARS,
-)
-from src.services._browser_report_download._browser_runtime.session_lifecycle import (
-    _resolve_agent_run_timeout_seconds,
-)
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
@@ -190,7 +194,7 @@ def _run_browser_report_download_agent_subprocess(
             if pooled_result is not None:
                 return pooled_result
 
-    download_dir.mkdir(parents=True, exist_ok=True)
+    download_dir = ensure_browser_directory(download_dir)
     payload = BrowserAgentWorkerPayload(
         schema_version="1.0",
         request=asdict(request),
@@ -199,15 +203,25 @@ def _run_browser_report_download_agent_subprocess(
         execution_url=execution_url,
         download_dir=str(download_dir),
         prompt_bundle=asdict(prompt_bundle),
-        execution_mode=("deterministic_playbook" if deterministic_playbook else "agent"),
+        execution_mode=(
+            "deterministic_playbook" if deterministic_playbook else "agent"
+        ),
         deterministic_playbook=(
             asdict(deterministic_playbook) if deterministic_playbook else None
         ),
     )
     protocol_dir = download_dir / "_browser_worker_protocol"
-    protocol_dir.mkdir(parents=True, exist_ok=True)
-    payload_path = protocol_dir / "browser_agent_worker_request.json"
-    response_path = protocol_dir / "browser_agent_worker_response.json"
+    protocol_dir = ensure_browser_directory(protocol_dir)
+    payload_path = resolve_browser_artifact_path(
+        parent_dir=protocol_dir,
+        source_name="browser_agent_worker_request.json",
+        fixed_name="browser_agent_worker_request.json",
+    )
+    response_path = resolve_browser_artifact_path(
+        parent_dir=protocol_dir,
+        source_name="browser_agent_worker_response.json",
+        fixed_name="browser_agent_worker_response.json",
+    )
     payload_path.write_text(
         json.dumps(asdict(payload), ensure_ascii=True),
         encoding="utf-8",
@@ -524,9 +538,7 @@ def _deserialize_execution_route_steps(
                 expected_evidence=_string_list(item.get("expected_evidence")),
                 observed_evidence=_string_list(item.get("observed_evidence")),
                 locator_evidence=_string_list(item.get("locator_evidence")),
-                postcondition_evidence=_string_list(
-                    item.get("postcondition_evidence")
-                ),
+                postcondition_evidence=_string_list(item.get("postcondition_evidence")),
                 verification_status=str(item.get("verification_status") or "").strip(),
                 locator_role=str(item.get("locator_role") or "").strip(),
                 locator_name=str(item.get("locator_name") or "").strip(),

@@ -1,15 +1,24 @@
 from __future__ import annotations
+
 import json
 import logging
-import shutil
+import stat
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.artifact_materialization import (
+    materialize_external_browser_artifact,
+)
+from src.services._browser_report_download.artifact_paths import (
+    ensure_browser_directory,
+    select_browser_pdf_destination_path,
+    validate_browser_artifact_path,
+    validate_browser_download_directory,
+)
 from src.services._browser_report_download.http import is_pdf_file
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -69,6 +78,8 @@ def _prefetch_structured_pdf_artifact(
                 normalized_url=normalized_url,
             )
         except AppError as exc:
+            if exc.code == "browser_download_artifact_path_invalid":
+                raise
             logger.info(
                 log_event(
                     ctx,
@@ -83,7 +94,6 @@ def _prefetch_structured_pdf_artifact(
                     },
                 )
             )
-            destination_path.unlink(missing_ok=True)
             continue
         if is_pdf_file(destination_path):
             logger.info(
@@ -100,7 +110,6 @@ def _prefetch_structured_pdf_artifact(
                 )
             )
             return str(destination_path)
-        destination_path.unlink(missing_ok=True)
     return ""
 
 
@@ -121,7 +130,8 @@ def _materialize_external_artifacts(
     )
     if not candidate_paths:
         return []
-    download_dir.mkdir(parents=True, exist_ok=True)
+    download_dir = validate_browser_download_directory(download_dir)
+    ensure_browser_directory(download_dir)
     resolved_download_dir = _safe_resolve_path(download_dir)
     materialized_paths: list[str] = []
     seen_targets: set[str] = set()
@@ -133,11 +143,22 @@ def _materialize_external_artifacts(
             path=resolved_source,
             directory=resolved_download_dir,
         ):
-            token = str(resolved_source)
-            if token not in seen_targets:
-                seen_targets.add(token)
-                materialized_paths.append(token)
-            continue
+            try:
+                validate_browser_artifact_path(
+                    resolved_source,
+                    parent_dir=resolved_download_dir,
+                    temporary_suffixes=(".part",),
+                )
+            except AppError as exc:
+                if exc.code != "browser_download_artifact_path_invalid":
+                    raise
+            else:
+                if _is_regular_readable_file(resolved_source):
+                    token = str(resolved_source)
+                    if token not in seen_targets:
+                        seen_targets.add(token)
+                        materialized_paths.append(token)
+                    continue
         target_path = _copy_external_artifact(
             source_path=resolved_source,
             download_dir=download_dir,
@@ -213,32 +234,20 @@ def _copy_external_artifact(
     source_path: Path,
     download_dir: Path,
 ) -> Path | None:
-    target_path = download_dir / source_path.name
-    counter = 1
-    while target_path.exists():
-        try:
-            if source_path.samefile(target_path):
-                return _safe_resolve_path(target_path)
-        except OSError:
-            target_path = (
-                download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
-            )
-            counter += 1
-            continue
-        target_path = download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
-        counter += 1
+    return materialize_external_browser_artifact(
+        source_path=source_path,
+        download_dir=download_dir,
+    )
+
+
+def _is_regular_readable_file(path: Path) -> bool:
     try:
-        shutil.copy2(source_path, target_path)
+        if not stat.S_ISREG(path.stat().st_mode):
+            return False
+        with path.open("rb"):
+            return True
     except OSError:
-        return None
-    resolved_target = _safe_resolve_path(target_path)
-    if (
-        resolved_target is None
-        or not resolved_target.exists()
-        or not resolved_target.is_file()
-    ):
-        return None
-    return resolved_target
+        return False
 
 
 def _safe_resolve_path(path: Path) -> Path | None:
@@ -301,11 +310,11 @@ def _pdf_prefetch_destination_path(
     target_url: str,
     downloaded_file_name: str,
 ) -> Path:
-    url_name = Path(urlsplit(target_url).path).name
-    file_name = url_name or downloaded_file_name or "download.pdf"
-    if not file_name.lower().endswith(".pdf"):
-        file_name = f"{file_name}.pdf"
-    return download_dir / file_name
+    return select_browser_pdf_destination_path(
+        parent_dir=download_dir,
+        source_name=downloaded_file_name,
+        target_url=target_url,
+    )
 
 
 __all__ = [

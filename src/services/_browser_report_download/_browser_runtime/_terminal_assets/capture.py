@@ -1,34 +1,37 @@
 from __future__ import annotations
+
 import logging
 import re
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
+
 from src.contracts.browser_download import (
     BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
 )
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download._browser_runtime import (
+    _TERMINAL_REPORT_TEXT_MARKERS,
+)
+from src.services._browser_report_download.artifact_paths import (
+    resolve_browser_artifact_path,
+)
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
     ensure_browser_download_target_hygiene_via_cdp,
 )
 from src.utils.logging import log_event
-from src.services._browser_report_download._browser_runtime import (
-    _TERMINAL_REPORT_TEXT_MARKERS,
-)
 
 from .artifacts import (
     _parse_raw_model_response,
 )
-
 from .network import (
     _collect_network_events,
     _collect_network_resource_urls,
 )
-
 from .page_state import (
     _write_terminal_html_snapshot,
     _write_terminal_screenshot,
@@ -72,6 +75,7 @@ def _capture_terminal_assets(
     html_snapshot_path = _write_terminal_html_snapshot(
         download_dir=download_dir,
         final_page_html=final_page_html,
+        source_identity=final_page_url or normalized_url,
     )
     screenshot_path = _write_terminal_screenshot(
         browser=browser,
@@ -217,15 +221,18 @@ def _maybe_capture_print_pdf_fallback(
         download_dir=download_dir,
         final_page_url=final_page_url or normalized_url,
     )
-    if not capture_print_pdf_via_cdp(
+    captured_path = capture_print_pdf_via_cdp(
         browser=browser,
         pdf_path=pdf_path,
         ctx=ctx,
         normalized_url=normalized_url,
         required=False,
         target_url=final_page_url or normalized_url,
-    ):
+        return_path=True,
+    )
+    if not isinstance(captured_path, Path):
         return ""
+    pdf_path = captured_path
     logger.info(
         log_event(
             ctx,
@@ -306,10 +313,21 @@ def _browser_rendered_pdf_capture_path(
     stem = Path(urlsplit(str(final_page_url or "onsite-report")).path).stem
     if not stem:
         stem = "onsite-report"
-    safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "-", stem).strip(".-")
-    if not safe_stem:
-        safe_stem = "onsite-report"
-    return download_dir / f"{safe_stem}-browser-rendered.pdf"
+    capture_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name=f"{stem}-browser-rendered.pdf",
+        extension=".pdf",
+        identity=final_page_url or "onsite-report",
+    )
+    if capture_path.exists():
+        return resolve_browser_artifact_path(
+            parent_dir=download_dir,
+            source_name=capture_path.name,
+            extension=".pdf",
+            identity=final_page_url or "onsite-report",
+            force_identity_hash=True,
+        )
+    return capture_path
 
 
 def _capture_completed_history_terminal_assets(

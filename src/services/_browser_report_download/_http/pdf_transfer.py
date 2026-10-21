@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import mimetypes
+import os
+import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -23,14 +25,18 @@ from src.contracts.http_acquisition import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download._http.config import (
-    _PDF_FETCH_FALLBACK_HEADERS,
     _HTML_FETCH_HEADERS,
     _HTML_FETCH_MAX_BYTES,
+    _PDF_FETCH_FALLBACK_HEADERS,
     _PDF_FETCH_HEADERS,
     _PDF_FETCH_MAX_BYTES,
 )
 from src.services._browser_report_download._http.html_evidence import (
     _extract_embedded_pdf_url,
+)
+from src.services._browser_report_download.artifact_paths import (
+    select_browser_pdf_destination_path,
+    validate_browser_artifact_path,
 )
 from src.services._browser_report_download.logging import (
     browser_download_result_log_fields,
@@ -50,6 +56,7 @@ _PDF_BINARY_FALLBACK_MIME_TYPES = {
     "application/octet-stream",
     "binary/octet-stream",
 }
+_MAX_WRAPPER_RECOVERY_HOPS = 3
 
 
 def try_direct_pdf_download(
@@ -65,7 +72,11 @@ def try_direct_pdf_download(
 ) -> BrowserReportDownloadResult | None:
     target_url = str(probe_url or normalized_url).strip() or normalized_url
     destination_name = Path(urlsplit(target_url).path).name or "download.pdf"
-    destination_path = download_dir / destination_name
+    destination_path = select_browser_pdf_destination_path(
+        parent_dir=download_dir,
+        source_name=destination_name,
+        target_url=target_url,
+    )
     logger.info(
         log_event(
             ctx,
@@ -81,13 +92,14 @@ def try_direct_pdf_download(
         )
     )
     try:
-        download_pdf_from_url(
-            pdf_url=target_url,
-            destination_path=destination_path,
-            timeout_seconds=request.settings.timeout_seconds,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
+        if not (destination_path.exists() and is_pdf_file(destination_path)):
+            download_pdf_from_url(
+                pdf_url=target_url,
+                destination_path=destination_path,
+                timeout_seconds=request.settings.timeout_seconds,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
         downloaded_path = ensure_downloaded_pdf(
             downloaded_path=destination_path,
             ctx=ctx,
@@ -105,7 +117,6 @@ def try_direct_pdf_download(
             normalized_url=normalized_url,
         )
     except AppError as exc:
-        destination_path.unlink(missing_ok=True)
         logger.info(
             log_event(
                 ctx,
@@ -172,13 +183,13 @@ def try_direct_pdf_download(
         encountered_form_fields=[],
         blocked_reason=None,
         blocked_reason_detail=None,
-        downloaded_file_path=str(destination_path),
-        downloaded_file_name=destination_path.name,
+        downloaded_file_path=str(downloaded_path or destination_path),
+        downloaded_file_name=(downloaded_path or destination_path).name,
         downloaded_mime_type=resolve_downloaded_mime_type(
             reported_mime_type=None,
-            downloaded_path=destination_path,
+            downloaded_path=downloaded_path or destination_path,
         ),
-        downloaded_size_bytes=destination_path.stat().st_size,
+        downloaded_size_bytes=(downloaded_path or destination_path).stat().st_size,
         onsite_capture_path=None,
         onsite_capture_format=None,
         onsite_page_count=None,
@@ -228,15 +239,22 @@ def ensure_downloaded_pdf(
                 },
             )
         )
+        recovery_name = Path(urlsplit(embedded_pdf_url).path).name or "recovered.pdf"
+        recovery_path = select_browser_pdf_destination_path(
+            parent_dir=downloaded_path.parent,
+            source_name=recovery_name,
+            target_url=embedded_pdf_url,
+        )
         download_pdf_from_url(
             pdf_url=embedded_pdf_url,
-            destination_path=downloaded_path,
+            destination_path=recovery_path,
             timeout_seconds=timeout_seconds,
             ctx=ctx,
             normalized_url=normalized_url,
+            require_pdf_signature=True,
         )
-        if is_pdf_file(downloaded_path):
-            return downloaded_path
+        if is_pdf_file(recovery_path):
+            return recovery_path
 
     raise AppError(
         code="browser_download_invalid_pdf",
@@ -435,7 +453,29 @@ def download_pdf_from_url(
     timeout_seconds: float,
     ctx: RunContext,
     normalized_url: str,
+    require_pdf_signature: bool = False,
+    _wrapper_recovery_depth: int = 0,
+    _wrapper_recovery_chain: tuple[str, ...] = (),
 ) -> None:
+    if (
+        _wrapper_recovery_depth > _MAX_WRAPPER_RECOVERY_HOPS
+        or pdf_url in _wrapper_recovery_chain
+    ):
+        raise AppError(
+            code="browser_download_invalid_pdf",
+            message="Downloaded PDF wrapper recovery exceeded its bounded limit",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "pdf_url": pdf_url,
+                "wrapper_recovery_depth": _wrapper_recovery_depth,
+                "wrapper_recovery_chain": list(_wrapper_recovery_chain),
+            },
+        )
+    destination_path = validate_browser_artifact_path(
+        destination_path,
+        temporary_suffixes=(".part",),
+    )
     logger.info(
         log_event(
             ctx,
@@ -449,7 +489,7 @@ def download_pdf_from_url(
             },
         )
     )
-    temp_path = destination_path.with_suffix(destination_path.suffix + ".part")
+    temp_path = _allocate_pdf_stage(destination_path)
     response: HttpAcquisitionResponse | None = None
     try:
         for attempt_index, headers in enumerate(
@@ -498,10 +538,121 @@ def download_pdf_from_url(
                     "destination_path": str(destination_path),
                 },
             )
-        temp_path.replace(destination_path)
-    except AppError as exc:
+        if not is_pdf_file(temp_path):
+            wrapper_html = _read_text_if_small(temp_path, max_bytes=64 * 1024)
+            embedded_pdf_url = _extract_embedded_pdf_url(
+                wrapper_html=wrapper_html,
+                document_url=pdf_url,
+            )
+            if embedded_pdf_url and embedded_pdf_url != pdf_url:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="browser_report_download_wrapper_detected",
+                        module=logger.name,
+                        fields={
+                            "normalized_url": normalized_url,
+                            "downloaded_file_path": str(destination_path),
+                            "embedded_pdf_url": embedded_pdf_url,
+                        },
+                    )
+                )
+                temp_path.unlink(missing_ok=True)
+                download_pdf_from_url(
+                    pdf_url=embedded_pdf_url,
+                    destination_path=destination_path,
+                    timeout_seconds=timeout_seconds,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    require_pdf_signature=True,
+                    _wrapper_recovery_depth=_wrapper_recovery_depth + 1,
+                    _wrapper_recovery_chain=(
+                        *_wrapper_recovery_chain,
+                        pdf_url,
+                    ),
+                )
+                return
+            raise AppError(
+                code="browser_download_invalid_pdf",
+                message="Downloaded file is not a valid PDF",
+                retryable=True,
+                context={
+                    "normalized_url": normalized_url,
+                    "pdf_url": pdf_url,
+                    "destination_path": str(destination_path),
+                },
+            )
+        _commit_downloaded_pdf(
+            temp_path=temp_path,
+            destination_path=destination_path,
+        )
+    except AppError:
         temp_path.unlink(missing_ok=True)
-        raise exc
+        raise
+
+
+def _commit_downloaded_pdf(
+    *,
+    temp_path: Path,
+    destination_path: Path,
+) -> None:
+    try:
+        if os.name == "nt":
+            os.rename(temp_path, destination_path)
+        else:
+            os.link(temp_path, destination_path)
+            temp_path.unlink()
+    except FileExistsError as exc:
+        raise _pdf_commit_conflict(destination_path) from exc
+    except OSError as exc:
+        raise AppError(
+            code="browser_download_pdf_commit_failed",
+            message="Failed to publish the downloaded PDF artifact",
+            cause=exc,
+            retryable=True,
+            context={"destination_path": str(destination_path)},
+        ) from exc
+
+
+def _allocate_pdf_stage(destination_path: Path) -> Path:
+    try:
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        file_descriptor, stage_name = tempfile.mkstemp(
+            prefix="p-",
+            suffix=".part",
+            dir=str(destination_path.parent),
+        )
+        os.close(file_descriptor)
+    except OSError as exc:
+        raise AppError(
+            code="browser_download_pdf_write_failed",
+            message="Failed to allocate a private PDF staging file",
+            cause=exc,
+            retryable=True,
+            context={"destination_path": str(destination_path)},
+        ) from exc
+    stage_path = Path(stage_name)
+    try:
+        return validate_browser_artifact_path(
+            stage_path,
+            parent_dir=destination_path.parent,
+        )
+    except AppError:
+        stage_path.unlink(missing_ok=True)
+        raise
+
+
+def _pdf_commit_conflict(destination_path: Path) -> AppError:
+    return AppError(
+        code="browser_download_pdf_commit_conflict",
+        message="A competing file already occupies the PDF destination",
+        retryable=True,
+        context={
+            "destination_path": str(destination_path),
+            "next_action": "select an identity-specific artifact path and retry",
+        },
+    )
 
 
 def _execute_pdf_fetch(

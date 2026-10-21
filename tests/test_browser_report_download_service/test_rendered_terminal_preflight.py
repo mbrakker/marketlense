@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 
 from src.contracts.browser_download import BrowserReportDownloadRequest
-from src.services._browser_report_download import rendered_terminal_preflight as terminal_runtime
+from src.services._browser_report_download import (
+    rendered_terminal_preflight as terminal_runtime,
+)
 
 from .builders import _settings
 
@@ -59,8 +60,10 @@ def test_rendered_terminal_preflight_returns_terminal_marker_without_agent(
     run_context,
 ) -> None:
     sessions: list[_BrowserSession] = []
+    download_paths: list[str] = []
 
     def session_factory(**kwargs) -> _BrowserSession:
+        download_paths.append(str(kwargs["downloads_path"]))
         session = _BrowserSession(
             url="https://www4.example.com/commerce-media-trends-report",
             title="404 Not Found",
@@ -78,6 +81,7 @@ def test_rendered_terminal_preflight_returns_terminal_marker_without_agent(
         ctx=run_context,
         normalized_url="https://go.example.com/commerce-media-trends-report",
         execution_url="https://go.example.com/commerce-media-trends-report",
+        download_dir=tmp_path / "downloads",
         browser_session_class=session_factory,
     )
 
@@ -91,6 +95,7 @@ def test_rendered_terminal_preflight_returns_terminal_marker_without_agent(
     assert "rendered_terminal_preflight" in response.probe.evidence_labels
     assert sessions[0].started is True
     assert sessions[0].killed is True
+    assert Path(download_paths[0]) == (tmp_path / "downloads").resolve()
 
 
 def test_rendered_terminal_preflight_does_not_treat_403_as_not_found(
@@ -102,6 +107,7 @@ def test_rendered_terminal_preflight_does_not_treat_403_as_not_found(
         ctx=run_context,
         normalized_url="https://go.example.com/commerce-media-trends-report",
         execution_url="https://go.example.com/commerce-media-trends-report",
+        download_dir=tmp_path / "downloads",
         browser_session_class=lambda **kwargs: _BrowserSession(
             url="https://go.example.com/commerce-media-trends-report",
             title="403 Forbidden",

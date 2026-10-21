@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import re
+import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -16,8 +18,16 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.artifact_materialization import (
+    materialize_external_browser_artifact,
+)
+from src.services._browser_report_download.artifact_paths import (
+    ensure_browser_directory,
+    resolve_browser_artifact_path,
+    validate_browser_artifact_path,
+    validate_browser_download_directory,
+)
 from src.services._browser_report_download.models import BrowserUseAgentResult
-from src.services._browser_report_download.request import prepare_download_dir
 from src.utils.errors import AppError
 
 from .classification import (
@@ -73,12 +83,17 @@ _SCROLL_GROWTH_MARKERS = (
     "end of article",
 )
 _ONSITE_HTML_FETCH_TIMEOUT_SECONDS = 15.0
+_ONSITE_MARKDOWN_FORMATS = {"md", "markdown"}
+_ONSITE_HTML_FORMATS = {"html", "html+markdown"}
+_ONSITE_PDF_FORMATS = {"browser_rendered_pdf", "rendered_onsite_pdf"}
+_ONSITE_CAPTURE_SUFFIXES = {".html", ".md", ".pdf"}
 
 
 def _build_salvaged_onsite_result(
     *,
     request: BrowserReportDownloadRequest,
     normalized_url: str,
+    download_dir: Path,
     final_url: str,
     browser_html: str,
     final_page_title: str,
@@ -92,15 +107,26 @@ def _build_salvaged_onsite_result(
     onsite_capture_path: str = "",
     onsite_capture_format: str = "",
 ) -> BrowserReportDownloadResult:
-    capture_path = Path(onsite_capture_path) if onsite_capture_path else None
+    capture_path = None
+    if onsite_capture_path:
+        resolved_capture_path = _resolve_existing_onsite_capture_path(
+            claimed_path=onsite_capture_path,
+            download_dir=download_dir,
+            onsite_capture_format=onsite_capture_format,
+        )
+        if resolved_capture_path is not None and resolved_capture_path.is_file():
+            capture_path = resolved_capture_path
     if capture_path is None or not capture_path.is_file():
         capture_path = _capture_salvaged_onsite_html(
-            request=request,
+            download_dir=download_dir,
             normalized_url=normalized_url,
             final_url=final_url,
             html=browser_html,
         )
-        onsite_capture_format = onsite_capture_format or "html"
+        onsite_capture_format = _generated_onsite_capture_format(
+            onsite_capture_format=onsite_capture_format,
+            suffix=".html",
+        )
     page_count = max(
         1,
         len(
@@ -211,8 +237,28 @@ def _ensure_onsite_capture_artifact(
     onsite_capture_format: str | None,
 ) -> tuple[str | None, str | None]:
     existing_path = str(onsite_capture_path or "").strip()
-    if existing_path and Path(existing_path).is_file():
-        return existing_path, onsite_capture_format
+    existing_capture_path: Path | None = None
+    if existing_path:
+        existing_capture_path = _resolve_existing_onsite_capture_path(
+            claimed_path=existing_path,
+            download_dir=download_dir,
+            onsite_capture_format=onsite_capture_format,
+        )
+        if (
+            existing_capture_path is not None
+            and existing_capture_path.is_file()
+            and str(onsite_capture_format or "").strip().casefold()
+            in _ONSITE_PDF_FORMATS
+        ):
+            return str(existing_capture_path), onsite_capture_format
+        if (
+            existing_capture_path is not None
+            and existing_capture_path.is_file()
+            and not str(browser_html or "").strip()
+            and str(onsite_capture_format or "").strip().casefold()
+            in _ONSITE_HTML_FORMATS | _ONSITE_MARKDOWN_FORMATS
+        ):
+            return str(existing_capture_path), onsite_capture_format
     capture_html = str(browser_html or "")
     if not capture_html.strip():
         fetched_html = _try_fetch_onsite_capture_html(
@@ -229,15 +275,17 @@ def _ensure_onsite_capture_artifact(
         ):
             capture_html = fetched_html
     if capture_html.strip():
-        capture_path = _safe_onsite_capture_path(
+        capture_path = _publish_generated_onsite_capture(
             download_dir=download_dir,
             claimed_path=existing_path,
             final_url=final_url,
+            content=capture_html,
             suffix=".html",
         )
-        capture_path.parent.mkdir(parents=True, exist_ok=True)
-        capture_path.write_text(capture_html, encoding="utf-8")
-        return str(capture_path), str(onsite_capture_format or "html").strip() or "html"
+        return str(capture_path), _generated_onsite_capture_format(
+            onsite_capture_format=onsite_capture_format,
+            suffix=".html",
+        )
     capture_text = str(terminal_text_excerpt or "").strip()
     extracted_text = _extract_onsite_capture_text_from_steps(route_steps)
     if len(extracted_text) > len(capture_text):
@@ -248,18 +296,84 @@ def _ensure_onsite_capture_artifact(
         final_page_title=final_page_title,
         terminal_text_excerpt=capture_text,
     ):
-        return onsite_capture_path, onsite_capture_format
-    capture_path = _safe_onsite_capture_path(
+        if existing_capture_path is not None and existing_capture_path.is_file():
+            return str(existing_capture_path), onsite_capture_format
+        return (None if existing_path else onsite_capture_path), onsite_capture_format
+    capture_path = _publish_generated_onsite_capture(
         download_dir=download_dir,
         claimed_path=existing_path,
         final_url=final_url,
+        content=capture_text,
         suffix=".md",
     )
-    capture_path.parent.mkdir(parents=True, exist_ok=True)
-    capture_path.write_text(capture_text, encoding="utf-8")
-    return str(capture_path), str(
-        onsite_capture_format or "markdown"
-    ).strip() or "markdown"
+    return str(capture_path), _generated_onsite_capture_format(
+        onsite_capture_format=onsite_capture_format,
+        suffix=".md",
+    )
+
+
+def _resolve_existing_onsite_capture_path(
+    *,
+    claimed_path: str,
+    download_dir: Path,
+    onsite_capture_format: str | None = None,
+) -> Path | None:
+    """Resolve a contained claim or materialize an existing external capture."""
+    download_root = validate_browser_download_directory(download_dir)
+    try:
+        source_path = Path(claimed_path).expanduser().resolve()
+    except OSError:
+        return None
+    try:
+        source_is_within_workspace = source_path.is_relative_to(download_root)
+    except OSError:
+        return None
+    if source_is_within_workspace:
+        try:
+            validated_path = validate_browser_artifact_path(
+                source_path,
+                parent_dir=download_root,
+                temporary_suffixes=(".part",),
+            )
+        except AppError:
+            return None
+        if not _onsite_capture_path_matches_format(
+            validated_path,
+            onsite_capture_format=onsite_capture_format,
+        ):
+            return None
+        return validated_path
+    if not source_path.is_file():
+        return None
+    if not _onsite_capture_path_matches_format(
+        source_path,
+        onsite_capture_format=onsite_capture_format,
+    ):
+        return None
+    materialized_path = materialize_external_browser_artifact(
+        source_path=source_path,
+        download_dir=download_root,
+        preferred_filename=source_path.name,
+        source_identity=str(source_path),
+    )
+    if materialized_path is None:
+        return None
+    try:
+        validated_materialized_path = validate_browser_artifact_path(
+            materialized_path,
+            parent_dir=download_root,
+            temporary_suffixes=(".part",),
+        )
+    except AppError:
+        return None
+    return (
+        validated_materialized_path
+        if _onsite_capture_path_matches_format(
+            validated_materialized_path,
+            onsite_capture_format=onsite_capture_format,
+        )
+        else None
+    )
 
 
 def _extract_onsite_capture_text_from_steps(
@@ -286,17 +400,83 @@ def _safe_onsite_capture_path(
     final_url: str,
     suffix: str,
 ) -> Path:
-    download_root = download_dir.resolve()
+    download_root = validate_browser_download_directory(download_dir)
+    preferred_name = _preferred_onsite_capture_name(
+        claimed_path=claimed_path,
+        download_root=download_root,
+        suffix=suffix,
+        final_url=final_url,
+    )
+    return resolve_browser_artifact_path(
+        parent_dir=download_root,
+        source_name=preferred_name,
+        extension=suffix,
+        identity=final_url or "onsite_report",
+        temporary_suffixes=(".part",),
+    )
+
+
+def _preferred_onsite_capture_name(
+    *,
+    claimed_path: str,
+    download_root: Path,
+    suffix: str,
+    final_url: str,
+) -> str:
     if claimed_path:
         candidate = Path(claimed_path).expanduser()
         try:
-            resolved_candidate = candidate.resolve()
+            resolved_candidate = validate_browser_artifact_path(
+                candidate,
+                parent_dir=download_root,
+                temporary_suffixes=(".part",),
+            )
             if resolved_candidate.is_relative_to(download_root):
-                return resolved_candidate
-        except OSError:
-            claimed_path = ""
+                return _replace_capture_suffix(resolved_candidate.name, suffix)
+        except (AppError, OSError, RuntimeError, ValueError):
+            pass
     stem = Path(urlsplit(final_url or "onsite_report").path).stem or "onsite_report"
-    return download_root / f"{stem}{suffix}"
+    return f"{stem}{suffix}"
+
+
+def _replace_capture_suffix(filename: str, suffix: str) -> str:
+    stem = Path(filename).stem or "onsite_report"
+    return f"{stem}{suffix}"
+
+
+def _onsite_capture_path_matches_format(
+    path: Path,
+    *,
+    onsite_capture_format: str | None,
+) -> bool:
+    suffix = path.suffix.casefold()
+    normalized_format = str(onsite_capture_format or "").strip().casefold()
+    if normalized_format in _ONSITE_MARKDOWN_FORMATS:
+        return suffix == ".md"
+    if normalized_format in _ONSITE_HTML_FORMATS:
+        return suffix == ".html"
+    if normalized_format in _ONSITE_PDF_FORMATS:
+        return suffix == ".pdf"
+    return suffix in _ONSITE_CAPTURE_SUFFIXES
+
+
+def _generated_onsite_capture_format(
+    *,
+    onsite_capture_format: str | None,
+    suffix: str,
+) -> str:
+    normalized_format = str(onsite_capture_format or "").strip()
+    lowered_format = normalized_format.casefold()
+    normalized_suffix = str(suffix or "").strip().casefold()
+    if normalized_suffix == ".md":
+        return (
+            normalized_format
+            if lowered_format in _ONSITE_MARKDOWN_FORMATS
+            else "markdown"
+        )
+    if normalized_suffix == ".html":
+        return normalized_format if lowered_format in _ONSITE_HTML_FORMATS else "html"
+    return normalized_format or "browser_rendered_pdf"
 
 
 def _looks_like_onsite_report_text(
@@ -338,6 +518,7 @@ def _prefer_onsite_capture_over_optional_form_submission(
     request: BrowserReportDownloadRequest,
     ctx: RunContext,
     normalized_url: str,
+    download_dir: Path,
     agent_result: BrowserUseAgentResult,
     browser_html: str,
     route_kind: str,
@@ -415,7 +596,7 @@ def _prefer_onsite_capture_over_optional_form_submission(
     if not capture_path:
         capture_path = str(
             _capture_salvaged_onsite_html(
-                request=request,
+                download_dir=download_dir,
                 normalized_url=normalized_url,
                 final_url=final_url,
                 html=capture_html,
@@ -561,21 +742,164 @@ def _looks_like_onsite_report_html(
 
 def _capture_salvaged_onsite_html(
     *,
-    request: BrowserReportDownloadRequest,
+    download_dir: Path,
     normalized_url: str,
     final_url: str,
     html: str,
 ) -> Path:
-    capture_root = prepare_download_dir(
-        root_dir=request.settings.output_dir,
-        normalized_url=normalized_url,
+    capture_root = validate_browser_download_directory(download_dir)
+    return _publish_generated_onsite_capture(
+        download_dir=capture_root,
+        claimed_path="",
+        final_url=final_url or normalized_url,
+        content=str(html or ""),
+        suffix=".html",
     )
-    capture_path = (
-        capture_root
-        / f"{Path(urlsplit(final_url or normalized_url).path).stem or 'onsite-report'}.html"
+
+
+def _publish_generated_onsite_capture(
+    *,
+    download_dir: Path,
+    claimed_path: str,
+    final_url: str,
+    content: str,
+    suffix: str,
+) -> Path:
+    capture_root = validate_browser_download_directory(download_dir)
+    ensure_browser_directory(capture_root)
+    preferred_path = _safe_onsite_capture_path(
+        download_dir=capture_root,
+        claimed_path=claimed_path,
+        final_url=final_url,
+        suffix=suffix,
     )
-    capture_path.write_text(str(html or ""), encoding="utf-8")
-    return capture_path
+    content_bytes = str(content or "").encode("utf-8")
+    stage_path = _write_onsite_capture_stage(
+        download_dir=capture_root,
+        content=content_bytes,
+    )
+    try:
+        try:
+            materialized_path = materialize_external_browser_artifact(
+                source_path=stage_path,
+                download_dir=capture_root,
+                preferred_filename=preferred_path.name,
+                source_identity=final_url or "onsite_report",
+            )
+        except AppError:
+            raise
+        except OSError as exc:
+            raise AppError(
+                code="browser_download_artifact_materialization_failed",
+                message="Generated on-site capture could not be materialized",
+                cause=exc,
+                retryable=False,
+                context={
+                    "path_role": "on-site capture",
+                    "next_action": "Choose a writable browser output directory",
+                },
+            ) from exc
+        if materialized_path is None:
+            raise AppError(
+                code="browser_download_artifact_materialization_failed",
+                message="Generated on-site capture could not be materialized",
+                retryable=False,
+                context={
+                    "path_role": "on-site capture",
+                    "next_action": "Choose a writable browser output directory",
+                },
+            )
+        validated_path = validate_browser_artifact_path(
+            materialized_path,
+            parent_dir=capture_root,
+            temporary_suffixes=(".part",),
+        )
+        if validated_path.suffix.casefold() != suffix.casefold():
+            raise AppError(
+                code="browser_download_artifact_materialization_failed",
+                message="Generated on-site capture has an incompatible extension",
+                retryable=False,
+                context={
+                    "path_role": "on-site capture",
+                    "next_action": "Choose a compatible capture format",
+                },
+            )
+        try:
+            actual_bytes = validated_path.read_bytes()
+        except OSError as exc:
+            raise AppError(
+                code="browser_download_artifact_materialization_failed",
+                message="Generated on-site capture could not be reopened",
+                cause=exc,
+                retryable=False,
+                context={
+                    "path_role": "on-site capture",
+                    "next_action": "Choose a readable browser output directory",
+                },
+            ) from exc
+        if actual_bytes != content_bytes:
+            raise AppError(
+                code="browser_download_artifact_materialization_failed",
+                message="Generated on-site capture bytes do not match the capture",
+                retryable=False,
+                context={
+                    "path_role": "on-site capture",
+                    "next_action": "Retry the bounded capture operation",
+                },
+            )
+        return validated_path
+    finally:
+        _unlink_owned_onsite_stage(stage_path)
+
+
+def _write_onsite_capture_stage(*, download_dir: Path, content: bytes) -> Path:
+    file_descriptor: int | None = None
+    stage_path: Path | None = None
+    try:
+        file_descriptor, stage_name = tempfile.mkstemp(
+            prefix="",
+            suffix=".part",
+            dir=str(download_dir),
+        )
+        stage_path = Path(stage_name)
+        stage_path = validate_browser_artifact_path(
+            stage_path,
+            parent_dir=download_dir,
+        )
+        with os.fdopen(file_descriptor, "wb") as handle:
+            file_descriptor = None
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        return stage_path
+    except AppError:
+        if file_descriptor is not None:
+            os.close(file_descriptor)
+        if stage_path is not None:
+            _unlink_owned_onsite_stage(stage_path)
+        raise
+    except OSError as exc:
+        if file_descriptor is not None:
+            os.close(file_descriptor)
+        if stage_path is not None:
+            _unlink_owned_onsite_stage(stage_path)
+        raise AppError(
+            code="browser_download_artifact_materialization_failed",
+            message="Generated on-site capture could not be staged",
+            cause=exc,
+            retryable=False,
+            context={
+                "path_role": "on-site capture",
+                "next_action": "Choose a writable browser output directory",
+            },
+        ) from exc
+
+
+def _unlink_owned_onsite_stage(path: Path) -> None:
+    try:
+        path.unlink()
+    except OSError:
+        return
 
 
 def _infer_onsite_completeness_status(
@@ -706,12 +1030,92 @@ def _has_scroll_growth_evidence(route_steps: list[BrowserDownloadRouteStep]) -> 
 
 def _resolve_onsite_capture_path(downloaded_path: Path) -> Path:
     if downloaded_path.suffix.lower() == ".html":
-        return downloaded_path
-    capture_path = downloaded_path.with_suffix(".html")
-    if capture_path.exists():
-        capture_path.unlink()
-    downloaded_path.replace(capture_path)
-    return capture_path
+        return validate_browser_artifact_path(
+            downloaded_path,
+            parent_dir=downloaded_path.parent,
+            temporary_suffixes=(".part",),
+        )
+    capture_root = validate_browser_download_directory(downloaded_path.parent)
+    downloaded_path = validate_browser_artifact_path(
+        downloaded_path,
+        parent_dir=capture_root,
+        temporary_suffixes=(".part",),
+    )
+    preferred_path = resolve_browser_artifact_path(
+        parent_dir=capture_root,
+        source_name=f"{downloaded_path.stem}.html",
+        extension=".html",
+        identity=str(downloaded_path),
+        temporary_suffixes=(".part",),
+    )
+    try:
+        materialized_path = materialize_external_browser_artifact(
+            source_path=downloaded_path,
+            download_dir=capture_root,
+            preferred_filename=preferred_path.name,
+            source_identity=str(downloaded_path),
+        )
+    except AppError:
+        raise
+    except OSError as exc:
+        raise AppError(
+            code="browser_download_artifact_materialization_failed",
+            message="Recovered on-site HTML could not be materialized",
+            cause=exc,
+            retryable=False,
+            context={
+                "path_role": "recovered on-site capture",
+                "next_action": "Choose a writable browser output directory",
+            },
+        ) from exc
+    if materialized_path is None:
+        raise AppError(
+            code="browser_download_artifact_materialization_failed",
+            message="Recovered on-site HTML could not be materialized",
+            retryable=False,
+            context={
+                "path_role": "recovered on-site capture",
+                "next_action": "Choose a writable browser output directory",
+            },
+        )
+    resolved_path = validate_browser_artifact_path(
+        materialized_path,
+        parent_dir=capture_root,
+        temporary_suffixes=(".part",),
+    )
+    if resolved_path.suffix.casefold() != ".html":
+        raise AppError(
+            code="browser_download_artifact_materialization_failed",
+            message="Recovered on-site HTML has an incompatible extension",
+            retryable=False,
+            context={
+                "path_role": "recovered on-site capture",
+                "next_action": "Choose a compatible browser output directory",
+            },
+        )
+    try:
+        if resolved_path.read_bytes() != downloaded_path.read_bytes():
+            raise AppError(
+                code="browser_download_artifact_materialization_failed",
+                message="Recovered on-site HTML bytes do not match the source",
+                retryable=False,
+                context={
+                    "path_role": "recovered on-site capture",
+                    "next_action": "Retry the bounded recovery operation",
+                },
+            )
+    except OSError as exc:
+        raise AppError(
+            code="browser_download_artifact_materialization_failed",
+            message="Recovered on-site HTML could not be reopened",
+            cause=exc,
+            retryable=False,
+            context={
+                "path_role": "recovered on-site capture",
+                "next_action": "Choose a readable browser output directory",
+            },
+        ) from exc
+    return resolved_path
 
 
 def _resolve_existing_browser_rendered_capture(raw_path: str | None) -> Path | None:

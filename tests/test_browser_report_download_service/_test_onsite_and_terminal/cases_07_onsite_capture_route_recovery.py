@@ -22,6 +22,10 @@ from src.services._browser_report_download._http.onsite_capture import (
     _should_try_direct_onsite_capture,
     try_direct_onsite_capture,
 )
+from src.services._browser_report_download._artifact.onsite import (
+    _resolve_onsite_capture_path,
+)
+from src.services._browser_report_download.artifact_paths import windows_path_units
 
 from ._shared import *  # noqa: F401,F403
 

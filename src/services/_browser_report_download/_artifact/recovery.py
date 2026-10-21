@@ -52,6 +52,7 @@ from .evidence import (
 )
 from .onsite import (
     _build_salvaged_onsite_result,
+    _generated_onsite_capture_format,
     _infer_onsite_completeness_status,
     _looks_like_non_report_terminal,
     _looks_like_onsite_report_html,
@@ -181,6 +182,7 @@ def _salvage_without_structured_result(
         return _build_salvaged_onsite_result(
             request=request,
             normalized_url=normalized_url,
+            download_dir=download_dir,
             final_url=final_url,
             browser_html=browser_html,
             final_page_title=final_page_title,
@@ -284,7 +286,11 @@ def _recover_salvaged_terminal_html(
             return current_html, current_snapshot, recovered_final_url
         return (
             current_html,
-            _write_terminal_html_snapshot(download_dir=download_dir, html=current_html),
+            _write_terminal_html_snapshot(
+                download_dir=download_dir,
+                html=current_html,
+                source_identity=recovered_final_url or normalized_url,
+            ),
             recovered_final_url,
         )
     fetch_targets = _normalize_string_list(
@@ -305,7 +311,11 @@ def _recover_salvaged_terminal_html(
             continue
         return (
             fetched_html,
-            _write_terminal_html_snapshot(download_dir=download_dir, html=fetched_html),
+            _write_terminal_html_snapshot(
+                download_dir=download_dir,
+                html=fetched_html,
+                source_identity=fetch_target,
+            ),
             fetch_target,
         )
     return "", current_snapshot, recovered_final_url
@@ -576,6 +586,10 @@ def _recover_from_invalid_artifact(
             traversed_page_urls=list(agent_result.traversed_page_urls),
             route_steps=_normalize_agent_route_steps_for_completeness(agent_result),
         )
+        capture_format = _generated_onsite_capture_format(
+            onsite_capture_format=agent_result.onsite_capture_format,
+            suffix=capture_path.suffix,
+        )
         return (
             "onsite_report",
             None,
@@ -583,7 +597,7 @@ def _recover_from_invalid_artifact(
             None,
             None,
             str(capture_path),
-            str(agent_result.onsite_capture_format or "html").strip() or "html",
+            capture_format,
             page_count,
             completeness_status,
             "captured",

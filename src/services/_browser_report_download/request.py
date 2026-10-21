@@ -1,14 +1,18 @@
 from __future__ import annotations
 
-from errno import EACCES, EBUSY, EPERM
+import secrets
 from hashlib import sha1
 from pathlib import Path
-from shutil import rmtree
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
     BrowserDownloadIdentityField,
     BrowserReportDownloadRequest,
+)
+from src.services._browser_report_download.artifact_paths import (
+    bounded_browser_directory_component,
+    ensure_browser_directory,
+    validate_browser_download_directory,
 )
 from src.services._config_service.identity import (
     identity_field_match_tokens,
@@ -33,7 +37,11 @@ _PUBLIC_EMAIL_DOMAINS = {
     "pm.me",
     "gmx.com",
 }
-_MANAGED_BROWSER_PROFILE_DIR_PREFIX = "browser-use-user-data-dir-profile"
+
+# The stable URL namespace must leave room for the short, attempt-owned child
+# workspace and its managed browser profile descendants.
+_DOWNLOAD_WORKSPACE_COMPONENT_RESERVATION = "a000000"
+_DOWNLOAD_WORKSPACE_PATH_SEPARATOR_RESERVATION = ""
 
 
 def validate_common_request(
@@ -205,9 +213,45 @@ def _identity_families_for_field(field: BrowserDownloadIdentityField) -> set[str
 
 
 def resolve_download_dir_path(*, root_dir: str, normalized_url: str) -> Path:
-    root = Path(root_dir).expanduser().resolve()
-    host = urlsplit(normalized_url).netloc.replace(":", "_") or "unknown_host"
+    try:
+        root = Path(root_dir).expanduser().resolve()
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise AppError(
+            code="browser_download_output_dir_invalid",
+            message="Browser download output directory could not be resolved safely",
+            cause=exc,
+            retryable=False,
+            context={
+                "windows_path_budget": 240,
+                "next_action": "Set a shorter writable browser output_dir",
+            },
+        ) from exc
+    raw_host = (urlsplit(normalized_url).netloc or "unknown_host").casefold()
     url_hash = sha1(normalized_url.encode("utf-8")).hexdigest()[:12]
+    trailing_components = (
+        _DOWNLOAD_WORKSPACE_PATH_SEPARATOR_RESERVATION,
+        url_hash,
+        _DOWNLOAD_WORKSPACE_COMPONENT_RESERVATION,
+    )
+    try:
+        host = bounded_browser_directory_component(
+            parent_dir=root,
+            raw_name=raw_host,
+            identity=raw_host or normalized_url,
+            trailing_components=trailing_components,
+        )
+    except AppError:
+        # The URL hash below remains the complete source identity. When a
+        # deep root leaves too little room for the regular host compaction,
+        # use a short deterministic label so the attempt workspace and its
+        # managed profile still fit the same validated budget.
+        compact_host = f"h{sha1(raw_host.encode('utf-8')).hexdigest()[:6]}"
+        host = bounded_browser_directory_component(
+            parent_dir=root,
+            raw_name=compact_host,
+            identity=raw_host or normalized_url,
+            trailing_components=trailing_components,
+        )
     download_dir = (root / host / url_hash).resolve()
     if download_dir != root and root not in download_dir.parents:
         raise AppError(
@@ -216,42 +260,57 @@ def resolve_download_dir_path(*, root_dir: str, normalized_url: str) -> Path:
             retryable=False,
             context={"root_dir": str(root), "download_dir": str(download_dir)},
         )
-    return download_dir
+    return validate_browser_download_directory(download_dir)
 
 
 def prepare_download_dir(*, root_dir: str, normalized_url: str) -> Path:
+    """Resolve one stable URL namespace without deleting prior attempts."""
+
     download_dir = resolve_download_dir_path(
         root_dir=root_dir,
         normalized_url=normalized_url,
     )
-    if download_dir.exists():
-        for child in download_dir.iterdir():
-            if child.is_dir():
-                _remove_download_dir_child(child)
-            else:
-                child.unlink()
-    else:
-        download_dir.mkdir(parents=True, exist_ok=True)
-    return download_dir
+    return ensure_browser_directory(download_dir)
 
 
-def _remove_download_dir_child(child: Path) -> None:
-    try:
-        rmtree(child)
-    except OSError as exc:
-        if _is_locked_managed_browser_profile_dir(child, exc):
-            return
-        raise
+def create_download_workspace(download_dir: Path) -> Path:
+    """Create one short, unique workspace for a single acquisition attempt."""
 
-
-def _is_locked_managed_browser_profile_dir(child: Path, exc: OSError) -> bool:
-    if not child.is_dir():
-        return False
-    if not child.name.startswith(_MANAGED_BROWSER_PROFILE_DIR_PREFIX):
-        return False
-    errno_value = getattr(exc, "errno", None)
-    winerror_value = getattr(exc, "winerror", None)
-    return errno_value in {EACCES, EBUSY, EPERM} or winerror_value == 32
+    stable_dir = validate_browser_download_directory(download_dir)
+    ensure_browser_directory(stable_dir)
+    for _ in range(32):
+        workspace_candidate = stable_dir / f"a{secrets.token_hex(3)}"
+        try:
+            workspace = workspace_candidate.resolve()
+            workspace.relative_to(stable_dir)
+        except (OSError, RuntimeError, ValueError):
+            continue
+        validate_browser_download_directory(workspace)
+        try:
+            workspace_candidate.mkdir()
+        except FileExistsError:
+            continue
+        except OSError as exc:
+            raise AppError(
+                code="browser_download_output_dir_invalid",
+                message="Browser download attempt workspace could not be created",
+                cause=exc,
+                retryable=False,
+                context={
+                    "download_dir": str(stable_dir),
+                    "next_action": "Choose a writable browser output directory",
+                },
+            ) from exc
+        return workspace
+    raise AppError(
+        code="browser_download_workspace_create_failed",
+        message="Could not allocate a unique browser download attempt workspace",
+        retryable=True,
+        context={
+            "download_dir": str(stable_dir),
+            "next_action": "Retry the browser download attempt",
+        },
+    )
 
 
 def _validate_email_value(value: str, *, field_name: str) -> None:

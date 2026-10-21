@@ -14,9 +14,16 @@ from src.contracts.browser_download import (
     BrowserDownloadSessionReusePolicy,
 )
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download.artifact_paths import (
+    ensure_browser_directory,
+    validate_browser_artifact_path,
+    validate_browser_profile_path,
+    validate_browser_session_reuse_base_path,
+)
 from src.services._browser_report_download.logging import (
     browser_session_reuse_log_fields,
 )
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service.session_reuse")
@@ -62,6 +69,7 @@ def resolve_browser_session_reuse(
         raw_base_dir=normalized_policy.base_dir,
         default_base_dir=default_base_dir,
     )
+    base_dir = validate_browser_session_reuse_base_path(base_dir)
     cleanup_removed_count = (
         _cleanup_expired_session_dirs(base_dir)
         if normalized_policy.cleanup_expired
@@ -107,10 +115,21 @@ def resolve_browser_session_reuse(
         key_hash=key_hash,
         publisher_scope=publisher_scope,
     )
+    profile_dir = validate_browser_profile_path(
+        profile_dir,
+        parent_dir=base_dir,
+        include_session_ledger=True,
+    )
     profile_reused = _is_fresh_profile(profile_dir)
     ttl_seconds = _effective_ttl_seconds(normalized_policy.ttl_seconds)
     expires_at = time.time() + ttl_seconds
-    profile_dir.mkdir(parents=True, exist_ok=True)
+    ensure_browser_directory(
+        profile_dir,
+        role="browser session-reuse profile directory",
+        profile=True,
+        parent_dir=base_dir,
+        include_session_ledger=True,
+    )
     _write_session_ledger(
         profile_dir=profile_dir,
         mode=mode,
@@ -154,7 +173,11 @@ def finalize_browser_session_reuse(
 ) -> None:
     if not decision.accepted or not decision.profile_path:
         return
-    profile_dir = Path(decision.profile_path).resolve()
+    profile_dir = validate_browser_profile_path(
+        Path(decision.profile_path),
+        parent_dir=Path(decision.profile_path).expanduser().parent,
+        include_session_ledger=True,
+    )
     ledger = _read_json(profile_dir / _SESSION_REUSE_LEDGER_FILE)
     ledger.update(
         {
@@ -192,9 +215,23 @@ def _normalize_policy(
 
 def _resolve_base_dir(*, raw_base_dir: str, default_base_dir: Path) -> Path:
     token = str(raw_base_dir or "").strip()
-    if token:
-        return Path(token).expanduser().resolve()
-    return (default_base_dir / "browser_session_reuse").resolve()
+    try:
+        if token:
+            return Path(token).expanduser().resolve()
+        return (default_base_dir / "browser_session_reuse").resolve()
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise AppError(
+            code="browser_download_session_reuse_path_invalid",
+            message="Browser session-reuse directory could not be resolved safely",
+            cause=exc,
+            retryable=False,
+            context={
+                "path_role": "browser session-reuse directory",
+                "next_action": (
+                    "Choose a shorter writable session-reuse directory and retry"
+                ),
+            },
+        ) from exc
 
 
 def _normalize_mode(raw_mode: str) -> str:
@@ -363,6 +400,7 @@ def _drop_missing_index_entries(base_dir: Path) -> None:
 
 
 def _read_json(path: Path) -> dict[str, Any]:
+    path = validate_browser_artifact_path(path)
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -371,11 +409,26 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, ensure_ascii=True, sort_keys=True),
-        encoding="utf-8",
-    )
+    path = validate_browser_artifact_path(path)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(payload, ensure_ascii=True, sort_keys=True),
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        raise AppError(
+            code="browser_download_session_reuse_path_invalid",
+            message="Browser session-reuse metadata could not be written safely",
+            cause=exc,
+            retryable=False,
+            context={
+                "path_role": "browser session-reuse metadata",
+                "next_action": (
+                    "Choose a shorter writable session-reuse directory and retry"
+                ),
+            },
+        ) from exc
 
 
 def _coerce_float(value: object) -> float:

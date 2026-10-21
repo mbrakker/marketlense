@@ -2,6 +2,15 @@
 from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
+from src.services._browser_report_download._artifact.onsite import (
+    _ensure_onsite_capture_artifact,
+)
+from src.services._browser_report_download.artifact_paths import (
+    resolve_browser_artifact_path,
+)
+from src.services._browser_report_download.models import BrowserUseAgentResult
+from src.services._browser_report_download.models import BrowserAgentRunResult
+
 
 def test_browser_report_download_result_trusts_explicit_lookup_enum_blocker(
     tmp_path: Path,
@@ -112,6 +121,7 @@ def test_browser_report_download_result_trusts_explicit_lookup_enum_blocker(
     assert response.blocked_reason == "blocked_unknown_required_enum"
     assert "could not be properly selected" in str(response.blocked_reason_detail)
 
+
 def test_download_report_with_browser_use_does_not_infer_static_archive_from_please_wait(
     tmp_path: Path,
     run_context,
@@ -171,6 +181,7 @@ def test_download_report_with_browser_use_does_not_infer_static_archive_from_ple
     assert response.outcome == "email_required"
     assert response.blocked_reason != "blocked_static_archive"
 
+
 def test_download_report_with_browser_use_does_not_infer_blocker_from_onsite_article_text(
     tmp_path: Path,
     run_context,
@@ -229,6 +240,7 @@ def test_download_report_with_browser_use_does_not_infer_blocker_from_onsite_art
     assert response.outcome == "captured"
     assert response.blocked_reason is None
     assert response.blocked_reason_detail is None
+
 
 def test_download_report_with_browser_use_salvages_empty_result_via_terminal_html_fetch(
     tmp_path: Path,
@@ -300,6 +312,7 @@ def test_download_report_with_browser_use_salvages_empty_result_via_terminal_htm
     assert response.onsite_capture_path is not None
     assert Path(str(response.onsite_capture_path)).exists()
 
+
 def test_download_report_with_browser_use_salvages_cached_terminal_state_when_timeout_recovery_hangs(
     tmp_path: Path,
     caplog,
@@ -363,6 +376,7 @@ def test_download_report_with_browser_use_salvages_cached_terminal_state_when_ti
         for event in _service_events(caplog)
     )
 
+
 def test_download_report_with_browser_use_salvages_terminal_state_on_timeout(
     tmp_path: Path,
     run_context,
@@ -411,6 +425,7 @@ def test_download_report_with_browser_use_salvages_terminal_state_on_timeout(
     assert response.route_kind == "pdf_download"
     assert response.outcome == "downloaded"
     assert response.downloaded_file_path.endswith("timed-out-report.pdf")
+
 
 def test_download_report_with_browser_use_materializes_claimed_onsite_capture(
     tmp_path: Path,
@@ -484,6 +499,239 @@ def test_download_report_with_browser_use_materializes_claimed_onsite_capture(
         .read_text(encoding="utf-8")
         .startswith("Local RankFlux research report analysis.")
     )
+
+
+def test_existing_external_onsite_capture_is_materialized_into_attempt_workspace(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    source_path = tmp_path / "external-browser-output" / "onsite_report.md"
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    source_bytes = b"external onsite capture"
+    source_path.write_bytes(source_bytes)
+    attempt_dir = tmp_path / "browser-workspace"
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/research/local-rankflux",
+        settings=_settings(tmp_path),
+        route_family_hint="browser_tracker_redirect",
+    )
+
+    capture_path, capture_format = _ensure_onsite_capture_artifact(
+        request=request,
+        ctx=run_context,
+        normalized_url=request.url,
+        download_dir=attempt_dir,
+        agent_result=BrowserUseAgentResult(route_kind="onsite_report"),
+        final_url=request.url,
+        final_page_title="Local RankFlux Research Report",
+        terminal_text_excerpt="",
+        route_steps=[],
+        browser_html="",
+        onsite_capture_path=str(source_path),
+        onsite_capture_format="markdown",
+    )
+
+    assert capture_path is not None
+    resolved_capture = Path(capture_path).resolve()
+    assert resolved_capture.is_relative_to(attempt_dir.resolve())
+    assert resolved_capture.read_bytes() == source_bytes
+    assert source_path.read_bytes() == source_bytes
+    assert capture_format == "markdown"
+
+
+def test_existing_html_capture_reuses_without_terminal_fetch(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    attempt_dir = tmp_path / "browser-workspace"
+    source_path = attempt_dir / "onsite_report.html"
+    source_bytes = b"<html><body><article>existing report</article></body></html>"
+    attempt_dir.mkdir(parents=True)
+    source_path.write_bytes(source_bytes)
+    fetch_calls: list[str] = []
+
+    def record_fetch(*args, **kwargs):
+        fetch_calls.append(str(args[0] if args else kwargs.get("url", "")))
+        return None
+
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        record_fetch,
+    )
+    request_url = "https://example.com/research/local-rankflux"
+    capture_path, capture_format = _ensure_onsite_capture_artifact(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=request_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_tracker_redirect",
+        ),
+        ctx=run_context,
+        normalized_url=request_url,
+        download_dir=attempt_dir,
+        agent_result=BrowserUseAgentResult(route_kind="onsite_report"),
+        final_url=request_url,
+        final_page_title="Local RankFlux Research Report",
+        terminal_text_excerpt="",
+        route_steps=[],
+        browser_html="",
+        onsite_capture_path=str(source_path),
+        onsite_capture_format="html",
+    )
+
+    assert Path(capture_path).resolve() == source_path.resolve()
+    assert capture_format == "html"
+    assert Path(capture_path).read_bytes() == source_bytes
+    assert fetch_calls == []
+
+
+def test_finalized_external_onsite_capture_stays_in_attempt_workspace(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    source_path = tmp_path / "external-browser-output" / "onsite_report.md"
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    source_bytes = b"finalized external onsite capture"
+    source_path.write_bytes(source_bytes)
+    attempt_dir = tmp_path / "browser-workspace"
+    request_url = "https://example.com/research/local-rankflux"
+    payload = {
+        "route_kind": "onsite_report",
+        "route_summary": "Captured the on-site report.",
+        "route_family": "browser_tracker_redirect",
+        "resolved_target_url": request_url,
+        "final_page_url": request_url,
+        "final_page_title": "Local RankFlux Research Report",
+        "onsite_capture_path": str(source_path),
+        "onsite_capture_format": "markdown",
+        "onsite_page_count": 1,
+        "onsite_completeness_status": "complete",
+    }
+    response = artifact_runtime.finalize_browser_report_download_result(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=request_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_tracker_redirect",
+        ),
+        ctx=run_context,
+        normalized_url=request_url,
+        delivery_email=None,
+        download_dir=attempt_dir,
+        browser_run=BrowserAgentRunResult(
+            schema_version="1.0",
+            raw_model_response=json.dumps(payload),
+            final_page_url=request_url,
+            final_page_title="Local RankFlux Research Report",
+            final_page_html="",
+            downloaded_files=[],
+            attachment_paths=[],
+            network_resource_urls=[],
+            network_events=[],
+            html_snapshot_path="",
+            screenshot_path="",
+        ),
+    )
+
+    assert response.onsite_capture_path is not None
+    resolved_capture = Path(response.onsite_capture_path).resolve()
+    assert resolved_capture.is_relative_to(attempt_dir.resolve())
+    assert resolved_capture.read_bytes() == source_bytes
+    assert source_path.read_bytes() == source_bytes
+
+
+def test_onsite_html_capture_rejects_missing_pdf_claim_for_html_output(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    attempt_dir = tmp_path / "browser-workspace"
+    request_url = "https://example.com/research/report"
+    capture_path, capture_format = _ensure_onsite_capture_artifact(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=request_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        ctx=run_context,
+        normalized_url=request_url,
+        download_dir=attempt_dir,
+        agent_result=BrowserUseAgentResult(route_kind="onsite_report"),
+        final_url=request_url,
+        final_page_title="Research report",
+        terminal_text_excerpt="",
+        route_steps=[],
+        browser_html="<html><body><h1>Research report</h1></body></html>",
+        onsite_capture_path=str(attempt_dir / "report.pdf"),
+        onsite_capture_format="html",
+    )
+
+    assert capture_path is not None
+    assert Path(capture_path).suffix == ".html"
+    assert capture_format == "html"
+    assert Path(capture_path).read_text(encoding="utf-8").startswith("<html>")
+    assert not (attempt_dir / "report.pdf").exists()
+
+
+def test_onsite_markdown_capture_preserves_occupied_identity_artifacts(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    attempt_dir = tmp_path / "browser-workspace"
+    request_url = "https://example.com/research/report"
+    normal_path = resolve_browser_artifact_path(
+        parent_dir=attempt_dir,
+        source_name="report",
+        extension=".md",
+        identity=request_url,
+        temporary_suffixes=(".part",),
+    )
+    identity_path = resolve_browser_artifact_path(
+        parent_dir=attempt_dir,
+        source_name="report",
+        extension=".md",
+        identity=request_url,
+        force_identity_hash=True,
+        temporary_suffixes=(".part",),
+    )
+    normal_path.parent.mkdir(parents=True)
+    normal_path.write_bytes(b"previous normal markdown")
+    identity_path.write_bytes(b"previous identity markdown")
+
+    capture_path, capture_format = _ensure_onsite_capture_artifact(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=request_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        ctx=run_context,
+        normalized_url=request_url,
+        download_dir=attempt_dir,
+        agent_result=BrowserUseAgentResult(route_kind="onsite_report"),
+        final_url=request_url,
+        final_page_title="Research report",
+        terminal_text_excerpt=("Research report analysis. " * 40),
+        route_steps=[],
+        browser_html="",
+        onsite_capture_path="",
+        onsite_capture_format="markdown",
+    )
+
+    assert capture_path is not None
+    assert Path(capture_path).suffix == ".md"
+    assert capture_format == "markdown"
+    assert (
+        Path(capture_path)
+        .read_text(encoding="utf-8")
+        .startswith("Research report analysis.")
+    )
+    assert normal_path.read_bytes() == b"previous normal markdown"
+    assert identity_path.read_bytes() == b"previous identity markdown"
+
 
 def test_download_report_with_browser_use_fetches_terminal_html_for_missing_onsite_capture(
     tmp_path: Path,
@@ -581,6 +829,7 @@ def test_download_report_with_browser_use_fetches_terminal_html_for_missing_onsi
         encoding="utf-8"
     )
 
+
 def test_download_report_with_browser_use_ignores_worker_metadata_when_materializing_onsite_extract(
     tmp_path: Path,
     run_context,
@@ -674,6 +923,7 @@ def test_download_report_with_browser_use_ignores_worker_metadata_when_materiali
     assert "original infographics" in capture_path.read_text(encoding="utf-8")
     assert response.downloaded_file_path is None
 
+
 __all__ = [
     "test_browser_report_download_result_trusts_explicit_lookup_enum_blocker",
     "test_download_report_with_browser_use_does_not_infer_static_archive_from_please_wait",
@@ -682,6 +932,11 @@ __all__ = [
     "test_download_report_with_browser_use_salvages_cached_terminal_state_when_timeout_recovery_hangs",
     "test_download_report_with_browser_use_salvages_terminal_state_on_timeout",
     "test_download_report_with_browser_use_materializes_claimed_onsite_capture",
+    "test_existing_external_onsite_capture_is_materialized_into_attempt_workspace",
+    "test_existing_html_capture_reuses_without_terminal_fetch",
+    "test_finalized_external_onsite_capture_stays_in_attempt_workspace",
+    "test_onsite_html_capture_rejects_missing_pdf_claim_for_html_output",
+    "test_onsite_markdown_capture_preserves_occupied_identity_artifacts",
     "test_download_report_with_browser_use_fetches_terminal_html_for_missing_onsite_capture",
     "test_download_report_with_browser_use_ignores_worker_metadata_when_materializing_onsite_extract",
 ]

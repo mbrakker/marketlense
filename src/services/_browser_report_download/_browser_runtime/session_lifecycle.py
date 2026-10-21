@@ -5,13 +5,9 @@ from __future__ import annotations
 from src.services._browser_report_download._browser_runtime._session_lifecycle.cleanup import (
     _cleanup_browser_profile_dir,
     _cleanup_managed_browser_profile_dirs,
-    _cleanup_new_browser_use_temp_dirs,
-    _cleanup_stale_browser_use_temp_dirs,
     _default_session_reuse_base_dir,
-    _list_browser_use_temp_dirs,
     _log_browser_cleanup_failure,
     _new_managed_browser_profile_dir,
-    _remove_browser_use_temp_dirs,
 )
 from src.services._browser_report_download._browser_runtime._session_lifecycle.history import (
     BrowserAgentHistoryResult,

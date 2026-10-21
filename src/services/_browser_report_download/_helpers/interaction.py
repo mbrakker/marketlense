@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,13 @@ from src.contracts.browser_download import (
     BrowserHelperStandardFormSubmitResult,
 )
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download.artifact_materialization import (
+    allocate_browser_artifact_stage,
+    materialize_external_browser_artifact,
+)
+from src.services._browser_report_download.artifact_paths import (
+    validate_browser_artifact_path,
+)
 from src.services._browser_report_download.cdp import (
     capture_terminal_screenshot_via_cdp,
 )
@@ -58,6 +66,7 @@ def browser_helper_capture_screenshot(
     normalized_url: str,
     required: bool = False,
 ) -> BrowserHelperScreenshot:
+    screenshot_path = validate_browser_artifact_path(screenshot_path)
     logger.info(
         log_event(
             ctx,
@@ -80,24 +89,31 @@ def browser_helper_capture_screenshot(
         ),
     )
     for source, candidate in candidates:
-        if _try_screenshot_call(candidate=candidate, screenshot_path=screenshot_path):
+        captured_path = _try_screenshot_call(
+            candidate=candidate,
+            screenshot_path=screenshot_path,
+            source_identity=normalized_url,
+        )
+        if captured_path is not None:
             return _screenshot_result(
                 ctx=ctx,
                 normalized_url=normalized_url,
-                screenshot_path=screenshot_path,
+                screenshot_path=captured_path,
                 source=source,
             )
-    if capture_terminal_screenshot_via_cdp(
+    cdp_captured_path = capture_terminal_screenshot_via_cdp(
         browser=browser,
         screenshot_path=screenshot_path,
         ctx=ctx,
         normalized_url=normalized_url,
         required=False,
-    ):
+        return_path=True,
+    )
+    if isinstance(cdp_captured_path, Path):
         return _screenshot_result(
             ctx=ctx,
             normalized_url=normalized_url,
-            screenshot_path=screenshot_path,
+            screenshot_path=cdp_captured_path,
             source="cdp",
         )
     if required:
@@ -1341,37 +1357,69 @@ def _screenshot_result(
     return result
 
 
-def _try_screenshot_call(*, candidate: Any, screenshot_path: Path) -> bool:
+def _try_screenshot_call(
+    *,
+    candidate: Any,
+    screenshot_path: Path,
+    source_identity: str = "",
+) -> Path | None:
     if not callable(candidate):
-        return False
-    screenshot_path.parent.mkdir(parents=True, exist_ok=True)
-    call_shapes = (
-        {"path": str(screenshot_path), "full_page": True},
-        {"path": str(screenshot_path), "fullPage": True},
-        {"path": str(screenshot_path)},
-    )
-    for kwargs in call_shapes:
-        try:
-            value = _maybe_await(candidate(**kwargs))
-        except TypeError:
-            continue
-        except Exception:
-            return False
-        if screenshot_path.exists() and screenshot_path.stat().st_size > 0:
-            return True
-        if isinstance(value, bytes) and value:
-            screenshot_path.write_bytes(value)
-            return screenshot_path.exists() and screenshot_path.stat().st_size > 0
-        if isinstance(value, str) and value.strip():
-            screenshot_path.write_text(value, encoding="utf-8")
-            return screenshot_path.exists() and screenshot_path.stat().st_size > 0
+        return None
     try:
-        value = _maybe_await(candidate(str(screenshot_path)))
-    except Exception:
-        return False
-    if screenshot_path.exists() and screenshot_path.stat().st_size > 0:
-        return True
-    if isinstance(value, bytes) and value:
-        screenshot_path.write_bytes(value)
-        return screenshot_path.exists() and screenshot_path.stat().st_size > 0
-    return False
+        stage_path = allocate_browser_artifact_stage(
+            screenshot_path,
+            stage_suffix=".png",
+        )
+    except (AppError, OSError):
+        return None
+
+    def has_staged_capture() -> bool:
+        try:
+            return stage_path.is_file() and stage_path.stat().st_size > 0
+        except OSError:
+            return False
+
+    def persist_returned_capture(value: Any) -> None:
+        if isinstance(value, bytes) and value:
+            with stage_path.open("wb") as handle:
+                handle.write(value)
+                handle.flush()
+                os.fsync(handle.fileno())
+        elif isinstance(value, str) and value.strip():
+            stage_path.write_text(value, encoding="utf-8")
+
+    try:
+        call_shapes = (
+            {"path": str(stage_path), "full_page": True},
+            {"path": str(stage_path), "fullPage": True},
+            {"path": str(stage_path)},
+        )
+        for kwargs in call_shapes:
+            try:
+                value = _maybe_await(candidate(**kwargs))
+            except TypeError:
+                continue
+            except Exception:
+                return None
+            persist_returned_capture(value)
+            if has_staged_capture():
+                break
+        if not has_staged_capture():
+            try:
+                value = _maybe_await(candidate(str(stage_path)))
+            except Exception:
+                return None
+            persist_returned_capture(value)
+        if not has_staged_capture():
+            return None
+        try:
+            return materialize_external_browser_artifact(
+                source_path=stage_path,
+                download_dir=screenshot_path.parent,
+                preferred_filename=screenshot_path.name,
+                source_identity=str(source_identity or screenshot_path),
+            )
+        except (AppError, OSError):
+            return None
+    finally:
+        stage_path.unlink(missing_ok=True)

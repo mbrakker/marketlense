@@ -208,7 +208,6 @@ def test_preflight_lifecycle_transition_finalizes_browser_budget_as_completed(
             cleanup_removed_count=0,
         ),
         profile_dir=tmp_path / "profile",
-        preexisting_temp_dirs=set(),
     )
 
     close_browser_preflight_session(

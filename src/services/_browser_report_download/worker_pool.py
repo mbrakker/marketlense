@@ -22,10 +22,14 @@ from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
 )
 from src.contracts.run_context import RunContext
-from src.services._browser_report_download.models import BrowserAgentRunResult
+from src.services._browser_report_download.artifact_paths import (
+    ensure_browser_directory,
+    resolve_browser_artifact_path,
+)
 from src.services._browser_report_download.logging import (
     browser_warm_worker_pool_log_fields,
 )
+from src.services._browser_report_download.models import BrowserAgentRunResult
 from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -199,9 +203,17 @@ class BrowserWarmWorkerPool:
         download_dir: Path,
         prompt_bundle: BrowserDownloadPromptBundle,
     ) -> BrowserAgentRunResult:
-        download_dir.mkdir(parents=True, exist_ok=True)
-        payload_path = download_dir / "browser_agent_worker_request.json"
-        response_path = download_dir / "browser_agent_worker_response.json"
+        download_dir = ensure_browser_directory(download_dir)
+        payload_path = resolve_browser_artifact_path(
+            parent_dir=download_dir,
+            source_name="browser_agent_worker_request.json",
+            fixed_name="browser_agent_worker_request.json",
+        )
+        response_path = resolve_browser_artifact_path(
+            parent_dir=download_dir,
+            source_name="browser_agent_worker_response.json",
+            fixed_name="browser_agent_worker_response.json",
+        )
         payload = {
             "schema_version": "1.0",
             "request": asdict(request),

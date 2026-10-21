@@ -42,6 +42,15 @@ from src.services._browser_report_download._http.html_evidence import (
 from src.services._browser_report_download._http.issuu import (
     try_embedded_issuu_capture,
 )
+from src.services._browser_report_download.artifact_materialization import (
+    allocate_browser_artifact_stage,
+    materialize_browser_artifact_bytes,
+    materialize_external_browser_artifact,
+)
+from src.services._browser_report_download.artifact_paths import (
+    resolve_browser_artifact_path,
+    validate_browser_artifact_path,
+)
 from src.services._browser_report_download.logging import (
     browser_download_result_log_fields,
 )
@@ -346,16 +355,35 @@ def try_direct_onsite_capture(
             )
         )
         return None
-    html_capture_path = download_dir / "onsite_capture.html"
-    html_capture_path.write_text(html, encoding="utf-8")
+    html_capture_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="onsite_capture.html",
+        fixed_name="onsite_capture.html",
+    )
+    rendered_pdf_output_path = resolve_browser_artifact_path(
+        parent_dir=download_dir,
+        source_name="onsite_capture.rendered.pdf",
+        fixed_name="onsite_capture.rendered.pdf",
+        temporary_suffixes=(".part",),
+    )
+    final_url = str(response.final_url or target_url).strip() or target_url
+    materialized_html_path = materialize_browser_artifact_bytes(
+        content=html.encode("utf-8"),
+        download_dir=download_dir,
+        preferred_filename=html_capture_path.name,
+        source_identity=f"{normalized_url}|{final_url}|html",
+    )
+    if materialized_html_path is None:
+        return None
+    html_capture_path = materialized_html_path
     rendered_pdf_path = _render_onsite_html_to_pdf(
         html=html,
-        output_path=download_dir / "onsite_capture.rendered.pdf",
+        output_path=rendered_pdf_output_path,
         ctx=ctx,
+        source_identity=f"{normalized_url}|{final_url}|pdf",
     )
     capture_path = rendered_pdf_path or html_capture_path
     capture_format = "rendered_onsite_pdf" if rendered_pdf_path else "html"
-    final_url = str(response.final_url or target_url).strip() or target_url
     final_title = _extract_html_title(html)
     terminal_excerpt = _extract_text_excerpt(html)
     response_result = BrowserReportDownloadResult(
@@ -456,35 +484,43 @@ def try_direct_onsite_capture(
 
 
 def _render_onsite_html_to_pdf(
-    *, html: str, output_path: Path, ctx: RunContext
+    *, html: str, output_path: Path, ctx: RunContext, source_identity: str = ""
 ) -> Path | None:
     """Create a bounded local PDF from a verified direct on-site HTML capture."""
-    output_path.unlink(missing_ok=True)
+    output_path = validate_browser_artifact_path(
+        output_path,
+        temporary_suffixes=(".part",),
+    )
+    stage_path = allocate_browser_artifact_stage(output_path)
     process = multiprocessing.get_context("spawn").Process(
         target=_write_onsite_html_pdf,
-        args=(_html_for_pdf_rendering(html), str(output_path), ctx),
+        args=(_html_for_pdf_rendering(html), str(stage_path), ctx),
     )
     try:
-        process.start()
-        process.join(_ONSITE_PDF_RENDER_TIMEOUT_SECONDS)
-        if process.is_alive():
-            process.terminate()
-            process.join()
-            output_path.unlink(missing_ok=True)
+        try:
+            process.start()
+            process.join(_ONSITE_PDF_RENDER_TIMEOUT_SECONDS)
+            if process.is_alive():
+                process.terminate()
+                process.join()
+                return None
+            if process.exitcode != 0:
+                return None
+        except (OSError, RuntimeError, ValueError):
+            if process.is_alive():
+                process.terminate()
+                process.join()
             return None
-        if process.exitcode != 0:
-            output_path.unlink(missing_ok=True)
+        if not stage_path.is_file() or not stage_path.read_bytes().startswith(b"%PDF-"):
             return None
-    except (OSError, RuntimeError, ValueError):
-        if process.is_alive():
-            process.terminate()
-            process.join()
-        output_path.unlink(missing_ok=True)
-        return None
-    if not output_path.is_file() or not output_path.read_bytes().startswith(b"%PDF-"):
-        output_path.unlink(missing_ok=True)
-        return None
-    return output_path
+        return materialize_external_browser_artifact(
+            source_path=stage_path,
+            download_dir=output_path.parent,
+            preferred_filename=output_path.name,
+            source_identity=source_identity or str(output_path),
+        )
+    finally:
+        stage_path.unlink(missing_ok=True)
 
 
 def _write_onsite_html_pdf(html: str, output_path: str, ctx: RunContext) -> None:
