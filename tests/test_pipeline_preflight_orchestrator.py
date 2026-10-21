@@ -23,6 +23,7 @@ from src.orchestrators.pipeline_preflight_orchestrator import (
     report_pipeline_prompt_namespaces,
     run_pipeline_preflight,
 )
+from src.services import file_service
 from src.utils.errors import AppError
 from src.utils.model_resolver import registered_production_llm_namespaces
 
@@ -290,7 +291,6 @@ def test_pipeline_preflight_persists_complete_resolved_policy_matrix(
             for namespace in registered_production_llm_namespaces()
         },
     )
-
     report = run_pipeline_preflight(
         PipelinePreflightRequest(
             schema_version="1.0",
@@ -316,6 +316,63 @@ def test_pipeline_preflight_persists_complete_resolved_policy_matrix(
     )
     assert payload["resolved_matrix"][0]["provider"] == "openai"
     assert payload["resolved_matrix"][0]["policy"]["model"] == "gpt-4.1-mini"
+
+
+def test_pipeline_preflight_persists_policy_matrix_under_a_deep_windows_safe_root(
+    tmp_path,
+    ingest_settings,
+) -> None:
+    output_dir = tmp_path
+    while len(str(output_dir.resolve())) < 205:
+        output_dir = output_dir / "segment"
+    settings = replace(
+        ingest_settings,
+        output_dir=str(output_dir),
+        cache_dir=str(tmp_path / "cache"),
+        state_db=str(tmp_path / "state" / "state.sqlite"),
+        reports_db=str(tmp_path / "state" / "reports.sqlite"),
+        llm_execution_policies={
+            namespace: {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "temperature": 0.0,
+                "provider_retry_count": 0,
+            }
+            for namespace in registered_production_llm_namespaces()
+        },
+    )
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="12345678-1234-1234-1234-123456789012",
+        task_id="t",
+        span_id="s",
+    )
+
+    report = run_pipeline_preflight(
+        PipelinePreflightRequest(
+            schema_version="1.0",
+            workflow="report_pipeline",
+            planned_side_effects=["model"],
+            settings=settings,
+            prompt_namespaces=["report_vs/doc_map"],
+            require_llm=True,
+            require_drive=False,
+            require_publish=False,
+            require_browser=False,
+            require_live_endpoints=False,
+        ),
+        ctx,
+        dependencies=replace(_deps(tmp_path), write_bytes=file_service.write_bytes),
+    )
+
+    matrix_files = list((output_dir / "preflight").glob("*.json"))
+    assert report.passed is True
+    assert len(matrix_files) == 1
+    payload = json.loads(matrix_files[0].read_text(encoding="utf-8"))
+    assert payload["run_id"] == str(ctx.run_id)
+    assert len(payload["resolved_matrix"]) == len(
+        registered_production_llm_namespaces()
+    )
 
 
 def test_pipeline_preflight_blocks_missing_prompt_namespace(

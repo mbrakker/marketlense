@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import logging
@@ -3274,6 +3275,14 @@ def _persist_resolved_policy_matrix(
         / "preflight"
         / f"{ctx.run_id}.llm_policy_matrix.json"
     )
+    if (
+        file_service.atomic_write_temp_path_length(path)
+        > file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    ):
+        compact_run_id = hashlib.sha256(
+            str(ctx.run_id).encode("utf-8")
+        ).hexdigest()[:16]
+        path = path.with_name(f"{compact_run_id}.llm_policy_matrix.json")
     payload = {
         "schema_version": "1.0",
         "run_id": str(ctx.run_id),
