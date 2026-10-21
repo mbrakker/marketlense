@@ -185,3 +185,15 @@ separate evidence record is
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`; Step 2 remains
 **PARTIAL** because of the false accept and lack of human editorial review;
 Step 3 remains unstarted.
+
+## Exact frozen ten-report E18 acceptance replay — 2026-10-21
+
+The exact frozen ten-report cohort (DoubleVerify, KPMG, Reuters Institute, Adjust, Algolia, Bain & Company, Criteo, Deloitte, Emplifi, and StackAdapt Inc.) was run in isolated fresh state. All ten source identities were admitted and reached terminal workflow records; 59 retained Step 1 candidates were available to the live Step 2 shadow replay. The source manifest verified all ten expected PDF SHA-256 values. No canonical claim, readiness override, publication, or WordPress write occurred.
+
+The first isolated run produced 385 provider calls, 4,116,807 input tokens, 829,903 output tokens, estimated cost $0.968736, and 7,752.966 seconds. Two reports ended with downstream validation failures (Reuters `expert_comment`/metric-label relationship and Criteo public-grounding); their retained selection artifacts remain included and are not silently counted as clean publication outcomes. The explicit Step 2 replay evaluated 59/59 retained claims: 58 verified first pass, 0 verified after retry, 1 failed verification, 0 unresolved, and 0 skipped.
+
+A second shared-batch run terminated all ten reports (8 `ias_canary_timeout`, 2 validation failures) and reused one run directory, so it is not a valid independent selection repetition. A supplemental isolated rerun was started for the five missing reports; its terminal result and scope are recorded in the ten-report package. The evidence package deliberately does not convert failed or reused-run artifacts into identity-overlap claims. The independent reviewer assessed 58 claims and recorded 57 approved, 1 revision-required (Algolia population qualifier), and 1 unresolved (the failed Criteo claim). This is claim-level LLM review, not P6 human acceptance.
+
+No deterministic selector, deduplication, fallback-theme or cache defect was reproduced in the current run. The existing selector version remains `evidence_backed_shortlisting:5`, with focused regression coverage for stable IDs, semantic proposition preservation, provenance conflicts, fallback coverage and cache invalidation. The observed Criteo qualifier/timeframe drift originated during candidate construction/metric binding and was correctly rejected downstream; a selector-only patch was not justified. The deep-root Windows policy-matrix path correction and explicit-ten reviewer-roster validation were supporting execution/evaluation fixes, not ranking or evidence-safety changes.
+
+The complete ledger, source hashes, per-report selection records, Step 2 attempts, independent scorecard and repeatability limitations are in [`docs/quality/verified-claims-ten-report-acceptance-202610/`](verified-claims-ten-report-acceptance-202610/). Step 1/E18 remains **PARTIAL**: the first live cohort is complete, but two clean independent Step 1 evaluations per eligible report and a source-recall oracle were not established. Step 3 and P6 remain open.

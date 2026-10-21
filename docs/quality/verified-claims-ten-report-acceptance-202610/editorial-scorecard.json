@@ -1,0 +1,548 @@
+{
+  "schema_version": "1.0",
+  "reviewer": {
+    "execution_identity": "2e1212bebc1d27932f6ea1e75dfd42140c3fb415de47de2c7bf2290348cec6fa",
+    "execution_policy_hash": "55b6e01891bda13e5140ff93dc67d0c37f9e922225d6a2efb11b14f7b7d093b4",
+    "model": "gpt-6-luna",
+    "prompt_content_hash": "e943a2d8834b629a48cf9948fdd8176cd84d9e91fdd4ac7fc16b3c797f456baa",
+    "prompt_namespace": "report_vs/validate/editorial_review",
+    "reasoning_effort": "high"
+  },
+  "rubric": {
+    "rating_scale": {
+      "strong": 5.0,
+      "adequate": 3.0,
+      "weak": 1.0,
+      "insufficient": 0.0,
+      "not_assessed": null
+    },
+    "weights_percent": {
+      "factual_accuracy_qualifiers": 25,
+      "important_finding_selection_recall": 20,
+      "analytical_depth_commercial_relevance": 20,
+      "distinctiveness_nonredundancy": 15,
+      "evidence_quality_provenance": 10,
+      "clarity_editorial_usefulness": 10
+    },
+    "material_defect_rule": "A material factual or numerical defect blocks ACCEPT regardless of aggregate score.",
+    "mapping_note": "The reviewer schema has no separate provenance rating; evidence_quality_provenance is reported as a factual-fidelity proxy and is labeled accordingly."
+  },
+  "reports": [
+    {
+      "report": "Adjust",
+      "claim_count": 7,
+      "review_invoked_count": 7,
+      "decision_counts": {
+        "approved": 7,
+        "revision_required": 0,
+        "unresolved": 0
+      },
+      "score": 99.43,
+      "verdict": "ACCEPT",
+      "strongest_selected_insights": [
+        {
+          "candidate_id": "multiplatform-measurement",
+          "final_claim": "Only around 31% of marketers report complete satisfaction with their ability to unify and read data across platforms. The page says cross-platform measurement attributes users across devices—for example, linking a mobile-web session to an in-app conversion or an email click to an app download—showing how channels work together rather than compete for last-click credit.",
+          "physical_pages": [
+            11
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "ai-operational-uses",
+          "final_claim": "As generative AI enters its utility phase, teams use it to systematically test creative variants, model user journeys, and tailor in-app messaging. Maturity varies: most organizations report low or moderate GenAI maturity, while a small group with advanced deployment reportedly achieved efficiency gains over 20%.",
+          "physical_pages": [
+            9
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "gaming-casual-growth",
+          "final_claim": "Globally, casual-game installs rose 19% and sessions rose 37% year over year from 2024 to 2025.",
+          "physical_pages": [
+            19
+          ],
+          "score": 100.0
+        }
+      ],
+      "omitted_or_underweighted_findings": [],
+      "unsupported_or_misleading_claims": [],
+      "duplicate_or_generic_insights": [],
+      "concrete_improvements": [],
+      "supporting_pages": [
+        9,
+        11,
+        19,
+        21,
+        27,
+        29,
+        35
+      ],
+      "limitation": "The independent reviewer contract rates selected claims individually. It does not provide a report-level source recall oracle; omitted and duplicate fields are empty unless the reviewer explicitly reported them."
+    },
+    {
+      "report": "Algolia",
+      "claim_count": 6,
+      "review_invoked_count": 6,
+      "decision_counts": {
+        "approved": 5,
+        "revision_required": 1,
+        "unresolved": 0
+      },
+      "score": 100.0,
+      "verdict": "REVISE",
+      "strongest_selected_insights": [
+        {
+          "candidate_id": "revenue-incentive-58",
+          "final_claim": "In the report’s 2025 total, 53% will maintain ongoing levels of search investment, while 39% are accelerating their AI adoption and commitment to search implementations.",
+          "physical_pages": [
+            5
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "search-capability-development-approaches",
+          "final_claim": "Among B2C businesses in the Total 2025 results, 49% reported working with a third party on search capabilities, compared with 27% developing in-house only and 23% using off-the-shelf, pre-packaged software. The report says third-party providers are favored for scalable, proven platforms offering flexibility, next-generation capabilities and seamless integration.",
+          "physical_pages": [
+            22
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "ai-search-purchase-agreement-regional-range",
+          "final_claim": "Among survey respondents, 68% in the USA (n=300) and 57% in Australia/NZ (n=200) said shoppers are more likely to complete a purchase using gen AI-supported systems; overall, 63% of respondents (n=1,100) said so.",
+          "physical_pages": [
+            12
+          ],
+          "score": 100.0
+        }
+      ],
+      "omitted_or_underweighted_findings": [],
+      "unsupported_or_misleading_claims": [
+        {
+          "description": "“B2C organizations” broadens the source’s named population, B2C ecommerce retailers. The population qualifier should be retained.",
+          "dimension": "factual_fidelity",
+          "severity": "material"
+        }
+      ],
+      "duplicate_or_generic_insights": [],
+      "concrete_improvements": [
+        {
+          "candidate_id": "agentic-search-deployment-and-plans",
+          "suggestion": "Among surveyed B2C ecommerce retailers (n=1,100 across the UK, USA, France, Germany and Australia/NZ), 17% reported already implementing an agentic search system, while 61% planned to implement one within the next 12 months."
+        }
+      ],
+      "supporting_pages": [
+        5,
+        12,
+        22,
+        23,
+        27
+      ],
+      "limitation": "The independent reviewer contract rates selected claims individually. It does not provide a report-level source recall oracle; omitted and duplicate fields are empty unless the reviewer explicitly reported them."
+    },
+    {
+      "report": "Bain & Company",
+      "claim_count": 5,
+      "review_invoked_count": 5,
+      "decision_counts": {
+        "approved": 5,
+        "revision_required": 0,
+        "unresolved": 0
+      },
+      "score": 100.0,
+      "verdict": "ACCEPT",
+      "strongest_selected_insights": [
+        {
+          "candidate_id": "born_tech_top_gainers_share",
+          "final_claim": "Born-tech companies accounted for 52% of market value growth among the top 20 gainers in each sector from December 31, 2015, to December 31, 2020.",
+          "physical_pages": [
+            1
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "tech_growth_mix_2015_20",
+          "final_claim": "From December 31, 2015, to December 31, 2020, born-tech companies accounted for 52% of market value growth among the top 20 gainers in each sector; companies with a tech-led strategy accounted for 20%, and other companies for 28%.",
+          "physical_pages": [
+            1
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "asset_light_scaling",
+          "final_claim": "Bain’s “How to win with tech” guidance says companies should take a cue from firms capitalizing on cloud technology and platform business models and take four actions: use data and analytics to gain an edge; scale rapidly with an “asset-light” model; add capabilities via partnerships; and invest in tech talent.",
+          "physical_pages": [
+            1
+          ],
+          "score": 100.0
+        }
+      ],
+      "omitted_or_underweighted_findings": [],
+      "unsupported_or_misleading_claims": [],
+      "duplicate_or_generic_insights": [],
+      "concrete_improvements": [],
+      "supporting_pages": [
+        1
+      ],
+      "limitation": "The independent reviewer contract rates selected claims individually. It does not provide a report-level source recall oracle; omitted and duplicate fields are empty unless the reviewer explicitly reported them."
+    },
+    {
+      "report": "Criteo",
+      "claim_count": 5,
+      "review_invoked_count": 4,
+      "decision_counts": {
+        "approved": 4,
+        "revision_required": 0,
+        "unresolved": 1
+      },
+      "score": 100.0,
+      "verdict": "UNRESOLVED",
+      "strongest_selected_insights": [
+        {
+          "candidate_id": "incrementality-metrics-retail-media",
+          "final_claim": "Criteo says incrementality will be a “North Star” for US agencies and their clients, and that such metrics are pushing 50% of agency professionals toward retail media.",
+          "physical_pages": [
+            7
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "agency-recommendations-performance-retention",
+          "final_claim": "For 2023 plans, 51% of agency respondents recommended that brands focus on performance, versus 45% who cited brand awareness; 47% recommended retention, versus 40% who cited acquisition.",
+          "physical_pages": [
+            8
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "omnichannel-management-next-year-focus",
+          "final_claim": "In the US, 54% of respondents say improving omnichannel campaign management will be a key focus area over the next year.",
+          "physical_pages": [
+            8
+          ],
+          "score": 100.0
+        }
+      ],
+      "omitted_or_underweighted_findings": [],
+      "unsupported_or_misleading_claims": [],
+      "duplicate_or_generic_insights": [],
+      "concrete_improvements": [],
+      "supporting_pages": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "limitation": "The independent reviewer contract rates selected claims individually. It does not provide a report-level source recall oracle; omitted and duplicate fields are empty unless the reviewer explicitly reported them."
+    },
+    {
+      "report": "Deloitte",
+      "claim_count": 6,
+      "review_invoked_count": 6,
+      "decision_counts": {
+        "approved": 6,
+        "revision_required": 0,
+        "unresolved": 0
+      },
+      "score": 100.0,
+      "verdict": "ACCEPT",
+      "strongest_selected_insights": [
+        {
+          "candidate_id": "trust-in-ai-ordering",
+          "final_claim": "The report identifies consumer trust as a gating factor, stating that only 14% of Americans trust AI to place orders on their behalf.",
+          "physical_pages": [
+            3
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "brand-data-control-versus-reach",
+          "final_claim": "The report frames retail AI’s strategic trade-off as balancing control of data and brand within retailers’ own ecosystems against the reach and velocity of third-party interfaces.",
+          "physical_pages": [
+            3
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "ai-visibility-data-interpretation",
+          "final_claim": "In the report’s LLM-led shopping model, retailer visibility is not driven solely by keyword rankings; it also depends on how effectively AI can interpret and surface retailer data. The report says this makes easily parsed, contextualized website and product data—including clear metadata, enriched product attributes, reviews, and pricing—important for discoverability.",
+          "physical_pages": [
+            5
+          ],
+          "score": 100.0
+        }
+      ],
+      "omitted_or_underweighted_findings": [],
+      "unsupported_or_misleading_claims": [],
+      "duplicate_or_generic_insights": [],
+      "concrete_improvements": [],
+      "supporting_pages": [
+        3,
+        5,
+        7,
+        8
+      ],
+      "limitation": "The independent reviewer contract rates selected claims individually. It does not provide a report-level source recall oracle; omitted and duplicate fields are empty unless the reviewer explicitly reported them."
+    },
+    {
+      "report": "DoubleVerify",
+      "claim_count": 5,
+      "review_invoked_count": 5,
+      "decision_counts": {
+        "approved": 5,
+        "revision_required": 0,
+        "unresolved": 0
+      },
+      "score": 99.2,
+      "verdict": "ACCEPT",
+      "strongest_selected_insights": [
+        {
+          "candidate_id": "q1-2026-brand-suitability-regional-rates",
+          "final_claim": "In Q1 2026, the Brand Suitability Violation Rate in DV’s tag-based open-web internal data was 8.0% in APAC, 6.3% in EMEA, 6.0% in LATAM, and 3.7% in North America.",
+          "physical_pages": [
+            3
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "q1-2026-apac-device-format-attention",
+          "final_claim": "In Q1 2026, APAC had the highest regional In-App Attention Index for both formats: 109 for Display (next-highest LATAM at 106) and 131 for Video (next-highest EMEA at 130).",
+          "physical_pages": [
+            10
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "authentic-attention-solution",
+          "final_claim": "DV Authentic Attention® is an MRC-accredited, privacy-friendly solution that does not rely on cookies and provides timely impression-level insights at scale. Its Attention Index aggregates 50+ data points to quantify user attention that correlates with business outcomes. The page describes the Exposure Index as evaluating multiple data points about an ad’s presentation and the Engagement Index as evaluating 20+ user-initiated engagements with the device while the ad is viewed and with the ad itself. These measures are presented as informing campaign effectiveness measurement, media planning and performance improvement.",
+          "physical_pages": [
+            8
+          ],
+          "score": 100.0
+        }
+      ],
+      "omitted_or_underweighted_findings": [],
+      "unsupported_or_misleading_claims": [],
+      "duplicate_or_generic_insights": [],
+      "concrete_improvements": [],
+      "supporting_pages": [
+        3,
+        8,
+        9,
+        10
+      ],
+      "limitation": "The independent reviewer contract rates selected claims individually. It does not provide a report-level source recall oracle; omitted and duplicate fields are empty unless the reviewer explicitly reported them."
+    },
+    {
+      "report": "Emplifi",
+      "claim_count": 5,
+      "review_invoked_count": 5,
+      "decision_counts": {
+        "approved": 5,
+        "revision_required": 0,
+        "unresolved": 0
+      },
+      "score": 100.0,
+      "verdict": "ACCEPT",
+      "strongest_selected_insights": [
+        {
+          "candidate_id": "ai-marketing-disclosure-expectation",
+          "final_claim": "91% of consumers expect brands to disclose AI use in marketing.",
+          "physical_pages": [
+            13
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "strategy-consistency",
+          "final_claim": "Consumers don’t evaluate brands based on a single campaign; they evaluate consistency across search results, reviews, AI usage, customer service interactions, and post-purchase experiences. The page says trust is built when brand promises align with customer experience everywhere.",
+          "physical_pages": [
+            19
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "behavior-high-value-research",
+          "final_claim": "For purchases over $/£500, more than half of consumers visit three or more websites and spend over an hour researching, actively validating brand claims across websites, reviews, search results, and marketplaces.",
+          "physical_pages": [
+            4
+          ],
+          "score": 100.0
+        }
+      ],
+      "omitted_or_underweighted_findings": [],
+      "unsupported_or_misleading_claims": [],
+      "duplicate_or_generic_insights": [],
+      "concrete_improvements": [],
+      "supporting_pages": [
+        4,
+        10,
+        13,
+        15,
+        19
+      ],
+      "limitation": "The independent reviewer contract rates selected claims individually. It does not provide a report-level source recall oracle; omitted and duplicate fields are empty unless the reviewer explicitly reported them."
+    },
+    {
+      "report": "KPMG",
+      "claim_count": 6,
+      "review_invoked_count": 6,
+      "decision_counts": {
+        "approved": 6,
+        "revision_required": 0,
+        "unresolved": 0
+      },
+      "score": 100.0,
+      "verdict": "ACCEPT",
+      "strongest_selected_insights": [
+        {
+          "candidate_id": "carveout-activity-expectations",
+          "final_claim": "Expectations for carve-out activity are rising materially over the next 12–24 months, reflecting structural rather than cyclical drivers.",
+          "physical_pages": [
+            6
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "ai-expands-analytical-scope",
+          "final_claim": "As AI adoption across the M&A lifecycle moves beyond experimentation and advanced analytical systems become embedded in diligence, modeling and integration planning, the expansion of analytical scope enables deeper benchmarking, more exhaustive contract review and earlier identification of risk.",
+          "physical_pages": [
+            6
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "execution-capability-and-value-capture",
+          "final_claim": "Execution capability is becoming a structural differentiator: in a cycle defined by portfolio reshaping, regulatory volatility, tax transformation and AI-enabled insight, organizations that can separate, integrate and scale effectively while modeling and managing dynamic risk are better positioned to capture value. The page says success depends less on boldness alone and more on institutional discipline, repeatability and the ability to execute under sustained uncertainty.",
+          "physical_pages": [
+            6
+          ],
+          "score": 100.0
+        }
+      ],
+      "omitted_or_underweighted_findings": [],
+      "unsupported_or_misleading_claims": [],
+      "duplicate_or_generic_insights": [],
+      "concrete_improvements": [],
+      "supporting_pages": [
+        6
+      ],
+      "limitation": "The independent reviewer contract rates selected claims individually. It does not provide a report-level source recall oracle; omitted and duplicate fields are empty unless the reviewer explicitly reported them."
+    },
+    {
+      "report": "Reuters Institute",
+      "claim_count": 7,
+      "review_invoked_count": 7,
+      "decision_counts": {
+        "approved": 7,
+        "revision_required": 0,
+        "unresolved": 0
+      },
+      "score": 99.43,
+      "verdict": "ACCEPT",
+      "strongest_selected_insights": [
+        {
+          "candidate_id": "focus-original-reporting",
+          "final_claim": "In Q13 (base = 264), respondents reported a +91 net difference between the proportions saying original investigations/on-the-ground reporting would be more versus less important for newsrooms to focus on in the era of AI.",
+          "physical_pages": [
+            17
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "search-traffic-forecast",
+          "final_claim": "Among 268 respondents, publishers’ average slider-based expectation was that traffic from search engines would change by −43% over the next three years; this is an expectation, not a measured decline.",
+          "physical_pages": [
+            12
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "social-referral-decline-facebook-x",
+          "final_claim": "According to Chartbeat data, the average number of referrals to news websites from Facebook fell 43% and from X fell 46% over the last two and a half years.",
+          "physical_pages": [
+            20
+          ],
+          "score": 100.0
+        }
+      ],
+      "omitted_or_underweighted_findings": [],
+      "unsupported_or_misleading_claims": [],
+      "duplicate_or_generic_insights": [],
+      "concrete_improvements": [],
+      "supporting_pages": [
+        12,
+        17,
+        20,
+        25,
+        30,
+        33,
+        38
+      ],
+      "limitation": "The independent reviewer contract rates selected claims individually. It does not provide a report-level source recall oracle; omitted and duplicate fields are empty unless the reviewer explicitly reported them."
+    },
+    {
+      "report": "StackAdapt Inc",
+      "claim_count": 7,
+      "review_invoked_count": 7,
+      "decision_counts": {
+        "approved": 7,
+        "revision_required": 0,
+        "unresolved": 0
+      },
+      "score": 100.0,
+      "verdict": "ACCEPT",
+      "strongest_selected_insights": [
+        {
+          "candidate_id": "retail-2026-values-misalignment-shopping",
+          "final_claim": "According to Kearney, 51% of consumers say they’ve stopped shopping for a brand that didn’t align with their values.",
+          "physical_pages": [
+            15
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "retail-2026-prepurchase-brand-engagement",
+          "final_claim": "Impact.com’s The Modern Customer Journey is cited for the finding that consumers typically engage with a brand 3+ times across digital channels before making a purchase.",
+          "physical_pages": [
+            11
+          ],
+          "score": 100.0
+        },
+        {
+          "candidate_id": "finding-21",
+          "final_claim": "The report concludes that marketers who win in 2026 will treat every surface as a storefront, orchestrating relevance across retail touchpoints and using programmatic to link data, creative, and outcomes in real time, with brand and performance treated as inseparable.",
+          "physical_pages": [
+            20
+          ],
+          "score": 100.0
+        }
+      ],
+      "omitted_or_underweighted_findings": [],
+      "unsupported_or_misleading_claims": [],
+      "duplicate_or_generic_insights": [],
+      "concrete_improvements": [],
+      "supporting_pages": [
+        7,
+        11,
+        13,
+        14,
+        15,
+        19,
+        20
+      ],
+      "limitation": "The independent reviewer contract rates selected claims individually. It does not provide a report-level source recall oracle; omitted and duplicate fields are empty unless the reviewer explicitly reported them."
+    }
+  ],
+  "aggregate": {
+    "scored_report_count": 10,
+    "aggregate_score_mean_of_scored_reports": 99.81,
+    "decision_counts": {
+      "approved": 57,
+      "revision_required": 1,
+      "unresolved": 1
+    },
+    "material_defect_count": 1
+  }
+}

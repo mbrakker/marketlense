@@ -1,0 +1,173 @@
+{
+  "schema_version": "1.0",
+  "first_run": {
+    "reports": 10,
+    "selected_count": 59,
+    "cohort_result": "tmp/ten-full/frozen-reliability-9kx4zae9/cohort_result.json"
+  },
+  "shared_batch_run": {
+    "available": true,
+    "summary": {
+      "admitted_report_count": 10,
+      "bounded_repair_rate": 0.4,
+      "cohort_admission_rate": 1.0,
+      "cohort_bounded_automatic_repair": true,
+      "cohort_cost_usd": 0.573289,
+      "cohort_duration_seconds": 1870.067,
+      "cohort_input_tokens": 2590889,
+      "cohort_model_provider_calls": 251,
+      "cohort_output_tokens": 516976,
+      "failure_code_pareto": {
+        "ias_canary_timeout": 8,
+        "validation_failed": 2
+      },
+      "first_attempt_awaiting_review_rate": 0.0,
+      "first_attempt_published_rate": 0.0,
+      "mean_cost": 0.057329,
+      "mean_duration_seconds": 401.7,
+      "median_cost": 0.038039,
+      "median_duration_seconds": 215.0,
+      "missing_terminal_report_count": 0,
+      "missing_terminal_report_ids": [],
+      "operator_intervention_count": 0,
+      "per_report_metric_scope": "report_scoped_excludes_shared_handoffs",
+      "publication_readiness_rate": 0.0,
+      "published_report_count": 0,
+      "report_count": 10,
+      "terminal_outcome_complete": true,
+      "typed_terminal_rate": 1.0,
+      "workflow_denominator": 10,
+      "workflow_failure_rate": 1.0
+    },
+    "artifact_selection_reports": 0,
+    "limitation": "The shared-batch run terminated with eight ias_canary_timeout and two validation_failed reports and reused one run directory, so it is not a valid independent ten-report selector repetition."
+  },
+  "supplemental_isolated_run": {
+    "available": false,
+    "summary": null,
+    "artifact_selection_reports": 0,
+    "scope": []
+  },
+  "comparisons": [
+    {
+      "report": "Adjust",
+      "status": "not_comparable",
+      "first_selected_ids": [
+        "ai-operational-uses",
+        "ecommerce-cpi-deal-discovery",
+        "ecommerce-installs-sessions-2025",
+        "finance-latam-installs",
+        "gaming-casual-growth",
+        "gaming-retention-all",
+        "multiplatform-measurement"
+      ]
+    },
+    {
+      "report": "Algolia",
+      "status": "not_comparable",
+      "first_selected_ids": [
+        "agentic-adoption-considerations",
+        "agentic-search-deployment-and-plans",
+        "ai-search-purchase-agreement-regional-range",
+        "revenue-incentive-58",
+        "search-capability-development-approaches",
+        "search-investment-and-adoption-activity"
+      ]
+    },
+    {
+      "report": "Bain & Company",
+      "status": "not_comparable",
+      "first_selected_ids": [
+        "asset_light_scaling",
+        "born_tech_top_gainers_share",
+        "cloud_platform_action_frame",
+        "tech_growth_mix_2015_20",
+        "tech_strategy_value_creators"
+      ]
+    },
+    {
+      "report": "Criteo",
+      "status": "not_comparable",
+      "first_selected_ids": [
+        "agency-recommendations-performance-retention",
+        "ctv-smaller-brand-access-concern",
+        "incrementality-metrics-retail-media",
+        "newer-channels-perceived-roi",
+        "omnichannel-management-next-year-focus"
+      ]
+    },
+    {
+      "report": "Deloitte",
+      "status": "not_comparable",
+      "first_selected_ids": [
+        "ai-shopping-default-plan-2026",
+        "ai-shopping-use-plan-2026",
+        "ai-visibility-data-interpretation",
+        "brand-data-control-versus-reach",
+        "genai-retail-traffic-2025-holiday",
+        "trust-in-ai-ordering"
+      ]
+    },
+    {
+      "report": "DoubleVerify",
+      "status": "not_comparable",
+      "first_selected_ids": [
+        "authentic-attention-solution",
+        "q1-2026-apac-device-format-attention",
+        "q1-2026-attention-index-normalization",
+        "q1-2026-brand-suitability-regional-rates",
+        "q1-2026-display-viewability-regional-rates"
+      ]
+    },
+    {
+      "report": "Emplifi",
+      "status": "not_comparable",
+      "first_selected_ids": [
+        "ai-marketing-disclosure-expectation",
+        "behavior-cross-check",
+        "service-response-time-expectation",
+        "strategy-consistency",
+        "trust-reviews-2026"
+      ]
+    },
+    {
+      "report": "KPMG",
+      "status": "not_comparable",
+      "first_selected_ids": [
+        "ai-adoption-across-deal-stages",
+        "ai-expands-analytical-scope",
+        "carveout-activity-expectations",
+        "carveouts-proactive-portfolio-action",
+        "execution-capability-and-value-capture",
+        "execution-risk-focus-areas"
+      ]
+    },
+    {
+      "report": "Reuters Institute",
+      "status": "not_comparable",
+      "first_selected_ids": [
+        "commercial-revenue-priorities",
+        "creator-response-plans",
+        "focus-original-reporting",
+        "newsroom-ai-initiatives-assessment",
+        "publisher-view-ai-misinformation",
+        "search-traffic-forecast",
+        "social-referral-decline-facebook-x"
+      ]
+    },
+    {
+      "report": "StackAdapt Inc",
+      "status": "not_comparable",
+      "first_selected_ids": [
+        "finding-20",
+        "finding-21",
+        "retail-2026-consumer-data-relevance-expectation",
+        "retail-2026-daily-marketer-ai-use",
+        "retail-2026-display-ctv-spend",
+        "retail-2026-prepurchase-brand-engagement",
+        "retail-2026-values-misalignment-shopping"
+      ]
+    }
+  ],
+  "conclusion": "PARTIAL: the first isolated run is complete, but two clean independent Step1 evaluations per eligible report were not obtained. No deterministic selector defect was reproduced from the available comparable artifacts; remaining variance is confounded by model/workflow failure and candidate-generation drift."
+}
