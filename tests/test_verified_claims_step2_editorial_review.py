@@ -269,13 +269,18 @@ def test_review_pages_must_be_inspected_and_notes_must_match() -> None:
     assert "supporting_pages_invalid" in validated["diagnostics"]
 
 
-def test_review_page_order_uses_retained_support_without_rebinding() -> None:
+def test_review_page_order_keeps_all_bounded_inspected_pages() -> None:
     assert _review_page_order({"supporting_physical_pages": [5, 6]}, [3, 4, 5, 6]) == [
+        3,
+        4,
         5,
         6,
     ]
     assert _review_page_order({"supporting_physical_pages": [41]}, [39, 41, 7, 43]) == [
-        41
+        39,
+        41,
+        7,
+        43,
     ]
     assert _review_page_order({}, [39, 41, 7, 43]) == [39, 41, 7, 43]
 

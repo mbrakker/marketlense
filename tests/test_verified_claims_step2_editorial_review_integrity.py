@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import subprocess
+import sys
+from pathlib import Path
+
 from scripts.quality.review_verified_claims_step2_editorial import (
     _acceptance_summary,
     _base_record,
@@ -42,6 +46,37 @@ def _additional_result(
             }
         ],
     }
+
+
+def test_editorial_cli_requires_explicit_live_or_existing_manifest() -> None:
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "quality"
+        / "review_verified_claims_step2_editorial.py"
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--frozen-result",
+            "missing-frozen-result.json",
+            "--frozen-source-manifest",
+            "missing-frozen-source.json",
+            "--additional-result",
+            "missing-additional-result.json",
+            "--additional-source-manifest",
+            "missing-additional-source.json",
+            "--output",
+            "missing-output.json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "--review-manifest is required unless --live is supplied" in result.stderr
 
 
 def _review_record(

@@ -121,6 +121,7 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "supporting_image_indices" in editorial.system.text
     assert "source_truth_notes_by_image" in editorial.system.text
     assert "do not return supporting_physical_pages" in editorial.user.text.lower()
+    assert "attached complete physical pages visible" in editorial.user.text.lower()
 
 
 def _settings(tmp_path):

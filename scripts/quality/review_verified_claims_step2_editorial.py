@@ -436,6 +436,7 @@ def _review_bundle(
             "source_context_json": "{}",
             "image_page_map": "",
             "inspected_physical_pages_json": "[]",
+            "attached_physical_pages_json": "[]",
         },
     )
     _require_visual_policy(bundle)
@@ -730,11 +731,18 @@ def _validate_result_binding(
 
 
 def _review_page_order(row: Mapping[str, Any], pages: list[int]) -> list[int]:
-    """Use retained support pages when present, otherwise inspect all pages."""
+    """Return the complete bounded page set available for independent review.
 
-    preferred = _strict_pages(row.get("supporting_physical_pages")) or []
-    retained = [page for page in preferred if page in pages]
-    return retained or pages
+    ``supporting_physical_pages`` is the historical Step 2 binding.  Using it
+    to choose the review attachments would make an independent reviewer unable
+    to discover that binding is wrong.  ``pages`` has already been validated
+    from ``inspected_physical_pages`` and is therefore the safe, bounded review
+    context.  The attachment order remains the validated inspected-page order;
+    every bounded page remains attached and independently selectable.
+    """
+
+    del row
+    return list(pages)
 
 
 def _render_pages(
@@ -817,6 +825,7 @@ def _review_one_claim(
                 ),
                 "image_page_map": _image_page_map_text(pages),
                 "inspected_physical_pages_json": json.dumps(pages, ensure_ascii=False),
+                "attached_physical_pages_json": json.dumps(pages, ensure_ascii=False),
             },
         ),
         ctx,
@@ -2557,15 +2566,42 @@ def main() -> int:
     parser.add_argument("--additional-source-manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--page-adjudication", type=Path)
-    args = parser.parse_args()
-    manifest = run_editorial_review(
-        frozen_result_path=args.frozen_result,
-        frozen_source_manifest_path=args.frozen_source_manifest,
-        additional_result_path=args.additional_result,
-        additional_source_manifest_path=args.additional_source_manifest,
-        output_path=args.output,
-        page_adjudication_path=args.page_adjudication,
+    parser.add_argument(
+        "--review-manifest",
+        type=Path,
+        help=(
+            "Existing immutable review manifest to reconcile without provider or "
+            "rendering calls. Required unless --live is supplied."
+        ),
     )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Explicitly dispatch the GPT-6 Luna High editorial review.",
+    )
+    args = parser.parse_args()
+    if args.live and args.review_manifest is not None:
+        parser.error("--review-manifest cannot be combined with --live")
+    if args.live:
+        manifest = run_editorial_review(
+            frozen_result_path=args.frozen_result,
+            frozen_source_manifest_path=args.frozen_source_manifest,
+            additional_result_path=args.additional_result,
+            additional_source_manifest_path=args.additional_source_manifest,
+            output_path=args.output,
+            page_adjudication_path=args.page_adjudication,
+        )
+    else:
+        if args.review_manifest is None:
+            parser.error("--review-manifest is required unless --live is supplied")
+        manifest = reconcile_editorial_manifest(
+            review_manifest_path=args.review_manifest,
+            frozen_result_path=args.frozen_result,
+            frozen_source_manifest_path=args.frozen_source_manifest,
+            additional_result_path=args.additional_result,
+            additional_source_manifest_path=args.additional_source_manifest,
+            page_adjudication_path=args.page_adjudication,
+        )
     manifest_sha256 = write_immutable_manifest(args.output, manifest)
     print(
         json.dumps(

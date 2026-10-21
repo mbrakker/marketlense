@@ -1887,6 +1887,7 @@ def replay_live_explicit_cohort(
     source_manifest_path: Path,
     output_root: Path | None = None,
     artifact_paths: Mapping[str, Path] | None = None,
+    real_claim_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Evaluate selected retained insights from an explicit frozen snapshot."""
 
@@ -1927,6 +1928,12 @@ def replay_live_explicit_cohort(
     for input_report in inputs["reports"]:
         report = str(input_report["report"])
         eligible_claims = list(input_report.get("eligible_claims") or [])
+        if real_claim_ids is not None:
+            eligible_claims = [
+                claim
+                for claim in eligible_claims
+                if str(claim.get("candidate_id") or "") in real_claim_ids
+            ]
         claim_metadata = input_report.get("claim_metadata") or {}
         source = input_report.get("source") or {}
         artifact = input_report.get("artifact") or {}
@@ -2307,8 +2314,23 @@ def main() -> int:
         metavar="REPORT=PATH",
         help="Explicit retained artifacts.json path; may be repeated.",
     )
+    parser.add_argument(
+        "--real-claim-id",
+        action="append",
+        default=[],
+        metavar="CANDIDATE_ID",
+        help=(
+            "Limit a live retained-input replay to the specified stable IDs; "
+            "may be repeated. The result is an isolated shadow subset."
+        ),
+    )
     args = parser.parse_args()
     explicit_inputs = args.cohort_result is not None or bool(args.artifact)
+    real_claim_ids = {
+        str(value).strip() for value in args.real_claim_id if str(value).strip()
+    }
+    if real_claim_ids and not args.live:
+        parser.error("--real-claim-id requires --live")
     if explicit_inputs and not args.live:
         parser.error("explicit retained inputs require --live")
     if explicit_inputs and args.sources_manifest is None:
@@ -2323,10 +2345,15 @@ def main() -> int:
             source_manifest_path=args.sources_manifest,
             output_root=args.output.parent if args.output else None,
             artifact_paths=artifact_paths,
+            real_claim_ids=real_claim_ids or None,
         )
     else:
         report = (
-            replay_live_step2(output_root=args.output.parent if args.output else None)
+            replay_live_step2(
+                output_root=args.output.parent if args.output else None,
+                real_claim_ids=real_claim_ids or None,
+                include_reference=False if real_claim_ids else True,
+            )
             if args.live
             else replay_frozen_step2(provider_free=bool(args.provider_free))
         )

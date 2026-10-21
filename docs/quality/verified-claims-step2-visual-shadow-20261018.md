@@ -2009,11 +2009,9 @@ state, or publication output was mutated.
 The editorial reviewer now returns one-based `supporting_image_indices` and
 `source_truth_notes_by_image`; the caller derives physical pages from the
 authoritative attachment-to-physical-page map. A reviewer-supplied physical
-page field that conflicts with that map fails closed. When a retained Step 2
-support binding exists, only those complete physical PDF pages are attached to
-the independent editorial review; otherwise the full inspected page set is
-used. This removes unrelated contents/navigation pages from the model's page
-selection without dropping legitimate multi-page support.
+page field that conflicts with that map fails closed. The historical v8/v9
+comparison below used only retained Step 2 support pages; the subsequent full
+context correction supersedes that attachment policy and is recorded below.
 
 The final targeted GPT-6 Luna High replay used the exact retained PDFs and no
 canonical or publication writes:
@@ -2089,3 +2087,120 @@ Overall Step 2 remains **PARTIAL / NO-GO for Step 3**. The retained claims were
 not promoted, Step 3 visual factualisation was not started, and fresh
 full-cohort selection effectiveness, canonical source-binding completeness,
 P6 human acceptance, and any publication/readiness transition remain open.
+
+### Independent full-context review and corrected-claim cycle — 2026-10-21
+
+This follow-up corrects the remaining attachment-boundary defect. The
+independent reviewer now receives every complete page in the already validated
+`inspected_physical_pages` set, in deterministic order. Step 2 supporting pages
+remain recorded separately as historical provenance; they no longer suppress
+pages from the independent review. The prompt explicitly lists the pages
+actually attached, and the existing image-index/page-map, PDF-hash, stale-row,
+and page-reconciliation guards remain authoritative. A changed final claim
+still requires a new result and a new review; no historical approval is reused.
+
+#### Narrowed versus full bounded page context
+
+The retained v8/v9 comparison used the narrowed Step 2 support-page set. The
+new v10 run used the exact same seven real claims and full bounded inspected
+pages. Both runs made 7 editorial calls and produced 2 `approved` decisions
+and 5 `revision_required` decisions. The difference was source-page
+availability, not a new approval of unsupported content:
+
+| Claim | Narrowed reviewer pages/status | Full-context reviewer pages/status | Result |
+|---|---|---|---|
+| `ai-search-platform-relationships` | 12 / accepted | 10 / blocked by reconciliation | Full context exposed a wrong-page selection; it was not promoted. |
+| `ai-browsers-adaptable-content` | 41 / accepted | 41 / accepted | Preserved. |
+| `activate-outlook-revenue-models` | 5–6 / revision | 4–5 / revision | Still held; chart attribution objection remains. |
+| `activate-ecommerce-capability-stack` | 115 / revision | 115 / revision | Same travel/tickets objection. |
+| `guest-checkout-abandonment` | 8 / revision | 8 / revision | Same Digital Natives objection. |
+| `market-growth-share-breakdown` | 1 / revision | 1 / revision | Same per-sector population objection. |
+| `cloud-platform-catalysts` | 1 / revision | 1 / revision | Same per-sector/date-scope objection. |
+
+The full-context run used **7 calls**, **201,184 input tokens**, **13,352
+output tokens**, **214,536 total tokens**, estimated cost **$0.026795**, and
+**144.259 seconds**. The narrowed v8/v9 runs used **132,330 total tokens**,
+estimated cost **$0.018526**, and **135.585 summed seconds**. Thus full context
+cost **$0.008269** and **82,206 tokens** more for this seven-claim comparison;
+it preserved factual safety but reduced clean acceptance from 2 to 1 because
+the search claim selected physical page 10. Existing reconciliation correctly
+blocked that page mismatch. A retained-pages-first ordering experiment (v12)
+also failed to improve page selection—2 controls were blocked—and was not
+adopted (**7 calls**, **214,614 tokens**, **$0.026833**, **157.813 seconds**).
+No unsupported claim was accepted in either full-context run.
+
+The rendered full pages were independently inspected for the affected source
+relationships. Reuters physical page 12 contains the search expectation and
+traffic observations; physical page 41 contains the browser examples, liquid
+content discussion, publisher measurement concern, and the 60% + 15% impact
+chart. Bain physical page 1 visibly labels the top-20-gainers-per-sector
+population, December 31, 2015–2020 comparison, and the 52%/20%/28% split.
+BigCommerce physical page 8 visibly names Digital Natives and separately
+labels 63% guest-checkout abandonment and 58% promotional-discount friction.
+Activate physical pages 5–6 visibly bind Internet access to **$128B / 5.7%**,
+advertising to **$108B / 4.7%**, and paid content to **$66B / 2.3%**.
+
+#### Fresh correction → verification → editorial review
+
+The five held IDs were evaluated from isolated, hash-matched retained-report
+inputs. Existing GPT-6 Luna High correction and verification were run first;
+the resulting corrected claims and actual verification provenance were written
+to new shadow outputs, then sent to a fresh independent editorial review. The
+historical Step 2/review manifests and canonical artifacts were not modified.
+
+| Candidate | Corrected/verified result | Fresh editorial result | Source pages and material finding |
+|---|---|---|---|
+| `activate-outlook-revenue-models` | Verified first pass | Approved wording but **blocked** by page reconciliation | Visual verifier cited 4–5; independent review cited 5–6; the corrected values are source-supported but the page binding is not silently reconciled. Activate SHA `5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c85655ae9dd4f2`. |
+| `activate-ecommerce-capability-stack` | Verified first pass | Accepted | Page 115; corrected claim retains exclusion of travel and tickets. |
+| `guest-checkout-abandonment` | Verified after retry | Accepted | Page 8; corrected claim retains Digital Natives and separates the promotional-discount relationship. BigCommerce SHA `29ffb53b9818460066c86e8d954bdd904bd0e11d2360d90dac040a5d33b9e7c3`. |
+| `market-growth-share-breakdown` | Verified first pass | Accepted | Page 1; corrected claim says top 20 gainers per sector and December 31, 2015–2020. |
+| `cloud-platform-catalysts` | Verified first pass | Revision required | Page 1; correction still says “across sectors” rather than the required per-sector population, so the fresh reviewer correctly withheld acceptance and supplied an actionable correction. Bain SHA `07541f3433b72007010ff604a93d0c560b6c6709ffd7bb5a58fefa81908f86c7`. |
+
+The correction/verification outputs used **12 provider calls** (**4** for the
+two Activate claims and **8** for the three additional claims), **324,268
+input tokens**, **11,344 output tokens**, **335,612 total tokens**, estimated
+cost **$0.038098**, and **177.35 seconds**. The fresh five-claim editorial
+review used **5 calls**, **155,316 input tokens**, **6,521 output tokens**,
+**161,837 total tokens**, estimated cost **$0.018793**, and **80.176 seconds**.
+Combined: **17 calls**, **479,584 input tokens**, **17,865 output tokens**,
+**497,449 total tokens**, estimated cost **$0.056891**, and **257.526 seconds**.
+Terminal outcomes were mutually
+exclusive: 4 verified first pass, 1 verified after retry, 0 failed, 0
+unresolved, and 0 skipped. Every fresh approved result had substantive
+source-grounded notes; the two remaining issues were blocked or
+revision-required rather than promoted.
+
+The replay CLI now requires explicit `--live` for provider dispatch. Without
+that flag it requires an existing `--review-manifest` and runs only the
+provider-free reconciliation path. The replay CLI also accepts repeated
+`--real-claim-id` values for isolated retained-ID correction cycles. These are
+additive shadow controls; no canonical claim, readiness state, or WordPress
+content was changed.
+
+#### Current verdicts
+
+- Independent full-context attachment/provenance safety: **PASS** for exposing
+  all bounded pages and failing closed on wrong-page selections; **PARTIAL** for
+  live editorial availability because the model selected Reuters physical page
+  10 when physical page 12 was required.
+- Five-claim corrected factual/editorial cycle: **PARTIAL** — three claims were
+  freshly accepted, Activate Outlook remains page-blocked, and Bain cloud
+  remains revision-required.
+- Step 1/E18 selection and repeatability: **PARTIAL**; these are post-selection
+  replays and do not establish fresh live selection effectiveness.
+- P6 human acceptance: **OPEN**.
+- Step 3 canonical integration: **NO-GO**. No Step 3 code, canonical
+  promotion, publication-readiness transition, or WordPress write was made.
+
+The provider-free exact frozen-five replay remains unchanged: **15 reference
+cases / 39 variants**, five matching PDF hashes, **29 retained IDs**, and
+**29/29 theme slots** with zero provider calls and no fabricated fixture
+substitution. Existing wrong-page, malformed-response, stale-review,
+source-hash, and page-adjudication regressions remain covered by the focused
+tests listed below. The immutable editorial-review roster remains **29 frozen
+claims + 25 additional claims**, with the explicit unavailable identity kept
+outside the eligible acceptance denominator. Final local verification after
+this correction passed **682 affected tests (1 skipped, 1 deselected)**,
+**115 prompt/LLM tests**, formatting, Ruff, mypy, documentation, backlog,
+repository-hygiene, contract-schema, architecture-import, role-boundary, and
+prompt-fixture gates.

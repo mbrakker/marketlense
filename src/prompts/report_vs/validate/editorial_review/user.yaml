@@ -12,6 +12,9 @@ text: |
   Inspected physical pages:
   {{ inspected_physical_pages_json }}
 
+  Attached complete physical pages visible in this request (and no others):
+  {{ attached_physical_pages_json }}
+
   Image-to-page mapping:
   {{ image_page_map }}
 

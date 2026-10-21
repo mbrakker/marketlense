@@ -705,4 +705,5 @@ fixtures:
       report_context_json: '{"report_title":"fixture report","categories":["digital commerce"],"authority":"metadata_only_non_authoritative"}'
       source_context_json: '{"source_identity":"fixture-pdf|pdf-sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","retained_physical_pages":[4],"inspected_physical_pages":[4],"evidence_ids":["f1"]}'
       inspected_physical_pages_json: "[4]"
+      attached_physical_pages_json: "[4]"
       image_page_map: "image 1 = physical PDF page 4"
