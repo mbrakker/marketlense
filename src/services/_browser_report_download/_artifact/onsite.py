@@ -23,7 +23,6 @@ from src.services._browser_report_download.artifact_paths import (
     validate_browser_download_directory,
 )
 from src.services._browser_report_download.models import BrowserUseAgentResult
-from src.services._browser_report_download.request import resolve_download_dir_path
 from src.utils.errors import AppError
 
 from .classification import (
@@ -85,6 +84,7 @@ def _build_salvaged_onsite_result(
     *,
     request: BrowserReportDownloadRequest,
     normalized_url: str,
+    download_dir: Path,
     final_url: str,
     browser_html: str,
     final_page_title: str,
@@ -101,7 +101,7 @@ def _build_salvaged_onsite_result(
     capture_path = Path(onsite_capture_path) if onsite_capture_path else None
     if capture_path is None or not capture_path.is_file():
         capture_path = _capture_salvaged_onsite_html(
-            request=request,
+            download_dir=download_dir,
             normalized_url=normalized_url,
             final_url=final_url,
             html=browser_html,
@@ -358,6 +358,7 @@ def _prefer_onsite_capture_over_optional_form_submission(
     request: BrowserReportDownloadRequest,
     ctx: RunContext,
     normalized_url: str,
+    download_dir: Path,
     agent_result: BrowserUseAgentResult,
     browser_html: str,
     route_kind: str,
@@ -435,7 +436,7 @@ def _prefer_onsite_capture_over_optional_form_submission(
     if not capture_path:
         capture_path = str(
             _capture_salvaged_onsite_html(
-                request=request,
+                download_dir=download_dir,
                 normalized_url=normalized_url,
                 final_url=final_url,
                 html=capture_html,
@@ -581,15 +582,12 @@ def _looks_like_onsite_report_html(
 
 def _capture_salvaged_onsite_html(
     *,
-    request: BrowserReportDownloadRequest,
+    download_dir: Path,
     normalized_url: str,
     final_url: str,
     html: str,
 ) -> Path:
-    capture_root = resolve_download_dir_path(
-        root_dir=request.settings.output_dir,
-        normalized_url=normalized_url,
-    )
+    capture_root = validate_browser_download_directory(download_dir)
     ensure_browser_directory(capture_root)
     capture_path = resolve_browser_artifact_path(
         parent_dir=capture_root,

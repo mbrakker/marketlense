@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 
 from src.services._browser_report_download._artifact.onsite import (
     _capture_salvaged_onsite_html,
@@ -14,7 +13,10 @@ from src.services._browser_report_download._browser_runtime._terminal_assets.pag
     _write_terminal_html_snapshot,
 )
 from src.services._browser_report_download.artifact_paths import windows_path_units
-from src.services._browser_report_download.request import resolve_download_dir_path
+from src.services._browser_report_download.request import (
+    create_download_workspace,
+    resolve_download_dir_path,
+)
 
 
 def test_browser_capture_paths_sanitize_url_stems_and_keep_root(tmp_path: Path) -> None:
@@ -59,18 +61,17 @@ def test_salvage_capture_does_not_delete_existing_download_artifact(
         normalized_url=normalized_url,
     )
     download_dir.mkdir(parents=True)
-    existing_pdf = download_dir / "existing.pdf"
+    attempt_dir = create_download_workspace(download_dir)
+    existing_pdf = attempt_dir / "existing.pdf"
     existing_pdf.write_bytes(b"%PDF-1.7\nexisting")
-    request = SimpleNamespace(
-        settings=SimpleNamespace(output_dir=str(tmp_path / "downloads"))
-    )
 
     capture = _capture_salvaged_onsite_html(
-        request=request,
+        download_dir=attempt_dir,
         normalized_url=normalized_url,
         final_url=normalized_url,
         html="<html><body>report</body></html>",
     )
 
     assert capture.exists()
+    assert capture.parent == attempt_dir.resolve()
     assert existing_pdf.read_bytes() == b"%PDF-1.7\nexisting"

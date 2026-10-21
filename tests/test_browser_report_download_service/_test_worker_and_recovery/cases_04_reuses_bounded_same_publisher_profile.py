@@ -60,7 +60,7 @@ def test_download_report_with_browser_use_reuses_bounded_same_publisher_profile(
     second = service.download_report_with_browser_use(
         BrowserReportDownloadRequest(
             schema_version="1.0",
-            url="https://example.com/reuse-report",
+            url="https://example.com/reuse-report-second",
             settings=settings,
         ),
         run_context,
@@ -84,4 +84,6 @@ def test_download_report_with_browser_use_reuses_bounded_same_publisher_profile(
     ]
 
 
-__all__ = ["test_download_report_with_browser_use_reuses_bounded_same_publisher_profile"]
+__all__ = [
+    "test_download_report_with_browser_use_reuses_bounded_same_publisher_profile"
+]

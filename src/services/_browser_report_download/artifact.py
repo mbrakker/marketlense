@@ -375,7 +375,7 @@ def finalize_browser_report_download_result(
     ):
         onsite_capture_path = str(
             _capture_salvaged_onsite_html(
-                request=request,
+                download_dir=download_dir,
                 normalized_url=normalized_url,
                 final_url=final_url,
                 html=browser_html,
@@ -439,6 +439,7 @@ def finalize_browser_report_download_result(
         request=request,
         ctx=ctx,
         normalized_url=normalized_url,
+        download_dir=download_dir,
         agent_result=agent_result,
         browser_html=browser_html,
         route_kind=route_kind,

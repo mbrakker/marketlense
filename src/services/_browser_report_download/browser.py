@@ -11,7 +11,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 from dataclasses import asdict, dataclass
 from hashlib import sha256
@@ -67,15 +66,12 @@ from src.services._browser_report_download._browser_runtime import (
     _BROWSER_KILL_TIMEOUT_SECONDS,
     _BROWSER_PROFILE_DIR_PREFIX,
     _BROWSER_RESET_TIMEOUT_SECONDS,
-    _BROWSER_USE_TEMP_DIR_PATTERNS,
     _EMAIL_DOMAIN_BLOCK_MARKERS,
     _EMAIL_DOMAIN_FAILURE_MARKERS,
     _LOOKUP_FAILURE_MARKERS,
     _LOOKUP_FIELD_MARKERS,
     _LOOKUP_SUBMIT_MARKERS,
     _PARTIAL_HISTORY_TEXT_MAX_CHARS,
-    _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS,
-    _TEMP_CLEANUP_LOG_SAMPLE_LIMIT,
     _TERMINAL_REPORT_TEXT_MARKERS,
     _TERMINAL_STABILIZATION_DEFAULT_POLL_SCHEDULE_SECONDS,
     _TERMINAL_STABILIZATION_EMAIL_POLL_SCHEDULE_SECONDS,
@@ -102,15 +98,12 @@ from src.services._browser_report_download._browser_runtime.session_lifecycle im
     BrowserAgentHistoryResult,
     _cleanup_browser_profile_dir,
     _cleanup_managed_browser_profile_dirs,
-    _cleanup_new_browser_use_temp_dirs,
-    _cleanup_stale_browser_use_temp_dirs,
     _collect_agent_history_text,
     _default_session_reuse_base_dir,
     _force_stop_local_browser_process,
     _infer_encountered_form_fields,
     _kill_browser,
     _kill_browser_with_timeout,
-    _list_browser_use_temp_dirs,
     _log_browser_cleanup_failure,
     _new_managed_browser_profile_dir,
     _prepare_browser_for_shutdown,
@@ -120,7 +113,6 @@ from src.services._browser_report_download._browser_runtime.session_lifecycle im
     _read_email_domain_blocker_partial_history,
     _read_lookup_blocker_partial_history,
     _read_terminal_blocker_partial_history,
-    _remove_browser_use_temp_dirs,
     _resolve_agent_run_timeout_seconds,
     _resolve_lookup_blocker_label,
     _run_agent_history_async_with_timeout,
@@ -309,7 +301,6 @@ class BrowserPreflightSession:
     launch_started_at: float
     session_reuse_decision: BrowserDownloadSessionReuseDecision
     profile_dir: Path
-    preexisting_temp_dirs: set[str]
     event_loop_runner: asyncio.Runner | None = None
     closed: bool = False
 
@@ -344,8 +335,6 @@ def start_browser_preflight_session(
         normalized_url=normalized_url,
     )
     launch_started_at = time.monotonic()
-    _cleanup_stale_browser_use_temp_dirs(ctx=ctx, normalized_url=normalized_url)
-    preexisting_temp_dirs = {str(path) for path in _list_browser_use_temp_dirs()}
     session_reuse_decision = resolve_browser_session_reuse(
         policy=request.settings.session_reuse_policy,
         default_base_dir=_default_session_reuse_base_dir(request, download_dir),
@@ -398,11 +387,6 @@ def start_browser_preflight_session(
                 ctx=ctx,
                 normalized_url=normalized_url,
             )
-        _cleanup_new_browser_use_temp_dirs(
-            ctx=ctx,
-            normalized_url=normalized_url,
-            preexisting_temp_dirs=preexisting_temp_dirs,
-        )
         raise
     return BrowserPreflightSession(
         browser_use=browser_use,
@@ -412,7 +396,6 @@ def start_browser_preflight_session(
         launch_started_at=launch_started_at,
         session_reuse_decision=session_reuse_decision,
         profile_dir=profile_dir,
-        preexisting_temp_dirs=preexisting_temp_dirs,
         event_loop_runner=_new_preflight_event_loop_runner(),
     )
 
@@ -465,11 +448,6 @@ def close_browser_preflight_session(
             ctx=ctx,
             normalized_url=normalized_url,
         )
-    _cleanup_new_browser_use_temp_dirs(
-        ctx=ctx,
-        normalized_url=normalized_url,
-        preexisting_temp_dirs=session.preexisting_temp_dirs,
-    )
 
 
 def _mark_lookup_submission_assisted_raw_response(raw_model_response: str) -> str:
@@ -2732,8 +2710,6 @@ def run_browser_report_download_agent(
     )
     usage_writer: BrowserUsageWriter | None = None
     if preflight_session is None:
-        _cleanup_stale_browser_use_temp_dirs(ctx=ctx, normalized_url=normalized_url)
-        preexisting_temp_dirs = {str(path) for path in _list_browser_use_temp_dirs()}
         session_reuse_decision = resolve_browser_session_reuse(
             policy=request.settings.session_reuse_policy,
             default_base_dir=_default_session_reuse_base_dir(request, download_dir),
@@ -2752,7 +2728,6 @@ def run_browser_report_download_agent(
         )
         ensure_browser_directory(profile_dir, profile=True)
     else:
-        preexisting_temp_dirs = preflight_session.preexisting_temp_dirs
         session_reuse_decision = preflight_session.session_reuse_decision
         profile_dir = preflight_session.profile_dir
     raw_model_response = ""
@@ -3268,11 +3243,6 @@ def run_browser_report_download_agent(
                 ctx=ctx,
                 normalized_url=normalized_url,
             )
-        _cleanup_new_browser_use_temp_dirs(
-            ctx=ctx,
-            normalized_url=normalized_url,
-            preexisting_temp_dirs=preexisting_temp_dirs,
-        )
         if preflight_session is not None:
             preflight_session.closed = True
             _close_preflight_event_loop_runner(preflight_session)

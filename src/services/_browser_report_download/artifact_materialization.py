@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import stat
+import tempfile
 from pathlib import Path
 from typing import Literal
 
@@ -102,19 +103,18 @@ def materialize_external_browser_artifact(
             target_path=target_path,
         )
         if publish_result == "published":
-            if (
-                _existing_target_state(
-                    source_path=source,
-                    target_path=target_path,
-                    download_dir=download_dir,
-                )
-                == "identical"
-            ):
-                return target_path
-            _unlink_owned_file(target_path)
-            return None
+            return target_path
         if publish_result == "failed":
             return None
+        if (
+            _existing_target_state(
+                source_path=source,
+                target_path=target_path,
+                download_dir=download_dir,
+            )
+            == "identical"
+        ):
+            return target_path
 
     raise AppError(
         code="browser_download_artifact_collision_exhausted",
@@ -171,9 +171,11 @@ def _existing_target_state(
 
 
 def _copy_and_publish(*, source_path: Path, target_path: Path) -> _PublishResult:
-    temp_path = target_path.with_name(f"{target_path.name}.part")
+    temp_path = _allocate_materialization_stage(target_path)
+    if temp_path is None:
+        return "failed"
     try:
-        with source_path.open("rb") as source, temp_path.open("xb") as target:
+        with source_path.open("rb") as source, temp_path.open("wb") as target:
             while True:
                 chunk = source.read(_COPY_CHUNK_BYTES)
                 if not chunk:
@@ -181,7 +183,11 @@ def _copy_and_publish(*, source_path: Path, target_path: Path) -> _PublishResult
                 target.write(chunk)
             target.flush()
             os.fsync(target.fileno())
+        if not _files_equal(source_path, temp_path):
+            _unlink_owned_file(temp_path)
+            return "failed"
     except FileExistsError:
+        _unlink_owned_file(temp_path)
         return "conflict"
     except OSError:
         _unlink_owned_file(temp_path)
@@ -200,6 +206,27 @@ def _copy_and_publish(*, source_path: Path, target_path: Path) -> _PublishResult
         _unlink_owned_file(temp_path)
         return "failed"
     return "published"
+
+
+def _allocate_materialization_stage(target_path: Path) -> Path | None:
+    try:
+        file_descriptor, stage_name = tempfile.mkstemp(
+            prefix="",
+            suffix=".part",
+            dir=str(target_path.parent),
+        )
+        os.close(file_descriptor)
+    except OSError:
+        return None
+    stage_path = Path(stage_name)
+    try:
+        return validate_browser_artifact_path(
+            stage_path,
+            parent_dir=target_path.parent,
+        )
+    except AppError:
+        _unlink_owned_file(stage_path)
+        raise
 
 
 def _files_equal(left: Path, right: Path) -> bool:

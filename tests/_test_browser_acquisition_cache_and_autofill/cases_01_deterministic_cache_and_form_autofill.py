@@ -163,6 +163,7 @@ def test_browser_download_reuses_valid_artifact_acquisition_cache(
     tmp_path: Path, external_boundary_mocks_only
 ):
     import src.services.browser_report_download_service as browser_download_service
+    from src.services._browser_report_download.request import resolve_download_dir_path
 
     def fail_if_browser_is_called(**_kwargs):
         raise AssertionError("browser boundary must not run for a valid cache hit")
@@ -173,7 +174,12 @@ def test_browser_download_reuses_valid_artifact_acquisition_cache(
         fail_if_browser_is_called,
     )
     settings = _settings(tmp_path)
-    pdf_path = tmp_path / "cached-report.pdf"
+    stable_download_dir = resolve_download_dir_path(
+        root_dir=settings.output_dir,
+        normalized_url="https://example.com/report",
+    )
+    stable_download_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path = stable_download_dir / "cached-report.pdf"
     payload = _valid_pdf_bytes()
     pdf_path.write_bytes(payload)
     request = BrowserReportDownloadRequest(

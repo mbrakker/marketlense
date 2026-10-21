@@ -103,6 +103,7 @@ from src.services._browser_report_download.publication_metadata import (
     extract_source_publication_metadata as _extract_source_publication_metadata,
 )
 from src.services._browser_report_download.request import (
+    create_download_workspace,
     prepare_download_dir,
     resolve_delivery_email_value,
     url_looks_like_direct_pdf,
@@ -1296,7 +1297,7 @@ def download_report_with_browser_use(
     if request.attempt_url and not normalized_execution_url:
         validate_common_request(request, normalized_execution_url)
     delivery_email_value = resolve_delivery_email_value(request)
-    download_dir = prepare_download_dir(
+    stable_download_dir = prepare_download_dir(
         root_dir=request.settings.output_dir,
         normalized_url=normalized_url,
     )
@@ -1304,7 +1305,7 @@ def download_report_with_browser_use(
         request=request,
         ctx=ctx,
         normalized_url=normalized_url,
-        download_dir=download_dir,
+        download_dir=stable_download_dir,
     )
     if cached_result is not None:
         return _complete_browser_download_result(
@@ -1313,6 +1314,7 @@ def download_report_with_browser_use(
             normalized_url=normalized_url,
             result=cached_result,
         )
+    download_dir = create_download_workspace(stable_download_dir)
     logger.info(
         log_event(
             ctx,
@@ -1454,11 +1456,6 @@ def download_report_with_browser_use(
                     "route_family_hint": request.route_family_hint,
                 },
             )
-        download_dir = prepare_download_dir(
-            root_dir=request.settings.output_dir,
-            normalized_url=normalized_url,
-        )
-
     report_page_link_request = request
     if (
         doc_type_prediction.predicted_doc_type == "report_page_pdf_link"
@@ -1579,6 +1576,7 @@ def download_report_with_browser_use(
             ctx=ctx,
             normalized_url=normalized_url,
             execution_url=normalized_execution_url,
+            download_dir=download_dir,
         )
         if rendered_terminal_response is not None:
             terminal_result = _preflight_terminal_static_archive_result(

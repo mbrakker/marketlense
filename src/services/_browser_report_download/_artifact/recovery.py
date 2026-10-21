@@ -181,6 +181,7 @@ def _salvage_without_structured_result(
         return _build_salvaged_onsite_result(
             request=request,
             normalized_url=normalized_url,
+            download_dir=download_dir,
             final_url=final_url,
             browser_html=browser_html,
             final_page_title=final_page_title,

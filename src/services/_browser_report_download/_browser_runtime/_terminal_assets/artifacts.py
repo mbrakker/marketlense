@@ -69,7 +69,6 @@ def _prefetch_structured_pdf_artifact(
         )
         if destination_path.exists() and is_pdf_file(destination_path):
             return str(destination_path)
-        committed_signature = None
         try:
             http_runtime.download_pdf_from_url(
                 pdf_url=target_url,
@@ -78,7 +77,6 @@ def _prefetch_structured_pdf_artifact(
                 ctx=ctx,
                 normalized_url=normalized_url,
             )
-            committed_signature = http_runtime.artifact_signature(destination_path)
         except AppError as exc:
             if exc.code == "browser_download_artifact_path_invalid":
                 raise
@@ -96,10 +94,6 @@ def _prefetch_structured_pdf_artifact(
                     },
                 )
             )
-            http_runtime.cleanup_attempt_owned_pdf(
-                destination_path,
-                committed_signature=committed_signature,
-            )
             continue
         if is_pdf_file(destination_path):
             logger.info(
@@ -116,10 +110,6 @@ def _prefetch_structured_pdf_artifact(
                 )
             )
             return str(destination_path)
-        http_runtime.cleanup_attempt_owned_pdf(
-            destination_path,
-            committed_signature=committed_signature,
-        )
     return ""
 
 

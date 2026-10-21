@@ -869,7 +869,7 @@ def test_browser_worker_subprocess_reports_missing_result_without_child_output(
     assert_logs_have_required_fields(_service_events(caplog))
 
 
-def test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_before_launch(
+def test_download_report_with_browser_use_preserves_unowned_browser_use_temp_dirs(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
@@ -880,23 +880,12 @@ def test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_bef
     stale_download_dir = tmp_path / "browser-use-downloads-stale"
     stale_download_dir.mkdir(parents=True, exist_ok=True)
     (stale_download_dir / "artifact.tmp").write_text("x", encoding="utf-8")
-    old_timestamp = time.time() - (
-        browser_runtime._STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS + 60.0
-    )
-    os.utime(stale_profile_dir, (old_timestamp, old_timestamp))
-    os.utime(stale_download_dir, (old_timestamp, old_timestamp))
-
     runtime = _runtime(
         tmp_path,
         route_kind="pdf_download",
         route_summary="Open the report page and save the PDF.",
         create_pdf=True,
         email_submission_completed=None,
-    )
-    external_boundary_mocks_only.setattr(
-        browser_runtime.tempfile,
-        "gettempdir",
-        lambda: str(tmp_path),
     )
     external_boundary_mocks_only.setattr(
         browser_runtime,
@@ -914,11 +903,11 @@ def test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_bef
     )
 
     assert response.outcome == "downloaded"
-    assert not stale_profile_dir.exists()
-    assert not stale_download_dir.exists()
+    assert stale_profile_dir.exists()
+    assert stale_download_dir.exists()
 
 
-def test_download_report_with_browser_use_cleans_new_browser_use_temp_dirs_after_run(
+def test_download_report_with_browser_use_preserves_new_unowned_browser_use_temp_dirs(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
@@ -941,11 +930,6 @@ def test_download_report_with_browser_use_cleans_new_browser_use_temp_dirs_after
 
     runtime.Agent = TempLeakAgent
     external_boundary_mocks_only.setattr(
-        browser_runtime.tempfile,
-        "gettempdir",
-        lambda: str(tmp_path),
-    )
-    external_boundary_mocks_only.setattr(
         browser_runtime,
         "import_module",
         lambda module_name: runtime,
@@ -961,7 +945,7 @@ def test_download_report_with_browser_use_cleans_new_browser_use_temp_dirs_after
     )
 
     assert response.outcome == "downloaded"
-    assert not (tmp_path / "browseruse-tmp-created-during-run").exists()
+    assert (tmp_path / "browseruse-tmp-created-during-run").exists()
 
 
 __all__ = [
@@ -975,6 +959,6 @@ __all__ = [
     "test_browser_worker_execution_never_dispatches_a_nested_worker",
     "test_pre_llm_autofill_runs_on_async_browser_session",
     "test_browser_worker_subprocess_reports_missing_result_without_child_output",
-    "test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_before_launch",
-    "test_download_report_with_browser_use_cleans_new_browser_use_temp_dirs_after_run",
+    "test_download_report_with_browser_use_preserves_unowned_browser_use_temp_dirs",
+    "test_download_report_with_browser_use_preserves_new_unowned_browser_use_temp_dirs",
 ]

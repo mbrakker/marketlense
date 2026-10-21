@@ -141,7 +141,6 @@ def _try_fetch_pdf_target(
         source_name=destination_name,
         target_url=target_url,
     )
-    committed_signature = None
     try:
         if not (
             destination_path.exists() and http_runtime.is_pdf_file(destination_path)
@@ -153,17 +152,13 @@ def _try_fetch_pdf_target(
                 ctx=ctx,
                 normalized_url=normalized_url,
             )
-            committed_signature = http_runtime.artifact_signature(destination_path)
         ensured_path = http_runtime.ensure_downloaded_pdf(
             downloaded_path=destination_path,
             ctx=ctx,
             normalized_url=normalized_url,
             document_url=target_url,
             timeout_seconds=request.settings.timeout_seconds,
-            expected_existing_signature=committed_signature,
         )
-        if committed_signature is not None and ensured_path is not None:
-            committed_signature = http_runtime.artifact_signature(ensured_path)
         http_runtime.validate_downloaded_pdf_artifact(
             downloaded_path=ensured_path,
             downloaded_mime_type=http_runtime.resolve_downloaded_mime_type(
@@ -174,10 +169,6 @@ def _try_fetch_pdf_target(
         )
         return ensured_path
     except AppError as exc:
-        http_runtime.cleanup_attempt_owned_pdf(
-            destination_path,
-            committed_signature=committed_signature,
-        )
         if exc.code == "browser_download_artifact_path_invalid":
             raise
         return None

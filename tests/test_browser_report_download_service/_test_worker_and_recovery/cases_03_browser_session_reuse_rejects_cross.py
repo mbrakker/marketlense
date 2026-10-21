@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+from src.services._browser_report_download.artifact_paths import windows_path_units
+
+
 def test_browser_session_reuse_rejects_cross_publisher_key_without_override(
     tmp_path: Path,
     run_context,
@@ -33,6 +36,7 @@ def test_browser_session_reuse_rejects_cross_publisher_key_without_override(
     assert second.accepted is False
     assert second.rejection_reason == "cross_publisher_scope_mismatch"
 
+
 def test_prepare_download_dir_tolerates_locked_managed_browser_profile_dir(
     tmp_path: Path,
     external_boundary_mocks_only,
@@ -49,16 +53,6 @@ def test_prepare_download_dir_tolerates_locked_managed_browser_profile_dir(
     (locked_profile_dir / "journal.baj").write_text("locked", encoding="utf-8")
     stale_artifact = download_dir / "stale.txt"
     stale_artifact.write_text("stale", encoding="utf-8")
-    original_rmtree = request_runtime.rmtree
-
-    def fake_rmtree(path: str | Path, *args: Any, **kwargs: Any) -> None:
-        candidate = Path(path)
-        if candidate == locked_profile_dir:
-            raise PermissionError(13, "locked", str(candidate))
-        return original_rmtree(path, *args, **kwargs)
-
-    external_boundary_mocks_only.setattr(request_runtime, "rmtree", fake_rmtree)
-
     prepared_dir = request_runtime.prepare_download_dir(
         root_dir=str(tmp_path),
         normalized_url=normalized_url,
@@ -66,7 +60,40 @@ def test_prepare_download_dir_tolerates_locked_managed_browser_profile_dir(
 
     assert prepared_dir == download_dir
     assert locked_profile_dir.exists()
-    assert not stale_artifact.exists()
+    assert stale_artifact.exists()
+
+
+def test_download_workspaces_are_unique_and_preserve_completed_attempts(
+    tmp_path: Path,
+) -> None:
+    normalized_url = (
+        "https://www.brightlocal.com/research/local-rankings-investigation-dentist"
+    )
+    download_dir = request_runtime.prepare_download_dir(
+        root_dir=str(tmp_path),
+        normalized_url=normalized_url,
+    )
+    completed_workspace = request_runtime.create_download_workspace(download_dir)
+    completed_artifact = completed_workspace / "report.pdf"
+    completed_artifact.write_bytes(b"%PDF-1.7 completed")
+
+    assert (
+        request_runtime.prepare_download_dir(
+            root_dir=str(tmp_path),
+            normalized_url=normalized_url,
+        )
+        == download_dir
+    )
+    next_workspace = request_runtime.create_download_workspace(download_dir)
+    third_workspace = request_runtime.create_download_workspace(download_dir)
+
+    assert next_workspace != third_workspace
+    assert completed_artifact.read_bytes() == b"%PDF-1.7 completed"
+    assert next_workspace.parent == download_dir
+    assert third_workspace.parent == download_dir
+    assert windows_path_units(next_workspace) <= 240
+    assert windows_path_units(third_workspace) <= 240
+
 
 def test_kill_browser_force_stops_local_watchdog_process_tree(
     run_context,
@@ -145,6 +172,7 @@ def test_kill_browser_force_stops_local_watchdog_process_tree(
     assert grandchild.kill_calls == 0
     assert fake_browser._local_browser_watchdog._subprocess is None
 
+
 def test_prepare_browser_for_shutdown_awaits_cancelled_reconnect_task(
     run_context,
 ) -> None:
@@ -187,6 +215,7 @@ def test_prepare_browser_for_shutdown_awaits_cancelled_reconnect_task(
     assert fake_browser._reconnecting is False
     assert fake_browser.browser_profile.cdp_url is None
     assert event_calls == ["set"]
+
 
 def test_download_report_with_browser_use_maps_browser_start_timeout_to_typed_error(
     tmp_path: Path,
@@ -234,6 +263,7 @@ def test_download_report_with_browser_use_maps_browser_start_timeout_to_typed_er
         code="browser_download_browser_start_timeout",
         retryable=True,
     )
+
 
 def test_download_report_with_browser_use_times_out_stalled_agent(
     tmp_path: Path,
@@ -292,9 +322,11 @@ def test_download_report_with_browser_use_times_out_stalled_agent(
     assert kill_calls
     assert stop_observations == [True]
 
+
 __all__ = [
     "test_browser_session_reuse_rejects_cross_publisher_key_without_override",
     "test_prepare_download_dir_tolerates_locked_managed_browser_profile_dir",
+    "test_download_workspaces_are_unique_and_preserve_completed_attempts",
     "test_kill_browser_force_stops_local_watchdog_process_tree",
     "test_prepare_browser_for_shutdown_awaits_cancelled_reconnect_task",
     "test_download_report_with_browser_use_maps_browser_start_timeout_to_typed_error",

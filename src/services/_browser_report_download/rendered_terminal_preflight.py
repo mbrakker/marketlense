@@ -54,6 +54,7 @@ def try_rendered_terminal_preflight(
     ctx: RunContext,
     normalized_url: str,
     execution_url: str,
+    download_dir: Path,
     browser_session_class: Any | None = None,
 ) -> BrowserPreflightProbeResponse | None:
     """Return terminal evidence only for an observed rendered not-found page.
@@ -97,6 +98,7 @@ def try_rendered_terminal_preflight(
                 browser_session_class=runtime_class,
                 request=request,
                 target_url=target_url,
+                download_dir=download_dir,
             ),
             timeout_seconds=_RENDERED_TERMINAL_PREFLIGHT_TIMEOUT_SECONDS,
             grace_seconds=2.0,
@@ -212,10 +214,12 @@ async def _observe_rendered_page(
     browser_session_class: Any,
     request: Any,
     target_url: str,
+    download_dir: Path,
 ) -> dict[str, str | bool]:
     browser_session = _new_browser_session(
         browser_session_class=browser_session_class,
         request=request,
+        download_dir=download_dir,
     )
     started = False
     try:
@@ -253,8 +257,13 @@ async def _observe_rendered_page(
         await _stop_browser_session(browser_session)
 
 
-def _new_browser_session(*, browser_session_class: Any, request: Any) -> Any:
-    output_dir = validate_browser_download_directory(Path(request.settings.output_dir))
+def _new_browser_session(
+    *,
+    browser_session_class: Any,
+    request: Any,
+    download_dir: Path,
+) -> Any:
+    output_dir = validate_browser_download_directory(download_dir)
     kwargs = {
         "headless": not bool(request.settings.headed),
         "downloads_path": str(output_dir),
