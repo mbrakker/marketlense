@@ -48,6 +48,7 @@ def test_download_report_with_browser_use_recovers_html_pdf_without_clobbering_c
                 {
                     "route_kind": "pdf_download",
                     "route_family": "browser_onsite_report",
+                    "onsite_capture_format": "browser_rendered_pdf",
                     "final_page_url": self.browser.url,
                     "downloaded_file_path": str(downloaded_path),
                     "downloaded_file_name": downloaded_path.name,
@@ -87,6 +88,7 @@ def test_download_report_with_browser_use_recovers_html_pdf_without_clobbering_c
     downloaded_path = capture_path.parent / "report.pdf"
     occupied_capture_path = capture_path.parent / "report.html"
     assert capture_path.suffix == ".html"
+    assert response.onsite_capture_format == "html"
     assert capture_path.read_bytes() == source_html
     assert downloaded_path.read_bytes() == source_html
     assert occupied_capture_path.read_bytes() == existing_html

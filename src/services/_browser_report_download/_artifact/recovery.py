@@ -52,6 +52,7 @@ from .evidence import (
 )
 from .onsite import (
     _build_salvaged_onsite_result,
+    _generated_onsite_capture_format,
     _infer_onsite_completeness_status,
     _looks_like_non_report_terminal,
     _looks_like_onsite_report_html,
@@ -577,6 +578,10 @@ def _recover_from_invalid_artifact(
             traversed_page_urls=list(agent_result.traversed_page_urls),
             route_steps=_normalize_agent_route_steps_for_completeness(agent_result),
         )
+        capture_format = _generated_onsite_capture_format(
+            onsite_capture_format=agent_result.onsite_capture_format,
+            suffix=capture_path.suffix,
+        )
         return (
             "onsite_report",
             None,
@@ -584,7 +589,7 @@ def _recover_from_invalid_artifact(
             None,
             None,
             str(capture_path),
-            str(agent_result.onsite_capture_format or "html").strip() or "html",
+            capture_format,
             page_count,
             completeness_status,
             "captured",
