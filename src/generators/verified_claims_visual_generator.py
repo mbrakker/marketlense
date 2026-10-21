@@ -151,7 +151,8 @@ def _image_page_map(inspected_physical_pages: list[int]) -> list[dict[str, int]]
 
 def _image_page_map_text(inspected_physical_pages: list[int]) -> str:
     return "\n".join(
-        f"image {index} = physical PDF page {page}"
+        f"image {index} = physical PDF page {page} "
+        "(authoritative; cite this page, not any printed page label)"
         for index, page in enumerate(inspected_physical_pages, start=1)
     )
 

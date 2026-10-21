@@ -3,6 +3,7 @@ from __future__ import annotations
 from scripts.quality.review_verified_claims_step2_editorial import (
     _acceptance_summary,
     _base_record,
+    _image_page_map_text,
     _valid_page_adjudication,
     _validate_cohort_identity_coverage,
     _validate_review_record_coverage,
@@ -57,6 +58,9 @@ def _review_record(
         "availability": availability,
         "cohort": cohort,
         "decision": decision,
+        "editorial_acceptance_status": "accepted"
+        if decision == "approved"
+        else "not_approved",
         "review_invoked": availability != "unavailable",
     }
 
@@ -195,6 +199,128 @@ def test_acceptance_summary_blocks_missing_review_record_coverage() -> None:
 
     assert summary["coverage_status"] == "BLOCKED"
     assert summary["editorial_acceptance_status"] == "FAIL"
+
+
+def test_acceptance_summary_rejects_unknown_decision_state() -> None:
+    validation = _validate_cohort_identity_coverage(
+        _additional_result([_claim("candidate-a"), _claim("candidate-b")]),
+        cohort="additional_five",
+    )
+    records = [
+        _review_record("candidate-a", decision="future_state"),
+        _review_record("candidate-b"),
+    ]
+
+    summary = _acceptance_summary(records=records, cohort_validations=[validation])
+
+    assert summary["editorial_acceptance_status"] == "PARTIAL"
+    assert "unexpected_decision:candidate-a:future_state" in summary["reasons"]
+
+
+def test_acceptance_summary_rejects_missing_editorial_acceptance_state() -> None:
+    validation = _validate_cohort_identity_coverage(
+        _additional_result([_claim("candidate-a"), _claim("candidate-b")]),
+        cohort="additional_five",
+    )
+    record = _review_record("candidate-a")
+    record.pop("editorial_acceptance_status")
+    records = [record, _review_record("candidate-b")]
+
+    summary = _acceptance_summary(records=records, cohort_validations=[validation])
+
+    assert summary["editorial_acceptance_status"] == "PARTIAL"
+    assert "editorial_acceptance_status_missing:candidate-a" in summary["reasons"]
+
+
+def test_acceptance_summary_rejects_inconsistent_approved_state() -> None:
+    validation = _validate_cohort_identity_coverage(
+        _additional_result([_claim("candidate-a"), _claim("candidate-b")]),
+        cohort="additional_five",
+    )
+    records = [
+        _review_record(
+            "candidate-a",
+            decision="approved",
+        )
+    ]
+    records[0]["editorial_acceptance_status"] = "pending"
+    records.append(_review_record("candidate-b"))
+
+    summary = _acceptance_summary(records=records, cohort_validations=[validation])
+
+    assert summary["editorial_acceptance_status"] == "PARTIAL"
+    assert (
+        "editorial_acceptance_status_not_accepted:candidate-a:"
+        "pending" in summary["reasons"]
+    )
+
+
+def test_acceptance_summary_rejects_malformed_acceptance_state() -> None:
+    validation = _validate_cohort_identity_coverage(
+        _additional_result([_claim("candidate-a"), _claim("candidate-b")]),
+        cohort="additional_five",
+    )
+    records = [_review_record("candidate-a"), _review_record("candidate-b")]
+    records[0]["editorial_acceptance_status"] = ["accepted"]
+
+    summary = _acceptance_summary(records=records, cohort_validations=[validation])
+
+    assert summary["editorial_acceptance_status"] == "PARTIAL"
+    assert (
+        "editorial_acceptance_status_malformed:candidate-a:['accepted']"
+        in summary["reasons"]
+    )
+
+
+def test_acceptance_summary_accepts_only_approved_accepted_records() -> None:
+    validation = _validate_cohort_identity_coverage(
+        _additional_result([_claim("candidate-a"), _claim("candidate-b")]),
+        cohort="additional_five",
+    )
+    records = [_review_record("candidate-a"), _review_record("candidate-b")]
+
+    summary = _acceptance_summary(records=records, cohort_validations=[validation])
+
+    assert summary["editorial_acceptance_status"] == "PASS"
+    assert summary["reasons"] == []
+
+
+def test_acceptance_summary_keeps_explicit_unavailable_outside_approval_gate() -> None:
+    unavailable = [
+        {
+            "candidate_id": "candidate-unavailable",
+            "report": "Report A",
+            "reason": "no safe physical page",
+        }
+    ]
+    result = _additional_result(
+        [_claim("candidate-a"), _claim("candidate-b")], unavailable=unavailable
+    )
+    result["real_shortlisted_set"]["selected_claim_count"] = 3  # type: ignore[index]
+    result["shortlist_inventory"][0]["selected_count"] = 3  # type: ignore[index]
+    validation = _validate_cohort_identity_coverage(result, cohort="additional_five")
+    records = [
+        _review_record("candidate-a"),
+        _review_record("candidate-b"),
+        _review_record(
+            "candidate-unavailable",
+            availability="unavailable",
+            decision="future_state",
+        ),
+    ]
+
+    summary = _acceptance_summary(records=records, cohort_validations=[validation])
+
+    assert summary["editorial_acceptance_status"] == "PASS"
+    assert "expected_unavailable_present" in summary["reasons"]
+
+
+def test_editorial_page_map_marks_physical_page_as_authoritative() -> None:
+    mapping = _image_page_map_text([5, 6])
+
+    assert "image 1 = physical PDF page 5" in mapping
+    assert "authoritative" in mapping
+    assert "cite this page, not any printed page label" in mapping
 
 
 def test_page_adjudication_requires_original_page_sets_to_match() -> None:

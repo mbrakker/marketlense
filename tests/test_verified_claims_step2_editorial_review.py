@@ -13,6 +13,7 @@ from scripts.quality.review_verified_claims_step2_editorial import (
     _base_record,
     _reconcile_source_pages,
     _record_summary,
+    _review_page_order,
     _validate_cohort_identity_coverage,
     _validate_result_binding,
     _validate_review_payload,
@@ -268,6 +269,95 @@ def test_review_pages_must_be_inspected_and_notes_must_match() -> None:
     assert "supporting_pages_invalid" in validated["diagnostics"]
 
 
+def test_review_page_order_uses_retained_support_without_rebinding() -> None:
+    assert _review_page_order({"supporting_physical_pages": [5, 6]}, [3, 4, 5, 6]) == [
+        5,
+        6,
+    ]
+    assert _review_page_order({"supporting_physical_pages": [41]}, [39, 41, 7, 43]) == [
+        41
+    ]
+    assert _review_page_order({}, [39, 41, 7, 43]) == [39, 41, 7, 43]
+
+
+def test_review_image_indices_bind_support_to_physical_pages() -> None:
+    validated = _validate_review_payload(
+        _payload(
+            supporting_image_indices=[2],
+            source_truth_notes_by_image={
+                "2": (
+                    "The second attached page reports the observed cohort "
+                    "relationship for the stated period."
+                )
+            },
+        ),
+        inspected_physical_pages=[10, 12],
+        require_image_indices=True,
+    )
+
+    assert validated["decision"] == "approved"
+    assert validated["supporting_physical_pages"] == [12]
+    assert validated["diagnostics"] == []
+
+
+def test_review_image_indices_preserve_valid_multi_page_support() -> None:
+    validated = _validate_review_payload(
+        _payload(
+            supporting_image_indices=[1, 2],
+            supporting_physical_pages=[10, 12],
+            source_truth_notes_by_image={
+                "1": (
+                    "The first attached page establishes the reported population "
+                    "and period."
+                ),
+                "2": (
+                    "The second attached page supplies the related metric and "
+                    "bounded implication."
+                ),
+            },
+        ),
+        inspected_physical_pages=[10, 12],
+        require_image_indices=True,
+    )
+
+    assert validated["decision"] == "approved"
+    assert validated["supporting_physical_pages"] == [10, 12]
+    assert validated["diagnostics"] == []
+
+
+def test_review_image_indices_reject_conflicting_physical_page_field() -> None:
+    validated = _validate_review_payload(
+        _payload(
+            supporting_image_indices=[2],
+            supporting_physical_pages=[10],
+            source_truth_notes_by_image={
+                "2": (
+                    "The second attached page reports the observed cohort "
+                    "relationship for the stated period."
+                )
+            },
+        ),
+        inspected_physical_pages=[10, 12],
+        require_image_indices=True,
+    )
+
+    assert validated["decision"] == "unresolved"
+    assert (
+        "supporting_physical_pages_image_mapping_conflict" in validated["diagnostics"]
+    )
+
+
+def test_review_requires_image_indices_when_new_mapping_contract_is_enabled() -> None:
+    validated = _validate_review_payload(
+        _payload(),
+        inspected_physical_pages=[12],
+        require_image_indices=True,
+    )
+
+    assert validated["decision"] == "unresolved"
+    assert "supporting_image_indices_invalid" in validated["diagnostics"]
+
+
 def test_provisional_recovery_pages_are_reviewable_without_promotion() -> None:
     pages, reason = _validate_result_binding(
         {
@@ -334,6 +424,9 @@ def _review_record(
         "availability": availability,
         "cohort": cohort,
         "decision": decision,
+        "editorial_acceptance_status": "accepted"
+        if decision == "approved"
+        else "not_approved",
         "review_invoked": availability != "unavailable",
     }
 

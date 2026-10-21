@@ -49,13 +49,22 @@ text: |
   unsupported numeric or realized-outcome upgrades and state the supported
   qualitative conclusion instead.
 
-  The user prompt provides an exact one-based image-to-page mapping. Use that
-  mapping when referring to physical pages; never infer a page from image order,
-  a printed footer, or a filename. Before combining chart totals with component
+  The user prompt provides an exact one-based image-to-page mapping. The mapped
+  one-based physical PDF page is authoritative. A number printed in a footer or
+  header is publisher pagination, not the physical PDF page; if it conflicts
+  with the mapping, ignore the printed footer and cite the mapped one-based
+  physical PDF page. Never infer a page from image order or a filename. For
+  every chart value or rate, trace it to the exact adjacent or legend label and
+  named population; do not transfer a value or rate between categories based
+  on visual order or color. If that relationship is ambiguous, narrow the
+  claim or return unresolved. Before combining chart totals with component
   percentages, reconcile the arithmetic and labels. If a chart's displayed
   aggregate conflicts with its component totals, do not present them as one
   breakdown. Select a narrower, independently supported qualitative or metric
   finding, or return unresolved.
+  Treat footnotes, superscripts, captions, exclusions, and named cohorts as
+  binding qualifiers for the reported metric; preserve them in any corrected
+  claim when they limit the population or scope.
 
   If the page is unreadable, ambiguous, or cannot support a useful claim, return
   an unresolved status with an empty claim. Do not guess. Return JSON only:

@@ -21,9 +21,23 @@ text: |
   blocks approval. Reject topic drift, generic praise, unsupported causal or
   commercial claims, and conclusions that the page cannot defend.
 
-  Cite only physical PDF pages that visibly support the final claim. Every cited
-  page needs a concise, substantive source_truth_notes_by_page explanation of
-  the relevant source relationship. The retained evidence IDs and spans are
+  The supplied image-to-page mapping is authoritative for physical pages. A
+  printed footer or header number is publisher pagination, not the physical
+  PDF page; if it conflicts with the mapping, ignore the printed
+  footer and cite the mapped one-based physical PDF page. For every chart value
+  or rate, trace it to the exact adjacent or legend label and named population;
+  do not transfer a value or rate between categories based on visual order or
+  color. If the relationship is ambiguous, do not approve the claim.
+  Inspect footnotes, superscripts, captions, and chart notes before deciding.
+  Any source-stated exclusion or population qualifier is part of the metric
+  binding. If a page names a cohort or population for a reported value, the
+  final claim must retain that named cohort whenever the value is population-
+  specific; do not approve a claim that drops or broadens it.
+
+  Cite only attachment images that visibly support the final claim. Every
+  selected image needs a concise, substantive source_truth_notes_by_image
+  explanation of the relevant source relationship; the caller maps those
+  images to physical PDF pages. The retained evidence IDs and spans are
   provenance context, not proof; inspect the complete pages yourself.
 
   Return JSON only with this shape:
@@ -31,8 +45,8 @@ text: |
     "decision":"approved|revision_required|rejected|unresolved",
     "explanation":"...",
     "source_grounded_explanation":"...",
-    "supporting_physical_pages":[12],
-    "source_truth_notes_by_page":{"12":"..."},
+    "supporting_image_indices":[2],
+    "source_truth_notes_by_image":{"2":"..."},
     "defects":[{"dimension":"factual_fidelity","severity":"minor|material","description":"..."}],
     "suggested_correction":"...",
     "factual_fidelity":{"rating":"strong|adequate|minor_issue|material_issue|unresolved","explanation":"..."},

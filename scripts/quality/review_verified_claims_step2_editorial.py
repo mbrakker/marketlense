@@ -125,6 +125,31 @@ def _validated_page_notes(
     return notes, list(dict.fromkeys(diagnostics))
 
 
+def _validated_image_notes(
+    value: Any, *, image_indices: list[int]
+) -> tuple[dict[str, str], list[str]]:
+    """Validate notes keyed by attachment index before physical-page mapping."""
+
+    if not isinstance(value, Mapping):
+        return {}, ["source_truth_notes_by_image_invalid"]
+    notes: dict[str, str] = {}
+    diagnostics: list[str] = []
+    allowed = set(image_indices)
+    for raw_index, raw_note in value.items():
+        try:
+            index = int(raw_index)
+        except (TypeError, ValueError):
+            index = 0
+        note = _nonempty_text(raw_note)
+        if index <= 0 or note is None or index not in allowed:
+            diagnostics.append("source_truth_notes_by_image_invalid")
+            continue
+        notes[str(index)] = note
+    if set(notes) != {str(index) for index in image_indices}:
+        diagnostics.append("source_truth_notes_by_image_incomplete")
+    return notes, list(dict.fromkeys(diagnostics))
+
+
 def _nonempty_text(value: Any) -> str | None:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -161,7 +186,10 @@ def _validated_defects(value: Any) -> tuple[list[dict[str, str]], list[str]]:
 
 
 def _validate_review_payload(
-    payload: Any, *, inspected_physical_pages: list[int]
+    payload: Any,
+    *,
+    inspected_physical_pages: list[int],
+    require_image_indices: bool = False,
 ) -> dict[str, Any]:
     """Validate and normalize one independent reviewer response.
 
@@ -217,19 +245,50 @@ def _validate_review_payload(
         source_grounded_explanation = ""
 
     raw_pages = payload.get("supporting_physical_pages")
-    supporting_pages = _strict_pages(raw_pages)
-    if supporting_pages is None or any(
-        page not in inspected_physical_pages for page in supporting_pages
-    ):
-        diagnostics.append("supporting_pages_invalid")
-        supporting_pages = []
-
-    notes, note_diagnostics = _validated_page_notes(
-        payload.get("source_truth_notes_by_page"),
-        pages=supporting_pages,
-        allowed_pages=inspected_physical_pages,
-    )
-    diagnostics.extend(note_diagnostics)
+    notes: dict[str, str]
+    if require_image_indices:
+        image_indices = _strict_pages(payload.get("supporting_image_indices"))
+        if image_indices is None or any(
+            index > len(inspected_physical_pages) for index in image_indices
+        ):
+            diagnostics.append("supporting_image_indices_invalid")
+            supporting_pages = []
+            notes = {}
+        else:
+            mapped_pages = [
+                inspected_physical_pages[index - 1] for index in image_indices
+            ]
+            supporting_pages = mapped_pages
+            if "supporting_physical_pages" in payload:
+                declared_pages = _strict_pages(raw_pages)
+                if declared_pages != mapped_pages:
+                    diagnostics.append(
+                        "supporting_physical_pages_image_mapping_conflict"
+                    )
+                    supporting_pages = []
+            image_notes, image_note_diagnostics = _validated_image_notes(
+                payload.get("source_truth_notes_by_image"),
+                image_indices=image_indices,
+            )
+            diagnostics.extend(image_note_diagnostics)
+            notes = {
+                str(page): image_notes[str(index)]
+                for index, page in zip(image_indices, mapped_pages, strict=True)
+                if str(index) in image_notes
+            }
+    else:
+        supporting_pages = _strict_pages(raw_pages)
+        if supporting_pages is None or any(
+            page not in inspected_physical_pages for page in supporting_pages
+        ):
+            diagnostics.append("supporting_pages_invalid")
+            supporting_pages = []
+        notes, note_diagnostics = _validated_page_notes(
+            payload.get("source_truth_notes_by_page"),
+            pages=supporting_pages,
+            allowed_pages=inspected_physical_pages,
+        )
+        diagnostics.extend(note_diagnostics)
 
     defects, defect_diagnostics = _validated_defects(payload.get("defects"))
     diagnostics.extend(defect_diagnostics)
@@ -385,7 +444,8 @@ def _review_bundle(
 
 def _image_page_map_text(pages: list[int]) -> str:
     return "\n".join(
-        f"image {index} = physical PDF page {page}"
+        f"image {index} = physical PDF page {page} "
+        "(authoritative; cite this page, not any printed page label)"
         for index, page in enumerate(pages, start=1)
     )
 
@@ -669,6 +729,14 @@ def _validate_result_binding(
     return pages, ""
 
 
+def _review_page_order(row: Mapping[str, Any], pages: list[int]) -> list[int]:
+    """Use retained support pages when present, otherwise inspect all pages."""
+
+    preferred = _strict_pages(row.get("supporting_physical_pages")) or []
+    retained = [page for page in preferred if page in pages]
+    return retained or pages
+
+
 def _render_pages(
     *,
     source: Mapping[str, Any],
@@ -779,7 +847,11 @@ def _review_one_claim(
         record["model"] = model
         return record
 
-    validated = _validate_review_payload(payload, inspected_physical_pages=pages)
+    validated = _validate_review_payload(
+        payload,
+        inspected_physical_pages=pages,
+        require_image_indices=True,
+    )
     response_bytes = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode(
         "utf-8"
     )
@@ -1840,6 +1912,55 @@ def _acceptance_summary(
         reason = f"review_record_coverage:{issue_code}"
         if reason not in reasons:
             reasons.append(reason)
+    eligible_nonapproval_ids: set[str] = set()
+    for record in records:
+        if record.get("availability") == "unavailable":
+            # An explicit unavailable record is the documented exception: it
+            # is represented in the review manifest but is not an eligible
+            # editorial approval candidate.
+            continue
+        candidate_id = _text(record.get("candidate_id")) or "unknown"
+        raw_decision = record.get("decision")
+        if not isinstance(raw_decision, str) or not raw_decision.strip():
+            if raw_decision is None or (
+                isinstance(raw_decision, str) and not raw_decision.strip()
+            ):
+                reasons.append(f"decision_missing:{candidate_id}")
+            else:
+                reasons.append(
+                    f"decision_malformed:{candidate_id}:{_text(raw_decision)}"
+                )
+            eligible_nonapproval_ids.add(candidate_id)
+        else:
+            decision = raw_decision.strip()
+            if decision not in _DECISIONS:
+                reasons.append(f"unexpected_decision:{candidate_id}:{decision}")
+                eligible_nonapproval_ids.add(candidate_id)
+            elif decision in {"rejected", "revision_required", "unresolved"}:
+                eligible_nonapproval_ids.add(candidate_id)
+
+        raw_acceptance_status = record.get("editorial_acceptance_status")
+        if (
+            not isinstance(raw_acceptance_status, str)
+            or not raw_acceptance_status.strip()
+        ):
+            if raw_acceptance_status is None or (
+                isinstance(raw_acceptance_status, str)
+                and not raw_acceptance_status.strip()
+            ):
+                reasons.append(f"editorial_acceptance_status_missing:{candidate_id}")
+            else:
+                reasons.append(
+                    "editorial_acceptance_status_malformed:"
+                    f"{candidate_id}:{_text(raw_acceptance_status)}"
+                )
+            eligible_nonapproval_ids.add(candidate_id)
+        elif raw_acceptance_status.strip() != "accepted":
+            reasons.append(
+                "editorial_acceptance_status_not_accepted:"
+                f"{candidate_id}:{raw_acceptance_status.strip()}"
+            )
+            eligible_nonapproval_ids.add(candidate_id)
     for decision in ("rejected", "revision_required", "unresolved"):
         if eligible_decisions.get(decision):
             reasons.append(f"{decision}:{eligible_decisions[decision]}")
@@ -1852,6 +1973,7 @@ def _acceptance_summary(
     ]
     for candidate_id in page_reconciliation_blocks:
         reasons.append(f"source_page_reconciliation_required:{candidate_id}")
+        eligible_nonapproval_ids.add(candidate_id)
     stale_review_blocks = [
         _text(record.get("candidate_id")) or "unknown"
         for record in records
@@ -1860,19 +1982,12 @@ def _acceptance_summary(
     ]
     for candidate_id in stale_review_blocks:
         reasons.append(f"stale_review_source_binding_required:{candidate_id}")
+        eligible_nonapproval_ids.add(candidate_id)
     if any(record.get("availability") == "unavailable" for record in records):
         reasons.append("expected_unavailable_present")
     reasons = list(dict.fromkeys(reasons))
 
-    eligible_nonapprovals = (
-        sum(
-            decision_count
-            for decision, decision_count in eligible_decisions.items()
-            if decision in {"rejected", "revision_required", "unresolved"}
-        )
-        + len(page_reconciliation_blocks)
-        + len(stale_review_blocks)
-    )
+    eligible_nonapprovals = len(eligible_nonapproval_ids)
     if coverage_status != "PASS":
         editorial_acceptance_status = "FAIL"
         reasons.insert(0, "identity_coverage_incomplete")
@@ -2146,14 +2261,16 @@ def run_editorial_review(
                         reason="final_claim_missing",
                     )
                 else:
+                    review_pages = _review_page_order(row, pages)
                     page_rendered = {
-                        page: rendered_pages.get((key, page), "") for page in pages
+                        page: rendered_pages.get((key, page), "")
+                        for page in review_pages
                     }
                     record = _review_one_claim(
                         cohort=cohort,
                         row=row,
                         source=source,
-                        pages=pages,
+                        pages=review_pages,
                         rendered=page_rendered,
                         bundle=bundle,
                         settings=settings,

@@ -59,6 +59,13 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
         ),
         _ctx(),
     )
+    editorial = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/validate/editorial_review",
+        ),
+        _ctx(),
+    )
 
     assert "complete original PDF page" in correction.system.text
     assert "independently" in verification.system.text.lower()
@@ -86,8 +93,34 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "guest-checkout" not in verification.system.text.lower()
     assert "portfolio-reconfiguration" not in verification.system.text.lower()
     assert "component totals" in correction.system.text.lower()
+    assert "printed footer" in correction.system.text.lower()
+    assert "mapped one-based" in correction.system.text.lower()
+    assert "physical pdf page" in correction.system.text.lower()
+    assert (
+        "do not transfer a value or rate between categories"
+        in correction.system.text.lower()
+    )
+    assert "footnote" in editorial.system.text.lower()
+    assert "population qualifier" in editorial.system.text.lower()
+    assert "named cohort" in editorial.system.text.lower()
     assert "image-to-page" in verification.user.text.lower()
     assert "inspected original or recovered PDF page" in verification.user.text
+    assert "printed footer" in verification.system.text.lower()
+    assert "mapped one-based" in verification.user.text.lower()
+    assert "physical pdf page" in verification.user.text.lower()
+    assert "do not transfer a value or rate between" in verification.system.text.lower()
+    assert (
+        "categories based on visual order or color" in verification.system.text.lower()
+    )
+    assert "printed footer" in editorial.system.text.lower()
+    assert "mapped one-based" in editorial.user.text.lower()
+    assert "physical pdf page" in editorial.user.text.lower()
+    assert "do not transfer a value or rate between" in editorial.system.text.lower()
+    assert "categories based on visual order or" in editorial.system.text.lower()
+    assert "output page binding" in editorial.user.text.lower()
+    assert "supporting_image_indices" in editorial.system.text
+    assert "source_truth_notes_by_image" in editorial.system.text
+    assert "do not return supporting_physical_pages" in editorial.user.text.lower()
 
 
 def _settings(tmp_path):
@@ -494,6 +527,11 @@ def test_visual_prompt_labels_each_image_with_one_based_physical_page(tmp_path):
     assert "image 2 = physical PDF page 15" in requests[0].user_prompt
     assert "image 1 = physical PDF page 14" in requests[1].user_prompt
     assert "image 2 = physical PDF page 15" in requests[1].user_prompt
+    assert "authoritative" in requests[0].user_prompt.lower()
+    assert "printed footer" in requests[0].user_prompt.lower()
+    assert (
+        "cite this page, not any printed page label" in requests[0].user_prompt.lower()
+    )
 
 
 def test_native_page_text_does_not_veto_visual_support_page(

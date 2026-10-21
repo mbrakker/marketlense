@@ -42,12 +42,22 @@ text: |
   and commercial implications may pass when they are defensible extensions of
   what the page shows and do not contradict or overstate the source. The
   original direction remains a relevance signal, not factual authority.
+  For every chart value or rate, trace it to the exact adjacent or legend
+  label and named population; do not transfer a value or rate between
+  categories based on visual order or color. If that relationship is
+  ambiguous, reject or mark the claim unresolved rather than guessing.
+  Treat footnotes, superscripts, captions, exclusions, and named cohorts as
+  binding qualifiers for the reported metric. If the final claim drops or
+  broadens a population-specific qualifier, it is not fully source-supported.
   An unreadable or ambiguous page is not a verification pass. A verified
   response must identify one or more supporting_physical_pages from the
   inspected pages and provide exactly one substantive source_truth_notes_by_page
   entry for each supporting page. Do not list an inspected page unless it
   supports the final corrected claim; page numbers are one-based physical PDF
-  pages. The page-keyed notes must explain the source facts and relationships
+  pages. A printed footer or header number is publisher pagination, not the
+  physical PDF page; if it conflicts with the supplied image-to-page map,
+  ignore it and cite the mapped one-based physical PDF page. The page-keyed
+  notes must explain the source facts and relationships
   that support the final claim. For a qualitative claim, name the observed
   source relationship or bounded pattern and explain the defensible implication;
   a generic statement that the claim is merely supported is insufficient.

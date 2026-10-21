@@ -1971,3 +1971,121 @@ Step 3** because the held Activate row, four revision-required editorial rows,
 the unavailable retained identity, fresh Step 1 effectiveness evidence, and P6
 human acceptance remain unresolved. This provider-free replay does not claim a
 live semantic-quality improvement.
+
+### Final factual/editorial quality closure — 2026-10-21
+
+This correction closes two deterministic review-boundary defects while keeping
+the shadow architecture unchanged. `_acceptance_summary()` now treats every
+eligible record as editorially acceptable only when both `decision` is exactly
+`approved` and `editorial_acceptance_status` is exactly `accepted`. Missing,
+malformed, unknown, pending, blocked, or contradictory values fail the
+editorial gate with candidate-specific diagnostics. An explicit
+`availability=unavailable` record remains the documented exception and is
+reported separately. The provider-free reconciliation of the immutable v4
+manifest produced:
+
+| Measure | Result |
+|---|---:|
+| Review identities | 54/54, coverage PASS |
+| Frozen-five + additional-five | 29 + 25 |
+| Decisions | 49 approved / 4 revision-required / 1 unavailable-unresolved |
+| Eligible rows with both approval fields | 49/53 eligible records; the unavailable row is excluded from the eligible gate |
+| Execution | PASS; 53 provider reviews invoked |
+| Editorial acceptance | PARTIAL; 5 eligible rows not accepted |
+| Source-page blocks | 1 (`activate-outlook-revenue-models`) |
+| Stale source-binding blocks | 0 |
+
+The reconciled manifest is
+`out/verified-claims-step2-editorial-review-20261021-v5-reconciled/manifest.json`
+(SHA-256 `9e10cf4a20a5a92fa87fcb9e8f912b28e7ddcac6ead295f9f904a20a33b14f1f`).
+Its diagnostics explicitly name the four Bain/Bigcommerce/Activate revision
+rows, the Activate page reconciliation block, and the expected unavailable
+Merchant Risk Council identity. No historical decision, final wording, source
+identity, evidence ID, span, protected field, canonical artifact, readiness
+state, or publication output was mutated.
+
+#### Physical-page and chart binding correction
+
+The editorial reviewer now returns one-based `supporting_image_indices` and
+`source_truth_notes_by_image`; the caller derives physical pages from the
+authoritative attachment-to-physical-page map. A reviewer-supplied physical
+page field that conflicts with that map fails closed. When a retained Step 2
+support binding exists, only those complete physical PDF pages are attached to
+the independent editorial review; otherwise the full inspected page set is
+used. This removes unrelated contents/navigation pages from the model's page
+selection without dropping legitimate multi-page support.
+
+The final targeted GPT-6 Luna High replay used the exact retained PDFs and no
+canonical or publication writes:
+
+| Target set | Calls | Input tokens | Output tokens | Total tokens | Cost | Wall time | Outcome |
+|---|---:|---:|---:|---:|---:|---:|---|
+| Activate Outlook + Reuters AI browsers (v8) | 2 | 25,265 | 3,300 | 28,565 | $0.004176 | 32.328 s | Activate revision-required; Reuters approved |
+| Activate eCommerce, Bigcommerce guest, Bain ×2, Reuters AI search (v9) | 5 | 93,832 | 9,933 | 103,765 | $0.014350 | 103.257 s | 4 revision-required; Reuters approved |
+| **Final affected set** | **7** | **119,097** | **13,233** | **132,330** | **$0.018526** | **135.585 s summed** | **2 approved; 5 revision-required** |
+
+The final page ledger is:
+
+| Claim | Final reviewer result | Reviewer physical page(s) | Finding |
+|---|---|---:|---|
+| `activate-outlook-revenue-models` | revision-required | 5–6 | The PDF binds Internet access to **$128B / 5.7%**, ad revenue to **$108B / 4.7%**, and paid content to **$66B / 2.3%**. The retained claim reverses access and paid content, so it remains held. |
+| `ai-browsers-adaptable-content` | approved | 41 | Physical page 41 supports browser capabilities, liquid content, publisher control/measurement concerns, base 265, and 60% + 15% = 75% expected impact. Physical page 39 is not promoted. |
+| `ai-search-platform-relationships` | approved | 12 | The final reviewer preserved the page-12 survey/traffic distinction; printed page 10 is not used. |
+| `activate-ecommerce-capability-stack` | revision-required | 115 | The reviewer required the source footnote “excluding travel and tickets” to remain in the final claim. |
+| `guest-checkout-abandonment` | revision-required | 8 | The reviewer required the Digital Natives population and kept the separate promotional-discount relationship. |
+| `market-growth-share-breakdown` | revision-required | 1 | The reviewer required “top 20 gainers per sector” rather than an unqualified top-20 population. |
+| `cloud-platform-catalysts` | revision-required | 1 | The reviewer required the same per-sector population and December 31, 2015–2020 measurement scope. |
+
+The v9 review files are
+`out/verified-claims-step2-targeted-editorial-20261021-v9/targeted-review.json`
+and v8 is
+`out/verified-claims-step2-targeted-editorial-20261021-v8/targeted-review.json`.
+The earlier v2 run independently surfaced the same eCommerce, guest-checkout,
+and Bain qualifier objections; the final v8/v9 run confirms them under the
+image-index contract. The explicit MRC unavailable identity remains held rather
+than inferred. The existing Adjust finance adjudication remains immutable and
+source-hash-bound; no golden expectation was changed.
+
+#### Deterministic and regression verification
+
+The provider-free replay at
+`out/verified-claims-step2-final-20261021/provider-free-replay-final.json`
+rechecked the exact **15 reference cases / 39 variants**, all five frozen PDF
+hashes, the **29** retained insight IDs, and **29/29** report-theme slots. It
+used zero provider calls and cannot establish live factual or editorial
+quality; the prior live reference gate remains the independent 39-variant
+semantic regression. No fabricated fixture substituted for a missing local
+source artifact.
+
+Focused verification results:
+
+- Editorial acceptance tests: **65 passed**.
+- Visual-generator regression files: **40 passed**.
+- Prompt/LLM service gates: **115 passed**.
+- Affected artifact, evidence-binding, generation, regeneration, publication-
+  quality, and Step 2 tests: **616 passed, 1 skipped, 1 deselected**.
+- Split-module regression suites under pytest importlib mode: **458 passed,
+  1 skipped**.
+- Ruff, compilation, and diff checks passed. The default pytest collection of
+  split modules reports the repository's pre-existing duplicate-module import
+  mismatch; rerunning those files with `--import-mode=importlib` passed.
+
+One accidental invocation of the live editorial CLI was stopped after two
+provider calls because that entry point is not the provider-free reconciliation
+command. Those two calls used 47,146 input tokens, 2,331 output tokens, and
+$0.005880; they produced no manifest or canonical/publication write and are
+excluded from the affected-set measurements above. This is recorded to avoid
+claiming that the final replay used no extra provider activity.
+
+#### Final decision
+
+Technical integrity for this correction is **PASS**: eligible editorial
+acceptance is fail-closed, physical-page mapping is explicit, wrong Reuters
+pages are not cleanly accepted, Activate chart bindings are independently
+flagged, and the qualifier regressions are held. Interim live editorial
+quality is **PARTIAL** because the affected set contains five legitimate
+revision-required outcomes and only the targeted claims were freshly reviewed.
+Overall Step 2 remains **PARTIAL / NO-GO for Step 3**. The retained claims were
+not promoted, Step 3 visual factualisation was not started, and fresh
+full-cohort selection effectiveness, canonical source-binding completeness,
+P6 human acceptance, and any publication/readiness transition remain open.

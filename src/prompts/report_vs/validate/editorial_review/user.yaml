@@ -15,8 +15,29 @@ text: |
   Image-to-page mapping:
   {{ image_page_map }}
 
+  The mapping is authoritative. A printed footer or header number is publisher
+  pagination, not the physical PDF page; if it conflicts with the mapping,
+  ignore the printed number and cite the mapped one-based physical PDF page.
+  For chart values and rates, trace each value to its exact label and named
+  population; do not transfer a value or rate between categories by visual
+  order or color.
+
+  Before deciding, inspect footnotes, superscripts, captions, and chart notes.
+  Preserve every source-stated exclusion and named population that qualifies a
+  reported value; a claim that omits or broadens a population-specific
+  qualifier must not be approved.
+
   Final corrected claim:
   {{ final_claim }}
+
+  Output page binding: identify the attachment image that visibly supports the
+  final claim, return its one-based attachment number in
+  supporting_image_indices and provide one substantive note per selected image
+  in source_truth_notes_by_image. The caller derives physical PDF pages from
+  the mapping; do not return supporting_physical_pages or
+  source_truth_notes_by_page, and do not copy any page number printed inside
+  the image. If the image-to-page mapping cannot be reconciled with the source
+  location, use unresolved rather than guessing.
 
   Do not request or infer the original claim, verifier outcome, verifier
   rationale, or prior quality assessment. Judge the final claim itself. A
