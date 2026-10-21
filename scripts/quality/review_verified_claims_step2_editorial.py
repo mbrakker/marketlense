@@ -21,9 +21,12 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.quality.replay_verified_claims_step2 import (
+    REFERENCE_PATH,
+    REPORT_ORDER,
     _explicit_source_records,
     _load_json,
     _relative_repository_path,
+    _retained_artifact_path,
     _usage_summary,
 )
 from src.contracts.config import ConfigLoadRequest
@@ -92,6 +95,34 @@ def _strict_pages(value: Any) -> list[int] | None:
             return None
         pages.append(page)
     return pages
+
+
+def _validated_page_notes(
+    value: Any,
+    *,
+    pages: list[int],
+    allowed_pages: Sequence[int] | None = None,
+) -> tuple[dict[str, str], list[str]]:
+    """Validate page-keyed source notes without accepting implicit bindings."""
+
+    if not isinstance(value, Mapping):
+        return {}, ["source_truth_notes_by_page_invalid"]
+    allowed = set(allowed_pages) if allowed_pages is not None else None
+    notes: dict[str, str] = {}
+    diagnostics: list[str] = []
+    for raw_page, raw_note in value.items():
+        try:
+            page = int(raw_page)
+        except (TypeError, ValueError):
+            page = 0
+        note = _nonempty_text(raw_note)
+        if page <= 0 or note is None or (allowed is not None and page not in allowed):
+            diagnostics.append("source_truth_notes_by_page_invalid")
+            continue
+        notes[str(page)] = note
+    if set(notes) != {str(page) for page in pages}:
+        diagnostics.append("source_truth_notes_by_page_incomplete")
+    return notes, list(dict.fromkeys(diagnostics))
 
 
 def _nonempty_text(value: Any) -> str | None:
@@ -193,23 +224,12 @@ def _validate_review_payload(
         diagnostics.append("supporting_pages_invalid")
         supporting_pages = []
 
-    raw_notes = payload.get("source_truth_notes_by_page")
-    notes: dict[str, str] = {}
-    if not isinstance(raw_notes, Mapping):
-        diagnostics.append("source_truth_notes_by_page_invalid")
-    else:
-        for raw_page, raw_note in raw_notes.items():
-            try:
-                page = int(raw_page)
-            except (TypeError, ValueError):
-                page = 0
-            note = _nonempty_text(raw_note)
-            if page <= 0 or note is None or page not in inspected_physical_pages:
-                diagnostics.append("source_truth_notes_by_page_invalid")
-                continue
-            notes[str(page)] = note
-        if set(notes) != {str(page) for page in supporting_pages}:
-            diagnostics.append("source_truth_notes_by_page_incomplete")
+    notes, note_diagnostics = _validated_page_notes(
+        payload.get("source_truth_notes_by_page"),
+        pages=supporting_pages,
+        allowed_pages=inspected_physical_pages,
+    )
+    diagnostics.extend(note_diagnostics)
 
     defects, defect_diagnostics = _validated_defects(payload.get("defects"))
     diagnostics.extend(defect_diagnostics)
@@ -409,6 +429,20 @@ def _base_record(
         "original_physical_pages": list(row.get("original_physical_pages") or []),
         "physical_pages": list(row.get("physical_pages") or []),
         "inspected_physical_pages": list(row.get("inspected_physical_pages") or []),
+        # Keep the Step 2 binding separate from the independent editorial
+        # review binding.  The latter may cite an alternative page, but it
+        # must not erase the authoritative input that it is being compared
+        # against.
+        "step2_supporting_physical_pages": (
+            list(row["supporting_physical_pages"])
+            if isinstance(row.get("supporting_physical_pages"), list)
+            else row.get("supporting_physical_pages")
+        ),
+        "step2_source_truth_notes_by_page": (
+            dict(row["source_truth_notes_by_page"])
+            if isinstance(row.get("source_truth_notes_by_page"), Mapping)
+            else row.get("source_truth_notes_by_page")
+        ),
         "source_binding_status": _text(row.get("source_binding_status")),
         "review_invoked": False,
         "decision": "unresolved",
@@ -423,6 +457,8 @@ def _base_record(
         "request_id": "",
         "model": "",
         "review_response_sha256": "",
+        "page_reconciliation": {},
+        "editorial_acceptance_status": "pending",
     }
 
 
@@ -438,6 +474,147 @@ def _unresolved_record(
     record["diagnostics"] = list(dict.fromkeys([reason, *(diagnostics or [])]))
     record["unresolved_reason"] = reason
     return record
+
+
+def _page_adjudication_key(record: Mapping[str, Any]) -> str:
+    return f"{_text(record.get('cohort'))}:{_text(record.get('candidate_id'))}"
+
+
+def _append_record_diagnostic(record: dict[str, Any], diagnostic: str) -> None:
+    diagnostics = record.get("diagnostics")
+    if not isinstance(diagnostics, list):
+        diagnostics = []
+        record["diagnostics"] = diagnostics
+    if diagnostic not in diagnostics:
+        diagnostics.append(diagnostic)
+
+
+def _valid_page_adjudication(
+    record: Mapping[str, Any], adjudication: Any
+) -> tuple[bool, list[int] | None, str]:
+    if not isinstance(adjudication, Mapping):
+        return False, None, "page_adjudication_invalid"
+    if _text(adjudication.get("status")).lower() != "accepted":
+        return False, None, "page_adjudication_not_accepted"
+    if _text(adjudication.get("cohort")) != _text(record.get("cohort")):
+        return False, None, "page_adjudication_cohort_mismatch"
+    if _text(adjudication.get("candidate_id")) != _text(record.get("candidate_id")):
+        return False, None, "page_adjudication_candidate_mismatch"
+    if _text(adjudication.get("report_name")) != _text(record.get("report_name")):
+        return False, None, "page_adjudication_report_mismatch"
+    source_hash = _text(adjudication.get("source_pdf_sha256")).lower()
+    expected_hash = _text(record.get("source_pdf_sha256_expected")).lower()
+    actual_hash = _text(record.get("source_pdf_sha256_actual")).lower()
+    if (
+        not source_hash
+        or not expected_hash
+        or not actual_hash
+        or expected_hash != actual_hash
+        or source_hash != expected_hash
+    ):
+        return False, None, "page_adjudication_source_hash_mismatch"
+    review_hash = _text(record.get("review_response_sha256"))
+    if not review_hash:
+        return False, None, "page_adjudication_review_hash_unavailable"
+    if _text(adjudication.get("review_response_sha256")) != review_hash:
+        return False, None, "page_adjudication_review_hash_mismatch"
+    if not _text(adjudication.get("adjudication_id")):
+        return False, None, "page_adjudication_id_missing"
+    explanation = _text(adjudication.get("source_grounded_explanation"))
+    if len(explanation) < _MIN_SOURCE_GROUNDED_EXPLANATION_LENGTH:
+        return False, None, "page_adjudication_explanation_not_substantive"
+    pages = _strict_pages(adjudication.get("adjudicated_physical_pages"))
+    inspected = _strict_pages(record.get("inspected_physical_pages"))
+    if not pages or not inspected or not set(pages).issubset(inspected):
+        return False, None, "page_adjudication_pages_invalid"
+    return True, pages, ""
+
+
+def _reconcile_source_pages(
+    record: dict[str, Any],
+    row: Mapping[str, Any],
+    *,
+    adjudications: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compare independent reviewer pages with the retained Step 2 binding.
+
+    A page-set difference is an editorial-acceptance concern, not a reason to
+    rewrite the reviewer response.  It remains blocked until an immutable,
+    hash-bound adjudication accepts the alternative source location.
+    """
+
+    step2_pages = _strict_pages(record.get("step2_supporting_physical_pages"))
+    inspected_pages = _strict_pages(record.get("inspected_physical_pages")) or []
+    step2_notes, step2_note_diagnostics = _validated_page_notes(
+        record.get("step2_source_truth_notes_by_page"),
+        pages=step2_pages or [],
+        allowed_pages=inspected_pages,
+    )
+    reviewer_pages = _strict_pages(record.get("supporting_physical_pages"))
+    reviewer_notes, reviewer_note_diagnostics = _validated_page_notes(
+        record.get("source_truth_notes_by_page"),
+        pages=reviewer_pages or [],
+        allowed_pages=inspected_pages,
+    )
+    reconciliation: dict[str, Any] = {
+        "status": "not_applicable",
+        "step2_supporting_physical_pages": step2_pages,
+        "reviewer_supporting_physical_pages": reviewer_pages,
+        "missing_from_reviewer": sorted(
+            set(step2_pages or []) - set(reviewer_pages or [])
+        ),
+        "reviewer_only_pages": sorted(
+            set(reviewer_pages or []) - set(step2_pages or [])
+        ),
+        "step2_source_truth_notes_by_page": step2_notes,
+        "step2_note_diagnostics": step2_note_diagnostics,
+        "reviewer_note_diagnostics": reviewer_note_diagnostics,
+        "adjudication_id": "",
+    }
+    record["page_reconciliation"] = reconciliation
+
+    if _text(record.get("decision")) != "approved":
+        record["editorial_acceptance_status"] = "not_approved"
+        return reconciliation
+
+    invalid_step2_binding = (
+        not step2_pages
+        or not inspected_pages
+        or not set(step2_pages).issubset(inspected_pages)
+        or bool(step2_note_diagnostics)
+    )
+    invalid_reviewer_binding = (
+        not reviewer_pages
+        or not set(reviewer_pages).issubset(inspected_pages)
+        or bool(reviewer_note_diagnostics)
+    )
+    if invalid_step2_binding or invalid_reviewer_binding:
+        reconciliation["status"] = "unresolved"
+        record["editorial_acceptance_status"] = "blocked_by_source_page_reconciliation"
+        _append_record_diagnostic(record, "source_page_reconciliation_required")
+        return reconciliation
+
+    if set(step2_pages or []) == set(reviewer_pages or []):
+        reconciliation["status"] = "matched"
+        record["editorial_acceptance_status"] = "accepted"
+        return reconciliation
+
+    _append_record_diagnostic(record, "source_page_reconciliation_required")
+    reconciliation["status"] = "requires_adjudication"
+    adjudication = (adjudications or {}).get(_page_adjudication_key(record))
+    valid, adjudicated_pages, reason = _valid_page_adjudication(record, adjudication)
+    if valid and isinstance(adjudication, Mapping):
+        reconciliation["status"] = "adjudicated"
+        reconciliation["adjudicated_physical_pages"] = adjudicated_pages
+        reconciliation["adjudication_id"] = _text(adjudication.get("adjudication_id"))
+        record["editorial_acceptance_status"] = "accepted"
+        _append_record_diagnostic(record, "source_page_reconciliation_adjudicated")
+        return reconciliation
+
+    if reason:
+        reconciliation["adjudication_diagnostic"] = reason
+    record["editorial_acceptance_status"] = "blocked_by_source_page_reconciliation"
+    return reconciliation
 
 
 def _validate_result_binding(
@@ -632,8 +809,174 @@ def _row_identity_issue(row: dict[str, Any], code: str) -> None:
         issues.append(code)
 
 
+def _authoritative_frozen_roster(
+    reference: Mapping[str, Any] | None = None,
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Load the frozen Step 0 identity roster from hash-pinned artifacts."""
+
+    issue_details: list[dict[str, str]] = []
+    if reference is None:
+        try:
+            reference = _load_json(REFERENCE_PATH)
+        except (OSError, TypeError, ValueError) as error:
+            return [], [
+                {
+                    "code": "frozen_roster_reference_unavailable",
+                    "detail": type(error).__name__,
+                }
+            ]
+    if not isinstance(reference, Mapping):
+        return [], [
+            {
+                "code": "frozen_roster_reference_unavailable",
+                "detail": "reference is not an object",
+            }
+        ]
+    raw_digests = reference.get("report_artifact_digests")
+    if not isinstance(raw_digests, Mapping):
+        return [], [
+            {
+                "code": "frozen_roster_reference_unavailable",
+                "detail": "report_artifact_digests is not an object",
+            }
+        ]
+
+    expected: list[dict[str, str]] = []
+    seen: dict[str, str] = {}
+    for report in REPORT_ORDER:
+        raw_digest = raw_digests.get(report)
+        if not isinstance(raw_digest, Mapping):
+            issue_details.append(
+                {
+                    "code": "frozen_roster_digest_unavailable",
+                    "detail": f"report={report!r}",
+                }
+            )
+            continue
+        expected_hash = _text(raw_digest.get("artifacts_sha256")).lower()
+        if not expected_hash:
+            issue_details.append(
+                {
+                    "code": "frozen_roster_artifact_hash_missing",
+                    "detail": f"report={report!r}",
+                }
+            )
+            continue
+        try:
+            artifact_path = _retained_artifact_path(dict(reference), report)
+        except (KeyError, TypeError, ValueError) as error:
+            issue_details.append(
+                {
+                    "code": "frozen_roster_artifact_missing",
+                    "detail": f"report={report!r} path_error={type(error).__name__}",
+                }
+            )
+            continue
+        if not artifact_path.is_file():
+            issue_details.append(
+                {
+                    "code": "frozen_roster_artifact_missing",
+                    "detail": f"report={report!r} path={artifact_path}",
+                }
+            )
+            continue
+        try:
+            actual_hash = _sha256(artifact_path)
+        except OSError as error:
+            issue_details.append(
+                {
+                    "code": "frozen_roster_artifact_hash_unavailable",
+                    "detail": f"report={report!r} error={type(error).__name__}",
+                }
+            )
+            continue
+        if actual_hash != expected_hash:
+            issue_details.append(
+                {
+                    "code": "frozen_roster_artifact_hash_mismatch",
+                    "detail": f"report={report!r}",
+                }
+            )
+            continue
+        try:
+            artifact = _load_json(artifact_path)
+        except (OSError, TypeError, ValueError) as error:
+            issue_details.append(
+                {
+                    "code": "frozen_roster_artifact_invalid",
+                    "detail": f"report={report!r} error={type(error).__name__}",
+                }
+            )
+            continue
+        insights = (
+            artifact.get("insights_final") if isinstance(artifact, Mapping) else None
+        )
+        if not isinstance(insights, list):
+            issue_details.append(
+                {
+                    "code": "frozen_roster_insights_invalid",
+                    "detail": f"report={report!r} insights_final is not a list",
+                }
+            )
+            continue
+        report_ids: list[str] = []
+        malformed = False
+        for insight in insights:
+            if not isinstance(insight, Mapping):
+                malformed = True
+                break
+            candidate_id = _text(insight.get("id") or insight.get("candidate_id"))
+            if not candidate_id or candidate_id in report_ids:
+                malformed = True
+                break
+            report_ids.append(candidate_id)
+        if malformed:
+            issue_details.append(
+                {
+                    "code": "frozen_roster_insights_invalid",
+                    "detail": (
+                        f"report={report!r} contains malformed or duplicate insight IDs"
+                    ),
+                }
+            )
+            continue
+        for candidate_id in report_ids:
+            prior_report = seen.get(candidate_id)
+            if prior_report is not None:
+                issue_details.append(
+                    {
+                        "code": "frozen_roster_duplicate_identity",
+                        "detail": (
+                            f"candidate_id={candidate_id!r} reports="
+                            f"{prior_report!r},{report!r}"
+                        ),
+                    }
+                )
+                continue
+            seen[candidate_id] = report
+            expected.append(
+                {
+                    "candidate_id": candidate_id,
+                    "report_name": report,
+                    "availability": "eligible",
+                }
+            )
+
+    if len(expected) != 29:
+        issue_details.append(
+            {
+                "code": "frozen_roster_count_mismatch",
+                "detail": f"expected=29 actual={len(expected)}",
+            }
+        )
+    return expected, issue_details
+
+
 def _validate_cohort_identity_coverage(
-    result: Mapping[str, Any], *, cohort: str
+    result: Mapping[str, Any],
+    *,
+    cohort: str,
+    frozen_reference: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Validate the immutable selected-identity roster before review calls."""
 
@@ -820,13 +1163,17 @@ def _validate_cohort_identity_coverage(
                 f"expected={expected_eligible_count}",
             )
     else:
-        real_rows = [
-            row
-            for row in claim_rows
-            if isinstance(row, Mapping)
-            and row.get("evaluation_set") == "real_shortlisted"
-        ]
-        for row in real_rows:
+        authoritative_roster, roster_issues = _authoritative_frozen_roster(
+            frozen_reference
+        )
+        for issue in roster_issues:
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                issue["code"],
+                issue["detail"],
+            )
+        for row in authoritative_roster:
             add_expected(
                 report=_text(row.get("report_name") or row.get("report")),
                 candidate_id=_text(row.get("candidate_id")),
@@ -1046,10 +1393,9 @@ def _validate_cohort_identity_coverage(
             )
         else:
             expected_reference_count = reference_set.get("candidate_variant_count")
-            reference_count_matches = (
-                type(expected_reference_count) is int
-                and expected_reference_count == len(reference_variant_ids)
-            )
+            reference_count_matches = type(
+                expected_reference_count
+            ) is int and expected_reference_count == len(reference_variant_ids)
             if not reference_count_matches:
                 _append_identity_issue(
                     issue_codes,
@@ -1209,6 +1555,15 @@ def _acceptance_summary(
     for decision in ("rejected", "revision_required", "unresolved"):
         if eligible_decisions.get(decision):
             reasons.append(f"{decision}:{eligible_decisions[decision]}")
+    page_reconciliation_blocks = [
+        _text(record.get("candidate_id")) or "unknown"
+        for record in records
+        if record.get("availability") != "unavailable"
+        and record.get("editorial_acceptance_status")
+        == "blocked_by_source_page_reconciliation"
+    ]
+    for candidate_id in page_reconciliation_blocks:
+        reasons.append(f"source_page_reconciliation_required:{candidate_id}")
     if any(record.get("availability") == "unavailable" for record in records):
         reasons.append("expected_unavailable_present")
     reasons = list(dict.fromkeys(reasons))
@@ -1217,7 +1572,7 @@ def _acceptance_summary(
         decision_count
         for decision, decision_count in eligible_decisions.items()
         if decision in {"rejected", "revision_required", "unresolved"}
-    )
+    ) + len(page_reconciliation_blocks)
     if coverage_status != "PASS":
         editorial_acceptance_status = "FAIL"
         reasons.insert(0, "identity_coverage_incomplete")
@@ -1242,6 +1597,7 @@ def _acceptance_summary(
         "material_defect_count": sum(
             _record_summary([record])["material_defect_count"] for record in records
         ),
+        "source_page_reconciliation_block_count": len(page_reconciliation_blocks),
         "execution_reasons": list(dict.fromkeys(execution_reasons)),
     }
 
@@ -1264,6 +1620,34 @@ def _source_record_for_report(
     )
 
 
+def _load_page_adjudications(path: Path | None) -> tuple[dict[str, Any], str]:
+    if path is None:
+        return {}, ""
+    try:
+        raw = _load_json(path)
+    except (OSError, TypeError, ValueError):
+        return {}, ""
+    raw_adjudications = raw.get("adjudications") if isinstance(raw, Mapping) else None
+    if isinstance(raw_adjudications, list):
+        adjudications: dict[str, Any] = {}
+        for item in raw_adjudications:
+            if not isinstance(item, Mapping):
+                continue
+            cohort = _text(item.get("cohort"))
+            candidate_id = _text(item.get("candidate_id"))
+            if cohort and candidate_id:
+                adjudications[f"{cohort}:{candidate_id}"] = dict(item)
+    elif isinstance(raw_adjudications, Mapping):
+        adjudications = {
+            str(key): value
+            for key, value in raw_adjudications.items()
+            if isinstance(value, Mapping)
+        }
+    else:
+        adjudications = {}
+    return adjudications, _sha256(path)
+
+
 def run_editorial_review(
     *,
     frozen_result_path: Path,
@@ -1271,6 +1655,7 @@ def run_editorial_review(
     additional_result_path: Path,
     additional_source_manifest_path: Path,
     output_path: Path,
+    page_adjudication_path: Path | None = None,
 ) -> dict[str, Any]:
     started = time.perf_counter()
     inputs = [
@@ -1323,6 +1708,9 @@ def run_editorial_review(
     )
     dependencies = VerifiedClaimsVisualDependencies.default()
     bundle = _review_bundle(settings=settings, ctx=ctx, dependencies=dependencies)
+    page_adjudications, page_adjudication_sha256 = _load_page_adjudications(
+        page_adjudication_path
+    )
 
     records: list[dict[str, Any]] = []
     report_records: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -1469,6 +1857,11 @@ def run_editorial_review(
                             span_id=f"{run_id}:{cohort}:{report}:{index}",
                         ),
                     )
+            _reconcile_source_pages(
+                record,
+                row,
+                adjudications=page_adjudications,
+            )
             records.append(record)
             report_records[key].append(record)
 
@@ -1509,6 +1902,14 @@ def run_editorial_review(
             "execution_policy_hash": bundle.execution_policy.policy_hash,
         },
         "input_manifests": source_manifest_hashes,
+        "page_adjudication_manifest": {
+            "path": (
+                _relative_repository_path(page_adjudication_path)
+                if page_adjudication_path is not None
+                else ""
+            ),
+            "sha256": page_adjudication_sha256,
+        },
         "source_audit": dict(sorted(source_audit.items())),
         "report_source_errors": dict(sorted(report_source_errors.items())),
         "reports": report_summaries,
@@ -1547,6 +1948,140 @@ def run_editorial_review(
     return manifest
 
 
+def reconcile_editorial_manifest(
+    *,
+    review_manifest_path: Path,
+    frozen_result_path: Path,
+    frozen_source_manifest_path: Path,
+    additional_result_path: Path,
+    additional_source_manifest_path: Path,
+    page_adjudication_path: Path | None = None,
+) -> dict[str, Any]:
+    """Replay acceptance corrections against an existing review manifest.
+
+    This path intentionally performs no provider or rendering calls.  It is
+    used to repair acceptance accounting and provenance preservation for an
+    immutable retained review result without presenting the repaired output as
+    a fresh model evaluation.
+    """
+
+    existing = _load_json(review_manifest_path)
+    raw_records = existing.get("records") if isinstance(existing, Mapping) else None
+    if not isinstance(raw_records, list):
+        raise ValueError("review manifest records are not a list")
+
+    loaded: list[
+        tuple[
+            str,
+            dict[str, Any],
+            dict[str, dict[str, Any]],
+            list[dict[str, Any]],
+            dict[str, Any],
+        ]
+    ] = []
+    for cohort, result_path, source_path in (
+        ("frozen_five", frozen_result_path, frozen_source_manifest_path),
+        ("additional_five", additional_result_path, additional_source_manifest_path),
+    ):
+        result, sources, rows, validation = _load_review_inputs(
+            result_path=result_path,
+            source_manifest_path=source_path,
+            cohort=cohort,
+        )
+        loaded.append((cohort, result, sources, rows, validation))
+
+    rows_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    sources_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+    for cohort, _result, sources, rows, _validation in loaded:
+        for row in rows:
+            candidate_id = _text(row.get("candidate_id"))
+            report = _text(row.get("report_name") or row.get("report"))
+            key = (cohort, candidate_id)
+            rows_by_key[key] = row
+            sources_by_key[key] = _source_record_for_report(sources, report)
+
+    adjudications, adjudication_sha256 = _load_page_adjudications(
+        page_adjudication_path
+    )
+    records: list[dict[str, Any]] = []
+    for raw_record in raw_records:
+        if not isinstance(raw_record, Mapping):
+            continue
+        record = dict(raw_record)
+        key = (_text(record.get("cohort")), _text(record.get("candidate_id")))
+        source_row = rows_by_key.get(key)
+        if source_row is not None:
+            base = _base_record(
+                cohort=key[0],
+                row=source_row,
+                source=sources_by_key.get(key, {}),
+            )
+            for field in (
+                "step2_supporting_physical_pages",
+                "step2_source_truth_notes_by_page",
+            ):
+                record[field] = base[field]
+        else:
+            _append_record_diagnostic(record, "step2_source_binding_unavailable")
+        _reconcile_source_pages(record, source_row or {}, adjudications=adjudications)
+        records.append(record)
+
+    cohort_validations = [entry[4] for entry in loaded]
+    report_records: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        report_key = f"{_text(record.get('cohort'))}:{_text(record.get('report_name'))}"
+        report_records[report_key].append(record)
+    acceptance = _acceptance_summary(
+        records=records,
+        cohort_validations=cohort_validations,
+    )
+    manifest = dict(existing)
+    manifest["records"] = records
+    manifest["reports"] = {
+        key: _record_summary(value) for key, value in sorted(report_records.items())
+    }
+    manifest["cohort_validation"] = {
+        validation["cohort"]: {
+            key: value for key, value in validation.items() if key != "normalized_rows"
+        }
+        for validation in cohort_validations
+    }
+    manifest["acceptance"] = acceptance
+    old_summary = existing.get("summary")
+    summary = dict(old_summary) if isinstance(old_summary, Mapping) else {}
+    summary.update(acceptance)
+    summary["provider_free_reconciliation"] = True
+    manifest["summary"] = summary
+    manifest["page_adjudication_manifest"] = {
+        "path": (
+            _relative_repository_path(page_adjudication_path)
+            if page_adjudication_path is not None
+            else ""
+        ),
+        "sha256": adjudication_sha256,
+    }
+    manifest["reconciliation"] = {
+        "provider_calls": 0,
+        "input_review_manifest_sha256": _sha256(review_manifest_path),
+        "input_result_manifests": [
+            {
+                "cohort": cohort,
+                "result_sha256": _sha256(result_path),
+                "source_manifest_sha256": _sha256(source_path),
+            }
+            for cohort, result_path, source_path in (
+                ("frozen_five", frozen_result_path, frozen_source_manifest_path),
+                (
+                    "additional_five",
+                    additional_result_path,
+                    additional_source_manifest_path,
+                ),
+            )
+        ],
+    }
+    return manifest
+
+
 def write_immutable_manifest(path: Path, manifest: Mapping[str, Any]) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("x", encoding="utf-8", newline="\n") as handle:
@@ -1562,6 +2097,7 @@ def main() -> int:
     parser.add_argument("--additional-result", type=Path, required=True)
     parser.add_argument("--additional-source-manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--page-adjudication", type=Path)
     args = parser.parse_args()
     manifest = run_editorial_review(
         frozen_result_path=args.frozen_result,
@@ -1569,6 +2105,7 @@ def main() -> int:
         additional_result_path=args.additional_result,
         additional_source_manifest_path=args.additional_source_manifest,
         output_path=args.output,
+        page_adjudication_path=args.page_adjudication,
     )
     manifest_sha256 = write_immutable_manifest(args.output, manifest)
     print(

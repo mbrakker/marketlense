@@ -1815,3 +1815,94 @@ still holds two review rows, Bain scope remains revision-required, and P6 human
 acceptance, fresh Step 1 selection evidence, and canonical source-binding
 completeness remain open. Step 3 remains **NO-GO/unstarted**. No canonical
 promotion, publication-readiness mutation, or WordPress write occurred.
+
+### Final acceptance-integrity correction — 2026-10-21
+
+This correction closes the remaining acceptance-boundary defects without
+changing the independent reviewer decision or any canonical artifact. The
+editorial record now preserves the retained Step 2
+`supporting_physical_pages` and `source_truth_notes_by_page` under separate
+`step2_*` fields. A reviewer page-set difference is compared as a set (so
+ordering and valid multi-page evidence are preserved), but an approved record
+with a different or structurally incomplete set is blocked as
+`source_page_reconciliation_required` until an immutable, source-hash- and
+review-response-hash-bound adjudication accepts the location. The adjudication
+packet is
+`docs/quality/verified-claims-step2-page-adjudication-20261021.json` (SHA-256
+`e76fcfdc1cec06a45c40949b40e1edfaedfa68f656bddd9c6eabf445480e5b79`).
+
+The frozen-five roster is no longer derived from the result under test. Each
+report is now checked against the committed Step 0 reference metadata, its
+retained `artifacts.json` SHA-256, and the exact `insights_final[].id` roster.
+The provider-free replay therefore detects substitution, wrong-report
+assignment, missing/duplicate IDs, malformed artifacts, and hash mismatch;
+the exact frozen roster is **29 expected / 29 actual, PASS**. The 39 reference
+variants remain a separate regression set and are not added to the 29-row
+selected denominator.
+
+#### Provider-free reconciliation ledger
+
+The retained v3 review was reconciled without provider calls at
+`out/verified-claims-step2-editorial-review-20261021-v3-reconciled-final/manifest.json`
+(SHA-256
+`83145be4153ab4e48b57c81a6083ba73cf788fc239f98cb9ee22483b4e0b089d`). It
+preserved **54 records**, **49 approved / 4 revision_required / 1 unresolved**,
+and `coverage_status=PASS`, `execution_status=PASS`. Three page differences
+were accepted after source inspection: Reuters `ai-search-platform-relationships`
+→ physical page 12 (reviewer page 10), Reuters
+`ai-browsers-adaptable-content` → physical page 41 (reviewer page 39), and
+Adjust `finance-benchmark-coverage` → the sufficient smaller set 35–38
+(reviewer pages 35–38; Step 2 retained 34–38). The Adjust page 34 context is
+not required because physical page 35 contains the global and regional growth
+figures. Activate `activate-outlook-revenue-models` remains blocked: physical
+page 4 is a contents page, page 6 contains the segment chart, and the retained
+review wording reverses the access/paid-content bindings. Page reconciliation
+cannot approve that factual error. The reconciled editorial status is therefore
+`PARTIAL`, with one source-page block; no reviewer wording, decision, evidence
+ID, span, protected field, or stable ID was rewritten.
+
+#### Targeted actual-PDF checks
+
+The targeted GPT-6 Luna High replay used the existing shadow correction and
+independent verification boundary. The five disputed/flagged frozen claims
+(Activate Outlook and eCommerce, Reuters AI Search and AI Browsers, and Adjust
+Finance) used **10 calls**, **357,173 input tokens**, **8,369 output tokens**,
+**365,542 total tokens**, estimated cost **$0.039901**, and **188.491 seconds**;
+all five were verified first pass. The final claims were preserved in the
+targeted report at
+`out/verified-claims-step2-targeted-20261021/targeted-report.json` (SHA-256
+`6c284ff2e3a75f0fa677d1a9370dd88320e1c7fdc2a8672023d80ff099f0a576`). This
+is targeted evidence, not a claim of improved full-cohort live selection.
+The actual-PDF check corrected Activate Outlook to the source-supported
+segment wording and confirmed Reuters page 12 and Adjust's source-supported
+subset. It nevertheless selected physical page 39 for the Reuters browser
+claim; direct full-page inspection shows that page 39 is unrelated and page 41
+is authoritative, so the adjudication uses page 41 and the model page error is
+not promoted.
+
+The explicit Bigcommerce retained-artifact replay evaluated five selected
+rows, including `guest-checkout-abandonment`, using **12 calls**, **90,457 input
+tokens**, **8,312 output tokens**, **98,769 total tokens**, estimated cost
+**$0.013201**, and **136.712 seconds**. It produced **4 first-pass and 1
+after-retry verified**, with no failed, unresolved, or skipped terminal rows.
+The corrected guest-checkout claim explicitly retains the **Digital Natives**
+population and the separate 58% promotional-discount relationship. The
+existing v3 editorial row remains `revision_required`; this shadow result does
+not mutate acceptance or canonical output. Bain's existing hash-bound
+adjudication and both scope warnings remain unchanged; the Merchant Risk
+Council row remains unavailable.
+
+#### Final decision
+
+Focused regressions pass (**44 passed** for the editorial acceptance module;
+the broader affected Step 2/evidence/regeneration set passes **210 passed, 1
+skipped, 1 deselected**), and the changed files pass Ruff formatting and
+linting. The implementation is **PASS within this correction scope**: source
+page provenance is preserved and reconciled, the frozen identity gate is
+independent, valid alternatives remain available, and known conflicting
+bindings fail closed. Overall Step 2 remains **PARTIAL / NO-GO for Step 3**:
+the Activate Outlook editorial row is still blocked, four editorial rows remain
+revision-required (including the known Activate, Bigcommerce, and Bain quality
+findings), one retained identity is unavailable, fresh full-cohort selection
+effectiveness and P6 human acceptance remain open, and no canonical promotion,
+publication-readiness mutation, or WordPress write occurred.

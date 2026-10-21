@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+from pathlib import Path
 
 import pytest
 
@@ -8,6 +10,8 @@ from scripts.quality.replay_verified_claims_step2 import _explicit_source_record
 from scripts.quality.review_verified_claims_step2_editorial import (
     _acceptance_summary,
     _artifact_context,
+    _base_record,
+    _reconcile_source_pages,
     _record_summary,
     _validate_cohort_identity_coverage,
     _validate_result_binding,
@@ -533,3 +537,352 @@ def test_source_records_accept_retained_expected_hash_key() -> None:
 
     assert records["Retained report"]["sha256_expected"] == "a" * 64
     assert records["Retained report"]["sha256_matches"] is False
+
+
+def _frozen_reference_fixture(
+    tmp_path: Path,
+) -> tuple[dict[str, object], dict[str, list[str]]]:
+    reports = {
+        "Capgemini Research Institute": [
+            "cap-1",
+            "cap-2",
+            "cap-3",
+            "cap-4",
+            "cap-5",
+        ],
+        "Activate": [
+            "act-1",
+            "act-2",
+            "act-3",
+            "act-4",
+            "act-5",
+            "act-6",
+            "act-7",
+        ],
+        "KPMG": ["kpmg-1", "kpmg-2", "kpmg-3", "kpmg-4", "kpmg-5"],
+        "Reuters Institute": [
+            "reuters-1",
+            "reuters-2",
+            "reuters-3",
+            "reuters-4",
+            "reuters-5",
+            "reuters-6",
+        ],
+        "Adjust": [
+            "adjust-1",
+            "adjust-2",
+            "adjust-3",
+            "adjust-4",
+            "adjust-5",
+            "adjust-6",
+        ],
+    }
+    digests: dict[str, dict[str, str]] = {}
+    for index, (report, candidate_ids) in enumerate(reports.items()):
+        artifact_path = (
+            tmp_path / f"report-{index}" / "report_analysis" / "artifacts.json"
+        )
+        artifact_path.parent.mkdir(parents=True)
+        artifact_path.write_text(
+            json.dumps(
+                {
+                    "insights_final": [
+                        {"id": candidate_id} for candidate_id in candidate_ids
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        digests[report] = {
+            "analysis_directory": str(artifact_path.parent.relative_to(tmp_path)),
+            "artifacts_sha256": hashlib.sha256(artifact_path.read_bytes()).hexdigest(),
+        }
+    reference = {
+        "retained_run": {"isolated_output_root": str(tmp_path)},
+        "report_artifact_digests": digests,
+    }
+    return reference, reports
+
+
+def _frozen_result(reports: dict[str, list[str]]) -> dict[str, object]:
+    claims = [
+        {
+            "candidate_id": candidate_id,
+            "evaluation_set": "real_shortlisted",
+            "report_name": report,
+        }
+        for report, candidate_ids in reports.items()
+        for candidate_id in candidate_ids
+    ]
+    return {
+        "claims": claims,
+        "real_shortlisted_set": {
+            "expected_claim_count": len(claims),
+            "input_claim_count": len(claims),
+        },
+    }
+
+
+def test_frozen_identity_coverage_uses_hash_verified_artifacts(tmp_path: Path) -> None:
+    reference, reports = _frozen_reference_fixture(tmp_path)
+    validation = _validate_cohort_identity_coverage(
+        _frozen_result(reports),
+        cohort="frozen_five",
+        frozen_reference=reference,
+    )
+
+    assert validation["coverage_status"] == "PASS"
+    assert validation["expected_count"] == 29
+    assert validation["actual_count"] == 29
+
+
+def test_frozen_identity_substitution_is_blocked_even_when_count_matches(
+    tmp_path: Path,
+) -> None:
+    reference, reports = _frozen_reference_fixture(tmp_path)
+    result = _frozen_result(reports)
+    result["claims"][0]["candidate_id"] = "substituted-id"  # type: ignore[index]
+
+    validation = _validate_cohort_identity_coverage(
+        result, cohort="frozen_five", frozen_reference=reference
+    )
+
+    assert validation["coverage_status"] == "BLOCKED"
+    assert "unexpected_candidate_id" in validation["issue_codes"]
+    assert "missing_candidate_id" in validation["issue_codes"]
+
+
+def test_frozen_identity_wrong_report_assignment_is_blocked(tmp_path: Path) -> None:
+    reference, reports = _frozen_reference_fixture(tmp_path)
+    result = _frozen_result(reports)
+    result["claims"][0]["report_name"] = "Activate"  # type: ignore[index]
+
+    validation = _validate_cohort_identity_coverage(
+        result, cohort="frozen_five", frozen_reference=reference
+    )
+
+    assert validation["coverage_status"] == "BLOCKED"
+    assert "wrong_report" in validation["issue_codes"]
+
+
+@pytest.mark.parametrize("failure", ["missing", "hash", "malformed"])
+def test_frozen_identity_authoritative_roster_failures_block_coverage(
+    tmp_path: Path, failure: str
+) -> None:
+    reference, reports = _frozen_reference_fixture(tmp_path)
+    if failure == "missing":
+        artifact_path = tmp_path / "report-4" / "report_analysis" / "artifacts.json"
+        artifact_path.unlink()
+    elif failure == "hash":
+        reference["report_artifact_digests"]["Adjust"]["artifacts_sha256"] = "0" * 64  # type: ignore[index]
+    else:
+        artifact_path = tmp_path / "report-4" / "report_analysis" / "artifacts.json"
+        artifact_path.write_text(
+            json.dumps({"insights_final": [{"bad": True}]}), encoding="utf-8"
+        )
+
+    validation = _validate_cohort_identity_coverage(
+        _frozen_result(reports),
+        cohort="frozen_five",
+        frozen_reference=reference,
+    )
+
+    assert validation["coverage_status"] == "BLOCKED"
+    assert any(
+        code in validation["issue_codes"]
+        for code in {
+            "frozen_roster_artifact_missing",
+            "frozen_roster_artifact_hash_mismatch",
+            "frozen_roster_insights_invalid",
+        }
+    )
+
+
+def test_reference_variants_remain_outside_frozen_identity_coverage(
+    tmp_path: Path,
+) -> None:
+    reference, reports = _frozen_reference_fixture(tmp_path)
+    result = _frozen_result(reports)
+    result["claims"].append(  # type: ignore[union-attr]
+        {"candidate_id": "variant-1", "evaluation_set": "reference_variant"}
+    )
+    result["reference_set"] = {"candidate_variant_count": 1}
+
+    validation = _validate_cohort_identity_coverage(
+        result, cohort="frozen_five", frozen_reference=reference
+    )
+
+    assert validation["coverage_status"] == "PASS"
+    assert validation["expected_count"] == 29
+    assert validation["reference_variant_count"] == 1
+
+
+def _page_row(
+    *, step2_pages: object = [12], step2_notes: object = None
+) -> dict[str, object]:
+    return {
+        "candidate_id": "page-candidate",
+        "report_name": "Report A",
+        "original_claim": "Original claim.",
+        "final_claim": "Final claim.",
+        "source_identity": "Report A|pdf-sha256:" + "a" * 64,
+        "supporting_physical_pages": step2_pages,
+        "source_truth_notes_by_page": step2_notes
+        if step2_notes is not None
+        else {"12": "Step 2 source note for physical page 12."},
+        "physical_pages": [12],
+        "original_physical_pages": [12],
+        "inspected_physical_pages": [12, 13],
+        "source_binding_status": "retained",
+    }
+
+
+def _approved_record(
+    row: dict[str, object], reviewer_pages: list[int]
+) -> dict[str, object]:
+    record = _base_record(
+        cohort="frozen_five",
+        row=row,
+        source={"sha256_expected": "a" * 64, "sha256_actual": "a" * 64},
+    )
+    record.update(
+        {
+            "decision": "approved",
+            "review_invoked": True,
+            "supporting_physical_pages": reviewer_pages,
+            "source_truth_notes_by_page": {
+                str(page): f"Reviewer source note for physical page {page}."
+                for page in reviewer_pages
+            },
+            "review_response_sha256": "review-hash",
+        }
+    )
+    return record
+
+
+def test_step2_provenance_is_preserved_and_matching_pages_are_accepted() -> None:
+    row = _page_row()
+    record = _approved_record(row, [12])
+
+    _reconcile_source_pages(record, row)
+
+    assert record["step2_supporting_physical_pages"] == [12]
+    assert (
+        record["step2_source_truth_notes_by_page"] == row["source_truth_notes_by_page"]
+    )
+    assert record["page_reconciliation"]["status"] == "matched"  # type: ignore[index]
+    assert record["editorial_acceptance_status"] == "accepted"
+
+
+@pytest.mark.parametrize(
+    ("step2_pages", "reviewer_pages"),
+    [([12], [10]), ([34, 35, 36, 37, 38], [35, 36, 37, 38])],
+)
+def test_page_disagreement_requires_adjudication(
+    step2_pages: list[int], reviewer_pages: list[int]
+) -> None:
+    row = _page_row(
+        step2_pages=step2_pages,
+        step2_notes={str(page): f"Step 2 note {page}." for page in step2_pages},
+    )
+    record = _approved_record(row, reviewer_pages)
+
+    _reconcile_source_pages(record, row)
+
+    assert record["decision"] == "approved"
+    assert (
+        record["editorial_acceptance_status"] == "blocked_by_source_page_reconciliation"
+    )
+    assert "source_page_reconciliation_required" in record["diagnostics"]
+    assert record["page_reconciliation"]["missing_from_reviewer"] == [  # type: ignore[index]
+        page for page in step2_pages if page not in reviewer_pages
+    ]
+
+
+def test_page_adjudication_accepts_supported_alternative() -> None:
+    row = _page_row(step2_pages=[12], step2_notes={"12": "Step 2 source note."})
+    record = _approved_record(row, [13])
+    adjudications = {
+        "frozen_five:page-candidate": {
+            "adjudication_id": "page-adjudication-1",
+            "status": "accepted",
+            "cohort": "frozen_five",
+            "candidate_id": "page-candidate",
+            "report_name": "Report A",
+            "source_pdf_sha256": "a" * 64,
+            "review_response_sha256": "review-hash",
+            "adjudicated_physical_pages": [13],
+            "source_grounded_explanation": (
+                "Physical page 13 independently supplies the same source-grounded "
+                "relationship as the retained page binding."
+            ),
+        }
+    }
+
+    _reconcile_source_pages(record, row, adjudications=adjudications)
+
+    assert record["decision"] == "approved"
+    assert record["editorial_acceptance_status"] == "accepted"
+    assert record["page_reconciliation"]["status"] == "adjudicated"  # type: ignore[index]
+    assert record["supporting_physical_pages"] == [13]
+
+
+def test_failed_page_adjudication_keeps_approval_blocked() -> None:
+    row = _page_row()
+    record = _approved_record(row, [13])
+    adjudications = {
+        "frozen_five:page-candidate": {
+            "adjudication_id": "page-adjudication-failed",
+            "status": "unresolved",
+            "candidate_id": "page-candidate",
+            "report_name": "Report A",
+            "source_pdf_sha256": "a" * 64,
+            "review_response_sha256": "review-hash",
+        }
+    }
+
+    _reconcile_source_pages(record, row, adjudications=adjudications)
+
+    assert (
+        record["editorial_acceptance_status"] == "blocked_by_source_page_reconciliation"
+    )
+    assert record["page_reconciliation"]["status"] == "requires_adjudication"  # type: ignore[index]
+
+
+def test_malformed_step2_provenance_blocks_approval_without_rewriting_review() -> None:
+    row = _page_row(step2_pages=None, step2_notes={})
+    record = _approved_record(row, [12])
+
+    _reconcile_source_pages(record, row)
+
+    assert record["decision"] == "approved"
+    assert (
+        record["editorial_acceptance_status"] == "blocked_by_source_page_reconciliation"
+    )
+    assert record["page_reconciliation"]["status"] == "unresolved"  # type: ignore[index]
+
+
+def test_acceptance_summary_counts_unresolved_page_reconciliation() -> None:
+    validation = _validate_cohort_identity_coverage(
+        _additional_result([_claim("candidate-a"), _claim("candidate-b")]),
+        cohort="additional_five",
+    )
+    records = [
+        {
+            "candidate_id": "candidate-a",
+            "decision": "approved",
+            "review_invoked": True,
+            "editorial_acceptance_status": "blocked_by_source_page_reconciliation",
+        },
+        {
+            "candidate_id": "candidate-b",
+            "decision": "approved",
+            "review_invoked": True,
+            "editorial_acceptance_status": "accepted",
+        },
+    ]
+
+    summary = _acceptance_summary(records=records, cohort_validations=[validation])
+
+    assert summary["editorial_acceptance_status"] == "PARTIAL"
+    assert "source_page_reconciliation_required:candidate-a" in summary["reasons"]

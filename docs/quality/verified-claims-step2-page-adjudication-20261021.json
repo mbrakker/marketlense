@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "artifact_kind": "verified_claims_step2_source_page_adjudication",
+  "immutable": true,
+  "shadow_only": true,
+  "canonical_mutation": false,
+  "publication_write": false,
+  "created_date": "2026-10-21",
+  "physical_page_semantics": "one-based physical PDF page indices; printed page labels are not physical bindings",
+  "inputs": {
+    "review_manifest_path": "out/verified-claims-step2-editorial-review-20261021-v3-corrected/manifest.json",
+    "review_manifest_sha256": "b1dbc93228c7b65d7ed19b01a694c2ad8dc68532fb66dfc10d6f3166adf4561e",
+    "targeted_step2_report_path": "out/verified-claims-step2-targeted-20261021/targeted-report.json",
+    "targeted_step2_report_sha256": "6c284ff2e3a75f0fa677d1a9370dd88320e1c7fdc2a8672023d80ff099f0a576",
+    "frozen_roster_reference_path": "docs/quality/verified-claims-step0-reference-cases-20261018.json"
+  },
+  "adjudications": [
+    {
+      "adjudication_id": "page-adjudication-reuters-ai-search-20261021",
+      "status": "accepted",
+      "cohort": "frozen_five",
+      "report_name": "Reuters Institute",
+      "candidate_id": "ai-search-platform-relationships",
+      "source_pdf_sha256": "f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52",
+      "review_response_sha256": "37bb4f25b9ff3a9cdfc6aeb86bb417455665c7dee760602e8e4f10e4c340aea0",
+      "step2_supporting_physical_pages": [12],
+      "reviewer_supporting_physical_pages": [10],
+      "adjudicated_physical_pages": [12],
+      "source_grounded_explanation": "Physical page 10 is a preceding political-pressure page and does not contain the claim. Physical page 12 contains the Q5 base 268 and minus-43-percent expectation, the Chartbeat decline figures, the uncertainty about AI Overviews, and the zero-click-search context. The final reviewer wording is source-supported on physical page 12."
+    },
+    {
+      "adjudication_id": "page-adjudication-reuters-ai-browsers-20261021",
+      "status": "accepted",
+      "cohort": "frozen_five",
+      "report_name": "Reuters Institute",
+      "candidate_id": "ai-browsers-adaptable-content",
+      "source_pdf_sha256": "f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52",
+      "review_response_sha256": "f10290e15ce2e01785bda448140231fcf5fc8b5bc50780af0854aadcc711400c",
+      "step2_supporting_physical_pages": [41],
+      "reviewer_supporting_physical_pages": [39],
+      "adjudicated_physical_pages": [41],
+      "source_grounded_explanation": "Physical page 39 is the preceding product-development page and does not contain the browser claim. Physical page 41 contains the Browser wars and agentic apps section, the browser and briefing capabilities, the liquid-content interpretation, and Q15's 60-percent plus 15-percent impact values on base 265. The final reviewer wording is source-supported on physical page 41."
+    },
+    {
+      "adjudication_id": "page-adjudication-adjust-finance-20261021",
+      "status": "accepted",
+      "cohort": "frozen_five",
+      "report_name": "Adjust",
+      "candidate_id": "finance-benchmark-coverage",
+      "source_pdf_sha256": "ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3",
+      "review_response_sha256": "87ec1fdab5e9e43d59de3dcaf56efc109c1cfbe395dd7c161dd1660be1295d53",
+      "step2_supporting_physical_pages": [34, 35, 36, 37, 38],
+      "reviewer_supporting_physical_pages": [35, 36, 37, 38],
+      "adjudicated_physical_pages": [35, 36, 37, 38],
+      "source_grounded_explanation": "Physical page 34 provides global introductory context, while physical page 35 contains the global and regional install/session growth figures used by the final wording. Physical pages 36, 37, and 38 contain the session, retention, CPI, and paid-versus-organic relationships. The reviewer set is a sufficient smaller source set for its final claim; page 34 is not required."
+    },
+    {
+      "adjudication_id": "page-adjudication-activate-outlook-20261021",
+      "status": "rejected",
+      "cohort": "frozen_five",
+      "report_name": "Activate",
+      "candidate_id": "activate-outlook-revenue-models",
+      "source_pdf_sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
+      "review_response_sha256": "6c8bdb72844d08ffab489f7f4a33b0700102c6d418eb7dccb409fcbab8eea9a9",
+      "step2_supporting_physical_pages": [5, 6],
+      "reviewer_supporting_physical_pages": [4, 5],
+      "authoritative_physical_pages": [5, 6],
+      "source_grounded_explanation": "Physical page 4 is a contents page and physical page 5 does not contain the segment-growth chart. More importantly, the retained reviewer wording reverses the page-6 segment bindings: 128 billion and 5.7 percent belong to cost of Internet access, while 66 billion and 2.3 percent belong to paid content. Page reconciliation cannot approve this materially incorrect final wording."
+    }
+  ]
+}
