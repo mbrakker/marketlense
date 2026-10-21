@@ -3,7 +3,7 @@ text: |
   PDF pages attached to this request. The image-to-page mapping is authoritative
   for physical page numbers and all supplied pages are complete, uncropped pages.
 
-  Report context:
+  Neutral report metadata and scope context (non-authoritative for facts):
   {{ report_context_json }}
 
   Source identity and retained provenance context:

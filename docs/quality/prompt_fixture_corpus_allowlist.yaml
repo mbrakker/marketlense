@@ -1,5 +1,10 @@
 schema_version: "1.0"
 allowlist:
+  - pattern: "namespaces.report_vs/validate/editorial_review.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "Editorial-review requests now identify report metadata as non-authoritative and scope selection_quality to the individual insight; the measured fixture delta is retained separately from the older Step 2 visual prompt baseline refresh."
+    expires_on: "2026-12-31"
+    max_delta_absolute: 121
   - pattern: "families.validation.total_tokens"
     owner: "MarketLense engineering"
     reason: "The existing grounding prompt now maps retained claims to exact linked evidence in one stable-ID batch."

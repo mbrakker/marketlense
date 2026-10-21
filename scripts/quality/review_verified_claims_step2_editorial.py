@@ -13,7 +13,7 @@ import json
 import sys
 import time
 from collections import Counter, defaultdict
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -30,6 +30,7 @@ from src.contracts.config import ConfigLoadRequest
 from src.contracts.prompts import PromptRenderRequest
 from src.contracts.report_assets import CropRefinePageRenderRequest
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId, TaskId
 from src.contracts.verified_claims import VisualClaimEvaluationRequest
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.verified_claims_visual_generator import (
@@ -59,6 +60,7 @@ _RATINGS = frozenset(
     }
 )
 _MATERIAL_RATINGS = frozenset({"material_issue"})
+_MIN_SOURCE_GROUNDED_EXPLANATION_LENGTH = 40
 _DIMENSIONS = (
     "factual_fidelity",
     "analytical_validity",
@@ -216,34 +218,53 @@ def _validate_review_payload(
         diagnostics.append("suggested_correction_invalid")
         suggested_correction = ""
 
+    if len(dimensions) != len(_DIMENSIONS):
+        diagnostics.append("dimensions_incomplete")
+    if decision == "approved" and not supporting_pages:
+        diagnostics.append("supporting_pages_required_for_approval")
+    if (
+        decision == "approved"
+        and len(source_grounded_explanation) < _MIN_SOURCE_GROUNDED_EXPLANATION_LENGTH
+    ):
+        diagnostics.append("source_grounded_explanation_not_substantive")
+    if decision == "approved" and any(len(note) < 20 for note in notes.values()):
+        diagnostics.append("source_truth_notes_not_substantive")
+
     material_factual_issue = dimensions.get("factual_fidelity", {}).get(
         "rating"
     ) in _MATERIAL_RATINGS or any(
         defect["dimension"] == "factual_fidelity" and defect["severity"] == "material"
         for defect in defects
     )
+    material_dimension_issue = any(
+        dimension.get("rating") in _MATERIAL_RATINGS
+        for dimension in dimensions.values()
+    )
+    unresolved_dimension = any(
+        dimension.get("rating") == "unresolved" for dimension in dimensions.values()
+    )
+    material_defect = any(defect.get("severity") == "material" for defect in defects)
+    decision_conflict = decision == "approved" and (
+        unresolved_dimension or material_dimension_issue or material_defect
+    )
+    if decision_conflict:
+        diagnostics.append("review_decision_conflict")
     if material_factual_issue and decision == "approved":
+        # Retain the existing diagnostic for compatibility, but do not turn a
+        # self-contradictory model response into a source-grounded rejection.
         diagnostics.append("material_factual_issue_blocks_approval")
-        decision = "rejected"
-
-    if decision == "approved":
-        if len(dimensions) != len(_DIMENSIONS):
-            diagnostics.append("dimensions_incomplete")
-        if not supporting_pages:
-            diagnostics.append("supporting_pages_required_for_approval")
-        if not source_grounded_explanation:
-            diagnostics.append("source_grounded_explanation_missing")
-        if any(len(note) < 20 for note in notes.values()):
-            diagnostics.append("source_truth_notes_not_substantive")
 
     diagnostics = list(dict.fromkeys(diagnostics))
-    if diagnostics and "material_factual_issue_blocks_approval" not in diagnostics:
+    structural_diagnostics = [
+        diagnostic
+        for diagnostic in diagnostics
+        if diagnostic
+        not in {"review_decision_conflict", "material_factual_issue_blocks_approval"}
+    ]
+    if structural_diagnostics:
         diagnostics.insert(0, "review_response_invalid")
-    if diagnostics and decision == "approved":
         decision = "unresolved"
-    elif diagnostics and decision in {"revision_required", "rejected"}:
-        # A malformed non-approval is still an unresolved review, not a
-        # fabricated editorial rejection.
+    elif decision_conflict:
         decision = "unresolved"
 
     result.update(
@@ -289,43 +310,19 @@ def _prompt_evidence_spans(row: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 
 def _artifact_context(row: Mapping[str, Any]) -> dict[str, Any]:
-    path = Path(str(row.get("retained_artifact_path") or ""))
-    if not path.is_file():
-        return {"report_title": _text(row.get("report_name"))}
-    try:
-        artifact = _load_json(path)
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return {"report_title": _text(row.get("report_name"))}
-    summary = artifact.get("summary")
-    summary_map = summary if isinstance(summary, Mapping) else {}
-    topics: list[dict[str, Any]] = []
-    for topic in artifact.get("topics_covered") or []:
-        if not isinstance(topic, Mapping):
-            continue
-        topics.append(
-            {
-                "topic": _text(topic.get("topic")),
-                "why_it_matters": _text(topic.get("why_it_matters"))[:700],
-                "subtopics": [
-                    _text(value)[:240]
-                    for value in topic.get("subtopics") or []
-                    if _text(value)
-                ][:4],
-            }
-        )
-        if len(topics) >= 12:
-            break
-    return {
-        "report_title": _text(row.get("report_name")),
-        "categories": [
-            _text(value) for value in artifact.get("categories") or [] if _text(value)
-        ],
-        "summary": {
-            "tldr": _text(summary_map.get("tldr"))[:1200],
-            "executive_summary": _text(summary_map.get("executive_summary"))[:1800],
-        },
-        "topics": topics,
+    context: dict[str, Any] = {
+        "report_title": _text(row.get("report_name") or row.get("report_title")),
+        "authority": "metadata_only_non_authoritative",
     }
+    raw_categories = row.get("report_categories") or row.get("categories")
+    if isinstance(raw_categories, list):
+        categories = [_text(value) for value in raw_categories if _text(value)]
+        if categories:
+            context["categories"] = categories[:8]
+    scope = _text(row.get("report_scope") or row.get("scope") or row.get("industry"))
+    if scope:
+        context["scope"] = scope[:500]
+    return context
 
 
 def _source_context(
@@ -400,6 +397,8 @@ def _base_record(
         "candidate_id": _text(row.get("candidate_id")),
         "case_id": _text(row.get("case_id")),
         "report_name": _text(row.get("report_name") or row.get("report")),
+        "availability": _text(row.get("input_kind")) or "eligible",
+        "input_validation_issues": list(row.get("input_validation_issues") or []),
         "original_claim": _text(row.get("original_claim")),
         "final_claim": _text(row.get("final_claim")),
         "source_identity": _text(row.get("source_identity")),
@@ -610,35 +609,491 @@ def _review_one_claim(
     return record
 
 
-def _load_review_inputs(
-    *, result_path: Path, source_manifest_path: Path, cohort: str
-) -> tuple[dict[str, Any], dict[str, dict[str, Any]], list[dict[str, Any]]]:
-    result = _load_json(result_path)
-    source_manifest = _load_json(source_manifest_path)
-    source_records = _explicit_source_records(source_manifest)
-    rows: list[dict[str, Any]] = []
-    for raw_row in result.get("claims") or []:
-        if not isinstance(raw_row, Mapping):
-            continue
-        if raw_row.get("evaluation_set") != "real_shortlisted":
-            continue
-        row = dict(raw_row)
-        row["cohort"] = cohort
-        rows.append(row)
+def _identity_key(report: str, candidate_id: str) -> str:
+    return f"{report}\x1f{candidate_id}"
+
+
+def _append_identity_issue(
+    issue_codes: list[str], issue_details: list[dict[str, str]], code: str, detail: str
+) -> None:
+    if code not in issue_codes:
+        issue_codes.append(code)
+    issue = {"code": code, "detail": detail}
+    if issue not in issue_details:
+        issue_details.append(issue)
+
+
+def _row_identity_issue(row: dict[str, Any], code: str) -> None:
+    issues = row.setdefault("input_validation_issues", [])
+    if not isinstance(issues, list):
+        issues = []
+        row["input_validation_issues"] = issues
+    if code not in issues:
+        issues.append(code)
+
+
+def _validate_cohort_identity_coverage(
+    result: Mapping[str, Any], *, cohort: str
+) -> dict[str, Any]:
+    """Validate the immutable selected-identity roster before review calls."""
+
+    expected: list[dict[str, str]] = []
+    expected_by_id: dict[str, dict[str, str]] = {}
+    issue_codes: list[str] = []
+    issue_details: list[dict[str, str]] = []
+
+    def add_expected(
+        *, report: str, candidate_id: str, availability: str, reason: str = ""
+    ) -> None:
+        if not candidate_id or not report:
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "malformed_expected_identity",
+                f"report={report!r}, candidate_id={candidate_id!r}",
+            )
+            return
+        record = {
+            "candidate_id": candidate_id,
+            "report_name": report,
+            "availability": availability,
+        }
+        if reason:
+            record["reason"] = reason
+        existing = expected_by_id.get(candidate_id)
+        if existing is not None:
+            code = (
+                "conflicting_expected_identity"
+                if existing["report_name"] != report
+                else "duplicate_expected_identity"
+            )
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                code,
+                f"candidate_id={candidate_id!r}",
+            )
+            return
+        expected.append(record)
+        expected_by_id[candidate_id] = record
+
+    claims = result.get("claims")
+    claim_rows = claims if isinstance(claims, list) else []
+    if not isinstance(claims, list):
+        _append_identity_issue(
+            issue_codes,
+            issue_details,
+            "identity_roster_unavailable",
+            "result.claims is not a list",
+        )
 
     real_set = result.get("real_shortlisted_set")
-    unavailable = real_set.get("unavailable") if isinstance(real_set, Mapping) else []
-    for raw_row in unavailable or []:
+    if not isinstance(real_set, Mapping):
+        real_set = {}
+        _append_identity_issue(
+            issue_codes,
+            issue_details,
+            "identity_roster_unavailable",
+            "result.real_shortlisted_set is not an object",
+        )
+
+    if cohort == "additional_five":
+        inventory = result.get("shortlist_inventory")
+        if not isinstance(inventory, list) or not inventory:
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "identity_roster_unavailable",
+                "result.shortlist_inventory is missing or empty",
+            )
+            inventory = []
+        inventory_unavailable_ids: set[str] = set()
+        for raw_inventory in inventory:
+            if not isinstance(raw_inventory, Mapping):
+                _append_identity_issue(
+                    issue_codes,
+                    issue_details,
+                    "malformed_inventory_entry",
+                    "shortlist_inventory contains a non-object entry",
+                )
+                continue
+            report = _text(raw_inventory.get("report"))
+            raw_eligible = raw_inventory.get("eligible_candidate_ids")
+            eligible = raw_eligible if isinstance(raw_eligible, list) else []
+            if not isinstance(raw_eligible, list):
+                _append_identity_issue(
+                    issue_codes,
+                    issue_details,
+                    "malformed_inventory_entry",
+                    f"report={report!r} eligible_candidate_ids is not a list",
+                )
+            for raw_candidate_id in eligible:
+                add_expected(
+                    report=report,
+                    candidate_id=_text(raw_candidate_id),
+                    availability="eligible",
+                )
+            raw_unavailable = raw_inventory.get("unavailable")
+            unavailable = raw_unavailable if isinstance(raw_unavailable, list) else []
+            if not isinstance(raw_unavailable, list):
+                _append_identity_issue(
+                    issue_codes,
+                    issue_details,
+                    "malformed_inventory_entry",
+                    f"report={report!r} unavailable is not a list",
+                )
+            for raw_unavailable_row in unavailable:
+                if not isinstance(raw_unavailable_row, Mapping):
+                    _append_identity_issue(
+                        issue_codes,
+                        issue_details,
+                        "malformed_inventory_entry",
+                        f"report={report!r} unavailable contains a non-object entry",
+                    )
+                    continue
+                candidate_id = _text(raw_unavailable_row.get("candidate_id"))
+                inventory_unavailable_ids.add(candidate_id)
+                add_expected(
+                    report=report,
+                    candidate_id=candidate_id,
+                    availability="unavailable",
+                    reason=_text(raw_unavailable_row.get("reason")),
+                )
+            selected_count = raw_inventory.get("selected_count")
+            expected_selected_count = len(eligible) + len(unavailable)
+            if (
+                type(selected_count) is not int
+                or selected_count != expected_selected_count
+            ):
+                _append_identity_issue(
+                    issue_codes,
+                    issue_details,
+                    "inventory_count_mismatch",
+                    "report="
+                    f"{report!r} selected_count={selected_count!r} "
+                    f"expected={expected_selected_count}",
+                )
+
+        result_unavailable = real_set.get("unavailable")
+        result_unavailable_rows = (
+            result_unavailable if isinstance(result_unavailable, list) else []
+        )
+        result_unavailable_ids = {
+            _text(row.get("candidate_id"))
+            for row in result_unavailable_rows
+            if isinstance(row, Mapping)
+        }
+        for candidate_id in sorted(inventory_unavailable_ids - result_unavailable_ids):
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "missing_unavailable_record",
+                f"candidate_id={candidate_id!r}",
+            )
+        for candidate_id in sorted(result_unavailable_ids - inventory_unavailable_ids):
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "unexpected_unavailable_identity",
+                f"candidate_id={candidate_id!r}",
+            )
+        expected_selected_count = len(expected)
+        if real_set.get("selected_claim_count") != expected_selected_count:
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "cohort_count_mismatch",
+                "selected_claim_count="
+                f"{real_set.get('selected_claim_count')!r} "
+                f"expected={expected_selected_count}",
+            )
+        expected_eligible_count = sum(
+            record["availability"] == "eligible" for record in expected
+        )
+        if real_set.get("eligible_claim_count") != expected_eligible_count:
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "cohort_count_mismatch",
+                "eligible_claim_count="
+                f"{real_set.get('eligible_claim_count')!r} "
+                f"expected={expected_eligible_count}",
+            )
+    else:
+        real_rows = [
+            row
+            for row in claim_rows
+            if isinstance(row, Mapping)
+            and row.get("evaluation_set") == "real_shortlisted"
+        ]
+        for row in real_rows:
+            add_expected(
+                report=_text(row.get("report_name") or row.get("report")),
+                candidate_id=_text(row.get("candidate_id")),
+                availability="eligible",
+            )
+        expected_count = real_set.get("expected_claim_count")
+        input_count = real_set.get("input_claim_count")
+        if type(expected_count) is not int or expected_count != len(expected):
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "cohort_count_mismatch",
+                f"expected_claim_count={expected_count!r} expected={len(expected)}",
+            )
+        if type(input_count) is not int or input_count != len(expected):
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "cohort_count_mismatch",
+                f"input_claim_count={input_count!r} expected={len(expected)}",
+            )
+
+    normalized_rows: list[dict[str, Any]] = []
+    actual_key_counts: Counter[str] = Counter()
+    reference_variant_ids: list[str] = []
+    for raw_row in claim_rows:
         if not isinstance(raw_row, Mapping):
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "malformed_claim_row",
+                "result.claims contains a non-object entry",
+            )
             continue
         row = dict(raw_row)
-        row["cohort"] = cohort
-        row["report_name"] = row.get("report")
+        candidate_id = _text(row.get("candidate_id"))
+        report = _text(row.get("report_name") or row.get("report"))
+        if _text(row.get("cohort")) and _text(row.get("cohort")) != cohort:
+            _row_identity_issue(row, "wrong_cohort")
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "wrong_cohort",
+                f"candidate_id={candidate_id!r}",
+            )
+        is_selected = row.get("evaluation_set") == "real_shortlisted"
+        expected_record = expected_by_id.get(candidate_id)
+        if is_selected:
+            normalized_rows.append(row)
+            if not candidate_id:
+                _row_identity_issue(row, "malformed_candidate_id")
+                _append_identity_issue(
+                    issue_codes,
+                    issue_details,
+                    "malformed_candidate_id",
+                    f"report={report!r}",
+                )
+            elif expected_record is None:
+                _row_identity_issue(row, "unexpected_candidate_id")
+                _append_identity_issue(
+                    issue_codes,
+                    issue_details,
+                    "unexpected_candidate_id",
+                    f"candidate_id={candidate_id!r}",
+                )
+            else:
+                if report != expected_record["report_name"]:
+                    _row_identity_issue(row, "wrong_report")
+                    _append_identity_issue(
+                        issue_codes,
+                        issue_details,
+                        "wrong_report",
+                        "candidate_id="
+                        f"{candidate_id!r} report={report!r} "
+                        f"expected={expected_record['report_name']!r}",
+                    )
+                if expected_record["availability"] != "eligible":
+                    _row_identity_issue(row, "unavailable_as_eligible")
+                    _append_identity_issue(
+                        issue_codes,
+                        issue_details,
+                        "unavailable_as_eligible",
+                        f"candidate_id={candidate_id!r}",
+                    )
+                actual_key_counts[_identity_key(report, candidate_id)] += 1
+        elif candidate_id in expected_by_id:
+            _row_identity_issue(row, "incorrectly_classified")
+            normalized_rows.append(row)
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "incorrectly_classified",
+                "candidate_id="
+                f"{candidate_id!r} "
+                f"evaluation_set={row.get('evaluation_set')!r}",
+            )
+        elif row.get("evaluation_set") == "reference_variant":
+            if not candidate_id:
+                _append_identity_issue(
+                    issue_codes,
+                    issue_details,
+                    "malformed_reference_row",
+                    "reference_variant has no candidate_id",
+                )
+            else:
+                reference_variant_ids.append(candidate_id)
+        else:
+            _row_identity_issue(row, "unexpected_candidate_id")
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "unexpected_candidate_id",
+                "candidate_id="
+                f"{candidate_id!r} evaluation_set="
+                f"{row.get('evaluation_set')!r}",
+            )
+
+    for raw_row in real_set.get("unavailable") or []:
+        if not isinstance(raw_row, Mapping):
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "malformed_unavailable_row",
+                "real_shortlisted_set.unavailable contains a non-object entry",
+            )
+            continue
+        row = dict(raw_row)
+        candidate_id = _text(row.get("candidate_id"))
+        report = _text(row.get("report") or row.get("report_name"))
+        row["report_name"] = report
         row["final_claim"] = ""
         row["original_claim"] = ""
         row["outcome"] = "unavailable"
+        row["input_kind"] = "unavailable"
+        normalized_rows.append(row)
+        expected_record = expected_by_id.get(candidate_id)
+        if not candidate_id or expected_record is None:
+            _row_identity_issue(row, "unexpected_unavailable_identity")
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "unexpected_unavailable_identity",
+                f"candidate_id={candidate_id!r}",
+            )
+        elif report != expected_record["report_name"]:
+            _row_identity_issue(row, "wrong_report")
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "wrong_report",
+                "candidate_id="
+                f"{candidate_id!r} report={report!r} "
+                f"expected={expected_record['report_name']!r}",
+            )
+        elif expected_record["availability"] != "unavailable":
+            _row_identity_issue(row, "eligible_as_unavailable")
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "eligible_as_unavailable",
+                f"candidate_id={candidate_id!r}",
+            )
+        actual_key_counts[_identity_key(report, candidate_id)] += 1
+
+    for row in normalized_rows:
+        candidate_id = _text(row.get("candidate_id"))
+        report = _text(row.get("report_name") or row.get("report"))
+        if actual_key_counts[_identity_key(report, candidate_id)] > 1:
+            _row_identity_issue(row, "duplicate_candidate_id")
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "duplicate_candidate_id",
+                f"candidate_id={candidate_id!r} report={report!r}",
+            )
+
+    actual_count = 0
+    for record in expected:
+        key = _identity_key(record["report_name"], record["candidate_id"])
+        if actual_key_counts[key] == 0:
+            code = (
+                "missing_unavailable_record"
+                if record["availability"] == "unavailable"
+                else "missing_candidate_id"
+            )
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                code,
+                "candidate_id="
+                f"{record['candidate_id']!r} "
+                f"report={record['report_name']!r}",
+            )
+            synthetic = {
+                "candidate_id": record["candidate_id"],
+                "report_name": record["report_name"],
+                "input_kind": record["availability"],
+                "input_validation_issues": [code],
+                "final_claim": "",
+                "original_claim": "",
+                "outcome": "unavailable"
+                if record["availability"] == "unavailable"
+                else "",
+            }
+            normalized_rows.append(synthetic)
+        else:
+            actual_count += 1
+
+    reference_set = result.get("reference_set")
+    if reference_variant_ids:
+        if not isinstance(reference_set, Mapping):
+            _append_identity_issue(
+                issue_codes,
+                issue_details,
+                "reference_roster_unavailable",
+                "reference_set is missing or not an object",
+            )
+        else:
+            expected_reference_count = reference_set.get("candidate_variant_count")
+            reference_count_matches = (
+                type(expected_reference_count) is int
+                and expected_reference_count == len(reference_variant_ids)
+            )
+            if not reference_count_matches:
+                _append_identity_issue(
+                    issue_codes,
+                    issue_details,
+                    "reference_variant_count_mismatch",
+                    "reference_variant_count="
+                    f"{len(reference_variant_ids)} expected="
+                    f"{expected_reference_count!r}",
+                )
+    coverage_status = "PASS" if not issue_codes and expected else "BLOCKED"
+    return {
+        "cohort": cohort,
+        "coverage_status": coverage_status,
+        "authoritative": bool(expected)
+        and "identity_roster_unavailable" not in issue_codes,
+        "expected_count": len(expected),
+        "actual_count": actual_count,
+        "expected_records": expected,
+        "issue_codes": issue_codes,
+        "issues": issue_details,
+        "reference_variant_count": len(reference_variant_ids),
+        "reference_variant_ids": reference_variant_ids,
+        "normalized_rows": normalized_rows,
+    }
+
+
+def _load_review_inputs(
+    *, result_path: Path, source_manifest_path: Path, cohort: str
+) -> tuple[
+    dict[str, Any],
+    dict[str, dict[str, Any]],
+    list[dict[str, Any]],
+    dict[str, Any],
+]:
+    result = _load_json(result_path)
+    source_manifest = _load_json(source_manifest_path)
+    source_records = _explicit_source_records(source_manifest)
+    validation = _validate_cohort_identity_coverage(result, cohort=cohort)
+    rows = []
+    for raw_row in validation["normalized_rows"]:
+        row = dict(raw_row)
+        row["cohort"] = cohort
         rows.append(row)
-    return result, source_records, rows
+    return result, source_records, rows, validation
 
 
 def _canonical_source_identity(report: str, source: Mapping[str, Any]) -> str:
@@ -680,19 +1135,30 @@ def _record_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
     decisions = Counter(
         str(record.get("decision") or "unresolved") for record in records
     )
+    material_defect_count = 0
+    for record in records:
+        raw_dimensions = record.get("dimensions")
+        dimensions: Mapping[str, Any] = (
+            raw_dimensions if isinstance(raw_dimensions, Mapping) else {}
+        )
+        raw_defects = record.get("defects")
+        defects: list[Any] = raw_defects if isinstance(raw_defects, list) else []
+        if any(
+            isinstance(dimension, Mapping)
+            and dimension.get("rating") == "material_issue"
+            for dimension in dimensions.values()
+        ) or any(
+            isinstance(defect, Mapping) and defect.get("severity") == "material"
+            for defect in defects
+        ):
+            material_defect_count += 1
     return {
         "selected_or_unavailable_count": len(records),
         "review_invoked_count": sum(
             bool(record.get("review_invoked")) for record in records
         ),
         "decision_counts": dict(sorted(decisions.items())),
-        "material_defect_count": sum(
-            any(
-                isinstance(defect, Mapping) and defect.get("severity") == "material"
-                for defect in record.get("defects") or []
-            )
-            for record in records
-        ),
+        "material_defect_count": material_defect_count,
         "source_pages_cited": sorted(
             {
                 page
@@ -701,6 +1167,82 @@ def _record_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
                 if type(page) is int
             }
         ),
+    }
+
+
+def _acceptance_summary(
+    *, records: list[dict[str, Any]], cohort_validations: Sequence[Mapping[str, Any]]
+) -> dict[str, Any]:
+    """Summarize execution, exact identity coverage, and editorial acceptance."""
+
+    coverage_status = (
+        "PASS"
+        if cohort_validations
+        and all(
+            validation.get("coverage_status") == "PASS"
+            for validation in cohort_validations
+        )
+        else "BLOCKED"
+    )
+    execution_reasons: list[str] = []
+    for record in records:
+        if record.get("review_invoked") or record.get("availability") == "unavailable":
+            continue
+        execution_reasons.append(
+            f"review_not_invoked:{_text(record.get('candidate_id')) or 'unknown'}"
+        )
+    execution_status = "PASS" if not execution_reasons else "PARTIAL"
+
+    decisions = Counter(
+        _text(record.get("decision")) or "unresolved" for record in records
+    )
+    eligible_decisions = Counter(
+        _text(record.get("decision")) or "unresolved"
+        for record in records
+        if record.get("availability") != "unavailable"
+    )
+    reasons: list[str] = []
+    for validation in cohort_validations:
+        for issue_code in validation.get("issue_codes") or []:
+            if issue_code not in reasons:
+                reasons.append(str(issue_code))
+    for decision in ("rejected", "revision_required", "unresolved"):
+        if eligible_decisions.get(decision):
+            reasons.append(f"{decision}:{eligible_decisions[decision]}")
+    if any(record.get("availability") == "unavailable" for record in records):
+        reasons.append("expected_unavailable_present")
+    reasons = list(dict.fromkeys(reasons))
+
+    eligible_nonapprovals = sum(
+        decision_count
+        for decision, decision_count in eligible_decisions.items()
+        if decision in {"rejected", "revision_required", "unresolved"}
+    )
+    if coverage_status != "PASS":
+        editorial_acceptance_status = "FAIL"
+        reasons.insert(0, "identity_coverage_incomplete")
+    elif execution_status != "PASS":
+        editorial_acceptance_status = "PARTIAL"
+        reasons.insert(0, "review_execution_incomplete")
+    elif eligible_nonapprovals:
+        editorial_acceptance_status = "PARTIAL"
+    else:
+        editorial_acceptance_status = "PASS"
+
+    return {
+        "execution_status": execution_status,
+        "coverage_status": coverage_status,
+        "editorial_acceptance_status": editorial_acceptance_status,
+        "reasons": list(dict.fromkeys(reasons)),
+        "selected_claim_count": len(records),
+        "review_invoked_count": sum(
+            bool(record.get("review_invoked")) for record in records
+        ),
+        "decision_counts": dict(sorted(decisions.items())),
+        "material_defect_count": sum(
+            _record_summary([record])["material_defect_count"] for record in records
+        ),
+        "execution_reasons": list(dict.fromkeys(execution_reasons)),
     }
 
 
@@ -743,23 +1285,26 @@ def run_editorial_review(
             dict[str, Any],
             dict[str, dict[str, Any]],
             list[dict[str, Any]],
+            dict[str, Any],
         ]
     ] = []
     for cohort, result_path, source_path in inputs:
-        result, sources, rows = _load_review_inputs(
+        result, sources, rows, validation = _load_review_inputs(
             result_path=result_path,
             source_manifest_path=source_path,
             cohort=cohort,
         )
-        loaded.append((cohort, result_path, source_path, result, sources, rows))
+        loaded.append(
+            (cohort, result_path, source_path, result, sources, rows, validation)
+        )
 
     review_root = output_path.parent
     review_root.mkdir(parents=True, exist_ok=True)
-    run_id = f"verified-claims-step2-editorial-review-{int(time.time())}"
+    run_id = RunId(f"verified-claims-step2-editorial-review-{int(time.time())}")
     ctx = RunContext(
         schema_version="1.0",
         run_id=run_id,
-        task_id=run_id,
+        task_id=TaskId(str(run_id)),
         span_id=run_id,
     )
     settings = load_settings(
@@ -785,9 +1330,18 @@ def run_editorial_review(
     rendered_pages: dict[tuple[str, int], str] = {}
     render_failures: dict[tuple[str, int], list[str]] = {}
     report_source_errors: dict[str, list[str]] = {}
+    cohort_validations = [entry[6] for entry in loaded]
 
     all_report_rows: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
-    for cohort, _result_path, _source_path, _result, source_records, rows in loaded:
+    for (
+        cohort,
+        _result_path,
+        _source_path,
+        _result,
+        source_records,
+        rows,
+        _validation,
+    ) in loaded:
         for row in rows:
             report = _text(row.get("report_name") or row.get("report"))
             all_report_rows[(cohort, report)].append(row)
@@ -838,7 +1392,20 @@ def run_editorial_review(
 
         for index, row in enumerate(rows):
             key = f"{cohort}:{report}"
-            if _text(row.get("outcome")) == "unavailable":
+            input_validation_issues = [
+                _text(issue)
+                for issue in row.get("input_validation_issues") or []
+                if _text(issue)
+            ]
+            if input_validation_issues:
+                record = _unresolved_record(
+                    cohort=cohort,
+                    row=row,
+                    source=source,
+                    reason="cohort_identity_invalid",
+                    diagnostics=input_validation_issues,
+                )
+            elif _text(row.get("outcome")) == "unavailable":
                 record = _unresolved_record(
                     cohort=cohort,
                     row=row,
@@ -898,7 +1465,7 @@ def run_editorial_review(
                         ctx=RunContext(
                             schema_version="1.0",
                             run_id=run_id,
-                            task_id=f"{run_id}:{cohort}:{report}:{index}",
+                            task_id=TaskId(f"{run_id}:{cohort}:{report}:{index}"),
                             span_id=f"{run_id}:{cohort}:{report}:{index}",
                         ),
                     )
@@ -913,7 +1480,15 @@ def run_editorial_review(
             "source_manifest_path": _relative_repository_path(source_path),
             "source_manifest_sha256": _sha256(source_path),
         }
-        for cohort, result_path, source_path, _result, _sources, _rows in loaded
+        for (
+            cohort,
+            result_path,
+            source_path,
+            _result,
+            _sources,
+            _rows,
+            _validation,
+        ) in loaded
     ]
     report_summaries = {
         key: _record_summary(value) for key, value in sorted(report_records.items())
@@ -937,22 +1512,20 @@ def run_editorial_review(
         "source_audit": dict(sorted(source_audit.items())),
         "report_source_errors": dict(sorted(report_source_errors.items())),
         "reports": report_summaries,
+        "cohort_validation": {
+            validation["cohort"]: {
+                key: value
+                for key, value in validation.items()
+                if key != "normalized_rows"
+            }
+            for validation in cohort_validations
+        },
+        "acceptance": _acceptance_summary(
+            records=records, cohort_validations=cohort_validations
+        ),
         "summary": {
-            "selected_claim_count": len(records),
-            "review_invoked_count": sum(
-                bool(record.get("review_invoked")) for record in records
-            ),
-            "decision_counts": dict(
-                sorted(
-                    Counter(str(record.get("decision")) for record in records).items()
-                )
-            ),
-            "material_defect_count": sum(
-                any(
-                    isinstance(defect, Mapping) and defect.get("severity") == "material"
-                    for defect in record.get("defects") or []
-                )
-                for record in records
+            **_acceptance_summary(
+                records=records, cohort_validations=cohort_validations
             ),
             "rendered_page_count": sum(bool(path) for path in rendered_pages.values()),
             "render_failure_count": len(render_failures),
@@ -1010,7 +1583,19 @@ def main() -> int:
             sort_keys=True,
         )
     )
-    return 0
+    acceptance = manifest["acceptance"]
+    return (
+        0
+        if all(
+            acceptance.get(key) == "PASS"
+            for key in (
+                "execution_status",
+                "coverage_status",
+                "editorial_acceptance_status",
+            )
+        )
+        else 2
+    )
 
 
 if __name__ == "__main__":

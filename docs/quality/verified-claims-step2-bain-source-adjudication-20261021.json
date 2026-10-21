@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "artifact_kind": "verified_claims_step2_bain_source_adjudication",
+  "immutable": true,
+  "shadow_only": true,
+  "report": "Bain & Company",
+  "source_pdf": {
+    "path": "out/browser_downloads/www.bain.com/9e6d7f717c38/tech-tonic-shifts.pdf",
+    "sha256": "07541f3433b72007010ff604a93d0c560b6c6709ffd7bb5a58fefa81908f86c7",
+    "physical_pages": [1]
+  },
+  "review_manifest": {
+    "path": "out/verified-claims-step2-editorial-review-20261021-v3-corrected/manifest.json",
+    "sha256": "b1dbc93228c7b65d7ed19b01a694c2ad8dc68532fb66dfc10d6f3166adf4561e"
+  },
+  "source_adjudication": [
+    {
+      "candidate_id": "market-growth-share-breakdown",
+      "review_record_sha256": "017f8239b57bc2e8fb3c9f6d9e88cbb7371abdfd1896b797aaab632f47f26367",
+      "original_review_decision": "revision_required",
+      "disposition": "source_consistent_but_scope_ambiguity_retained",
+      "finding": "The page headline uses the phrase top 20 gainers across sectors, while the chart label defines top 20 gainers per sector and the note describes category-level aggregation. The retained review flag is therefore a defensible editorial-scope warning, not an independently confirmed factual error.",
+      "review_decision_preserved": true,
+      "auto_approval": false
+    },
+    {
+      "candidate_id": "cloud-platform-catalysts",
+      "review_record_sha256": "b044f3ac405290bbc9f47fa37719f38817cebe71ae236faf9b3cc08d4d63da02",
+      "original_review_decision": "revision_required",
+      "disposition": "source_consistent_but_scope_ambiguity_retained",
+      "finding": "The final replacement is supported by page 1 for the 2015-20 value-growth figures, cloud/platform catalyst framing, and four actions. The same page contains the headline/chart scope tension described above, so the reviewer's qualification remains material for acceptance even though the source itself contains both formulations.",
+      "review_decision_preserved": true,
+      "auto_approval": false
+    }
+  ],
+  "canonical_mutation": false,
+  "publication_write": false
+}

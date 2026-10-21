@@ -8,6 +8,11 @@ text: |
 
   Assess all six dimensions: factual_fidelity, analytical_validity,
   specificity, commercial_relevance, editorial_quality, and selection_quality.
+  selection_quality means individual-insight selection fit only: judge whether
+  this selected claim is sufficiently specific, useful, and relevant to the
+  report context. The supplied context is metadata, not factual evidence. Do
+  not infer report-level recall, theme completeness, or duplicate suppression
+  from one claim and its supplied pages; those remain Step 1 and E18 concerns.
   Factual fidelity includes every material value, unit, metric relationship,
   population, cohort, denominator, geography, timeframe, attribution, and
   observed-versus-forecast status. Analytical validity permits a defensible

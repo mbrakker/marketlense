@@ -101,7 +101,11 @@ def _explicit_source_records(
         report_name = str(report or "").strip()
         source = raw_source if isinstance(raw_source, Mapping) else {}
         raw_path = str(source.get("path") or "").strip()
-        expected_sha = str(source.get("sha256") or "").strip().lower()
+        expected_sha = (
+            str(source.get("sha256") or source.get("sha256_expected") or "")
+            .strip()
+            .lower()
+        )
         path = _resolve_repository_path(raw_path)
         exists = path.is_file()
         actual_sha = ""

@@ -1692,3 +1692,126 @@ therefore **NO-GO** and unstarted. This review demonstrates retained-artifact
 editorial quality evidence; it does not claim fresh live shortlist recall,
 repeatability, canonical claim promotion, publication readiness, or WordPress
 writes.
+
+### Editorial acceptance integrity correction — 2026-10-21
+
+The acceptance boundary was corrected after the first independent review. The
+review payload validator now separates structural validity from decision
+consistency: malformed or incomplete responses are unresolved, while an
+`approved` response containing an unresolved dimension, material dimension
+rating, or material defect is an unresolved `review_decision_conflict`, not a
+fabricated rejection. Adequate and minor findings remain eligible. Material
+defect counts are claim-level counts. Approved responses also require a
+substantive source-grounded explanation and complete page-specific notes.
+
+The exact-cohort ledger now validates the 29 frozen-five identities and the 25
+additional-five identities (24 eligible plus the explicit Merchant Risk Council
+unavailable row) before provider calls. The frozen result also contains 39
+reference variants; those are recorded as an independent out-of-scope reference
+set rather than being silently treated as unknown selected claims. Missing,
+duplicate, unknown, wrong-report, wrong-cohort, and incorrectly classified rows
+block coverage. The written manifest carries separate `execution_status`,
+`coverage_status`, `editorial_acceptance_status`, and reason fields; a non-PASS
+manifest is still written for audit and the CLI exits nonzero afterward.
+
+The review request now receives only neutral report metadata and scope. It does
+not read retained generated summaries, topics, findings, or upstream answer
+content. `selection_quality` is explicitly limited to individual-insight fit;
+report-level recall, theme coverage, and duplicate suppression remain Step 1/E18
+questions. The source-record loader also accepts the retained
+`sha256_expected` source-ledger form and recomputes the actual PDF hash before
+rendering.
+
+#### Exact-cohort review comparison
+
+The raw fresh review is retained at
+`out/verified-claims-step2-editorial-review-20261021-v3/manifest.json`, SHA-256
+`0ca7df70987eef9d7d65ff4dd76aa9e06fdd12839886610246925c951436e28a`. It made
+53 GPT-6 Luna High calls, used 1,242,224 input tokens and 57,203 output tokens
+(1,299,427 total), cost an estimated `$0.152829`, took 742.780 seconds, rendered
+119 full pages, and observed zero cache reuse. A deterministic reconciliation of
+the same terminal rows after the identity fix is retained at
+`out/verified-claims-step2-editorial-review-20261021-v3-corrected/manifest.json`,
+SHA-256 `b1dbc93228c7b65d7ed19b01a694c2ad8dc68532fb66dfc10d6f3166adf4561e`.
+It made no provider calls and did not change any claim or review row.
+
+| Cohort/report | v2 baseline | Fresh v3 review | Observed change |
+|---|---:|---:|---|
+| Frozen / Capgemini Research Institute | 5 approved | 5 approved | No decision change. |
+| Frozen / Activate | 7 approved | 6 approved, 1 revision-required | `activate-ecommerce-capability-stack` omitted the PDF's exclusion of travel and tickets. |
+| Frozen / KPMG | 5 approved | 5 approved | No decision change. |
+| Frozen / Reuters Institute | 6 approved | 6 approved | Two supporting-page lists changed; one is an evidence defect noted below. |
+| Frozen / Adjust | 6 approved | 6 approved | Finance supporting pages narrowed from 34-38 to 35-38; page 34 is required for the global install/session values, so this review row is held for evidence completeness. |
+| Additional / DoubleVerify | 5 approved | 5 approved | No decision change. |
+| Additional / Merchant Risk Council | 4 approved, 1 unavailable | 4 approved, 1 unavailable | Explicit unavailable identity preserved. |
+| Additional / Algolia | 5 approved | 5 approved | No decision change. |
+| Additional / Bain & Company | 4 approved, 1 revision-required | 3 approved, 2 revision-required | `cloud-platform-catalysts` received the same defensible scope warning as `market-growth-share-breakdown`. |
+| Additional / Bigcommerce | 5 approved | 4 approved, 1 revision-required | `guest-checkout-abandonment` omitted the Digital Natives population. |
+
+The exact identities remained **29 frozen plus 25 additional = 54 rows**. The
+model terminal decisions changed from **52 approved / 1 revision-required / 1
+unresolved** in v2 to **49 approved / 4 revision-required / 1 unresolved** in
+v3. The corrected acceptance status is `execution_status=PASS`,
+`coverage_status=PASS`, and `editorial_acceptance_status=PARTIAL`; the only
+unresolved row is the known unavailable MRC binding. There were no failed or
+skipped review calls. The four material review flags are the three genuine
+scope/population issues above plus the existing Bain market-scope warning.
+Original claims, final wording, stable IDs, evidence IDs/spans, protected
+fields, source hashes, and retained source identity were unchanged across v2
+and v3. Four reviewer supporting-page lists changed; the model's page lists
+are not treated as canonical provenance without the source audit below.
+
+#### Source audit and Bain adjudication
+
+Manual inspection of the hash-matched original PDFs found two fresh-review
+evidence-binding defects that remain held rather than promoted. Reuters
+`ai-search-platform-relationships` was marked approved with physical page 10,
+but the 43% survey, 33%/38% Chartbeat values, and 2,500-site population are on
+physical page 12; page 10 is preceding context. Adjust
+`finance-benchmark-coverage` was marked approved with pages 35-38, while page
+34 contains the global -4% installs / +21% sessions values included in its final
+claim. These are independent review-evidence defects, not new source claims;
+the final claims remain shadow-only and are not counted as clean editorial
+sign-off. This is why the result is not upgraded to PASS.
+
+The Bain page-1 concern was adjudicated separately against the exact PDF hash
+without changing the original review decisions. The source contains both the
+headline wording "top 20 gainers across sectors" and the chart scope
+"top 20 gainers per sector" plus a category-aggregation note. The two review
+rows are therefore source-consistent but carry a defensible editorial-scope
+warning. The immutable adjudication is
+`docs/quality/verified-claims-step2-bain-source-adjudication-20261021.json`
+(SHA-256 `934a677e34edd78d628f2204a6eacdda71ffb4b655581d101c22c88be6ee457a`);
+it preserves both `revision_required` decisions, records `auto_approval=false`,
+and records no canonical or publication mutation.
+
+The retained Step 0 frozen-five technical gate remains independent: all 15
+reference cases / 39 variants were evaluated with **39/39 expected outcome
+matches**, **38 verified first pass**, one `ACT-004-wrong-page` unresolved, and
+zero false accepts or false rejects. No correction or verification replay was
+rerun for this acceptance-only correction.
+
+#### Prompt-baseline provenance
+
+The visual correction and verification token increases visible in the committed
+baseline were not introduced by the `a1c5510e` editorial-review commit itself.
+History shows that the Step 2 visual prompts changed across the preceding
+`2e56b17b`, `9d9f5bef`, `92392238`, `964f1d03`, `30b6070a`, and `c8082e3a`
+corrections while the corpus snapshot was not refreshed after every change.
+`a1c5510e` measured the current 49-fixture corpus, including the new editorial
+review namespace, so the visual correction (1,598 tokens) and verification
+(1,801 tokens) values reflect an overdue accumulated refresh rather than an
+unjustified reset. The current neutral-context/selection-scope wording adds a
+measured **+121 validation tokens** (current corpus 106,779 versus baseline
+106,658; estimated cost delta `$0.000012`); the prompt regression gate passes.
+The time-bounded allowlist records this exact editorial-review delta separately.
+
+#### Decision
+
+This correction is **PARTIAL**, not PASS: structural acceptance accounting,
+exact identity coverage, neutral review context, source-hash verification, and
+model-review execution are corrected and measured; manual source-page audit
+still holds two review rows, Bain scope remains revision-required, and P6 human
+acceptance, fresh Step 1 selection evidence, and canonical source-binding
+completeness remain open. Step 3 remains **NO-GO/unstarted**. No canonical
+promotion, publication-readiness mutation, or WordPress write occurred.
