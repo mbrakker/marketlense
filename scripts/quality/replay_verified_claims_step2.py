@@ -680,7 +680,13 @@ def _recovery_candidates_for_claim(
 def _retained_claims(
     reference: dict[str, Any], report: str
 ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]], list[dict[str, Any]]]:
-    """Load the exact retained Step 1 shortlist without fabricating fixtures."""
+    """Load the retained final-editorial roster without fabricating fixtures.
+
+    ``insights_final`` is the public editorial roster after Step 1 candidate
+    selection and final wording generation. It is intentionally not the raw
+    ``insights_candidates`` model pool; callers that need candidate-stage
+    recall must inspect that artifact section separately.
+    """
 
     artifact_path = _retained_artifact_path(reference, report)
     if not artifact_path.is_file():

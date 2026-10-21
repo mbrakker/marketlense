@@ -2327,3 +2327,37 @@ post-selection targeted replays and do not establish fresh Step 1 selection
 effectiveness, repeated-run stability, P6 human acceptance, or canonical
 source-binding completeness. Step 3 remains **NO-GO / unstarted** until those
 independent gates are satisfied.
+
+#### Ten-report source-grounded selection audit — 2026-10-22
+
+The exact frozen ten-report PDF/artifact cohort was independently audited at
+physical-page level for all 59 accessible final-editorial rows. All ten source
+hashes and page counts matched. The audit rated **33 HIGH, 22 MEDIUM, 4 LOW,
+and 0 INVALID** source-grounded rows; LOW denotes a source-supported but weak
+standalone editorial finding, not a factual failure. No independently confirmed
+unsupported material claim was marked verified. The Criteo
+`newer-channels-perceived-roi` row remains correctly `failed_verification`
+after two malformed verification attempts.
+
+The audit found no deterministic selector, semantic-deduplication,
+fallback-fidelity, or cache defect that supports a production patch. It did
+record bounded omissions within covered themes (including Reuters AI-browser
+impact p.41, KPMG execution tooling p.24, Criteo US campaign-cost increase
+p.7, Deloitte discovery-speed p.6, Emplifi positive-resolution repeat buying
+p.18, and StackAdapt first-party/contextual data p.12), one source-supported
+Emplifi final-stage roster substitution, one Algolia shadow binding-continuity
+limitation, and three provisional page recoveries. The Step2 replay evaluates
+`insights_final`, not necessarily the raw `insights_candidates` pool; stable
+IDs are not used as a quality proxy. Full matrix and before/after ledger:
+[`source-grounded-editorial-audit.md`](verified-claims-ten-report-acceptance-202610/source-grounded-editorial-audit.md).
+
+The audit itself was provider-free. A separate explicit replay was mistakenly
+started with a flag combination that does not enable provider-free operation;
+it was interrupted after 14 bounded calls (DoubleVerify 10, KPMG 4), 95,499
+input tokens, 4,930 output tokens, `$0.012016` estimated cost, and about 84
+seconds. It produced no accepted result and no canonical, publication, or
+WordPress write; those calls are excluded from all ten-report metrics.
+
+Step 1/E18 and Step2 remain **PARTIAL**; P6 remains open and Step 3 remains
+**NO-GO / unstarted**. No ranking, fallback, minimum-count, cache, canonical,
+or publication behavior was changed by this audit.

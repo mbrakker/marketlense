@@ -26,6 +26,7 @@
 - [Step1 root-cause analysis](step1-root-cause-analysis.md) — diagnosis and justified production changes.
 - [Step2 verification ledger](step2-verification-ledger.json) — original/final claims, correction and verification attempts, outcomes and bindings.
 - [Editorial scorecard](editorial-scorecard.md) and [structured scorecard](editorial-scorecard.json) — fresh claim-level review.
+- [Source-grounded editorial audit](source-grounded-editorial-audit.md) — independent physical-page review of all 59 final rows, omitted high-value candidates, and Step 1/Step 2 roster lineage.
 - [Repeatability analysis](repeatability-analysis.md) — independent-run limits and identity comparisons.
 - [Acceptance summary](acceptance-summary.md) — mutually exclusive outcomes and remaining gates.
 
