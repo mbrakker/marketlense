@@ -251,6 +251,14 @@ def _ensure_onsite_capture_artifact(
             in _ONSITE_PDF_FORMATS
         ):
             return str(existing_capture_path), onsite_capture_format
+        if (
+            existing_capture_path is not None
+            and existing_capture_path.is_file()
+            and not str(browser_html or "").strip()
+            and str(onsite_capture_format or "").strip().casefold()
+            in _ONSITE_HTML_FORMATS | _ONSITE_MARKDOWN_FORMATS
+        ):
+            return str(existing_capture_path), onsite_capture_format
     capture_html = str(browser_html or "")
     if not capture_html.strip():
         fetched_html = _try_fetch_onsite_capture_html(
@@ -459,13 +467,14 @@ def _generated_onsite_capture_format(
 ) -> str:
     normalized_format = str(onsite_capture_format or "").strip()
     lowered_format = normalized_format.casefold()
-    if suffix == ".md":
+    normalized_suffix = str(suffix or "").strip().casefold()
+    if normalized_suffix == ".md":
         return (
             normalized_format
             if lowered_format in _ONSITE_MARKDOWN_FORMATS
             else "markdown"
         )
-    if suffix == ".html":
+    if normalized_suffix == ".html":
         return normalized_format if lowered_format in _ONSITE_HTML_FORMATS else "html"
     return normalized_format or "browser_rendered_pdf"
 

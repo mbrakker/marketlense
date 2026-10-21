@@ -7,6 +7,7 @@ import pytest
 from src.services._browser_report_download._artifact import onsite as onsite_runtime
 from src.services._browser_report_download._artifact.onsite import (
     _capture_salvaged_onsite_html,
+    _generated_onsite_capture_format,
     _resolve_onsite_capture_path,
     _safe_onsite_capture_path,
 )
@@ -118,6 +119,16 @@ def test_already_html_recovery_preserves_path_and_bytes(tmp_path: Path) -> None:
 
     assert capture_path == downloaded_path.resolve()
     assert capture_path.read_bytes() == source_bytes
+
+
+def test_recovered_capture_format_normalizes_extension_case() -> None:
+    assert (
+        _generated_onsite_capture_format(
+            onsite_capture_format="browser_rendered_pdf",
+            suffix=".HTML",
+        )
+        == "html"
+    )
 
 
 def test_salvage_capture_long_unicode_url_stays_within_windows_budget(

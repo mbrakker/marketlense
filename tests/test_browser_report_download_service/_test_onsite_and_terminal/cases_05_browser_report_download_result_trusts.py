@@ -540,6 +540,54 @@ def test_existing_external_onsite_capture_is_materialized_into_attempt_workspace
     assert capture_format == "markdown"
 
 
+def test_existing_html_capture_reuses_without_terminal_fetch(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    attempt_dir = tmp_path / "browser-workspace"
+    source_path = attempt_dir / "onsite_report.html"
+    source_bytes = b"<html><body><article>existing report</article></body></html>"
+    attempt_dir.mkdir(parents=True)
+    source_path.write_bytes(source_bytes)
+    fetch_calls: list[str] = []
+
+    def record_fetch(*args, **kwargs):
+        fetch_calls.append(str(args[0] if args else kwargs.get("url", "")))
+        return None
+
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        record_fetch,
+    )
+    request_url = "https://example.com/research/local-rankflux"
+    capture_path, capture_format = _ensure_onsite_capture_artifact(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=request_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_tracker_redirect",
+        ),
+        ctx=run_context,
+        normalized_url=request_url,
+        download_dir=attempt_dir,
+        agent_result=BrowserUseAgentResult(route_kind="onsite_report"),
+        final_url=request_url,
+        final_page_title="Local RankFlux Research Report",
+        terminal_text_excerpt="",
+        route_steps=[],
+        browser_html="",
+        onsite_capture_path=str(source_path),
+        onsite_capture_format="html",
+    )
+
+    assert Path(capture_path).resolve() == source_path.resolve()
+    assert capture_format == "html"
+    assert Path(capture_path).read_bytes() == source_bytes
+    assert fetch_calls == []
+
+
 def test_finalized_external_onsite_capture_stays_in_attempt_workspace(
     tmp_path: Path,
     run_context,
@@ -885,6 +933,7 @@ __all__ = [
     "test_download_report_with_browser_use_salvages_terminal_state_on_timeout",
     "test_download_report_with_browser_use_materializes_claimed_onsite_capture",
     "test_existing_external_onsite_capture_is_materialized_into_attempt_workspace",
+    "test_existing_html_capture_reuses_without_terminal_fetch",
     "test_finalized_external_onsite_capture_stays_in_attempt_workspace",
     "test_onsite_html_capture_rejects_missing_pdf_claim_for_html_output",
     "test_onsite_markdown_capture_preserves_occupied_identity_artifacts",
