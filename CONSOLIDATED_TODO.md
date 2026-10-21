@@ -295,12 +295,14 @@ acceptance is demonstrated.
 **PATH-02 implementation evidence — 2026-10-21:** Baseline commits
 `117613fc3ba3ac30234357271ad463bd3601af29` and review-driven ownership fix
 `3fb07955c1c483bc81eee09e74dc4bfe8ef47c74` established attempt-owned,
-path-budgeted browser transfer. Final integrity commits `2ab809dc` and
-`a31780e8` extend the existing materializer with optional preferred filename and
+path-budgeted browser transfer. Final integrity commits `2ab809dc`, `a31780e8`,
+and follow-up `abff74d6` extend the existing materializer with optional preferred filename and
 source identity, replace destructive PDF-to-HTML rename and direct HTML/Markdown
 writes with uniquely staged no-clobber publication, preserve occupied and
 source artifacts, verify exact bytes on readback, and normalize recovered format
-labels to the actual extension. Cache-first stable namespaces, one exclusive
+labels to the actual extension. Valid existing HTML/Markdown captures are reused
+before terminal fetch when browser HTML is absent, and suffix metadata is
+case-normalized. Cache-first stable namespaces, one exclusive
 workspace per attempt, bounded wrapper recovery with cycle protection,
 no-destructive final cleanup, onsite/preflight workspace propagation, and
 preservation of unowned global browser temp directories remain unchanged.
@@ -308,10 +310,11 @@ preservation of unowned global browser temp directories remain unchanged.
 Native Windows focused validation passed 31 PATH-02 tests with 2
 symlink-privilege skips; the affected browser acquisition, preflight, session,
 cache and wrapper-recovery command passed 216 tests with 2 skips and 1
-deselection. The final on-site/materializer suite passed 84 tests covering
+deselection. The final on-site/materializer suite passed 86 tests covering
 occupied and identity-hashed collisions, exact replay, changed bytes,
 original-source preservation, `.html`/`.md` compatibility, long Unicode path
-budgeting, typed failure cleanup, and the actual service recovery route.
+budgeting, typed failure cleanup, existing-capture reuse without terminal fetch,
+and the actual service recovery route.
 Formatting, Ruff, forbidden-patching, architecture/import, role-I/O,
 service-boundary, contract snapshot, bounded-logging, test-file ownership and
 full-repository mypy gates passed (`0` tracked errors across 782 source files).
@@ -319,8 +322,8 @@ The native HTTP readback returned 44 exact bytes with SHA-256 prefix
 `8a11a347421a6dda`, stable/workspace/destination path lengths of `86/94/105`
 UTF-16 units, and no residual `.part` files.
 
-Hosted full CI passed on exact SHA `a31780e8` in
-[run 39591082284](https://github.com/mbrakker/marketlense/actions/runs/39591082284),
+Hosted full CI passed on exact SHA `abff74d6` in
+[run 39594640428](https://github.com/mbrakker/marketlense/actions/runs/39594640428),
 including default pytest/coverage, both mutation partitions, release evidence
 and all repository quality gates; the WordPress staging REST gate was skipped
 because its prerequisite was unavailable. The two external-symlink tests were
