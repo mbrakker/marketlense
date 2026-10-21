@@ -33,6 +33,7 @@ REPORT_GENERATION_NAMESPACES: tuple[str, ...] = (
     "report_vs/validate/semantic",
     "report_vs/validate/visual_claim_correction",
     "report_vs/validate/visual_claim_verification",
+    "report_vs/validate/editorial_review",
     "report_vs/taxonomy",
     "report_vs/taxonomy_repair",
     "report_vs/context_category_fit",
@@ -97,6 +98,7 @@ PRODUCTION_LLM_NAMESPACES: tuple[str, ...] = (
     "report_vs/validate/semantic",
     "report_vs/validate/visual_claim_correction",
     "report_vs/validate/visual_claim_verification",
+    "report_vs/validate/editorial_review",
     "signal_generation/synthesis",
     "briefing_generation/synthesis",
 )

@@ -1582,3 +1582,113 @@ work is an attributed independent review of the 29 final claims against the
 hash-bound PDFs, a fresh run retaining pre-selector evidence, and the E18
 three-run repeatability baseline. Step 1 remains **PARTIAL**, E18 and P6 remain
 **Active**, and Step 3 remains **unstarted**.
+
+### Independent LLM editorial acceptance review — 2026-10-21
+
+The missing independent review was completed as a separate, immutable,
+shadow-only acceptance artifact. It reviewed the final corrected claim from the
+retained Step 2 result against complete original PDF pages, report context, and
+source identity/page mapping. The review prompt did not receive the prior
+verifier verdict, verification rationale, quality score, or correction history;
+it assessed factual fidelity, analytical validity, specificity, commercial
+relevance, editorial quality, and selection quality independently. No wording,
+evidence binding, canonical artifact, readiness state, or publication output was
+mutated.
+
+The authoritative review manifest is retained locally at
+`out/verified-claims-step2-editorial-review-20261021-v2/manifest.json` with
+SHA-256
+`53c55f2af0cc96bb2d1c2e181ba2208d371bf2330b6f1994b32d7546a07b6b0b`. It binds
+the two input result/manifests, all ten expected PDF hashes, the reviewer model
+and reasoning policy, prompt hash
+`8e80f044ee5c4f38152ce9777b3e212f28254b5a09414fe55e1ae8cb52d71cee`, every
+original/final claim, stable ID, evidence identity, physical page list,
+decision, dimension assessment, source-grounded explanation, and page-specific
+diagnostics. All ten source hashes matched; no source-identity or page-render
+failure occurred.
+
+#### Review ledger
+
+| Cohort/report | Reviewed records | Decisions | Supporting physical pages cited |
+|---|---:|---|---|
+| Frozen / Capgemini Research Institute | 5 | 5 approved | 4, 6, 9, 35, 36, 45 |
+| Frozen / Activate | 7 | 7 approved | 4, 5, 14, 15, 26, 53, 96, 115, 136 |
+| Frozen / KPMG | 5 | 5 approved | 6, 11, 15, 17, 19, 21, 26, 33 |
+| Frozen / Reuters Institute | 6 | 6 approved | 12, 15, 18, 30, 36, 39 |
+| Frozen / Adjust | 6 | 6 approved | 9, 11, 13, 17, 19, 27–30, 34–38 |
+| Additional / DoubleVerify | 5 | 5 approved | 3, 4, 9, 10 |
+| Additional / Merchant Risk Council | 5 | 4 approved, 1 unresolved/unavailable | 2 for the four eligible claims |
+| Additional / Algolia | 5 | 5 approved | 5, 12, 26, 27 |
+| Additional / Bain & Company | 5 | 4 approved, 1 revision_required | 1 |
+| Additional / Bigcommerce | 5 | 5 approved | 4, 5, 7, 8 |
+
+The frozen-five set therefore has **29/29 approved**. The additional-five set
+has **24/24 eligible records reviewed**: **23 approved** and **1
+revision_required**; the 25th selected identity is the pre-existing Merchant
+Risk Council `post-purchase-fraud-section-scope` item with no safe page binding,
+and remains explicitly unresolved without a review call. Across the visible
+54-record denominator the decisions are **52 approved, 1 revision_required,
+and 1 unresolved**; there are no failed or skipped review invocations.
+
+The dimension results were: factual fidelity 52 strong / 1 material_issue;
+analytical validity 52 strong / 1 adequate; specificity 52 strong / 1
+minor_issue; commercial relevance 50 strong / 3 adequate; editorial quality
+51 strong / 2 adequate; and selection quality 53 strong. The sole material
+flag is the Bain `market-growth-share-breakdown` review. The reviewer read
+“top 20 gainers across sectors” as potentially ambiguous against the chart
+label “top 20 gainers per sector.” Direct inspection of the hash-matched PDF
+page 1 shows that the source itself contains both the exact headline wording
+used by the final claim (“top 20 gainers across sectors”) and the chart note
+“top 20 gainers per sector.” The final claim is therefore source-consistent;
+the reviewer flag is retained as an adversarial editorial diagnostic, not
+confirmed as a production factual defect. No automatic suggested correction was
+promoted.
+
+#### Measured execution and comparison
+
+The corrected review used **53 GPT-6 Luna High calls**, **1,309,714 input
+tokens**, **57,364 output tokens**, **1,367,078 total tokens**, estimated cost
+**$0.159650**, **804.018 seconds** wall time, **119 rendered full pages**, and
+zero observed cache reuse. The initial review pass was deliberately not used as
+the acceptance result: its inherited 2,048-token limit truncated two JSON
+responses and its reviewer-side gate skipped three provisional-recovery rows.
+The v2 pass raised only this new review namespace to 4,096 output tokens,
+re-reviewed all 53 eligible records, allowed existing `provisional_recovered`
+pages as inspection context without promotion, and produced complete responses.
+The first pass was 46 approved / 1 revision_required / 7 unresolved; the
+corrected acceptance pass is 52 / 1 / 1. The MRC unavailable row remained
+unresolved in both passes. No retry was added; the review namespace retains
+`provider_retry_count: 0`.
+
+The existing frozen-five technical result remains the independent corrected
+claim gate for all **15 reference cases / 39 variants**: **39/39 expected
+classifications matched**, with 38 verified first pass and
+`ACT-004-wrong-page` unresolved, and the 29 real retained claims were **29/29
+verified first pass**. The independent review did not replace that comparator
+or rewrite its raw result. The separate immutable adversarial acceptance record
+is at
+`out/verified-claims-step2-acceptance-20261021/adversarial-acceptance.json`,
+SHA-256
+`be6c681097397fc1ea7de5c6d9b0189eec1d938ed3ff333fca45bd2ecbee7d29`; it binds
+the original corpus/result/comparator hashes, matches **9/9**, records eight
+verified cases and one safe wrong-page abstention, and explicitly records
+`canonical_mutation: false` and `publication_write: false`. The original raw
+adversarial result was not overwritten and no second comparator was introduced.
+
+#### Acceptance decision
+
+The independent editorial review is **complete for the available retained
+claims**, with no independently confirmed unsupported material claim approved;
+the one reviewer material flag is source-consistent on manual PDF adjudication,
+and the one unresolved record is a known unavailable binding rather than a
+silent approval. The technical Step 2 implementation and its existing 39-case,
+provenance, retry, and shadow-write gates remain **PASS** within scope.
+
+Overall Step 2 remains **PARTIAL/BLOCKED**, not a canonical release approval:
+Step 0 still contains partial/unresolved canonical direct bindings, the retained
+inputs still lack raw pre-selector pools and a current-HEAD three-run selection
+baseline, E18 remains Active, and P6 human acceptance remains Active. Step 3 is
+therefore **NO-GO** and unstarted. This review demonstrates retained-artifact
+editorial quality evidence; it does not claim fresh live shortlist recall,
+repeatability, canonical claim promotion, publication readiness, or WordPress
+writes.

@@ -92,20 +92,20 @@
       "total_tokens": 22875
     },
     "validation": {
-      "estimated_cost_usd": 0.001145,
+      "estimated_cost_usd": 0.00156,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
-      "expected_output_tokens": 1520,
+      "expected_output_tokens": 1900,
       "expected_tool_calls": 0,
       "family": "validation",
-      "input_tokens": 3850,
-      "namespace_count": 4,
-      "runtime_ms": 5.1734,
+      "input_tokens": 6104,
+      "namespace_count": 5,
+      "runtime_ms": 5.5059,
       "schema_version": "1.0",
-      "total_tokens": 5370
+      "total_tokens": 8004
     }
   },
-  "fixture_count": 48,
+  "fixture_count": 49,
   "fixture_path": "C:\\Programing\\Market lense\\src\\prompts\\_dry_run_fixtures.yaml",
   "generated_at_utc": "2026-10-13T19:04:50.190279+00:00",
   "iterations": 3,
@@ -755,46 +755,60 @@
       "total_tokens": 920
     },
     "report_vs/validate/visual_claim_correction": {
-      "estimated_cost_usd": 0.000264,
+      "estimated_cost_usd": 0.000312,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 380,
       "expected_tool_calls": 0,
       "family": "validation",
-      "input_tokens": 741,
+      "input_tokens": 1218,
       "model": "gpt-6-luna",
       "namespace": "report_vs/validate/visual_claim_correction",
-      "runtime_ms": 1.0824,
+      "runtime_ms": 1.1041,
       "schema_version": "1.0",
-      "total_tokens": 1121
+      "total_tokens": 1598
     },
     "report_vs/validate/visual_claim_verification": {
-      "estimated_cost_usd": 0.000253,
+      "estimated_cost_usd": 0.000332,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 380,
       "expected_tool_calls": 0,
       "family": "validation",
-      "input_tokens": 626,
+      "input_tokens": 1421,
       "model": "gpt-6-luna",
       "namespace": "report_vs/validate/visual_claim_verification",
-      "runtime_ms": 1.2178,
+      "runtime_ms": 1.1187,
       "schema_version": "1.0",
-      "total_tokens": 1006
+      "total_tokens": 1801
+    },
+    "report_vs/validate/editorial_review": {
+      "estimated_cost_usd": 0.000288,
+      "expected_browser_attempts": 0,
+      "expected_ocr_calls": 0,
+      "expected_output_tokens": 380,
+      "expected_tool_calls": 0,
+      "family": "validation",
+      "input_tokens": 982,
+      "model": "gpt-6-luna",
+      "namespace": "report_vs/validate/editorial_review",
+      "runtime_ms": 1.1512,
+      "schema_version": "1.0",
+      "total_tokens": 1362
     }
   },
   "schema_version": "1.0",
   "totals": {
-    "estimated_cost_usd": 0.023472,
+    "estimated_cost_usd": 0.023887,
     "expected_browser_attempts": 7,
     "expected_ocr_calls": 1,
-    "expected_output_tokens": 32676,
+    "expected_output_tokens": 33056,
     "expected_tool_calls": 0,
     "family": "totals",
-    "input_tokens": 71348,
-    "namespace_count": 48,
-    "runtime_ms": 56.6935,
+    "input_tokens": 73602,
+    "namespace_count": 49,
+    "runtime_ms": 61.68,
     "schema_version": "1.0",
-    "total_tokens": 104024
+    "total_tokens": 106658
   }
 }

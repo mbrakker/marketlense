@@ -694,3 +694,15 @@ fixtures:
       source_json: '{"source_identity":"fixture-pdf","physical_page":4,"evidence_ids":["f1"]}'
       corrected_claim: "Digital wallets continue to expand in B2B and consumer checkout flows."
       image_page_map: "image 1 = physical PDF page 4"
+  - namespace: "report_vs/validate/editorial_review"
+    family: "validation"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_validation
+    system_variables: {}
+    user_variables:
+      final_claim: "Digital wallets continue to expand in B2B and consumer checkout flows."
+      report_context_json: '{"report_title":"fixture report","categories":["digital commerce"]}'
+      source_context_json: '{"source_identity":"fixture-pdf|pdf-sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","retained_physical_pages":[4],"inspected_physical_pages":[4],"evidence_ids":["f1"]}'
+      inspected_physical_pages_json: "[4]"
+      image_page_map: "image 1 = physical PDF page 4"

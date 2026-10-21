@@ -1,0 +1,32 @@
+text: |
+  Independently review this final corrected claim against the complete original
+  PDF pages attached to this request. The image-to-page mapping is authoritative
+  for physical page numbers and all supplied pages are complete, uncropped pages.
+
+  Report context:
+  {{ report_context_json }}
+
+  Source identity and retained provenance context:
+  {{ source_context_json }}
+
+  Inspected physical pages:
+  {{ inspected_physical_pages_json }}
+
+  Image-to-page mapping:
+  {{ image_page_map }}
+
+  Final corrected claim:
+  {{ final_claim }}
+
+  Do not request or infer the original claim, verifier outcome, verifier
+  rationale, or prior quality assessment. Judge the final claim itself. A
+  source-supported replacement may be accepted when it is commercially useful
+  and relevant to this report context. A generic statement, unrelated topic,
+  unsupported metric, unsupported cohort or denominator, wrong timeframe,
+  wrong geography, or forecast/observation swap must not be approved.
+
+  For an approved decision, cite at least one inspected physical page and give a
+  substantive source-grounded explanation plus exactly one note for each cited
+  page. For revision_required or rejected, explain the concrete defect and give
+  a suggested correction only when useful. Use unresolved when the response is
+  incomplete or the page evidence is ambiguous.
