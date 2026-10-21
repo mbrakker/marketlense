@@ -1137,7 +1137,7 @@ def _validate_cohort_identity_coverage(
             "result.real_shortlisted_set is not an object",
         )
 
-    if cohort == "additional_five":
+    if cohort in {"additional_five", "explicit_ten"}:
         inventory = result.get("shortlist_inventory")
         if not isinstance(inventory, list) or not inventory:
             _append_identity_issue(
@@ -2088,12 +2088,13 @@ def run_editorial_review(
     additional_source_manifest_path: Path,
     output_path: Path,
     page_adjudication_path: Path | None = None,
+    input_specs: Sequence[tuple[str, Path, Path]] | None = None,
 ) -> dict[str, Any]:
     started = time.perf_counter()
-    inputs = [
+    inputs = list(input_specs or [
         ("frozen_five", frozen_result_path, frozen_source_manifest_path),
         ("additional_five", additional_result_path, additional_source_manifest_path),
-    ]
+    ])
     loaded: list[
         tuple[
             str,
@@ -2560,10 +2561,23 @@ def write_immutable_manifest(path: Path, manifest: Mapping[str, Any]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--frozen-result", type=Path, required=True)
-    parser.add_argument("--frozen-source-manifest", type=Path, required=True)
-    parser.add_argument("--additional-result", type=Path, required=True)
-    parser.add_argument("--additional-source-manifest", type=Path, required=True)
+    parser.add_argument("--frozen-result", type=Path)
+    parser.add_argument("--frozen-source-manifest", type=Path)
+    parser.add_argument("--additional-result", type=Path)
+    parser.add_argument("--additional-source-manifest", type=Path)
+    parser.add_argument(
+        "--single-result",
+        type=Path,
+        help=(
+            "Review one explicit shortlist roster without loading the frozen-five "
+            "cohort."
+        ),
+    )
+    parser.add_argument(
+        "--single-source-manifest",
+        type=Path,
+        help="Source manifest paired with --single-result.",
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--page-adjudication", type=Path)
     parser.add_argument(
@@ -2582,18 +2596,65 @@ def main() -> int:
     args = parser.parse_args()
     if args.live and args.review_manifest is not None:
         parser.error("--review-manifest cannot be combined with --live")
-    if args.live:
-        manifest = run_editorial_review(
-            frozen_result_path=args.frozen_result,
-            frozen_source_manifest_path=args.frozen_source_manifest,
-            additional_result_path=args.additional_result,
-            additional_source_manifest_path=args.additional_source_manifest,
-            output_path=args.output,
-            page_adjudication_path=args.page_adjudication,
+    single_inputs = (args.single_result, args.single_source_manifest)
+    if any(value is not None for value in single_inputs):
+        if any(value is None for value in single_inputs):
+            parser.error(
+                "--single-result and --single-source-manifest must be supplied "
+                "together"
+            )
+        if any(
+            value is not None
+            for value in (
+                args.frozen_result,
+                args.frozen_source_manifest,
+                args.additional_result,
+                args.additional_source_manifest,
+            )
+        ):
+            parser.error(
+                "single-cohort inputs cannot be combined with the two-cohort inputs"
+            )
+    elif any(
+        value is None
+        for value in (
+            args.frozen_result,
+            args.frozen_source_manifest,
+            args.additional_result,
+            args.additional_source_manifest,
         )
+    ):
+        parser.error(
+            "the frozen/additional result and source-manifest arguments are required "
+            "unless --single-result is supplied"
+        )
+    if args.live:
+        if args.single_result is not None:
+            manifest = run_editorial_review(
+                frozen_result_path=Path(),
+                frozen_source_manifest_path=Path(),
+                additional_result_path=Path(),
+                additional_source_manifest_path=Path(),
+                output_path=args.output,
+                page_adjudication_path=args.page_adjudication,
+                input_specs=[
+                    ("explicit_ten", args.single_result, args.single_source_manifest)
+                ],
+            )
+        else:
+            manifest = run_editorial_review(
+                frozen_result_path=args.frozen_result,
+                frozen_source_manifest_path=args.frozen_source_manifest,
+                additional_result_path=args.additional_result,
+                additional_source_manifest_path=args.additional_source_manifest,
+                output_path=args.output,
+                page_adjudication_path=args.page_adjudication,
+            )
     else:
         if args.review_manifest is None:
             parser.error("--review-manifest is required unless --live is supplied")
+        if args.single_result is not None:
+            parser.error("--single-result is supported only with --live")
         manifest = reconcile_editorial_manifest(
             review_manifest_path=args.review_manifest,
             frozen_result_path=args.frozen_result,

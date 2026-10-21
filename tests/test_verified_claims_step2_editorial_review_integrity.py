@@ -218,6 +218,17 @@ def test_review_record_coverage_rejects_malformed_record() -> None:
     assert "review_record_malformed" in coverage["issue_codes"]
 
 
+def test_explicit_ten_roster_uses_inventory_identity_validation() -> None:
+    validation = _validate_cohort_identity_coverage(
+        _additional_result([_claim("candidate-a"), _claim("candidate-b")]),
+        cohort="explicit_ten",
+    )
+
+    assert validation["coverage_status"] == "PASS"
+    assert validation["expected_count"] == 2
+    assert validation["actual_count"] == 2
+
+
 def test_acceptance_summary_blocks_missing_review_record_coverage() -> None:
     validation = _validate_cohort_identity_coverage(
         _additional_result([_claim("candidate-a"), _claim("candidate-b")]),
