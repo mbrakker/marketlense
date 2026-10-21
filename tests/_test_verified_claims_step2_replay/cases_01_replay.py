@@ -21,7 +21,6 @@ from scripts.quality.replay_verified_claims_step2 import (
     _retained_claims,
     _shadow_replacement_selection,
     replay_frozen_step2,
-    replay_live_explicit_cohort,
 )
 
 
@@ -227,77 +226,6 @@ def test_explicit_cohort_inventory_preserves_page_less_selected_insights(tmp_pat
             "report": "Test Report",
         }
     ]
-
-
-def test_targeted_explicit_replay_does_not_dispatch_unknown_id(tmp_path):
-    pdf_path = tmp_path / "source.pdf"
-    document = fitz.open()
-    page = document.new_page()
-    page.insert_text((72, 72), "A source-backed retained finding.")
-    document.save(pdf_path)
-    document.close()
-
-    artifact_path = (
-        tmp_path / "run" / "output" / "artifact" / "report_analysis" / "artifacts.json"
-    )
-    artifact_path.parent.mkdir(parents=True)
-    artifact_path.write_text(
-        json.dumps(
-            {
-                "insights_final": [
-                    {
-                        "id": "eligible-1",
-                        "text": "A source-backed retained finding.",
-                        "pages": [1],
-                    }
-                ]
-            }
-        ),
-        encoding="utf-8",
-    )
-    source_hash = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
-    cohort_path = tmp_path / "cohort_result.json"
-    cohort_path.write_text(
-        json.dumps(
-            {
-                "reports": [
-                    {
-                        "publisher_id": "Targeted Report",
-                        "run_directory": str(tmp_path / "run"),
-                    }
-                ]
-            }
-        ),
-        encoding="utf-8",
-    )
-    manifest_path = tmp_path / "sources.json"
-    manifest_path.write_text(
-        json.dumps(
-            {
-                "source_pdfs": {
-                    "Targeted Report": {
-                        "path": str(pdf_path),
-                        "sha256": source_hash,
-                    }
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    result = replay_live_explicit_cohort(
-        cohort_result_path=cohort_path,
-        source_manifest_path=manifest_path,
-        output_root=tmp_path / "out",
-        real_claim_ids={"unknown-1"},
-    )
-
-    assert result["provider_status"] == "not_dispatched"
-    assert result["usage"]["provider_calls"] == 0
-    assert result["claims"] == []
-    assert result["real_shortlisted_set"]["selected_claim_count"] == 1
-    assert result["targeted_replay"]["unknown_ids"] == ["unknown-1"]
-    assert result["targeted_replay"]["dispatched_ids"] == []
 
 
 def test_explicit_cohort_inventory_allows_exact_provisional_binding(

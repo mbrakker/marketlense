@@ -2221,7 +2221,7 @@ evaluated, skipped, unavailable, ambiguous, and unknown IDs/counts from the
 full-cohort `selected_count`, `eligible_count`, and `unavailable_count`.
 Unknown, ambiguous, and unavailable-only requests return `not_dispatched` with
 an actionable reason and zero provider calls. Unfiltered execution retains the
-existing full-cohort behavior. Focused replay coverage is **46 passed, 1
+existing full-cohort behavior. Focused replay coverage is **48 passed, 1
 skipped**. The provider-free exact replay remains **15 cases / 39 variants**,
 **29 retained IDs**, and **29/29 theme slots**, with all five source hashes
 matching and no provider or publication writes.
