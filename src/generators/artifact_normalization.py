@@ -206,8 +206,7 @@ def remap_editorial_plan_to_verified_facts(
         if isinstance(fact, dict) and _s(fact.get("fact_id")).strip()
     ]
     fact_evidence_ids = [
-        f"verified-fact:{_s(fact.get('fact_id')).strip()}"
-        for fact in facts
+        f"verified-fact:{_s(fact.get('fact_id')).strip()}" for fact in facts
     ]
     if not fact_evidence_ids:
         raise AppError(

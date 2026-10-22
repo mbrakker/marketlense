@@ -354,9 +354,10 @@ def test_verified_result_carries_independent_fact_after_metric_replacement(tmp_p
     assert item.verified_fact["statement"] == "Investment represented 53% of the mix."
     assert item.verified_fact["metric"] == verified_metric
     assert item.verified_fact["metric"] != item.original_metric_binding
-    assert item.verified_fact["source_pdf_sha256"] == hashlib.sha256(
-        (tmp_path / "source.pdf").read_bytes()
-    ).hexdigest()
+    assert (
+        item.verified_fact["source_pdf_sha256"]
+        == hashlib.sha256((tmp_path / "source.pdf").read_bytes()).hexdigest()
+    )
     assert item.verified_fact["supporting_physical_pages"] == [5]
 
 
@@ -399,13 +400,9 @@ def test_malformed_verification_response_can_use_one_bounded_retry(tmp_path):
     assert item.outcome == "verified_after_retry"
     assert len(item.correction_attempts) == 2
     assert len(item.verification_attempts) == 2
+    assert "verification_response_invalid" in item.verification_attempts[0].diagnostics
     assert (
-        "verification_response_invalid"
-        in item.verification_attempts[0].diagnostics
-    )
-    assert (
-        "verification_response_malformed"
-        in item.verification_attempts[0].diagnostics
+        "verification_response_malformed" in item.verification_attempts[0].diagnostics
     )
 
 

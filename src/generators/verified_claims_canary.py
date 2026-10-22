@@ -90,8 +90,7 @@ def build_visual_authority_admitter(
             retryable=False,
         )
     output_dir = str(
-        config.output_dir
-        or Path(default_output_dir) / "verified_claims_visual_canary"
+        config.output_dir or Path(default_output_dir) / "verified_claims_visual_canary"
     )
 
     def admit(candidates: Sequence[Mapping[str, Any]]) -> VisualAuthorityAdmission:
@@ -330,8 +329,10 @@ def _verified_fact_from_result(
         return "verified_fact_inspected_pages_missing", {}
     result_supporting_pages = _result_pages(result, ("supporting_physical_pages",))
     fact_supporting_pages = _pages(raw_fact.get("supporting_physical_pages"))
-    if result_supporting_pages and fact_supporting_pages and (
-        result_supporting_pages != fact_supporting_pages
+    if (
+        result_supporting_pages
+        and fact_supporting_pages
+        and (result_supporting_pages != fact_supporting_pages)
     ):
         return "verified_fact_supporting_pages_conflict", {}
     supporting_pages = _result_pages(result, ("supporting_physical_pages",))
@@ -474,9 +475,7 @@ def _verified_evidence_packs(facts: Sequence[Mapping[str, Any]]) -> dict[str, An
     }
 
 
-def _empty_admission(
-    audit: Dict[str, Any], reason: str
-) -> VisualAuthorityAdmission:
+def _empty_admission(audit: Dict[str, Any], reason: str) -> VisualAuthorityAdmission:
     audit["terminal_error"] = reason
     audit["digest"] = sha256_json({"terminal_error": reason})
     audit["quarantined_count"] = len(audit.get("quarantined") or [])

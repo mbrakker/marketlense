@@ -175,9 +175,7 @@ def _result(
     page = physical_page or candidate["pages"][0]
     corrected_id = corrected_evidence_id or evidence_id
     corrected_pages = (
-        [physical_page]
-        if physical_page is not None
-        else list(candidate["pages"])
+        [physical_page] if physical_page is not None else list(candidate["pages"])
     )
     if (
         verified_fact is None
@@ -409,12 +407,14 @@ def test_material_correction_is_admitted_from_verified_fact_without_original_bin
     assert fact["supporting_physical_pages"] == [4]
     assert fact["provenance"]["discovery_candidate_id"] == "candidate-1"
     assert fact["provenance"]["discovery_evidence_ids"] == ["finding-1"]
-    assert admission.verified_evidence_packs["findings"]["findings"][0][
-        "id"
-    ] == "verified-fact:candidate-1"
-    assert admission.verified_evidence_packs["findings"]["findings"][0][
-        "evidence"
-    ] != candidate["evidence"]
+    assert (
+        admission.verified_evidence_packs["findings"]["findings"][0]["id"]
+        == "verified-fact:candidate-1"
+    )
+    assert (
+        admission.verified_evidence_packs["findings"]["findings"][0]["evidence"]
+        != candidate["evidence"]
+    )
 
 
 def test_verified_fact_is_required_for_material_correction():
@@ -645,22 +645,19 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
         evidence_packs=_generation_evidence(2),
         settings=_settings(tmp_path),
         ctx=_ctx(),
-        openai_client=FakeOpenAI(
-            responses
-        ),
+        openai_client=FakeOpenAI(responses),
         prompt_client=prompt_client,
         analysis_store=FakeAnalysisStore(),
         visual_authority_admitter=admit,
     )
 
-    verified_ids = {
-        f"verified-fact:{candidate['id']}" for candidate in candidates
-    }
+    verified_ids = {f"verified-fact:{candidate['id']}" for candidate in candidates}
     assert {item["evidence_id"] for item in payload["insights_final"]} == verified_ids
     assert payload["quotes_final"] == []
-    assert payload["verified_facts"] == payload["_cache"]["visual_authority_canary"][
-        "verified_facts"
-    ]
+    assert (
+        payload["verified_facts"]
+        == payload["_cache"]["visual_authority_canary"]["verified_facts"]
+    )
     first_final = next(
         item
         for item in payload["insights_final"]
@@ -677,20 +674,23 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
         "report_vs/artifacts/insights_final"
     )
     assert final_vars["_visual_authority_digest"] == "d" * 64
-    assert f'"verified-fact:{candidates[0]["id"]}"' in final_vars[
-        "insights_candidates_json"
-    ]
-    assert f'"verified-fact:{candidates[1]["id"]}"' in final_vars[
-        "insights_candidates_json"
-    ]
+    assert (
+        f'"verified-fact:{candidates[0]["id"]}"'
+        in final_vars["insights_candidates_json"]
+    )
+    assert (
+        f'"verified-fact:{candidates[1]["id"]}"'
+        in final_vars["insights_candidates_json"]
+    )
     for namespace in (
         "report_vs/artifacts/expert_comment",
         "report_vs/artifacts/linkedin_post",
     ):
         downstream_vars = prompt_client.variables_for_namespace(namespace)
-        assert f'"verified-fact:{candidates[0]["id"]}"' in downstream_vars[
-            "metric_spine_json"
-        ]
+        assert (
+            f'"verified-fact:{candidates[0]["id"]}"'
+            in downstream_vars["metric_spine_json"]
+        )
     assert "The retained report confirms the trend." not in (
         prompt_client.variables_for_namespace("report_vs/artifacts/summary").get(
             "evidence_json", ""
@@ -826,9 +826,7 @@ def test_scoped_regeneration_preserves_visual_authority_pool(tmp_path):
         "digest": "e" * 64,
         "verified_fact_digest": "e" * 64,
         "verified_facts": deepcopy(visual_admission.verified_facts),
-        "verified_evidence_packs": deepcopy(
-            visual_admission.verified_evidence_packs
-        ),
+        "verified_evidence_packs": deepcopy(visual_admission.verified_evidence_packs),
         "admitted_candidates": deepcopy(visual_admission.admitted_candidates),
         "audit": {"admitted_count": 2},
     }
@@ -870,17 +868,16 @@ def test_scoped_regeneration_preserves_visual_authority_pool(tmp_path):
         prompt_client=_FakePromptClient(),
     )
 
-    final_ids = {
-        item["id"] for item in response.updated_artifacts["insights_final"]
-    }
+    final_ids = {item["id"] for item in response.updated_artifacts["insights_final"]}
     candidate_ids = {
         item["id"] for item in response.updated_artifacts["insights_candidates"]
     }
     assert final_ids <= {item["id"] for item in admitted}
     assert candidate_ids <= {item["id"] for item in admitted}
-    assert response.updated_artifacts["_cache"]["visual_authority_canary"][
-        "digest"
-    ] == "e" * 64
+    assert (
+        response.updated_artifacts["_cache"]["visual_authority_canary"]["digest"]
+        == "e" * 64
+    )
 
 
 def test_enabled_visual_cache_without_fact_snapshot_fails_closed(tmp_path):
@@ -932,9 +929,7 @@ def test_verified_regeneration_replaces_stale_toc_with_structural_context(tmp_pa
         "digest": "f" * 64,
         "verified_fact_digest": "f" * 64,
         "verified_facts": deepcopy(visual_admission.verified_facts),
-        "verified_evidence_packs": deepcopy(
-            visual_admission.verified_evidence_packs
-        ),
+        "verified_evidence_packs": deepcopy(visual_admission.verified_evidence_packs),
         "admitted_candidates": deepcopy(visual_admission.admitted_candidates),
         "audit": {"admitted_count": 2},
     }
@@ -951,4 +946,3 @@ def test_verified_regeneration_replaces_stale_toc_with_structural_context(tmp_pa
         "Raw discovery summary" not in str(item)
         for item in response.updated_artifacts["toc_topics_expanded"]
     )
-
