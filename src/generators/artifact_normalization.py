@@ -206,8 +206,7 @@ def remap_editorial_plan_to_verified_facts(
         if isinstance(fact, dict) and _s(fact.get("fact_id")).strip()
     ]
     fact_evidence_ids = [
-        f"verified-fact:{_s(fact.get('fact_id')).strip()}"
-        for fact in facts
+        f"verified-fact:{_s(fact.get('fact_id')).strip()}" for fact in facts
     ]
     if not fact_evidence_ids:
         raise AppError(
@@ -231,7 +230,8 @@ def remap_editorial_plan_to_verified_facts(
                 aliases.setdefault(identifier.casefold(), set()).add(evidence_id)
 
     themes: list[dict[str, Any]] = []
-    for index, theme in enumerate(plan["themes"]):
+    unmapped_themes: list[str] = []
+    for theme in plan["themes"]:
         mapped: list[str] = []
         for raw_evidence_id in theme["evidence_ids"]:
             targets = aliases.get(raw_evidence_id.casefold(), set())
@@ -240,8 +240,23 @@ def remap_editorial_plan_to_verified_facts(
                 if target not in mapped:
                     mapped.append(target)
         if not mapped:
-            mapped = [fact_evidence_ids[index % len(fact_evidence_ids)]]
+            unmapped_themes.append(theme["theme"])
+            continue
         themes.append({**theme, "evidence_ids": mapped})
+    if len(themes) < MIN_FINAL_ARTIFACT_INSIGHTS:
+        raise AppError(
+            code="verified_fact_editorial_coverage_insufficient",
+            message=(
+                "Verified-fact editorial coverage requires at least "
+                f"{MIN_FINAL_ARTIFACT_INSIGHTS} themes with unambiguous fact bindings"
+            ),
+            retryable=False,
+            context={
+                "verified_fact_count": len(fact_evidence_ids),
+                "mapped_theme_count": len(themes),
+                "unmapped_themes": unmapped_themes,
+            },
+        )
     return {"report_thesis": plan["report_thesis"], "themes": themes}
 
 
@@ -1016,7 +1031,7 @@ def _claim_has_safe_summary_evidence(claim: Dict[str, Any]) -> bool:
 
 def _span_is_safe_summary_source(span: Dict[str, Any]) -> bool:
     return _span_is_direct(span) or (
-        _s(span.get("source_pack")).strip() == "doc_map"
+        _s(span.get("source_pack")).strip() in {"doc_map", "verified_facts"}
         and bool(_s(span.get("text")).strip())
     )
 
@@ -3642,6 +3657,14 @@ def _build_evidence_span_index(
                 and family_status.get("status") == "generated"
                 and family_status.get("policy_action") == "keep"
             )
+            family_source = (
+                _s(family_status.get("source")).strip()
+                if isinstance(family_status, dict)
+                else ""
+            )
+            finding_source_pack = (
+                "verified_facts" if family_source == "verified_facts" else "findings"
+            )
             for item in findings_pack.get("findings") or []:
                 if not isinstance(item, dict):
                     continue
@@ -3656,7 +3679,7 @@ def _build_evidence_span_index(
                     continue
                 _register(
                     evidence_id=finding_id,
-                    source_pack="findings",
+                    source_pack=finding_source_pack,
                     pages=pages,
                     text=excerpt,
                 )
@@ -3675,7 +3698,11 @@ def _build_evidence_span_index(
                 ):
                     _register(
                         evidence_id=finding_id,
-                        source_pack="findings_statement",
+                        source_pack=(
+                            "verified_facts"
+                            if finding_source_pack == "verified_facts"
+                            else "findings_statement"
+                        ),
                         pages=pages,
                         text=statement,
                     )

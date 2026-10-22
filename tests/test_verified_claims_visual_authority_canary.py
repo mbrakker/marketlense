@@ -7,20 +7,20 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.contracts.regeneration import (
-    ArtifactRegenerationRequest,
-    RegenerationIssue,
-    RegenerationPlan,
-    RegenerationTarget,
-)
 from src.contracts.verified_claims import (
     VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
     VisualClaimEvaluationResponse,
     VisualClaimEvaluationResult,
 )
+from src.generators._artifact_generator.family_policy import (
+    build_artifact_family_status,
+)
 from src.generators._artifact_generator.generation import generate_artifacts
 from src.generators.artifact_normalization import (
+    artifact_evidence_span_index,
+    bind_artifact_evidence_spans,
     build_verified_fact_doc_map,
+    page_bound_direct_evidence_packs,
     remap_editorial_plan_to_verified_facts,
 )
 from src.generators.verified_claims_canary import (
@@ -42,55 +42,8 @@ from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _generation_responses,
     _insight,
 )
-from tests._test_report_regeneration_generator import (
-    _split_support_test_report_regeneration_generator as regeneration_support,
-)
-
-_FakeOpenAIClient = regeneration_support._FakeOpenAIClient
-_FakePromptClient = regeneration_support._FakePromptClient
-_current_artifacts = regeneration_support._current_artifacts
-_regeneration_evidence_packs = regeneration_support._evidence_packs
-_regeneration_settings = regeneration_support._settings
-_regeneration_ctx = regeneration_support._ctx
-_test_regenerate_artifacts = regeneration_support.regenerate_artifacts
 
 SOURCE_IDENTITY = f"frozen-report|pdf-sha256:{'a' * 64}"
-
-
-def _visual_regeneration_request(
-    current: dict, evidence: dict, tmp_path: Path
-) -> ArtifactRegenerationRequest:
-    return ArtifactRegenerationRequest(
-        report_id="visual-authority-regeneration",
-        report_name="visual-authority-regeneration",
-        attempt_index=1,
-        plan=RegenerationPlan(
-            mode="targeted",
-            targets=[
-                RegenerationTarget(
-                    target_section="insights_bundle",
-                    regenerate_steps=["insights_final"],
-                    issues=[
-                        RegenerationIssue(
-                            rule_id="grounding",
-                            affected_section="insights:insight-1.text",
-                            message="The retained wording needs repair.",
-                            severity="error",
-                            entity_id="insight:insight-1:text",
-                            evidence_ids=["f1"],
-                        )
-                    ],
-                )
-            ],
-        ),
-        current_artifacts=current,
-        doc_map=evidence["doc_map"],
-        evidence_packs=evidence,
-        settings=_regeneration_settings(tmp_path),
-        ctx=_regeneration_ctx(),
-        source_status=current["source_status"],
-        categories=["Category"],
-    )
 
 
 def _metric(value: str = "42%", *, cohort: str = "all buyers") -> dict[str, str]:
@@ -175,9 +128,7 @@ def _result(
     page = physical_page or candidate["pages"][0]
     corrected_id = corrected_evidence_id or evidence_id
     corrected_pages = (
-        [physical_page]
-        if physical_page is not None
-        else list(candidate["pages"])
+        [physical_page] if physical_page is not None else list(candidate["pages"])
     )
     if (
         verified_fact is None
@@ -409,12 +360,14 @@ def test_material_correction_is_admitted_from_verified_fact_without_original_bin
     assert fact["supporting_physical_pages"] == [4]
     assert fact["provenance"]["discovery_candidate_id"] == "candidate-1"
     assert fact["provenance"]["discovery_evidence_ids"] == ["finding-1"]
-    assert admission.verified_evidence_packs["findings"]["findings"][0][
-        "id"
-    ] == "verified-fact:candidate-1"
-    assert admission.verified_evidence_packs["findings"]["findings"][0][
-        "evidence"
-    ] != candidate["evidence"]
+    assert (
+        admission.verified_evidence_packs["findings"]["findings"][0]["id"]
+        == "verified-fact:candidate-1"
+    )
+    assert (
+        admission.verified_evidence_packs["findings"]["findings"][0]["evidence"]
+        != candidate["evidence"]
+    )
 
 
 def test_verified_fact_is_required_for_material_correction():
@@ -556,6 +509,186 @@ def test_same_id_equivalent_duplicate_is_evaluated_once_without_quarantine():
     assert admission.audit["coverage_complete"] is True
 
 
+def test_verified_facts_survive_explicit_unresolved_sibling_results():
+    first = _candidate("candidate-1", evidence_id="finding-1", page=4)
+    second = _candidate("candidate-2", evidence_id="finding-2", page=5)
+
+    admission = admit_visual_authority_candidates(
+        candidates=[first, second],
+        evaluation=_response(
+            _result(first),
+            _result(second, outcome="unresolved"),
+        ),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(first, second),
+    )
+
+    assert [fact["fact_id"] for fact in admission.verified_facts] == ["candidate-1"]
+    assert admission.audit["coverage_complete"] is True
+    assert admission.audit["outcome_counts"] == {"verified": 1, "unresolved": 1}
+    assert admission.audit["quarantined"] == [
+        {"candidate_id": "candidate-2", "reason": "outcome_unresolved"}
+    ]
+
+
+def test_missing_result_is_an_integrity_failure_not_partial_admission():
+    first = _candidate("candidate-1", evidence_id="finding-1", page=4)
+    second = _candidate("candidate-2", evidence_id="finding-2", page=5)
+
+    admission = admit_visual_authority_candidates(
+        candidates=[first, second],
+        evaluation=_response(_result(first)),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(first, second),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["terminal_error"] == "evaluation_coverage_incomplete"
+    assert {item["reason"] for item in admission.audit["quarantined"]} == {
+        "evaluation_missing"
+    }
+
+
+def test_duplicate_result_id_is_an_integrity_failure_not_first_result_wins():
+    candidate = _candidate()
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(
+            _result(candidate),
+            _result(candidate, final_claim="A conflicting duplicate result."),
+        ),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["terminal_error"] == "evaluation_coverage_incomplete"
+    assert admission.audit["quarantined"] == [
+        {"candidate_id": "candidate-1", "reason": "duplicate_evaluation_id"}
+    ]
+
+
+def test_unexpected_result_id_is_an_integrity_failure_not_an_extra_fact():
+    candidate = _candidate()
+    unexpected = _candidate("candidate-2", evidence_id="finding-2", page=5)
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(_result(candidate), _result(unexpected)),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["terminal_error"] == "evaluation_coverage_incomplete"
+    assert admission.audit["quarantined"] == [
+        {"candidate_id": "candidate-2", "reason": "evaluation_unexpected_id"}
+    ]
+
+
+def test_failed_verification_is_accounted_without_discarding_valid_sibling():
+    verified = _candidate("candidate-1", evidence_id="finding-1", page=4)
+    failed = _candidate("candidate-2", evidence_id="finding-2", page=5)
+
+    admission = admit_visual_authority_candidates(
+        candidates=[verified, failed],
+        evaluation=_response(
+            _result(verified),
+            _result(failed, outcome="failed_verification"),
+        ),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(verified, failed),
+    )
+
+    assert [fact["fact_id"] for fact in admission.verified_facts] == ["candidate-1"]
+    assert admission.audit["coverage_complete"] is True
+    assert admission.audit["outcome_counts"] == {
+        "verified": 1,
+        "failed_verification": 1,
+    }
+    assert admission.audit["quarantined"] == [
+        {"candidate_id": "candidate-2", "reason": "outcome_failed_verification"}
+    ]
+
+
+def test_verified_fact_projection_is_not_direct_quote_evidence():
+    candidate = _candidate()
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(_result(candidate)),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    evidence_id = "verified-fact:candidate-1"
+    index = artifact_evidence_span_index(
+        doc_map={}, evidence_packs=admission.verified_evidence_packs
+    )
+    assert index[evidence_id][0]["source_pack"] == "verified_facts"
+    assert (
+        page_bound_direct_evidence_packs(admission.verified_evidence_packs)["findings"][
+            "findings"
+        ]
+        == []
+    )
+    quote_status = build_artifact_family_status(
+        summary={},
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[
+            {
+                "text": candidate["text"],
+                "evidence_id": evidence_id,
+                "evidence_spans": index[evidence_id],
+            }
+        ],
+        expert_comment="",
+        linkedin_post="",
+    )
+    assert quote_status["quotes"]["reason"] == "quotes_missing_verbatim_source"
+
+    projected = deepcopy(admission.admitted_candidates[0])
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=[projected],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs=admission.verified_evidence_packs,
+    )
+    assert projected["text"] == candidate["text"]
+    assert projected["pages"] == [4]
+    assert projected["source_identity"] == SOURCE_IDENTITY
+    assert projected["evidence_spans"][0]["source_pack"] == "verified_facts"
+    assert projected["evidence_spans"][0]["text"] != candidate["evidence"]
+
+
+def test_invalid_terminal_outcome_fails_closed_as_malformed_accounting():
+    candidate = _candidate()
+    result = _result(candidate, outcome="rejected")
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(result),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["terminal_error"] == "evaluation_coverage_incomplete"
+    assert admission.audit["quarantined"] == [
+        {"candidate_id": "candidate-1", "reason": "evaluation_outcome_invalid"}
+    ]
+
+
 def test_verified_fact_conflicting_identity_fails_closed():
     candidate = _candidate()
     result = _result(
@@ -645,22 +778,19 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
         evidence_packs=_generation_evidence(2),
         settings=_settings(tmp_path),
         ctx=_ctx(),
-        openai_client=FakeOpenAI(
-            responses
-        ),
+        openai_client=FakeOpenAI(responses),
         prompt_client=prompt_client,
         analysis_store=FakeAnalysisStore(),
         visual_authority_admitter=admit,
     )
 
-    verified_ids = {
-        f"verified-fact:{candidate['id']}" for candidate in candidates
-    }
+    verified_ids = {f"verified-fact:{candidate['id']}" for candidate in candidates}
     assert {item["evidence_id"] for item in payload["insights_final"]} == verified_ids
     assert payload["quotes_final"] == []
-    assert payload["verified_facts"] == payload["_cache"]["visual_authority_canary"][
-        "verified_facts"
-    ]
+    assert (
+        payload["verified_facts"]
+        == payload["_cache"]["visual_authority_canary"]["verified_facts"]
+    )
     first_final = next(
         item
         for item in payload["insights_final"]
@@ -677,20 +807,23 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
         "report_vs/artifacts/insights_final"
     )
     assert final_vars["_visual_authority_digest"] == "d" * 64
-    assert f'"verified-fact:{candidates[0]["id"]}"' in final_vars[
-        "insights_candidates_json"
-    ]
-    assert f'"verified-fact:{candidates[1]["id"]}"' in final_vars[
-        "insights_candidates_json"
-    ]
+    assert (
+        f'"verified-fact:{candidates[0]["id"]}"'
+        in final_vars["insights_candidates_json"]
+    )
+    assert (
+        f'"verified-fact:{candidates[1]["id"]}"'
+        in final_vars["insights_candidates_json"]
+    )
     for namespace in (
         "report_vs/artifacts/expert_comment",
         "report_vs/artifacts/linkedin_post",
     ):
         downstream_vars = prompt_client.variables_for_namespace(namespace)
-        assert f'"verified-fact:{candidates[0]["id"]}"' in downstream_vars[
-            "metric_spine_json"
-        ]
+        assert (
+            f'"verified-fact:{candidates[0]["id"]}"'
+            in downstream_vars["metric_spine_json"]
+        )
     assert "The retained report confirms the trend." not in (
         prompt_client.variables_for_namespace("report_vs/artifacts/summary").get(
             "evidence_json", ""
@@ -698,7 +831,7 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
     )
 
 
-def test_verified_fact_context_removes_discovery_facts_and_remaps_plan_ids():
+def test_verified_fact_context_removes_discovery_facts_and_omits_unmapped_themes():
     source_doc_map = {
         "doc_id": "report-1",
         "title": "Report title",
@@ -721,13 +854,21 @@ def test_verified_fact_context_removes_discovery_facts_and_remaps_plan_ids():
                 "discovery_candidate_id": "candidate-1",
                 "discovery_evidence_ids": ["finding-1"],
             },
-        }
+        },
+        {
+            "fact_id": "candidate-2",
+            "provenance": {
+                "discovery_candidate_id": "candidate-2",
+                "discovery_evidence_ids": ["finding-2"],
+            },
+        },
     ]
     plan = {
         "report_thesis": "The report has a planning thesis.",
         "themes": [
             {"theme": "Theme 1", "priority": 1, "evidence_ids": ["finding-1"]},
             {"theme": "Theme 2", "priority": 2, "evidence_ids": ["missing"]},
+            {"theme": "Theme 3", "priority": 3, "evidence_ids": ["finding-2"]},
         ],
     }
 
@@ -742,8 +883,27 @@ def test_verified_fact_context_removes_discovery_facts_and_remaps_plan_ids():
     }
     assert [theme["evidence_ids"] for theme in remapped["themes"]] == [
         ["verified-fact:candidate-1"],
-        ["verified-fact:candidate-1"],
+        ["verified-fact:candidate-2"],
     ]
+
+
+def test_verified_fact_context_fails_closed_when_coverage_has_one_mapped_theme():
+    plan = {
+        "report_thesis": "The report has a planning thesis.",
+        "themes": [
+            {"theme": "Theme 1", "priority": 1, "evidence_ids": ["finding-1"]},
+            {"theme": "Unsupported", "priority": 2, "evidence_ids": ["missing"]},
+        ],
+    }
+    facts = [
+        {
+            "fact_id": "candidate-1",
+            "provenance": {"discovery_evidence_ids": ["finding-1"]},
+        }
+    ]
+
+    with pytest.raises(AppError, match="Verified-fact editorial coverage"):
+        remap_editorial_plan_to_verified_facts(plan, facts)
 
 
 def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path):
@@ -813,142 +973,3 @@ def test_canary_configuration_requires_expected_pdf_hash():
             settings=object(),
             doc_map={},
         )
-
-
-def test_scoped_regeneration_preserves_visual_authority_pool(tmp_path):
-    current = _current_artifacts()
-    admitted = deepcopy(current["insights_final"][:2])
-    visual_admission = _verified_admission(admitted, digest="e" * 64)
-    current["insights_candidates"] = deepcopy(admitted)
-    current["verified_facts"] = deepcopy(visual_admission.verified_facts)
-    current["_cache"]["visual_authority_canary"] = {
-        "enabled": True,
-        "digest": "e" * 64,
-        "verified_fact_digest": "e" * 64,
-        "verified_facts": deepcopy(visual_admission.verified_facts),
-        "verified_evidence_packs": deepcopy(
-            visual_admission.verified_evidence_packs
-        ),
-        "admitted_candidates": deepcopy(visual_admission.admitted_candidates),
-        "audit": {"admitted_count": 2},
-    }
-    evidence = _regeneration_evidence_packs()
-
-    response = _test_regenerate_artifacts(
-        ArtifactRegenerationRequest(
-            report_id="visual-authority-regeneration",
-            report_name="visual-authority-regeneration",
-            attempt_index=1,
-            plan=RegenerationPlan(
-                mode="targeted",
-                targets=[
-                    RegenerationTarget(
-                        target_section="insights_bundle",
-                        regenerate_steps=["insights_final"],
-                        issues=[
-                            RegenerationIssue(
-                                rule_id="grounding",
-                                affected_section="insights:insight-1.text",
-                                message="The retained wording needs repair.",
-                                severity="error",
-                                entity_id="insight:insight-1:text",
-                                evidence_ids=["f1"],
-                            )
-                        ],
-                    )
-                ],
-            ),
-            current_artifacts=current,
-            doc_map=evidence["doc_map"],
-            evidence_packs=evidence,
-            settings=_regeneration_settings(tmp_path),
-            ctx=_regeneration_ctx(),
-            source_status=current["source_status"],
-            categories=["Category"],
-        ),
-        openai_client=_FakeOpenAIClient(),
-        prompt_client=_FakePromptClient(),
-    )
-
-    final_ids = {
-        item["id"] for item in response.updated_artifacts["insights_final"]
-    }
-    candidate_ids = {
-        item["id"] for item in response.updated_artifacts["insights_candidates"]
-    }
-    assert final_ids <= {item["id"] for item in admitted}
-    assert candidate_ids <= {item["id"] for item in admitted}
-    assert response.updated_artifacts["_cache"]["visual_authority_canary"][
-        "digest"
-    ] == "e" * 64
-
-
-def test_enabled_visual_cache_without_fact_snapshot_fails_closed(tmp_path):
-    current = _current_artifacts()
-    current["_cache"]["visual_authority_canary"] = {
-        "enabled": True,
-        "admitted_candidates": deepcopy(current["insights_final"][:2]),
-    }
-    evidence = _regeneration_evidence_packs()
-
-    with pytest.raises(AppError, match="complete visual fact snapshot"):
-        _test_regenerate_artifacts(
-            _visual_regeneration_request(current, evidence, tmp_path),
-            openai_client=_FakeOpenAIClient(),
-            prompt_client=_FakePromptClient(),
-        )
-
-
-def test_verified_regeneration_replaces_stale_toc_with_structural_context(tmp_path):
-    current = _current_artifacts()
-    admitted = deepcopy(current["insights_final"][:2])
-    visual_admission = _verified_admission(admitted, digest="f" * 64)
-    current["insights_candidates"] = deepcopy(admitted)
-    current["verified_facts"] = deepcopy(visual_admission.verified_facts)
-    current["toc_entries"] = [
-        {
-            "section_id": "raw-section",
-            "section_title": "Raw discovery title",
-            "display_title": "Raw discovery title",
-            "summary": "Raw discovery summary",
-            "topic_matters": "Raw discovery summary",
-            "key_points": [],
-            "evidence_ids": [],
-            "pages": [],
-            "order": 1,
-            "status": "toc_only",
-        }
-    ]
-    current["toc_topics"] = ["Raw discovery title"]
-    current["toc_topics_expanded"] = [
-        {
-            "topic": "Raw discovery title",
-            "summary": "Raw discovery summary",
-            "key_points": [],
-        }
-    ]
-    current["_cache"]["visual_authority_canary"] = {
-        "enabled": True,
-        "digest": "f" * 64,
-        "verified_fact_digest": "f" * 64,
-        "verified_facts": deepcopy(visual_admission.verified_facts),
-        "verified_evidence_packs": deepcopy(
-            visual_admission.verified_evidence_packs
-        ),
-        "admitted_candidates": deepcopy(visual_admission.admitted_candidates),
-        "audit": {"admitted_count": 2},
-    }
-    evidence = _regeneration_evidence_packs()
-
-    response = _test_regenerate_artifacts(
-        _visual_regeneration_request(current, evidence, tmp_path),
-        openai_client=_FakeOpenAIClient(),
-        prompt_client=_FakePromptClient(),
-    )
-
-    assert "Raw discovery title" not in response.updated_artifacts["toc_topics"]
-    assert all(
-        "Raw discovery summary" not in str(item)
-        for item in response.updated_artifacts["toc_topics_expanded"]
-    )
-

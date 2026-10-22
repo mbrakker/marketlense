@@ -176,9 +176,7 @@ class VisualClaimEvaluationResult:
     )
     corrected_evidence_spans: List[Dict[str, Any]] = field(
         default_factory=list,
-        metadata={
-            "doc": "Evidence spans bound to the final corrected proposition."
-        },
+        metadata={"doc": "Evidence spans bound to the final corrected proposition."},
     )
     corrected_metric_binding: Dict[str, Any] = field(
         default_factory=dict,

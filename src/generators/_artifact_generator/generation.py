@@ -40,6 +40,7 @@ from src.generators._artifact_generator.storage import (
 from src.generators._artifact_generator.toc import build_toc_artifacts
 from src.generators.artifact_normalization import (
     EDITORIAL_PLAN_TRANSFORM_VERSION,
+    MIN_FINAL_ARTIFACT_INSIGHTS,
     REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     artifact_base_variables,
     artifact_quote_candidates,
@@ -1312,17 +1313,16 @@ def generate_artifacts(
             admission, "admitted_candidates", []
         )
         visual_authority_digest = _s(getattr(admission, "digest", "")).strip()
-        visual_authority_audit = deepcopy(
-            getattr(admission, "audit", {})
-        )
+        visual_authority_audit = deepcopy(getattr(admission, "audit", {}))
         visual_authority_verified_facts = getattr(admission, "verified_facts", [])
         visual_authority_evidence_packs = getattr(
             admission, "verified_evidence_packs", {}
         )
-        if not visual_authority_digest or not isinstance(
-            visual_authority_admitted_candidates, list
-        ) or not isinstance(visual_authority_verified_facts, list) or not isinstance(
-            visual_authority_evidence_packs, dict
+        if (
+            not visual_authority_digest
+            or not isinstance(visual_authority_admitted_candidates, list)
+            or not isinstance(visual_authority_verified_facts, list)
+            or not isinstance(visual_authority_evidence_packs, dict)
         ):
             raise AppError(
                 code="visual_authority_admission_malformed",
@@ -1335,10 +1335,20 @@ def generate_artifacts(
             )
         if not visual_authority_verified_facts or not visual_authority_evidence_packs:
             raise AppError(
-                code="visual_authority_admission_empty",
-                message="Visual authority admission returned no verified facts",
+                code="visual_authority_coverage_insufficient",
+                message=(
+                    "Visual authority admission has no verified facts to support "
+                    "the report"
+                ),
                 retryable=False,
-                context={"report_id": report_id},
+                context={
+                    "report_id": report_id,
+                    "coverage_reason": visual_authority_audit.get(
+                        "terminal_error", "no_verified_facts"
+                    ),
+                    "outcome_counts": visual_authority_audit.get("outcome_counts", {}),
+                    "quarantined": visual_authority_audit.get("quarantined", []),
+                },
             )
         active_doc_map = build_verified_fact_doc_map(safe_doc_map)
         active_evidence = deepcopy(visual_authority_evidence_packs)
@@ -1406,14 +1416,20 @@ def generate_artifacts(
             candidate_insights=[],
             editorial_plan=editorial_plan,
         )
-        if not insights_candidates:
+        if len(insights_candidates) < MIN_FINAL_ARTIFACT_INSIGHTS:
             raise AppError(
-                code="visual_authority_admission_empty",
+                code="visual_authority_coverage_insufficient",
                 message=(
-                    "Visual authority admission left no eligible insight candidates"
+                    "Visual authority admission does not meet the existing minimum "
+                    "insight coverage requirement"
                 ),
                 retryable=False,
-                context={"report_id": report_id},
+                context={
+                    "report_id": report_id,
+                    "required_count": MIN_FINAL_ARTIFACT_INSIGHTS,
+                    "admitted_count": len(insights_candidates),
+                    "coverage_reason": "verified_facts_below_minimum_insight_count",
+                },
             )
         if cache_meta is None:
             cache_meta = {}
@@ -1428,9 +1444,7 @@ def generate_artifacts(
                 fields={
                     "report_id": report_id,
                     "admitted_count": len(insights_candidates),
-                    "evaluated_count": visual_authority_audit.get(
-                        "evaluated_count", 0
-                    ),
+                    "evaluated_count": visual_authority_audit.get("evaluated_count", 0),
                     "quarantined_count": visual_authority_audit.get(
                         "quarantined_count", 0
                     ),
@@ -1708,7 +1722,7 @@ def generate_artifacts(
             )
         if quote_model_required and not quotes_final and allow_quote_fallback:
             quotes_final = fallback_artifact_quotes_from_candidates(
-            active_evidence.get("quote_candidates")
+                active_evidence.get("quote_candidates")
             )
             if quotes_final:
                 logger.info(

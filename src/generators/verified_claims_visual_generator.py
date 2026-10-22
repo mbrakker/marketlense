@@ -586,9 +586,7 @@ def _normalise_verified_fact_payload(
     for alias, field_name in (("direction", "trend"), ("population", "segment")):
         if not metric[field_name] and alias in raw_metric:
             metric[field_name] = copy.deepcopy(raw_metric.get(alias))
-    if metric["value"] and (
-        not _text(metric["label"]) or not _text(metric["unit"])
-    ):
+    if metric["value"] and (not _text(metric["label"]) or not _text(metric["unit"])):
         return {}, ["verification_verified_fact_metric_incomplete"]
     raw_qualifiers = raw_fact.get("qualifiers", [])
     if not isinstance(raw_qualifiers, list) or any(
@@ -596,9 +594,13 @@ def _normalise_verified_fact_payload(
     ):
         return {}, ["verification_verified_fact_qualifiers_invalid"]
     raw_pages = raw_fact.get("supporting_physical_pages")
-    if raw_pages is not None and _strict_physical_page_list(
-        {"supporting_physical_pages": raw_pages}, "supporting_physical_pages"
-    ) is None:
+    if (
+        raw_pages is not None
+        and _strict_physical_page_list(
+            {"supporting_physical_pages": raw_pages}, "supporting_physical_pages"
+        )
+        is None
+    ):
         return {}, ["verification_verified_fact_pages_invalid"]
     return {
         "statement": statement,
