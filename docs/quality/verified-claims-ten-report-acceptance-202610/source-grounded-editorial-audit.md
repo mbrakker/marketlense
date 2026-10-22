@@ -173,3 +173,11 @@ Criteo `newer-channels-perceived-roi` is the reliability negative case: the orig
 - The report has no evidence that raising the minimum count, changing theme weighting, or adding a business-keyword score would improve quality without weakening diversity or factual safeguards.
 
 The evidence therefore supports **PARTIAL**, with Step 1/E18 and Step 2 shadow verification still open. It does not support closing P6, claiming live selection improvement, promoting canonical verified claims, or starting Step 3.
+
+## Source-recall acceptance oracle — 2026-10-22
+
+The compact [source-recall reference set](source-recall-reference-set.json) records six materially important source findings against the exact hash-matched PDFs. Each row includes the physical page, bounded source quotation, metric/population/timeframe/status where applicable, commercial importance, and an essential-versus-alternative classification. Semantic credit is intentionally strict: a related topic or adjacent commercial implication does not count as the same finding.
+
+Against the retained ten-report final roster, **0/6 reference findings received semantic recall credit**. Emplifi's repeat-buying result is the one `essential` omission; the Reuters, KPMG, Criteo, Deloitte, and StackAdapt rows are `valuable_alternative` omissions. The selected rows remain source-grounded; this is an editorial-recall result, not a factual-error count. KPMG is further qualified because its page-24 quote is source-verified in the audit inventory but has no supported `quote-2` row in the retained evidence-fidelity ledger, so its exact selector eligibility cannot be reconstructed.
+
+The five supported non-KPMG rows were present in the retained candidate/finding inventory and absent from the selected candidate roster. The artifacts do not persist per-candidate rejection reasons, so the evidence supports a bounded candidate-stage selection/final editorial trade-off but not a deterministic ranking defect. No keyword score, minimum-count increase, or forced replacement is justified by this post-selection oracle alone. The oracle does not claim fresh live selection effectiveness; the clean repeatability and new-run results are recorded separately.

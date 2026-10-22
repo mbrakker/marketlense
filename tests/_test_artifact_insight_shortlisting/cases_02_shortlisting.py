@@ -540,7 +540,7 @@ def test_finding_fallback_covers_uncovered_themes_before_filling_capacity() -> N
 
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION == (
-        "evidence_backed_shortlisting:6"
+        "evidence_backed_shortlisting:7"
     )
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
         "stable_id_unique_selection:2"

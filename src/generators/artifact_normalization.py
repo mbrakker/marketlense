@@ -22,7 +22,7 @@ from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:6"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:7"
 
 METRIC_FIELDS = (
     "label",
@@ -534,6 +534,14 @@ def preserve_public_source_displays(
                     metric[field_name] = _preserve_source_displays(
                         _s(metric.get(field_name)), evidence
                     )
+            timeframe = _s(metric.get("timeframe")).strip()
+            if timeframe and not _source_text_contains_field(timeframe, evidence):
+                # A candidate may carry a period copied from a neighbouring
+                # finding.  The bound evidence is authoritative at this
+                # boundary; keep the supported metric but remove only the
+                # unsupported temporal qualifier before it reaches the spine
+                # and public copy families.
+                metric["timeframe"] = ""
         text_has_unsupported_number = _has_unsupported_material_number(
             _s(insight.get("text")), evidence
         )
@@ -709,6 +717,53 @@ def source_backed_summary_claim_bindings(
 
 def _preserve_source_displays(text: str, evidence: str) -> str:
     return preserve_unique_source_displays(text, evidence)
+
+
+def _source_text_contains_field(value: str, evidence: str) -> bool:
+    """Return whether a protected display is explicitly present in evidence."""
+
+    normalized_value = normalize_for_lookup(value)
+    normalized_evidence = normalize_for_lookup(evidence)
+    if not normalized_value:
+        return True
+    if normalized_value in normalized_evidence:
+        return True
+    value_tokens = set(re.findall(r"[a-z0-9%]+", normalized_value))
+    evidence_tokens = set(re.findall(r"[a-z0-9%]+", normalized_evidence))
+    value_tokens.difference_update(
+        {
+            "a",
+            "an",
+            "and",
+            "as",
+            "at",
+            "by",
+            "for",
+            "in",
+            "of",
+            "on",
+            "the",
+            "to",
+            "with",
+        }
+    )
+    return bool(value_tokens) and all(
+        token in evidence_tokens or _timeframe_token_is_present(token, evidence_tokens)
+        for token in value_tokens
+    )
+
+
+def _timeframe_token_is_present(token: str, evidence_tokens: set[str]) -> bool:
+    """Allow a conservative inflectional match without inferring a period."""
+
+    if any(character.isdigit() for character in token):
+        return False
+    stem_length = max(4, len(token) - 3)
+    stem = token[:stem_length]
+    return any(
+        len(candidate) >= stem_length and candidate[:stem_length] == stem
+        for candidate in evidence_tokens
+    )
 
 
 def _has_unsupported_material_number(text: str, evidence: str) -> bool:
@@ -1046,6 +1101,19 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
             "metric": metric,
             "pages": pages,
         }
+        timeframe = _s(metric.get("timeframe")).strip()
+        binding_evidence = " ".join(
+            [
+                insight["evidence"],
+                *[
+                    _s(span.get("text") or span.get("evidence"))
+                    for span in insight["evidence_spans"]
+                    if isinstance(span, dict)
+                ],
+            ]
+        )
+        if timeframe and not _source_text_contains_field(timeframe, binding_evidence):
+            metric["timeframe"] = ""
         for field_name in INSIGHT_TEXT_FIELDS:
             value = _normalize_insight_text_field(field_name, item.get(field_name))
             if value:

@@ -53,5 +53,9 @@ text: |
   infer subjects or qualifiers from DocMap or titles. Use numbers only when its
   excerpt states the full value-subject-period relationship. Keep both fields
   audience-specific, non-generic, and non-contradictory.
+  Preserve every source qualifier, including words such as "some", "certain",
+  "at launch", "among", and "after". Do not broaden a scoped statement into a
+  universal one, and do not move a period, population, or status from a nearby
+  finding into this candidate.
   For each metric, `metric.value` must contain one complete human-readable primary metric or one coherent comparison/range. When `metric.value` is present, `metric.label` is required: make it a concise human-readable description of that exact source-backed metric (for example, `Digital video revenue growth`, `Monthly U.S. adult generative AI users`, or `Global eCommerce sales`), never a general insight or search statement. Never put a semicolon-separated metric list in `metric.value`. `metric.unit` must represent one semantic unit and must not repeat currency symbols or magnitude words already contained in `metric.value`. Keep supporting numbers in `text` and `evidence`, not in the public metric display.
   When the retained evidence supplies them, preserve the exact numeric binding in `metric.subject`, `metric.cohort`, `metric.denominator`, and `metric.observation_status` (`observed`, `forecast`, or `estimate`). Leave a field empty rather than inferring it.

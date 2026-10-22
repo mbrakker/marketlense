@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0",
+  "cohort_manifest": "cohort-manifest.json",
+  "selection_baseline": {
+    "commit": "38a71ec705755f279dac2cba6a73adb1090e3f17",
+    "selection_version": "evidence_backed_shortlisting:5",
+    "final_roster_count": 59,
+    "matching_rule": "Credit at most one reference finding when the final roster preserves the same proposition, population, metric, period/status, and material scope. A shared topic, source page, or related commercial theme is not equivalent."
+  },
+  "reference_findings": [
+    {
+      "report": "Reuters Institute",
+      "candidate_id": "ai-browser-agentic-app-impact",
+      "evidence_id": "ai-browser-agentic-app-impact",
+      "source_pdf_sha256": "f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52",
+      "physical_pages": [41],
+      "source_quote": "Three-quarters of respondents (75%) see these changes as having a large or very large impact on publishers over the next three years. Very large impact 15%; large impact 60%. Base = 265.",
+      "metric": {
+        "value": "75%",
+        "unit": "percent",
+        "subject": "impact on publishers from AI browsers and agentic apps",
+        "population": "survey respondents",
+        "denominator": "respondents answering Q15",
+        "timeframe": "next three years",
+        "status": "forecast",
+        "sample_size": "265"
+      },
+      "commercial_importance": "High: publisher discovery and access may be affected by AI-browser and agentic interfaces.",
+      "importance": "valuable_alternative",
+      "observed_stage": "candidate_stage_selection",
+      "observed_disposition": "Source-supported candidate was present in the retained inventory but was not in the selected candidate roster; the persisted artifact has no selector-level rejection reason.",
+      "semantic_recall_credit": false,
+      "semantic_recall_note": "The selected 43% search-traffic forecast is a related discovery risk, not the same publisher-impact proposition."
+    },
+    {
+      "report": "KPMG",
+      "candidate_id": "tools-perform-production-and-verification-tasks",
+      "evidence_id": "quote-2",
+      "source_pdf_sha256": "a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589",
+      "physical_pages": [24],
+      "source_quote": "These tools don't answer questions. They read documents, execute analysis, write deliverables and verify outputs against defined standards.",
+      "metric": null,
+      "commercial_importance": "High: the report's AI value proposition includes end-to-end execution and verification, not only analysis.",
+      "importance": "valuable_alternative",
+      "observed_stage": "evidence_fidelity",
+      "observed_disposition": "The audit inventory contains a source-verified page-24 quote, but the retained evidence-fidelity ledger has no supported result for quote-2; selection eligibility cannot be inferred safely.",
+      "semantic_recall_credit": false,
+      "semantic_recall_note": "The selected AI diligence and integration rows are adjacent capabilities, not the same production-and-verification proposition."
+    },
+    {
+      "report": "Criteo",
+      "candidate_id": "us-digital-campaign-cost-estimate",
+      "evidence_id": "s3-us-campaign-costs",
+      "source_pdf_sha256": "17cf2e92c8804e35274faf3dd416db2fe6e4a81d7aa92418ada8ba90ee77c00c",
+      "physical_pages": [7],
+      "source_quote": "In fact, US agencies estimate the cost of running campaigns across digital media channels will rise by 22% in 2023.",
+      "metric": {
+        "value": "22% rise",
+        "unit": "percent",
+        "subject": "cost of running campaigns across digital media channels",
+        "population": "US agencies",
+        "denominator": "",
+        "timeframe": "2023",
+        "status": "estimate",
+        "sample_size": ""
+      },
+      "commercial_importance": "High: a quantified cost pressure is directly relevant to channel-budget planning.",
+      "importance": "valuable_alternative",
+      "observed_stage": "candidate_stage_selection",
+      "observed_disposition": "Supported candidate was in the retained inventory but was not in the selected candidate roster; it competed with incrementality and newer-channel ROI findings.",
+      "semantic_recall_credit": false,
+      "semantic_recall_note": "The retained 50% incrementality and 61% perceived-ROI findings do not preserve the campaign-cost estimate."
+    },
+    {
+      "report": "Deloitte",
+      "candidate_id": "genai-discovery-and-shopping-speed",
+      "evidence_id": "genai-product-discovery-use",
+      "source_pdf_sha256": "cb3a6420505366198c519929726ecc274cc9e310686541339d749361d239ba65",
+      "physical_pages": [6],
+      "source_quote": "Twenty-three percent of consumers already use generative AI for product discovery while shopping, and of those who do, 35% are using it to speed up their shopping process.",
+      "metric": {
+        "value": "35%",
+        "unit": "percent",
+        "subject": "use of generative AI to speed up shopping",
+        "population": "consumers who use generative AI for product discovery while shopping",
+        "denominator": "consumers who use generative AI for product discovery while shopping",
+        "timeframe": "",
+        "status": "observed",
+        "sample_size": ""
+      },
+      "commercial_importance": "High: discovery-speed utility is a distinct consumer use case for AI-assisted shopping journeys.",
+      "importance": "valuable_alternative",
+      "observed_stage": "candidate_stage_selection",
+      "observed_disposition": "Supported candidate was in the retained inventory but was not in the selected candidate roster; it competed within the AI-shopping journey theme.",
+      "semantic_recall_credit": false,
+      "semantic_recall_note": "The selected 24% default-plan and 64% intended-use findings describe adoption plans, not the 35% speed use among discovery users."
+    },
+    {
+      "report": "Emplifi",
+      "candidate_id": "repeat-buying-after-positive-resolution",
+      "evidence_id": "customer-experience-positive-resolution-repeat-purchase",
+      "source_pdf_sha256": "54a6726033fce9474929dec62bc85fc4dd3ada574398d043d12ec48b0eaddeb5",
+      "physical_pages": [18],
+      "source_quote": "After a positive resolution, 59% of total respondents bought from the brand again (62% U.S.; 57% U.K.).",
+      "metric": {
+        "value": "59% overall; 62% U.S.; 57% U.K.",
+        "unit": "percent",
+        "subject": "buying from the brand again",
+        "population": "respondents after a positive resolution",
+        "denominator": "",
+        "timeframe": "",
+        "status": "observed",
+        "sample_size": ""
+      },
+      "commercial_importance": "High: it connects service recovery with observed repeat buying, a direct retention outcome.",
+      "importance": "essential",
+      "observed_stage": "candidate_stage_selection",
+      "observed_disposition": "Supported candidate was in the retained inventory but was not in the selected candidate roster; the roster retained service-response expectation instead.",
+      "semantic_recall_credit": false,
+      "semantic_recall_note": "The selected 84% quick-response expectation is an input/service standard, not the post-resolution repeat-purchase outcome."
+    },
+    {
+      "report": "StackAdapt Inc",
+      "candidate_id": "retail-2026-first-party-contextual-data",
+      "evidence_id": "finding-14",
+      "source_pdf_sha256": "909444f8721c9ec21d2f734bd5f0575bc147f2d5493f4960d3173003f6ceb305",
+      "physical_pages": [12],
+      "source_quote": "With increased signal loss and the decline of cookies, 1st-party and contextual data become the core of durable retail marketing strategies. Together, they enable privacy-first targeting, personalization, and measurement across the retail journey.",
+      "metric": null,
+      "commercial_importance": "High: it identifies the data mechanism supporting targeting, personalization and measurement as signals decline.",
+      "importance": "valuable_alternative",
+      "observed_stage": "candidate_stage_selection",
+      "observed_disposition": "Supported candidate was in the retained inventory but was not in the selected candidate roster; the selected 68% relevance expectation covers only part of the mechanism.",
+      "semantic_recall_credit": false,
+      "semantic_recall_note": "The selected 68% expectation and programmatic-capability rows are related but do not preserve the first-party/contextual foundation proposition."
+    }
+  ]
+}

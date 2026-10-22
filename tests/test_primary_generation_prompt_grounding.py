@@ -377,6 +377,24 @@ def test_insight_candidates_bind_to_source_findings_not_docmap_sections() -> Non
         in normalised
     )
     assert "full value-subject-period relationship" in normalised
+    assert "preserve every source qualifier" in normalised
+    assert "do not broaden a scoped statement" in normalised
+
+
+def test_final_insight_prompt_cannot_add_unbound_scope_or_period() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/insights_final",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    normalised = _normalise_whitespace(prompt_set.user.text).lower()
+
+    assert "do not add a timeframe, population, geography, or qualifier" in (
+        normalised
+    )
 
 
 def test_doc_map_prompt_keeps_multi_measure_values_with_explicit_labels() -> None:

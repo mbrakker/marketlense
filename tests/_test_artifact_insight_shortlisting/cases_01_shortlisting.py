@@ -794,3 +794,96 @@ def test_supported_candidate_numeric_binding_survives_downstream_metric_spine() 
     assert metric_spine[0]["value"] == "42%"
     assert metric_spine[0]["timeframe"] == ""
     assert metric_spine[0]["geography"] == ""
+
+
+def test_source_bound_metric_drops_unbound_timeframe() -> None:
+    insight = _insight(
+        "criteo-performance-retention",
+        "s4-performance-retention-recommendations",
+        "For 2023 plans, agency respondents recommended performance over "
+        "brand awareness.",
+        score=0.8,
+        evidence=(
+            "51% of agency respondents recommend brands focus on performance versus "
+            "45% who say brand awareness."
+        ),
+        metric={
+            "label": "Agency recommendations",
+            "value": "51% versus 45%",
+            "unit": "%",
+            "timeframe": "2023 plans",
+            "segment": "Agency respondents",
+            "cohort": "Agency respondents",
+            "observation_status": "observed",
+        },
+        pages=[8],
+    )
+
+    artifact_normalization.preserve_public_source_displays(
+        summary={},
+        insights_final=[insight],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert insight["metric"]["value"] == "51% versus 45%"
+    assert insight["metric"]["timeframe"] == ""
+    assert insight["metric"]["segment"] == "Agency respondents"
+
+
+def test_candidate_normalization_drops_unbound_calendar_timeframe() -> None:
+    normalized = artifact_normalization.normalize_artifact_insights(
+        [
+            _insight(
+                "criteo-performance-retention",
+                "s4-performance-retention-recommendations",
+                "Agency respondents recommended performance over brand awareness.",
+                score=0.8,
+                evidence=(
+                    "51% of agency respondents recommend brands focus on performance "
+                    "versus 45% who say brand awareness."
+                ),
+                metric={
+                    "label": "Agency recommendations",
+                    "value": "51% versus 45%",
+                    "unit": "%",
+                    "timeframe": "2023 plans",
+                },
+                pages=[8],
+            )
+        ],
+        prefix="candidate",
+    )
+
+    assert normalized[0]["metric"]["timeframe"] == ""
+    assert normalized[0]["metric"]["value"] == "51% versus 45%"
+
+
+def test_candidate_normalization_preserves_supported_paraphrased_timeframe() -> None:
+    normalized = artifact_normalization.normalize_artifact_insights(
+        [
+            _insight(
+                "agentic-search-plans",
+                "quote-001",
+                "Retailers are planning agentic search implementation.",
+                score=0.8,
+                evidence=(
+                    "Adoption is projected to increase significantly, with 61% "
+                    "planning implementation within the next 12 months."
+                ),
+                metric={
+                    "label": "Agentic search implementation plans",
+                    "value": "61%",
+                    "unit": "%",
+                    "timeframe": "61% plan implementation within the next 12 months",
+                },
+                pages=[5],
+            )
+        ],
+        prefix="candidate",
+    )
+
+    assert (
+        normalized[0]["metric"]["timeframe"]
+        == "61% plan implementation within the next 12 months"
+    )

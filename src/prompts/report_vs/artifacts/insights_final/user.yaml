@@ -31,6 +31,10 @@ text: |
   follow-up tied to it. Neither may add a factual premise or false attribution
   or promise an outcome.
   Preserve source scope exactly: per-group values are not across-group values.
+  Do not add a timeframe, population, geography, or qualifier that is absent
+  from the selected candidate's evidence and protected metric binding. Keep
+  scoped words such as "some", "certain", "at launch", "among", and "after";
+  if the candidate does not establish a detail, omit it.
   In `so_what` and `now_what`, avoid repeating numbers or ranked-group labels
   from `text`, and omit counts absent from the linked evidence.
   Do not output arrays/comma-separated values inside evidence_id; if uncertain, use an empty string.
