@@ -2852,9 +2852,9 @@ call:
 Focused regressions now cover mixed verified/unresolved and
 verified/failed-verification results, missing/duplicate/unexpected/malformed
 accounting, wrong hash/page and metric failures, synthetic-span quote
-exclusion, contradictory planning input, cache replay, regeneration, and
+exclusion, unsupported planning input, cache replay, regeneration, and
 typed minimum coverage. The affected local suite passed **530 tests with 1
-skip in 20.52 seconds**. Formatting, compilation, public-report quality, and
+skip in 20.96 seconds**. Formatting, compilation, public-report quality, and
 diff checks passed.
 
 **Provider-free retained-artifact replay.** The exact retained Algolia cache
