@@ -42,6 +42,21 @@ _MAX_RECOVERY_PAGES_PER_CLAIM = 3
 _PDF_SHA256_PATTERN = re.compile(
     r"(?:^|[|,; ])pdf-sha256[:=]([0-9a-f]{64})(?:$|[|,; ])", re.I
 )
+_PROTECTED_METRIC_FIELDS = (
+    "label",
+    "value",
+    "unit",
+    "trend",
+    "timeframe",
+    "geography",
+    "segment",
+    "sample_size",
+    "confidence",
+    "subject",
+    "cohort",
+    "denominator",
+    "observation_status",
+)
 
 
 @dataclass(frozen=True)
@@ -73,6 +88,23 @@ class VerifiedClaimsVisualDependencies:
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _complete_metric_binding(claim: Mapping[str, Any]) -> dict[str, Any]:
+    raw_metric = claim.get("metric")
+    if not isinstance(raw_metric, Mapping):
+        return {}
+    binding = {str(key): copy.deepcopy(value) for key, value in raw_metric.items()}
+    for field_name in _PROTECTED_METRIC_FIELDS:
+        binding.setdefault(field_name, "")
+    return binding
+
+
+def _claims_have_identical_proposition(left: str, right: str) -> bool:
+    def normalize(value: str) -> str:
+        return re.sub(r"\s+", " ", _text(value)).casefold()
+
+    return bool(normalize(left)) and normalize(left) == normalize(right)
 
 
 def _candidate_id(claim: Mapping[str, Any]) -> str:
@@ -548,15 +580,28 @@ def _attempt_is_non_retryable(details: list[str]) -> bool:
 
 
 def _source_truth_notes_present(notes: str) -> bool:
-    """Validate the response shape; Luna owns semantic source assessment.
+    """Require a bounded, source-specific explanation without judging prose."""
 
-    The verification prompt requires a substantive source-grounded explanation.
-    Deterministic code can enforce that the field is present and non-empty, but
-    it cannot safely decide whether a paraphrase is substantively grounded
-    without reimplementing the visual verifier's semantic judgment.
-    """
-
-    return isinstance(notes, str) and bool(notes.strip())
+    if not isinstance(notes, str):
+        return False
+    normalized = re.sub(r"\s+", " ", notes).strip().casefold()
+    normalized_without_terminal_punctuation = normalized.rstrip(".!?")
+    if len(normalized) < 32:
+        return False
+    if normalized_without_terminal_punctuation in {
+        "the claim is supported by the source",
+        "the claim is supported by the source page",
+        "the claim is plausible and supported by the source page",
+    }:
+        return False
+    return bool(
+        re.search(
+            r"\b(?:page|chart|table|figure|section|report|survey|respondent|cohort|"
+            r"population|metric|value|share|percent|shows?|reports?|observed|forecast)\b"
+            r"|\d|%",
+            normalized,
+        )
+    )
 
 
 def _require_visual_policy(bundle: Any) -> None:
@@ -660,16 +705,40 @@ def _record_result(
 ) -> VisualClaimEvaluationResult:
     original_physical_pages = _physical_pages(claim) if physical_page > 0 else []
     supporting_pages = list(supporting_physical_pages or [])
+    original_claim = _text(claim.get("text") or claim.get("claim"))
+    binding_status = _source_binding_status(original_physical_pages, supporting_pages)
+    original_evidence_ids = _evidence_ids(claim)
+    original_evidence_spans = _evidence_spans(claim)
+    original_metric_binding = _complete_metric_binding(claim)
+    final_binding_is_retained = (
+        bool(final_claim)
+        and binding_status == "retained"
+        and bool(original_evidence_ids)
+        and _claims_have_identical_proposition(original_claim, final_claim)
+    )
     return VisualClaimEvaluationResult(
         schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
         candidate_id=_candidate_id(claim),
-        original_claim=_text(claim.get("text") or claim.get("claim")),
+        original_claim=original_claim,
         source_identity=request.source_identity,
         physical_page=physical_page,
         physical_pages=_physical_pages(claim) if physical_page > 0 else [],
         outcome=outcome,
-        evidence_ids=_evidence_ids(claim),
-        evidence_spans=_evidence_spans(claim),
+        evidence_ids=original_evidence_ids,
+        evidence_spans=original_evidence_spans,
+        original_metric_binding=original_metric_binding,
+        corrected_evidence_ids=(
+            list(original_evidence_ids) if final_binding_is_retained else []
+        ),
+        corrected_evidence_spans=(
+            copy.deepcopy(original_evidence_spans) if final_binding_is_retained else []
+        ),
+        corrected_metric_binding=(
+            copy.deepcopy(original_metric_binding) if final_binding_is_retained else {}
+        ),
+        corrected_source_binding_status=(
+            "retained" if final_binding_is_retained else "unbound"
+        ),
         correction_attempts=list(correction_attempts or []),
         verification_attempts=list(verification_attempts or []),
         final_claim=final_claim,
@@ -680,9 +749,7 @@ def _record_result(
         ),
         recovered_physical_pages=list(recovered_physical_pages or []),
         recovery_reason=recovery_reason,
-        source_binding_status=_source_binding_status(
-            original_physical_pages, supporting_pages
-        ),
+        source_binding_status=binding_status,
         supporting_physical_pages=supporting_pages,
         source_truth_notes_by_page=dict(source_truth_notes_by_page or {}),
         canonical_approval_status=canonical_approval_status,
@@ -746,6 +813,7 @@ def _correction_attempt(
                 claim="",
                 status="failed",
                 issues=_provider_error_details("correction_provider_error", error),
+                model=model_request.model,
             ),
             "",
         )
@@ -871,13 +939,17 @@ def _verification_attempt(
             attempt=attempt,
             outcome="rejected",
             diagnostics=_provider_error_details("verification_provider_error", error),
+            model=model_request.model,
         )
     if payload is None:
         return VisualClaimVerificationAttempt(
             schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
             attempt=attempt,
             outcome="rejected",
-            diagnostics=["verification_response_invalid"],
+            diagnostics=[
+                "verification_response_invalid",
+                "verification_response_malformed",
+            ],
             request_id=request_id,
             model=model,
         )
@@ -887,6 +959,10 @@ def _verification_attempt(
     ):
         outcome = "rejected"
         diagnostics = ["verification_response_invalid"]
+        if not isinstance(payload.get("outcome"), str):
+            diagnostics.append("verification_outcome_missing")
+        if not isinstance(payload.get("source_truth_notes"), str):
+            diagnostics.append("verification_source_truth_notes_missing")
         notes = ""
         supporting_pages: list[int] = []
         notes_by_page: dict[str, str] = {}
@@ -902,14 +978,19 @@ def _verification_attempt(
         )
     if diagnostics is None:
         outcome = "rejected"
-        diagnostics = ["verification_response_invalid"]
+        diagnostics = [
+            "verification_response_invalid",
+            "verification_diagnostics_invalid",
+        ]
     if outcome not in _VERIFICATION_OUTCOMES:
         outcome = "rejected"
         diagnostics = [*diagnostics, "verification_response_invalid"]
     elif outcome == "verified":
         quality_issues: list[str] = []
-        if not _source_truth_notes_present(notes):
+        if not notes.strip():
             quality_issues.append("verification_explanation_missing")
+        elif not _source_truth_notes_present(notes):
+            quality_issues.append("verification_explanation_insubstantial")
         if not supporting_pages:
             quality_issues.append("verification_supporting_pages_invalid")
         if any(

@@ -540,7 +540,7 @@ def test_finding_fallback_covers_uncovered_themes_before_filling_capacity() -> N
 
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION == (
-        "evidence_backed_shortlisting:5"
+        "evidence_backed_shortlisting:6"
     )
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
         "stable_id_unique_selection:2"
@@ -557,6 +557,7 @@ def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> N
         "evidence_backed_shortlisting:2",
         "evidence_backed_shortlisting:3",
         "evidence_backed_shortlisting:4",
+        "evidence_backed_shortlisting:5",
     ],
 )
 def test_old_selection_version_cannot_match_a_new_cache_key(old_version: str) -> None:

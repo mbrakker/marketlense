@@ -652,6 +652,43 @@ def _attach_verified_finding_pages(
     return supported_ids
 
 
+def _attach_verified_quote_pages(
+    quotes: list[dict[str, object]], fidelity
+) -> set[str]:
+    """Bind a quote only when fidelity resolves it to one physical PDF page."""
+
+    quotes_by_id = {
+        str(quote.get("id") or "").strip(): quote
+        for quote in quotes
+        if str(quote.get("id") or "").strip()
+    }
+    supported_ids: set[str] = set()
+    for result in fidelity.results:
+        claim_id = str(result.candidate.claim_id)
+        if result.status != "supported" or not claim_id.startswith(
+            "evidence:quote_candidates:"
+        ):
+            continue
+        quote_id = claim_id.removeprefix("evidence:quote_candidates:")
+        quote = quotes_by_id.get(quote_id)
+        if quote is None:
+            continue
+        pages = sorted(
+            {
+                int(reference.page)
+                for reference in result.candidate.evidence_references
+                if isinstance(getattr(reference, "page", None), int)
+                and not isinstance(reference.page, bool)
+                and reference.page > 0
+            }
+        )
+        if len(pages) != 1:
+            continue
+        quote["page"] = pages[0]
+        supported_ids.add(quote_id)
+    return supported_ids
+
+
 def _missing_findings_retrieval_targets(
     targets: list[dict[str, object]],
     findings: list[dict[str, object]],
@@ -1269,6 +1306,17 @@ def generate_evidence_packs(
             ]
             _attach_verified_finding_pages(findings, fidelity)
             findings_pack["findings"] = findings
+        quote_candidates_pack = results.get("quote_candidates")
+        if isinstance(quote_candidates_pack, dict) and isinstance(
+            quote_candidates_pack.get("quote_candidates"), list
+        ):
+            quotes = [
+                quote
+                for quote in quote_candidates_pack["quote_candidates"]
+                if isinstance(quote, dict)
+            ]
+            _attach_verified_quote_pages(quotes, fidelity)
+            quote_candidates_pack["quote_candidates"] = quotes
         results = exclude_untrusted_evidence(results, fidelity)
         for pack_name in ("findings", "quote_candidates"):
             if pack_name in results:

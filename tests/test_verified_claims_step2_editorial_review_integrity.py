@@ -79,6 +79,24 @@ def test_editorial_cli_requires_explicit_live_or_existing_manifest() -> None:
     assert "--review-manifest is required unless --live is supplied" in result.stderr
 
 
+def test_step2_replay_rejects_ambiguous_provider_free_live_flags() -> None:
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "quality"
+        / "replay_verified_claims_step2.py"
+    )
+    result = subprocess.run(
+        [sys.executable, str(script), "--provider-free", "--live"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "cannot be combined with --live" in result.stderr
+
+
 def _review_record(
     candidate_id: str,
     *,

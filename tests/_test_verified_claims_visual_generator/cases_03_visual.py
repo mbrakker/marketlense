@@ -167,6 +167,213 @@ def test_verified_result_records_only_inspected_supporting_pages_and_page_notes(
     assert item.verification_attempts[0].supporting_physical_pages == [5]
 
 
+def test_materially_rewritten_claim_does_not_retain_original_metric_binding(tmp_path):
+    claim = _claim(
+        "revenue-incentive-58",
+        "The platform receives 58% of revenue from incentive-driven activity.",
+    )
+    claim["evidence_id"] = "ch2-revenue-incentive"
+    claim["evidence_spans"] = [
+        {
+            "evidence_id": "ch2-revenue-incentive",
+            "page": 5,
+            "start": 10,
+            "end": 20,
+        }
+    ]
+    claim["metric"] = {
+        "label": "Revenue share",
+        "value": "58%",
+        "unit": "%",
+        "subject": "Platform revenue",
+        "cohort": "Incentive-driven activity",
+        "timeframe": "Observed period",
+        "observation_status": "observed",
+    }
+    responses = iter(
+        [
+            {
+                "claim": (
+                    "Investment represented 53% of the mix, while 39% was "
+                    "allocated to growth."
+                ),
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "Physical page 5 reports the investment and growth shares for "
+                    "the named mix; the original revenue proposition is not the "
+                    "page's metric."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": (
+                        "Physical page 5 reports the investment and growth shares "
+                        "for the named mix."
+                    )
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [claim]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified"
+    assert item.final_claim.startswith("Investment represented 53%")
+    assert item.evidence_ids == ["ch2-revenue-incentive"]
+    assert item.original_metric_binding["value"] == "58%"
+    assert item.corrected_evidence_ids == []
+    assert item.corrected_evidence_spans == []
+    assert item.corrected_metric_binding == {}
+    assert item.corrected_source_binding_status == "unbound"
+
+
+def test_identical_verified_claim_retains_authoritative_corrected_binding(tmp_path):
+    claim = _claim("candidate-1", "The source reports 61% adoption among video users.")
+    claim["metric"] = {
+        "label": "Adoption",
+        "value": "61%",
+        "unit": "%",
+        "cohort": "Video users",
+    }
+    responses = iter(
+        [
+            {
+                "claim": "The source reports 61% adoption among video users.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "Physical page 5 reports the 61% adoption result for the "
+                    "named video-user cohort."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": (
+                        "Physical page 5 reports the 61% adoption result for the "
+                        "named video-user cohort."
+                    )
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [claim]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.corrected_source_binding_status == "retained"
+    assert item.corrected_evidence_ids == ["f1"]
+    assert item.corrected_evidence_spans == item.evidence_spans
+    assert item.corrected_metric_binding == item.original_metric_binding
+
+
+def test_malformed_verification_response_can_use_one_bounded_retry(tmp_path):
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            None,
+            {
+                "claim": "Corrected claim after retry",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "Physical page 5 confirms the corrected value and the named "
+                    "cohort relationship."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": (
+                        "Physical page 5 confirms the corrected value and the "
+                        "named cohort relationship."
+                    )
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [_claim("candidate-1", "Original claim")]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified_after_retry"
+    assert len(item.correction_attempts) == 2
+    assert len(item.verification_attempts) == 2
+    assert (
+        "verification_response_invalid"
+        in item.verification_attempts[0].diagnostics
+    )
+    assert (
+        "verification_response_malformed"
+        in item.verification_attempts[0].diagnostics
+    )
+
+
+def test_generic_verification_explanation_is_not_substantive(tmp_path):
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": "The claim is supported by the source.",
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": "The claim is supported by the source."
+                },
+            },
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": "The claim is supported by the source.",
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": "The claim is supported by the source."
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [_claim("candidate-1", "Original claim")]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "failed_verification"
+    assert all(
+        "verification_explanation_insubstantial" in attempt.diagnostics
+        for attempt in item.verification_attempts
+    )
+
+
 def test_verified_result_can_attribute_one_support_page_from_multiple_inspected_pages(
     tmp_path,
 ):

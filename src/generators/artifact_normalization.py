@@ -22,7 +22,7 @@ from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:5"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:6"
 
 METRIC_FIELDS = (
     "label",
@@ -1063,8 +1063,13 @@ def select_artifact_insights(
     final_insights: List[Dict[str, Any]],
     candidate_insights: List[Dict[str, Any]],
     editorial_plan: Dict[str, Any],
+    require_final_candidate_lineage: bool = False,
 ) -> List[Dict[str, Any]]:
     """Lead with the strongest evidence-bound insight and retain theme coverage.
+
+    ``require_final_candidate_lineage`` is used only at the final-insight
+    admission boundary.  Candidate-stage selection remains able to admit
+    evidence-bound alternatives from the findings fallback pool.
 
     When a final insight shares a stable ID with a chosen candidate, the
     candidate is the evidence-anchored source of the protected factual fields
@@ -1079,6 +1084,7 @@ def select_artifact_insights(
     unresolved_candidate_ids = set(_candidate_insight_groups(candidate_insights)) - set(
         candidate_facts
     )
+    final_lineage_ids = set(candidate_facts)
     anchored_finals = [
         _restore_candidate_factual_fields(item, candidate_facts)
         if isinstance(item, dict)
@@ -1088,6 +1094,13 @@ def select_artifact_insights(
             isinstance(item, dict)
             and _s(item.get("id")).strip()
             in conflicting_candidate_ids.union(unresolved_candidate_ids)
+        )
+        and (
+            not require_final_candidate_lineage
+            or (
+                isinstance(item, dict)
+                and _s(item.get("id")).strip() in final_lineage_ids
+            )
         )
     ]
     ranked = _ranked_unique_insights(anchored_finals, candidate_insights)
@@ -1201,6 +1214,17 @@ def _candidate_group_has_factual_conflict(
         values.discard("")
         if len(values) > 1:
             return True
+    source_identities = {
+        normalize_for_lookup(
+            candidate.get("source_identity") or candidate.get("source_id")
+        )
+        for candidate in candidates
+        if normalize_for_lookup(
+            candidate.get("source_identity") or candidate.get("source_id")
+        )
+    }
+    if len(source_identities) > 1:
+        return True
     for index, candidate in enumerate(candidates):
         for other in candidates[index + 1 :]:
             if _candidate_provenance_has_conflict(candidate, other):
@@ -1223,8 +1247,11 @@ def _candidate_provenance_has_conflict(
     if _candidates_have_concrete_physical_spans(candidate_spans, other_spans):
         return not _candidate_spans_are_compatible(candidate_spans, other_spans)
     shared_texts = candidate_texts.intersection(other_texts)
-    if shared_texts:
-        return False
+    if shared_texts and not candidate_spans and not other_spans:
+        if not candidate_pages and not other_pages:
+            return False
+        if candidate_pages.intersection(other_pages):
+            return False
     if _candidate_spans_are_compatible(candidate_spans, other_spans):
         return False
 
@@ -1268,15 +1295,20 @@ def _candidates_have_concrete_physical_spans(
 ) -> bool:
     def has_concrete_span(spans: List[Dict[str, Any]]) -> bool:
         return any(
-            normalize_for_lookup(
-                span.get("source_pack")
-                or span.get("section_id")
-                or span.get("text")
-                or span.get("evidence")
-            )
-            or any(
+            any(
                 isinstance(span.get(field_name), int)
-                for field_name in ("page", "start_offset", "end_offset")
+                and not isinstance(span.get(field_name), bool)
+                for field_name in (
+                    "page",
+                    "start_offset",
+                    "end_offset",
+                    "start",
+                    "end",
+                    "char_start",
+                    "char_end",
+                    "line_start",
+                    "line_end",
+                )
             )
             for span in spans
         )
@@ -1296,6 +1328,15 @@ def _candidate_spans_are_compatible(
             ) or not _compatible_span_source(
                 candidate_span.get("section_id"),
                 other_span.get("section_id"),
+            ) or not _compatible_span_source(
+                candidate_span.get("source_identity"),
+                other_span.get("source_identity"),
+            ) or not _compatible_span_source(
+                candidate_span.get("source_id"),
+                other_span.get("source_id"),
+            ) or not _compatible_span_source(
+                candidate_span.get("evidence_id"),
+                other_span.get("evidence_id"),
             ):
                 continue
             candidate_text = normalize_for_lookup(
@@ -1304,10 +1345,20 @@ def _candidate_spans_are_compatible(
             other_text = normalize_for_lookup(
                 other_span.get("text") or other_span.get("evidence")
             )
-            if candidate_span.get("page") == other_span.get(
-                "page"
-            ) and _span_offsets_overlap(candidate_span, other_span):
-                return True
+            candidate_page = candidate_span.get("page")
+            other_page = other_span.get("page")
+            if (
+                isinstance(candidate_page, int)
+                and not isinstance(candidate_page, bool)
+                and isinstance(other_page, int)
+                and not isinstance(other_page, bool)
+            ):
+                if candidate_page != other_page:
+                    continue
+                if _span_offsets_overlap(candidate_span, other_span):
+                    return True
+                if _span_offsets_are_concrete(candidate_span, other_span):
+                    continue
             if candidate_text and other_text:
                 if candidate_text == other_text:
                     return True
@@ -1315,6 +1366,31 @@ def _candidate_spans_are_compatible(
             if _span_locations_match(candidate_span, other_span):
                 return True
     return False
+
+
+def _span_offsets_are_concrete(
+    left: Dict[str, Any], right: Dict[str, Any]
+) -> bool:
+    return _span_offset_pair(left) is not None and _span_offset_pair(right) is not None
+
+
+def _span_offset_pair(span: Dict[str, Any]) -> tuple[int, int] | None:
+    for start_name, end_name in (
+        ("start_offset", "end_offset"),
+        ("char_start", "char_end"),
+        ("start", "end"),
+        ("line_start", "line_end"),
+    ):
+        start = span.get(start_name)
+        end = span.get(end_name)
+        if (
+            isinstance(start, int)
+            and not isinstance(start, bool)
+            and isinstance(end, int)
+            and not isinstance(end, bool)
+        ):
+            return start, end
+    return None
 
 
 def _compatible_span_source(left: Any, right: Any) -> bool:
@@ -1326,17 +1402,12 @@ def _compatible_span_source(left: Any, right: Any) -> bool:
 def _span_offsets_overlap(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
     if not isinstance(left.get("page"), int) or not isinstance(right.get("page"), int):
         return False
-    left_start = left.get("start_offset")
-    left_end = left.get("end_offset")
-    right_start = right.get("start_offset")
-    right_end = right.get("end_offset")
-    if not (
-        isinstance(left_start, int)
-        and isinstance(left_end, int)
-        and isinstance(right_start, int)
-        and isinstance(right_end, int)
-    ):
+    left_offsets = _span_offset_pair(left)
+    right_offsets = _span_offset_pair(right)
+    if left_offsets is None or right_offsets is None:
         return False
+    left_start, left_end = left_offsets
+    right_start, right_end = right_offsets
     return max(left_start, right_start) <= min(left_end, right_end)
 
 

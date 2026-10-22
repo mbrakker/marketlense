@@ -896,3 +896,78 @@ def test_generate_evidence_packs_logs_prompt_observability_and_response_metadata
     response_hash = response_fields["response_sha256"]
     assert response_hash["redaction"] == "***REDACTED***"
     assert len(response_hash["sha256"]) == 64
+
+
+def test_supported_quote_candidate_gets_unique_physical_page_from_fidelity() -> None:
+    from types import SimpleNamespace
+
+    from src.generators.evidence_pack_generator import _attach_verified_quote_pages
+
+    quote = {"id": "quote-1", "text": "Exact source quotation.", "page": None}
+    fidelity = SimpleNamespace(
+        results=[
+            SimpleNamespace(
+                status="supported",
+                candidate=SimpleNamespace(
+                    claim_id="evidence:quote_candidates:quote-1",
+                    evidence_references=[SimpleNamespace(page=7)],
+                ),
+            )
+        ]
+    )
+
+    supported = _attach_verified_quote_pages([quote], fidelity)
+
+    assert supported == {"quote-1"}
+    assert quote["page"] == 7
+
+
+def test_ambiguous_quote_candidate_pages_remain_unbound() -> None:
+    from types import SimpleNamespace
+
+    from src.generators.evidence_pack_generator import _attach_verified_quote_pages
+
+    quote = {"id": "quote-1", "text": "Ambiguous source quotation.", "page": None}
+    fidelity = SimpleNamespace(
+        results=[
+            SimpleNamespace(
+                status="supported",
+                candidate=SimpleNamespace(
+                    claim_id="evidence:quote_candidates:quote-1",
+                    evidence_references=[
+                        SimpleNamespace(page=7),
+                        SimpleNamespace(page=8),
+                    ],
+                ),
+            )
+        ]
+    )
+
+    assert _attach_verified_quote_pages([quote], fidelity) == set()
+    assert quote["page"] is None
+
+
+def test_quote_page_binding_overrides_a_printed_label_with_physical_page() -> None:
+    from types import SimpleNamespace
+
+    from src.generators.evidence_pack_generator import _attach_verified_quote_pages
+
+    quote = {"id": "execution-risk-focus-areas", "page": 34}
+    fidelity = SimpleNamespace(
+        results=[
+            SimpleNamespace(
+                status="supported",
+                candidate=SimpleNamespace(
+                    claim_id=(
+                        "evidence:quote_candidates:execution-risk-focus-areas"
+                    ),
+                    evidence_references=[SimpleNamespace(page=35)],
+                ),
+            )
+        ]
+    )
+
+    assert _attach_verified_quote_pages([quote], fidelity) == {
+        "execution-risk-focus-areas"
+    }
+    assert quote["page"] == 35

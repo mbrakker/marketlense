@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
-VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION = "1.0"
+VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION = "1.1"
 
 
 @dataclass(frozen=True)
@@ -147,6 +147,42 @@ class VisualClaimEvaluationResult:
         default_factory=list,
         metadata={
             "doc": "Copied authoritative evidence spans from the shortlisted claim."
+        },
+    )
+    original_metric_binding: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Complete protected metric binding retained from the original claim."
+        },
+    )
+    corrected_evidence_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Evidence IDs independently bound to the final claim; empty when "
+                "the corrected proposition differs from the retained claim."
+            )
+        },
+    )
+    corrected_evidence_spans: List[Dict[str, Any]] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Evidence spans bound to the final corrected proposition."
+        },
+    )
+    corrected_metric_binding: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Protected metric binding for the final claim, when authoritative."
+        },
+    )
+    corrected_source_binding_status: str = field(
+        default="unbound",
+        metadata={
+            "doc": (
+                "Final-claim binding state: retained only for an unchanged claim; "
+                "otherwise unbound until independently sourced."
+            )
         },
     )
     correction_attempts: List[VisualClaimCorrectionAttempt] = field(

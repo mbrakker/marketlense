@@ -9,6 +9,7 @@ import json
 import re
 import sys
 import time
+from copy import deepcopy
 from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any, Mapping
@@ -1398,6 +1399,39 @@ def _verified_corrected_insight(
         "supporting_physical_pages": supporting_pages,
         "evidence_status": "visual_verified_provisional",
     }
+    corrected_evidence_ids = [
+        str(value).strip()
+        for value in row.get("corrected_evidence_ids") or []
+        if str(value).strip()
+    ]
+    corrected_evidence_spans = [
+        deepcopy(value)
+        for value in row.get("corrected_evidence_spans") or []
+        if isinstance(value, Mapping)
+    ]
+    corrected_metric = row.get("corrected_metric_binding")
+    if (
+        str(row.get("corrected_source_binding_status") or "").strip() == "retained"
+        and corrected_evidence_ids
+        and corrected_evidence_spans
+    ):
+        insight["evidence_ids"] = corrected_evidence_ids
+        if len(corrected_evidence_ids) == 1:
+            insight["evidence_id"] = corrected_evidence_ids[0]
+        insight["evidence_spans"] = corrected_evidence_spans
+        corrected_evidence_text = "\n\n".join(
+            dict.fromkeys(
+                str(span.get("text") or span.get("evidence") or "").strip()
+                for span in corrected_evidence_spans
+                if str(span.get("text") or span.get("evidence") or "").strip()
+            )
+        )
+        if corrected_evidence_text:
+            insight["evidence"] = corrected_evidence_text
+        if isinstance(corrected_metric, Mapping):
+            insight["metric"] = deepcopy(dict(corrected_metric))
+        insight["evidence_status"] = "visual_verified_bound"
+        return insight
     if source_text:
         insight["evidence_id"] = f"provisional-page:{candidate_id}"
         insight["evidence"] = source_text
@@ -2416,6 +2450,21 @@ def replay_live_explicit_cohort(
                             "evidence_spans": list(
                                 result_payload.get("evidence_spans") or []
                             ),
+                            "original_metric_binding": deepcopy(
+                                result_payload.get("original_metric_binding") or {}
+                            ),
+                            "corrected_evidence_ids": list(
+                                result_payload.get("corrected_evidence_ids") or []
+                            ),
+                            "corrected_evidence_spans": list(
+                                result_payload.get("corrected_evidence_spans") or []
+                            ),
+                            "corrected_metric_binding": deepcopy(
+                                result_payload.get("corrected_metric_binding") or {}
+                            ),
+                            "corrected_source_binding_status": result_payload.get(
+                                "corrected_source_binding_status", "unbound"
+                            ),
                             "original_physical_pages": list(
                                 result_payload.get("original_physical_pages") or []
                             ),
@@ -2725,6 +2774,8 @@ def main() -> int:
         ),
     )
     args = parser.parse_args()
+    if args.provider_free and args.live:
+        parser.error("--provider-free cannot be combined with --live")
     explicit_inputs = args.cohort_result is not None or bool(args.artifact)
     real_claim_ids = {
         str(value).strip() for value in args.real_claim_id if str(value).strip()

@@ -4711,6 +4711,7 @@ def _handle_insights_bundle_regeneration(
             final_insights=execution.state.insights_final,
             candidate_insights=execution.state.insights_candidates,
             editorial_plan=execution.state.editorial_plan,
+            require_final_candidate_lineage=True,
         ),
         prior_final_insights=prior_final_insights,
     )

@@ -1342,6 +1342,7 @@ def generate_artifacts(
         ),
         candidate_insights=insights_candidates,
         editorial_plan=editorial_plan,
+        require_final_candidate_lineage=True,
     )
     selected_lead_insight = next(
         (insight for insight in insights_final if _s(insight.get("text")).strip()),

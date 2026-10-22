@@ -334,6 +334,33 @@ def test_verified_corrected_insight_uses_replacement_page_not_retained_facts() -
     assert "old retained evidence" not in insight["evidence"]
 
 
+def test_verified_corrected_insight_uses_explicit_unchanged_claim_binding() -> None:
+    row = {
+        "candidate_id": "candidate-1",
+        "final_claim": "The source reports 61% adoption among video users.",
+        "supporting_physical_pages": [5],
+        "corrected_source_binding_status": "retained",
+        "corrected_evidence_ids": ["adoption-61"],
+        "corrected_evidence_spans": [
+            {"evidence_id": "adoption-61", "page": 5, "text": "61% adoption"}
+        ],
+        "corrected_metric_binding": {
+            "value": "61%",
+            "unit": "%",
+            "cohort": "Video users",
+        },
+    }
+
+    insight = _verified_corrected_insight(row, {})
+
+    assert insight is not None
+    assert insight["evidence_id"] == "adoption-61"
+    assert insight["evidence_ids"] == ["adoption-61"]
+    assert insight["evidence_spans"] == row["corrected_evidence_spans"]
+    assert insight["metric"] == row["corrected_metric_binding"]
+    assert insight["evidence_status"] == "visual_verified_bound"
+
+
 def test_shadow_selection_keeps_visual_replacement_pending_canonical_approval() -> None:
     row = {
         "candidate_id": "candidate-1",
