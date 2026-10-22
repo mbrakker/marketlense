@@ -381,12 +381,22 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
     )
     assert first_final["metric"]["timeframe"] == "2024"
     assert payload["_cache"]["visual_authority_canary"]["digest"] == "d" * 64
+    assert any(
+        item.get("evidence_id") == "f1" and item.get("timeframe") == "2024"
+        for item in payload["metric_spine"]
+    )
     final_vars = prompt_client.variables_for_namespace(
         "report_vs/artifacts/insights_final"
     )
     assert final_vars["_visual_authority_digest"] == "d" * 64
     assert '"f1"' in final_vars["insights_candidates_json"]
     assert '"f2"' in final_vars["insights_candidates_json"]
+    for namespace in (
+        "report_vs/artifacts/expert_comment",
+        "report_vs/artifacts/linkedin_post",
+    ):
+        downstream_vars = prompt_client.variables_for_namespace(namespace)
+        assert '"f1"' in downstream_vars["metric_spine_json"]
 
 
 def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path):
