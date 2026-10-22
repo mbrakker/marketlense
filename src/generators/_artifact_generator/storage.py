@@ -234,6 +234,7 @@ def assemble_artifacts_payload(
     soft_copy_repair_lineage: Optional[Dict[str, str]] = None,
     regeneration_attempt: int = 0,
     validate_references: bool = True,
+    visual_authority_canary: bool = False,
 ) -> Dict[str, Any]:
     del report_name
     for insight_items in (insights_candidates, insights_final):
@@ -415,12 +416,13 @@ def assemble_artifacts_payload(
                 fields=evidence_span_stats,
             )
         )
-    expert_comment, linkedin_post = preserve_public_source_displays(
-        summary=summary,
-        insights_final=insights_final,
-        expert_comment=expert_comment,
-        linkedin_post=linkedin_post,
-    )
+    if not visual_authority_canary:
+        expert_comment, linkedin_post = preserve_public_source_displays(
+            summary=summary,
+            insights_final=insights_final,
+            expert_comment=expert_comment,
+            linkedin_post=linkedin_post,
+        )
     if summary_fallback_applied:
         soft_copy_claim_bindings["summary"] = source_backed_summary_claim_bindings(
             summary
@@ -461,7 +463,7 @@ def assemble_artifacts_payload(
             )
             soft_copy_claim_bindings["summary"] = []
             summary_fallback_applied = False
-        if summary_fallback_applied:
+        if summary_fallback_applied and not visual_authority_canary:
             preserve_public_source_displays(
                 summary=summary,
                 insights_final=insights_final,

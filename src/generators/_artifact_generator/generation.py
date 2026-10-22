@@ -380,6 +380,9 @@ def generate_artifacts(
     analysis_store=report_analysis_store_service,
     artifact_step_executor: Optional[ArtifactStepExecutor] = None,
     prompt_family_reuse_reader=read_reusable_prompt_family,
+    visual_authority_admitter: Optional[
+        Callable[[Sequence[Dict[str, Any]]], Any]
+    ] = None,
 ) -> Dict[str, Any]:
     ctx = ctx or new_run_context(task_id=f"artifacts:{report_id}")
     # MD5 remains available for artifact cache operations below, but never as
@@ -950,14 +953,18 @@ def generate_artifacts(
             ctx=ctx,
         )
         cache_key = sha256_json(cache_meta)
-        cached = _load_cached_artifacts(
-            output_dir=settings.output_dir,
-            report_id=report_id,
-            report_name=report_name,
-            cache_key=cache_key,
-            expected_cache_meta=cache_meta,
-            ctx=ctx,
-            analysis_store=analysis_store,
+        cached = (
+            None
+            if visual_authority_admitter is not None
+            else _load_cached_artifacts(
+                output_dir=settings.output_dir,
+                report_id=report_id,
+                report_name=report_name,
+                cache_key=cache_key,
+                expected_cache_meta=cache_meta,
+                ctx=ctx,
+                analysis_store=analysis_store,
+            )
         )
         if cached is not None:
 
@@ -1287,6 +1294,67 @@ def generate_artifacts(
         candidate_insights=fallback_candidates,
         editorial_plan=editorial_plan,
     )
+    visual_authority_digest = ""
+    visual_authority_audit: Dict[str, Any] = {}
+    visual_authority_admitted_candidates: List[Dict[str, Any]] = []
+    if visual_authority_admitter is not None:
+        admission = visual_authority_admitter(deepcopy(insights_candidates))
+        visual_authority_admitted_candidates = getattr(
+            admission, "admitted_candidates", []
+        )
+        visual_authority_digest = _s(getattr(admission, "digest", "")).strip()
+        visual_authority_audit = deepcopy(
+            getattr(admission, "audit", {})
+        )
+        if not visual_authority_digest or not isinstance(
+            visual_authority_admitted_candidates, list
+        ):
+            raise AppError(
+                code="visual_authority_admission_malformed",
+                message="Visual authority admission returned an invalid result",
+                retryable=False,
+                context={"report_id": report_id},
+            )
+        insights_candidates = select_artifact_insights(
+            final_insights=visual_authority_admitted_candidates,
+            candidate_insights=[],
+            editorial_plan=editorial_plan,
+        )
+        if not insights_candidates:
+            raise AppError(
+                code="visual_authority_admission_empty",
+                message=(
+                    "Visual authority admission left no eligible insight candidates"
+                ),
+                retryable=False,
+                context={"report_id": report_id},
+            )
+        editorial_plan_dependency_vars = {
+            **editorial_plan_dependency_vars,
+            "_visual_authority_digest": visual_authority_digest,
+        }
+        if cache_meta is None:
+            cache_meta = {}
+        cache_meta["visual_authority_digest"] = visual_authority_digest
+        cache_key = sha256_json(cache_meta)
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="visual_authority_canary_admitted",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "admitted_count": len(insights_candidates),
+                    "evaluated_count": visual_authority_audit.get(
+                        "evaluated_count", 0
+                    ),
+                    "quarantined_count": visual_authority_audit.get(
+                        "quarantined_count", 0
+                    ),
+                },
+            )
+        )
     completed_candidate_count = len(
         [candidate for candidate in insights_candidates if _s(candidate.get("text"))]
     )
@@ -1467,12 +1535,13 @@ def generate_artifacts(
             doc_map=safe_doc_map,
             evidence_packs=safe_evidence,
         )
-        preserve_public_source_displays(
-            summary={},
-            insights_final=distribution_insights,
-            expert_comment="",
-            linkedin_post="",
-        )
+        if visual_authority_admitter is None:
+            preserve_public_source_displays(
+                summary={},
+                insights_final=distribution_insights,
+                expert_comment="",
+                linkedin_post="",
+            )
         metric_spine = derive_metric_spine_from_insights(
             distribution_insights,
             editorial_plan=editorial_plan,
@@ -1627,12 +1696,13 @@ def generate_artifacts(
     # Canonical evidence is now bound, so source-display preservation can
     # replace any generated insight number that exceeds its linked record
     # before it feeds downstream public-copy families.
-    preserve_public_source_displays(
-        summary=summary,
-        insights_final=insights_final,
-        expert_comment="",
-        linkedin_post="",
-    )
+    if visual_authority_admitter is None:
+        preserve_public_source_displays(
+            summary=summary,
+            insights_final=insights_final,
+            expert_comment="",
+            linkedin_post="",
+        )
     if not dependency_dag_enabled:
         metric_spine = derive_metric_spine_from_insights(
             insights_final,
@@ -1816,10 +1886,25 @@ def generate_artifacts(
             "family_outputs": family_outputs,
             "family_transformations": family_transformations,
             "family_reuse_telemetry": family_reuse_telemetry,
+            **(
+                {
+                    "visual_authority_canary": {
+                        "enabled": True,
+                        "digest": visual_authority_digest,
+                        "admitted_candidates": deepcopy(
+                            visual_authority_admitted_candidates
+                        ),
+                        "audit": deepcopy(visual_authority_audit),
+                    }
+                }
+                if visual_authority_admitter is not None
+                else {}
+            ),
         },
         soft_copy_claim_bindings=soft_copy_claim_bindings,
         soft_copy_prompt_identities=soft_copy_prompt_identities,
         soft_copy_generation_attempts=soft_copy_generation_attempts,
+        visual_authority_canary=visual_authority_admitter is not None,
     )
     store_artifacts_payload(
         analysis_store=analysis_store,

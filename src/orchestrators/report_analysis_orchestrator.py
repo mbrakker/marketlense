@@ -32,6 +32,9 @@ from src.contracts.vector_store import (
 )
 from src.generators.figure_caption_generator import generate_figure_captions
 from src.generators.normalize_generator import normalize_report
+from src.generators.pdf_chart_panel_identity_generator import (
+    transcribe_chart_panel_identity,
+)
 from src.generators.report_analysis_generator import (
     VectorStoreIndexingState,
     _resolve_categories_from_report_context,
@@ -41,9 +44,6 @@ from src.generators.report_generation_dependencies import (
     ReportAnalysisDependencies,
     ReportSourceDependencies,
 )
-from src.generators.pdf_chart_panel_identity_generator import (
-    transcribe_chart_panel_identity,
-)
 from src.generators.report_generation_shared import (
     merge_artifacts_into_payload,
     pack_paths,
@@ -52,6 +52,10 @@ from src.generators.report_generation_shared import (
     resolve_doc_map_primary_contributor,
 )
 from src.generators.report_title_resolution_generator import source_backed_title
+from src.generators.verified_claims_canary import (
+    VisualAuthorityCanaryConfig,
+    build_visual_authority_admitter,
+)
 from src.orchestrators._report_analysis_orchestrator.artifact_batches import (
     ArtifactStepTaskScheduler,
     ArtifactTaskRenderer,
@@ -418,6 +422,7 @@ def run_report_analysis(
     figure_caption_openai_client=None,
     source_openai_client=None,
     source_dependencies: ReportSourceDependencies | None = None,
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> ReportAnalysisState:
     if str(runtime.ctx.admission_decision_hash or "").strip():
         # Admission is the report workflow boundary.  Reject incomplete
@@ -1011,6 +1016,19 @@ def run_report_analysis(
     artifacts_payload: dict | None = None
     try:
         artifact_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts")
+        if visual_authority_canary is not None:
+            artifact_kwargs["visual_authority_admitter"] = (
+                build_visual_authority_admitter(
+                    config=visual_authority_canary,
+                    pdf_path=source.analysis_pdf_path or runtime.local_pdf_path,
+                    default_output_dir=runtime.settings.output_dir,
+                    report_name=runtime.report_name,
+                    evidence_packs=packs,
+                    ctx=artifact_ctx,
+                    settings=runtime.settings,
+                    doc_map=artifact_doc_map,
+                )
+            )
         with ArtifactStepTaskScheduler(runtime.settings) as artifact_executor:
             artifact_kwargs["artifact_step_executor"] = artifact_executor
             artifacts_payload = dependencies.generate_artifacts(

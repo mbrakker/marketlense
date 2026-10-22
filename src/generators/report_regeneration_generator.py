@@ -109,6 +109,8 @@ class _RegenerationState:
     expert_comment: str
     linkedin_post: str
     source_status: Dict[str, Any]
+    visual_authority_candidates: List[Dict[str, Any]] = field(default_factory=list)
+    visual_authority_digest: str = ""
     regenerated_sections: List[str] = field(default_factory=list)
     prompt_namespaces: List[str] = field(default_factory=list)
     prompt_identities: Dict[str, Dict[str, Any]] = field(default_factory=dict)
@@ -242,11 +244,14 @@ def regenerate_artifacts(
         fallback_toc_bundle=fallback_toc_bundle,
         source_status=availability,
     )
+    _apply_visual_authority_pool(state)
     state.editorial_plan = stabilize_broad_artifact_editorial_plan(
         state.editorial_plan,
         doc_map=safe_doc_map,
         evidence_packs=safe_evidence,
     )
+    if state.visual_authority_digest:
+        base_vars["_visual_authority_digest"] = state.visual_authority_digest
     runtime = _RegenerationRuntime(
         request=request,
         safe_doc_map=safe_doc_map,
@@ -394,6 +399,7 @@ def regenerate_artifacts(
         soft_copy_repair_lineage=state.soft_copy_repair_lineage,
         regeneration_attempt=request.attempt_index,
         validate_references=False,
+        visual_authority_canary=bool(state.visual_authority_candidates),
     )
     _preserve_atomic_target_families(
         updated_artifacts=updated_artifacts,
@@ -402,6 +408,11 @@ def regenerate_artifacts(
         original_artifacts=request.current_artifacts,
         additional_paths=state.deterministic_mutation_paths,
     )
+    if state.visual_authority_candidates:
+        updated_artifacts["insights_candidates"] = deepcopy(
+            state.insights_candidates
+        )
+        updated_artifacts["insights_final"] = deepcopy(state.insights_final)
     authorized_source_roots = {
         re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
         for target in request.plan.targets
@@ -1954,6 +1965,21 @@ def _build_regeneration_state(
         if isinstance(raw_cache, dict)
         else None
     )
+    raw_visual_authority = (
+        raw_cache.get("visual_authority_canary")
+        if isinstance(raw_cache, dict)
+        else None
+    )
+    visual_authority_candidates = (
+        _copy_list(raw_visual_authority.get("admitted_candidates"))
+        if isinstance(raw_visual_authority, dict)
+        else []
+    )
+    visual_authority_digest = (
+        _s(raw_visual_authority.get("digest")).strip()
+        if isinstance(raw_visual_authority, dict)
+        else ""
+    )
     return _RegenerationState(
         toc_entries=toc_entries,
         toc_topics=toc_topics,
@@ -1964,6 +1990,8 @@ def _build_regeneration_state(
         summary=_copy_dict(safe_artifacts.get("summary")),
         insights_candidates=_copy_list(safe_artifacts.get("insights_candidates")),
         insights_final=_copy_list(safe_artifacts.get("insights_final")),
+        visual_authority_candidates=visual_authority_candidates,
+        visual_authority_digest=visual_authority_digest,
         quotes_final=_copy_list(safe_artifacts.get("quotes_final")),
         cover_semantics=_copy_dict(safe_artifacts.get("cover_semantics")),
         expert_comment=_s(safe_artifacts.get("expert_comment")),
@@ -1988,6 +2016,53 @@ def _build_regeneration_state(
         else {},
         soft_copy_evidence_selections=soft_copy_evidence_selections,
     )
+
+
+def _apply_visual_authority_pool(state: _RegenerationState) -> None:
+    """Keep canary regeneration on the admitted stable-ID candidate pool."""
+
+    if not state.visual_authority_candidates:
+        return
+    authoritative = {
+        _s(item.get("id")).strip(): item
+        for item in state.visual_authority_candidates
+        if isinstance(item, dict) and _s(item.get("id")).strip()
+    }
+    if not authoritative or not state.visual_authority_digest:
+        raise AppError(
+            code="visual_authority_regeneration_metadata_invalid",
+            message="Visual authority regeneration metadata is incomplete",
+            retryable=False,
+        )
+
+    def constrain(
+        items: List[Dict[str, Any]], *, fill_missing: bool
+    ) -> List[Dict[str, Any]]:
+        constrained: List[Dict[str, Any]] = []
+        seen: set[str] = set()
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            insight_id = _s(item.get("id")).strip()
+            retained = authoritative.get(insight_id)
+            if retained is None or insight_id in seen:
+                continue
+            constrained.append(
+                restore_artifact_insight_factual_fields(
+                    deepcopy(item), [retained]
+                )
+            )
+            seen.add(insight_id)
+        if fill_missing:
+            constrained.extend(
+                deepcopy(retained)
+                for insight_id, retained in authoritative.items()
+                if insight_id not in seen
+            )
+        return constrained
+
+    state.insights_candidates = constrain(state.insights_candidates, fill_missing=True)
+    state.insights_final = constrain(state.insights_final, fill_missing=False)
 
 
 def _retained_soft_copy_evidence_selections(value: object) -> Dict[str, Dict[str, Any]]:
@@ -4623,6 +4698,7 @@ def _restore_failed_insight_metrics_deterministically(
 def _handle_insights_bundle_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
+    _apply_visual_authority_pool(execution.state)
     if _uses_safe_removal(execution):
         if _abstain_failed_insight_implications(execution):
             return
@@ -4670,23 +4746,31 @@ def _handle_insights_bundle_regeneration(
     execution.state.insights_candidates = _merge_regenerated_insights_by_stable_id(
         current_insights=execution.state.insights_candidates,
         regenerated_insights=regenerated_candidates,
-        append_new=True,
+        append_new=not bool(execution.state.visual_authority_candidates),
     )
+    _apply_visual_authority_pool(execution.state)
     execution.state.insights_candidates = select_artifact_insights(
         final_insights=execution.state.insights_candidates,
-        candidate_insights=fallback_artifact_insights_from_findings(
-            execution.runtime.safe_evidence.get("findings"),
-            limit=target_count * 2,
-            editorial_plan=execution.state.editorial_plan,
-            evidence_fidelity=execution.runtime.safe_evidence.get("evidence_fidelity"),
-            covered_evidence_ids=[
-                _s(item.get("evidence_id"))
-                for item in execution.state.insights_candidates
-                if isinstance(item, dict)
-            ],
+        candidate_insights=(
+            []
+            if execution.state.visual_authority_candidates
+            else fallback_artifact_insights_from_findings(
+                execution.runtime.safe_evidence.get("findings"),
+                limit=target_count * 2,
+                editorial_plan=execution.state.editorial_plan,
+                evidence_fidelity=execution.runtime.safe_evidence.get(
+                    "evidence_fidelity"
+                ),
+                covered_evidence_ids=[
+                    _s(item.get("evidence_id"))
+                    for item in execution.state.insights_candidates
+                    if isinstance(item, dict)
+                ],
+            )
         ),
         editorial_plan=execution.state.editorial_plan,
     )
+    _apply_visual_authority_pool(execution.state)
     eligible_candidate_insights = eligible_final_insight_candidates(
         execution.state.insights_candidates
     )
@@ -4736,6 +4820,7 @@ def _handle_insights_bundle_regeneration(
         prior_final_insights=prior_final_insights,
         eligible_candidate_insights=eligible_candidate_insights,
     )
+    _apply_visual_authority_pool(execution.state)
     execution.state.regenerated_sections.extend(
         ["insights_candidates", "insights_final"]
     )
@@ -5019,6 +5104,26 @@ def _regenerate_one_final_insight(
             execution.state.deterministic_mutation_paths.append(
                 f"insights_final[item={insight_id}].{field_name}"
             )
+    if execution.state.visual_authority_candidates:
+        authoritative = next(
+            (
+                item
+                for item in execution.state.visual_authority_candidates
+                if isinstance(item, dict)
+                and _s(item.get("id")).strip() == insight_id
+            ),
+            None,
+        )
+        if authoritative is None:
+            raise AppError(
+                code="visual_authority_regeneration_candidate_missing",
+                message="The repaired insight is outside the admitted visual pool.",
+                retryable=False,
+                context={"report_id": execution.runtime.request.report_id},
+            )
+        repaired = restore_artifact_insight_factual_fields(
+            repaired, [authoritative]
+        )
     if not any(
         _insight_path_value(repaired, field_path)
         != _insight_path_value(original, field_path)
