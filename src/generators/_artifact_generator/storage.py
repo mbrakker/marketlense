@@ -784,7 +784,9 @@ def _soft_copy_claim_provenance_payload(
         elif text:
             retained = [claim for claim in claims if claim.artifact_family == family]
             if not isinstance(declared, list) or not declared:
-                if not retained_soft_copy_claims_cover_text(text=text, claims=retained):
+                if not retained_soft_copy_claims_cover_text(
+                    text=text, claims=retained
+                ):
                     # A regeneration candidate may contain newly generated
                     # public prose without the model's binding payload. Keep
                     # the candidate structurally serializable so the

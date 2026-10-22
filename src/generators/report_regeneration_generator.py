@@ -277,7 +277,9 @@ def regenerate_artifacts(
         state.toc_topics = normalize_artifact_topics(
             fallback_toc_bundle.get("toc_topics")
         )
-        state.topic_briefs = _copy_list(fallback_toc_bundle.get("toc_topics_expanded"))
+        state.topic_briefs = _copy_list(
+            fallback_toc_bundle.get("toc_topics_expanded")
+        )
     base_vars = artifact_base_variables(active_doc_map, active_evidence)
     base_vars.pop("canonical_evidence_ids_json", None)
     _apply_visual_authority_pool(state)
@@ -469,7 +471,9 @@ def regenerate_artifacts(
         additional_paths=state.deterministic_mutation_paths,
     )
     if state.visual_authority_candidates:
-        updated_artifacts["insights_candidates"] = deepcopy(state.insights_candidates)
+        updated_artifacts["insights_candidates"] = deepcopy(
+            state.insights_candidates
+        )
         updated_artifacts["insights_final"] = deepcopy(state.insights_final)
     authorized_source_roots = {
         re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
@@ -630,9 +634,7 @@ def _prepare_grounding(
         report=_regeneration_report_stub(artifacts),
         artifacts=artifacts,
         evidence_packs=(
-            evidence_packs
-            if isinstance(evidence_packs, dict)
-            else request.evidence_packs
+            evidence_packs if isinstance(evidence_packs, dict) else request.evidence_packs
         ),
         vector_store_id=request.vector_store_id,
         publisher_name=request.publisher_name,
@@ -2167,7 +2169,9 @@ def _apply_visual_authority_pool(state: _RegenerationState) -> None:
             if retained is None or insight_id in seen:
                 continue
             constrained.append(
-                restore_artifact_insight_factual_fields(deepcopy(item), [retained])
+                restore_artifact_insight_factual_fields(
+                    deepcopy(item), [retained]
+                )
             )
             seen.add(insight_id)
         if fill_missing:
@@ -5226,7 +5230,8 @@ def _regenerate_one_final_insight(
             (
                 item
                 for item in execution.state.visual_authority_candidates
-                if isinstance(item, dict) and _s(item.get("id")).strip() == insight_id
+                if isinstance(item, dict)
+                and _s(item.get("id")).strip() == insight_id
             ),
             None,
         )
@@ -5237,7 +5242,9 @@ def _regenerate_one_final_insight(
                 retryable=False,
                 context={"report_id": execution.runtime.request.report_id},
             )
-        repaired = restore_artifact_insight_factual_fields(repaired, [authoritative])
+        repaired = restore_artifact_insight_factual_fields(
+            repaired, [authoritative]
+        )
     if not any(
         _insight_path_value(repaired, field_path)
         != _insight_path_value(original, field_path)

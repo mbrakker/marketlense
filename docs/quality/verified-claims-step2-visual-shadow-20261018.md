@@ -2903,6 +2903,19 @@ PDF pages; Algolia has no final artifact because the five-fact snapshot was
 available only in the retained verification cache, not in a completed
 current-head generation.
 
+**Hosted CI limitation.** Final-SHA hosted run `39815198918` passed the test
+job (**8,008 passed, 1 skipped**) and both mutation partitions, including the
+formatting, policy, architecture, schema, and repository gates. Its release
+evidence job failed only at the retained prompt-fixture regression gate:
+validation-family tokens were **9,597 vs 8,004** (+19.90%) and estimated cost
+was **$0.001720 vs $0.001560** (+10.26%); the total-token delta was **+1.62%**.
+A full rerun reproduced the same values. The prompt/config diff from the last
+successful hosted run is confined to the pre-existing Step 2 visual-verification
+prompt changes; no Step 3 stabilization commit changes prompts or model
+configuration. The gate was not weakened or allowlisted. This leaves the
+aggregate hosted release evidence status PARTIAL even though the changed
+Step 3 paths and all affected tests passed.
+
 **Current verdict: PARTIAL.** The verified-fact authority boundary, exact
 accounting, mixed-outcome admission, input isolation, quote semantics, cache
 identity, regeneration continuity, and current-head regression suite pass.

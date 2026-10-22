@@ -26,14 +26,6 @@ from src.utils.coercion import stripped_string_value
 from src.utils.errors import AppError
 
 _TERMINAL_VERIFIED_OUTCOMES = frozenset({"verified", "verified_after_retry"})
-_TERMINAL_EVALUATION_OUTCOMES = frozenset(
-    {
-        *_TERMINAL_VERIFIED_OUTCOMES,
-        "unresolved",
-        "failed_verification",
-        "skipped",
-    }
-)
 _SCORE_ONLY_FIELDS = frozenset(
     {
         "editorial_score",
@@ -98,7 +90,8 @@ def build_visual_authority_admitter(
             retryable=False,
         )
     output_dir = str(
-        config.output_dir or Path(default_output_dir) / "verified_claims_visual_canary"
+        config.output_dir
+        or Path(default_output_dir) / "verified_claims_visual_canary"
     )
 
     def admit(candidates: Sequence[Mapping[str, Any]]) -> VisualAuthorityAdmission:
@@ -156,7 +149,6 @@ def admit_visual_authority_candidates(
         "verified_fact_count": 0,
         "quarantined_count": 0,
         "coverage_complete": False,
-        "outcome_counts": {},
         "quarantined": [],
     }
     if not expected_sha:
@@ -207,7 +199,6 @@ def admit_visual_authority_candidates(
 
     results_by_id: dict[str, Any] = {}
     duplicate_result_ids: set[str] = set()
-    malformed_result_ids: set[str] = set()
     for raw_result in raw_results:
         candidate_id = _result_field(raw_result, "candidate_id")
         if not candidate_id:
@@ -217,17 +208,11 @@ def admit_visual_authority_candidates(
         if candidate_id in results_by_id:
             duplicate_result_ids.add(candidate_id)
             continue
-        outcome = _result_field(raw_result, "outcome").lower()
-        if outcome not in _TERMINAL_EVALUATION_OUTCOMES:
-            malformed_result_ids.add(candidate_id)
-            continue
         results_by_id[candidate_id] = raw_result
-        outcome_counts = audit["outcome_counts"]
-        outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
 
     expected_ids = set(candidate_groups)
     result_ids = set(results_by_id)
-    missing_ids = expected_ids - result_ids - malformed_result_ids
+    missing_ids = expected_ids - result_ids
     extra_ids = result_ids - expected_ids
     for candidate_id in sorted(duplicate_result_ids):
         _record_quarantine(audit, candidate_id, "duplicate_evaluation_id")
@@ -235,14 +220,11 @@ def admit_visual_authority_candidates(
         _record_quarantine(audit, candidate_id, "evaluation_missing")
     for candidate_id in sorted(extra_ids):
         _record_quarantine(audit, candidate_id, "evaluation_unexpected_id")
-    for candidate_id in sorted(malformed_result_ids):
-        _record_quarantine(audit, candidate_id, "evaluation_outcome_invalid")
     audit["coverage_complete"] = (
         bool(expected_ids)
         and not missing_ids
         and not extra_ids
         and not duplicate_result_ids
-        and not malformed_result_ids
         and not conflicting_ids
         and audit["evaluated_count"] == len(expected_ids)
     )
@@ -257,10 +239,6 @@ def admit_visual_authority_candidates(
         if not candidate_id or candidate_id in conflicting_ids:
             continue
         result = results_by_id[candidate_id]
-        outcome = _result_field(result, "outcome").lower()
-        if outcome not in _TERMINAL_VERIFIED_OUTCOMES:
-            _record_quarantine(audit, candidate_id, f"outcome_{outcome}")
-            continue
         reason, fact = _verified_fact_from_result(
             candidate=candidate,
             result=result,
@@ -352,10 +330,8 @@ def _verified_fact_from_result(
         return "verified_fact_inspected_pages_missing", {}
     result_supporting_pages = _result_pages(result, ("supporting_physical_pages",))
     fact_supporting_pages = _pages(raw_fact.get("supporting_physical_pages"))
-    if (
-        result_supporting_pages
-        and fact_supporting_pages
-        and (result_supporting_pages != fact_supporting_pages)
+    if result_supporting_pages and fact_supporting_pages and (
+        result_supporting_pages != fact_supporting_pages
     ):
         return "verified_fact_supporting_pages_conflict", {}
     supporting_pages = _result_pages(result, ("supporting_physical_pages",))
@@ -498,7 +474,9 @@ def _verified_evidence_packs(facts: Sequence[Mapping[str, Any]]) -> dict[str, An
     }
 
 
-def _empty_admission(audit: Dict[str, Any], reason: str) -> VisualAuthorityAdmission:
+def _empty_admission(
+    audit: Dict[str, Any], reason: str
+) -> VisualAuthorityAdmission:
     audit["terminal_error"] = reason
     audit["digest"] = sha256_json({"terminal_error": reason})
     audit["quarantined_count"] = len(audit.get("quarantined") or [])

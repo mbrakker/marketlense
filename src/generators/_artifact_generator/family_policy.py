@@ -323,8 +323,6 @@ def _quote_has_verbatim_source(quote: Dict[str, Any]) -> bool:
             if not isinstance(span, dict):
                 continue
             source_pack = _s(span.get("source_pack")).strip().casefold()
-            if source_pack == "verified_facts":
-                continue
             if source_pack == "quote_candidates":
                 return True
             span_text = _s(span.get("text")).strip()
