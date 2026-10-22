@@ -5,9 +5,33 @@ import os
 import re
 import unicodedata
 
-
 _SAFE_NAME_RX = re.compile(r"[^A-Za-z0-9._ ()-]")
 _PATH_SEPARATOR_RX = re.compile(r"[\\/]+")
+WINDOWS_PATH_BUDGET = 240
+WINDOWS_COMPONENT_BUDGET = 255
+_WINDOWS_RESERVED_COMPONENT_BASES = {
+    "con",
+    "prn",
+    "aux",
+    "nul",
+    *(f"com{index}" for index in range(1, 10)),
+    *(f"lpt{index}" for index in range(1, 10)),
+    *(f"com{superscript}" for superscript in ("¹", "²", "³")),
+    *(f"lpt{superscript}" for superscript in ("¹", "²", "³")),
+}
+
+
+def windows_path_units(value: str | os.PathLike[str]) -> int:
+    """Return the UTF-16 code-unit length used by the Windows path budget."""
+
+    return len(os.fspath(value).encode("utf-16-le", errors="surrogatepass")) // 2
+
+
+def is_windows_reserved_component(value: str) -> bool:
+    """Return whether a filename component uses a reserved Windows device name."""
+
+    base_name = str(value or "").split(".", maxsplit=1)[0].rstrip(" .")
+    return base_name.casefold() in _WINDOWS_RESERVED_COMPONENT_BASES
 
 
 def safe_pdf_name(raw_name: str) -> str:

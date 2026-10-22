@@ -3,12 +3,14 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import re
+from io import BytesIO
 from pathlib import Path
 
 import pymupdf as fitz
 from pypdf import PdfReader, PdfWriter
 from pypdf.errors import PdfReadError, PdfStreamError
 
+from src.contracts.files import WriteBytesRequest
 from src.contracts.pdf_context import (
     PdfContext,
     PdfContextBuildRequest,
@@ -45,12 +47,21 @@ from src.contracts.pdf_utils import (
     PdfIntegrityCheckResponse,
 )
 from src.contracts.run_context import RunContext
+from src.services import file_service
 from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.path_utils import (
+    WINDOWS_COMPONENT_BUDGET,
+    WINDOWS_PATH_BUDGET,
+    bounded_artifact_filename,
+    is_windows_reserved_component,
+    safe_path_segment,
+    windows_path_units,
+)
 from src.utils.pdf_text_layout import (
-    detached_percent_label_tokens,
     derive_two_panel_percent_chart_evidence,
+    detached_percent_label_tokens,
     has_two_panel_percent_chart_candidate,
     layout_text_preserves_label_value_rows,
 )
@@ -731,7 +742,22 @@ def render_text_pdf(
     try:
         for page in sorted(request.pages, key=lambda item: item.page_number):
             _append_text_page(doc, page.text)
-        doc.save(output_path.as_posix())
+        file_service.write_bytes(
+            WriteBytesRequest(
+                schema_version=request.schema_version,
+                path=str(output_path),
+                content=doc.tobytes(),
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        raise AppError(
+            code="pdf_text_render_failed",
+            message=f"Failed to render OCR PDF: {request.output_path}",
+            cause=exc,
+            retryable=exc.retryable,
+            severity=exc.severity,
+        ) from exc
     except (RuntimeError, ValueError, TypeError, OSError) as exc:
         raise AppError(
             code="pdf_text_render_failed",
@@ -936,6 +962,127 @@ def _rendered_pdf_page_count(path: Path) -> int:
         return document.page_count
 
 
+_OCR_ATOMIC_TEMP_NAME = ".0000000000000000.0000000000000000"
+_OCR_IDENTITY_LENGTH = 12
+
+
+def _ocr_split_path_error(path: Path, *, reason: str) -> AppError:
+    return AppError(
+        code="pdf_ocr_split_path_invalid",
+        message="PDF OCR split path cannot fit the supported Windows path policy",
+        retryable=False,
+        context={
+            "path": str(path),
+            "reason": reason,
+            "windows_path_budget": WINDOWS_PATH_BUDGET,
+            "windows_component_budget": WINDOWS_COMPONENT_BUDGET,
+            "next_action": "Set a shorter writable OCR output directory",
+        },
+    )
+
+
+def _ocr_split_conflict(path: Path, *, cause: Exception | None = None) -> AppError:
+    return AppError(
+        code="pdf_ocr_split_artifact_conflict",
+        message="Refusing to replace a conflicting OCR chunk artifact",
+        cause=cause,
+        retryable=False,
+        context={
+            "path": str(path),
+            "next_action": (
+                "Remove the conflicting chunk or choose a new OCR output directory"
+            ),
+        },
+    )
+
+
+def _resolve_ocr_path(path_value: str, *, role: str) -> Path:
+    try:
+        path = Path(path_value).expanduser().resolve()
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise _ocr_split_path_error(
+            Path(str(path_value)), reason=f"{role}_resolution_failed"
+        ) from exc
+    for component in path.parts:
+        if component in {path.anchor, "", "."}:
+            continue
+        if (
+            windows_path_units(component) > WINDOWS_COMPONENT_BUDGET
+            or component != component.rstrip(" .")
+            or is_windows_reserved_component(component)
+        ):
+            raise _ocr_split_path_error(path, reason=f"{role}_component_invalid")
+    return path
+
+
+def _validate_ocr_output_root(output_dir: Path) -> None:
+    root_units = windows_path_units(output_dir)
+    atomic_temp_units = root_units + 1 + windows_path_units(_OCR_ATOMIC_TEMP_NAME)
+    if atomic_temp_units > WINDOWS_PATH_BUDGET:
+        raise _ocr_split_path_error(
+            output_dir, reason="output_root_atomic_temp_too_long"
+        )
+    if root_units + 1 >= WINDOWS_PATH_BUDGET:
+        raise _ocr_split_path_error(
+            output_dir, reason="output_root_leaves_no_filename_budget"
+        )
+
+
+def _source_identity(source_pdf_path: Path) -> str:
+    content_md5 = hashlib.md5()
+    try:
+        with source_pdf_path.open("rb") as handle:
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                content_md5.update(block)
+    except OSError as exc:
+        raise AppError(
+            code="pdf_ocr_split_read_failed",
+            message=f"Failed to read PDF for OCR split: {source_pdf_path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    return hashlib.sha256(
+        f"{source_pdf_path}\x00{content_md5.hexdigest()}".encode("utf-8")
+    ).hexdigest()[:_OCR_IDENTITY_LENGTH]
+
+
+def _ocr_chunk_path(
+    *,
+    output_dir: Path,
+    source_pdf_path: Path,
+    source_identity: str,
+    start_page_number: int,
+    end_page_number: int,
+) -> Path:
+    available_units = min(
+        WINDOWS_COMPONENT_BUDGET,
+        WINDOWS_PATH_BUDGET - windows_path_units(output_dir) - 1,
+    )
+    compact_stem = (
+        f"ocr-{source_identity}-pages-{start_page_number:04d}-{end_page_number:04d}"
+    )
+    if available_units <= windows_path_units(f"a-{source_identity}.pdf"):
+        raise _ocr_split_path_error(
+            output_dir, reason="chunk_filename_budget_exhausted"
+        )
+    source_stem = safe_path_segment(source_pdf_path.stem, fallback="ocr").casefold()
+    filename = bounded_artifact_filename(
+        f"{source_stem}-{source_identity}.ocr-pages-"
+        f"{start_page_number:04d}-{end_page_number:04d}",
+        compact_stem=compact_stem,
+        extension=".pdf",
+        max_length=available_units,
+    )
+    chunk_path = output_dir / filename
+    if (
+        windows_path_units(chunk_path) > WINDOWS_PATH_BUDGET
+        or windows_path_units(chunk_path.name) > WINDOWS_COMPONENT_BUDGET
+        or is_windows_reserved_component(chunk_path.name)
+    ):
+        raise _ocr_split_path_error(chunk_path, reason="chunk_path_too_long")
+    return chunk_path
+
+
 def split_pdf_for_ocr(
     request: PdfOcrSplitRequest,
     ctx: RunContext,
@@ -953,13 +1100,17 @@ def split_pdf_for_ocr(
             },
         )
     )
-    source_pdf_path = Path(request.source_pdf_path)
     if request.chunk_page_count < 1:
         raise AppError(
             code="pdf_ocr_split_invalid_request",
             message="chunk_page_count must be at least 1",
             retryable=False,
         )
+    source_pdf_path = _resolve_ocr_path(request.source_pdf_path, role="source_pdf")
+    output_dir = _resolve_ocr_path(request.output_dir, role="output_dir")
+    if windows_path_units(source_pdf_path) > WINDOWS_PATH_BUDGET:
+        raise _ocr_split_path_error(source_pdf_path, reason="source_pdf_path_too_long")
+    _validate_ocr_output_root(output_dir)
     try:
         reader = PdfReader(source_pdf_path.as_posix(), strict=False)
     except FileNotFoundError as exc:
@@ -996,8 +1147,8 @@ def split_pdf_for_ocr(
             chunk = PdfOcrChunk(
                 schema_version="1.0",
                 chunk_index=1,
-                source_pdf_path=request.source_pdf_path,
-                chunk_pdf_path=request.source_pdf_path,
+                source_pdf_path=str(source_pdf_path),
+                chunk_pdf_path=str(source_pdf_path),
                 start_page_number=1,
                 end_page_number=total_pages,
                 page_count=total_pages,
@@ -1019,10 +1170,8 @@ def split_pdf_for_ocr(
             )
             return response
 
-        output_dir = Path(request.output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        source_identity = _source_identity(source_pdf_path)
         chunks: list[PdfOcrChunk] = []
-        stem = source_pdf_path.stem or "ocr"
         for chunk_index, start_idx in enumerate(
             range(0, total_pages, request.chunk_page_count), start=1
         ):
@@ -1032,17 +1181,35 @@ def split_pdf_for_ocr(
                 writer.add_page(reader.pages[page_idx])
             start_page_number = start_idx + 1
             end_page_number = end_idx
-            chunk_pdf_path = output_dir / (
-                f"{stem}.ocr-pages-{start_page_number:04d}-{end_page_number:04d}.pdf"
+            chunk_pdf_path = _ocr_chunk_path(
+                output_dir=output_dir,
+                source_pdf_path=source_pdf_path,
+                source_identity=source_identity,
+                start_page_number=start_page_number,
+                end_page_number=end_page_number,
             )
-            with chunk_pdf_path.open("wb") as handle:
-                writer.write(handle)
+            chunk_bytes = BytesIO()
+            writer.write(chunk_bytes)
+            try:
+                file_service.write_bytes(
+                    WriteBytesRequest(
+                        schema_version="1.0",
+                        path=str(chunk_pdf_path),
+                        content=chunk_bytes.getvalue(),
+                    ),
+                    ctx,
+                    reject_conflicting_existing=True,
+                )
+            except AppError as exc:
+                if exc.code == "file_write_conflict":
+                    raise _ocr_split_conflict(chunk_pdf_path, cause=exc) from exc
+                raise
             chunks.append(
                 PdfOcrChunk(
                     schema_version="1.0",
                     chunk_index=chunk_index,
-                    source_pdf_path=request.source_pdf_path,
-                    chunk_pdf_path=chunk_pdf_path.as_posix(),
+                    source_pdf_path=str(source_pdf_path),
+                    chunk_pdf_path=str(chunk_pdf_path),
                     start_page_number=start_page_number,
                     end_page_number=end_page_number,
                     page_count=end_idx - start_idx,

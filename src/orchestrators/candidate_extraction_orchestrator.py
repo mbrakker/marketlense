@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from dataclasses import dataclass
@@ -10,28 +11,44 @@ from src.contracts.candidate_extraction import (
     CandidateExtractOutcome,
     CandidateExtractRequest,
 )
-from src.contracts.drive import DriveDownloadRequest, DriveListRequest, DriveFile
-from src.contracts.files import FileExistsRequest, FileHashRequest, WriteBytesRequest
+from src.contracts.drive import DriveDownloadRequest, DriveFile, DriveListRequest
+from src.contracts.files import (
+    FileExistsRequest,
+    FileHashRequest,
+    ReadBytesRequest,
+    WriteBytesRequest,
+)
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.generators.candidate_extraction_generator import generate_candidate_pack
-from src.services.drive_service import download_pdf, list_pdfs
-from src.services.file_service import file_exists, file_md5, write_bytes
-from src.services.pdf_service import check_pdf_eof
-from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.orchestrators.remediation_orchestrator import (
     record_workflow_failure,
     remediation_input_checksum,
 )
+from src.orchestrators.retry_orchestrator import run_step_with_default_policy
+from src.services.drive_service import download_pdf, list_pdfs
+from src.services.file_service import file_exists, file_md5, read_bytes, write_bytes
+from src.services.pdf_service import check_pdf_eof
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
-from src.utils.path_utils import safe_pdf_name
+from src.utils.path_utils import (
+    WINDOWS_COMPONENT_BUDGET,
+    WINDOWS_PATH_BUDGET,
+    bounded_artifact_filename,
+    is_windows_reserved_component,
+    safe_path_segment,
+    safe_pdf_name,
+    windows_path_units,
+)
 from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.candidate_extraction_orchestrator")
+
+_ATOMIC_TEMP_NAME = ".0000000000000000.0000000000000000"
+_CACHE_IDENTITY_LENGTH = 12
 
 
 @dataclass(frozen=True)
@@ -40,7 +57,9 @@ class CandidateExtractionDependencies:
     download_pdf: Callable[[DriveDownloadRequest, RunContext], Any]
     file_exists: Callable[[FileExistsRequest, RunContext], Any]
     file_md5: Callable[[FileHashRequest, RunContext], Any]
+    read_bytes: Callable[[ReadBytesRequest, RunContext], Any]
     write_bytes: Callable[[WriteBytesRequest, RunContext], Any]
+    write_bytes_no_replace: Callable[[WriteBytesRequest, RunContext], Any]
     check_pdf_eof: Callable[[PdfEofCheckRequest, RunContext], Any]
     generate_candidate_pack: Callable[[CandidateExtractRequest, RunContext], Any]
     sleep_fn: Callable[[float], None]
@@ -52,7 +71,9 @@ class CandidateExtractionDependencies:
             download_pdf=download_pdf,
             file_exists=file_exists,
             file_md5=file_md5,
+            read_bytes=read_bytes,
             write_bytes=write_bytes,
+            write_bytes_no_replace=_write_bytes_no_replace,
             check_pdf_eof=check_pdf_eof,
             generate_candidate_pack=generate_candidate_pack,
             sleep_fn=time.sleep,
@@ -90,23 +111,155 @@ def _run_step_with_retry(
     )
 
 
+def _write_bytes_no_replace(request: WriteBytesRequest, ctx: RunContext) -> Any:
+    return write_bytes(request, ctx, reject_conflicting_existing=True)
+
+
+def _candidate_cache_path_error(path: Path, *, reason: str) -> AppError:
+    return AppError(
+        code="candidate_cache_path_invalid",
+        message=(
+            "Candidate PDF cache path cannot fit the supported Windows path policy"
+        ),
+        retryable=False,
+        context={
+            "path": str(path),
+            "reason": reason,
+            "windows_path_budget": WINDOWS_PATH_BUDGET,
+            "windows_component_budget": WINDOWS_COMPONENT_BUDGET,
+            "next_action": "Set a shorter writable candidate cache_dir",
+        },
+    )
+
+
+def _candidate_cache_conflict(
+    path: Path, *, cause: Exception | None = None
+) -> AppError:
+    return AppError(
+        code="candidate_cache_conflict",
+        message="Refusing to replace a conflicting source-associated candidate PDF",
+        cause=cause,
+        retryable=False,
+        context={
+            "path": str(path),
+            "next_action": "Choose a new cache root or remove the conflicting artifact",
+        },
+    )
+
+
+def _resolved_candidate_cache_root(settings: IngestSettings) -> Path:
+    try:
+        root = Path(settings.cache_dir).expanduser().resolve()
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise _candidate_cache_path_error(
+            Path(str(settings.cache_dir)), reason="cache_root_resolution_failed"
+        ) from exc
+
+    for component in root.parts:
+        if component in {root.anchor, "", "."}:
+            continue
+        if (
+            windows_path_units(component) > WINDOWS_COMPONENT_BUDGET
+            or component != component.rstrip(" .")
+            or is_windows_reserved_component(component)
+        ):
+            raise _candidate_cache_path_error(
+                root, reason="cache_root_component_invalid"
+            )
+    temp_path_units = (
+        windows_path_units(root) + 1 + windows_path_units(_ATOMIC_TEMP_NAME)
+    )
+    if temp_path_units > WINDOWS_PATH_BUDGET:
+        raise _candidate_cache_path_error(
+            root, reason="cache_root_atomic_temp_too_long"
+        )
+    return root
+
+
+def _candidate_cache_filename(file: DriveFile, root: Path) -> str:
+    raw_name = safe_pdf_name(file.name or f"{file.file_id}.pdf")
+    safe_stem = safe_path_segment(Path(raw_name).stem.casefold(), fallback="candidate")
+    file_identity = hashlib.sha256(file.file_id.encode("utf-8")).hexdigest()[
+        :_CACHE_IDENTITY_LENGTH
+    ]
+    content_identity = ""
+    if file.md5_checksum:
+        content_identity = hashlib.sha256(
+            str(file.md5_checksum).strip().casefold().encode("utf-8")
+        ).hexdigest()[:_CACHE_IDENTITY_LENGTH]
+    identity_stem = f"{safe_stem}-{file_identity}"
+    if content_identity:
+        identity_stem = f"{identity_stem}-{content_identity}"
+
+    available_units = min(
+        WINDOWS_COMPONENT_BUDGET,
+        WINDOWS_PATH_BUDGET - windows_path_units(root) - 1,
+    )
+    minimum_compacted_units = len("a-000000000000.pdf")
+    if available_units < minimum_compacted_units:
+        raise _candidate_cache_path_error(
+            root, reason="cache_filename_budget_exhausted"
+        )
+    filename = bounded_artifact_filename(
+        identity_stem,
+        compact_stem=f"candidate-{file_identity}",
+        extension=".pdf",
+        max_length=available_units,
+    )
+    if windows_path_units(filename) > available_units or is_windows_reserved_component(
+        filename
+    ):
+        raise _candidate_cache_path_error(
+            root / filename, reason="cache_filename_budget_exhausted"
+        )
+    return filename
+
+
+def _candidate_cache_paths(
+    file: DriveFile, settings: IngestSettings
+) -> tuple[Path, Path | None]:
+    root = _resolved_candidate_cache_root(settings)
+    filename = _candidate_cache_filename(file, root)
+    canonical_path = root / filename
+    if windows_path_units(canonical_path) > WINDOWS_PATH_BUDGET:
+        raise _candidate_cache_path_error(canonical_path, reason="cache_path_too_long")
+
+    legacy_candidate_path = root / safe_pdf_name(file.name or f"{file.file_id}.pdf")
+    if (
+        windows_path_units(legacy_candidate_path) > WINDOWS_PATH_BUDGET
+        or windows_path_units(legacy_candidate_path.name) > WINDOWS_COMPONENT_BUDGET
+        or is_windows_reserved_component(legacy_candidate_path.name)
+    ):
+        return canonical_path, None
+    return canonical_path, legacy_candidate_path
+
+
 def _download_if_needed(
     file: DriveFile,
     settings: IngestSettings,
     ctx: RunContext,
     dependencies: CandidateExtractionDependencies,
 ) -> tuple[str, Optional[str]]:
-    cache_name = safe_pdf_name(file.name or f"{file.file_id}.pdf")
-    cache_path = str(Path(settings.cache_dir) / cache_name)
+    cache_path_obj, legacy_path_obj = _candidate_cache_paths(file, settings)
+    cache_path = str(cache_path_obj)
     md5 = None
     exists_resp = dependencies.file_exists(
         FileExistsRequest(schema_version="1.0", path=cache_path), ctx
     )
-    if exists_resp.exists and file.md5_checksum:
-        md5_resp = dependencies.file_md5(
-            FileHashRequest(schema_version="1.0", path=cache_path), ctx
-        )
-        if md5_resp.md5 == file.md5_checksum:
+    canonical_exists = bool(exists_resp.exists)
+    if canonical_exists and file.md5_checksum:
+        try:
+            md5_resp = dependencies.file_md5(
+                FileHashRequest(schema_version="1.0", path=cache_path), ctx
+            )
+        except AppError as exc:
+            if exc.code == "file_not_found":
+                md5_resp = None
+            else:
+                raise
+        if md5_resp is None:
+            canonical_exists = False
+        elif md5_resp.md5.casefold() == file.md5_checksum.casefold():
             md5 = md5_resp.md5
             logger.info(
                 log_event(
@@ -118,6 +271,59 @@ def _download_if_needed(
                 )
             )
             return cache_path, md5
+        else:
+            raise _candidate_cache_conflict(
+                cache_path_obj,
+                cause=ValueError("existing candidate cache md5 does not match source"),
+            )
+
+    if not canonical_exists and file.md5_checksum and legacy_path_obj is not None:
+        legacy_path = str(legacy_path_obj)
+        legacy_exists = dependencies.file_exists(
+            FileExistsRequest(schema_version="1.0", path=legacy_path), ctx
+        )
+        if legacy_exists.exists:
+            legacy_md5 = dependencies.file_md5(
+                FileHashRequest(schema_version="1.0", path=legacy_path), ctx
+            )
+            if legacy_md5.md5.casefold() == file.md5_checksum.casefold():
+                legacy_content = dependencies.read_bytes(
+                    ReadBytesRequest(schema_version="1.0", path=legacy_path), ctx
+                ).content
+                if (
+                    hashlib.md5(legacy_content).hexdigest().casefold()
+                    == file.md5_checksum.casefold()
+                ):
+                    try:
+                        dependencies.write_bytes_no_replace(
+                            WriteBytesRequest(
+                                schema_version="1.0",
+                                path=cache_path,
+                                content=legacy_content,
+                            ),
+                            ctx,
+                        )
+                    except AppError as exc:
+                        if exc.code != "file_write_conflict":
+                            raise
+                        raise _candidate_cache_conflict(
+                            cache_path_obj, cause=exc
+                        ) from exc
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="orchestrator",
+                            event="pdf_cache_legacy_promoted",
+                            module=logger.name,
+                            fields={
+                                "file_id": file.file_id,
+                                "path": cache_path,
+                                "legacy_path": legacy_path,
+                                "md5": file.md5_checksum,
+                            },
+                        )
+                    )
+                    return cache_path, file.md5_checksum
 
     logger.info(
         log_event(
@@ -142,12 +348,17 @@ def _download_if_needed(
         lambda: dependencies.download_pdf(dl_req, ctx),
         dependencies,
     )
-    write_resp = dependencies.write_bytes(
-        WriteBytesRequest(
-            schema_version="1.0", path=cache_path, content=dl_resp.content
-        ),
-        ctx,
-    )
+    try:
+        write_resp = dependencies.write_bytes_no_replace(
+            WriteBytesRequest(
+                schema_version="1.0", path=cache_path, content=dl_resp.content
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        if exc.code == "file_write_conflict":
+            raise _candidate_cache_conflict(cache_path_obj, cause=exc) from exc
+        raise
     md5 = write_resp.md5
     eof_check = dependencies.check_pdf_eof(
         PdfEofCheckRequest(schema_version="1.0", path=cache_path), ctx

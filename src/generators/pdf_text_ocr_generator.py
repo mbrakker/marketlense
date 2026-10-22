@@ -21,7 +21,6 @@ from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_generation import ReportRuntimeState
 from src.generators.report_generation_dependencies import ReportSourceDependencies
 from src.generators.report_generation_shared import (
-    cache_dir,
     read_cache_json,
     write_cache_json,
 )
@@ -30,6 +29,269 @@ from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.model_client_contract import require_injected_model_client
 from src.utils.model_resolver import resolve_settings_execution_policy
+from src.utils.path_utils import (
+    WINDOWS_COMPONENT_BUDGET,
+    WINDOWS_PATH_BUDGET,
+    bounded_artifact_filename,
+    is_windows_reserved_component,
+    safe_path_segment,
+    windows_path_units,
+)
+
+_OCR_ATOMIC_TEMP_NAME = ".0000000000000000.0000000000000000"
+_OCR_IDENTITY_LENGTH = 12
+
+
+def _ocr_path_error(path: Path, *, role: str, reason: str) -> AppError:
+    return AppError(
+        code="pdf_text_ocr_path_invalid",
+        message=f"{role} cannot fit the supported Windows path policy",
+        retryable=False,
+        context={
+            "path": str(path),
+            "path_role": role,
+            "reason": reason,
+            "windows_path_budget": WINDOWS_PATH_BUDGET,
+            "windows_component_budget": WINDOWS_COMPONENT_BUDGET,
+            "next_action": "Set a shorter writable OCR cache_dir",
+        },
+    )
+
+
+def _validate_ocr_path_components(path: Path, *, role: str) -> None:
+    for component in path.parts:
+        if component in {path.anchor, "", "."}:
+            continue
+        if (
+            windows_path_units(component) > WINDOWS_COMPONENT_BUDGET
+            or component != component.rstrip(" .")
+            or is_windows_reserved_component(component)
+        ):
+            raise _ocr_path_error(path, role=role, reason="path_component_invalid")
+
+
+def _resolve_ocr_path(path_value: str | Path, *, role: str) -> Path:
+    try:
+        path = Path(path_value).expanduser().resolve()
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise _ocr_path_error(
+            Path(str(path_value)), role=role, reason="path_resolution_failed"
+        ) from exc
+    _validate_ocr_path_components(path, role=role)
+    return path
+
+
+def _ocr_parent_file_name_budget(parent: Path, *, role: str) -> int:
+    parent_units = windows_path_units(parent)
+    atomic_temp_units = windows_path_units(_OCR_ATOMIC_TEMP_NAME)
+    if parent_units + 1 + atomic_temp_units > WINDOWS_PATH_BUDGET:
+        raise _ocr_path_error(parent, role=role, reason="atomic_temp_path_too_long")
+    available = min(
+        WINDOWS_COMPONENT_BUDGET,
+        WINDOWS_PATH_BUDGET - parent_units - 1,
+    )
+    if available <= 0:
+        raise _ocr_path_error(parent, role=role, reason="no_filename_budget")
+    return available
+
+
+def _truncate_ocr_units(value: str, max_units: int) -> str:
+    if max_units <= 0:
+        return ""
+    units = 0
+    result: list[str] = []
+    for character in value:
+        character_units = windows_path_units(character)
+        if units + character_units > max_units:
+            break
+        result.append(character)
+        units += character_units
+    return "".join(result)
+
+
+def _bounded_ocr_component(
+    raw_value: str,
+    *,
+    identity: str,
+    max_units: int,
+    fallback: str,
+) -> str:
+    safe_value = safe_path_segment(raw_value, fallback=fallback)
+    if (
+        safe_value == raw_value
+        and windows_path_units(safe_value) <= max_units
+        and not is_windows_reserved_component(safe_value)
+    ):
+        return safe_value
+
+    digest = sha256(str(identity).encode("utf-8")).hexdigest()[:_OCR_IDENTITY_LENGTH]
+    suffix = f"-{digest}"
+    prefix = _truncate_ocr_units(
+        safe_value,
+        max_units - windows_path_units(suffix),
+    ).rstrip(" ._-")
+    candidate = f"{prefix}{suffix}" if prefix else digest
+    if (
+        not candidate
+        or windows_path_units(candidate) > max_units
+        or windows_path_units(candidate) > WINDOWS_COMPONENT_BUDGET
+        or is_windows_reserved_component(candidate)
+    ):
+        raise _ocr_path_error(
+            Path(raw_value),
+            role="OCR artifact path",
+            reason="component_budget_exhausted",
+        )
+    return candidate
+
+
+def _ocr_cache_root(runtime: ReportRuntimeState) -> Path:
+    settings_root = _resolve_ocr_path(
+        runtime.settings.cache_dir,
+        role="OCR cache root",
+    )
+    raw_key = str(runtime.md5 or runtime.report_name or runtime.file.file_id or "ocr")
+    base_candidates = (settings_root / "pdf_cache", settings_root / ".pdf-cache")
+    for base in base_candidates:
+        _validate_ocr_path_components(base, role="OCR cache root")
+        base_units = windows_path_units(base)
+        key_budget = min(
+            WINDOWS_COMPONENT_BUDGET,
+            WINDOWS_PATH_BUDGET
+            - base_units
+            - 2
+            - windows_path_units(_OCR_ATOMIC_TEMP_NAME),
+        )
+        if key_budget <= 0:
+            continue
+        key_component = _bounded_ocr_component(
+            raw_key,
+            identity=raw_key,
+            max_units=key_budget,
+            fallback="ocr",
+        )
+        cache_root = base / key_component
+        _validate_ocr_path_components(cache_root, role="OCR cache root")
+        try:
+            _ocr_parent_file_name_budget(cache_root, role="OCR cache root")
+        except AppError:
+            continue
+        return cache_root
+    raise _ocr_path_error(
+        settings_root,
+        role="OCR cache root",
+        reason="cache_root_budget_exhausted",
+    )
+
+
+def _ocr_cache_file_path(
+    cache_root: Path,
+    *,
+    prefix: str,
+    cache_key: str,
+    extension: str,
+) -> Path:
+    available = _ocr_parent_file_name_budget(cache_root, role="OCR cache artifact")
+    raw_stem = f"{prefix}_{cache_key}"
+    normal_name = f"{raw_stem}{extension}"
+    if (
+        windows_path_units(normal_name) <= available
+        and windows_path_units(normal_name) <= WINDOWS_COMPONENT_BUDGET
+        and not is_windows_reserved_component(normal_name)
+    ):
+        return cache_root / normal_name
+
+    bounded_name = bounded_artifact_filename(
+        raw_stem,
+        compact_stem=f"{prefix}_{cache_key[:_OCR_IDENTITY_LENGTH]}",
+        extension=extension,
+        max_length=available,
+    )
+    if (
+        windows_path_units(bounded_name) > available
+        or windows_path_units(bounded_name) > WINDOWS_COMPONENT_BUDGET
+        or is_windows_reserved_component(bounded_name)
+    ):
+        raise _ocr_path_error(
+            cache_root / bounded_name,
+            role="OCR cache artifact",
+            reason="cache_filename_budget_exhausted",
+        )
+    return cache_root / bounded_name
+
+
+def _ocr_chunk_directory(
+    runtime: ReportRuntimeState, cache_root: Path, cache_key: str
+) -> Path:
+    raw_name = f"ocr_chunks_{cache_key or f'run-{runtime.ctx.run_id}'}"
+    parent_budget = min(
+        WINDOWS_COMPONENT_BUDGET,
+        WINDOWS_PATH_BUDGET
+        - windows_path_units(cache_root)
+        - 2
+        - windows_path_units(_OCR_ATOMIC_TEMP_NAME),
+    )
+    if parent_budget <= 0:
+        raise _ocr_path_error(
+            cache_root,
+            role="OCR chunk directory",
+            reason="chunk_directory_budget_exhausted",
+        )
+    identity = f"{runtime.file.file_id}\x00{cache_key or runtime.ctx.run_id}"
+    component = _bounded_ocr_component(
+        raw_name,
+        identity=identity,
+        max_units=parent_budget,
+        fallback="ocr_chunks",
+    )
+    chunk_dir = cache_root / component
+    _validate_ocr_path_components(chunk_dir, role="OCR chunk directory")
+    try:
+        _ocr_parent_file_name_budget(chunk_dir, role="OCR chunk directory")
+    except AppError as exc:
+        raise _ocr_path_error(
+            chunk_dir,
+            role="OCR chunk directory",
+            reason="chunk_directory_budget_exhausted",
+        ) from exc
+    return chunk_dir
+
+
+def _ocr_noncached_output_path(runtime: ReportRuntimeState) -> Path:
+    parent = _resolve_ocr_path(runtime.settings.cache_dir, role="OCR output root")
+    available = _ocr_parent_file_name_budget(parent, role="OCR output artifact")
+    safe_report_name = safe_path_segment(
+        runtime.report_name,
+        fallback=safe_path_segment(runtime.file.file_id, fallback="report"),
+    )
+    raw_stem = f"{safe_report_name}.ocr"
+    normal_name = f"{raw_stem}.pdf"
+    if (
+        windows_path_units(normal_name) <= available
+        and windows_path_units(normal_name) <= WINDOWS_COMPONENT_BUDGET
+        and not is_windows_reserved_component(normal_name)
+    ):
+        return parent / normal_name
+
+    identity = f"{runtime.file.file_id}\x00{runtime.report_name}"
+    digest = sha256(identity.encode("utf-8")).hexdigest()[:_OCR_IDENTITY_LENGTH]
+    bounded_name = bounded_artifact_filename(
+        safe_report_name,
+        compact_stem=f"ocr-{digest}",
+        extension=".ocr.pdf",
+        max_length=available,
+    )
+    if (
+        windows_path_units(bounded_name) > available
+        or windows_path_units(bounded_name) > WINDOWS_COMPONENT_BUDGET
+        or is_windows_reserved_component(bounded_name)
+    ):
+        raise _ocr_path_error(
+            parent / bounded_name,
+            role="OCR output artifact",
+            reason="output_filename_budget_exhausted",
+        )
+    return parent / bounded_name
 
 
 def recover_pdf_text_with_ocr(
@@ -101,8 +363,18 @@ def recover_pdf_text_with_ocr(
                 "chunk_page_count": runtime.settings.pdf_text_ocr_chunk_page_count,
             }
         )
-        cache_json_path = cache_root / f"ocr_response_{cache_key}.json"
-        cache_pdf_path = cache_root / f"ocr_text_{cache_key}.pdf"
+        cache_json_path = _ocr_cache_file_path(
+            cache_root,
+            prefix="ocr_response",
+            cache_key=cache_key,
+            extension=".json",
+        )
+        cache_pdf_path = _ocr_cache_file_path(
+            cache_root,
+            prefix="ocr_text",
+            cache_key=cache_key,
+            extension=".pdf",
+        )
         cached_payload = read_cache_json(cache_json_path, ocr_ctx, dependencies)
         cached_pdf_exists = False
         if cache_pdf_path is not None:
@@ -167,12 +439,11 @@ def recover_pdf_text_with_ocr(
             },
         )
 
-    chunk_dir_name = cache_key or f"run-{runtime.ctx.run_id}"
     split_response = dependencies.split_pdf_for_ocr(
         PdfOcrSplitRequest(
             schema_version="1.0",
             source_pdf_path=runtime.local_pdf_path,
-            output_dir=str(cache_root / f"ocr_chunks_{chunk_dir_name}"),
+            output_dir=str(_ocr_chunk_directory(runtime, cache_root, cache_key)),
             chunk_page_count=runtime.settings.pdf_text_ocr_chunk_page_count,
         ),
         ocr_ctx,
@@ -275,7 +546,7 @@ def recover_pdf_text_with_ocr(
     output_path = (
         str(cache_pdf_path)
         if cache_pdf_path is not None
-        else str(Path(runtime.settings.cache_dir) / f"{runtime.report_name}.ocr.pdf")
+        else str(_ocr_noncached_output_path(runtime))
     )
     try:
         render_response = dependencies.render_text_pdf(
@@ -536,11 +807,6 @@ def _detect_chunk_numbering(chunk: PdfOcrChunk, raw_pages: list[PdfOcrPageText])
 def _ocr_candidate_models(runtime: ReportRuntimeState) -> list[str]:
     model = str(runtime.settings.pdf_text_ocr_model or "").strip()
     return [model] if model else []
-
-
-def _ocr_cache_root(runtime: ReportRuntimeState) -> Path:
-    cache_key = runtime.md5 or runtime.report_name or runtime.file.file_id
-    return cache_dir(runtime.settings, cache_key)
 
 
 def _cached_response_from_payload(payload: dict) -> PdfOcrAggregateResponse:
