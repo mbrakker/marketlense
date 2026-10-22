@@ -2601,3 +2601,136 @@ retained provenance trace is continuous for the audited rows, but clean
 full-cohort live selection repeatability, a source-recall oracle, P6 human
 acceptance, and canonical corrected-claim binding completeness remain open.
 Step 3 remains unstarted.
+
+#### Visual-authoritative editorial canary — 2026-10-22
+
+This checkpoint adds an explicit, opt-in, shadow-only canary at the existing
+candidate-to-final editorial boundary. It does not promote canonical verified
+claims, change publication readiness, write WordPress, or implement Step 3.
+The implementation checkpoints are `0079be14` (canary admission and wiring)
+and `38bb36e1` (downstream propagation regressions).
+
+**Boundary and authority rules.** `run_report_analysis()` and
+`generate_artifacts()` retain their default behavior when no canary
+configuration is supplied. In canary mode, the existing Step 2 evaluator is
+called with a hash-bearing source identity and the actual source PDF. The
+admission adapter requires a terminal `verified` or `verified_after_retry`
+outcome, an exact source identity/hash match, the stable candidate ID, a
+physical page, canonical evidence spans, and a complete protected metric
+binding for a material correction. An unchanged proposition may retain its
+original binding; a material `unbound` correction is quarantined. Duplicate or
+conflicting stable IDs are failed closed rather than resolved by editorial
+score. No evidence ID, page, span, metric, or factual field is invented.
+
+Admitted candidates are the sole factual pool for final insights, metric
+spine, expert commentary, LinkedIn output, and scoped regeneration. The
+authority digest participates in affected family inputs and is retained in
+the private cache metadata. Overall artifact-cache reads are bypassed until
+admission runs, and regeneration reuses only the admitted pool/digest. The
+legacy `preserve_public_source_displays()` correction is skipped inside this
+canary path; the non-canary path is unchanged.
+
+**Provider-free frozen-five replay.** The exact Step 0 cohort (Capgemini,
+Activate, KPMG, Reuters Institute, and Adjust) used the retained real-report
+artifacts, `evidence_fidelity` packs, DocMaps, and hash-matched PDFs. It
+covered **15 reference cases / 39 variants**, **29 retained real IDs**, and
+**29/29 retained theme slots**, with **5/5 PDF hashes matching** and zero
+provider calls or fabricated fixture substitutions. This validates input and
+admission coverage; it is not evidence of fresh live selection improvement.
+
+The isolated GPT-6 Luna High frozen-five evaluation used **150 provider
+calls**, **2,482,109 input tokens**, **100,241 output tokens**,
+**2,582,350 total tokens**, estimated cost **$0.298333**, and **1,737.858 s**.
+The 29 real retained claims were **26 first-pass verified, 3 verified after
+retry, 0 failed, and 0 unresolved**. The 39 reference variants were **33
+first-pass verified, 3 verified after retry, 3 unresolved, and 0 failed**;
+the reference gate matched **37/39**, with **0 false accepts** and **2 false
+rejects**. `ACT-004` remained correctly unresolved for its wrong page. The
+two false rejects were `CAP-001` and `CAP-002`: the model supplied a
+source-grounded neighboring correction, but the current benchmark evaluator
+still applies the original-direction constraint. Golden expectations were
+not changed.
+
+For `ADJ-001-unsupported-metric`, the original churn/conversion claim was
+not treated as valid. The evaluated final claim replaced those labels with
+the source-supported global 2024–2025 gaming-app install/session tuple,
+including strategy sessions `+57%`, strategy installs `-1%`, casino installs
+`+22%`, casino sessions `-5%`, and slots installs `+46%` / sessions `-5%`.
+The final claim is source-grounded on the expected physical page, but its
+corrected binding is `unbound`; therefore the canary correctly quarantines it
+instead of promoting the evaluator's `verified` label as editorial
+authority.
+
+**Ten-report live replay and admission ledger.** The requested cohort was
+DoubleVerify, Adjust, Bain & Company, Emplifi, StackAdapt, Algolia, Criteo,
+Deloitte, KPMG, and Reuters Institute. The hash-matched replay evaluated all
+**59 real shortlisted claims** using **116 selected provider calls**
+(118 ledger rows observed), **1,790,894 input tokens**, **54,838 output
+tokens**, **1,845,732 total tokens**, estimated cost **$0.206506**, and
+**1,060.387 s**. Terminal evaluator outcomes were **59 first-pass verified,
+0 after-retry, 0 unresolved, 0 failed, and 0 skipped**. The 59 stable IDs
+and per-report selected counts were unchanged from the retained baseline;
+all 10/10 actual PDF hashes matched, and no physical-page or evidence-ID
+differences were observed against that baseline. The evaluator rewrote the
+final wording for 58/59 rows, so those result payloads alone cannot be
+treated as a canary editorial result.
+
+The provider-free admission replay over those exact responses produced
+**1 admitted and 58 quarantined** claims. The single admission was the
+unchanged StackAdapt `retail-2026-consumer-data-relevance-expectation`
+binding. Quarantine reasons were **53 `corrected_binding_unbound`**, **3
+`evidence_span_page_missing`**, and **2 `evidence_page_not_supported`**.
+
+| Report | Input | Admitted | Quarantined | Main reason |
+|---|---:|---:|---:|---|
+| Adjust | 7 | 0 | 7 | 7 unbound corrections |
+| Algolia | 6 | 0 | 6 | 5 unbound; 1 missing span page |
+| Bain & Company | 5 | 0 | 5 | 4 unbound; 1 missing span page |
+| Criteo | 5 | 0 | 5 | 5 unbound corrections |
+| Deloitte | 6 | 0 | 6 | 4 unbound; 2 unsupported pages |
+| DoubleVerify | 5 | 0 | 5 | 5 unbound corrections |
+| Emplifi | 5 | 0 | 5 | 5 unbound corrections |
+| KPMG | 6 | 0 | 6 | 5 unbound; 1 missing span page |
+| Reuters Institute | 7 | 0 | 7 | 7 unbound corrections |
+| StackAdapt Inc | 7 | 1 | 6 | 6 unbound corrections |
+
+The four known-failure canary probes (Criteo, Algolia, DoubleVerify, and
+Adjust) used **8 provider calls**, **188,631 input tokens**, **5,212 output
+tokens**, **193,843 total tokens**, and estimated cost **$0.021470**. Each
+returned an evaluator `verified` result with an `unbound` material correction;
+none was admitted. The isolated Criteo probe independently used 2 calls,
+15,411 total tokens, estimated cost `$0.002084`, and 22.758 s, with the same
+fail-closed admission outcome. These are bounded source-evaluation probes,
+not evidence of a successful end-to-end canary generation.
+
+The retained Step 2 ledger had **58 verified / 1 failed** (the Criteo
+`newer-channels-perceived-roi` row). The new evaluator's **59 verified**
+count is not a measured quality improvement: it reflects a fresh model run,
+and the canary admits only one unchanged row. No canary final artifact was
+generated from the ten-report live results because no material corrected
+binding was independently available. There were no canonical artifact
+mutations, publication writes, or WordPress writes.
+
+**Regression evidence.** The new canary suite covers unchanged and
+independently bound corrections, unbound corrections, wrong hash/page/span,
+duplicate and conflicting IDs, non-terminal outcomes, cache replay,
+authority-digest changes, downstream metric-spine/expert/social propagation,
+and scoped regeneration. The focused artifact, evidence-binding, visual
+evaluation, shortlisting, normalization, public-projection, and canary
+suites passed **219 tests with 1 skipped**. The focused regeneration suites
+passed **219 tests**. Mypy passed for the four changed production modules;
+changed canary/generation/orchestrator/test files pass Ruff. The regeneration
+and storage modules retain previously existing Ruff findings and were not
+broadly refactored. The local aggregate gate remains limited by the known
+CPython 3.14 versus native CPython 3.12 wheelhouse failure recorded above.
+
+**Verdict.** The visual-authority boundary is implemented and fails closed on
+missing or ambiguous corrected provenance. The exact real-report replay
+demonstrates source-hash coverage and stable selection identity, but it does
+not yet demonstrate useful live canary editorial replacement: **58/59 live
+results were quarantined**, and no fresh admitted final-family output exists
+for comparison. Step 2 therefore remains **PARTIAL/NO-GO** for authority
+promotion, and Step 3 remains **unstarted / not ready**. Remaining gaps are
+independent corrected evidence bindings for material rewrites, fresh
+end-to-end canary output, the two strict-direction reference false rejects,
+and the supported-runtime CI gate.

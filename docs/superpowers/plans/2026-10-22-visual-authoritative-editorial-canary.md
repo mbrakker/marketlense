@@ -52,9 +52,9 @@
 
 **Files:** `docs/quality/verified-claims-step2-visual-shadow-20261018.md`, `CONSOLIDATED_TODO.md` only if supported by measured evidence, and focused replay/report tooling only if an existing entry point can carry the explicit canary configuration.
 
-- [ ] Run provider-free replay using retained real-report artifacts and synthetic contract cases for the admission boundary; record unavailable live measurements honestly.
-- [ ] If exact expected SHA-256 identities and isolated PDFs are available, run the opt-in visual canary with existing GPT-6 Luna High infrastructure; otherwise record the precise source-hash/configuration limitation and do not fabricate results.
-- [ ] Compare fresh, cached, and scoped-regenerated outputs for the ten-report cohort where retained artifacts support comparison; record calls, tokens, cost, latency, factual/editorial outcomes, and cache reuse only when measured.
-- [ ] Update the existing Step 2 shadow evidence report with the boundary, canary admission results, limitations, and Step 3 readiness verdict; do not claim live selection improvement from post-selection replay alone.
-- [ ] Run focused suites, repository CI checks, inspect the final diff for scope/secrets, commit, push, and report exact results including any pre-existing environment failure.
+- [x] Run provider-free replay using retained real-report artifacts and synthetic contract cases for the admission boundary; record unavailable live measurements honestly.
+- [x] With exact expected SHA-256 identities and isolated PDFs available, run the GPT-6 Luna High evaluator and provider-free canary admission replay; no material corrected binding was admissible for a fresh final-family canary, which is recorded as the evidence limitation.
+- [x] Compare fresh, cached, and scoped-regenerated outputs for the ten-report cohort where retained artifacts support comparison; record calls, tokens, cost, latency, factual/editorial outcomes, and cache reuse only when measured.
+- [x] Update the existing Step 2 shadow evidence report with the boundary, canary admission results, limitations, and Step 3 readiness verdict; do not claim live selection improvement from post-selection replay alone.
+- [x] Run focused suites, repository CI checks, inspect the final diff for scope/secrets, commit, push, and report exact results including any pre-existing environment failure.
 
