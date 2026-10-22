@@ -604,6 +604,72 @@ def test_missing_result_is_an_integrity_failure_not_partial_admission():
     }
 
 
+def test_duplicate_result_id_is_an_integrity_failure_not_first_result_wins():
+    candidate = _candidate()
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(
+            _result(candidate),
+            _result(candidate, final_claim="A conflicting duplicate result."),
+        ),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["terminal_error"] == "evaluation_coverage_incomplete"
+    assert admission.audit["quarantined"] == [
+        {"candidate_id": "candidate-1", "reason": "duplicate_evaluation_id"}
+    ]
+
+
+def test_unexpected_result_id_is_an_integrity_failure_not_an_extra_fact():
+    candidate = _candidate()
+    unexpected = _candidate("candidate-2", evidence_id="finding-2", page=5)
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(_result(candidate), _result(unexpected)),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["terminal_error"] == "evaluation_coverage_incomplete"
+    assert admission.audit["quarantined"] == [
+        {"candidate_id": "candidate-2", "reason": "evaluation_unexpected_id"}
+    ]
+
+
+def test_failed_verification_is_accounted_without_discarding_valid_sibling():
+    verified = _candidate("candidate-1", evidence_id="finding-1", page=4)
+    failed = _candidate("candidate-2", evidence_id="finding-2", page=5)
+
+    admission = admit_visual_authority_candidates(
+        candidates=[verified, failed],
+        evaluation=_response(
+            _result(verified),
+            _result(failed, outcome="failed_verification"),
+        ),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(verified, failed),
+    )
+
+    assert [fact["fact_id"] for fact in admission.verified_facts] == ["candidate-1"]
+    assert admission.audit["coverage_complete"] is True
+    assert admission.audit["outcome_counts"] == {
+        "verified": 1,
+        "failed_verification": 1,
+    }
+    assert admission.audit["quarantined"] == [
+        {"candidate_id": "candidate-2", "reason": "outcome_failed_verification"}
+    ]
+
+
 def test_verified_fact_projection_is_not_direct_quote_evidence():
     candidate = _candidate()
     admission = admit_visual_authority_candidates(
@@ -650,8 +716,11 @@ def test_verified_fact_projection_is_not_direct_quote_evidence():
         doc_map={},
         evidence_packs=admission.verified_evidence_packs,
     )
+    assert projected["text"] == candidate["text"]
     assert projected["pages"] == [4]
+    assert projected["source_identity"] == SOURCE_IDENTITY
     assert projected["evidence_spans"][0]["source_pack"] == "verified_facts"
+    assert projected["evidence_spans"][0]["text"] != candidate["evidence"]
 
 
 def test_invalid_terminal_outcome_fails_closed_as_malformed_accounting():
@@ -888,6 +957,34 @@ def test_verified_fact_context_fails_closed_when_coverage_has_one_mapped_theme()
 
     with pytest.raises(AppError, match="Verified-fact editorial coverage"):
         remap_editorial_plan_to_verified_facts(plan, facts)
+
+
+def test_generation_fails_with_typed_minimum_coverage_error_after_remap(tmp_path):
+    candidates = [
+        _insight("f1", score=0.99, text="Retained first insight."),
+        _insight("f2", score=0.98, text="Retained second insight."),
+    ]
+
+    def admit(shortlisted):
+        return _verified_admission(shortlisted[:1], digest="g" * 64)
+
+    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f1"])
+
+    with pytest.raises(AppError, match="minimum insight coverage") as error:
+        generate_artifacts(
+            report_id="visual-authority-minimum-coverage",
+            report_name="Visual Authority Minimum Coverage",
+            doc_map=_doc_map(2),
+            evidence_packs=_generation_evidence(2),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            openai_client=FakeOpenAI(responses),
+            prompt_client=CapturingPromptClient(),
+            analysis_store=FakeAnalysisStore(),
+            visual_authority_admitter=admit,
+        )
+
+    assert error.value.code == "visual_authority_coverage_insufficient"
 
 
 def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path):
