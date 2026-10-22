@@ -90,6 +90,12 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "wrong-locator rescue" in verification.system.text.lower()
     assert "same-subject" in verification.system.text.lower()
     assert "different causal or metric condition" in verification.system.text.lower()
+    assert (
+        "original evidence and metric are discovery context"
+        in verification.system.text.lower()
+    )
+    assert '"verified_fact"' in verification.system.text
+    assert "authoritative verified statement" in verification.system.text.lower()
     assert "guest-checkout" not in verification.system.text.lower()
     assert "portfolio-reconfiguration" not in verification.system.text.lower()
     assert "component totals" in correction.system.text.lower()
@@ -109,6 +115,8 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "mapped one-based" in verification.user.text.lower()
     assert "physical pdf page" in verification.user.text.lower()
     assert "do not transfer a value or rate between" in verification.system.text.lower()
+    assert "verified_fact" in verification.user.text
+    assert "original evidence and metric" in verification.user.text.lower()
     assert (
         "categories based on visual order or color" in verification.system.text.lower()
     )

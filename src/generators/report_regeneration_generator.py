@@ -44,6 +44,7 @@ from src.generators.artifact_normalization import (
     artifact_vector_store_enabled,
     bind_artifact_evidence_spans,
     build_expert_synthesis_context,
+    build_verified_fact_doc_map,
     discard_location_only_insights,
     discard_location_only_quotes,
     eligible_final_insight_candidates,
@@ -57,6 +58,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_toc_entries,
     normalize_artifact_topics,
     normalize_expert_domain,
+    remap_editorial_plan_to_verified_facts,
     restore_artifact_insight_factual_fields,
     select_artifact_insights,
     stabilize_broad_artifact_editorial_plan,
@@ -82,6 +84,7 @@ from src.generators.report_generation_shared import resolve_doc_map_metadata
 from src.generators.report_title_resolution_generator import source_backed_title
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
+from src.generators.verified_claims_canary import project_verified_facts_as_insights
 from src.services import prompt_service, report_analysis_store_service
 from src.utils.analysis_family import family_is_abstained
 from src.utils.cache_utils import sha256_json
@@ -110,6 +113,8 @@ class _RegenerationState:
     linkedin_post: str
     source_status: Dict[str, Any]
     visual_authority_candidates: List[Dict[str, Any]] = field(default_factory=list)
+    visual_authority_facts: List[Dict[str, Any]] = field(default_factory=list)
+    visual_authority_evidence_packs: Dict[str, Any] = field(default_factory=dict)
     visual_authority_digest: str = ""
     regenerated_sections: List[str] = field(default_factory=list)
     prompt_namespaces: List[str] = field(default_factory=list)
@@ -234,9 +239,6 @@ def regenerate_artifacts(
         )
     )
 
-    base_vars = artifact_base_variables(safe_doc_map, safe_evidence)
-    base_vars.pop("canonical_evidence_ids_json", None)
-    quote_candidates = artifact_quote_candidates(safe_evidence)
     expert_domain = normalize_expert_domain(request.categories)
     fallback_toc_bundle = build_toc_artifacts(doc_map=safe_doc_map)
     state = _build_regeneration_state(
@@ -244,18 +246,54 @@ def regenerate_artifacts(
         fallback_toc_bundle=fallback_toc_bundle,
         source_status=availability,
     )
+    active_doc_map = safe_doc_map
+    active_evidence = safe_evidence
+    quote_candidates = artifact_quote_candidates(safe_evidence)
+    if state.visual_authority_digest:
+        if (
+            not state.visual_authority_facts
+            or not state.visual_authority_evidence_packs
+        ):
+            raise AppError(
+                code="visual_authority_regeneration_metadata_invalid",
+                message=(
+                    "Verified-mode regeneration requires the complete visual fact "
+                    "snapshot and evidence pack"
+                ),
+                retryable=False,
+            )
+        active_doc_map = build_verified_fact_doc_map(safe_doc_map)
+        active_evidence = deepcopy(state.visual_authority_evidence_packs)
+        canonical_evidence = deepcopy(active_evidence)
+        quote_candidates = []
+        state.editorial_plan = remap_editorial_plan_to_verified_facts(
+            state.editorial_plan,
+            state.visual_authority_facts,
+        )
+        fallback_toc_bundle = build_toc_artifacts(doc_map=active_doc_map)
+        state.toc_entries = normalize_artifact_toc_entries(
+            fallback_toc_bundle.get("toc_entries")
+        )
+        state.toc_topics = normalize_artifact_topics(
+            fallback_toc_bundle.get("toc_topics")
+        )
+        state.topic_briefs = _copy_list(
+            fallback_toc_bundle.get("toc_topics_expanded")
+        )
+    base_vars = artifact_base_variables(active_doc_map, active_evidence)
+    base_vars.pop("canonical_evidence_ids_json", None)
     _apply_visual_authority_pool(state)
     state.editorial_plan = stabilize_broad_artifact_editorial_plan(
         state.editorial_plan,
-        doc_map=safe_doc_map,
-        evidence_packs=safe_evidence,
+        doc_map=active_doc_map,
+        evidence_packs=active_evidence,
     )
     if state.visual_authority_digest:
         base_vars["_visual_authority_digest"] = state.visual_authority_digest
     runtime = _RegenerationRuntime(
         request=request,
-        safe_doc_map=safe_doc_map,
-        safe_evidence=safe_evidence,
+        safe_doc_map=active_doc_map,
+        safe_evidence=active_evidence,
         base_vars=base_vars,
         quote_candidates=quote_candidates,
         expert_domain=expert_domain,
@@ -282,13 +320,17 @@ def regenerate_artifacts(
             )
         )
         current_artifact_state = _artifact_state_from_state(state)
-        prepared = _prepare_grounding(request, current_artifact_state)
+        prepared = _prepare_grounding(
+            request,
+            current_artifact_state,
+            evidence_packs=runtime.safe_evidence,
+        )
         grounding_package = _build_grounding_package(
             target=target,
             prepared=prepared,
             artifacts=current_artifact_state,
-            evidence_packs=safe_evidence,
-            doc_map=safe_doc_map,
+            evidence_packs=runtime.safe_evidence,
+            doc_map=runtime.safe_doc_map,
         )
         handler = _resolve_regeneration_handler(target.target_section)
         repair_decision_count = len(state.repair_decisions)
@@ -364,11 +406,30 @@ def regenerate_artifacts(
         cache_meta["regeneration_prompt_requirements"] = (
             state.regeneration_prompt_requirements
         )
+    if state.visual_authority_facts:
+        existing_visual_cache = cache_meta.get("visual_authority_canary")
+        visual_cache = (
+            deepcopy(existing_visual_cache)
+            if isinstance(existing_visual_cache, dict)
+            else {}
+        )
+        visual_cache.update(
+            {
+                "enabled": True,
+                "digest": state.visual_authority_digest,
+                "verified_fact_digest": state.visual_authority_digest,
+                "verified_facts": deepcopy(state.visual_authority_facts),
+                "verified_evidence_packs": deepcopy(
+                    state.visual_authority_evidence_packs
+                ),
+            }
+        )
+        cache_meta["visual_authority_canary"] = visual_cache
     updated_artifacts = assemble_artifacts_payload(
         report_id=request.report_id,
         report_name=request.report_name,
-        doc_map=safe_doc_map,
-        evidence_packs=safe_evidence,
+        doc_map=runtime.safe_doc_map,
+        evidence_packs=runtime.safe_evidence,
         toc_bundle={
             "toc_entries": state.toc_entries,
             "toc_topics": state.toc_topics,
@@ -397,9 +458,10 @@ def regenerate_artifacts(
         replaced_soft_copy_claim_ids=state.replaced_soft_copy_claim_ids,
         soft_copy_repair_texts=state.soft_copy_repair_texts,
         soft_copy_repair_lineage=state.soft_copy_repair_lineage,
+        verified_facts=state.visual_authority_facts,
         regeneration_attempt=request.attempt_index,
         validate_references=False,
-        visual_authority_canary=bool(state.visual_authority_candidates),
+        visual_authority_canary=bool(state.visual_authority_facts),
     )
     _preserve_atomic_target_families(
         updated_artifacts=updated_artifacts,
@@ -442,6 +504,13 @@ def regenerate_artifacts(
         for root in sorted(authorized_source_roots)
         if root in updated_artifacts
     }
+    if state.visual_authority_digest:
+        # Verified mode owns the structural TOC snapshot even when the repair
+        # target is a different family; never restore discovery-era TOC prose
+        # from the promoted baseline.
+        for root in ("toc_entries", "toc_topics", "toc_topics_expanded"):
+            if root in updated_artifacts:
+                atomic_source_patch[root] = deepcopy(updated_artifacts[root])
     finalized_derived_paths = finalize_regeneration_candidate_artifacts(
         promoted_baseline=request.current_artifacts,
         candidate_artifacts=updated_artifacts,
@@ -556,13 +625,17 @@ def _actual_repair_strategy(
 def _prepare_grounding(
     request: ArtifactRegenerationRequest,
     artifacts: Dict[str, Any],
+    *,
+    evidence_packs: Dict[str, Any] | None = None,
 ):
     validation_request = ValidationRequest(
         schema_version="1.0",
         report_id=request.report_id,
         report=_regeneration_report_stub(artifacts),
         artifacts=artifacts,
-        evidence_packs=request.evidence_packs,
+        evidence_packs=(
+            evidence_packs if isinstance(evidence_packs, dict) else request.evidence_packs
+        ),
         vector_store_id=request.vector_store_id,
         publisher_name=request.publisher_name,
         report_name=request.report_name,
@@ -1970,9 +2043,24 @@ def _build_regeneration_state(
         if isinstance(raw_cache, dict)
         else None
     )
-    visual_authority_candidates = (
-        _copy_list(raw_visual_authority.get("admitted_candidates"))
+    visual_authority_enabled = isinstance(raw_visual_authority, dict) and (
+        raw_visual_authority.get("enabled") is True
+    )
+    visual_authority_facts = (
+        _copy_list(raw_visual_authority.get("verified_facts"))
         if isinstance(raw_visual_authority, dict)
+        else []
+    )
+    if not visual_authority_facts:
+        visual_authority_facts = _copy_list(safe_artifacts.get("verified_facts"))
+    visual_authority_evidence_packs = (
+        _copy_dict(raw_visual_authority.get("verified_evidence_packs"))
+        if isinstance(raw_visual_authority, dict)
+        else {}
+    )
+    visual_authority_candidates = (
+        project_verified_facts_as_insights(visual_authority_facts)
+        if visual_authority_facts
         else []
     )
     visual_authority_digest = (
@@ -1980,6 +2068,37 @@ def _build_regeneration_state(
         if isinstance(raw_visual_authority, dict)
         else ""
     )
+    if visual_authority_enabled and (
+        not visual_authority_facts
+        or not visual_authority_evidence_packs
+        or not visual_authority_digest
+    ):
+        raise AppError(
+            code="visual_authority_regeneration_metadata_invalid",
+            message=(
+                "Enabled verified-mode regeneration requires the complete visual "
+                "fact snapshot, evidence pack, and digest"
+            ),
+            retryable=False,
+        )
+    if visual_authority_facts and not visual_authority_digest:
+        source_identities = sorted(
+            {
+                _s(fact.get("source_identity")).strip()
+                for fact in visual_authority_facts
+                if isinstance(fact, dict) and _s(fact.get("source_identity")).strip()
+            }
+        )
+        visual_authority_digest = sha256_json(
+            {
+                "source_identity": (
+                    source_identities[0]
+                    if len(source_identities) == 1
+                    else source_identities
+                ),
+                "verified_facts": visual_authority_facts,
+            }
+        )
     return _RegenerationState(
         toc_entries=toc_entries,
         toc_topics=toc_topics,
@@ -1991,6 +2110,8 @@ def _build_regeneration_state(
         insights_candidates=_copy_list(safe_artifacts.get("insights_candidates")),
         insights_final=_copy_list(safe_artifacts.get("insights_final")),
         visual_authority_candidates=visual_authority_candidates,
+        visual_authority_facts=visual_authority_facts,
+        visual_authority_evidence_packs=visual_authority_evidence_packs,
         visual_authority_digest=visual_authority_digest,
         quotes_final=_copy_list(safe_artifacts.get("quotes_final")),
         cover_semantics=_copy_dict(safe_artifacts.get("cover_semantics")),

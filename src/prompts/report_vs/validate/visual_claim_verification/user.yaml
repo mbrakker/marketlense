@@ -18,6 +18,12 @@ text: |
   Original claim (analytical direction only; not factual authority):
   {{ original_claim | default("") }}
 
+  Original evidence and metric are discovery context only. Do not copy them into
+  the authoritative result unless the inspected source page independently supports
+  them. The verified fact must describe the final corrected claim, including its
+  own population, metric, timeframe, geography, cohort, denominator and
+  observation/forecast status.
+
   Corrected claim:
   {{ corrected_claim }}
 
@@ -35,6 +41,9 @@ text: |
   not promote provisional recovery evidence into the retained binding.
 
   Do not assume the claim is correct because another model produced it. Return
-  only the verification JSON required by the system prompt. Diagnostics must
+  only the verification JSON required by the system prompt. For a verified
+  outcome, include an authoritative verified_fact with a source-grounded
+  statement, a structured metric object when applicable, and bounded qualifiers.
+  For a qualitative fact, use an empty metric object. Diagnostics must
   name exact unsupported or conflicting values, labels, populations, periods,
   status or analytical conclusions when rejecting the claim.

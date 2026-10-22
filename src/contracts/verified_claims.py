@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION = "1.1"
+VERIFIED_FACT_SCHEMA_VERSION = "1.0"
 
 
 @dataclass(frozen=True)
@@ -107,6 +108,15 @@ class VisualClaimVerificationAttempt:
         metadata={
             "doc": (
                 "Page-keyed source-grounded explanations for supporting physical pages."
+            )
+        },
+    )
+    verified_fact: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Source-established factual statement and structured metric; "
+                "empty unless the verification response supplied a valid fact."
             )
         },
     )
@@ -249,6 +259,15 @@ class VisualClaimEvaluationResult:
             )
         },
     )
+    verified_fact: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Authoritative visual fact; original candidate fields remain "
+                "diagnostic lineage only."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -270,6 +289,7 @@ class VisualClaimEvaluationResponse:
 
 __all__ = [
     "VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION",
+    "VERIFIED_FACT_SCHEMA_VERSION",
     "VisualClaimCorrectionAttempt",
     "VisualClaimEvaluationRequest",
     "VisualClaimEvaluationResponse",

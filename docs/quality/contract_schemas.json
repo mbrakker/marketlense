@@ -48838,6 +48838,10 @@
             "$ref": "#/$defs/src.contracts.verified_claims.VisualClaimVerificationAttempt"
           },
           "type": "array"
+        },
+        "verified_fact": {
+          "additionalProperties": {},
+          "type": "object"
         }
       },
       "required": [
@@ -48888,6 +48892,10 @@
             "type": "integer"
           },
           "type": "array"
+        },
+        "verified_fact": {
+          "additionalProperties": {},
+          "type": "object"
         }
       },
       "required": [

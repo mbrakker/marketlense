@@ -55,6 +55,7 @@ from src.generators.analysis_store_adapter import (
 from src.generators.artifact_normalization import (
     ARTIFACT_INSIGHT_SELECTION_VERSION,
     EDITORIAL_PLAN_TRANSFORM_VERSION,
+    _normalize_public_numeric_signs,
     artifact_evidence_span_index,
     bind_artifact_evidence_spans,
     carry_soft_copy_binding_semantics_to_final_sentences,
@@ -62,7 +63,6 @@ from src.generators.artifact_normalization import (
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
-    _normalize_public_numeric_signs,
     normalize_artifact_toc_entries,
     preserve_public_source_displays,
     preserve_soft_copy_binding_source_displays,
@@ -235,6 +235,7 @@ def assemble_artifacts_payload(
     regeneration_attempt: int = 0,
     validate_references: bool = True,
     visual_authority_canary: bool = False,
+    verified_facts: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     del report_name
     for insight_items in (insights_candidates, insights_final):
@@ -559,6 +560,10 @@ def assemble_artifacts_payload(
         "source_status": source_status,
         "family_status": family_status,
     }
+    if visual_authority_canary:
+        artifacts_payload["verified_facts"] = deepcopy(
+            [fact for fact in (verified_facts or []) if isinstance(fact, dict)]
+        )
     completed_summary_bindings, recovered_summary_binding_count = (
         _complete_summary_bindings_from_exact_direct_claims(
             summary=summary,
@@ -779,7 +784,9 @@ def _soft_copy_claim_provenance_payload(
         elif text:
             retained = [claim for claim in claims if claim.artifact_family == family]
             if not isinstance(declared, list) or not declared:
-                if not retained_soft_copy_claims_cover_text(text=text, claims=retained):
+                if not retained_soft_copy_claims_cover_text(
+                    text=text, claims=retained
+                ):
                     # A regeneration candidate may contain newly generated
                     # public prose without the model's binding payload. Keep
                     # the candidate structurally serializable so the

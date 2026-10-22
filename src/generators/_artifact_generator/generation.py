@@ -47,6 +47,7 @@ from src.generators.artifact_normalization import (
     artifact_vector_store_enabled,
     bind_artifact_evidence_spans,
     build_expert_synthesis_context,
+    build_verified_fact_doc_map,
     discard_location_only_insights,
     discard_location_only_quotes,
     fallback_artifact_insights_from_evidence,
@@ -60,6 +61,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_summary,
     normalize_expert_domain,
     preserve_public_source_displays,
+    remap_editorial_plan_to_verified_facts,
     select_artifact_insights,
     soft_copy_context_evidence_anchors,
     stabilize_broad_artifact_editorial_plan,
@@ -404,7 +406,9 @@ def generate_artifacts(
     )
     safe_doc_map = doc_map or {}
     safe_evidence = evidence_packs or {}
-    reference_evidence_packs = {**safe_evidence, "doc_map": safe_doc_map}
+    active_doc_map = safe_doc_map
+    active_evidence = safe_evidence
+    reference_evidence_packs = {**active_evidence, "doc_map": active_doc_map}
     # Bounded aliases for the insight/metric-spine identifiers that the
     # soft-copy prompt context itself exposes beside one retained evidence ID
     # each.  Populated once those inputs exist; consulted at render time.
@@ -441,8 +445,8 @@ def generate_artifacts(
             insights_candidates=list_field("insights_candidates"),
             insights_final=list_field("insights_final"),
             quotes_final=list_field("quotes_final"),
-            doc_map=safe_doc_map,
-            evidence_packs=safe_evidence,
+            doc_map=active_doc_map,
+            evidence_packs=active_evidence,
             editorial_plan=(
                 editorial_plan if isinstance(editorial_plan, dict) else None
             ),
@@ -476,8 +480,8 @@ def generate_artifacts(
             insights_candidates=[],
             insights_final=[],
             quotes_final=[],
-            doc_map=safe_doc_map,
-            evidence_packs=safe_evidence,
+            doc_map=active_doc_map,
+            evidence_packs=active_evidence,
         )
         if span_stats.get("pruned_claim_count", 0) > 0 and repaired_summary.get(
             "claim_evidence_map"
@@ -499,8 +503,8 @@ def generate_artifacts(
             insights_candidates=[],
             insights_final=[],
             quotes_final=[],
-            doc_map=safe_doc_map,
-            evidence_packs=safe_evidence,
+            doc_map=active_doc_map,
+            evidence_packs=active_evidence,
             soft_copy_claim_provenance=provenance,
             context_anchors=context_anchor_evidence_ids,
         )
@@ -942,8 +946,8 @@ def generate_artifacts(
     if md5:
         cache_meta = _artifact_cache_meta(
             md5=md5,
-            doc_map=safe_doc_map,
-            evidence_packs=safe_evidence,
+            doc_map=active_doc_map,
+            evidence_packs=active_evidence,
             availability=availability,
             expert_domain=expert_domain,
             category_ids=category_ids or [],
@@ -1108,7 +1112,10 @@ def generate_artifacts(
     quote_plan, fast_path_quote_candidates, quote_reason, allow_quote_fallback = (
         _quote_candidate_pool_plan(safe_evidence)
     )
-    quote_model_required = quote_plan == "model"
+    # Verified-mode output cannot contain raw quote candidates.  Do not spend
+    # a downstream quote call on discovery-only evidence when the visual fact
+    # admission callback is active.
+    quote_model_required = quote_plan == "model" and visual_authority_admitter is None
     deterministic_quote_plan = quote_plan in {"fast_path", "complete_empty", "held"}
     quotes_final: List[Dict[str, Any]] = (
         fallback_artifact_quotes_from_candidates(
@@ -1297,6 +1304,8 @@ def generate_artifacts(
     visual_authority_digest = ""
     visual_authority_audit: Dict[str, Any] = {}
     visual_authority_admitted_candidates: List[Dict[str, Any]] = []
+    visual_authority_verified_facts: List[Dict[str, Any]] = []
+    visual_authority_evidence_packs: Dict[str, Any] = {}
     if visual_authority_admitter is not None:
         admission = visual_authority_admitter(deepcopy(insights_candidates))
         visual_authority_admitted_candidates = getattr(
@@ -1306,15 +1315,92 @@ def generate_artifacts(
         visual_authority_audit = deepcopy(
             getattr(admission, "audit", {})
         )
+        visual_authority_verified_facts = getattr(admission, "verified_facts", [])
+        visual_authority_evidence_packs = getattr(
+            admission, "verified_evidence_packs", {}
+        )
         if not visual_authority_digest or not isinstance(
             visual_authority_admitted_candidates, list
+        ) or not isinstance(visual_authority_verified_facts, list) or not isinstance(
+            visual_authority_evidence_packs, dict
         ):
             raise AppError(
                 code="visual_authority_admission_malformed",
-                message="Visual authority admission returned an invalid result",
+                message=(
+                    "Visual authority admission must return a verified-fact "
+                    "snapshot and evidence pack"
+                ),
                 retryable=False,
                 context={"report_id": report_id},
             )
+        if not visual_authority_verified_facts or not visual_authority_evidence_packs:
+            raise AppError(
+                code="visual_authority_admission_empty",
+                message="Visual authority admission returned no verified facts",
+                retryable=False,
+                context={"report_id": report_id},
+            )
+        active_doc_map = build_verified_fact_doc_map(safe_doc_map)
+        active_evidence = deepcopy(visual_authority_evidence_packs)
+        reference_evidence_packs = {**active_evidence, "doc_map": active_doc_map}
+        editorial_plan = remap_editorial_plan_to_verified_facts(
+            editorial_plan,
+            visual_authority_verified_facts,
+        )
+        editorial_plan_json = _dump_json(editorial_plan)
+        base_vars = artifact_base_variables(active_doc_map, active_evidence)
+        base_vars.pop("canonical_evidence_ids_json", None)
+        summary_evidence_json = _summary_prioritized_evidence_json(
+            active_evidence, editorial_plan
+        )
+        toc_bundle = build_toc_artifacts(doc_map=active_doc_map)
+        toc_topics = [entry["display_title"] for entry in toc_bundle["toc_entries"]]
+        editorial_plan_transform_identity = {
+            "transform": "normalize_and_stabilize_editorial_plan_verified_facts",
+            "version": EDITORIAL_PLAN_TRANSFORM_VERSION,
+            "input_hash": sha256_json(raw_editorial_plan),
+            "output_hash": sha256_json(editorial_plan),
+            "verified_fact_digest": visual_authority_digest,
+        }
+        editorial_plan_dependency_hash = sha256_json(
+            {
+                "family_id": "report_vs/artifacts/editorial_plan",
+                "producing_identity": {
+                    key: editorial_plan_identity.get(key)
+                    for key in (
+                        "family_schema_version",
+                        "processing_version",
+                        "prompt_content_hash",
+                        "execution_identity",
+                        "model_provider",
+                        "model_name",
+                        "model_policy_namespace",
+                        "routing_policy_version",
+                        "validator_version",
+                        "relevant_input_hash",
+                        "configuration_policy_hash",
+                    )
+                },
+                "transform": editorial_plan_transform_identity,
+            }
+        )
+        editorial_plan_dependency_vars = {
+            "_editorial_plan_dependency_hash": editorial_plan_dependency_hash,
+            "_visual_authority_digest": visual_authority_digest,
+        }
+        quote_candidates = []
+        quotes_final = []
+        quote_model_required = False
+        deterministic_quote_plan = True
+        quote_reason = "verified_facts_only"
+        quote_dependency_hash = sha256_json(None)
+        quote_producer_identity = {
+            "producer": _QUOTE_FAST_PATH_PRODUCER,
+            "producer_version": _QUOTE_FAST_PATH_VERSION,
+            "dependency_hash": quote_dependency_hash,
+            "decision": "complete_empty",
+            "reason_code": quote_reason,
+        }
         insights_candidates = select_artifact_insights(
             final_insights=visual_authority_admitted_candidates,
             candidate_insights=[],
@@ -1329,10 +1415,6 @@ def generate_artifacts(
                 retryable=False,
                 context={"report_id": report_id},
             )
-        editorial_plan_dependency_vars = {
-            **editorial_plan_dependency_vars,
-            "_visual_authority_digest": visual_authority_digest,
-        }
         if cache_meta is None:
             cache_meta = {}
         cache_meta["visual_authority_digest"] = visual_authority_digest
@@ -1381,7 +1463,7 @@ def generate_artifacts(
         )
         if not quotes_final and allow_quote_fallback:
             quotes_final = fallback_artifact_quotes_from_candidates(
-                safe_evidence.get("quote_candidates")
+                active_evidence.get("quote_candidates")
             )
             if quotes_final:
                 logger.info(
@@ -1499,12 +1581,12 @@ def generate_artifacts(
                 "insights_final_json": cover_insights_final_json,
                 "categories_json": _dump_json(categories or []),
                 "region": _s(
-                    safe_doc_map.get("region") or safe_doc_map.get("geography")
+                    active_doc_map.get("region") or active_doc_map.get("geography")
                 ).strip(),
                 "covered_period": _s(
-                    safe_doc_map.get("covered_period")
-                    or safe_doc_map.get("time_period")
-                    or safe_doc_map.get("period")
+                    active_doc_map.get("covered_period")
+                    or active_doc_map.get("time_period")
+                    or active_doc_map.get("period")
                 ).strip(),
             },
             ctx=cover_semantics_ctx,
@@ -1523,8 +1605,8 @@ def generate_artifacts(
             insights_candidates=distribution_candidates,
             insights_final=distribution_insights,
             quotes_final=[],
-            doc_map=safe_doc_map,
-            evidence_packs=safe_evidence,
+            doc_map=active_doc_map,
+            evidence_packs=active_evidence,
             editorial_plan=editorial_plan,
         )
         bind_artifact_evidence_spans(
@@ -1532,8 +1614,8 @@ def generate_artifacts(
             insights_candidates=distribution_candidates,
             insights_final=distribution_insights,
             quotes_final=[],
-            doc_map=safe_doc_map,
-            evidence_packs=safe_evidence,
+            doc_map=active_doc_map,
+            evidence_packs=active_evidence,
         )
         if visual_authority_admitter is None:
             preserve_public_source_displays(
@@ -1557,8 +1639,8 @@ def generate_artifacts(
         expert_synthesis_context = build_expert_synthesis_context(
             editorial_plan=editorial_plan,
             insights_final=distribution_insights,
-            doc_map=safe_doc_map,
-            evidence_packs=safe_evidence,
+            doc_map=active_doc_map,
+            evidence_packs=active_evidence,
         )
         distribution_tasks = [
             ArtifactRenderTask(
@@ -1626,7 +1708,7 @@ def generate_artifacts(
             )
         if quote_model_required and not quotes_final and allow_quote_fallback:
             quotes_final = fallback_artifact_quotes_from_candidates(
-                safe_evidence.get("quote_candidates")
+            active_evidence.get("quote_candidates")
             )
             if quotes_final:
                 logger.info(
@@ -1658,8 +1740,8 @@ def generate_artifacts(
         insights_candidates=insights_candidates,
         insights_final=insights_final,
         quotes_final=quotes_final,
-        doc_map=safe_doc_map,
-        evidence_packs=safe_evidence,
+        doc_map=active_doc_map,
+        evidence_packs=active_evidence,
         editorial_plan=editorial_plan,
     )
     if evidence_id_stats.get("normalized_count", 0) > 0:
@@ -1677,8 +1759,8 @@ def generate_artifacts(
         insights_candidates=insights_candidates,
         insights_final=insights_final,
         quotes_final=quotes_final,
-        doc_map=safe_doc_map,
-        evidence_packs=safe_evidence,
+        doc_map=active_doc_map,
+        evidence_packs=active_evidence,
     )
     if (
         evidence_span_stats.get("bound_count", 0) > 0
@@ -1719,8 +1801,8 @@ def generate_artifacts(
         expert_synthesis_context = build_expert_synthesis_context(
             editorial_plan=editorial_plan,
             insights_final=insights_final,
-            doc_map=safe_doc_map,
-            evidence_packs=safe_evidence,
+            doc_map=active_doc_map,
+            evidence_packs=active_evidence,
         )
 
         distribution_results = step_executor(
@@ -1863,8 +1945,8 @@ def generate_artifacts(
     artifacts_payload = assemble_artifacts_payload(
         report_id=report_id,
         report_name=report_name,
-        doc_map=safe_doc_map,
-        evidence_packs=safe_evidence,
+        doc_map=active_doc_map,
+        evidence_packs=active_evidence,
         toc_bundle=toc_bundle,
         editorial_plan=editorial_plan,
         summary=summary,
@@ -1891,6 +1973,11 @@ def generate_artifacts(
                     "visual_authority_canary": {
                         "enabled": True,
                         "digest": visual_authority_digest,
+                        "verified_fact_digest": visual_authority_digest,
+                        "verified_facts": deepcopy(visual_authority_verified_facts),
+                        "verified_evidence_packs": deepcopy(
+                            visual_authority_evidence_packs
+                        ),
                         "admitted_candidates": deepcopy(
                             visual_authority_admitted_candidates
                         ),
@@ -1904,6 +1991,7 @@ def generate_artifacts(
         soft_copy_claim_bindings=soft_copy_claim_bindings,
         soft_copy_prompt_identities=soft_copy_prompt_identities,
         soft_copy_generation_attempts=soft_copy_generation_attempts,
+        verified_facts=visual_authority_verified_facts,
         visual_authority_canary=visual_authority_admitter is not None,
     )
     store_artifacts_payload(

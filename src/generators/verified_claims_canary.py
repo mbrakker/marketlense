@@ -1,49 +1,52 @@
-"""Admission of shadow visual results into an isolated editorial canary.
+"""Admission of independently verified visual facts into an isolated canary.
 
-This module is deliberately a narrow adapter.  The visual evaluator remains
-shadow-only; this code only decides which already-selected candidates may be
-used by an explicitly opted-in generation run.
+The visual evaluator remains shadow-only. This adapter converts its terminal
+verified results into a small, source-hash-bound fact snapshot for an explicit
+editorial canary; original candidate bindings remain discovery diagnostics.
 """
 
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence
 
 from src.contracts.verified_claims import VisualClaimEvaluationResponse
-from src.generators.artifact_normalization import (
-    METRIC_BINDING_FIELDS,
-    METRIC_FIELDS,
-    artifact_evidence_span_index,
-    eligible_final_insight_candidates,
-)
 from src.generators.verified_claims_recovery import (
     build_verified_claims_shadow_request,
     source_pdf_sha256,
 )
 from src.generators.verified_claims_visual_generator import (
     VerifiedClaimsVisualDependencies,
-    _claims_have_identical_proposition,
     evaluate_shortlisted_claims,
 )
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import stripped_string_value
 from src.utils.errors import AppError
-from src.utils.text_normalization import normalize_for_lookup
 
-_TERMINAL_VERIFIED_OUTCOMES = {"verified", "verified_after_retry"}
-_INDEPENDENT_BINDING_STATUSES = {"bound", "independently_bound"}
+_TERMINAL_VERIFIED_OUTCOMES = frozenset({"verified", "verified_after_retry"})
+_SCORE_ONLY_FIELDS = frozenset(
+    {
+        "editorial_score",
+        "relevance_score",
+        "score",
+        "rank",
+        "selection_rank",
+        "_selection_score",
+    }
+)
 
 
 @dataclass(frozen=True)
 class VisualAuthorityAdmission:
-    """Private canary admission result; not a persisted/public contract."""
+    """Private verified-fact canary result; not a persisted/public contract."""
 
-    admitted_candidates: List[Dict[str, Any]]
-    digest: str
-    audit: Dict[str, Any]
+    admitted_candidates: List[Dict[str, Any]] = field(default_factory=list)
+    verified_facts: List[Dict[str, Any]] = field(default_factory=list)
+    verified_evidence_packs: Dict[str, Any] = field(default_factory=dict)
+    digest: str = ""
+    audit: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -71,6 +74,7 @@ def build_visual_authority_admitter(
 ):
     """Build the explicit canary callback consumed by artifact generation."""
 
+    del doc_map
     source_identity = str(config.source_identity or "").strip()
     if not source_identity or not source_pdf_sha256(source_identity):
         raise AppError(
@@ -113,7 +117,7 @@ def build_visual_authority_admitter(
             candidates=candidates,
             evaluation=evaluation,
             source_identity=source_identity,
-            doc_map=doc_map,
+            doc_map={},
             evidence_packs=evidence_packs,
         )
 
@@ -128,53 +132,73 @@ def admit_visual_authority_candidates(
     doc_map: Mapping[str, Any],
     evidence_packs: Mapping[str, Any],
 ) -> VisualAuthorityAdmission:
-    """Admit only source-bound terminal visual results.
+    """Project complete terminal visual results into verified facts.
 
-    The PDF hash itself is checked by ``evaluate_shortlisted_claims`` before
-    it returns.  Requiring the same hash-bearing identity here prevents a
-    caller from accidentally combining a response from another source with
-    this candidate pool.
+    doc_map and evidence_packs are accepted for the existing callback boundary
+    and discovery trace. They are never used to authorize a fact.
     """
 
-    candidate_list = [
-        deepcopy(dict(candidate))
-        for candidate in candidates
-        if isinstance(candidate, Mapping)
-    ]
+    del doc_map, evidence_packs
+    expected_source_identity = str(source_identity or "").strip()
+    expected_sha = source_pdf_sha256(expected_source_identity)
     audit: Dict[str, Any] = {
         "enabled": True,
         "evaluated_count": 0,
+        "expected_count": 0,
         "admitted_count": 0,
+        "verified_fact_count": 0,
         "quarantined_count": 0,
+        "coverage_complete": False,
         "quarantined": [],
     }
-
-    expected_source_identity = str(source_identity or "").strip()
-    if not source_pdf_sha256(expected_source_identity):
+    if not expected_sha:
         return _empty_admission(audit, "source_pdf_hash_missing")
-
     if not _response_is_shadow(evaluation):
         return _empty_admission(audit, "evaluation_not_shadow")
     raw_results = _response_claims(evaluation)
     if raw_results is None:
         return _empty_admission(audit, "evaluation_claims_malformed")
 
-    authoritative_candidates = eligible_final_insight_candidates(candidate_list)
-    authoritative_by_id = {
-        _candidate_id(candidate): candidate
-        for candidate in authoritative_candidates
-        if _candidate_id(candidate)
+    raw_candidate_list = [
+        deepcopy(dict(candidate))
+        for candidate in candidates
+        if isinstance(candidate, Mapping)
+    ]
+    candidate_groups: dict[str, list[dict[str, Any]]] = {}
+    for candidate in raw_candidate_list:
+        candidate_id = _candidate_id(candidate)
+        if candidate_id:
+            candidate_groups.setdefault(candidate_id, []).append(candidate)
+        else:
+            _record_quarantine(audit, "", "candidate_id_missing")
+    audit["expected_count"] = len(candidate_groups)
+    conflicting_ids = {
+        candidate_id
+        for candidate_id, group in candidate_groups.items()
+        if len({_candidate_signature(item) for item in group}) > 1
     }
-    candidate_ids = {
-        _candidate_id(candidate)
-        for candidate in candidate_list
-        if _candidate_id(candidate)
-    }
-    conflicting_ids = candidate_ids - set(authoritative_by_id)
-    span_index = artifact_evidence_span_index(
-        doc_map=dict(doc_map or {}), evidence_packs=dict(evidence_packs or {})
-    )
-    results_by_id: Dict[str, Any] = {}
+    for candidate_id in sorted(conflicting_ids):
+        _record_quarantine(audit, candidate_id, "candidate_factual_conflict")
+
+    # Equivalent representations are one expected fact.  Keep the first
+    # source-order representation only after the score-free factual signature
+    # has established that the duplicates are equivalent.  Conflicting IDs
+    # remain in the expected set so coverage fails closed below.
+    candidate_list: list[dict[str, Any]] = []
+    seen_candidate_ids: set[str] = set()
+    for candidate in raw_candidate_list:
+        candidate_id = _candidate_id(candidate)
+        if (
+            not candidate_id
+            or candidate_id in seen_candidate_ids
+            or candidate_id in conflicting_ids
+        ):
+            continue
+        seen_candidate_ids.add(candidate_id)
+        candidate_list.append(candidate)
+
+    results_by_id: dict[str, Any] = {}
+    duplicate_result_ids: set[str] = set()
     for raw_result in raw_results:
         candidate_id = _result_field(raw_result, "candidate_id")
         if not candidate_id:
@@ -182,352 +206,389 @@ def admit_visual_authority_candidates(
             continue
         audit["evaluated_count"] += 1
         if candidate_id in results_by_id:
-            _record_quarantine(audit, candidate_id, "duplicate_evaluation_id")
-            results_by_id.pop(candidate_id, None)
+            duplicate_result_ids.add(candidate_id)
             continue
         results_by_id[candidate_id] = raw_result
 
-    admitted: List[Dict[str, Any]] = []
-    for candidate_id, result in results_by_id.items():
-        candidate = authoritative_by_id.get(candidate_id)
-        if candidate is None:
-            reason = (
-                "candidate_factual_conflict"
-                if candidate_id in conflicting_ids
-                else "candidate_not_authoritative"
-            )
-            _record_quarantine(audit, candidate_id, reason)
+    expected_ids = set(candidate_groups)
+    result_ids = set(results_by_id)
+    missing_ids = expected_ids - result_ids
+    extra_ids = result_ids - expected_ids
+    for candidate_id in sorted(duplicate_result_ids):
+        _record_quarantine(audit, candidate_id, "duplicate_evaluation_id")
+    for candidate_id in sorted(missing_ids):
+        _record_quarantine(audit, candidate_id, "evaluation_missing")
+    for candidate_id in sorted(extra_ids):
+        _record_quarantine(audit, candidate_id, "evaluation_unexpected_id")
+    audit["coverage_complete"] = (
+        bool(expected_ids)
+        and not missing_ids
+        and not extra_ids
+        and not duplicate_result_ids
+        and not conflicting_ids
+        and audit["evaluated_count"] == len(expected_ids)
+    )
+    if not audit["coverage_complete"]:
+        audit["quarantined_count"] = len(audit["quarantined"])
+        return _empty_admission(audit, "evaluation_coverage_incomplete")
+
+    facts: list[dict[str, Any]] = []
+    projections: list[dict[str, Any]] = []
+    for candidate in candidate_list:
+        candidate_id = _candidate_id(candidate)
+        if not candidate_id or candidate_id in conflicting_ids:
             continue
-        reason, admitted_candidate = _admit_one(
+        result = results_by_id[candidate_id]
+        reason, fact = _verified_fact_from_result(
             candidate=candidate,
             result=result,
             expected_source_identity=expected_source_identity,
-            span_index=span_index,
+            expected_sha=expected_sha,
         )
         if reason:
             _record_quarantine(audit, candidate_id, reason)
             continue
-        admitted.append(admitted_candidate)
+        facts.append(fact)
+        projections.append(_fact_projection(fact))
 
-    candidate_order = {
-        _candidate_id(candidate): index
-        for index, candidate in enumerate(candidate_list)
-        if _candidate_id(candidate)
-    }
-    admitted.sort(
-        key=lambda item: candidate_order.get(
-            _candidate_id(item), len(candidate_order)
-        )
-    )
-    audit["admitted_count"] = len(admitted)
+    facts_by_id: dict[str, dict[str, Any]] = {}
+    unique_projections: list[dict[str, Any]] = []
+    for fact, projection in zip(facts, projections, strict=True):
+        fact_id = str(fact["fact_id"])
+        if fact_id in facts_by_id:
+            _record_quarantine(audit, fact_id, "duplicate_verified_fact_id")
+            continue
+        facts_by_id[fact_id] = fact
+        unique_projections.append(projection)
+
+    verified_evidence_packs = _verified_evidence_packs(list(facts_by_id.values()))
+    audit["admitted_count"] = len(unique_projections)
+    audit["verified_fact_count"] = len(facts_by_id)
     audit["quarantined_count"] = len(audit["quarantined"])
     digest = sha256_json(
         {
             "source_identity": expected_source_identity,
-            "admitted_candidates": admitted,
+            "verified_facts": list(facts_by_id.values()),
         }
     )
     audit["digest"] = digest
     return VisualAuthorityAdmission(
-        admitted_candidates=admitted,
+        admitted_candidates=unique_projections,
+        verified_facts=list(facts_by_id.values()),
+        verified_evidence_packs=verified_evidence_packs,
         digest=digest,
         audit=audit,
     )
 
 
-def _admit_one(
+def _verified_fact_from_result(
     *,
-    candidate: Dict[str, Any],
+    candidate: Mapping[str, Any],
     result: Any,
     expected_source_identity: str,
-    span_index: Dict[str, List[Dict[str, Any]]],
-) -> tuple[str, Dict[str, Any]]:
-    outcome = _result_field(result, "outcome").lower()
-    if outcome not in _TERMINAL_VERIFIED_OUTCOMES:
+    expected_sha: str,
+) -> tuple[str, dict[str, Any]]:
+    if _result_field(result, "outcome").lower() not in _TERMINAL_VERIFIED_OUTCOMES:
         return "outcome_not_verified", {}
     if _result_field(result, "source_identity") != expected_source_identity:
         return "source_identity_mismatch", {}
 
-    original_evidence_id = _field_text(candidate, "evidence_id")
-    if not original_evidence_id:
-        return "candidate_evidence_id_missing", {}
-    if _result_ids(result, "evidence_ids") != [original_evidence_id]:
-        return "original_evidence_binding_mismatch", {}
-    if not _metric_matches(
-        _result_mapping(result, "original_metric_binding"),
-        _complete_metric(candidate.get("metric")),
+    raw_fact = _result_mapping(result, "verified_fact")
+    fact_id = _field_text(raw_fact, "fact_id")
+    if fact_id and fact_id != _candidate_id(candidate):
+        return "verified_fact_id_mismatch", {}
+    fact_source_identity = _field_text(raw_fact, "source_identity")
+    if fact_source_identity and fact_source_identity != expected_source_identity:
+        return "verified_fact_source_identity_mismatch", {}
+    fact_outcome = _field_text(raw_fact, "verification_outcome").lower()
+    result_outcome = _result_field(result, "outcome").lower()
+    if fact_outcome and fact_outcome != result_outcome:
+        return "verified_fact_outcome_mismatch", {}
+    statement = _field_text(raw_fact, "statement")
+    metric = raw_fact.get("metric")
+    if not statement:
+        return "verified_fact_missing", {}
+    if not isinstance(metric, Mapping):
+        return "verified_fact_metric_malformed", {}
+    metric_payload = deepcopy(dict(metric))
+    if metric_payload.get("value") and (
+        not _field_text(metric_payload, "label")
+        or not _field_text(metric_payload, "unit")
     ):
-        return "original_metric_binding_mismatch", {}
-    reason = _validate_result_binding(
-        result=result,
-        evidence_ids=[original_evidence_id],
-        spans=_result_list(result, "evidence_spans"),
-        span_index=span_index,
-        source_identity=expected_source_identity,
-    )
-    if reason:
-        return reason, {}
-    if not _positive_int(_result_field(result, "physical_page")):
-        return "physical_page_missing", {}
+        return "verified_fact_metric_incomplete", {}
 
-    final_claim = _result_field(result, "final_claim").strip()
-    original_claim = _field_text(candidate, "text")
-    binding_status = _result_field(result, "corrected_source_binding_status").lower()
-    if not final_claim:
-        return "final_claim_missing", {}
-    if binding_status == "retained":
-        if not _claims_have_identical_proposition(original_claim, final_claim):
-            return "retained_binding_changed", {}
-        if _result_ids(result, "corrected_evidence_ids") != [original_evidence_id]:
-            return "retained_binding_mismatch", {}
-        if not _metric_matches(
-            _result_mapping(result, "corrected_metric_binding"),
-            _complete_metric(candidate.get("metric")),
-        ):
-            return "retained_metric_binding_mismatch", {}
-        corrected_spans = _result_list(result, "corrected_evidence_spans")
-        reason = _validate_result_binding(
-            result=result,
-            evidence_ids=[original_evidence_id],
-            spans=corrected_spans,
-            span_index=span_index,
-            source_identity=expected_source_identity,
+    qualifiers = raw_fact.get("qualifiers", [])
+    if not isinstance(qualifiers, list) or any(
+        not isinstance(item, str) or not item.strip() for item in qualifiers
+    ):
+        return "verified_fact_qualifiers_invalid", {}
+
+    inspected_pages = _result_pages(
+        result, ("inspected_physical_pages", "physical_pages")
+    )
+    if not inspected_pages:
+        return "verified_fact_inspected_pages_missing", {}
+    result_supporting_pages = _result_pages(result, ("supporting_physical_pages",))
+    fact_supporting_pages = _pages(raw_fact.get("supporting_physical_pages"))
+    if result_supporting_pages and fact_supporting_pages and (
+        result_supporting_pages != fact_supporting_pages
+    ):
+        return "verified_fact_supporting_pages_conflict", {}
+    supporting_pages = _result_pages(result, ("supporting_physical_pages",))
+    if not supporting_pages:
+        raw_fact_pages = raw_fact.get("supporting_physical_pages")
+        supporting_pages = _pages(raw_fact_pages)
+    if not supporting_pages:
+        return "verified_fact_supporting_pages_missing", {}
+    if inspected_pages and not set(supporting_pages).issubset(inspected_pages):
+        return "verified_fact_supporting_page_not_inspected", {}
+
+    result_hash = _result_field(result, "source_pdf_sha256").lower()
+    fact_hash = _field_text(raw_fact, "source_pdf_sha256").lower()
+    if result_hash and result_hash != expected_sha:
+        return "verified_fact_source_hash_mismatch", {}
+    if fact_hash != expected_sha:
+        return "verified_fact_source_hash_mismatch", {}
+
+    raw_provenance = raw_fact.get("provenance")
+    provenance = dict(raw_provenance) if isinstance(raw_provenance, Mapping) else {}
+    source_notes = _result_mapping(result, "source_truth_notes_by_page")
+    if not source_notes:
+        raw_notes = provenance.get("source_truth_notes_by_page")
+        source_notes = (
+            {
+                str(key): str(value)
+                for key, value in raw_notes.items()
+                if str(value).strip()
+            }
+            if isinstance(raw_notes, Mapping)
+            else {}
         )
-        if reason:
-            return reason, {}
-        admitted = deepcopy(candidate)
-        admitted["text"] = final_claim
-        return "", admitted
+    if not source_notes or any(
+        str(page) not in source_notes for page in supporting_pages
+    ):
+        return "verified_fact_source_notes_incomplete", {}
 
-    if binding_status == "unbound":
-        return "corrected_binding_unbound", {}
-    if binding_status not in _INDEPENDENT_BINDING_STATUSES:
-        return "corrected_binding_status_invalid", {}
-
-    corrected_ids = _result_ids(result, "corrected_evidence_ids")
-    if len(corrected_ids) != 1:
-        return "corrected_evidence_binding_ambiguous", {}
-    corrected_id = corrected_ids[0]
-    corrected_metric = _result_mapping(result, "corrected_metric_binding")
-    if not _complete_metric_is_present(corrected_metric):
-        return "corrected_metric_binding_incomplete", {}
-    corrected_spans = _result_list(result, "corrected_evidence_spans")
-    reason = _validate_result_binding(
-        result=result,
-        evidence_ids=[corrected_id],
-        spans=corrected_spans,
-        span_index=span_index,
-        source_identity=expected_source_identity,
-    )
-    if reason:
-        return reason, {}
-    canonical_spans = _canonical_spans(span_index, corrected_id)
-    if not canonical_spans:
-        return "corrected_evidence_id_unknown", {}
-    admitted = deepcopy(candidate)
-    admitted["text"] = final_claim
-    admitted["evidence_id"] = corrected_id
-    admitted["pages"] = _span_pages(canonical_spans)
-    admitted["evidence_spans"] = deepcopy(canonical_spans)
-    canonical_text = _canonical_excerpt(canonical_spans)
-    if canonical_text:
-        admitted["evidence"] = canonical_text
-    admitted["metric"] = _complete_metric(corrected_metric)
-    return "", admitted
-
-
-def _validate_result_binding(
-    *,
-    result: Any,
-    evidence_ids: List[str],
-    spans: List[Any],
-    span_index: Dict[str, List[Dict[str, Any]]],
-    source_identity: str,
-) -> str:
-    if not spans:
-        return "evidence_spans_missing"
-    expected_ids = {value.casefold() for value in evidence_ids}
-    matched_pages: set[int] = set()
-    for raw_span in spans:
-        if not isinstance(raw_span, Mapping):
-            return "evidence_span_malformed"
-        span_id = _field_text(raw_span, "evidence_id")
-        if span_id.casefold() not in expected_ids:
-            return "evidence_span_id_mismatch"
-        for field_name in ("source_identity", "source_id"):
-            declared_source = _field_text(raw_span, field_name)
-            if declared_source and declared_source != source_identity:
-                return "evidence_span_source_mismatch"
-        page = _positive_int(raw_span.get("page"))
-        if page is None:
-            return "evidence_span_page_missing"
-        matching = [
-            span
-            for span in _canonical_spans(span_index, span_id)
-            if _positive_int(span.get("page")) == page
-        ]
-        if not matching:
-            return "evidence_page_not_supported"
-        raw_text = _field_text(raw_span, "text")
-        if raw_text and not any(
-            _texts_are_compatible(raw_text, _field_text(span, "text"))
-            for span in matching
-            if _field_text(span, "text")
-        ):
-            return "evidence_excerpt_mismatch"
-        matched_pages.add(page)
-    if not matched_pages:
-        return "evidence_page_missing"
-    physical_page = _positive_int(_result_field(result, "physical_page"))
-    known_pages = {
-        page
-        for evidence_id in evidence_ids
-        for page in _span_pages(_canonical_spans(span_index, evidence_id))
+    fact = {
+        "schema_version": "1.0",
+        "fact_id": _candidate_id(candidate),
+        "statement": statement,
+        "metric": metric_payload,
+        "qualifiers": [item.strip() for item in qualifiers],
+        "source_identity": expected_source_identity,
+        "source_pdf_sha256": expected_sha,
+        "supporting_physical_pages": supporting_pages,
+        "verification_outcome": _result_field(result, "outcome").lower(),
+        "provenance": {
+            "inspected_physical_pages": inspected_pages,
+            "source_truth_notes_by_page": deepcopy(source_notes),
+            "discovery_candidate_id": _candidate_id(candidate),
+            "discovery_evidence_ids": _candidate_evidence_ids(candidate),
+        },
     }
-    if physical_page is None or physical_page not in known_pages:
-        # A materially corrected result may be visually inspected on a page
-        # represented only by the corrected binding, so this check is applied
-        # by the caller to the supplied binding pages instead.
-        corrected_ids = _result_ids(result, "corrected_evidence_ids")
-        corrected_pages = {
-            page
-            for evidence_id in corrected_ids
-            for page in _span_pages(_canonical_spans(span_index, evidence_id))
+    return "", fact
+
+
+def _fact_projection(fact: Mapping[str, Any]) -> dict[str, Any]:
+    fact_id = _field_text(fact, "fact_id")
+    evidence_id = f"verified-fact:{fact_id}"
+    pages = _pages(fact.get("supporting_physical_pages"))
+    raw_provenance = fact.get("provenance")
+    notes = (
+        raw_provenance.get("source_truth_notes_by_page", {})
+        if isinstance(raw_provenance, Mapping)
+        else {}
+    )
+    spans = [
+        {
+            "evidence_id": evidence_id,
+            "source_pack": "verified_facts",
+            "page": page,
+            "text": _field_text(notes, str(page)) or _field_text(fact, "statement"),
+            "source_identity": _field_text(fact, "source_identity"),
         }
-        if physical_page is None or physical_page not in corrected_pages:
-            return "physical_page_not_supported"
-    return ""
+        for page in pages
+    ]
+    return {
+        "id": fact_id,
+        "verified_fact_id": fact_id,
+        "text": _field_text(fact, "statement"),
+        "evidence_id": evidence_id,
+        "evidence": _field_text(fact, "statement"),
+        "evidence_spans": spans,
+        "pages": pages,
+        "metric": deepcopy(fact.get("metric") or {}),
+        "source_identity": _field_text(fact, "source_identity"),
+        "verified_fact": deepcopy(dict(fact)),
+    }
 
 
-def _empty_admission(audit: Dict[str, Any], reason: str) -> VisualAuthorityAdmission:
-    audit["quarantined_count"] = 0
+def project_verified_facts_as_insights(
+    facts: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Build deterministic artifact-shaped projections from verified facts."""
+
+    return [
+        _fact_projection(fact)
+        for fact in facts
+        if isinstance(fact, Mapping) and _field_text(fact, "fact_id")
+    ]
+
+
+def _verified_evidence_packs(facts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    findings = []
+    for fact in facts:
+        projection = _fact_projection(fact)
+        findings.append(
+            {
+                "id": projection["evidence_id"],
+                "verified_fact_id": projection["verified_fact_id"],
+                "text": projection["text"],
+                "statement": projection["text"],
+                "evidence": projection["evidence"],
+                "evidence_spans": projection["evidence_spans"],
+                "pages": projection["pages"],
+                "metric": projection["metric"],
+                "source_identity": projection["source_identity"],
+            }
+        )
+    return {
+        "findings": {
+            "family_status": {
+                "family": "findings",
+                "source": "verified_facts",
+                "status": "generated",
+                "policy_action": "keep",
+            },
+            "findings": findings,
+        },
+        "verified_facts": {
+            "family_status": {
+                "family": "verified_facts",
+                "source": "visual_verification",
+                "status": "generated",
+                "policy_action": "keep",
+            },
+            "verified_facts": [deepcopy(dict(fact)) for fact in facts],
+        },
+    }
+
+
+def _empty_admission(
+    audit: Dict[str, Any], reason: str
+) -> VisualAuthorityAdmission:
     audit["terminal_error"] = reason
-    digest = sha256_json({"terminal_error": reason})
-    audit["digest"] = digest
-    return VisualAuthorityAdmission(admitted_candidates=[], digest=digest, audit=audit)
+    audit["digest"] = sha256_json({"terminal_error": reason})
+    audit["quarantined_count"] = len(audit.get("quarantined") or [])
+    return VisualAuthorityAdmission(
+        admitted_candidates=[],
+        verified_facts=[],
+        verified_evidence_packs={},
+        digest=audit["digest"],
+        audit=audit,
+    )
 
 
 def _record_quarantine(audit: Dict[str, Any], candidate_id: str, reason: str) -> None:
-    quarantined = audit["quarantined"]
-    quarantined.append({"candidate_id": candidate_id, "reason": reason})
+    audit.setdefault("quarantined", []).append(
+        {"candidate_id": candidate_id, "reason": reason}
+    )
 
 
 def _response_is_shadow(response: Any) -> bool:
-    raw = response.get("shadow_mode") if isinstance(response, Mapping) else getattr(
-        response, "shadow_mode", False
+    raw = (
+        response.get("shadow_mode")
+        if isinstance(response, Mapping)
+        else getattr(response, "shadow_mode", False)
     )
     return raw is True
 
 
-def _response_claims(response: Any) -> List[Any] | None:
-    claims = response.get("claims") if isinstance(response, Mapping) else getattr(
-        response, "claims", None
+def _response_claims(response: Any) -> list[Any] | None:
+    claims = (
+        response.get("claims")
+        if isinstance(response, Mapping)
+        else getattr(response, "claims", None)
     )
     return claims if isinstance(claims, list) else None
 
 
 def _result_field(value: Any, field_name: str) -> str:
     if isinstance(value, Mapping):
-        return stripped_string_value(value.get(field_name))
-    return stripped_string_value(getattr(value, field_name, ""))
+        return stripped_string_value(value.get(field_name)).strip()
+    return stripped_string_value(getattr(value, field_name, "")).strip()
 
 
-def _result_mapping(value: Any, field_name: str) -> Dict[str, Any]:
-    raw = value.get(field_name) if isinstance(value, Mapping) else getattr(
-        value, field_name, {}
+def _result_mapping(value: Any, field_name: str) -> dict[str, Any]:
+    raw = (
+        value.get(field_name)
+        if isinstance(value, Mapping)
+        else getattr(value, field_name, {})
     )
     return dict(raw) if isinstance(raw, Mapping) else {}
 
 
-def _result_list(value: Any, field_name: str) -> List[Any]:
-    raw = value.get(field_name) if isinstance(value, Mapping) else getattr(
-        value, field_name, []
-    )
-    return list(raw) if isinstance(raw, list) else []
+def _result_pages(value: Any, fields: Sequence[str]) -> list[int]:
+    for field_name in fields:
+        raw = (
+            value.get(field_name)
+            if isinstance(value, Mapping)
+            else getattr(value, field_name, [])
+        )
+        pages = _pages(raw)
+        if pages:
+            return pages
+    return []
 
 
-def _result_ids(value: Any, field_name: str) -> List[str]:
-    return [
-        stripped_string_value(item).strip()
-        for item in _result_list(value, field_name)
-        if stripped_string_value(item).strip()
-    ]
+def _pages(value: Any) -> list[int]:
+    if not isinstance(value, list):
+        return []
+    pages: list[int] = []
+    for raw_page in value:
+        if isinstance(raw_page, bool):
+            continue
+        try:
+            page = int(raw_page)
+        except (TypeError, ValueError):
+            continue
+        if page > 0 and page not in pages:
+            pages.append(page)
+    return pages
 
 
 def _candidate_id(candidate: Mapping[str, Any]) -> str:
-    return stripped_string_value(candidate.get("id")).strip()
+    for key in ("id", "stable_candidate_id", "candidate_id"):
+        value = _field_text(candidate, key)
+        if value:
+            return value
+    return ""
+
+
+def _candidate_signature(candidate: Mapping[str, Any]) -> str:
+    payload = {
+        key: deepcopy(value)
+        for key, value in candidate.items()
+        if key not in _SCORE_ONLY_FIELDS
+    }
+    return sha256_json(payload)
+
+
+def _candidate_evidence_ids(candidate: Mapping[str, Any]) -> list[str]:
+    values = [candidate.get("evidence_id")]
+    raw_ids = candidate.get("evidence_ids")
+    if isinstance(raw_ids, list):
+        values.extend(raw_ids)
+    ids: list[str] = []
+    for value in values:
+        text = stripped_string_value(value).strip()
+        if text and text not in ids:
+            ids.append(text)
+    return ids
 
 
 def _field_text(value: Mapping[str, Any], field_name: str) -> str:
     return stripped_string_value(value.get(field_name)).strip()
-
-
-def _complete_metric(metric: Any) -> Dict[str, Any]:
-    metric = metric if isinstance(metric, Mapping) else {}
-    return {
-        field_name: deepcopy(metric.get(field_name, ""))
-        for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
-    }
-
-
-def _complete_metric_is_present(metric: Mapping[str, Any]) -> bool:
-    if not isinstance(metric, Mapping):
-        return False
-    return all(
-        field_name in metric
-        for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
-    )
-
-
-def _metric_matches(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
-    if not _complete_metric_is_present(left):
-        return False
-    return _complete_metric(left) == _complete_metric(right)
-
-
-def _canonical_spans(
-    span_index: Dict[str, List[Dict[str, Any]]], evidence_id: str
-) -> List[Dict[str, Any]]:
-    return span_index.get(str(evidence_id).casefold(), [])
-
-
-def _span_pages(spans: Sequence[Mapping[str, Any]]) -> List[int]:
-    return list(
-        dict.fromkeys(
-            page
-            for span in spans
-            for page in [_positive_int(span.get("page"))]
-            if page is not None
-        )
-    )
-
-
-def _canonical_excerpt(spans: Sequence[Mapping[str, Any]]) -> str:
-    return " ".join(
-        dict.fromkeys(
-            _field_text(span, "text") for span in spans if _field_text(span, "text")
-        )
-    )
-
-
-def _texts_are_compatible(left: str, right: str) -> bool:
-    left_key = normalize_for_lookup(left)
-    right_key = normalize_for_lookup(right)
-    return bool(
-        left_key
-        and right_key
-        and (left_key == right_key or left_key in right_key or right_key in left_key)
-    )
-
-
-def _positive_int(value: Any) -> int | None:
-    if isinstance(value, bool):
-        return None
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        return None
-    return parsed if parsed > 0 else None
 
 
 __all__ = [
@@ -535,4 +596,5 @@ __all__ = [
     "VisualAuthorityAdmission",
     "admit_visual_authority_candidates",
     "build_visual_authority_admitter",
+    "project_verified_facts_as_insights",
 ]

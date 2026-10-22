@@ -123,6 +123,43 @@
         }
       }
     },
+    "verified_facts": {
+      "type": "array",
+      "description": "Shadow-only visual facts that are authoritative for verified-mode downstream generation.",
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "fact_id",
+          "statement",
+          "metric",
+          "source_identity",
+          "source_pdf_sha256",
+          "supporting_physical_pages",
+          "verification_outcome",
+          "provenance"
+        ],
+        "properties": {
+          "schema_version": { "type": "string", "minLength": 1 },
+          "fact_id": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string", "minLength": 1 },
+          "metric": { "type": "object" },
+          "qualifiers": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "source_identity": { "type": "string", "minLength": 1 },
+          "source_pdf_sha256": { "type": "string", "minLength": 64 },
+          "supporting_physical_pages": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "integer", "minimum": 1 }
+          },
+          "verification_outcome": { "type": "string", "enum": ["verified", "verified_after_retry"] },
+          "provenance": { "type": "object" }
+        }
+      }
+    },
     "topics_covered": {
       "type": "array",
       "items": {

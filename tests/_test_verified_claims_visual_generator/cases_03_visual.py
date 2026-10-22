@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 from src.generators.verified_claims_visual_generator import evaluate_shortlisted_claims
 
 from .cases_01_visual import _claim, _ctx, _dependencies, _request, _settings
@@ -282,6 +284,80 @@ def test_identical_verified_claim_retains_authoritative_corrected_binding(tmp_pa
     assert item.corrected_evidence_ids == ["f1"]
     assert item.corrected_evidence_spans == item.evidence_spans
     assert item.corrected_metric_binding == item.original_metric_binding
+
+
+def test_verified_result_carries_independent_fact_after_metric_replacement(tmp_path):
+    claim = _claim(
+        "candidate-1",
+        "The source reports 58% revenue share for incentive-driven activity.",
+    )
+    claim["metric"] = {
+        "label": "Revenue share",
+        "value": "58%",
+        "unit": "%",
+        "cohort": "Incentive-driven activity",
+    }
+    verified_metric = {
+        "label": "Investment mix",
+        "value": "53%",
+        "unit": "%",
+        "trend": "",
+        "timeframe": "2026",
+        "geography": "global",
+        "segment": "investment mix",
+        "sample_size": "",
+        "confidence": "source_backed",
+        "subject": "investment",
+        "cohort": "reported mix",
+        "denominator": "reported mix",
+        "observation_status": "observed",
+    }
+    responses = iter(
+        [
+            {
+                "claim": "Investment represented 53% of the mix.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "Physical page 5 reports 53% for investment in the named "
+                    "reported mix, not the original revenue-share metric."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": (
+                        "Physical page 5 reports 53% for investment in the named "
+                        "reported mix."
+                    )
+                },
+                "verified_fact": {
+                    "statement": "Investment represented 53% of the mix.",
+                    "metric": verified_metric,
+                    "qualifiers": ["Observed reported mix."],
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [claim]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified"
+    assert item.verified_fact["statement"] == "Investment represented 53% of the mix."
+    assert item.verified_fact["metric"] == verified_metric
+    assert item.verified_fact["metric"] != item.original_metric_binding
+    assert item.verified_fact["source_pdf_sha256"] == hashlib.sha256(
+        (tmp_path / "source.pdf").read_bytes()
+    ).hexdigest()
+    assert item.verified_fact["supporting_physical_pages"] == [5]
 
 
 def test_malformed_verification_response_can_use_one_bounded_retry(tmp_path):

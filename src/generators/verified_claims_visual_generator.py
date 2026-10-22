@@ -18,6 +18,7 @@ from src.contracts.report_assets import CropRefinePageRenderRequest
 from src.contracts.run_context import RunContext
 from src.contracts.verified_claims import (
     VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
+    VERIFIED_FACT_SCHEMA_VERSION,
     VisualClaimCorrectionAttempt,
     VisualClaimEvaluationRequest,
     VisualClaimEvaluationResponse,
@@ -564,6 +565,85 @@ def _supporting_page_notes(
     return supporting_pages, notes, list(dict.fromkeys(diagnostics))
 
 
+def _normalise_verified_fact_payload(
+    payload: Mapping[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    """Validate the factual fields returned by the existing verifier call."""
+
+    raw_fact = payload.get("verified_fact")
+    if raw_fact is None:
+        return {}, []
+    if not isinstance(raw_fact, Mapping):
+        return {}, ["verification_verified_fact_invalid"]
+    statement = _text(raw_fact.get("statement"))
+    raw_metric = raw_fact.get("metric")
+    if not statement or not isinstance(raw_metric, Mapping):
+        return {}, ["verification_verified_fact_invalid"]
+    metric = {
+        field_name: copy.deepcopy(raw_metric.get(field_name, ""))
+        for field_name in _PROTECTED_METRIC_FIELDS
+    }
+    for alias, field_name in (("direction", "trend"), ("population", "segment")):
+        if not metric[field_name] and alias in raw_metric:
+            metric[field_name] = copy.deepcopy(raw_metric.get(alias))
+    if metric["value"] and (
+        not _text(metric["label"]) or not _text(metric["unit"])
+    ):
+        return {}, ["verification_verified_fact_metric_incomplete"]
+    raw_qualifiers = raw_fact.get("qualifiers", [])
+    if not isinstance(raw_qualifiers, list) or any(
+        not isinstance(value, str) or not value.strip() for value in raw_qualifiers
+    ):
+        return {}, ["verification_verified_fact_qualifiers_invalid"]
+    raw_pages = raw_fact.get("supporting_physical_pages")
+    if raw_pages is not None and _strict_physical_page_list(
+        {"supporting_physical_pages": raw_pages}, "supporting_physical_pages"
+    ) is None:
+        return {}, ["verification_verified_fact_pages_invalid"]
+    return {
+        "statement": statement,
+        "metric": metric,
+        "qualifiers": [value.strip() for value in raw_qualifiers],
+    }, []
+
+
+def _authoritative_verified_fact(
+    *,
+    claim: Mapping[str, Any],
+    request: VisualClaimEvaluationRequest,
+    outcome: str,
+    verified_fact: Mapping[str, Any] | None,
+    supporting_physical_pages: list[int],
+    inspected_physical_pages: list[int],
+    source_truth_notes_by_page: Mapping[str, str],
+) -> dict[str, Any]:
+    if outcome not in {"verified", "verified_after_retry"} or not isinstance(
+        verified_fact, Mapping
+    ):
+        return {}
+    statement = _text(verified_fact.get("statement"))
+    metric = verified_fact.get("metric")
+    if not statement or not isinstance(metric, Mapping):
+        return {}
+    return {
+        "schema_version": VERIFIED_FACT_SCHEMA_VERSION,
+        "fact_id": _candidate_id(claim),
+        "statement": statement,
+        "metric": copy.deepcopy(dict(metric)),
+        "qualifiers": copy.deepcopy(verified_fact.get("qualifiers") or []),
+        "source_identity": request.source_identity,
+        "source_pdf_sha256": _source_pdf_sha256(request.source_identity),
+        "supporting_physical_pages": list(supporting_physical_pages),
+        "verification_outcome": outcome,
+        "provenance": {
+            "inspected_physical_pages": list(inspected_physical_pages),
+            "source_truth_notes_by_page": dict(source_truth_notes_by_page),
+            "discovery_candidate_id": _candidate_id(claim),
+            "discovery_evidence_ids": _evidence_ids(claim),
+        },
+    }
+
+
 def _provider_error_details(prefix: str, error: Exception) -> list[str]:
     if isinstance(error, AppError):
         return [
@@ -701,6 +781,7 @@ def _record_result(
     source_binding_status: str = "retained",
     supporting_physical_pages: list[int] | None = None,
     source_truth_notes_by_page: Mapping[str, str] | None = None,
+    verified_fact: Mapping[str, Any] | None = None,
     canonical_approval_status: str = "not_approved",
 ) -> VisualClaimEvaluationResult:
     original_physical_pages = _physical_pages(claim) if physical_page > 0 else []
@@ -710,6 +791,17 @@ def _record_result(
     original_evidence_ids = _evidence_ids(claim)
     original_evidence_spans = _evidence_spans(claim)
     original_metric_binding = _complete_metric_binding(claim)
+    authoritative_verified_fact = _authoritative_verified_fact(
+        claim=claim,
+        request=request,
+        outcome=outcome,
+        verified_fact=verified_fact,
+        supporting_physical_pages=supporting_pages,
+        inspected_physical_pages=list(
+            inspected_physical_pages or original_physical_pages
+        ),
+        source_truth_notes_by_page=source_truth_notes_by_page or {},
+    )
     final_binding_is_retained = (
         bool(final_claim)
         and binding_status == "retained"
@@ -753,6 +845,7 @@ def _record_result(
         supporting_physical_pages=supporting_pages,
         source_truth_notes_by_page=dict(source_truth_notes_by_page or {}),
         canonical_approval_status=canonical_approval_status,
+        verified_fact=authoritative_verified_fact,
     )
 
 
@@ -954,6 +1047,8 @@ def _verification_attempt(
             model=model,
         )
     diagnostics: list[str] | None
+    verified_fact: dict[str, Any] = {}
+    verified_fact_issues: list[str] = []
     if not isinstance(payload.get("outcome"), str) or not isinstance(
         payload.get("source_truth_notes"), str
     ):
@@ -976,6 +1071,18 @@ def _verification_attempt(
         diagnostics = (
             [*diagnostics, *support_diagnostics] if diagnostics is not None else None
         )
+        verified_fact, verified_fact_issues = _normalise_verified_fact_payload(payload)
+        raw_fact_pages = (
+            payload.get("verified_fact", {}).get("supporting_physical_pages")
+            if isinstance(payload.get("verified_fact"), Mapping)
+            else None
+        )
+        if (
+            verified_fact
+            and isinstance(raw_fact_pages, list)
+            and raw_fact_pages != supporting_pages
+        ):
+            verified_fact_issues.append("verification_verified_fact_pages_conflict")
     if diagnostics is None:
         outcome = "rejected"
         diagnostics = [
@@ -1002,6 +1109,7 @@ def _verification_attempt(
             for diagnostic in diagnostics
         ):
             quality_issues.append("verification_source_truth_notes_by_page_invalid")
+        quality_issues.extend(verified_fact_issues)
         if quality_issues:
             outcome = "rejected"
             diagnostics = [*diagnostics, *quality_issues]
@@ -1011,6 +1119,7 @@ def _verification_attempt(
     if outcome != "verified":
         supporting_pages = []
         notes_by_page = {}
+        verified_fact = {}
     return VisualClaimVerificationAttempt(
         schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
         attempt=attempt,
@@ -1019,6 +1128,7 @@ def _verification_attempt(
         source_truth_notes=notes,
         supporting_physical_pages=supporting_pages,
         source_truth_notes_by_page=notes_by_page,
+        verified_fact=verified_fact,
         request_id=request_id,
         model=model,
     )
@@ -1186,6 +1296,7 @@ def _evaluate_claim(
                 ],
                 supporting_physical_pages=verification.supporting_physical_pages,
                 source_truth_notes_by_page=verification.source_truth_notes_by_page,
+                verified_fact=verification.verified_fact,
                 recovery_reason=_text(recovery_candidates[0].get("reason"))
                 if recovery_candidates
                 else "",

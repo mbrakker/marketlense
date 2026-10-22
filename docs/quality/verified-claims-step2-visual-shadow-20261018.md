@@ -2734,3 +2734,90 @@ promotion, and Step 3 remains **unstarted / not ready**. Remaining gaps are
 independent corrected evidence bindings for material rewrites, fresh
 end-to-end canary output, the two strict-direction reference false rejects,
 and the supported-runtime CI gate.
+
+#### Verified-fact downstream canary — 2026-10-22
+
+This checkpoint implements the Step 3 authority boundary as an explicit,
+opt-in canary. It remains shadow-only: no canonical claim promotion,
+publication-readiness transition, WordPress write, or default-path authority
+change occurs. Discovery DocMaps, findings, candidate propositions,
+editorial-plan themes, and quote candidates are discovery inputs only. A
+terminal visual result must instead provide a source-hash-bound verified fact
+with a non-empty statement, valid structured metric (or an explicit
+qualitative metric), inspected and supporting physical pages, and
+source-specific verification notes. The verified-fact digest is stored with
+the canary cache and regeneration snapshot; incomplete cache metadata fails
+closed. Quotes are empty in this mode.
+
+The smallest admitted record is `fact_id`, verified statement, protected
+metric fields, exact source identity and PDF SHA-256, supporting physical
+pages, terminal outcome, inspected pages, and page-level provenance notes.
+The discovery candidate ID/evidence IDs remain traceability metadata only.
+Final insights, summary evidence, metric spine, key figures, expert/social
+generation inputs, evidence binding, and scoped regeneration all consume the
+admitted verified-fact projection. Editorial plan and theme data may order or
+label the output but cannot authorize a factual field. Existing correction and
+verification calls remain independent and bounded at two attempts each.
+
+**Focused real-report replay.** The isolated GPT-6 Luna High runs used the
+retained real-report artifacts and exact hash-matched PDFs for Criteo, Adjust,
+DoubleVerify, and Algolia. Source review used full physical PDF pages and
+rendered page images; no cropped image was used for authority. The successful
+outputs were independently checked against the following pages:
+
+| Report | Terminal canary result | Downstream output | PDF/source review |
+|---|---|---|---|
+| Criteo | 5/5 facts admitted; 5 first-pass verified | 5 final insights, 4 metric-spine rows, 2 key figures, 0 quotes | Pages 5, 7, and 8 support the 61% expectation qualifier, 22% estimate, 50% retail-media implication, 51/45 and 47/40 plan comparisons, and 54% US focus. |
+| Adjust | 5/5 facts admitted; 4 first-pass and 1 after retry | 5 final insights, 2 metric-spine rows, 2 key figures, 0 quotes | Pages 6, 9, 11, 21, and 34 support install/session growth, the over-20% advanced-GenAI qualifier, 31% satisfaction, all-games retention, and the finance install/session divergence. |
+| DoubleVerify | 5/5 facts admitted; 5 first-pass verified | 5 final insights, 1 metric-spine row, 0 key figures, 0 quotes | Pages 3, 8, 9, and 10 support regional brand-suitability rates, the 20+ engagement definition, normalized-100 context, and APAC/North America device-format values. |
+| Algolia | 0/6 admitted; five verification responses carried facts, while `revenue-as-critical-incentive` remained unresolved after its bounded correction path | No final artifact was produced; coverage failed closed | The hash matched and available source pages support the verified responses, including the page-23 investment correction and pages 22, 26, and 27 survey facts. No unresolved fact was promoted. |
+
+The successful artifacts are under the ignored local replay root
+`out/verified_claims_step3_live_20261022/` and contain exact source hashes in
+every fact. Criteo, Adjust, and DoubleVerify final insight evidence IDs are
+all `verified-fact:<fact_id>`; their final wording and protected fields were
+reviewed against the PDF pages above. The four-report runs recorded:
+
+The verified source hashes were Criteo
+`17cf2e92c8804e35274faf3dd416db2fe6e4a81d7aa92418ada8ba90ee77c00c`, Adjust
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`,
+DoubleVerify `99f0cc4f7787cac52b7f89eefa7659053b3703ea100b9e0522fa500c64463d7e`,
+and Algolia
+`d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50`.
+
+| Report | Provider calls / visual calls | Input + output tokens | Estimated cost | Provider latency | Cache reuse |
+|---|---:|---:|---:|---:|---:|
+| Criteo | 17 / 10 | 186,154 + 33,755 | $0.035493 | 339.882 s | 0 hits |
+| Adjust | 19 / 12 | 298,765 + 40,489 | $0.050020 | 389.581 s | 1 hit |
+| DoubleVerify | 17 / 10 | 177,058 + 40,307 | $0.037759 | 379.156 s | 1 hit |
+| Algolia | 17 / 12 | 381,146 + 38,004 | $0.057017 | 375.670 s | 1 hit |
+
+These totals are from the isolated `cost-ledger.jsonl` files and include
+artifact-generation calls; no measurements were inferred. The Algolia worker
+was stopped after its provider work completed but before an artifact could be
+written, because the canary had already failed closed on incomplete coverage.
+
+**Provider-free and regression evidence.** The deterministic provider-free
+path is covered by the verified-fact admission, digest/cache, downstream
+projection, and regeneration tests; the retained pre-Step 3 artifacts do not
+contain authoritative verified-fact snapshots and therefore cannot be reused
+as a provider-free Step 3 fact source. A read-only replay of the new isolated
+snapshots used zero provider calls: Criteo, Adjust, and DoubleVerify each had
+5 facts, 5 final insights, exact PDF-hash matches, verified-fact-only final
+evidence IDs, and zero quotes; Algolia had no admitted snapshot. The focused
+suite passed **498 tests in 28.93 seconds**. `python -m compileall -q src tests`, the contract schema
+snapshot gate, and `git diff --check` passed. Ruff is clean for the new
+verified-claims visual/canary code and tests; the changed storage/regeneration
+modules still report the repository's pre-existing formatting findings. No
+full ten-report downstream Step 3 run was claimed from the older ten-report
+Step 2 results because those results lack verified-fact snapshots.
+
+**Verdict: PARTIAL.** The authority boundary, fail-closed admission,
+source-hash/page checks, downstream verified-fact routing, cache identity, and
+regeneration continuity are implemented and exercised. Three focused reports
+produced PDF-reviewed final artifacts; Algolia correctly abstained. Step 3 is
+not ready to close: the complete ten-report downstream replay, fresh
+provider-free verified-fact snapshots for the retained cohort, and an
+independent review of every final output remain outstanding. This checkpoint
+does not claim improved live selection quality or alter the Step 2
+PARTIAL/NO-GO status.

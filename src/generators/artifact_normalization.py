@@ -23,6 +23,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
 ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:7"
+VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
     "label",
@@ -148,6 +149,100 @@ def artifact_base_variables(
             sorted(known_evidence_ids, key=str.casefold)
         ),
     }
+
+
+def build_verified_fact_doc_map(doc_map: Dict[str, Any]) -> Dict[str, Any]:
+    """Retain only structural navigation context after visual fact admission.
+
+    Section titles and stable ordering are layout inputs.  DocMap summaries,
+    key points, pages, and report-level descriptive fields remain discovery
+    material and must not reach downstream factual prompts in verified mode.
+    """
+
+    source = doc_map if isinstance(doc_map, dict) else {}
+    sections = source.get("sections")
+    structural_sections: list[dict[str, Any]] = []
+    if isinstance(sections, list):
+        for index, raw_section in enumerate(sections):
+            if not isinstance(raw_section, dict):
+                continue
+            section_id = _s(raw_section.get("id")).strip()
+            title = _s(
+                raw_section.get("title")
+                or raw_section.get("heading")
+                or raw_section.get("name")
+            ).strip()
+            if not section_id and not title:
+                continue
+            item: dict[str, Any] = {
+                "id": section_id or f"section-{index + 1}",
+                "title": title,
+            }
+            order = raw_section.get("order")
+            if isinstance(order, int) and not isinstance(order, bool):
+                item["order"] = order
+            structural_sections.append(item)
+    result: dict[str, Any] = {
+        "schema_version": VERIFIED_FACT_CONTEXT_VERSION,
+        "sections": structural_sections,
+    }
+    for key in ("doc_id", "document_id", "title"):
+        value = _s(source.get(key)).strip()
+        if value:
+            result[key] = value
+    return result
+
+
+def remap_editorial_plan_to_verified_facts(
+    editorial_plan: Dict[str, Any],
+    verified_facts: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Keep planning themes while replacing discovery IDs with fact IDs."""
+
+    plan = normalize_artifact_editorial_plan(editorial_plan)
+    facts = [
+        fact
+        for fact in verified_facts
+        if isinstance(fact, dict) and _s(fact.get("fact_id")).strip()
+    ]
+    fact_evidence_ids = [
+        f"verified-fact:{_s(fact.get('fact_id')).strip()}"
+        for fact in facts
+    ]
+    if not fact_evidence_ids:
+        raise AppError(
+            code="verified_facts_missing",
+            message=(
+                "Verified-mode editorial planning requires at least one verified fact"
+            ),
+            retryable=False,
+        )
+    aliases: dict[str, set[str]] = {}
+    for fact, evidence_id in zip(facts, fact_evidence_ids, strict=True):
+        identifiers = {_s(fact.get("fact_id")).strip(), evidence_id}
+        provenance = fact.get("provenance")
+        if isinstance(provenance, dict):
+            identifiers.add(_s(provenance.get("discovery_candidate_id")).strip())
+            raw_evidence_ids = provenance.get("discovery_evidence_ids")
+            if isinstance(raw_evidence_ids, list):
+                identifiers.update(_s(value).strip() for value in raw_evidence_ids)
+        for identifier in identifiers:
+            if identifier:
+                aliases.setdefault(identifier.casefold(), set()).add(evidence_id)
+
+    themes: list[dict[str, Any]] = []
+    for index, theme in enumerate(plan["themes"]):
+        mapped: list[str] = []
+        for raw_evidence_id in theme["evidence_ids"]:
+            targets = aliases.get(raw_evidence_id.casefold(), set())
+            if len(targets) == 1:
+                target = next(iter(targets))
+                if target not in mapped:
+                    mapped.append(target)
+        if not mapped:
+            mapped = [fact_evidence_ids[index % len(fact_evidence_ids)]]
+        themes.append({**theme, "evidence_ids": mapped})
+    return {"report_thesis": plan["report_thesis"], "themes": themes}
 
 
 def normalize_artifact_editorial_plan(value: Any) -> Dict[str, Any]:

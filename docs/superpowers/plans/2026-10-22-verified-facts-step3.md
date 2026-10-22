@@ -207,3 +207,17 @@ git status --short
 git push origin codex/fix-retained-insight-evidence-validation
 \`\`\`
 
+## Execution evidence — 2026-10-22
+
+Tasks 1–4 are implemented in the current worktree and covered by the
+verified-fact contract, admission, downstream-input, cache, and regeneration
+regressions. The focused suite passed 498 tests; compileall, the contract
+schema snapshot gate, and `git diff --check` passed. The provider-free
+snapshot audit passed for the three admitted focused reports and correctly
+reported no Algolia snapshot after fail-closed incomplete coverage. Actual
+GPT-6 Luna High downstream generation produced PDF-reviewed artifacts for
+Criteo, Adjust, and DoubleVerify; Algolia abstained. Task 5 is therefore
+partially complete: the evidence report is updated, but full-ten downstream
+Step 3 replay and fresh retained-cohort verified-fact snapshots remain open.
+The implementation verdict is **PARTIAL**, and Step 3 is not closed.
+
