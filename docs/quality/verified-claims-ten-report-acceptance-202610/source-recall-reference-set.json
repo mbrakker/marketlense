@@ -7,6 +7,7 @@
     "final_roster_count": 59,
     "matching_rule": "Credit at most one reference finding when the final roster preserves the same proposition, population, metric, period/status, and material scope. A shared topic, source page, or related commercial theme is not equivalent."
   },
+  "current_selection_version": "evidence_backed_shortlisting:7",
   "reference_findings": [
     {
       "report": "Reuters Institute",

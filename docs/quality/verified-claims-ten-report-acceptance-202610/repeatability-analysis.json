@@ -82,6 +82,156 @@
       "Reuters Institute"
     ]
   },
+  "remaining_five_isolated_run": {
+    "available": true,
+    "git_sha": "6f09874c4007e74ce239d2e343eb448095b52aea",
+    "cohort_result": "tmp/step1-repeat-five-clean-20261022/frozen-reliability-7doc1wdj/cohort_result.json",
+    "summary": {
+      "report_count": 5,
+      "admitted_report_count": 5,
+      "cohort_model_provider_calls": 181,
+      "cohort_input_tokens": 1729700,
+      "cohort_output_tokens": 373333,
+      "cohort_cost_usd": 0.42165,
+      "cohort_duration_seconds": 2649.459,
+      "publication_readiness_rate": 0.6,
+      "workflow_failure_rate": 0.4,
+      "failure_code_pareto": {
+        "publish_readiness_failed": 1,
+        "validation_failed": 1
+      },
+      "terminal_outcome_complete": true,
+      "published_report_count": 0
+    },
+    "reports": [
+      {
+        "report": "DoubleVerify",
+        "report_id": "cohort-e854b71d6fb10333b47f",
+        "state": "failed",
+        "validation": "fail",
+        "publication_readiness": "fail",
+        "failure_code": "validation_failed",
+        "calls": 47,
+        "input_tokens": 506358,
+        "output_tokens": 123110,
+        "cost_usd": 0.11523,
+        "duration_seconds": 716.111,
+        "diagnosis": "The run exhausted three targeted repairs on a false metric-label relationship defect caused by noisy chart OCR being evaluated instead of the precise findings_statement span."
+      },
+      {
+        "report": "Adjust",
+        "report_id": "cohort-b638414df0b1fccea1cd",
+        "state": "failed",
+        "validation": "pass",
+        "publication_readiness": "fail",
+        "failure_code": "publish_readiness_failed",
+        "calls": 35,
+        "input_tokens": 396529,
+        "output_tokens": 68321,
+        "cost_usd": 0.090391,
+        "duration_seconds": 543.731,
+        "diagnosis": "Validation passed, but the generated public projection exposed composite quote identifiers in citation text; no publication write occurred."
+      },
+      {
+        "report": "Bain & Company",
+        "report_id": "cohort-77bc67b2bc98187d9d58",
+        "state": "awaiting_review",
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "failure_code": "",
+        "calls": 25,
+        "input_tokens": 228297,
+        "output_tokens": 53766,
+        "cost_usd": 0.066289,
+        "duration_seconds": 357.696
+      },
+      {
+        "report": "Emplifi",
+        "report_id": "cohort-f62048b469dd784e6e7c",
+        "state": "awaiting_review",
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "failure_code": "",
+        "calls": 36,
+        "input_tokens": 215589,
+        "output_tokens": 58874,
+        "cost_usd": 0.067741,
+        "duration_seconds": 566.133
+      },
+      {
+        "report": "StackAdapt Inc",
+        "report_id": "cohort-8ef1021c332aa85ba008",
+        "state": "awaiting_review",
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "failure_code": "",
+        "calls": 38,
+        "input_tokens": 382927,
+        "output_tokens": 69262,
+        "cost_usd": 0.081999,
+        "duration_seconds": 465.788
+      }
+    ],
+    "limitation": "This is one clean isolated repeat for the previously missing five, not two independent repeats per report. The DoubleVerify and Adjust failures are terminal safeguards, not selector failures."
+  },
+  "corrected_followup_run": {
+    "available": true,
+    "git_sha": "08be09bf77192064f74b8c622c87cc079c6ff946",
+    "cohort_result": "tmp/step1-rerun-dv-adjust-20261022/frozen-reliability-it5gqf06/cohort_result.json",
+    "summary": {
+      "report_count": 2,
+      "admitted_report_count": 2,
+      "cohort_model_provider_calls": 85,
+      "cohort_input_tokens": 1003936,
+      "cohort_output_tokens": 163685,
+      "cohort_cost_usd": 0.209432,
+      "cohort_duration_seconds": 1559.072,
+      "publication_readiness_rate": 0.5,
+      "workflow_failure_rate": 0.5,
+      "failure_code_pareto": {
+        "validation_failed": 1
+      },
+      "terminal_outcome_complete": true,
+      "published_report_count": 0
+    },
+    "reports": [
+      {
+        "report": "DoubleVerify",
+        "report_id": "cohort-e854b71d6fb10333b47f",
+        "state": "awaiting_review",
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "calls": 36,
+        "input_tokens": 353385,
+        "output_tokens": 69063,
+        "cost_usd": 0.077989,
+        "duration_seconds": 556.227,
+        "bounded_repairs": 3
+      },
+      {
+        "report": "Adjust",
+        "report_id": "cohort-b638414df0b1fccea1cd",
+        "state": "failed",
+        "validation": "fail",
+        "publication_readiness": "fail",
+        "failure_code": "validation_failed",
+        "calls": 49,
+        "input_tokens": 650551,
+        "output_tokens": 94622,
+        "cost_usd": 0.131443,
+        "duration_seconds": 1002.845,
+        "bounded_repairs": 3,
+        "diagnosis": "The generated summary and insight introduced an unsupported 2024-to-2025 timeframe and incomplete numeric displays; retained-claim validation correctly failed closed."
+      }
+    ],
+    "provider_free_projection": {
+      "commit": "9e32ac36",
+      "source_artifact": "tmp/step1-repeat-five-clean-20261022/frozen-reliability-7doc1wdj/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-cj0rmq0m/output/mo-a5407b768f97/report_analysis/artifacts.json",
+      "rendered_projection": "tmp/adjust-render-projection-20261022-after-fix/mobile-app-trends-2026-pdf-pdf.html",
+      "public_internal_identifier_matches": 0,
+      "limitation": "Provider-free re-render confirms the composite quote-ID sanitizer on the retained valid artifact; it is not a fresh live selection or readiness result."
+    }
+  },
   "comparisons": [
     {
       "report": "Adjust",

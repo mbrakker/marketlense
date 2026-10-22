@@ -131,7 +131,7 @@ The most important omissions were already present in the candidate pool (Reuters
 
 ### Deterministic shortlisting and fallback
 
-`evidence_backed_shortlisting:5` uses direct evidence strength, retained relevance/metric/novelty scores, editorial-plan priorities, and theme coverage. It does not use arbitrary business keywords. The ten-report replay shows broad coverage without forcing every weak alternative: 49 of 55 plan themes have an exact selected evidence-ID match; the remaining six are qualitative/ID-mapping cases where exact ID matching is not a reliable coverage oracle. All selected rows retain evidence IDs, spans, pages, and protected fields.
+`evidence_backed_shortlisting:7` uses direct evidence strength, retained relevance/metric/novelty scores, editorial-plan priorities, and theme coverage. It does not use arbitrary business keywords. The ten-report replay shows broad coverage without forcing every weak alternative: 49 of 55 plan themes have an exact selected evidence-ID match; the remaining six are qualitative/ID-mapping cases where exact ID matching is not a reliable coverage oracle. All selected rows retain evidence IDs, spans, pages, and protected fields. Version 7's only selection-boundary change is the Criteo candidate-timeframe cleanup; it does not add ranking or minimum-count logic.
 
 The recurring pattern is one or more candidates competing within an already-covered theme. The selector/final stage then preserves a bounded roster rather than adding every high-scoring alternative. That is an editorial trade-off, not a factual-integrity failure. Merging the KPMG AI rows, Algolia investment rows, or Deloitte 24%/64% rows would risk removing distinct periods, populations, or propositions. Conversely, adding a keyword score or increasing the minimum would manufacture redundancy and weaken the existing fail-closed behavior.
 
@@ -161,13 +161,13 @@ Criteo `newer-channels-perceived-roi` is the reliability negative case: the orig
 | Source-rating HIGH / MEDIUM / LOW / INVALID | not measured | 33 / 22 / 4 / 0 | New independent quality matrix; LOW is editorial weakness, not factual invalidity. |
 | Original empty-page rows later recovered | not separated | 3 | KPMG, Algolia, Bain; source-supported but provisional. |
 | Exact candidate/final ID overlap | not reported | 58/59 | IDs are lineage metadata, not a quality score. |
-| Clean independent Step 1 repetitions | 5 reports only | 5 reports only | No fresh recall or repeatability claim. |
+| Clean independent Step 1 repetitions | 5 reports only | 10 reports once each | No report has two clean independent repeats; repeatability remains open. |
 | Canonical/publication/WordPress writes | 0 | 0 | Shadow-only boundary preserved. |
 
 ## Remaining limitations and decision
 
 - The package has no independent source-recall oracle or blind human P6 review. Omitted-finding judgments are an engineering audit, not a measured recall percentage.
-- Only five reports have a clean supplemental isolated Step 1 run; the shared-batch repetition is invalid because it reused a run directory and failed all ten reports.
+- Each of the ten reports now has one clean isolated repeat across the two supplemental runs, but no report has two clean independent repeats. The shared-batch repetition is invalid because it reused a run directory and failed all ten reports.
 - Candidate/final roster provenance is recorded in separate artifacts but not yet emitted as a single typed stage field in the Step 2 report. The replay helper’s documentation now explicitly distinguishes `insights_final` from the raw candidate pool; no behavioral schema change was made.
 - The Algolia corrected-claim binding and three recovered page bindings remain shadow-only limitations. They must not be treated as canonical verified-claim evidence.
 - The report has no evidence that raising the minimum count, changing theme weighting, or adding a business-keyword score would improve quality without weakening diversity or factual safeguards.
@@ -181,3 +181,11 @@ The compact [source-recall reference set](source-recall-reference-set.json) reco
 Against the retained ten-report final roster, **0/6 reference findings received semantic recall credit**. Emplifi's repeat-buying result is the one `essential` omission; the Reuters, KPMG, Criteo, Deloitte, and StackAdapt rows are `valuable_alternative` omissions. The selected rows remain source-grounded; this is an editorial-recall result, not a factual-error count. KPMG is further qualified because its page-24 quote is source-verified in the audit inventory but has no supported `quote-2` row in the retained evidence-fidelity ledger, so its exact selector eligibility cannot be reconstructed.
 
 The five supported non-KPMG rows were present in the retained candidate/finding inventory and absent from the selected candidate roster. The artifacts do not persist per-candidate rejection reasons, so the evidence supports a bounded candidate-stage selection/final editorial trade-off but not a deterministic ranking defect. No keyword score, minimum-count increase, or forced replacement is justified by this post-selection oracle alone. The oracle does not claim fresh live selection effectiveness; the clean repeatability and new-run results are recorded separately.
+
+## Remaining-five live replay and confirmed quality fixes — 2026-10-22
+
+The first clean remaining-five replay at `6f09874c` used the exact hash-matched PDFs and fresh per-report state. It produced 181 provider calls, 1,729,700 input tokens, 373,333 output tokens, `$0.421650`, and 2,649.459 seconds. Bain, Emplifi, and StackAdapt passed validation and publication readiness. DoubleVerify failed after three repairs because the metric-label validator evaluated noisy chart OCR rather than its precise retained `findings_statement`; Adjust passed validation but failed readiness because a composite quote identifier was rendered in public citation text. These are terminal safeguards, not unsupported promotions.
+
+The corrected follow-up at `08be09bf` used 85 calls, 1,003,936 input tokens, 163,685 output tokens, `$0.209432`, and 1,559.072 seconds. DoubleVerify passed validation/readiness after the precise-span fix. Adjust failed closed after three repairs on a separate model-generated unsupported `2024–2025` timeframe and incomplete numeric displays; the existing protected-fact and public-quality gates were not weakened. The final sanitizer correction at `9e32ac36` rejects embedded composite quote/finding/insight/figure/claim identifiers. A provider-free re-render of the earlier valid Adjust artifact produced zero internal-identifier matches, but this is not a live readiness pass.
+
+The live repeat's selected evidence roster varied materially from the first ten-report run: exact evidence-ID overlap was DoubleVerify 1/5, Adjust 0/6, Bain 3/5, Emplifi 0/5, and StackAdapt 0/5. The differences are recorded as model/candidate-generation repeatability evidence, not as proof of a selector defect or a quality improvement. No source-recall credit is added to the strict 0/6 oracle, and no unsupported claim is promoted.

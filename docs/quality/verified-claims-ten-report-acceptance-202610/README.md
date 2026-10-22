@@ -15,6 +15,8 @@
 
 - Step1: 10/10 terminal cohort records; 59 selected candidates.
 - Supplemental isolated Step1 (five reports): 168 provider calls, 1896381 input tokens, 352004 output tokens, $0.431351, 2929.71 seconds; 5/5 terminal validation-pass reports.
+- Remaining-five isolated Step1/analysis replay at `6f09874c`: 181 provider calls, 1729700 input tokens, 373333 output tokens, $0.421650, 2649.459 seconds; Bain, Emplifi and StackAdapt passed validation/readiness, DoubleVerify failed a confirmed metric-label false positive, and Adjust failed public identifier readiness.
+- Corrected follow-up at `08be09bf`: 85 provider calls, 1003936 input tokens, 163685 output tokens, $0.209432, 1559.072 seconds; DoubleVerify passed validation/readiness after the relationship fix, while Adjust failed closed on an independent unsupported timeframe/incomplete-numeric result after three repairs. A provider-free retained Adjust re-render at `9e32ac36` produced zero internal public-identifier matches.
 - Step2: 120 provider calls, 1879961 total tokens, $0.212434, 935.903 seconds; outcomes {"failed_verification": 1, "skipped": 0, "unresolved": 0, "verified_after_retry": 0, "verified_first_pass": 58, "verified_total": 58}.
 - Independent review: 58 calls, 946469 total tokens, $0.115553, 605.152 seconds; decisions {"approved": 57, "revision_required": 1, "unresolved": 1}.
 - Side effects: shadow-only; no canonical mutation and no publication write.

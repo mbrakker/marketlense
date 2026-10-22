@@ -1021,6 +1021,44 @@ quality defects are corrected and the reference gate is green, but fresh
 selection evidence and independent editorial approval remain unavailable.
 Step 3 remains unstarted.
 
+#### Ten-report live reliability follow-up and deterministic release guards — 2026-10-22
+
+This checkpoint records real-report reliability evidence associated with the
+ten-report Step 1/E18 acceptance work; it does not promote or mutate any Step 2
+claim.
+
+- The clean remaining-five replay at `6f09874c` used fresh isolated state and
+  the exact source PDFs. It used 181 provider calls, 1,729,700 input tokens,
+  373,333 output tokens, `$0.421650`, and 2,649.459 seconds. Bain, Emplifi,
+  and StackAdapt passed validation/readiness. DoubleVerify failed on a
+  confirmed metric-label false positive caused by noisy chart OCR being checked
+  instead of its precise retained `findings_statement` span. Adjust passed
+  validation but failed readiness because a composite quote identifier reached
+  public citation text.
+- The deterministic fix at `08be09bf` scopes only the relationship check to an
+  authoritative `findings_statement` span when present; all other checks retain
+  the full evidence bundle. The follow-up sanitizer correction at `9e32ac36`
+  rejects composite internal quote/finding/insight/figure/claim tokens. The corrected follow-up
+  used 85 provider calls, 1,003,936 input tokens, 163,685 output tokens,
+  `$0.209432`, and 1,559.072 seconds: DoubleVerify passed validation/readiness;
+  Adjust failed closed on a separate unsupported `2024–2025` timeframe and
+  incomplete numeric displays after three bounded repairs. No canonical,
+  readiness, publication, or WordPress write was made.
+- A provider-free re-render of the earlier valid Adjust artifact at `9e32ac36`
+  produced zero internal-identifier matches. This verifies the projection
+  correction but is not a live Adjust readiness result and does not claim
+  improved selection quality. The exact remaining-five live rosters varied
+  from the initial run (shared evidence IDs: DoubleVerify 1/5, Adjust 0/6,
+  Bain 3/5, Emplifi 0/5, StackAdapt 0/5); no source-recall credit was added.
+
+Focused affected validation, grounding, render, readiness, regeneration, and
+Step 2 suites passed **416 tests, 1 skipped, and 1 deselected** before the final
+two-line sanitizer follow-up; the focused sanitizer and findings-statement
+regressions passed afterward, and changed-file Ruff plus `git diff --check`
+passed. The latest branch commit is `9e32ac36`. Step 2 remains
+**PARTIAL/NO-GO**, Step 1/E18 remains **PARTIAL/Active**, P6 remains open, and
+Step 3 remains unstarted.
+
 ### CI acceptance-gate correction — 2026-10-20
 
 The reviewed `d3ec52a0` branch reproduced all **35** reported failures against
