@@ -147,6 +147,24 @@ def _candidate_cache_conflict(
     )
 
 
+def _candidate_source_md5_mismatch(
+    file: DriveFile, *, expected_md5: str, actual_md5: str
+) -> AppError:
+    return AppError(
+        code="candidate_source_md5_mismatch",
+        message=("Downloaded candidate PDF does not match the MD5 supplied by Drive"),
+        retryable=False,
+        context={
+            "file_id": file.file_id,
+            "expected_md5": expected_md5,
+            "actual_md5": actual_md5,
+            "next_action": (
+                "Refresh Drive metadata and retry with the current source checksum"
+            ),
+        },
+    )
+
+
 def _resolved_candidate_cache_root(settings: IngestSettings) -> Path:
     try:
         root = Path(settings.cache_dir).expanduser().resolve()
@@ -176,16 +194,19 @@ def _resolved_candidate_cache_root(settings: IngestSettings) -> Path:
     return root
 
 
-def _candidate_cache_filename(file: DriveFile, root: Path) -> str:
+def _candidate_cache_filename(
+    file: DriveFile, root: Path, *, content_md5: str | None = None
+) -> str:
     raw_name = safe_pdf_name(file.name or f"{file.file_id}.pdf")
     safe_stem = safe_path_segment(Path(raw_name).stem.casefold(), fallback="candidate")
     file_identity = hashlib.sha256(file.file_id.encode("utf-8")).hexdigest()[
         :_CACHE_IDENTITY_LENGTH
     ]
     content_identity = ""
-    if file.md5_checksum:
+    source_md5 = content_md5 if content_md5 is not None else file.md5_checksum
+    if source_md5:
         content_identity = hashlib.sha256(
-            str(file.md5_checksum).strip().casefold().encode("utf-8")
+            str(source_md5).strip().casefold().encode("utf-8")
         ).hexdigest()[:_CACHE_IDENTITY_LENGTH]
     identity_stem = f"{safe_stem}-{file_identity}"
     if content_identity:
@@ -216,10 +237,13 @@ def _candidate_cache_filename(file: DriveFile, root: Path) -> str:
 
 
 def _candidate_cache_paths(
-    file: DriveFile, settings: IngestSettings
+    file: DriveFile,
+    settings: IngestSettings,
+    *,
+    content_md5: str | None = None,
 ) -> tuple[Path, Path | None]:
     root = _resolved_candidate_cache_root(settings)
-    filename = _candidate_cache_filename(file, root)
+    filename = _candidate_cache_filename(file, root, content_md5=content_md5)
     canonical_path = root / filename
     if windows_path_units(canonical_path) > WINDOWS_PATH_BUDGET:
         raise _candidate_cache_path_error(canonical_path, reason="cache_path_too_long")
@@ -243,10 +267,12 @@ def _download_if_needed(
     cache_path_obj, legacy_path_obj = _candidate_cache_paths(file, settings)
     cache_path = str(cache_path_obj)
     md5 = None
-    exists_resp = dependencies.file_exists(
-        FileExistsRequest(schema_version="1.0", path=cache_path), ctx
-    )
-    canonical_exists = bool(exists_resp.exists)
+    canonical_exists = False
+    if file.md5_checksum:
+        exists_resp = dependencies.file_exists(
+            FileExistsRequest(schema_version="1.0", path=cache_path), ctx
+        )
+        canonical_exists = bool(exists_resp.exists)
     if canonical_exists and file.md5_checksum:
         try:
             md5_resp = dependencies.file_md5(
@@ -348,8 +374,21 @@ def _download_if_needed(
         lambda: dependencies.download_pdf(dl_req, ctx),
         dependencies,
     )
+    downloaded_md5 = hashlib.md5(dl_resp.content).hexdigest()
+    expected_md5 = str(file.md5_checksum or "").strip().casefold()
+    if expected_md5 and downloaded_md5.casefold() != expected_md5:
+        raise _candidate_source_md5_mismatch(
+            file,
+            expected_md5=expected_md5,
+            actual_md5=downloaded_md5,
+        )
+    if not expected_md5:
+        cache_path_obj, _ = _candidate_cache_paths(
+            file, settings, content_md5=downloaded_md5
+        )
+        cache_path = str(cache_path_obj)
     try:
-        write_resp = dependencies.write_bytes_no_replace(
+        dependencies.write_bytes_no_replace(
             WriteBytesRequest(
                 schema_version="1.0", path=cache_path, content=dl_resp.content
             ),
@@ -359,7 +398,7 @@ def _download_if_needed(
         if exc.code == "file_write_conflict":
             raise _candidate_cache_conflict(cache_path_obj, cause=exc) from exc
         raise
-    md5 = write_resp.md5
+    md5 = downloaded_md5
     eof_check = dependencies.check_pdf_eof(
         PdfEofCheckRequest(schema_version="1.0", path=cache_path), ctx
     )

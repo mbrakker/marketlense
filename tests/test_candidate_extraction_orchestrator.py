@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from dataclasses import replace
@@ -21,7 +22,7 @@ def _drive_file() -> DriveFile:
         file_id="file-1",
         name="report.pdf",
         modified_time=None,
-        md5_checksum="md5",
+        md5_checksum=None,
     )
 
 
@@ -58,7 +59,8 @@ def test_candidate_extract_retries_retryable_download_with_real_generator_path(
     run_context,
     assert_logs_have_required_fields,
 ) -> None:
-    drive_file = _drive_file()
+    payload = _pdf_bytes()
+    drive_file = replace(_drive_file(), md5_checksum=hashlib.md5(payload).hexdigest())
     attempts = {"download": 0}
     sleep_calls: list[int] = []
 
@@ -68,12 +70,11 @@ def test_candidate_extract_retries_retryable_download_with_real_generator_path(
             raise AppError(
                 code="drive_download_failed", message="retry", retryable=True
             )
-        payload = _pdf_bytes()
         return DriveDownloadResponse(
             schema_version="1.0",
             file=req.file,
             content=payload,
-            md5="md5",
+            md5=hashlib.md5(payload).hexdigest(),
             size=len(payload),
         )
 

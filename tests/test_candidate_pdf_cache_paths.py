@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
@@ -125,6 +126,120 @@ def test_candidate_cache_replay_and_changed_content_use_safe_distinct_artifacts(
     assert Path(changed_outcome.pdf_path).read_bytes() == second_content
     assert Path(first_outcome.pdf_path).read_bytes() == first_content
     assert downloads == ["drive-replayed", "drive-replayed"]
+
+
+def test_candidate_cache_without_drive_md5_versions_downloaded_content_safely(
+    ingest_settings, run_context
+) -> None:
+    first_content = _pdf_bytes("missing-md5-a")
+    second_content = _pdf_bytes("missing-md5-b")
+    first = replace(
+        _drive_file("drive-missing-md5", "report.pdf", first_content),
+        md5_checksum=None,
+    )
+    changed = replace(
+        _drive_file("drive-missing-md5", "REPORT.PDF", second_content),
+        md5_checksum=None,
+    )
+    downloads: list[str] = []
+
+    first_outcome = _run(ingest_settings, run_context, first, first_content, downloads)
+    replay_outcome = _run(ingest_settings, run_context, first, first_content, downloads)
+    changed_outcome = _run(
+        ingest_settings, run_context, changed, second_content, downloads
+    )
+
+    assert first_outcome.error is None
+    assert replay_outcome.error is None
+    assert changed_outcome.error is None
+    assert replay_outcome.pdf_path == first_outcome.pdf_path
+    assert changed_outcome.pdf_path != first_outcome.pdf_path
+    assert Path(first_outcome.pdf_path).read_bytes() == first_content
+    assert Path(changed_outcome.pdf_path).read_bytes() == second_content
+    assert downloads == ["drive-missing-md5"] * 3
+
+
+def test_candidate_download_rejects_source_md5_mismatch_before_publication(
+    ingest_settings, run_context
+) -> None:
+    expected_content = _pdf_bytes("expected")
+    downloaded_content = _pdf_bytes("downloaded")
+    drive_file = _drive_file("drive-md5-mismatch", "mismatch.pdf", expected_content)
+    cache_root = Path(ingest_settings.cache_dir)
+    cache_root.mkdir(parents=True, exist_ok=True)
+    marker = cache_root / "pre-existing-marker.txt"
+    marker.write_bytes(b"keep me")
+    downloads: list[str] = []
+
+    def _download(request, _ctx):
+        downloads.append(request.file.file_id)
+        return DriveDownloadResponse(
+            schema_version="1.0",
+            file=request.file,
+            content=downloaded_content,
+            md5=hashlib.md5(downloaded_content).hexdigest(),
+            size=len(downloaded_content),
+        )
+
+    dependencies = replace(
+        orchestrator.CandidateExtractionDependencies.default(),
+        download_pdf=_download,
+    )
+    canonical_path, _ = orchestrator._candidate_cache_paths(drive_file, ingest_settings)
+
+    with pytest.raises(AppError) as exc_info:
+        orchestrator._download_if_needed(
+            drive_file, ingest_settings, run_context, dependencies
+        )
+
+    assert exc_info.value.code == "candidate_source_md5_mismatch"
+    assert exc_info.value.retryable is False
+    assert downloads == [drive_file.file_id]
+    assert not canonical_path.exists()
+    assert marker.read_bytes() == b"keep me"
+
+
+def test_candidate_cache_concurrent_same_source_publishes_complete_artifact(
+    ingest_settings, run_context
+) -> None:
+    content = _pdf_bytes("concurrent")
+    drive_file = _drive_file("drive-concurrent", "concurrent.pdf", content)
+    downloads: list[str] = []
+
+    def _download(request, _ctx):
+        downloads.append(request.file.file_id)
+        return DriveDownloadResponse(
+            schema_version="1.0",
+            file=request.file,
+            content=content,
+            md5=hashlib.md5(content).hexdigest(),
+            size=len(content),
+        )
+
+    dependencies = replace(
+        orchestrator.CandidateExtractionDependencies.default(),
+        download_pdf=_download,
+    )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(
+                orchestrator._download_if_needed,
+                drive_file,
+                ingest_settings,
+                run_context,
+                dependencies,
+            )
+            for _ in range(2)
+        ]
+        results = [future.result() for future in futures]
+
+    paths = {Path(path) for path, _md5 in results}
+    assert len(paths) == 1
+    path = next(iter(paths))
+    assert path.read_bytes() == content
+    assert all(md5 == hashlib.md5(content).hexdigest() for _path, md5 in results)
+    assert 1 <= len(downloads) <= 2
 
 
 def test_candidate_cache_promotes_matching_legacy_artifact_without_download(

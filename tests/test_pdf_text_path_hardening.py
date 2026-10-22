@@ -110,6 +110,7 @@ def test_ocr_split_rejects_impossible_output_root_before_creating_it(
     source_pdf = tmp_path / "source.pdf"
     _build_multi_page_text_pdf(source_pdf, page_count=3)
     output_dir = tmp_path / ("impossible-output-" * 20)
+    before = {path.name for path in tmp_path.iterdir()}
 
     with pytest.raises(AppError) as exc_info:
         split_pdf_for_ocr(
@@ -118,7 +119,27 @@ def test_ocr_split_rejects_impossible_output_root_before_creating_it(
 
     assert exc_info.value.code == "pdf_ocr_split_path_invalid"
     assert exc_info.value.retryable is False
-    assert not output_dir.exists()
+    assert {path.name for path in tmp_path.iterdir()} == before
+
+
+def test_ocr_split_rejects_deep_valid_root_without_creating_directories(
+    tmp_path: Path,
+) -> None:
+    source_pdf = tmp_path / "source.pdf"
+    _build_multi_page_text_pdf(source_pdf, page_count=3)
+    output_dir = tmp_path
+    for index in range(8):
+        output_dir /= f"nested-output-{index:02d}-" + ("x" * 24)
+    before = {path.name for path in tmp_path.iterdir()}
+
+    with pytest.raises(AppError) as exc_info:
+        split_pdf_for_ocr(
+            PdfOcrSplitRequest("1.0", str(source_pdf), str(output_dir), 2), _ctx()
+        )
+
+    assert exc_info.value.code == "pdf_ocr_split_path_invalid"
+    assert exc_info.value.retryable is False
+    assert {path.name for path in tmp_path.iterdir()} == before
 
 
 __all__ = [
@@ -126,4 +147,5 @@ __all__ = [
     "test_ocr_split_does_not_casefold_collide_for_distinct_sources",
     "test_ocr_split_preserves_conflicting_chunk_bytes",
     "test_ocr_split_rejects_impossible_output_root_before_creating_it",
+    "test_ocr_split_rejects_deep_valid_root_without_creating_directories",
 ]

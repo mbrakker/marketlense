@@ -264,8 +264,11 @@ def _ocr_noncached_output_path(runtime: ReportRuntimeState) -> Path:
         runtime.report_name,
         fallback=safe_path_segment(runtime.file.file_id, fallback="report"),
     )
-    raw_stem = f"{safe_report_name}.ocr"
-    normal_name = f"{raw_stem}.pdf"
+    identity = f"{runtime.file.file_id}\x00{runtime.ctx.run_id}"
+    digest = sha256(identity.encode("utf-8")).hexdigest()[:_OCR_IDENTITY_LENGTH]
+    identity_suffix = f"-{digest}"
+    extension = ".ocr.pdf"
+    normal_name = f"{safe_report_name}{identity_suffix}{extension}"
     if (
         windows_path_units(normal_name) <= available
         and windows_path_units(normal_name) <= WINDOWS_COMPONENT_BUDGET
@@ -273,14 +276,19 @@ def _ocr_noncached_output_path(runtime: ReportRuntimeState) -> Path:
     ):
         return parent / normal_name
 
-    identity = f"{runtime.file.file_id}\x00{runtime.report_name}"
-    digest = sha256(identity.encode("utf-8")).hexdigest()[:_OCR_IDENTITY_LENGTH]
-    bounded_name = bounded_artifact_filename(
-        safe_report_name,
-        compact_stem=f"ocr-{digest}",
-        extension=".ocr.pdf",
-        max_length=available,
+    identity_budget = (
+        available - windows_path_units(identity_suffix) - windows_path_units(extension)
     )
+    readable_prefix = _truncate_ocr_units(safe_report_name, identity_budget).rstrip(
+        " .-"
+    )
+    if not readable_prefix:
+        raise _ocr_path_error(
+            parent,
+            role="OCR output artifact",
+            reason="output_filename_budget_exhausted",
+        )
+    bounded_name = f"{readable_prefix}{identity_suffix}{extension}"
     if (
         windows_path_units(bounded_name) > available
         or windows_path_units(bounded_name) > WINDOWS_COMPONENT_BUDGET
@@ -347,6 +355,9 @@ def recover_pdf_text_with_ocr(
         ocr_ctx,
     )
 
+    noncached_output_path: Path | None = None
+    if not runtime.md5 or not runtime.settings.pdf_text_ocr_cache_enabled:
+        noncached_output_path = _ocr_noncached_output_path(runtime)
     cache_key = ""
     cache_json_path: Path | None = None
     cache_pdf_path: Path | None = None
@@ -546,7 +557,7 @@ def recover_pdf_text_with_ocr(
     output_path = (
         str(cache_pdf_path)
         if cache_pdf_path is not None
-        else str(_ocr_noncached_output_path(runtime))
+        else str(noncached_output_path)
     )
     try:
         render_response = dependencies.render_text_pdf(
