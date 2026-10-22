@@ -89,6 +89,10 @@ def test_ocr_split_preserves_conflicting_chunk_bytes(tmp_path: Path) -> None:
 
     first_response = split_pdf_for_ocr(request, _ctx())
     conflicting_path = Path(first_response.chunks[0].chunk_pdf_path)
+    first_chunk_bytes = conflicting_path.read_bytes()
+    replay_response = split_pdf_for_ocr(request, _ctx())
+    assert replay_response.chunks[0].chunk_pdf_path == str(conflicting_path)
+    assert conflicting_path.read_bytes() == first_chunk_bytes
     conflicting_bytes = b"not the source chunk"
     conflicting_path.write_bytes(conflicting_bytes)
 
