@@ -4859,6 +4859,7 @@ def _handle_insights_bundle_regeneration(
     regenerated_candidates = normalize_artifact_insights(
         candidates_result.get("insights_candidates"),
         prefix="candidate",
+        verified_mode=bool(execution.state.visual_authority_digest),
     )
     execution.state.insights_candidates = _merge_regenerated_insights_by_stable_id(
         current_insights=execution.state.insights_candidates,
@@ -4914,7 +4915,9 @@ def _handle_insights_bundle_regeneration(
     )
     regenerated_final = _restore_final_insight_evidence_bindings(
         final_insights=normalize_artifact_insights(
-            final_result.get("insights_final"), prefix="insight"
+            final_result.get("insights_final"),
+            prefix="insight",
+            verified_mode=bool(execution.state.visual_authority_digest),
         ),
         candidate_insights=eligible_candidate_insights,
         prior_final_insights=[],
@@ -5106,7 +5109,9 @@ def _regenerate_one_final_insight(
         },
     )
     regenerated = normalize_artifact_insights(
-        result.get("insights_final"), prefix="insight"
+        result.get("insights_final"),
+        prefix="insight",
+        verified_mode=bool(execution.state.visual_authority_digest),
     )
     matching = [
         item for item in regenerated if _s(item.get("id")).strip() == insight_id

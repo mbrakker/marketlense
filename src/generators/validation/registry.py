@@ -8,8 +8,8 @@ from src.contracts.validation import ValidationIssue
 from src.utils.logging import log_event
 
 from .claim_support import run_claim_support_rule
-from .grounding import run_grounding_rule
 from .family_confidence import run_family_confidence_rule
+from .grounding import run_grounding_rule
 from .metrics import run_metric_rule
 from .models import ValidationRuntime
 from .numbers import run_number_rule
@@ -68,9 +68,17 @@ def run_validation_rule_registry(
     *,
     parallel_workers: int,
 ) -> List[ValidationIssue]:
+    mode = str(getattr(runtime.request, "validation_mode", "full") or "full")
+    if runtime.prepared.verified_facts_mode:
+        if mode == "inline_deterministic":
+            mode = "verified_facts_inline"
+        elif mode == "deferred_grounding":
+            mode = "verified_facts_grounding"
+        else:
+            mode = "verified_facts"
     registry = rules_for_validation_mode(
         build_validation_rule_registry(),
-        mode=str(getattr(runtime.request, "validation_mode", "full") or "full"),
+        mode=mode,
     )
     if parallel_workers > 1:
         run_validation_rules_in_parallel(
@@ -98,6 +106,12 @@ def rules_for_validation_mode(
             if rule.rule_id not in {"semantic", "grounding"}
         )
     if normalized == "deferred_grounding":
+        return tuple(rule for rule in registry if rule.rule_id == "grounding")
+    if normalized == "verified_facts_inline":
+        return tuple(
+            rule for rule in registry if rule.rule_id not in {"semantic", "grounding"}
+        )
+    if normalized == "verified_facts_grounding":
         return tuple(rule for rule in registry if rule.rule_id == "grounding")
     return tuple(registry)
 

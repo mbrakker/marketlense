@@ -513,7 +513,9 @@ def assemble_artifacts_payload(
         if carried:
             soft_copy_claim_bindings[family] = carried
     metric_spine = derive_metric_spine_from_insights(
-        insights_final, editorial_plan=editorial_plan
+        insights_final,
+        editorial_plan=editorial_plan,
+        verified_mode=bool(visual_authority_canary or verified_facts),
     )
     topics_covered = build_topics_covered(
         toc_entries=toc_entries,
@@ -527,6 +529,7 @@ def assemble_artifacts_payload(
         summary=summary,
         insights_final=insights_final,
         editorial_plan=editorial_plan,
+        verified_mode=bool(visual_authority_canary or verified_facts),
     )
     chart_insight_cards = build_chart_insight_cards(
         key_figures=key_figures,
@@ -1120,11 +1123,13 @@ def derive_metric_spine_from_insights(
     insights_final: List[Dict[str, Any]],
     *,
     editorial_plan: Dict[str, Any] | None = None,
+    verified_mode: bool = False,
 ) -> List[Dict[str, Any]]:
     return _derive_metric_spine_from_insights(
         insights_final,
         editorial_plan=editorial_plan,
         limit=6,
+        verified_mode=verified_mode,
     )
 
 
@@ -1133,6 +1138,7 @@ def _derive_metric_spine_from_insights(
     *,
     editorial_plan: Dict[str, Any] | None,
     limit: int | None,
+    verified_mode: bool = False,
 ) -> List[Dict[str, Any]]:
     spine: List[Dict[str, Any]] = []
     for index, insight in enumerate(insights_final, start=1):
@@ -1144,6 +1150,8 @@ def _derive_metric_spine_from_insights(
         raw_value = _s(metric.get("value") or metric.get("raw_value")).strip()
         raw_unit = _s(metric.get("unit")).strip()
         value, unit = normalize_public_metric_display(value=raw_value, unit=raw_unit)
+        if verified_mode:
+            value, unit = raw_value, raw_unit
         if not value and _is_coherent_metric_display(raw_value, raw_unit):
             value, unit = raw_value, raw_unit
         evidence_id = _s(
@@ -1189,6 +1197,8 @@ def _derive_metric_spine_from_insights(
             "missing_context_notes": missing_context_notes,
             "evidence_id": evidence_id,
         }
+        if verified_mode and isinstance(metric.get("observations"), list):
+            item["observations"] = deepcopy(metric["observations"])
         numeric_metadata = numeric_metadata_for_complete_display(value)
         if numeric_metadata is not None:
             item["source_display_value"] = value
@@ -1447,6 +1457,7 @@ def build_key_figures(
     summary: Dict[str, Any] | None = None,
     insights_final: List[Dict[str, Any]] | None = None,
     editorial_plan: Dict[str, Any] | None = None,
+    verified_mode: bool = False,
 ) -> List[Dict[str, Any]]:
     candidate_metrics = list(metric_spine)
     retained_metric_ids = {
@@ -1459,6 +1470,7 @@ def build_key_figures(
             insights_final,
             editorial_plan=editorial_plan,
             limit=None,
+            verified_mode=verified_mode,
         ):
             metric_id = _s(metric.get("metric_id")).strip()
             if metric_id and metric_id not in retained_metric_ids:
@@ -1522,6 +1534,11 @@ def build_key_figures(
                 "cohort": _s(metric.get("cohort")).strip(),
                 "denominator": _s(metric.get("denominator")).strip(),
                 "observation_status": _s(metric.get("observation_status")).strip(),
+                **(
+                    {"observations": deepcopy(metric["observations"])}
+                    if verified_mode and isinstance(metric.get("observations"), list)
+                    else {}
+                ),
                 "source_page": page_values[0] if page_values else None,
                 "why_it_matters": _key_figure_why_it_matters(
                     metric,
@@ -2373,11 +2390,13 @@ def build_canonical_regeneration_derived_artifacts(
     summary = artifacts.get("summary") or {}
     quotes = artifacts.get("quotes_final") or []
     editorial_plan = artifacts.get("editorial_plan") or {}
+    verified_mode = bool(artifacts.get("verified_facts"))
     canonical: Dict[str, Any] = {}
     if "metric_spine" in builder_roots:
         canonical["metric_spine"] = derive_metric_spine_from_insights(
             insights,
             editorial_plan=editorial_plan,
+            verified_mode=verified_mode,
         )
     if "topics_covered" in builder_roots:
         canonical["topics_covered"] = build_topics_covered(
@@ -2393,6 +2412,7 @@ def build_canonical_regeneration_derived_artifacts(
             summary=summary,
             insights_final=insights,
             editorial_plan=editorial_plan,
+            verified_mode=verified_mode,
         )
     if "chart_insight_cards" in builder_roots:
         canonical["chart_insight_cards"] = build_chart_insight_cards(
@@ -3311,10 +3331,14 @@ def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, 
     raw_quotes_final = payload.get("quotes_final")
     summary: Dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
     insights_candidates: List[Dict[str, Any]] = normalize_artifact_insights(
-        raw_insights_candidates, prefix="candidate"
+        raw_insights_candidates,
+        prefix="candidate",
+        verified_mode=bool(payload.get("verified_facts")),
     )
     insights_final: List[Dict[str, Any]] = normalize_artifact_insights(
-        raw_insights_final, prefix="insight"
+        raw_insights_final,
+        prefix="insight",
+        verified_mode=bool(payload.get("verified_facts")),
     )
     quotes_final: List[Dict[str, Any]] = (
         [item for item in raw_quotes_final if isinstance(item, dict)]

@@ -54,9 +54,16 @@ def run_claim_support_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
     if not isinstance(claim_map, list):
         return issues
 
-    evidence_quality_grades = _collect_evidence_quality_grades(
-        runtime.request.evidence_packs
+    verified_mode = runtime.prepared.verified_facts_mode
+    evidence_quality_grades = (
+        {}
+        if verified_mode
+        else _collect_evidence_quality_grades(runtime.request.evidence_packs)
     )
+    if verified_mode:
+        return _run_verified_claim_support_rule(
+            claim_map, set(runtime.prepared.evidence_map)
+        )
     known_evidence_ids = set(evidence_quality_grades)
     for index, raw_claim in enumerate(claim_map):
         if not isinstance(raw_claim, dict):
@@ -158,6 +165,66 @@ def run_claim_support_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
                         f"Summary claim '{claim_text[:120]}' has evidence spans "
                         "that do not match "
                         f"evidence_id '{evidence_id}'."
+                    ),
+                    severity="error",
+                    section=f"summary.claim_evidence_map[{index}]",
+                    repair_target="summary",
+                    entity_id=evidence_id,
+                )
+            )
+    return issues
+
+
+def _run_verified_claim_support_rule(
+    claim_map: list[object], known_evidence_ids: set[str]
+) -> List[ValidationIssue]:
+    """Check only the verified-fact reference contract, never source grades."""
+
+    issues: List[ValidationIssue] = []
+    for index, raw_claim in enumerate(claim_map):
+        if not isinstance(raw_claim, dict):
+            continue
+        claim_text = s(raw_claim.get("claim")).strip()
+        evidence_id = s(raw_claim.get("evidence_id")).strip()
+        spans = [
+            span
+            for span in raw_claim.get("evidence_spans") or []
+            if isinstance(span, dict)
+        ]
+        if not evidence_id or evidence_id not in known_evidence_ids:
+            issues.append(
+                issue(
+                    rule_id=RULE_ID,
+                    message=(
+                        f"Verified-fact summary claim references unknown evidence_id "
+                        f"'{evidence_id}': {claim_text[:160]}"
+                    ),
+                    severity="error",
+                    section=f"summary.claim_evidence_map[{index}]",
+                    repair_target="summary",
+                    entity_id=evidence_id,
+                )
+            )
+            continue
+        if not spans:
+            issues.append(
+                issue(
+                    rule_id=RULE_ID,
+                    message="Verified-fact summary claim is missing evidence spans.",
+                    severity="error",
+                    section=f"summary.claim_evidence_map[{index}]",
+                    repair_target="summary",
+                    entity_id=evidence_id,
+                )
+            )
+            continue
+        if any(s(span.get("evidence_id")).strip() != evidence_id for span in spans):
+            issues.append(
+                issue(
+                    rule_id=RULE_ID,
+                    message=(
+                        "Verified-fact summary claim has an inconsistent evidence "
+                        "span."
                     ),
                     severity="error",
                     section=f"summary.claim_evidence_map[{index}]",

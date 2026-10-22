@@ -31,6 +31,11 @@ from .shared import (
     s,
     section_policy,
 )
+from .verified_facts import (
+    canonical_evidence_map,
+    canonical_fact_text,
+    validated_verified_facts,
+)
 
 
 def collect_evidence_texts(
@@ -38,6 +43,7 @@ def collect_evidence_texts(
     evidence_packs: dict,
     *,
     pdf_text: str = "",
+    verified_facts_only: bool = False,
 ) -> Tuple[List[str], Dict[str, str]]:
     texts: List[str] = []
     text_keys: set[str] = set()
@@ -58,6 +64,12 @@ def collect_evidence_texts(
         value = s(evidence_text).strip()
         if key and value:
             evidence_by_id[key] = value
+
+    if verified_facts_only:
+        facts = validated_verified_facts(artifacts, evidence_packs)
+        evidence_by_id.update(canonical_evidence_map(facts))
+        texts.extend(canonical_fact_text(fact) for fact in facts.values())
+        return texts, evidence_by_id
 
     if isinstance(artifacts, dict):
         summary = ensure_dict(artifacts.get("summary"))

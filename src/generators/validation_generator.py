@@ -44,10 +44,18 @@ def validate_report(
 ) -> ValidationReport:
     ctx = ctx or new_run_context(task_id=f"validation:{request.report_id}")
     validation_mode = str(request.validation_mode or "full").strip()
-    if validation_mode not in {"full", "inline_deterministic", "deferred_grounding"}:
+    if validation_mode not in {
+        "full",
+        "inline_deterministic",
+        "deferred_grounding",
+        "verified_facts",
+    }:
         raise AppError(
             code="validation_mode_invalid",
-            message="Validation mode must be full, inline_deterministic, or deferred_grounding",
+            message=(
+                "Validation mode must be full, inline_deterministic, "
+                "deferred_grounding, or verified_facts"
+            ),
             retryable=False,
             severity="error",
             context={"validation_mode": validation_mode},

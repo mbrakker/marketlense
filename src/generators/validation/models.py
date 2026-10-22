@@ -45,6 +45,9 @@ class ValidationPreparedInputs:
     evidence_windows: List[EvidenceWindow]
     grounding_use_vector_store: bool
     grounding_retrieval_mode: str
+    verified_facts_mode: bool = False
+    verified_facts: Dict[str, dict] = field(default_factory=dict)
+    authority_evidence_packs: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

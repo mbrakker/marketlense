@@ -331,7 +331,10 @@ def _claim_provenance_hash(raw: object) -> str:
 
 
 def _candidates(
-    artifacts: dict, evidence: dict[str, tuple[str, str, int | None]]
+    artifacts: dict,
+    evidence: dict[str, tuple[str, str, int | None]],
+    *,
+    verified_facts_only: bool = False,
 ) -> list[_ClaimValidationInput]:
     output: list[_ClaimValidationInput] = []
     soft_copy_claims, soft_copy_provenance_error = _soft_copy_claims_by_hash(artifacts)
@@ -491,7 +494,9 @@ def _candidates(
                     entity_id=entity,
                 )
                 if family == "insights_final" and isinstance(raw.get("metric"), dict):
-                    metric_text = metric_claim_text(raw["metric"])
+                    metric_text = metric_claim_text(
+                        raw["metric"], include_observations=verified_facts_only
+                    )
                     if metric_text:
                         add(
                             family,
@@ -513,7 +518,9 @@ def _candidates(
         stable_id = str(
             raw.get("id") or raw.get("figure_id") or raw.get("key_figure_id") or index
         ).strip()
-        figure_text = metric_claim_text(raw)
+        figure_text = metric_claim_text(
+            raw, include_observations=verified_facts_only
+        )
         if figure_text:
             add(
                 "key_figures",
@@ -536,7 +543,7 @@ def _candidates(
     return output
 
 
-def metric_claim_text(metric: dict) -> str:
+def metric_claim_text(metric: dict, *, include_observations: bool = False) -> str:
     """Create the canonical factual display from retained metric fields."""
 
     display_value = metric.get("value") or metric.get("figure")
@@ -555,6 +562,26 @@ def metric_claim_text(metric: dict) -> str:
         )
     ]
     values.insert(2, str(display_value or "").strip())
+    observations = metric.get("observations")
+    if include_observations and isinstance(observations, list):
+        for observation in observations:
+            if not isinstance(observation, dict):
+                continue
+            values.extend(
+                str(observation.get(key) or "").strip()
+                for key in (
+                    "label",
+                    "value",
+                    "unit",
+                    "timeframe",
+                    "geography",
+                    "segment",
+                    "cohort",
+                    "denominator",
+                    "observation_status",
+                )
+                if str(observation.get(key) or "").strip()
+            )
     return " ".join(value for value in values if value)
 
 
@@ -592,6 +619,7 @@ def _checks(
     source_evidence: dict[str, tuple[str, str, int | None]],
     *,
     require_all_evidence_references: bool = False,
+    verified_facts_only: bool = False,
 ) -> tuple[list[ClaimValidationCheck], ProtectedFactComparison | None]:
     refs = candidate.evidence_references
     known = [
@@ -620,6 +648,8 @@ def _checks(
         )
     )
     checks = [evidence_check]
+    if verified_facts_only:
+        return checks, None
     cited = [source_evidence[reference.evidence_id][1] for reference in known]
     protected_facts = None
     if cited:
@@ -936,6 +966,7 @@ def _validate_claims_against_sources(
     semantic_batch_validator: SemanticBatchValidator | None = None,
     semantic_results: list[ClaimSemanticGroundingResult] | None = None,
     source_identity: str = "",
+    verified_facts_only: bool = False,
 ) -> ClaimValidationPackage:
     """Validate claims against authoritative retained source text.
 
@@ -974,6 +1005,7 @@ def _validate_claims_against_sources(
                 require_all_evidence_references=(
                     candidate_input.require_all_evidence_references
                 ),
+                verified_facts_only=verified_facts_only,
             )
         failed = [check.reason for check in checks if check.status == "failed"]
         deterministic_entailment = any(
@@ -2643,15 +2675,17 @@ def validate_retained_claims(
     semantic_batch_validator: SemanticBatchValidator | None = None,
     semantic_results: list[ClaimSemanticGroundingResult] | None = None,
     source_identity: str = "",
+    verified_facts_only: bool = False,
 ) -> ClaimValidationPackage:
     """Validate retained claims, batching semantic fallback for undecidable facts."""
 
     evidence = _evidence_index(evidence_packs)
     return _validate_claims_against_sources(
-        _candidates(artifacts, evidence),
+        _candidates(artifacts, evidence, verified_facts_only=verified_facts_only),
         evidence,
         artifact=artifacts,
         semantic_batch_validator=semantic_batch_validator,
         semantic_results=semantic_results,
         source_identity=source_identity,
+        verified_facts_only=verified_facts_only,
     )

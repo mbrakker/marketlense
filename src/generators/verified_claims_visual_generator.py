@@ -57,6 +57,8 @@ _PROTECTED_METRIC_FIELDS = (
     "cohort",
     "denominator",
     "observation_status",
+    "forecast_status",
+    "observations",
 )
 
 
@@ -582,7 +584,17 @@ def _normalise_verified_fact_payload(
     metric = {
         field_name: copy.deepcopy(raw_metric.get(field_name, ""))
         for field_name in _PROTECTED_METRIC_FIELDS
+        if field_name not in {"forecast_status", "observations"}
     }
+    if "forecast_status" in raw_metric:
+        metric["forecast_status"] = copy.deepcopy(raw_metric["forecast_status"])
+    if "observations" in raw_metric:
+        if not isinstance(raw_metric["observations"], list) or any(
+            not isinstance(observation, Mapping)
+            for observation in raw_metric["observations"]
+        ):
+            return {}, ["verification_verified_fact_observations_invalid"]
+        metric["observations"] = copy.deepcopy(raw_metric["observations"])
     for alias, field_name in (("direction", "trend"), ("population", "segment")):
         if not metric[field_name] and alias in raw_metric:
             metric[field_name] = copy.deepcopy(raw_metric.get(alias))

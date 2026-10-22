@@ -17,6 +17,11 @@ from .shared import (
     grounding_retrieval_mode,
     resolve_grounding_vector_store_mode,
 )
+from .verified_facts import (
+    canonical_verified_evidence_packs,
+    validated_verified_facts,
+    verified_facts_mode,
+)
 
 
 def prepare_validation_inputs(
@@ -26,23 +31,40 @@ def prepare_validation_inputs(
     *,
     md5: str | None,
 ) -> ValidationPreparedInputs:
-    grounding_use_vector_store = resolve_grounding_vector_store_mode(
-        request=request, settings=settings
+    verified_mode = verified_facts_mode(
+        request.artifacts, str(request.validation_mode or "")
+    )
+    grounding_use_vector_store = (
+        False
+        if verified_mode
+        else resolve_grounding_vector_store_mode(request=request, settings=settings)
     )
     retrieval_mode = grounding_retrieval_mode(grounding_use_vector_store)
+    verified_facts = (
+        validated_verified_facts(
+            request.artifacts,
+            request.evidence_packs,
+            expected_source_identity=str(request.source_id or ""),
+        )
+        if verified_mode
+        else {}
+    )
     insights = ensure_list(
         request.artifacts.get("insights_final")
         if isinstance(request.artifacts, dict)
         else []
     )
     quotes = extract_quotes(request, insights)
-    pdf_text = str(request.source_text or "").strip()
-    if not pdf_text:
-        pdf_text = load_pdf_text_from_cache(settings.cache_dir, md5, ctx)
+    pdf_text = ""
+    if not verified_mode:
+        pdf_text = str(request.source_text or "").strip()
+        if not pdf_text:
+            pdf_text = load_pdf_text_from_cache(settings.cache_dir, md5, ctx)
     evidence_texts, evidence_map = collect_evidence_texts(
         request.artifacts,
         request.evidence_packs,
         pdf_text=pdf_text,
+        verified_facts_only=verified_mode,
     )
     window_sources = list(evidence_texts)
     if pdf_text:
@@ -57,4 +79,11 @@ def prepare_validation_inputs(
         evidence_windows=evidence_windows,
         grounding_use_vector_store=grounding_use_vector_store,
         grounding_retrieval_mode=retrieval_mode,
+        verified_facts_mode=verified_mode,
+        verified_facts=verified_facts,
+        authority_evidence_packs=(
+            canonical_verified_evidence_packs(verified_facts)
+            if verified_mode
+            else {}
+        ),
     )

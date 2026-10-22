@@ -29,6 +29,13 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
 )
 from src.contracts.validation import ValidationIssue, ValidationReport
+from src.generators.validation.verified_facts import (
+    canonical_evidence_map,
+    fact_for_evidence_id,
+    metric_binding_mismatches,
+    validated_verified_facts,
+    verified_facts_mode,
+)
 from src.services.render_service import _sanitize_public_prose
 from src.utils.editorial_identity import insight_entity_id
 from src.utils.errors import AppError
@@ -45,6 +52,7 @@ BLOCKING_RULE_IDS = {
     "public_editorial_quality.incomplete_numeric_expression",
     "public_editorial_quality.temporal_integrity",
     "public_editorial_quality.metric_label_relationship",
+    "public_editorial_quality.metric_binding_mismatch",
     "public_editorial_quality.material_claim_evidence_missing",
     "public_editorial_quality.internal_identifier",
     "public_editorial_quality.placeholder",
@@ -257,6 +265,29 @@ def evaluate_public_editorial_quality(
     safe_artifacts = artifacts if isinstance(artifacts, dict) else {}
     waivers = _normalized_waivers(disabled_rule_waivers)
     issues: list[PublicEditorialQualityIssue] = []
+    if verified_facts_mode(safe_artifacts):
+        safe_artifacts = dict(safe_artifacts)
+        try:
+            verified_index = validated_verified_facts(safe_artifacts)
+        except AppError as exc:
+            verified_index = {}
+            invalid_item = _item(
+                "verified_facts",
+                "verified_facts",
+                "",
+                [],
+                "insights_bundle",
+            )
+            issues.append(
+                _issue(
+                    report_id,
+                    "public_editorial_quality.material_claim_evidence_missing",
+                    invalid_item,
+                    f"verified fact snapshot is invalid: {exc.message}",
+                )
+            )
+        safe_artifacts["_verified_fact_index"] = verified_index
+        safe_artifacts["_verified_facts_mode"] = True
 
     for item in _public_text_items(safe_artifacts):
         issues.extend(_text_issues(report_id, item))
@@ -363,6 +394,18 @@ def _text_issues(
     issues: list[PublicEditorialQualityIssue] = []
     if not text.strip():
         return issues
+    if item.get("verified_facts_mode") and (
+        not item.get("evidence_ids")
+        or not str(item.get("evidence_text") or "").strip()
+    ):
+        issues.append(
+            _issue(
+                report_id,
+                "public_editorial_quality.material_claim_evidence_missing",
+                item,
+                "verified public prose has no canonical fact binding",
+            )
+        )
     for rule_id, pattern, description in (
         (
             "public_editorial_quality.internal_identifier",
@@ -465,6 +508,32 @@ def _text_issues(
                 relationship_explanation,
             )
         )
+    if item.get("verified_facts_mode") or any(
+        str(evidence_id).startswith("verified-fact:")
+        for evidence_id in item.get("evidence_ids") or []
+    ):
+        verified_evidence = str(item.get("evidence_text") or "")
+        verified_metric = item.get("verified_fact_metric")
+        if _unsupported_numbers(text, verified_evidence, verified_metric):
+            issues.append(
+                _issue(
+                    report_id,
+                    "public_editorial_quality.unsupported_numeric_claim",
+                    item,
+                    "material numeric claim is absent from the canonical verified fact",
+                )
+            )
+        verified_explanation = _verified_metric_text_explanation(
+            text, verified_metric, verified_evidence
+        )
+        if verified_explanation:
+            rule_id = (
+                "public_editorial_quality.temporal_integrity"
+                if "timeframe" in verified_explanation
+                or "forecast" in verified_explanation
+                else "public_editorial_quality.metric_label_relationship"
+            )
+            issues.append(_issue(report_id, rule_id, item, verified_explanation))
     if field.endswith((".so_what", ".now_what")) and _is_nonspecific_action(text):
         issues.append(
             _issue(
@@ -509,10 +578,38 @@ def _insight_issues(
             evidence_status=_evidence_status(insight),
             evidence_text=evidence,
         )
+        _annotate_verified_item(item, artifacts)
+        fact = _fact_for_item(artifacts, item)
+        if fact is not None:
+            mismatches = metric_binding_mismatches(
+                insight.get("metric"), fact.get("metric")
+            )
+            if mismatches:
+                issues.append(
+                    _issue(
+                        report_id,
+                        "public_editorial_quality.metric_binding_mismatch",
+                        item,
+                        "insight metric binding differs from its canonical verified "
+                        "fact: "
+                        + ", ".join(mismatches),
+                    )
+                )
         item["metric_relationship_evidence_text"] = (
-            _preferred_metric_relationship_evidence(insight) or evidence
+            (
+                item.get("evidence_text")
+                if item.get("verified_facts_mode")
+                else _preferred_metric_relationship_evidence(insight) or evidence
+            )
         )
-        if text and (not evidence_id or not evidence):
+        if text and (
+            not evidence_id
+            or not evidence
+            or (
+                item.get("verified_facts_mode")
+                and _fact_for_item(artifacts, item) is None
+            )
+        ):
             issues.append(
                 _issue(
                     report_id,
@@ -525,6 +622,7 @@ def _insight_issues(
         if (
             text
             and evidence
+            and not item.get("verified_facts_mode")
             and _unsupported_numbers(text, evidence, insight.get("metric"))
         ):
             issues.append(
@@ -610,6 +708,11 @@ def _key_figure_issues(
     for index, figure in enumerate(_dict_items(artifacts.get("key_figures")), start=1):
         evidence_id = str(figure.get("evidence_id") or "").strip()
         evidence_text = evidence_text_by_id.get(evidence_id, "")
+        fact = fact_for_evidence_id(_verified_fact_index(artifacts), evidence_id)
+        if fact is not None:
+            evidence_text = canonical_evidence_map(
+                {str(fact.get("fact_id") or ""): fact}
+            ).get(evidence_id, "")
         if not evidence_id or not evidence_text:
             continue
         for field_name in ("label", "figure", "why_it_matters"):
@@ -624,6 +727,7 @@ def _key_figure_issues(
                 repair_target="key_figures",
                 evidence_text=evidence_text,
             )
+            _annotate_verified_item(item, artifacts)
             field_issues = _text_issues(report_id, item)
             if field_name in {"label", "figure"}:
                 # Key-figure labels and displays are reader-facing metric
@@ -799,7 +903,14 @@ def _html_issues(
 def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
     summary_value = artifacts.get("summary")
     summary: dict[str, Any] = summary_value if isinstance(summary_value, dict) else {}
+    verified_mode = verified_facts_mode(artifacts)
     summary_evidence = _summary_evidence_items(summary)
+    if verified_mode:
+        summary_evidence = _verified_evidence_items(
+            artifacts, [evidence_id for evidence_id, _ in summary_evidence]
+        )
+        if not summary_evidence and len(_verified_fact_index(artifacts)) == 1:
+            summary_evidence = _verified_evidence_items(artifacts)
     for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
         value = _sanitize_public_prose(summary.get(field_name))
         if value:
@@ -814,7 +925,7 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 yield from claim_items
             elif summary_evidence:
                 for evidence_id, evidence_text in summary_evidence:
-                    yield _item(
+                    item = _item(
                         "summary",
                         field_name,
                         value,
@@ -822,9 +933,19 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                         "summary",
                         evidence_text=evidence_text,
                     )
+                    _annotate_verified_item(item, artifacts)
+                    yield item
             else:
-                yield _item("summary", field_name, value, [], "summary")
+                item = _item("summary", field_name, value, [], "summary")
+                _annotate_verified_item(item, artifacts)
+                yield item
     downstream_evidence = _downstream_evidence_items(artifacts)
+    if verified_mode:
+        downstream_evidence = _verified_evidence_items(
+            artifacts, [evidence_id for evidence_id, _ in downstream_evidence]
+        )
+        if not downstream_evidence and len(_verified_fact_index(artifacts)) == 1:
+            downstream_evidence = _verified_evidence_items(artifacts)
     for field_name in ("expert_comment", "linkedin_post"):
         value = _sanitize_public_prose(artifacts.get(field_name))
         if value:
@@ -839,7 +960,7 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 yield from claim_items
             elif downstream_evidence:
                 for evidence_id, evidence_text in downstream_evidence:
-                    yield _item(
+                    item = _item(
                         field_name,
                         field_name,
                         value,
@@ -847,8 +968,12 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                         field_name,
                         evidence_text=evidence_text,
                     )
+                    _annotate_verified_item(item, artifacts)
+                    yield item
             else:
-                yield _item(field_name, field_name, value, [], field_name)
+                item = _item(field_name, field_name, value, [], field_name)
+                _annotate_verified_item(item, artifacts)
+                yield item
 
 
 def _retained_soft_copy_sentence_items(
@@ -1392,6 +1517,104 @@ def _downstream_evidence_items(artifacts: dict[str, Any]) -> list[tuple[str, str
         if str(item.get("evidence_id") or "").strip()
         and str(item.get("evidence") or "").strip()
     ]
+
+
+def _verified_fact_index(artifacts: object) -> dict[str, dict[str, Any]]:
+    if not isinstance(artifacts, dict):
+        return {}
+    cached = artifacts.get("_verified_fact_index")
+    if isinstance(cached, dict):
+        return {
+            str(key): value
+            for key, value in cached.items()
+            if isinstance(value, dict)
+        }
+    if not verified_facts_mode(artifacts):
+        return {}
+    try:
+        return validated_verified_facts(artifacts)
+    except AppError:
+        return {}
+
+
+def _verified_evidence_items(
+    artifacts: object,
+    evidence_ids: Iterable[str] | None = None,
+) -> list[tuple[str, str]]:
+    evidence_map = canonical_evidence_map(_verified_fact_index(artifacts))
+    if evidence_ids is None:
+        return list(evidence_map.items())
+    return [
+        (evidence_id, evidence_map[evidence_id])
+        for evidence_id in dict.fromkeys(str(value).strip() for value in evidence_ids)
+        if evidence_id in evidence_map
+    ]
+
+
+def _fact_for_item(
+    artifacts: object, item: Mapping[str, Any]
+) -> Mapping[str, Any] | None:
+    facts = _verified_fact_index(artifacts)
+    matches = [
+        fact_for_evidence_id(facts, evidence_id)
+        for evidence_id in item.get("evidence_ids") or []
+    ]
+    matches = [fact for fact in matches if fact is not None]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _annotate_verified_item(item: dict[str, Any], artifacts: object) -> None:
+    if not verified_facts_mode(artifacts):
+        return
+    facts = _verified_fact_index(artifacts)
+    item["verified_facts_mode"] = True
+    evidence_ids = set(item.get("evidence_ids") or [])
+    canonical_texts = [
+        canonical_evidence_map({fact_id: fact}).get(
+            f"verified-fact:{fact_id}", ""
+        )
+        for fact_id, fact in facts.items()
+        if f"verified-fact:{fact_id}" in evidence_ids
+    ]
+    if canonical_texts:
+        item["evidence_text"] = "; ".join(text for text in canonical_texts if text)
+    fact = _fact_for_item(artifacts, item)
+    if fact is not None:
+        item["verified_fact_metric"] = fact.get("metric")
+
+
+def _verified_metric_text_explanation(
+    text: str, metric: object, evidence_text: str
+) -> str:
+    if not isinstance(metric, Mapping):
+        return ""
+    relationship = _metric_label_relationship_explanation(text, evidence_text)
+    if relationship:
+        return relationship
+    timeframe = str(metric.get("timeframe") or "").strip()
+    expected_years = set(re.findall(r"\b(?:19|20)\d{2}\b", timeframe))
+    claimed_years = set(re.findall(r"\b(?:19|20)\d{2}\b", text))
+    if expected_years and claimed_years and not claimed_years.issubset(expected_years):
+        return "uses a different timeframe from the canonical verified fact"
+    status = str(
+        metric.get("observation_status") or metric.get("forecast_status") or ""
+    ).strip().casefold()
+    if status in {"observed", "actual", "historical"} and _FORECAST_MARKER.search(text):
+        return "adds a forecast marker to an observed canonical fact"
+    label = str(metric.get("label") or "").strip()
+    quantities = _material_quantities(text)
+    if label and quantities:
+        first_quantity = quantities[0]
+        prefix = text[: first_quantity.start].strip(" ,:;-")
+        prefix = re.sub(
+            r"\b(?:reached|was|is|were|are|stood at|accounts for|accounted for)\b.*$",
+            "",
+            prefix,
+            flags=re.IGNORECASE,
+        ).strip()
+        if prefix and _normalized_text(label) not in _normalized_text(prefix):
+            return "attaches a retained metric value to a different source metric label"
+    return ""
 
 
 def _temporal_integrity_explanation(text: str, evidence_text: str) -> str:

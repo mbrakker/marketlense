@@ -115,6 +115,10 @@
           "denominator": { "type": "string" },
           "observation_status": { "type": "string" },
           "confidence": { "type": "string" },
+          "observations": {
+            "type": "array",
+            "items": { "type": "object" }
+          },
           "missing_context_notes": {
             "type": "array",
             "items": { "type": "string" }
@@ -204,6 +208,10 @@
           "cohort": { "type": "string" },
           "denominator": { "type": "string" },
           "observation_status": { "type": "string" },
+          "observations": {
+            "type": "array",
+            "items": { "type": "object" }
+          },
           "source_page": { "type": ["integer", "null"] },
           "why_it_matters": { "type": "string" },
           "caveat": { "type": "string" },

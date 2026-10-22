@@ -159,7 +159,10 @@ class ValidationRequest(SemanticIdContract):
     validation_mode: str = field(
         default="full",
         metadata={
-            "doc": "Validation execution mode: full, inline_deterministic, or deferred_grounding."
+            "doc": (
+                "Validation execution mode: full, inline_deterministic, "
+                "deferred_grounding, or verified_facts."
+            )
         },
     )
     deterministic_grounding_passed: bool = field(

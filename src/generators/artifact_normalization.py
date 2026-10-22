@@ -1175,7 +1175,9 @@ def _strip_public_editorial_scaffold(value: str) -> str:
     return PUBLIC_EDITORIAL_SCAFFOLD_RE.sub("", value).strip()
 
 
-def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, Any]]:
+def normalize_artifact_insights(
+    items: Any, *, prefix: str, verified_mode: bool = False
+) -> List[Dict[str, Any]]:
     normalized: List[Dict[str, Any]] = []
     if not isinstance(items, list):
         return normalized
@@ -1187,14 +1189,23 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
         metric.update(
             {
                 key: _s(metric_raw.get(key, ""))
-                for key in METRIC_BINDING_FIELDS
-                if key in metric_raw
+                for key in (*METRIC_BINDING_FIELDS, "forecast_status")
+                if key in metric_raw or verified_mode
             }
         )
-        metric["value"], metric["unit"] = normalize_public_metric_display(
-            value=metric["value"], unit=metric["unit"]
-        )
-        if TEMPORAL_ONLY_METRIC_RE.fullmatch(metric["value"].strip()):
+        if verified_mode:
+            metric["value"] = _s(metric_raw.get("value", ""))
+            metric["unit"] = _s(metric_raw.get("unit", ""))
+            observations = metric_raw.get("observations")
+            if isinstance(observations, list):
+                metric["observations"] = deepcopy(observations)
+        else:
+            metric["value"], metric["unit"] = normalize_public_metric_display(
+                value=metric["value"], unit=metric["unit"]
+            )
+        if not verified_mode and TEMPORAL_ONLY_METRIC_RE.fullmatch(
+            metric["value"].strip()
+        ):
             _clear_unproven_metric_metadata(metric)
         pages_raw_obj = item.get("pages")
         pages_raw = pages_raw_obj if isinstance(pages_raw_obj, list) else []
@@ -1222,7 +1233,11 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
                 ],
             ]
         )
-        if timeframe and not _source_text_contains_field(timeframe, binding_evidence):
+        if (
+            not verified_mode
+            and timeframe
+            and not _source_text_contains_field(timeframe, binding_evidence)
+        ):
             metric["timeframe"] = ""
         for field_name in INSIGHT_TEXT_FIELDS:
             value = _normalize_insight_text_field(field_name, item.get(field_name))

@@ -5,7 +5,7 @@ import json
 import re
 import threading
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from typing import Any, Callable, List, Mapping, Sequence
 
 from src.contracts.claim_validation import (
@@ -15,12 +15,12 @@ from src.contracts.claim_validation import (
     ClaimSemanticValidationIdentity,
     ClaimValidationPackage,
 )
+from src.contracts.pdf_text import PdfTextPage
 from src.contracts.prompt_family_materialization import (
     PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
     PromptFamilyMaterializationRequest,
     PromptFamilyReuseRequest,
 )
-from src.contracts.pdf_text import PdfTextPage
 from src.contracts.protected_facts import ProtectedFactComparison
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.soft_copy_claim_provenance import (
@@ -77,6 +77,13 @@ from .shared import (
     s,
     section_policy,
     section_root,
+)
+from .verified_facts import (
+    canonical_evidence_map,
+    canonical_verified_evidence_packs,
+    fact_for_evidence_id,
+    validated_verified_facts,
+    verified_facts_mode,
 )
 
 RULE_ID = "grounding"
@@ -142,16 +149,33 @@ def _claim_prompt_content_hashes(
 
 
 def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
+    verified_mode = runtime.prepared.verified_facts_mode
+    evidence_packs = (
+        runtime.prepared.authority_evidence_packs
+        if verified_mode
+        else runtime.request.evidence_packs
+    )
+    request = (
+        replace(
+            runtime.request,
+            evidence_packs=evidence_packs,
+            source_text="",
+            source_pages=[],
+        )
+        if verified_mode
+        else runtime.request
+    )
     package = validate_retained_claims(
-        runtime.request.artifacts,
-        runtime.request.evidence_packs,
+        request.artifacts,
+        request.evidence_packs,
         source_identity=runtime.source_id,
+        verified_facts_only=verified_mode,
     )
     semantic_inputs = retained_claim_semantic_inputs(
         package,
-        runtime.request.evidence_packs,
+        request.evidence_packs,
         source_identity=runtime.source_id,
-        source_pages=runtime.request.source_pages,
+        source_pages=request.source_pages,
     )
     runtime.retained_claim_validation = package
 
@@ -159,7 +183,7 @@ def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
         runtime.retained_claim_validation = updated
 
     issues = run_grounding_check(
-        request=runtime.request,
+        request=request,
         settings=runtime.settings,
         grounding_use_vector_store=runtime.prepared.grounding_use_vector_store,
         evidence_texts=runtime.prepared.evidence_texts,
@@ -268,11 +292,26 @@ def run_grounding_check(
     prompt_ctx = child_context(ctx, task_id=f"{ctx.task_id}:grounding")
     prompt_namespace = "report_vs/validate/grounding"
     artifacts = request.artifacts if isinstance(request.artifacts, dict) else {}
+    verified_mode = verified_facts_mode(artifacts, request.validation_mode)
+    if verified_mode:
+        grounding_use_vector_store = False
+        facts = validated_verified_facts(
+            artifacts,
+            request.evidence_packs,
+            expected_source_identity=str(request.source_id or ""),
+        )
+        request = replace(
+            request,
+            evidence_packs=canonical_verified_evidence_packs(facts),
+            source_text="",
+            source_pages=[],
+        )
     if retained_claim_package is None:
         retained_claim_package = validate_retained_claims(
             artifacts,
             request.evidence_packs,
             source_identity=source_id or request.source_id,
+            verified_facts_only=verified_mode,
         )
     if retained_claim_inputs is None:
         retained_claim_inputs = retained_claim_semantic_inputs(
@@ -341,6 +380,7 @@ def run_grounding_check(
             artifacts,
             request.evidence_packs,
             source_identity=source_id or request.source_id,
+            verified_facts_only=verified_mode,
         )
     retained_claim_package, retained_claim_inputs, reuse_telemetry = (
         reuse_retained_claim_semantic_results(
@@ -1243,11 +1283,26 @@ def grounding_payload(
     *,
     retained_claim_inputs: Sequence[ClaimSemanticInput] | None = None,
 ) -> dict:
+    verified_mode = verified_facts_mode(artifacts, request.validation_mode)
+    verified_facts: dict[str, dict[str, Any]] = {}
+    if verified_mode:
+        verified_facts = validated_verified_facts(
+            artifacts,
+            request.evidence_packs,
+            expected_source_identity=str(request.source_id or ""),
+        )
+        request = replace(
+            request,
+            evidence_packs=canonical_verified_evidence_packs(verified_facts),
+            source_text="",
+            source_pages=[],
+        )
     if retained_claim_inputs is None:
         package = validate_retained_claims(
             artifacts,
             request.evidence_packs,
             source_identity=request.source_id,
+            verified_facts_only=verified_mode,
         )
         retained_claim_inputs = retained_claim_semantic_inputs(
             package,
@@ -1259,28 +1314,45 @@ def grounding_payload(
         artifacts.get("insights_final") if isinstance(artifacts, dict) else []
     )
     insights: List[dict] = []
+    verified_evidence = canonical_evidence_map(verified_facts)
     for insight in insights_raw if isinstance(insights_raw, list) else []:
         if not isinstance(insight, dict):
             continue
         metric = ensure_dict(insight.get("metric"))
+        evidence_id = s(insight.get("evidence_id"))
+        fact = fact_for_evidence_id(verified_facts, evidence_id)
+        authoritative_metric = (
+            fact.get("metric")
+            if isinstance(fact, dict) and isinstance(fact.get("metric"), dict)
+            else metric
+        )
         insights.append(
             {
                 "id": s(insight.get("id")),
                 "text": s(insight.get("text")),
-                "evidence_id": s(insight.get("evidence_id")),
-                "evidence": s(insight.get("evidence")),
+                "evidence_id": evidence_id,
+                "evidence": (
+                    verified_evidence.get(evidence_id, s(insight.get("evidence")))
+                    if not verified_mode
+                    else verified_evidence.get(evidence_id, "")
+                ),
                 "metric": {
-                    "value": s(metric.get("value")),
-                    "unit": s(metric.get("unit")),
-                    "timeframe": s(metric.get("timeframe")),
-                    "trend": s(metric.get("trend")),
-                    "sample_size": s(metric.get("sample_size")),
-                    "geography": s(metric.get("geography")),
-                    "segment": s(metric.get("segment")),
-                    "subject": s(metric.get("subject")),
-                    "cohort": s(metric.get("cohort")),
-                    "denominator": s(metric.get("denominator")),
-                    "observation_status": s(metric.get("observation_status")),
+                    "value": s(authoritative_metric.get("value")),
+                    "unit": s(authoritative_metric.get("unit")),
+                    "timeframe": s(authoritative_metric.get("timeframe")),
+                    "trend": s(authoritative_metric.get("trend")),
+                    "sample_size": s(authoritative_metric.get("sample_size")),
+                    "geography": s(authoritative_metric.get("geography")),
+                    "segment": s(authoritative_metric.get("segment")),
+                    "subject": s(authoritative_metric.get("subject")),
+                    "cohort": s(authoritative_metric.get("cohort")),
+                    "denominator": s(authoritative_metric.get("denominator")),
+                    "observation_status": s(
+                        authoritative_metric.get("observation_status")
+                    ),
+                    "observations": authoritative_metric.get("observations")
+                    if isinstance(authoritative_metric.get("observations"), list)
+                    else [],
                 },
                 "so_what": sanitize_citation_tokens(s(insight.get("so_what"))),
                 "now_what": sanitize_citation_tokens(s(insight.get("now_what"))),
@@ -1302,10 +1374,10 @@ def grounding_payload(
         if isinstance(summary, dict)
         else [],
     }
-    title_is_canonical = _matches_canonical_doc_map_identity(
+    title_is_canonical = verified_mode or _matches_canonical_doc_map_identity(
         request.report.title, request.evidence_packs.get("doc_map"), field="title"
     ) or _matches_explicit_source_title(request.report.title, request)
-    publisher_is_canonical = _matches_canonical_doc_map_identity(
+    publisher_is_canonical = verified_mode or _matches_canonical_doc_map_identity(
         request.report.publisher,
         request.evidence_packs.get("doc_map"),
         field="publisher",
@@ -1339,6 +1411,7 @@ def grounding_payload(
         publisher=("" if publisher_is_canonical else request.report.publisher),
         insights=insights,
         summary=summary_clean,
+        verified_facts=verified_facts,
     )
     payload["public_factual_items"] = public_factual_items
     public_item_ids = {
@@ -1517,9 +1590,11 @@ def _public_factual_items(
     publisher: str,
     insights: Sequence[dict],
     summary: dict[str, Any],
+    verified_facts: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> List[dict]:
     """Material public claims with their exact retained evidence payloads."""
     items: List[dict] = []
+    verified_evidence_by_id = canonical_evidence_map(verified_facts or {})
     source_page_texts = {
         int(page.page_number): s(page.text)
         for page in source_pages
@@ -1597,12 +1672,20 @@ def _public_factual_items(
         if sentences and all(len(values) == 1 for values in matched):
             for sentence, values in zip(sentences, matched, strict=True):
                 claim = values[0]
-                provenance_evidence = [
-                    s(span.get("text"))
-                    for span in claim.source_spans
-                    if s(span.get("evidence_id")) in claim.evidence_ids
-                    and s(span.get("text"))
-                ]
+                provenance_evidence = (
+                    [
+                        verified_evidence_by_id[evidence_id]
+                        for evidence_id in claim.evidence_ids
+                        if evidence_id in verified_evidence_by_id
+                    ]
+                    if verified_evidence_by_id
+                    else [
+                        s(span.get("text"))
+                        for span in claim.source_spans
+                        if s(span.get("evidence_id")) in claim.evidence_ids
+                        and s(span.get("text"))
+                    ]
+                )
                 add(
                     claim.claim_id,
                     section,
@@ -1638,6 +1721,9 @@ def _public_factual_items(
         fallback: str = "",
     ) -> str:
         """Combine concise retained copy with authoritative source spans."""
+
+        if verified_evidence_by_id:
+            return verified_evidence_by_id.get(evidence_id, "")
 
         spans = evidence_spans.get(evidence_id.casefold(), [])
         ordered_packs = (
@@ -1690,10 +1776,14 @@ def _public_factual_items(
             evidence_text,
             summary_evidence_by_id,
         )
-    insight_evidence = {
-        s(insight.get("evidence_id")): s(insight.get("evidence"))
-        for insight in insights
-    }
+    insight_evidence = (
+        verified_evidence_by_id
+        if verified_evidence_by_id
+        else {
+            s(insight.get("evidence_id")): s(insight.get("evidence"))
+            for insight in insights
+        }
+    )
     insight_statements = {
         s(insight.get("evidence_id")): s(insight.get("text"))
         for insight in insights
@@ -1734,7 +1824,7 @@ def _public_factual_items(
         add(
             f"key_figure:{index}:figure",
             f"key_figures:{index}.figure",
-            metric_claim_text(figure),
+            metric_claim_text(figure, include_observations=bool(verified_facts)),
             [evidence_id],
             evidence_text_for_id(evidence_id),
         )

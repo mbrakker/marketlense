@@ -1252,6 +1252,7 @@ def generate_artifacts(
     insights_candidates = normalize_artifact_insights(
         stage_one_results.get("insights_candidates", {}).get("insights_candidates"),
         prefix="candidate",
+        verified_mode=visual_authority_admitter is not None,
     )
     insights_candidates = [
         candidate
@@ -1535,7 +1536,9 @@ def generate_artifacts(
         )
     insights_final = select_artifact_insights(
         final_insights=normalize_artifact_insights(
-            insights_final_result.get("insights_final"), prefix="insight"
+            insights_final_result.get("insights_final"),
+            prefix="insight",
+            verified_mode=visual_authority_admitter is not None,
         ),
         candidate_insights=insights_candidates,
         editorial_plan=editorial_plan,
@@ -1641,6 +1644,7 @@ def generate_artifacts(
         metric_spine = derive_metric_spine_from_insights(
             distribution_insights,
             editorial_plan=editorial_plan,
+            verified_mode=visual_authority_admitter is not None,
         )
         metric_spine_json = _dump_json(metric_spine)
         context_anchor_evidence_ids.clear()
@@ -1803,6 +1807,7 @@ def generate_artifacts(
         metric_spine = derive_metric_spine_from_insights(
             insights_final,
             editorial_plan=editorial_plan,
+            verified_mode=visual_authority_admitter is not None,
         )
         metric_spine_json = _dump_json(metric_spine)
         context_anchor_evidence_ids.clear()

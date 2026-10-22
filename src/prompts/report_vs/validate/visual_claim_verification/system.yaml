@@ -72,7 +72,7 @@ text: |
   are eligible only when they were actually inspected and visibly support the final claim.
 
   Return JSON only:
-  {"outcome":"verified|rejected|unresolved","diagnostics":["..."],"verified_fact":{"statement":"...","metric":{"label":"...","value":"...","unit":"...","trend":"...","timeframe":"...","geography":"...","segment":"...","sample_size":"...","confidence":"...","subject":"...","cohort":"...","denominator":"...","observation_status":"..."},"qualifiers":["..."]},"source_truth_notes":"...","supporting_physical_pages":[12],"source_truth_notes_by_page":{"12":"..."}}
+  {"outcome":"verified|rejected|unresolved","diagnostics":["..."],"verified_fact":{"statement":"...","metric":{"label":"...","value":"...","unit":"...","trend":"...","timeframe":"...","geography":"...","segment":"...","sample_size":"...","confidence":"...","subject":"...","cohort":"...","denominator":"...","observation_status":"...","forecast_status":"...","observations":[{"label":"...","value":"...","unit":"...","timeframe":"...","segment":"...","geography":"...","cohort":"...","denominator":"...","observation_status":"..."}]},"qualifiers":["..."]},"source_truth_notes":"...","supporting_physical_pages":[12],"source_truth_notes_by_page":{"12":"..."}}
   For a qualitative verified fact, use an empty metric object rather than
   inventing numeric fields. Do not add a verified_fact for rejected or unresolved
   outcomes.

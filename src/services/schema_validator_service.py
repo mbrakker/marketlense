@@ -12,6 +12,10 @@ from src.contracts.schema_validation import (
     SchemaValidateRequest,
     SchemaValidateResponse,
 )
+from src.generators.validation.verified_facts import (
+    validated_verified_facts,
+    verified_facts_mode,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -268,49 +272,54 @@ def validate_evidence_references(
     ctx: RunContext,
 ) -> None:
     evidence_ids: set[str] = set()
-    findings_payload = evidence_pack_payloads.get("findings")
-    if isinstance(findings_payload, dict):
-        for item in findings_payload.get("findings") or []:
-            if not isinstance(item, dict):
+    verified_mode = verified_facts_mode(artifacts_payload)
+    if verified_mode:
+        facts = validated_verified_facts(artifacts_payload, evidence_pack_payloads)
+        evidence_ids.update(f"verified-fact:{fact_id}" for fact_id in facts)
+    if not verified_mode:
+        findings_payload = evidence_pack_payloads.get("findings")
+        if isinstance(findings_payload, dict):
+            for item in findings_payload.get("findings") or []:
+                if not isinstance(item, dict):
+                    continue
+                value = str(item.get("id") or "").strip()
+                if value:
+                    evidence_ids.add(value)
+        quotes_payload = evidence_pack_payloads.get("quote_candidates")
+        if isinstance(quotes_payload, dict):
+            for item in quotes_payload.get("quote_candidates") or []:
+                if not isinstance(item, dict):
+                    continue
+                value = str(item.get("id") or "").strip()
+                if value:
+                    evidence_ids.add(value)
+        doc_map_payload = evidence_pack_payloads.get("doc_map")
+        if isinstance(doc_map_payload, dict):
+            for section in doc_map_payload.get("sections") or []:
+                if not isinstance(section, dict):
+                    continue
+                value = str(section.get("id") or "").strip()
+                if value:
+                    evidence_ids.add(value)
+        # These families are no longer generated.  Retained reports from before
+        # the representative-evidence path may still cite their stable IDs,
+        # however, so allow those artifacts in normal replay without reintroducing
+        # a model call or a current output contract for the retired families.
+        for pack_name, item_key in (
+            ("key_metrics", "key_metrics"),
+            ("recommendations", "recommendations"),
+            ("risk_register", "risks"),
+            ("contradictions", "contradictions"),
+        ):
+            legacy_payload = evidence_pack_payloads.get(pack_name)
+            if not isinstance(legacy_payload, dict):
                 continue
-            value = str(item.get("id") or "").strip()
-            if value:
-                evidence_ids.add(value)
-    quotes_payload = evidence_pack_payloads.get("quote_candidates")
-    if isinstance(quotes_payload, dict):
-        for item in quotes_payload.get("quote_candidates") or []:
-            if not isinstance(item, dict):
-                continue
-            value = str(item.get("id") or "").strip()
-            if value:
-                evidence_ids.add(value)
-    doc_map_payload = evidence_pack_payloads.get("doc_map")
-    if isinstance(doc_map_payload, dict):
-        for section in doc_map_payload.get("sections") or []:
-            if not isinstance(section, dict):
-                continue
-            value = str(section.get("id") or "").strip()
-            if value:
-                evidence_ids.add(value)
-    # These families are no longer generated.  Retained reports from before the
-    # representative-evidence path may still cite their stable IDs, however, so
-    # allow those artifacts to be validated and replayed without reintroducing
-    # a model call or a current output contract for the retired families.
-    for pack_name, item_key in (
-        ("key_metrics", "key_metrics"),
-        ("recommendations", "recommendations"),
-        ("risk_register", "risks"),
-        ("contradictions", "contradictions"),
-    ):
-        legacy_payload = evidence_pack_payloads.get(pack_name)
-        if not isinstance(legacy_payload, dict):
-            continue
-        for item in legacy_payload.get(item_key) or []:
-            if not isinstance(item, dict):
-                continue
-            value = str(item.get("id") or "").strip()
-            if value:
-                evidence_ids.add(value)
+            for item in legacy_payload.get(item_key) or []:
+                if not isinstance(item, dict):
+                    continue
+                value = str(item.get("id") or "").strip()
+                if value:
+                    evidence_ids.add(value)
     references: list[str] = []
     summary = artifacts_payload.get("summary")
     if isinstance(summary, dict):

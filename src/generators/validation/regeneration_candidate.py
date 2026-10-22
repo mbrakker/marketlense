@@ -26,6 +26,7 @@ from src.generators.claim_validation_generator import validate_retained_claims
 from src.generators.soft_copy_claim_provenance import (
     retained_soft_copy_claims_cover_text,
 )
+from src.generators.validation.verified_facts import verified_facts_mode
 from src.services.schema_validator_service import (
     validate_evidence_references,
     validate_schema,
@@ -150,6 +151,7 @@ def validate_regeneration_candidate(
             evidence_packs,
             previous_artifacts=current_artifacts,
             baseline_retained_claim_severities=baseline_retained_claim_severities,
+            verified_facts_only=verified_facts_mode(candidate_artifacts),
         )
     )
     candidate_by_key = {record.key: record for record in candidate_records}
@@ -401,6 +403,7 @@ def retained_claim_repair_issues(
     *,
     previous_artifacts: dict[str, Any] | None = None,
     baseline_retained_claim_severities: Mapping[str, str] | None = None,
+    verified_facts_only: bool = False,
 ) -> list[ValidationIssue]:
     """Return only mechanically provable repair findings.
 
@@ -408,13 +411,18 @@ def retained_claim_repair_issues(
     run after candidate integrity; this preflight never invents a contradiction.
     """
 
-    package = validate_retained_claims(artifacts, evidence_packs)
+    verified_facts_only = verified_facts_only or verified_facts_mode(artifacts)
+    package = validate_retained_claims(
+        artifacts, evidence_packs, verified_facts_only=verified_facts_only
+    )
     previous_results = {}
     if previous_artifacts is not None:
         previous_results = {
             (result.candidate.source_family, result.candidate.claim_id): result
             for result in validate_retained_claims(
-                previous_artifacts, evidence_packs
+                previous_artifacts,
+                evidence_packs,
+                verified_facts_only=verified_facts_only,
             ).results
         }
     family_targets = {

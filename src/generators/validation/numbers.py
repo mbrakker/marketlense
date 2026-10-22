@@ -19,6 +19,7 @@ from .evidence import retrieve_evidence_windows, split_sentences
 from .models import EvidenceWindow, ValidationRuntime
 from .quantities import (
     collect_allowed_quantities,
+    collect_quantities_from_texts,
     quantity_supported,
     unsupported_quantity_severity,
 )
@@ -29,6 +30,16 @@ RULE_ID = "numbers"
 
 
 def run_number_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
+    if runtime.prepared.verified_facts_mode:
+        return validate_new_numbers(
+            artifacts=runtime.request.artifacts,
+            insights=runtime.prepared.insights,
+            report=runtime.request.report,
+            evidence_texts=runtime.prepared.evidence_texts,
+            evidence_windows=runtime.prepared.evidence_windows,
+            source_text="",
+            verified_facts_mode=True,
+        )
     return validate_new_numbers(
         artifacts=runtime.request.artifacts,
         insights=runtime.prepared.insights,
@@ -46,10 +57,13 @@ def validate_new_numbers(
     evidence_texts: Sequence[str],
     evidence_windows: Optional[Sequence[EvidenceWindow]] = None,
     source_text: str = "",
+    verified_facts_mode: bool = False,
 ) -> List[ValidationIssue]:
     issues: List[ValidationIssue] = []
-    allowed_quantities = collect_allowed_quantities(
-        insights, report, artifacts, evidence_texts
+    allowed_quantities = (
+        collect_quantities_from_texts(evidence_texts)
+        if verified_facts_mode
+        else collect_allowed_quantities(insights, report, artifacts, evidence_texts)
     )
     windows = list(evidence_windows or [])
     soft_copy_claims = _soft_copy_claims_by_sentence(artifacts)
@@ -163,6 +177,8 @@ def validate_new_numbers(
                             evidence_ids=list(claim.evidence_ids) if claim else [],
                         )
                     )
+        if verified_facts_mode:
+            continue
         unsupported_pairs = unsupported_period_time_pairs(text, source_text)
         source_pairs = period_time_pairs(source_text)
         source_values_by_period = {period: value for period, value in source_pairs}

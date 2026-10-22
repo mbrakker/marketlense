@@ -9,6 +9,7 @@ from src.utils.quantity import extract_quantities
 from .evidence import contains_token, metric_value_supported, retrieve_evidence_windows
 from .models import EvidenceWindow, SemanticSupport, ValidationRuntime
 from .shared import RETRIEVE_TOP_K, format_confidence, issue, s
+from .verified_facts import fact_for_evidence_id, metric_binding_mismatches
 
 RULE_ID = "metrics"
 _COMPARISON_CUE = re.compile(
@@ -19,6 +20,15 @@ _COMPARISON_CUE = re.compile(
 
 
 def run_metric_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
+    if runtime.prepared.verified_facts_mode:
+        return validate_insight_metrics(
+            insights=runtime.prepared.insights,
+            evidence_map=runtime.prepared.evidence_map,
+            semantic_support=runtime.semantic_outcome.metric_support,
+            evidence_windows=runtime.prepared.evidence_windows,
+            verified_facts=runtime.prepared.verified_facts,
+            verified_facts_mode=True,
+        )
     return validate_insight_metrics(
         insights=runtime.prepared.insights,
         evidence_map=runtime.prepared.evidence_map,
@@ -32,7 +42,13 @@ def validate_insight_metrics(
     evidence_map: Dict[str, str],
     semantic_support: Optional[Dict[str, SemanticSupport]] = None,
     evidence_windows: Optional[Sequence[EvidenceWindow]] = None,
+    verified_facts: Optional[Dict[str, dict]] = None,
+    verified_facts_mode: bool = False,
 ) -> List[ValidationIssue]:
+    if verified_facts_mode:
+        return _validate_verified_fact_metrics(
+            insights, verified_facts or {}, evidence_map
+        )
     issues: List[ValidationIssue] = []
     windows = list(evidence_windows or [])
     for idx, insight in enumerate(insights):
@@ -143,6 +159,48 @@ def validate_insight_metrics(
                         section=f"insights:{label}",
                     )
                 )
+    return issues
+
+
+def _validate_verified_fact_metrics(
+    insights: Sequence[dict],
+    verified_facts: Dict[str, dict],
+    evidence_map: Dict[str, str],
+) -> List[ValidationIssue]:
+    issues: List[ValidationIssue] = []
+    for idx, insight in enumerate(insights):
+        if not isinstance(insight, dict):
+            continue
+        evidence_id = s(insight.get("evidence_id"))
+        label = s(insight.get("id") or f"insight_{idx + 1}")
+        fact = fact_for_evidence_id(verified_facts, evidence_id)
+        if fact is None or evidence_id not in evidence_map:
+            issues.append(
+                issue(
+                    rule_id=RULE_ID,
+                    message=f"Verified insight {label} has no canonical fact binding",
+                    severity="error",
+                    section=f"insights:{label}",
+                )
+            )
+            continue
+        mismatches = metric_binding_mismatches(
+            insight.get("metric"), fact.get("metric")
+        )
+        if mismatches:
+            issues.append(
+                issue(
+                    rule_id=RULE_ID,
+                    message=(
+                        f"Verified metric binding differs from fact for {label}: "
+                        + ", ".join(mismatches)
+                    ),
+                    severity="error",
+                    section=f"insights:{label}",
+                    entity_id=label,
+                    evidence_ids=[evidence_id],
+                )
+            )
     return issues
 
 
