@@ -84,4 +84,4 @@
 - [x] Run the actual representative candidate extraction and OCR split/readback path with isolated artifacts; record exact paths, pages, cache-hit/provider-call evidence, and path measurements.
 - [x] Run applicable formatting, Ruff, forbidden-patching, architecture/I/O, contract, test ownership, and type checks; run native Windows tests if the environment supports them.
 - [x] Inspect the final diff for scope and secret exposure, record passed/failed/unavailable checks and genuine residual gaps in both canonical backlog locations.
-- [ ] Commit the verified branch, push it to `origin`, and report the commit SHA without merging.
+- [x] Commit the verified branch, push it to `origin`, and report the commit SHA without merging.
