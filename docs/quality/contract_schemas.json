@@ -48727,6 +48727,26 @@
         "canonical_approval_status": {
           "type": "string"
         },
+        "corrected_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "corrected_evidence_spans": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "corrected_metric_binding": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "corrected_source_binding_status": {
+          "type": "string"
+        },
         "correction_attempts": {
           "items": {
             "$ref": "#/$defs/src.contracts.verified_claims.VisualClaimCorrectionAttempt"
@@ -48760,6 +48780,10 @@
         },
         "original_claim": {
           "type": "string"
+        },
+        "original_metric_binding": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "original_physical_pages": {
           "items": {

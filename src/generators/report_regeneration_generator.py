@@ -59,6 +59,7 @@ from src.generators.artifact_normalization import (
     select_artifact_insights,
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
+    validate_final_insight_candidate_lineage,
 )
 from src.generators.artifact_normalization import (
     page_bound_direct_evidence_packs as _page_bound_direct_evidence_packs,
@@ -4701,6 +4702,13 @@ def _handle_insights_bundle_regeneration(
         ),
         candidate_insights=execution.state.insights_candidates,
         prior_final_insights=execution.state.insights_final,
+    )
+    validate_final_insight_candidate_lineage(
+        final_insights=regenerated_final,
+        candidate_insights=[
+            *execution.state.insights_candidates,
+            *prior_final_insights,
+        ],
     )
     execution.state.insights_final = _merge_regenerated_insights_by_stable_id(
         current_insights=execution.state.insights_final,

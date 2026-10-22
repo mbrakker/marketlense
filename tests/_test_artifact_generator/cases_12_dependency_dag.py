@@ -504,3 +504,61 @@ def test_reused_prompt_families_and_soft_copy_provenance_survive_dag(tmp_path):
             replay_claim["producing_prompt_identity"]
             == fresh_claim["producing_prompt_identity"]
         )
+
+
+def test_reused_final_family_with_invalid_lineage_regenerates_before_return(
+    tmp_path,
+):
+    source_id = "source:final-lineage-cache-reuse"
+    fresh = generate_artifacts(
+        report_id="final-lineage-cache-reuse",
+        report_name="Final lineage cache reuse",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path / "fresh"),
+        ctx=replace(_ctx(), source_identity_id=source_id),
+        openai_client=_ControlledArtifactClient(),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    retained = deepcopy(fresh["_cache"]["family_outputs"])
+    retained["report_vs/artifacts/insights_final"] = deepcopy(
+        retained["report_vs/artifacts/insights_candidates"]
+    )
+    retained["report_vs/artifacts/insights_final"][0]["id"] = "unmatched-final-id"
+
+    def reuse_reader(request, _ctx):
+        return PromptFamilyReuseResponse(
+            schema_version="1.0",
+            reusable=True,
+            reason="reused",
+            output_payload=retained[request.family_id],
+            artifact_id="retained:" + request.family_id,
+            output_hash="retained-hash",
+        )
+
+    replay_client = _ControlledArtifactClient()
+    replay_client.completed["insights_candidates"].set()
+    replay_client.responses["insights_final"] = {
+        "insights_final": deepcopy(
+            fresh["_cache"]["family_outputs"]["report_vs/artifacts/insights_candidates"]
+        )
+    }
+    replay = generate_artifacts(
+        report_id="final-lineage-cache-reuse",
+        report_name="Final lineage cache reuse",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path / "replay"),
+        ctx=replace(_ctx(), source_identity_id=source_id),
+        openai_client=replay_client,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        prompt_family_reuse_reader=reuse_reader,
+    )
+
+    assert replay_client.completion_order == ["insights_final"]
+    assert replay["_cache"]["family_reuse"]["report_vs/artifacts/insights_final"][
+        "cache_reuse_rejection_reason"
+    ] == ("cached_payload_validation:artifact_final_insight_lineage_invalid")
+    assert "unmatched-final-id" not in {item["id"] for item in replay["insights_final"]}

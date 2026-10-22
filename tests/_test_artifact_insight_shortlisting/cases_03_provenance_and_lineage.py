@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from src.generators.artifact_normalization import select_artifact_insights
+import pytest
+
+from src.generators.artifact_normalization import (
+    select_artifact_insights,
+    validate_final_insight_candidate_lineage,
+)
+from src.utils.errors import AppError
 
 
 def _plan(*evidence_ids: str) -> dict[str, object]:
@@ -84,11 +90,14 @@ def test_selector_rejects_shared_top_level_text_with_disjoint_physical_spans() -
         ],
     )
 
-    assert select_artifact_insights(
-        final_insights=[],
-        candidate_insights=[first, second],
-        editorial_plan=_plan("f1", "f2"),
-    ) == []
+    assert (
+        select_artifact_insights(
+            final_insights=[],
+            candidate_insights=[first, second],
+            editorial_plan=_plan("f1", "f2"),
+        )
+        == []
+    )
 
 
 def test_selector_rejects_identical_span_text_with_disjoint_offsets() -> None:
@@ -135,11 +144,14 @@ def test_selector_rejects_identical_span_text_with_disjoint_offsets() -> None:
         ),
     ]
 
-    assert select_artifact_insights(
-        final_insights=[],
-        candidate_insights=candidates,
-        editorial_plan=_plan("f1", "f2"),
-    ) == []
+    assert (
+        select_artifact_insights(
+            final_insights=[],
+            candidate_insights=candidates,
+            editorial_plan=_plan("f1", "f2"),
+        )
+        == []
+    )
 
 
 def test_selector_rejects_conflicting_span_source_ids_despite_matching_text() -> None:
@@ -188,11 +200,14 @@ def test_selector_rejects_conflicting_span_source_ids_despite_matching_text() ->
         ),
     ]
 
-    assert select_artifact_insights(
-        final_insights=[],
-        candidate_insights=candidates,
-        editorial_plan=_plan("f1", "f2"),
-    ) == []
+    assert (
+        select_artifact_insights(
+            final_insights=[],
+            candidate_insights=candidates,
+            editorial_plan=_plan("f1", "f2"),
+        )
+        == []
+    )
 
 
 def test_final_selection_rejects_unbound_final_identity_and_uses_alternative() -> None:
@@ -249,3 +264,52 @@ def test_final_selection_preserves_editorial_rewrite_for_eligible_identity() -> 
     assert selected[0]["text"] == "Approved final editorial wording."
     assert selected[0]["evidence_id"] == "f1"
     assert selected[0]["metric"]["value"] == "42%"
+
+
+def test_final_lineage_validation_reports_unmatched_identity_before_fallback() -> None:
+    candidate = _insight(
+        "behavior-cross-check",
+        "f1",
+        "The eligible candidate survives final admission.",
+        score=0.4,
+        pages=[18],
+    )
+    final = _insight(
+        "behavior-high-value-research",
+        "f1",
+        "An unmatched final rewrite.",
+        score=0.99,
+    )
+
+    with pytest.raises(AppError) as captured:
+        validate_final_insight_candidate_lineage(
+            final_insights=[final], candidate_insights=[candidate]
+        )
+
+    assert captured.value.code == "artifact_final_insight_lineage_invalid"
+    assert captured.value.context["invalid_insight_ids"] == [
+        "behavior-high-value-research"
+    ]
+
+
+def test_final_lineage_validation_reports_missing_identity() -> None:
+    candidate = _insight(
+        "behavior-cross-check",
+        "f1",
+        "The eligible candidate survives final admission.",
+        score=0.4,
+    )
+    final = _insight(
+        "",
+        "f1",
+        "A final rewrite without a stable identity.",
+        score=0.99,
+    )
+
+    with pytest.raises(AppError) as captured:
+        validate_final_insight_candidate_lineage(
+            final_insights=[final], candidate_insights=[candidate]
+        )
+
+    assert captured.value.code == "artifact_final_insight_lineage_invalid"
+    assert captured.value.context["missing_insight_id"] is True

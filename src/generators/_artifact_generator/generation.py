@@ -64,6 +64,7 @@ from src.generators.artifact_normalization import (
     soft_copy_context_evidence_anchors,
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
+    validate_final_insight_candidate_lineage,
 )
 from src.generators.artifact_prompt_provenance import artifact_prompt_identity
 from src.generators.prompt_preparation import prepare_prompt_bundle
@@ -573,6 +574,11 @@ def generate_artifacts(
                         payload.get("quotes_final")
                     )
                 validate_required_evidence_references(payload, task.ctx)
+                if task.step_name == "insights_final":
+                    validate_final_insight_candidate_lineage(
+                        final_insights=payload.get("insights_final") or [],
+                        candidate_insights=insights_candidates,
+                    )
 
         elif task.step_name == "summary":
 
@@ -691,6 +697,7 @@ def generate_artifacts(
             )
         else:
             reuse = None
+        reuse_rejection_reason = ""
         soft_copy_family = _SOFT_COPY_NAMESPACES.get(namespace)
         retained_soft_copy = (
             soft_copy_prompt_family_materialization_from_payload(reuse.output_payload)
@@ -727,6 +734,27 @@ def generate_artifacts(
                 soft_copy_reuse_rejection_reason="soft_copy_provenance_incompatible",
             )
         if reuse is not None and reuse.reusable:
+            public_output = (
+                retained_soft_copy.public_output
+                if retained_soft_copy is not None
+                else reuse.output_payload
+            )
+            if payload_validator is not None:
+                cached_payload = {root_key: public_output}
+                try:
+                    payload_validator(cached_payload)
+                except AppError as error:
+                    reuse_rejection_reason = f"cached_payload_validation:{error.code}"
+                    reuse = None
+                else:
+                    public_output = cached_payload.get(root_key)
+            if reuse is None:
+                update_family_reuse(
+                    namespace,
+                    cache_reuse_rejected=True,
+                    cache_reuse_rejection_reason=reuse_rejection_reason,
+                )
+        if reuse is not None and reuse.reusable:
             with family_state_lock:
                 reused = family_reuse_telemetry["reused_families"]
                 assert isinstance(reused, list)
@@ -739,11 +767,6 @@ def generate_artifacts(
                     artifact_id=reuse.artifact_id,
                     output_hash=reuse.output_hash,
                 )
-            public_output = (
-                retained_soft_copy.public_output
-                if retained_soft_copy is not None
-                else reuse.output_payload
-            )
             record_family_output(namespace, reuse.output_payload)
             if soft_copy_family and retained_soft_copy is not None:
                 with family_state_lock:
@@ -773,11 +796,17 @@ def generate_artifacts(
                     or "soft_copy_provenance_missing"
                 )
                 if family_reuse[namespace].get("soft_copy_reuse_rejected")
+                else str(
+                    family_reuse[namespace].get("cache_reuse_rejection_reason")
+                    or "cached_payload_validation_failed"
+                )
+                if family_reuse[namespace].get("cache_reuse_rejected")
                 else reuse.reason
             )
             if (
                 reuse is not None
                 or family_reuse[namespace].get("soft_copy_reuse_rejected")
+                or family_reuse[namespace].get("cache_reuse_rejected")
             )
             else (
                 "vector_store_provenance_missing"
@@ -1308,6 +1337,10 @@ def generate_artifacts(
     def validate_final_insight_references(payload: Dict[str, Any]) -> None:
         normalize_required_evidence_references(payload)
         validate_required_evidence_references(payload, insights_final_ctx)
+        validate_final_insight_candidate_lineage(
+            final_insights=payload.get("insights_final") or [],
+            candidate_insights=insights_candidates,
+        )
 
     insights_final_result: Dict[str, Any]
     if dependency_dag_enabled:

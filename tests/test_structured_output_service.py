@@ -125,6 +125,48 @@ def test_recovery_feedback_names_unknown_references_and_uncovered_sentences() ->
     assert "response_text" not in exc_info.value.context
 
 
+def test_recovery_feedback_names_invalid_final_insight_ids() -> None:
+    seen_schema_errors: list[str] = []
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        del mode, original_response
+        seen_schema_errors.append(schema_errors)
+        return _response({"insights_final": []})
+
+    def validate_payload(candidate: dict) -> None:
+        del candidate
+        raise AppError(
+            code="artifact_final_insight_lineage_invalid",
+            message="Final insight identity is not bound to a candidate",
+            retryable=False,
+            context={"invalid_insight_ids": ["unmatched-final-id"]},
+        )
+
+    with pytest.raises(StructuredOutputFailure) as exc_info:
+        execute_structured_output(
+            StructuredOutputExecutionRequest(
+                schema_version="1.0",
+                report_id="insight-lineage-1",
+                artifact_family="insights_final",
+                schema_name="artifacts",
+                model="gpt-5-mini",
+                terminal_failure_code="artifact_structured_output_invalid",
+            ),
+            _ctx(),
+            call_model=call_model,
+            normalize_payload=lambda payload: payload,
+            validate_payload=validate_payload,
+            is_substantive=lambda candidate: bool(candidate),
+            model_pricing={},
+        )
+
+    assert any(
+        "invalid insight ids: unmatched-final-id" in error
+        for error in seen_schema_errors
+    )
+    assert exc_info.value.context["invalid_insight_ids"] == ["unmatched-final-id"]
+
+
 def test_recovery_repairs_retained_empty_document_map_and_records_attempts(
     caplog,
     assert_logs_have_required_fields,

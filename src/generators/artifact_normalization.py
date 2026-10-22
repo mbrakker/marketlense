@@ -1136,6 +1136,59 @@ def select_artifact_insights(
     return selected
 
 
+def validate_final_insight_candidate_lineage(
+    *,
+    final_insights: List[Dict[str, Any]],
+    candidate_insights: List[Dict[str, Any]],
+) -> None:
+    """Reject final identities that cannot resolve to one bound candidate.
+
+    Final-stage selection may fill missing slots from eligible candidates, but
+    an emitted final identity must first be validated.  Raising the existing
+    application error lets structured-output recovery record the invalid ID
+    instead of silently dropping it and retaining a different proposition.
+    """
+
+    candidate_facts = _candidate_factual_fields(candidate_insights)
+    final_ids: list[str] = []
+    duplicate_ids: set[str] = set()
+    seen_ids: set[str] = set()
+    missing_id = False
+    for insight in final_insights:
+        if not isinstance(insight, dict):
+            continue
+        insight_id = _s(insight.get("id")).strip()
+        if not insight_id:
+            missing_id = True
+            continue
+        if insight_id in seen_ids:
+            duplicate_ids.add(insight_id)
+            continue
+        seen_ids.add(insight_id)
+        final_ids.append(insight_id)
+
+    invalid_ids = sorted(
+        {insight_id for insight_id in final_ids if insight_id not in candidate_facts}
+    )
+    if not invalid_ids and not duplicate_ids and not missing_id:
+        return
+    context: Dict[str, Any] = {}
+    if invalid_ids:
+        context["invalid_insight_ids"] = invalid_ids
+    if duplicate_ids:
+        context["duplicate_insight_ids"] = sorted(duplicate_ids)
+    if missing_id:
+        context["missing_insight_id"] = True
+    raise AppError(
+        code="artifact_final_insight_lineage_invalid",
+        message=(
+            "Final insight identities must resolve to unique, evidence-bound candidates"
+        ),
+        retryable=False,
+        context=context,
+    )
+
+
 def _candidate_factual_fields(
     candidate_insights: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, Any]]:
@@ -1322,21 +1375,27 @@ def _candidate_spans_are_compatible(
 ) -> bool:
     for candidate_span in candidate_spans:
         for other_span in other_spans:
-            if not _compatible_span_source(
-                candidate_span.get("source_pack"),
-                other_span.get("source_pack"),
-            ) or not _compatible_span_source(
-                candidate_span.get("section_id"),
-                other_span.get("section_id"),
-            ) or not _compatible_span_source(
-                candidate_span.get("source_identity"),
-                other_span.get("source_identity"),
-            ) or not _compatible_span_source(
-                candidate_span.get("source_id"),
-                other_span.get("source_id"),
-            ) or not _compatible_span_source(
-                candidate_span.get("evidence_id"),
-                other_span.get("evidence_id"),
+            if (
+                not _compatible_span_source(
+                    candidate_span.get("source_pack"),
+                    other_span.get("source_pack"),
+                )
+                or not _compatible_span_source(
+                    candidate_span.get("section_id"),
+                    other_span.get("section_id"),
+                )
+                or not _compatible_span_source(
+                    candidate_span.get("source_identity"),
+                    other_span.get("source_identity"),
+                )
+                or not _compatible_span_source(
+                    candidate_span.get("source_id"),
+                    other_span.get("source_id"),
+                )
+                or not _compatible_span_source(
+                    candidate_span.get("evidence_id"),
+                    other_span.get("evidence_id"),
+                )
             ):
                 continue
             candidate_text = normalize_for_lookup(
@@ -1368,9 +1427,7 @@ def _candidate_spans_are_compatible(
     return False
 
 
-def _span_offsets_are_concrete(
-    left: Dict[str, Any], right: Dict[str, Any]
-) -> bool:
+def _span_offsets_are_concrete(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
     return _span_offset_pair(left) is not None and _span_offset_pair(right) is not None
 
 

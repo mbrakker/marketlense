@@ -638,6 +638,8 @@ _ACTIONABLE_CONTEXT_LIST_KEYS = (
     "missing_reference_ids",
     "missing_evidence_ids",
     "missing_claim_ids",
+    "invalid_insight_ids",
+    "duplicate_insight_ids",
 )
 
 

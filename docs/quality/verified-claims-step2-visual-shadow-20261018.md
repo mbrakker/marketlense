@@ -2410,3 +2410,67 @@ module's seven pre-existing findings, and changed modules compiled. No
 canonical claim, publication-readiness state, or WordPress content was
 written. Step 1/E18 and Step 2 remain **PARTIAL**; this work does not claim
 fresh live selection improvement and Step 3 remains **NO-GO / unstarted**.
+
+#### Verified Claims integrity checkpoint — 2026-10-22
+
+This checkpoint starts from `73af170` and closes the remaining demonstrated
+contract and final-lineage defects without changing Step 2's shadow-only
+boundary.
+
+- The P0 CI failure was a generated-snapshot omission: `verified_claims` was
+  already at schema v1.1, while `docs/quality/contract_schemas.json` still
+  reflected the prior contract. The update produced only the five intentional
+  v1.1 fields (`original_metric_binding`, `corrected_evidence_ids`,
+  `corrected_evidence_spans`, `corrected_metric_binding`, and
+  `corrected_source_binding_status`); the no-update checker then passed.
+- Final insight payloads now pass through one deterministic lineage validator
+  before admission, cached reuse, and targeted regeneration return. Unknown,
+  duplicate, empty, or conflict-excluded stable IDs raise the existing
+  structured-output error with bounded diagnostics; an invalid final ID can no
+  longer be silently replaced while retaining its editorial identity. Cached
+  final families are validated before reuse and regenerate through the existing
+  family path when rejected. Valid same-ID editorial rewrites still retain
+  their final wording while protected candidate facts and evidence bindings are
+  restored. No selector ranking or fallback policy was changed.
+- Regeneration validates the regenerated roster against both the current
+  candidate pool and retained prior final bindings. This preserves legitimate
+  targeted repairs while failing closed on a newly introduced identity. The
+  cache regression proves one final-family regeneration, records the rejection
+  reason, and emits no unmatched ID.
+- The exact frozen-five provider-free replay remains **15 reference cases / 39
+  variants**, **29 selected IDs**, **29/29 theme slots**, five matching source
+  hashes, and zero provider calls or fabricated fixture substitutions. The
+  selected identities, physical pages, evidence spans and protected bindings
+  are unchanged from the retained Step 1 baseline. This is a replay of retained
+  artifacts, not evidence of improved live selection effectiveness.
+- A targeted live Criteo `newer-channels-perceived-roi` run used GPT-6 Luna
+  High and the hash-matched PDF page 5. It was verified first pass with 2
+  calls, 14,037 input tokens, 1,086 output tokens, 15,123 total tokens,
+  estimated cost `$0.001947`, and 20.344 seconds. The corrected claim
+  explicitly distinguishes a respondent expectation from measured ROI; its
+  changed proposition correctly remains `unbound` rather than inheriting the
+  original metric binding. This is one targeted recovery, not a full-cohort
+  quality measurement.
+- No deterministic omission, ranking, minimum-count, or shared-batch
+  reliability change was justified by the retained audit. The known
+  within-theme omissions remain editorial coverage limitations; the shared
+  batch remains invalid for independent selection-repeatability evidence.
+  KPMG quote-4, Algolia quote-001, and Bain quote-4 retain the existing unique
+  physical-page-only recovery policy (pages 35, 26, and 1 respectively), with
+  ambiguous cases remaining unbound.
+
+Verification for this checkpoint: the affected artifact/source/visual,
+shortlisting, regeneration, structured-output, and contract suites passed
+**253 tests with 1 deselected**. Contract snapshot validation passed; changed
+modules compiled; changed-file formatting passed after formatting the touched
+files. Ruff still reports **eight pre-existing findings** in
+`report_regeneration_generator.py` (introduced by older commits, including its
+existing list-comprehension finding); no new finding is attributable to this
+checkpoint. No canonical claim, readiness state, publication artifact, or
+WordPress content was written.
+
+Verdict: Step 1/E18 remains **PARTIAL** and Step 2 remains
+**PARTIAL/NO-GO**. Step 3 remains unstarted. The checkpoint closes the
+demonstrated integrity defects, but fresh full-cohort selection effectiveness,
+clean shared-batch repeatability, source-recall measurement, and P6 human
+editorial acceptance remain outstanding.
