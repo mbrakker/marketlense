@@ -1061,7 +1061,10 @@ def _public_citation_label(value: str) -> str:
         "report_context",
     }:
         return ""
-    if re.match(r"(?:quote|finding|insight|figure|claim)[_-]", lowered):
+    if re.search(
+        r"(?<![a-z0-9])(?:quote|finding|insight|figure|claim)[_-][a-z0-9_-]+",
+        lowered,
+    ):
         return ""
     if re.fullmatch(
         r"(?:[a-z]{1,4}[-_]?\d{1,5}|(?:quote|finding|insight|figure|claim)[_-][a-z0-9_-]+)",

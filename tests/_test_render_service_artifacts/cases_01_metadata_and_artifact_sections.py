@@ -273,7 +273,7 @@ def test_quote_author_projection_drops_embedded_internal_quote_identifier() -> N
             {
                 "text": "The market is moving toward measurable outcomes.",
                 "speaker": "Example expert team market-outlook-2026-quote-01",
-                "evidence_id": "quote-01",
+                "evidence_id": "market-outlook-2026-quote-01",
                 "page": 10,
             }
         ],
@@ -285,6 +285,7 @@ def test_quote_author_projection_drops_embedded_internal_quote_identifier() -> N
     assert quotes[0]["author"] == "Example Publisher expert team"
     assert "quote-01" not in quotes[0]["author"]
     assert "quote-01" not in quotes[0]["citation_line"]
+    assert _public_citation_label("market-outlook-2026-quote-01") == ""
 
 
 @pytest.mark.parametrize(
