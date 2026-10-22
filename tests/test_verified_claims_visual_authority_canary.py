@@ -19,8 +19,14 @@ from src.contracts.verified_claims import (
     VisualClaimEvaluationResult,
 )
 from src.generators._artifact_generator.generation import generate_artifacts
+from src.generators._artifact_generator.family_policy import (
+    build_artifact_family_status,
+)
 from src.generators.artifact_normalization import (
+    artifact_evidence_span_index,
+    bind_artifact_evidence_spans,
     build_verified_fact_doc_map,
+    page_bound_direct_evidence_packs,
     remap_editorial_plan_to_verified_facts,
 )
 from src.generators.verified_claims_canary import (
@@ -556,6 +562,117 @@ def test_same_id_equivalent_duplicate_is_evaluated_once_without_quarantine():
     assert admission.audit["coverage_complete"] is True
 
 
+def test_verified_facts_survive_explicit_unresolved_sibling_results():
+    first = _candidate("candidate-1", evidence_id="finding-1", page=4)
+    second = _candidate("candidate-2", evidence_id="finding-2", page=5)
+
+    admission = admit_visual_authority_candidates(
+        candidates=[first, second],
+        evaluation=_response(
+            _result(first),
+            _result(second, outcome="unresolved"),
+        ),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(first, second),
+    )
+
+    assert [fact["fact_id"] for fact in admission.verified_facts] == ["candidate-1"]
+    assert admission.audit["coverage_complete"] is True
+    assert admission.audit["outcome_counts"] == {"verified": 1, "unresolved": 1}
+    assert admission.audit["quarantined"] == [
+        {"candidate_id": "candidate-2", "reason": "outcome_unresolved"}
+    ]
+
+
+def test_missing_result_is_an_integrity_failure_not_partial_admission():
+    first = _candidate("candidate-1", evidence_id="finding-1", page=4)
+    second = _candidate("candidate-2", evidence_id="finding-2", page=5)
+
+    admission = admit_visual_authority_candidates(
+        candidates=[first, second],
+        evaluation=_response(_result(first)),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(first, second),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["terminal_error"] == "evaluation_coverage_incomplete"
+    assert {item["reason"] for item in admission.audit["quarantined"]} == {
+        "evaluation_missing"
+    }
+
+
+def test_verified_fact_projection_is_not_direct_quote_evidence():
+    candidate = _candidate()
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(_result(candidate)),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    evidence_id = "verified-fact:candidate-1"
+    index = artifact_evidence_span_index(
+        doc_map={}, evidence_packs=admission.verified_evidence_packs
+    )
+    assert index[evidence_id][0]["source_pack"] == "verified_facts"
+    assert (
+        page_bound_direct_evidence_packs(admission.verified_evidence_packs)["findings"][
+            "findings"
+        ]
+        == []
+    )
+    quote_status = build_artifact_family_status(
+        summary={},
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[
+            {
+                "text": candidate["text"],
+                "evidence_id": evidence_id,
+                "evidence_spans": index[evidence_id],
+            }
+        ],
+        expert_comment="",
+        linkedin_post="",
+    )
+    assert quote_status["quotes"]["reason"] == "quotes_missing_verbatim_source"
+
+    projected = deepcopy(admission.admitted_candidates[0])
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=[projected],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs=admission.verified_evidence_packs,
+    )
+    assert projected["pages"] == [4]
+    assert projected["evidence_spans"][0]["source_pack"] == "verified_facts"
+
+
+def test_invalid_terminal_outcome_fails_closed_as_malformed_accounting():
+    candidate = _candidate()
+    result = _result(candidate, outcome="rejected")
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(result),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["terminal_error"] == "evaluation_coverage_incomplete"
+    assert admission.audit["quarantined"] == [
+        {"candidate_id": "candidate-1", "reason": "evaluation_outcome_invalid"}
+    ]
+
+
 def test_verified_fact_conflicting_identity_fails_closed():
     candidate = _candidate()
     result = _result(
@@ -698,7 +815,7 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
     )
 
 
-def test_verified_fact_context_removes_discovery_facts_and_remaps_plan_ids():
+def test_verified_fact_context_removes_discovery_facts_and_omits_unmapped_themes():
     source_doc_map = {
         "doc_id": "report-1",
         "title": "Report title",
@@ -721,13 +838,21 @@ def test_verified_fact_context_removes_discovery_facts_and_remaps_plan_ids():
                 "discovery_candidate_id": "candidate-1",
                 "discovery_evidence_ids": ["finding-1"],
             },
-        }
+        },
+        {
+            "fact_id": "candidate-2",
+            "provenance": {
+                "discovery_candidate_id": "candidate-2",
+                "discovery_evidence_ids": ["finding-2"],
+            },
+        },
     ]
     plan = {
         "report_thesis": "The report has a planning thesis.",
         "themes": [
             {"theme": "Theme 1", "priority": 1, "evidence_ids": ["finding-1"]},
             {"theme": "Theme 2", "priority": 2, "evidence_ids": ["missing"]},
+            {"theme": "Theme 3", "priority": 3, "evidence_ids": ["finding-2"]},
         ],
     }
 
@@ -742,8 +867,27 @@ def test_verified_fact_context_removes_discovery_facts_and_remaps_plan_ids():
     }
     assert [theme["evidence_ids"] for theme in remapped["themes"]] == [
         ["verified-fact:candidate-1"],
-        ["verified-fact:candidate-1"],
+        ["verified-fact:candidate-2"],
     ]
+
+
+def test_verified_fact_context_fails_closed_when_coverage_has_one_mapped_theme():
+    plan = {
+        "report_thesis": "The report has a planning thesis.",
+        "themes": [
+            {"theme": "Theme 1", "priority": 1, "evidence_ids": ["finding-1"]},
+            {"theme": "Unsupported", "priority": 2, "evidence_ids": ["missing"]},
+        ],
+    }
+    facts = [
+        {
+            "fact_id": "candidate-1",
+            "provenance": {"discovery_evidence_ids": ["finding-1"]},
+        }
+    ]
+
+    with pytest.raises(AppError, match="Verified-fact editorial coverage"):
+        remap_editorial_plan_to_verified_facts(plan, facts)
 
 
 def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path):
