@@ -243,12 +243,12 @@ def remap_editorial_plan_to_verified_facts(
             unmapped_themes.append(theme["theme"])
             continue
         themes.append({**theme, "evidence_ids": mapped})
-    if len(themes) < 2:
+    if len(themes) < MIN_FINAL_ARTIFACT_INSIGHTS:
         raise AppError(
             code="verified_fact_editorial_coverage_insufficient",
             message=(
-                "Verified-fact editorial coverage requires at least two themes "
-                "with unambiguous fact bindings"
+                "Verified-fact editorial coverage requires at least "
+                f"{MIN_FINAL_ARTIFACT_INSIGHTS} themes with unambiguous fact bindings"
             ),
             retryable=False,
             context={
