@@ -2361,3 +2361,52 @@ WordPress write; those calls are excluded from all ten-report metrics.
 Step 1/E18 and Step2 remain **PARTIAL**; P6 remains open and Step 3 remains
 **NO-GO / unstarted**. No ranking, fallback, minimum-count, cache, canonical,
 or publication behavior was changed by this audit.
+
+#### Ten-report integrity corrections — 2026-10-22
+
+This follow-up implements only the confirmed integrity defects from the
+ten-report audit. It was verified locally from retained artifacts and did not
+run a new provider evaluation. The prior ten-report live result remains the
+measurement baseline: 59 rows, 58 first-pass verified and one Criteo
+`failed_verification`; its malformed Criteo response was empty/non-JSON and
+did not provide a safe repair payload.
+
+- Corrected-claim lineage is now separate from original lineage. The Algolia
+  58% revenue candidate keeps its original candidate/evidence/metric/page
+  binding; a materially different 53%/39% investment correction retains only
+  its verified final text and inspected-page record unless an independently
+  bound corrected evidence/metric binding is present. The replay helper cannot
+  promote the original binding into that changed proposition.
+- Final insight admission now rejects an unmatched final-stage stable ID at
+  the final artifact boundary and fills from eligible candidates. An eligible
+  same-ID final rewrite keeps its editorial wording while restoring the
+  candidate's protected factual fields. The retained Emplifi artifact was not
+  rewritten; a provider-free selector check admitted `behavior-cross-check`
+  and rejected the unmatched `behavior-high-value-research` identity.
+- The existing fidelity results resolve unique physical pages for the three
+  audited missing-page cases: KPMG quote-4 to page 35, Algolia quote-001 to
+  page 26, and Bain quote-4 to page 1. Fresh evidence-pack construction now
+  attaches such a page only when fidelity returns exactly one physical page;
+  ambiguous or unsupported results remain unbound/provisional. Printed page
+  labels are not substituted for physical PDF pages, and retained historical
+  artifacts remain unchanged.
+- Verification responses now distinguish malformed/schema-invalid output from
+  substantive source rejection, require a substantive source-specific note
+  and supporting pages for a verified outcome, retain typed provider failure
+  metadata, and keep the existing two correction/two verification attempt
+  bounds. The Criteo retained result therefore remains fail-closed.
+- `--provider-free --live` is rejected before dispatch. The explicit
+  provider-free replay completed with 0 provider calls, 0 fabricated fixture
+  substitutions, 15 reference cases / 39 variants, 5/5 matching PDF hashes,
+  29 retained IDs and 29/29 theme slots. Its limitation remains explicit: it
+  does not measure live correction quality or selection effectiveness.
+
+Focused verification after these changes passed **66 tests**, the broader
+artifact/source/visual suite passed **147 tests with 1 expected skip**, the
+affected generator/regeneration suite passed **395 tests**, and the focused
+Step 2 acceptance/provenance suite passed **202 tests with 1 expected skip and
+1 deselection**. Ruff passed for all changed files except the regeneration
+module's seven pre-existing findings, and changed modules compiled. No
+canonical claim, publication-readiness state, or WordPress content was
+written. Step 1/E18 and Step 2 remain **PARTIAL**; this work does not claim
+fresh live selection improvement and Step 3 remains **NO-GO / unstarted**.
