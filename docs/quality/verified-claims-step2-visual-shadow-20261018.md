@@ -2821,3 +2821,92 @@ provider-free verified-fact snapshots for the retained cohort, and an
 independent review of every final output remain outstanding. This checkpoint
 does not claim improved live selection quality or alter the Step 2
 PARTIAL/NO-GO status.
+
+#### Step 3 stabilization — 2026-10-22 (current branch)
+
+This checkpoint records the current-head correction after the first opt-in
+verified-fact canary replay. The canary remains opt-in and shadow-only: no
+canonical claim, publication-readiness, or WordPress state was mutated.
+
+The root causes were bounded and were fixed without a new service or model
+call:
+
+* `admit_visual_authority_candidates()` previously returned an empty admission
+  whenever any result was unresolved or failed, even when other candidates had
+  complete independent verified facts. It now requires exact one-result
+  accounting for every expected identity, records terminal outcome counts and
+  quarantine reasons, fails closed on missing/duplicate/unexpected/conflicting/
+  malformed identities, and admits only individually valid `verified` or
+  `verified_after_retry` facts. `unresolved`, `failed_verification`, and
+  `skipped` are terminal accounting outcomes, not facts.
+* Verified-fact projections retain the stable
+  `verified-fact:<fact_id>` reference, authoritative statement, metric, source
+  hash, identity, and physical pages. Page notes are carried under the
+  `verified_facts` source pack and are excluded from direct evidence and
+  publisher-quote validation; they are analytical provenance, not PDF quotes.
+* Verified editorial-plan remapping no longer assigns an unrelated fact by
+  modulo index. Unmapped themes are omitted and the existing minimum insight
+  requirement is enforced with typed `visual_authority_coverage_insufficient`
+  errors when the admitted set cannot support a report.
+
+Focused regressions now cover mixed verified/unresolved and
+verified/failed-verification results, missing/duplicate/unexpected/malformed
+accounting, wrong hash/page and metric failures, synthetic-span quote
+exclusion, contradictory planning input, cache replay, regeneration, and
+typed minimum coverage. The affected local suite passed **530 tests with 1
+skip in 20.52 seconds**. Formatting, compilation, public-report quality, and
+diff checks passed.
+
+**Provider-free retained-artifact replay.** The exact retained Algolia cache
+was replayed through the current admission function using its five actual
+verified response payloads and its actual unresolved `revenue-incentive-58`
+correction result. The previous behavior produced no artifact from this
+6-claim run. The corrected accounting produced **5 admitted facts / 1
+unresolved**, with `coverage_complete=true`, outcome counts of **5 verified,
+1 unresolved**, and no fabricated fact or unsupported binding. This validates
+the admission correction only; it is not fresh live editorial-generation
+quality evidence.
+
+The retained ten-report Step 2 result was also passed through the current
+admission boundary: **59/59 identities were accounted for, but 0/59 were
+admitted** because those result records contain no authoritative
+`verified_fact` snapshots. This is the required fail-closed result, not a
+quality regression. No ten-report Step 3 downstream run was claimed from
+those records.
+
+For the three retained Step 3 artifacts with authoritative snapshots, a
+provider-free current-head rebind replay preserved all downstream numeric
+content while changing only the provenance classification:
+
+| Report | Facts / final insights | Metric spine before → after | Key figures before → after | Final span source before → after |
+|---|---:|---:|---:|---|
+| Criteo | 5 / 5 | 4 → 4 | 2 → 2 | `findings` → `verified_facts` |
+| Adjust | 5 / 5 | 2 → 2 | 2 → 2 | `findings` → `verified_facts` |
+| DoubleVerify | 5 / 5 | 1 → 1 | 0 → 0 | `findings` → `verified_facts` |
+
+The DoubleVerify zero-key-figure result is therefore not projection loss. Its
+existing normalization rejects composite semicolon-separated metric displays;
+the retained authoritative facts do not provide a safe existing decomposition
+into separate key-figure bindings. No speculative numeric enrichment was
+added. Full-page PDF review confirmed the retained final claims on pages 3,
+8, 9, and 10, including the page-10 North America Video values 128 (In-App)
+and 88 (Mobile Web); no independent factual error was found in that review.
+
+The prior bounded GPT-6 Luna High runs remain the measured live baseline:
+they recorded **17/19/17/17 calls** for Criteo/Adjust/DoubleVerify/Algolia,
+the tokens, costs, latency, and cache reuse listed in the preceding canary
+checkpoint, with no publication writes. No new provider calls were made by
+this correction; the current-head provider-free replay must not be presented
+as a fresh live editorial-quality improvement. The current retained Criteo,
+Adjust, and DoubleVerify editorial outputs were reviewed against full source
+PDF pages; Algolia has no final artifact because the five-fact snapshot was
+available only in the retained verification cache, not in a completed
+current-head generation.
+
+**Current verdict: PARTIAL.** The verified-fact authority boundary, exact
+accounting, mixed-outcome admission, input isolation, quote semantics, cache
+identity, regeneration continuity, and current-head regression suite pass.
+Step 3 is not ready to close because a fresh current-head editorial generation
+and independent review for the complete retained ten-report cohort remain
+unavailable, and live selection effectiveness is still unmeasured. The
+previous Step 2 **PARTIAL/NO-GO** status is unchanged.
