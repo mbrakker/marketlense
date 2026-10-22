@@ -267,6 +267,26 @@ def test_public_citation_label_rejects_internal_provenance_identifiers() -> None
     assert _public_citation_label('"Market report"') == '"Market report"'
 
 
+def test_quote_author_projection_drops_embedded_internal_quote_identifier() -> None:
+    quotes = _coerce_quotes(
+        [
+            {
+                "text": "The market is moving toward measurable outcomes.",
+                "speaker": "Example expert team market-outlook-2026-quote-01",
+                "evidence_id": "quote-01",
+                "page": 10,
+            }
+        ],
+        {},
+        "Example Publisher",
+        report_title="Market Outlook 2026",
+    )
+
+    assert quotes[0]["author"] == "Example Publisher expert team"
+    assert "quote-01" not in quotes[0]["author"]
+    assert "quote-01" not in quotes[0]["citation_line"]
+
+
 @pytest.mark.parametrize(
     ("source_title", "max_length", "public_title"),
     [

@@ -428,6 +428,64 @@ def test_explicit_combined_category_accepts_the_rounded_sum() -> None:
     )
 
 
+def test_insight_metric_relationship_prefers_precise_findings_statement_span() -> None:
+    claim = (
+        "Q1 2026 In-App Display / Video Attention Index: North America 96 / 128; "
+        "APAC 109 / 131; LATAM 106 / 112; EMEA 95 / 130."
+    )
+    noisy_chart_evidence = (
+        "10 QUARTERLY BENCHMARKS | Q1 2026 Regional Performance APAC "
+        "EMEA North America LATAM Desktop In-App Mobile Web Display Video "
+        "106109102 11513199 APAC Desktop In-App Mobile Web Display Video "
+        "12595110 107130101 EMEA Desktop In-App Mobile Web Display Video "
+        "1079689 9312888 North America Desktop In-App Mobile Web Display Video "
+        "104106108 9211284 LATAM In-Depth Regional Performance Exposure "
+        "Engagement ProminenceIndex IntensityIndex User PresenceIndex "
+        "Ad InteractionIndex APAC 153 93 99 109 EMEA 125 95 112 139 "
+        "LATAM 115 109 98 84 North America 82 103 95 99 Source: DV Internal Data"
+        " In Attention Index by Regions for Q1 2026, In-App Display / Video "
+        "index values were North America 96 / 128, APAC 109 / 131, "
+        "LATAM 106 / 112, and EMEA 95 / 130."
+    )
+    findings_statement = (
+        "In Attention Index by Regions for Q1 2026, In-App Display / Video "
+        "index values were North America 96 / 128, APAC 109 / 131, "
+        "LATAM 106 / 112, and EMEA 95 / 130."
+    )
+    report = evaluate_public_editorial_quality(
+        report_id="doubleverify-findings-statement-precedence",
+        artifacts={
+            "insights_final": [
+                {
+                    "id": "q1-2026-in-app-attention-indices",
+                    "text": claim,
+                    "evidence_id": "regional-in-app-display-video-q1-2026",
+                    "evidence": noisy_chart_evidence,
+                    "evidence_spans": [
+                        {
+                            "evidence_id": "regional-in-app-display-video-q1-2026",
+                            "source_pack": "findings",
+                            "page": 10,
+                            "text": noisy_chart_evidence,
+                        },
+                        {
+                            "evidence_id": "regional-in-app-display-video-q1-2026",
+                            "source_pack": "findings_statement",
+                            "page": 10,
+                            "text": findings_statement,
+                        },
+                    ],
+                    "metric": {},
+                }
+            ]
+        },
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" not in {
+        issue.rule_id for issue in report.issues
+    }
+
+
 def test_combined_category_rejects_a_value_outside_the_rounded_sum() -> None:
     evidence = "Display accounts for 45.85% of spend; CTV accounts for 30.83%."
 

@@ -8,7 +8,10 @@ from PIL import Image
 
 from src.contracts.report_assets import RenderRequest
 from src.contracts.run_context import RunContext
-from src.services._render_service.normalization import _public_citation_label
+from src.services._render_service.normalization import (
+    _coerce_quotes,
+    _public_citation_label,
+)
 from src.services._render_service.view import (
     _build_seo_title,
     _marketlense_article_url,
@@ -24,6 +27,7 @@ __all__ = [
     "Path",
     "pytest",
     "Image",
+    "_coerce_quotes",
     "RenderRequest",
     "RunContext",
     "_public_citation_label",

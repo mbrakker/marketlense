@@ -449,7 +449,12 @@ def _text_issues(
             )
         )
     relationship_explanation = _metric_label_relationship_explanation(
-        text, str(item.get("evidence_text") or "")
+        text,
+        str(
+            item.get("metric_relationship_evidence_text")
+            or item.get("evidence_text")
+            or ""
+        ),
     )
     if relationship_explanation:
         issues.append(
@@ -503,6 +508,9 @@ def _insight_issues(
             repair_target="insights_bundle",
             evidence_status=_evidence_status(insight),
             evidence_text=evidence,
+        )
+        item["metric_relationship_evidence_text"] = (
+            _preferred_metric_relationship_evidence(insight) or evidence
         )
         if text and (not evidence_id or not evidence):
             issues.append(
@@ -566,6 +574,22 @@ def _insight_issues(
                 else:
                     issues.extend(_text_issues(report_id, implication))
     return issues
+
+
+def _preferred_metric_relationship_evidence(insight: Mapping[str, Any]) -> str:
+    """Prefer an authoritative findings statement for label/value binding checks."""
+    statements: list[str] = []
+    for raw_span in insight.get("evidence_spans") or []:
+        if not isinstance(raw_span, Mapping):
+            continue
+        if str(raw_span.get("source_pack") or "").strip().casefold() != (
+            "findings_statement"
+        ):
+            continue
+        text = str(raw_span.get("text") or raw_span.get("evidence") or "").strip()
+        if text and text not in statements:
+            statements.append(text)
+    return "\n".join(statements)
 
 
 def _key_figure_issues(

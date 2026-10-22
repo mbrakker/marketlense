@@ -948,7 +948,15 @@ def _coerce_quotes(
 def _display_quote_author(author: str, publisher: str) -> str:
     normalized_author = _s(author)
     if normalized_author and normalized_author.casefold() != "unknown":
-        return normalized_author
+        internal_tokens = re.finditer(
+            r"(?:quote|finding|insight|figure|claim)[_-][a-z0-9_-]+",
+            normalized_author,
+            re.IGNORECASE,
+        )
+        if not any(
+            not _public_citation_label(match.group(0)) for match in internal_tokens
+        ):
+            return normalized_author
     normalized_publisher = _s(publisher)
     if normalized_publisher:
         return f"{normalized_publisher} expert team"
