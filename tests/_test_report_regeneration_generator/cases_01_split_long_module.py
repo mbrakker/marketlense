@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -23,11 +24,30 @@ def test_restore_missing_final_insight_roster_replaces_duplicate_model_id() -> N
     restored = _restore_missing_final_insight_roster(
         selected_insights=selected,
         prior_final_insights=prior,
+        eligible_candidate_insights=[
+            {"id": "insight-1", "text": "Candidate one", "evidence_id": "f1"},
+            {"id": "insight-2", "text": "Candidate two", "evidence_id": "f2"},
+        ],
     )
 
     assert [item["id"] for item in restored] == ["insight-2", "insight-1"]
     assert restored[0]["text"] == "Repaired two"
     assert restored[1] == prior[0]
+
+
+def test_stale_prior_final_id_is_not_reintroduced() -> None:
+    selected = [
+        {"id": "current", "text": "Current candidate", "evidence_id": "f-current"}
+    ]
+    prior = [{"id": "stale", "text": "Stale final", "evidence_id": "f-stale"}]
+
+    restored = _restore_missing_final_insight_roster(
+        selected_insights=selected,
+        prior_final_insights=prior,
+        eligible_candidate_insights=selected,
+    )
+
+    assert [item["id"] for item in restored] == ["current"]
 
 
 def test_grounding_package_quarantines_failed_evidence_and_uses_replacements() -> None:

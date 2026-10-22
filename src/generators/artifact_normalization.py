@@ -1189,6 +1189,38 @@ def validate_final_insight_candidate_lineage(
     )
 
 
+def eligible_final_insight_candidates(
+    candidate_insights: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Return one authoritative, source-bound candidate for each stable ID."""
+
+    candidate_facts = _candidate_factual_fields(candidate_insights)
+    eligible: List[Dict[str, Any]] = []
+    for insight_id, group in _candidate_insight_groups(candidate_insights).items():
+        if insight_id not in candidate_facts:
+            continue
+        reliable = [
+            insight for insight in group if _s(insight.get("evidence_id")).strip()
+        ]
+        if reliable:
+            eligible.append(
+                _restore_candidate_factual_fields(
+                    min(reliable, key=_insight_quality_key), candidate_facts
+                )
+            )
+    return eligible
+
+
+def restore_artifact_insight_factual_fields(
+    insight: Dict[str, Any], candidate_insights: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Restore a final insight from the authoritative candidate fact index."""
+
+    return _restore_candidate_factual_fields(
+        insight, _candidate_factual_fields(candidate_insights)
+    )
+
+
 def _candidate_factual_fields(
     candidate_insights: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, Any]]:

@@ -46,6 +46,7 @@ from src.generators.artifact_normalization import (
     build_expert_synthesis_context,
     discard_location_only_insights,
     discard_location_only_quotes,
+    eligible_final_insight_candidates,
     fallback_artifact_insights_from_findings,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
@@ -56,6 +57,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_toc_entries,
     normalize_artifact_topics,
     normalize_expert_domain,
+    restore_artifact_insight_factual_fields,
     select_artifact_insights,
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
@@ -1841,15 +1843,15 @@ def _restore_missing_final_insight_roster(
     *,
     selected_insights: List[Dict[str, Any]],
     prior_final_insights: List[Dict[str, Any]],
+    eligible_candidate_insights: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    """Keep a repaired final-insight roster one-to-one with prior stable IDs.
+    """Restore only prior IDs that remain in the eligible candidate pool.
 
     A model can emit a duplicate ID while selecting a fixed-size final roster.
-    If that displaces another prior material insight, the deterministic
-    candidate gate correctly rejects the result for losing evidence continuity.
-    Replace only duplicate or newly introduced IDs with the displaced prior
-    item; explicit repairs for the first occurrence of a stable ID remain
-    intact.
+    If that displaces another prior material insight, restore its final wording
+    only when the same ID still resolves to an eligible source-bound candidate.
+    The candidate supplies all protected factual fields; a prior final record
+    alone is never evidence of current eligibility.
     """
     prior_by_id = {
         insight_id: deepcopy(item)
@@ -1860,11 +1862,18 @@ def _restore_missing_final_insight_roster(
     }
     if not prior_by_id:
         return selected_insights
+    eligible_ids = {
+        insight_id
+        for item in eligible_candidate_insights
+        if isinstance(item, dict) and (insight_id := _s(item.get("id")).strip())
+    }
 
     selected = [deepcopy(item) for item in selected_insights if isinstance(item, dict)]
     selected_ids = [_s(item.get("id")).strip() for item in selected]
     missing_ids = [
-        insight_id for insight_id in prior_by_id if insight_id not in set(selected_ids)
+        insight_id
+        for insight_id in prior_by_id
+        if insight_id in eligible_ids and insight_id not in set(selected_ids)
     ]
     if not missing_ids:
         return selected
@@ -1875,7 +1884,9 @@ def _restore_missing_final_insight_roster(
         if insight_id in selected_ids[:index] or insight_id not in prior_by_id
     ]
     for index, insight_id in zip(replace_indexes, missing_ids, strict=False):
-        selected[index] = deepcopy(prior_by_id[insight_id])
+        selected[index] = restore_artifact_insight_factual_fields(
+            prior_by_id[insight_id], eligible_candidate_insights
+        )
     return selected
 
 
@@ -4676,6 +4687,10 @@ def _handle_insights_bundle_regeneration(
         ),
         editorial_plan=execution.state.editorial_plan,
     )
+    eligible_candidate_insights = eligible_final_insight_candidates(
+        execution.state.insights_candidates
+    )
+    execution.state.insights_candidates = eligible_candidate_insights
     final_ctx = child_context(
         execution.target_ctx, task_id=f"{execution.target_ctx.task_id}:final"
     )
@@ -4700,15 +4715,12 @@ def _handle_insights_bundle_regeneration(
         final_insights=normalize_artifact_insights(
             final_result.get("insights_final"), prefix="insight"
         ),
-        candidate_insights=execution.state.insights_candidates,
-        prior_final_insights=execution.state.insights_final,
+        candidate_insights=eligible_candidate_insights,
+        prior_final_insights=[],
     )
     validate_final_insight_candidate_lineage(
         final_insights=regenerated_final,
-        candidate_insights=[
-            *execution.state.insights_candidates,
-            *prior_final_insights,
-        ],
+        candidate_insights=eligible_candidate_insights,
     )
     execution.state.insights_final = _merge_regenerated_insights_by_stable_id(
         current_insights=execution.state.insights_final,
@@ -4717,11 +4729,12 @@ def _handle_insights_bundle_regeneration(
     execution.state.insights_final = _restore_missing_final_insight_roster(
         selected_insights=select_artifact_insights(
             final_insights=execution.state.insights_final,
-            candidate_insights=execution.state.insights_candidates,
+            candidate_insights=eligible_candidate_insights,
             editorial_plan=execution.state.editorial_plan,
             require_final_candidate_lineage=True,
         ),
         prior_final_insights=prior_final_insights,
+        eligible_candidate_insights=eligible_candidate_insights,
     )
     execution.state.regenerated_sections.extend(
         ["insights_candidates", "insights_final"]

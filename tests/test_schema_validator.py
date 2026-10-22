@@ -5,6 +5,7 @@ from src.contracts.schema_validation import SchemaValidateRequest
 from src.services.schema_validator_service import (
     provider_output_schema,
     validate_evidence_references,
+    validate_output_schema,
     validate_schema,
 )
 from src.utils.errors import AppError
@@ -47,6 +48,31 @@ def test_validate_schema_fails_missing_required():
             _ctx(),
         )
     assert exc.value.code == "schema_missing_required"
+
+
+def test_artifact_final_schema_accepts_empty_but_rejects_malformed_entries():
+    validate_output_schema(
+        payload={"insights_final": []},
+        schema_name="artifacts",
+        root_key="insights_final",
+        ctx=_ctx(),
+    )
+
+    with pytest.raises(AppError):
+        validate_output_schema(
+            payload={"insights_final": [{"text": "Missing identity"}]},
+            schema_name="artifacts",
+            root_key="insights_final",
+            ctx=_ctx(),
+        )
+
+    with pytest.raises(AppError):
+        validate_output_schema(
+            payload={"insights_final": ["not an insight"]},
+            schema_name="artifacts",
+            root_key="insights_final",
+            ctx=_ctx(),
+        )
 
 
 def test_validate_schema_fails_when_doc_map_section_missing_summary_or_key_points():

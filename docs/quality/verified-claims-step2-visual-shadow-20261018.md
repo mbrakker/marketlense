@@ -2474,3 +2474,92 @@ Verdict: Step 1/E18 remains **PARTIAL** and Step 2 remains
 demonstrated integrity defects, but fresh full-cohort selection effectiveness,
 clean shared-batch repeatability, source-recall measurement, and P6 human
 editorial acceptance remain outstanding.
+
+#### Regeneration lineage admission and retained-evidence continuity — 2026-10-22
+
+This checkpoint closes the remaining regeneration-path lineage inconsistency;
+it does not change initial selection, fallback ranking, visual correction, or
+canonical persistence.
+
+- **Checkpoint A — root cause and fix.**
+  `_handle_insights_bundle_regeneration()` previously validated a regenerated
+  final roster against the current candidates plus arbitrary prior-final
+  records, then selected it against current candidates alone. A stale prior ID
+  could therefore pass one boundary and disappear or be restored at another.
+  The path now derives one eligible, source-bound candidate per stable ID using
+  `_candidate_factual_fields()` and `_candidate_group_has_factual_conflict()`;
+  it validates, restores factual fields, and selects regenerated finals only
+  against that pool. `_restore_missing_final_insight_roster()` restores a prior
+  editorial rewrite only when its ID is still in that pool. Stale IDs and
+  conflicting source bindings are not substituted from prior-final text or an
+  evidence ID alone. Valid same-ID repairs retain final editorial wording and
+  receive the authoritative candidate binding. New valid candidates remain
+  eligible. Existing cache reuse already revalidates final IDs against the
+  current candidate facts, so no cache-key/version change was necessary.
+- **Checkpoint B — malformed payload boundary.** The existing artifacts schema
+  requires each `insights_final` item to be an object with `id`, `text`, and
+  `evidence_id`; it rejects malformed/missing-identity entries while allowing
+  an empty intermediate array. The lineage helper therefore remains focused on
+  identity/conflict checks and does not duplicate schema validation or reject a
+  legitimate empty intermediate state.
+- **Checkpoint C — corrected-claim continuity.** The retained Algolia
+  `revenue-incentive-58` correction changes the original 58% proposition to a
+  53%/39% search-investment proposition. Its original page/evidence/metric
+  binding is preserved as original provenance, while the corrected binding
+  remains unbound because the retained evidence does not independently provide
+  a complete authoritative replacement binding. The successful Criteo 61%
+  correction is explicitly an expectation rather than measured ROI and remains
+  source-bound to original page 5 while corrected metric fields stay empty.
+  No stale metric, population, period, forecast, or page identity is inferred.
+- **Checkpoint D — retained real-report trace.** Hash-matched retained outputs
+  preserve KPMG `execution-risk-focus-areas` / `quote-4` on physical page 35,
+  Algolia `agentic-search-deployment-and-plans` / `quote-001` on page 26,
+  Bain `cloud_platform_action_frame` / `quote-4` on page 1, and Criteo
+  `newer-channels-perceived-roi` / `s2-newer-channels-roi` on page 5. KPMG,
+  Algolia, and Bain page recoveries remain `provisional_recovered` rather than
+  canonical promotions because their original artifact page arrays were empty.
+  Emplifi `behavior-high-value-research` remains a source-supported final-stage
+  roster substitution with physical page 4; its absence from the raw
+  candidate roster was not rewritten. No historical artifact was edited.
+- **Checkpoint E — selection audit.** The retained ten-report source-grounded
+  audit still locates the known omissions inside already-covered themes or at
+  the final-stage roster boundary. It does not expose a deterministic selector
+  rejection, fallback-fidelity, minimum-count, or cache defect, so no new
+  ranking algorithm or selection policy was introduced. This is not fresh live
+  Step 1 selection evidence.
+- **Checkpoint F — shared-batch reliability.** The retained shared run shows
+  eight `ias_canary_timeout` and two `validation_failed` terminal rows, all at
+  semantic validation, and all ten members point at the same run directory.
+  The retained telemetry does not establish whether provider contention,
+  worker contention, or timeout configuration caused the canary failures; the
+  isolated supplemental run used separate state and passed. No reliability
+  change was made without an observed root cause, and the shared run remains
+  invalid as an independent selection repetition.
+
+Current verification: the provider-free frozen-five replay produced **15
+reference cases / 39 variants**, **29 selected IDs**, **29/29 theme slots**,
+**5/5 PDF hashes**, and zero provider calls or fabricated fixture substitutions;
+selected IDs are unchanged from the retained baseline. The focused lineage,
+artifact, Step 2, regeneration, cache, schema, and contract suite passed
+**541 tests, 1 skipped, and 1 deselected**. The contract snapshot gate passed
+and changed production modules compiled. Ruff passed for the changed
+normalization, shortlisting, schema-test, and schema-validator files; the
+regeneration module retains eight pre-existing findings and the split test
+module retains three pre-existing line-length findings. No provider calls,
+canonical mutation, publication-readiness transition, or WordPress write was
+made by this checkpoint.
+
+The local aggregate `py scripts/ci/run_quality_gate.py` reached the full
+pytest stage and recorded **7,968 passed, 2 skipped, and 32 deselected**. It
+stopped on the pre-existing `tests/test_build_hash_locked_wheelhouse.py::test_existing_wheelhouse_reports_missing_active_artifact`
+failure because this workstation runs CPython 3.14 while that native
+wheelhouse audit requires CPython 3.12; local coverage/mutation stages were
+therefore not reached. Hosted CI remains the authoritative supported-runtime
+check for those stages.
+
+Verdict: Step 1/E18 remains **PARTIAL** and Step 2 remains
+**PARTIAL/NO-GO**. The regeneration lineage defect is corrected and the
+retained provenance trace is continuous for the audited rows, but clean
+full-cohort live selection repeatability, a source-recall oracle, P6 human
+acceptance, and canonical corrected-claim binding completeness remain open.
+Step 3 remains unstarted.

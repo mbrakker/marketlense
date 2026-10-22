@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from src.generators.artifact_normalization import (
+    eligible_final_insight_candidates,
     select_artifact_insights,
     validate_final_insight_candidate_lineage,
 )
@@ -208,6 +209,55 @@ def test_selector_rejects_conflicting_span_source_ids_despite_matching_text() ->
         )
         == []
     )
+
+
+def test_eligible_final_pool_excludes_conflicting_same_id_provenance() -> None:
+    shared_text = "The source reports 42% for surveyed respondents."
+    metric = {"label": "Respondent share", "value": "42%", "unit": "%"}
+    candidates = [
+        _insight(
+            "prior-final",
+            "f1",
+            "Candidate supported by source A.",
+            score=0.1,
+            metric=metric,
+            evidence=shared_text,
+            pages=[4],
+            evidence_spans=[
+                {
+                    "evidence_id": "f1",
+                    "source_pack": "findings",
+                    "source_identity": "source-a",
+                    "page": 4,
+                    "start_offset": 10,
+                    "end_offset": 25,
+                    "text": shared_text,
+                }
+            ],
+        ),
+        _insight(
+            "prior-final",
+            "f1",
+            "Candidate supported by source B.",
+            score=0.9,
+            metric=metric,
+            evidence=shared_text,
+            pages=[4],
+            evidence_spans=[
+                {
+                    "evidence_id": "f1",
+                    "source_pack": "findings",
+                    "source_identity": "source-b",
+                    "page": 4,
+                    "start_offset": 10,
+                    "end_offset": 25,
+                    "text": shared_text,
+                }
+            ],
+        ),
+    ]
+
+    assert eligible_final_insight_candidates(candidates) == []
 
 
 def test_final_selection_rejects_unbound_final_identity_and_uses_alternative() -> None:
