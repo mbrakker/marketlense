@@ -104,7 +104,7 @@ def _make_deep_root(base: Path, target_units: int) -> Path:
     root = base / "deep-root"
     index = 0
     while windows_path_units(root) < target_units:
-        root /= f"segment-{index:02d}-{'x' * 20}"
+        root /= f"segment-{index:02d}"
         index += 1
     root.mkdir(parents=True, exist_ok=True)
     return root
