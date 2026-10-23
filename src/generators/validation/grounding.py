@@ -1755,9 +1755,7 @@ def grounding_payload(
                 "subject": s(authoritative_metric.get("subject")),
                 "cohort": s(authoritative_metric.get("cohort")),
                 "denominator": s(authoritative_metric.get("denominator")),
-                "observation_status": s(
-                    authoritative_metric.get("observation_status")
-                ),
+                "observation_status": s(authoritative_metric.get("observation_status")),
                 "observations": authoritative_metric.get("observations")
                 if isinstance(authoritative_metric.get("observations"), list)
                 else [],

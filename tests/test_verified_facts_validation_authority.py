@@ -300,17 +300,18 @@ def test_verified_grounding_passes_complete_canonical_fact_to_batches():
     assert insight_payload["metric"] == metric
     assert "final_only_population" not in insight_payload["metric"]
     assert payload["canonical_verified_facts"]["fact-1"] == fact
-    assert payload["canonical_verified_facts"]["fact-1"]["statement"] == fact[
-        "statement"
-    ]
+    assert (
+        payload["canonical_verified_facts"]["fact-1"]["statement"] == fact["statement"]
+    )
 
     batch_payload, _semantic_inputs = _grounding_batches(
         {**payload, "retained_claims_to_ground": []}, []
     )[0]
     assert batch_payload["canonical_verified_facts"] == {"fact-1": fact}
-    assert batch_payload["canonical_verified_facts"]["fact-1"]["provenance"] == fact[
-        "provenance"
-    ]
+    assert (
+        batch_payload["canonical_verified_facts"]["fact-1"]["provenance"]
+        == fact["provenance"]
+    )
 
 
 def test_verified_grounding_keeps_authoritative_fact_when_editorial_value_matches():
@@ -348,12 +349,14 @@ def test_verified_grounding_keeps_authoritative_fact_when_editorial_value_matche
 
     assert payload["insights_final"][0]["text"].endswith("forecast.")
     assert payload["insights_final"][0]["metric"] == fact["metric"]
-    assert payload["canonical_verified_facts"]["fact-1"]["metric"][
-        "population_definition"
-    ] == fact["metric"]["population_definition"]
-    assert payload["canonical_verified_facts"]["fact-1"]["metric"][
-        "forecast_status"
-    ] == "observed"
+    assert (
+        payload["canonical_verified_facts"]["fact-1"]["metric"]["population_definition"]
+        == fact["metric"]["population_definition"]
+    )
+    assert (
+        payload["canonical_verified_facts"]["fact-1"]["metric"]["forecast_status"]
+        == "observed"
+    )
 
 
 def test_verified_composite_metric_survives_normalization_and_metric_spine():
