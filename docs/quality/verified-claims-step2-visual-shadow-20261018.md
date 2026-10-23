@@ -2925,3 +2925,103 @@ Step 3 is not ready to close because a fresh current-head editorial generation
 and independent review for the complete retained ten-report cohort remain
 unavailable, and live selection effectiveness is still unmeasured. The
 previous Step 2 **PARTIAL/NO-GO** status is unchanged.
+
+#### Verified-facts authority boundary — 2026-10-23 (`b312b377`)
+
+This checkpoint records the opt-in downstream authority correction. The
+verified-facts path now treats the complete, hash-bound visual snapshot as the
+only source-fact representation. Preparation does not load PDF text,
+DocMap/legacy evidence, or vector retrieval for that mode; evidence collection,
+metrics, quantities, claim support, grounding, public editorial quality, and
+scoped regeneration consume the canonical verified-fact projection instead.
+Normal validation mode remains on its existing path.
+
+The retained deterministic safeguards are structural and operational: schema
+validation, source identity and SHA-256 matching, inspected/supporting physical
+pages, per-page source-truth notes, unique fact IDs, exact verified-fact
+references, evidence-span/page/source checks, complete visual outcome
+accounting, cache/digest identity, regeneration lineage, protected metric
+bindings, editorial coverage, and publication-readiness/quarantine behavior.
+Composite metrics retain structured `observations` through the metric-spine and
+key-figure projections; no regex-based source interpretation or speculative
+numeric enrichment was added.
+
+Focused adversarial regressions cover a fact that differs from DocMap text,
+composite observations, fabricated numbers, swapped label/value pairs, wrong
+timeframes, unsupported expert/distribution claims, regeneration injection,
+missing provenance, wrong PDF hashes, invalid references, and unchanged normal
+mode. The affected clean-worktree suite passed **726 tests in 24.44 seconds**.
+Selected-file Ruff (`F401,F821,I,B017`), compileall, and `git diff --check`
+also passed.
+
+**Provider-free retained replay.** The exact retained Step 2 replay covered
+the frozen reference set (**15 cases / 39 variants**) with the five matching
+source hashes and zero provider calls. The retained Step 2 artifacts do not
+contain authoritative `verified_facts` snapshots, so this replay proves
+fail-closed handling and regression behavior only; it does not measure fresh
+verified-fact generation or live selection quality.
+
+**Live normal-mode regression.** The requested Criteo, Adjust, DoubleVerify,
+and Algolia runs were executed from clean SHA `b312b377` with retained PDFs,
+GPT-6 Luna High, and no publication flags. All four reached `awaiting_review`
+with validation and publication-readiness `pass`, `published=false`, and no
+WordPress writes. The aggregate was **150 provider calls**, **1,454,059 input
+tokens**, **306,787 output tokens**, **$0.345472 estimated cost**, and
+**2,605.674 seconds** total duration:
+
+| Report | Calls | Input + output tokens | Estimated cost | Duration | Artifact mode | Result |
+|---|---:|---:|---:|---:|---|---|
+| Criteo | 29 | 320,956 + 59,165 | $0.070854 | 411.000 s | normal (`findings`) | awaiting review / pass |
+| Adjust | 42 | 336,634 + 86,685 | $0.095921 | 648.616 s | normal (`findings`) | awaiting review / pass |
+| DoubleVerify | 37 | 381,335 + 77,386 | $0.085508 | 633.361 s | normal (`findings`) | awaiting review / pass |
+| Algolia | 42 | 415,134 + 83,551 | $0.093189 | 912.697 s | normal (`findings`) | awaiting review / pass |
+
+Because the production frozen-cohort runner does not inject a verified-fact
+snapshot, these four outputs intentionally exercise unchanged normal mode and
+must not be reported as verified-facts editorial evidence. The verified mode
+itself is covered by the focused contract, downstream, regeneration, and
+fail-closed tests above. No unsupported verified-fact promotion was observed
+in the live normal-mode outputs; no independent human PDF review of all normal
+mode prose is claimed here.
+
+**Live ten-report normal-mode regression.** The exact ten-member cohort was
+then run from the same clean SHA and retained source root in an isolated,
+non-publishing worktree. Terminal accounting was complete for **10/10**
+members. The aggregate used **372 provider calls**, **3,843,807 input tokens**,
+**744,894 output tokens**, **$0.880189 estimated cost**, and **5,240.420
+seconds**. Six reports reached `awaiting_review` with validation/readiness pass;
+four failed closed. The mutually exclusive terminal ledger was:
+
+| Report | Validation | Readiness / terminal result | Calls | Estimated cost |
+|---|---|---|---:|---:|
+| DoubleVerify | pass | pass / awaiting review | 28 | $0.064083 |
+| KPMG | pass | pass / awaiting review | 37 | $0.099746 |
+| Reuters Institute | pass | pass / awaiting review | 37 | $0.093971 |
+| Adjust | fail | `summary_safe_removal_target_unresolved` | 54 | $0.125651 |
+| Algolia | fail | `validation_failed` | 41 | $0.093094 |
+| Bain & Company | pass | pass / awaiting review | 31 | $0.070463 |
+| Criteo | pass | pass / awaiting review | 29 | $0.075790 |
+| Deloitte | pass | `publish_readiness_failed` | 30 | $0.074602 |
+| Emplifi | fail | `validation_failed` | 45 | $0.099696 |
+| StackAdapt Inc | pass | pass / awaiting review | 40 | $0.083093 |
+
+All ten remained `published=false` with no WordPress writes. The four failed
+rows were not double-counted: Adjust stopped on an unresolved safe-removal
+target after deterministic timeframe/provenance repair failures, Algolia and
+Emplifi exhausted bounded validation/regeneration paths, and Deloitte passed
+validation but failed the publication-readiness gate with an unresolved
+retained claim. The separate four-report clean run had Adjust and Algolia pass,
+so the retained ten-run failures do not by themselves establish a regression
+from this change; they are recorded as live normal-mode reliability limits.
+
+The standard frozen-cohort runner produced normal artifacts for the live
+members (`findings` provenance and no authoritative `verified_facts` snapshot),
+so neither the four-report nor ten-report generation is evidence that the
+verified-facts mode was exercised end-to-end. This is intentional in the
+comparison: normal mode remains unchanged. The verified mode is supported by
+the focused contract/downstream/regeneration tests and provider-free checks,
+but a fresh live generation that injects admitted verified-fact snapshots and
+an independent PDF review of every such final output remain outstanding.
+
+**Verdict: PARTIAL.** The implementation establishes the verified-fact
+authority boundary and preserves deterministic integrity checks, with normal

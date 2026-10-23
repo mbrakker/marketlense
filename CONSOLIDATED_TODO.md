@@ -476,3 +476,34 @@ The authoritative statuses and short reasons remain above; the [original registe
 Prior hosted CI run `39815198918` passed **8,008 tests with 1 skip** and both mutation partitions, but the release-evidence prompt-fixture gate failed on the pre-existing Step 2 validation-family token/cost drift (**9,597 vs 8,004 tokens; +19.90%; $0.001720 vs $0.001560; +10.26%**), reproduced by a full rerun. Final-SHA run `39818845777` passed the tests and both mutation partitions and reproduced the same release-evidence failure. No Step 3 prompt/config change caused it and the gate was not weakened; the aggregate status therefore remains **PARTIAL**.
 
 Local aggregate-gate limitation: the supported-runtime-independent pytest pass was 7,968 passed, 2 skipped, and 32 deselected before the pre-existing CPython-3.14/native-CPython-3.12 wheelhouse test failure stopped coverage and mutation locally; hosted CI is required for the supported full gate.
+
+**Verified-facts authority boundary — 2026-10-23:** Commit `b312b377` makes the
+opt-in verified-facts snapshot the sole source-fact authority for preparation,
+evidence, metrics, quantities, claim support, grounding, public editorial
+quality, and scoped regeneration. It preserves source identity/SHA-256,
+physical-page and inspected-page checks, unique IDs, exact references,
+protected metric bindings, cache/regeneration lineage, editorial coverage, and
+publication-readiness fail-closed behavior; normal mode remains unchanged.
+Structured composite observations are retained without speculative numeric
+enrichment. The affected clean-worktree suite passed **726 tests**; selected
+Ruff, compileall, and diff checks passed. Provider-free retained replay still
+covers 15 cases/39 variants with five matching hashes and zero calls, but the
+retained records contain no authoritative verified-fact snapshots. Four fresh
+GPT-6 Luna High frozen-member runs (Criteo, Adjust, DoubleVerify, Algolia)
+completed in unchanged normal mode with validation/readiness pass and no
+publication writes: 150 calls, 1,454,059 input tokens, 306,787 output tokens,
+`$0.345472`, and 2,605.674 seconds. Because the standard runner did not inject
+verified-fact snapshots, this is normal-mode regression evidence, not proof of
+verified-mode editorial quality. The subsequent exact ten-report normal-mode
+run completed terminal accounting for 10/10 members: 6 validation/readiness
+passes and 4 fail-closed outcomes (`summary_safe_removal_target_unresolved`,
+`validation_failed` x2, and `publish_readiness_failed`), using 372 calls,
+3,843,807 input tokens, 744,894 output tokens, `$0.880189`, and 5,240.420
+seconds. All remained unpublished with no WordPress writes. The four-report
+run had Adjust and Algolia pass, so the ten-run failures are recorded as live
+normal-mode reliability limits, not attributed to the verified-facts boundary
+without a controlled causal comparison. The standard runner produced no
+authoritative verified-fact snapshots; fresh live verified-mode editorial
+generation and independent PDF review remain open. Step 2 remains
+**PARTIAL/NO-GO** and Step 3 remains unstarted; no status is closed from this
+checkpoint alone. Details: `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
