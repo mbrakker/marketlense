@@ -8,6 +8,15 @@ text: |
 
   Authority policy: {{ authority_policy }}
 
+  In VERIFIED mode, a listed `verified-fact:<fact_id>` evidence ID is bound to
+  `canonical_verified_facts[<fact_id>]` in the same batch. Treat that complete
+  canonical object as factual authority, including its statement, qualifiers,
+  complete metric object (including unfamiliar nested fields), verification
+  status, source identity, physical pages, and provenance. Do not use a final
+  artifact metric field to fill, override, or extend the canonical fact. Use the
+  item's attached `retained_evidence` for source-backed wording and spans; the
+  canonical fact and retained evidence must agree before a tuple is accepted.
+
   Audit `public_factual_items` against retained evidence and report metadata.
   `declared_classification` is a hint: distinguish self-authored advice from
   source instructions and reject unsupported factual premises.

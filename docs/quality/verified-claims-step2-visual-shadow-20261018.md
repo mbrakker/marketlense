@@ -3653,3 +3653,79 @@ The final pushed checkpoint is `3e85cca9acd317d32a32f40b195792ca76c28914`.
 Hosted CI run `40021563321` passed `tests`, both mutation partitions, and
 `release_evidence`; the formatting-only follow-up also left all production
 changes and the documented PARTIAL / Step 3-not-ready verdict unchanged.
+
+#### Verified grounding complete-fact context correction — 2026-10-24
+
+The verified grounding payload previously projected each authoritative metric
+through a fixed twelve-field dictionary. That was the exact information-loss
+boundary: report-specific fields such as `label`, `confidence`,
+`forecast_status`, nested observation qualifiers, composite-methodology data,
+and conditional assumptions were absent from the `insights_final` grounding
+input even though they were present in the validated `verified_facts` snapshot.
+The canonical evidence text remained source-bound, but it was not a substitute
+for the complete fact object.
+
+The minimal correction is verified-mode-only. `grounding_payload()` now deep
+copies the complete validated authoritative metric object, while normal mode
+keeps its existing projection. The payload carries the complete canonical fact
+snapshot, and `_grounding_batches()` forwards only the fact objects referenced
+by that batch under `canonical_verified_facts`. The existing system prompt now
+binds each `verified-fact:<id>` evidence ID to that object and explicitly
+prohibits final-artifact metric fields from extending or overriding it. The
+grounding validator identity advanced from `grounding_validation_output:1.7`
+to `:1.8`; existing relevant-input, prompt-content, and family-reuse checks
+therefore cannot reuse a pre-change result. No new validator, service, model
+call, or output contract was introduced.
+
+Provider-free retained-payload comparison used the hash-matched Criteo and
+DoubleVerify artifacts from the 2026-10-23 downstream checkpoint. This compares
+the exact provider input shape; it is not a fresh live model-quality claim:
+
+| Report | Selected facts / insights | Public items / batches | Old report JSON tokens | New report JSON tokens | Delta |
+|---|---:|---:|---:|---:|---:|
+| Criteo | 5 / 5 | 40 / 5 | 17,704 | 32,325 | +14,621 |
+| DoubleVerify | 5 / 5 | 37 / 5 | 17,408 | 34,758 | +17,350 |
+
+The token counts above use the local `o200k_base` tokenizer over each complete
+batch `report_json`; they exclude the system/user prompt wrapper and provider
+output. The new input contains all fact fields and batch-scoped canonical
+provenance. The old projection exposed only the prior fixed metric keys. No
+new provider call, cost, or latency was incurred by this replay. The unchanged
+fixture gate passed with total **108,429 tokens / $0.024065** versus the
+accepted baseline **108,275 / $0.024049** (+154 tokens / +$0.000016); the
+validation family was **9,640 / $0.001725** versus **9,486 / $0.001709**.
+Thresholds, fixtures, pricing, and factual checks were unchanged.
+
+The retained model outputs were reapplied through the corrected grounding
+boundary without a provider call. Criteo retained **69 checks / 3 unsupported**
+and returned the same **3 `not_established` grounding issues** as the retained
+result. DoubleVerify retained **66 checks / 3 unsupported** and returned the
+same **3 `not_established` issues** (two error-level metric qualifier issues
+and one informational comparison issue). This confirms the correction does not
+silently turn existing failures into passes. The source review also checked the
+full PDF pages directly: Criteo pages 5/7/8 contain the 61% ROI expectation,
+22% US cost estimate, and 51%/45% plan comparison; DoubleVerify pages 3/8/9/10
+contain the 8.0%/3.7% regional rates, 20+ engagement definition, normalized-100
+window, and North America video table. The remaining Criteo failures concern
+combining distinct respondent populations/attribution scope; the remaining
+DoubleVerify failures concern qualifiers that the editorial metric wording
+does not establish as a complete tuple. They remain fail-closed and were not
+forced through by the added context.
+
+Focused regressions cover unfamiliar nested metrics, composite observations
+with multiple units/populations/timeframes, conditional forecast assumptions,
+same-number contradictory editorial wording, final-only metric fields, and
+batch-level canonical-fact availability. The new regressions passed **3/3**;
+the affected top-level grounding/claim/prompt suite passed **401 tests**. The
+shared worktree also has one known pre-existing local failure in
+`test_verified_composite_metric_survives_normalization_and_metric_spine`
+because the user-owned dirty `artifact_normalization.py` removes its
+`verified_mode` parameter; that file and its untracked duplicate were not
+changed or staged. Ruff and mypy passed for the changed grounding/contract/test
+files. No canonical, publication, or WordPress write occurred.
+
+**Verdict: PASS for the targeted grounding-input correction; Step 2 remains
+PARTIAL / NO-GO.** The canonical fact cannot be bypassed by the lossy metric
+projection and cache identity is invalidated. The provider-free replay does not
+establish that a new model call would change Criteo or DoubleVerify editorial
+verdicts, and no live improvement claim is made. Step 3 remains not ready.

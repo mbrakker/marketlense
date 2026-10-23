@@ -10,7 +10,7 @@ from src.generators.artifact_normalization import normalize_artifact_insights
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
-from src.generators.validation.grounding import grounding_payload
+from src.generators.validation.grounding import _grounding_batches, grounding_payload
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.generators.validation.verified_facts import validated_verified_facts
 from src.services.schema_validator_service import validate_evidence_references
@@ -239,6 +239,121 @@ def test_verified_grounding_payload_uses_fact_snapshot_over_discovery_copy(tmp_p
         for item in payload["public_factual_items"]
         if isinstance(item, dict)
     )
+
+
+def test_verified_grounding_passes_complete_canonical_fact_to_batches():
+    metric = _metric(
+        observations=[
+            {
+                "label": "Creators",
+                "value": "42%",
+                "unit": "%",
+                "timeframe": "2026 H1",
+                "population": "verified buyers",
+                "methodology": {"weighting": "post-stratified"},
+            },
+            {
+                "label": "Views",
+                "value": "18m",
+                "unit": "views",
+                "timeframe": "2026 H2",
+                "population": "all respondents",
+                "methodology": {"weighting": "raw"},
+            },
+        ]
+    )
+    metric.update(
+        {
+            "forecast_status": "conditional_forecast",
+            "assumptions": {
+                "adoption_rate": {"value": "42%", "condition": "if spend holds"},
+                "confidence_interval": {"lower": "35%", "upper": "49%"},
+            },
+            "composite_methodology": {
+                "units": ["%", "views"],
+                "populations": ["verified buyers", "all respondents"],
+            },
+        }
+    )
+    fact = _fact(metric=metric)
+    artifacts = _verified_artifacts(fact=fact)
+    artifacts["insights_final"][0]["text"] = (
+        "Adoption stayed flat at 42% for a different population."
+    )
+    artifacts["insights_final"][0]["metric"] = {
+        "value": "99%",
+        "unit": "%",
+        "final_only_population": "unverified segment",
+    }
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=_packs(fact),
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+
+    payload = grounding_payload(request, artifacts)
+    insight_payload = payload["insights_final"][0]
+    assert insight_payload["metric"] == metric
+    assert "final_only_population" not in insight_payload["metric"]
+    assert payload["canonical_verified_facts"]["fact-1"] == fact
+    assert payload["canonical_verified_facts"]["fact-1"]["statement"] == fact[
+        "statement"
+    ]
+
+    batch_payload, _semantic_inputs = _grounding_batches(
+        {**payload, "retained_claims_to_ground": []}, []
+    )[0]
+    assert batch_payload["canonical_verified_facts"] == {"fact-1": fact}
+    assert batch_payload["canonical_verified_facts"]["fact-1"]["provenance"] == fact[
+        "provenance"
+    ]
+
+
+def test_verified_grounding_keeps_authoritative_fact_when_editorial_value_matches():
+    fact = _fact(
+        metric={
+            **_metric(),
+            "forecast_status": "observed",
+            "population_definition": {
+                "included": "buyers who completed the survey",
+                "excluded": "non-respondents",
+            },
+        }
+    )
+    artifacts = _verified_artifacts(fact=fact)
+    artifacts["insights_final"][0]["text"] = (
+        "Adoption fell to 42% among non-respondents in a forecast."
+    )
+    artifacts["insights_final"][0]["metric"] = {
+        "value": "42%",
+        "unit": "%",
+        "population_definition": "non-respondents",
+        "forecast_status": "forecast",
+    }
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=_packs(fact),
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+
+    payload = grounding_payload(request, artifacts)
+
+    assert payload["insights_final"][0]["text"].endswith("forecast.")
+    assert payload["insights_final"][0]["metric"] == fact["metric"]
+    assert payload["canonical_verified_facts"]["fact-1"]["metric"][
+        "population_definition"
+    ] == fact["metric"]["population_definition"]
+    assert payload["canonical_verified_facts"]["fact-1"]["metric"][
+        "forecast_status"
+    ] == "observed"
 
 
 def test_verified_composite_metric_survives_normalization_and_metric_spine():

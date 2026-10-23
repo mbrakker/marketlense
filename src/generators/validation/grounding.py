@@ -5,6 +5,7 @@ import json
 import re
 import threading
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from copy import deepcopy
 from dataclasses import asdict, replace
 from typing import Any, Callable, List, Mapping, Sequence
 
@@ -80,6 +81,7 @@ from .shared import (
     section_root,
 )
 from .verified_facts import (
+    VERIFIED_FACT_EVIDENCE_PREFIX,
     canonical_evidence_map,
     canonical_verified_evidence_packs,
     fact_for_evidence_id,
@@ -132,17 +134,42 @@ def _grounding_batches(
     ] or [[]]
     batch_count = max(len(claim_groups), len(public_groups))
     batches: list[tuple[dict, list[ClaimSemanticInput]]] = []
+    canonical_verified_facts = audit_payload.get("canonical_verified_facts")
     for index in range(batch_count):
         claim_group = claim_groups[index] if index < len(claim_groups) else []
         public_group = public_groups[index] if index < len(public_groups) else []
+        batch_payload: dict[str, Any] = {
+            "public_factual_items": public_group,
+            "retained_claims_to_ground": [
+                entry for _semantic_input, entry in claim_group
+            ],
+        }
+        if isinstance(canonical_verified_facts, dict):
+            evidence_ids = [
+                s(evidence_id)
+                for item in public_group
+                if isinstance(item, dict)
+                for evidence_id in item.get("evidence_ids", [])
+                if s(evidence_id).startswith(VERIFIED_FACT_EVIDENCE_PREFIX)
+            ]
+            evidence_ids.extend(
+                s(evidence_id)
+                for _semantic_input, entry in claim_group
+                for evidence_id in entry.get("evidence_ids", [])
+                if s(evidence_id).startswith(VERIFIED_FACT_EVIDENCE_PREFIX)
+            )
+            fact_ids = dict.fromkeys(
+                evidence_id.removeprefix(VERIFIED_FACT_EVIDENCE_PREFIX)
+                for evidence_id in evidence_ids
+            )
+            batch_payload["canonical_verified_facts"] = {
+                fact_id: canonical_verified_facts[fact_id]
+                for fact_id in fact_ids
+                if fact_id in canonical_verified_facts
+            }
         batches.append(
             (
-                {
-                    "public_factual_items": public_group,
-                    "retained_claims_to_ground": [
-                        entry for _semantic_input, entry in claim_group
-                    ],
-                },
+                batch_payload,
                 [semantic_input for semantic_input, _entry in claim_group],
             )
         )
@@ -1714,6 +1741,28 @@ def grounding_payload(
             if isinstance(fact, dict) and isinstance(fact.get("metric"), dict)
             else metric
         )
+        metric_payload = (
+            deepcopy(authoritative_metric)
+            if verified_mode and isinstance(fact, dict)
+            else {
+                "value": s(authoritative_metric.get("value")),
+                "unit": s(authoritative_metric.get("unit")),
+                "timeframe": s(authoritative_metric.get("timeframe")),
+                "trend": s(authoritative_metric.get("trend")),
+                "sample_size": s(authoritative_metric.get("sample_size")),
+                "geography": s(authoritative_metric.get("geography")),
+                "segment": s(authoritative_metric.get("segment")),
+                "subject": s(authoritative_metric.get("subject")),
+                "cohort": s(authoritative_metric.get("cohort")),
+                "denominator": s(authoritative_metric.get("denominator")),
+                "observation_status": s(
+                    authoritative_metric.get("observation_status")
+                ),
+                "observations": authoritative_metric.get("observations")
+                if isinstance(authoritative_metric.get("observations"), list)
+                else [],
+            }
+        )
         insights.append(
             {
                 "id": s(insight.get("id")),
@@ -1724,24 +1773,7 @@ def grounding_payload(
                     if not verified_mode
                     else verified_evidence.get(evidence_id, "")
                 ),
-                "metric": {
-                    "value": s(authoritative_metric.get("value")),
-                    "unit": s(authoritative_metric.get("unit")),
-                    "timeframe": s(authoritative_metric.get("timeframe")),
-                    "trend": s(authoritative_metric.get("trend")),
-                    "sample_size": s(authoritative_metric.get("sample_size")),
-                    "geography": s(authoritative_metric.get("geography")),
-                    "segment": s(authoritative_metric.get("segment")),
-                    "subject": s(authoritative_metric.get("subject")),
-                    "cohort": s(authoritative_metric.get("cohort")),
-                    "denominator": s(authoritative_metric.get("denominator")),
-                    "observation_status": s(
-                        authoritative_metric.get("observation_status")
-                    ),
-                    "observations": authoritative_metric.get("observations")
-                    if isinstance(authoritative_metric.get("observations"), list)
-                    else [],
-                },
+                "metric": metric_payload,
                 "so_what": sanitize_citation_tokens(s(insight.get("so_what"))),
                 "now_what": sanitize_citation_tokens(s(insight.get("now_what"))),
             }
@@ -1800,6 +1832,8 @@ def grounding_payload(
             s(artifacts.get("linkedin_post") if isinstance(artifacts, dict) else "")
         ),
     }
+    if verified_mode:
+        payload["canonical_verified_facts"] = deepcopy(verified_facts)
     # This remains one batched grounding call.  The explicit inventory prevents
     # public projections such as figures and downstream prose from becoming
     # invisible merely because they are not top-level analysis artifacts.

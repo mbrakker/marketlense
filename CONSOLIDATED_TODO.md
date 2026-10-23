@@ -697,3 +697,18 @@ The final formatting follow-up is pushed as `3e85cca9acd317d32a32f40b195792ca76c
 Hosted CI run `40021563321` passed `tests`, both mutation partitions, and
 `release_evidence`; this does not change the downstream PARTIAL/NO-GO or
 Step 3 not-ready status.
+
+**Verified grounding complete-fact context correction — 2026-10-24:** The
+verified grounding path no longer projects authoritative metrics through a
+fixed field list. It forwards the complete validated metric and batch-scoped
+canonical fact object, keeps normal mode unchanged, and advances the grounding
+validator identity to `grounding_validation_output:1.8` so prior family results
+cannot be reused. Focused regressions pass, the unchanged prompt-fixture gate
+passes at **108,429 tokens / $0.024065** (+154 / +$0.000016 from the accepted
+baseline), and provider-free Criteo/DoubleVerify replays preserve their prior
+fail-closed grounding verdicts. Direct PDF review confirms the remaining
+failures are unsupported population/attribution or metric-qualifier wording,
+not a reason to weaken grounding. No provider, canonical, publication, or
+WordPress write occurred. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
