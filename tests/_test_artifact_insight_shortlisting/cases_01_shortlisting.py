@@ -794,8 +794,9 @@ def test_selector_preserves_verified_forecast_and_composite_binding() -> None:
     assert selected[0]["metric"]["observations"] == observations
 
 
-def test_selector_fails_closed_for_same_id_conflicting_verified_composite_binding(
-) -> None:
+def test_selector_fails_closed_for_same_id_conflicting_verified_composite_binding() -> (
+    None
+):
     first = _insight(
         "shared",
         "f1",
