@@ -43,6 +43,9 @@ from src.utils.path_utils import (
 
 
 _CROP_REFINE_PAGE_SUBDIR = "crop_refine_pages"
+# Reserve a realistic 12-digit page index so report-directory identity does not
+# depend on the width of the requested page number.
+_CROP_REFINE_PAGE_BUDGET_INDEX = 999_999_999_999
 _FINGERPRINT_SIDECAR_SUFFIX = ".fingerprint.json"
 _FINGERPRINT_TEMP_PREFIX = ".tmp-write-"
 # tempfile's current random name sequence is eight characters. Keep two extra
@@ -72,6 +75,14 @@ def _crop_refine_page_paths(
             temporary_path,
         ),
     )
+
+
+def _crop_refine_page_budget_paths(
+    root: Path, report_component: str
+) -> tuple[Path, ...]:
+    return _crop_refine_page_paths(
+        root, report_component, _CROP_REFINE_PAGE_BUDGET_INDEX
+    )[2]
 
 
 def _path_components(path: Path) -> tuple[str, ...]:
@@ -172,15 +183,23 @@ def _resolve_crop_refine_page_paths(
     image_path, relative_path, artifact_paths = _crop_refine_page_paths(
         root, safe_report_name, request.page
     )
-    violation = _crop_refine_path_violation(root, artifact_paths)
-    if violation is None:
+    budget_artifact_paths = _crop_refine_page_budget_paths(root, safe_report_name)
+    budget_violation = _crop_refine_path_violation(root, budget_artifact_paths)
+    actual_violation = _crop_refine_path_violation(root, artifact_paths)
+    if budget_violation is None:
+        if actual_violation is not None:
+            raise _crop_refine_path_error(
+                request,
+                root,
+                image_path,
+                f"requested page artifact path is invalid: {actual_violation}",
+            )
         return image_path, relative_path
 
     digest = hashlib.sha256(str(request.report_name).encode("utf-8")).hexdigest()[:12]
     compact_suffix = f"-{digest}"
-    compact_base, _, compact_base_paths = _crop_refine_page_paths(
-        root, digest, request.page
-    )
+    compact_base, _, _ = _crop_refine_page_paths(root, digest, request.page)
+    compact_base_paths = _crop_refine_page_budget_paths(root, digest)
     compact_base_violation = _crop_refine_path_violation(root, compact_base_paths)
     if compact_base_violation is not None:
         raise _crop_refine_path_error(
@@ -198,7 +217,12 @@ def _resolve_crop_refine_page_paths(
         compact_suffix
     )
     prefix_budget = min(path_prefix_budget, component_prefix_budget)
-    prefix = _truncate_path_segment(safe_report_name, prefix_budget).rstrip(" .-_")
+    compact_prefix_source = (
+        safe_report_name.replace(".", "_")
+        if is_windows_reserved_component(safe_report_name)
+        else safe_report_name
+    )
+    prefix = _truncate_path_segment(compact_prefix_source, prefix_budget).rstrip(" .-_")
     compact_report_name = f"{prefix}{compact_suffix}" if prefix else digest
     compact_image, compact_relative, compact_paths = _crop_refine_page_paths(
         root, compact_report_name, request.page
