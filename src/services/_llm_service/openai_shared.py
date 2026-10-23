@@ -894,9 +894,7 @@ def _adapt_responses_metadata(
         else getattr(details, "reasoning_tokens", None)
     )
     raw_status = (
-        resp.get("status")
-        if isinstance(resp, dict)
-        else getattr(resp, "status", None)
+        resp.get("status") if isinstance(resp, dict) else getattr(resp, "status", None)
     )
     provider_status = str(raw_status or "").strip().lower()
     incomplete_details = (

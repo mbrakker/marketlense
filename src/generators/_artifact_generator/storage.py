@@ -2312,8 +2312,7 @@ def finalize_regeneration_candidate_artifacts(
                     dict.fromkeys(
                         int(span["page"])
                         for span in canonical_spans
-                        if isinstance(span.get("page"), int)
-                        and span["page"] > 0
+                        if isinstance(span.get("page"), int) and span["page"] > 0
                     )
                 )
                 if "pages" in item:
