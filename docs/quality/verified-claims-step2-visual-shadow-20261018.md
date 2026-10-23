@@ -3276,3 +3276,22 @@ instructions are unambiguous, normal mode is preserved, and no additional LLM
 stage was introduced. The release prompt-fixture gate remains red and a fresh
 verified five-report editorial-quality pass is not established; those are the
 remaining blockers.
+
+#### Hosted CI for canonical semantic-input correction — 2026-10-23 (`8fce73a1`, run `39934588808`)
+
+The hosted `tests` job passed the repository test/coverage suite and all
+formatting, Ruff, type, architecture, policy, schema, documentation, hygiene,
+and WordPress subproject checks. Both isolated mutation partitions also passed.
+The only failed job was `release_evidence`, whose unchanged prompt-fixture
+gate reproduced the measured regression: **108,275 vs 106,658 total tokens
+(+1,617, +1.52%)** and **9,486 vs 8,004 validation-family tokens (+1,482,
++18.52%)**; estimated cost was **$0.024049 vs $0.023887** overall and
+**$0.001709 vs $0.001560** for validation. Runtime and OCR/browser-count
+metrics did not fail the gate. No release threshold, baseline, pricing, or
+allowlist was changed.
+
+This is the terminal hosted result for the code correction. It confirms the
+canonical-input and prompt-authority changes pass the repository safety and
+mutation gates, but the release-evidence status remains red because the
+historical prompt corpus does not yet accept the existing Step 2 validation
+instruction inventory. **Overall status remains PARTIAL; Step 3 is not ready.**

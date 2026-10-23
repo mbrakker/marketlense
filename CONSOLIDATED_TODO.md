@@ -577,3 +577,21 @@ incomplete projection context. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. No canonical,
 publication, or WordPress write occurred; details are in the Step 2 evidence
 report.
+
+**Verified semantic-input authority and prompt cleanup — 2026-10-23
+(`8fce73a1`):** Lower-level verified grounding now rejects stale, conflicting,
+duplicate, incomplete, or omitted precomputed semantic inputs before prompt
+rendering or cache reuse, while valid canonical inputs remain accepted. The
+grounding authority policy is system-only; legacy visual/OCR corroboration is
+preserved there and verified mode remains canonical-fact-only. The exact
+provider-free frozen-five replay remains 15/39 reference cases/variants, 29
+retained IDs, 29 theme slots, five matching PDF hashes, and zero provider
+calls. Hosted run `39934588808` passed tests/coverage, both mutation
+partitions, static/policy/schema/documentation/hygiene gates, and WordPress
+subproject checks; only the unchanged prompt-fixture gate failed at 108,275 vs
+106,658 total tokens and 9,486 vs 8,004 validation tokens. The retained
+DoubleVerify/Adjust verified-mode validation probes failed closed on
+non-substantive grounding output and made no canonical or publication writes.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**. Details are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
