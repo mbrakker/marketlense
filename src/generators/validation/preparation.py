@@ -49,6 +49,9 @@ def prepare_validation_inputs(
         if verified_mode
         else {}
     )
+    authority_evidence_packs = (
+        canonical_verified_evidence_packs(verified_facts) if verified_mode else {}
+    )
     insights = ensure_list(
         request.artifacts.get("insights_final")
         if isinstance(request.artifacts, dict)
@@ -62,7 +65,7 @@ def prepare_validation_inputs(
             pdf_text = load_pdf_text_from_cache(settings.cache_dir, md5, ctx)
     evidence_texts, evidence_map = collect_evidence_texts(
         request.artifacts,
-        request.evidence_packs,
+        authority_evidence_packs if verified_mode else request.evidence_packs,
         pdf_text=pdf_text,
         verified_facts_only=verified_mode,
     )
@@ -81,9 +84,5 @@ def prepare_validation_inputs(
         grounding_retrieval_mode=retrieval_mode,
         verified_facts_mode=verified_mode,
         verified_facts=verified_facts,
-        authority_evidence_packs=(
-            canonical_verified_evidence_packs(verified_facts)
-            if verified_mode
-            else {}
-        ),
+        authority_evidence_packs=authority_evidence_packs,
     )

@@ -6,6 +6,8 @@ text: |
   - analyst_interpretation
   - prescriptive_recommendation
 
+  Authority policy: {{ authority_policy }}
+
   Audit `public_factual_items` against retained evidence and report metadata.
   `declared_classification` is a hint: distinguish self-authored advice from
   source instructions and reject unsupported factual premises.
@@ -51,11 +53,10 @@ text: |
     OCR order alone is not the tuple. Confirm label reversals visually before
     marking contradiction; unreadable or ambiguous layouts are
     `not_established`.
-  - Retained evidence may itself contain a transcription or association error.
-    For a tabular or chart claim, inspect the source through file_search before
-    accepting it. If the source binds the value to a different tuple, return a
-    factual `contradicted` result even when the supplied evidence repeats the
-    artifact claim.
+  - Retained evidence may itself contain a transcription or association error
+    in legacy mode. Follow the authority policy for source corroboration. If the
+    authoritative source binds the value to a different tuple, return a factual
+    `contradicted` result even when supplied evidence repeats the artifact claim.
 
   Editorial interpretation and recommendation policy:
   - Classify every material sentence as `factual_claim`, `analyst_interpretation`,
@@ -95,34 +96,8 @@ text: |
   `population`, `comparison`, `observation_status`, `attribution`, `certainty`,
   and `causality`.
 
-  Return JSON with:
-  {
-    "checks": [
-      {
-        "item_id": "...",
-        "section": "...",
-        "text": "...",
-        "classification": "factual_claim",
-        "entailment_outcome": "entailed|contradicted|not_established",
-        "proposition_status": "compatible|incompatible|unknown",
-        "protected_facts": {"value": {"claim_value": "...|null", "evidence_value": "...|null", "status": "compatible|incompatible|unknown"}},
-        "reason": "..."
-      }
-    ],
-    "unsupported": [
-      {
-        "item_id": "...",
-        "section": "...",
-        "text": "...",
-        "classification": "factual_claim|analyst_interpretation|prescriptive_recommendation",
-        "entailment_outcome": "contradicted|not_established",
-        "violation_type": "hallucinated_entity_or_event|unsupported_number|misattributed_quote|report_directive_misattribution|unsupported_factual_claim|contradicted|unsupported_causal_outcome|unsupported_certainty|unsupported_operational_or_financial_benefit|evidence_retrieval_failure|non_fatal_interpretation",
-        "reason": "..."
-      }
-    ]
-  }
-
-  Include every protected-dimension key in each factual check. Return factual
+  Return only JSON satisfying the provided grounding-validation schema. Include
+  every protected-dimension key in each factual check. Return factual
   `contradicted` and factual `not_established` entries in `unsupported`, with
   the matching `entailment_outcome`. Also return an `unsupported` entry for
   each rejected interpretation or recommendation, with its classification and

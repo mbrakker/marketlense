@@ -11,8 +11,10 @@ from src.contracts.prompts import (
     PromptDryRunRequest,
     PromptLoadRequest,
     PromptNamespaceListRequest,
+    PromptRenderRequest,
 )
 from src.contracts.run_context import RunContext
+from src.generators.validation.grounding import grounding_authority_policy
 from src.services import prompt_service
 from src.services.config_service import load_settings
 from src.services.prompt_service import list_prompt_namespaces, validate_prompt_dry_run
@@ -138,6 +140,42 @@ def test_grounding_prompt_rejects_adversarial_near_equivalence() -> None:
         assert protected_dimension in prompt_text
     assert "contradicted" in prompt_text
     assert "not_established" in prompt_text
+
+
+def test_grounding_prompt_authority_policy_disables_file_search_for_verified_mode():
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/validate/grounding",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    verified = prompt_service.render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.system,
+            variables={
+                "authority_policy": grounding_authority_policy(True),
+            },
+        ),
+        _ctx(),
+    )
+    legacy = prompt_service.render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.system,
+            variables={
+                "authority_policy": grounding_authority_policy(False),
+            },
+        ),
+        _ctx(),
+    )
+
+    assert "file_search" not in verified.text
+    assert "canonical verified facts" in verified.text
+    assert "file_search" in legacy.text
 
 
 def test_grounding_prompt_distinguishes_editorial_interpretation_and_advice() -> None:

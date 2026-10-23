@@ -651,10 +651,12 @@ fixtures:
     model: "openai/gpt-5-mini"
     temperature: 0.0
     benchmark: *benchmark_validation
-    system_variables: {}
+    system_variables:
+      authority_policy: "Legacy mode: use attached evidence and corroborate chart/table associations with file_search when supplied evidence may contain a tuple error."
     user_variables:
       report_json: *report_json
       evidence_json: *evidence_json
+      authority_policy: "Legacy mode: use attached evidence and corroborate chart/table associations with file_search when supplied evidence may contain a tuple error."
   - namespace: "report_vs/identity_resolution"
     family: "report"
     model: "openai/gpt-5-mini"

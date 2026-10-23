@@ -21,10 +21,12 @@ from src.generators.validation.grounding import (
     grounding_payload,
     run_grounding_check,
 )
+from src.generators.validation.preparation import prepare_validation_inputs
 from src.generators.validation.registry import (
     build_validation_rule_registry,
     rules_for_validation_mode,
 )
+from src.generators.validation.verified_facts import verified_facts_mode
 from src.utils.errors import AppError
 from tests._test_validation_generator._shared import (
     FakeOpenAI,
@@ -34,6 +36,7 @@ from tests._test_validation_generator._shared import (
 )
 from tests.test_verified_facts_validation_authority import (
     SOURCE_IDENTITY,
+    SOURCE_SHA,
     _fact,
     _packs,
     _report,
@@ -74,6 +77,219 @@ def _grounding_check(
         },
         "reason": f"semantic_{outcome}",
     }
+
+
+@pytest.mark.parametrize(
+    "mode",
+    ["verified_facts", "verified_facts_inline", "verified_facts_grounding"],
+)
+def test_explicit_verified_modes_require_a_valid_snapshot(tmp_path, mode):
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority-cleanup",
+        report=_report(),
+        artifacts={},
+        evidence_packs={},
+        source_id=SOURCE_IDENTITY,
+        validation_mode=mode,
+    )
+
+    with pytest.raises(AppError, match="snapshot is missing"):
+        prepare_validation_inputs(request, _settings(tmp_path), _ctx(), md5=SOURCE_SHA)
+
+
+@pytest.mark.parametrize(
+    "mode",
+    ["verified_facts", "verified_facts_inline", "verified_facts_grounding"],
+)
+def test_explicit_verified_modes_reject_malformed_source_identity(tmp_path, mode):
+    artifacts = _verified_artifacts()
+    artifacts["verified_facts"][0]["source_identity"] = "not-a-hash-bound-source"
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority-cleanup",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=_packs(),
+        source_id=SOURCE_IDENTITY,
+        validation_mode=mode,
+    )
+
+    with pytest.raises(AppError, match="source identity"):
+        prepare_validation_inputs(request, _settings(tmp_path), _ctx(), md5=SOURCE_SHA)
+
+
+def test_normal_mode_remains_backward_compatible_without_verified_facts(tmp_path):
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="normal-authority-cleanup",
+        report=_report(),
+        artifacts={},
+        evidence_packs={},
+        source_id="legacy-source",
+        validation_mode="full",
+    )
+
+    prepared = prepare_validation_inputs(request, _settings(tmp_path), _ctx(), md5="")
+
+    assert prepared.verified_facts_mode is False
+    assert prepared.authority_evidence_packs == {}
+
+
+def test_visual_authority_cache_marker_is_a_trusted_verified_mode_signal():
+    artifacts = {
+        "_cache": {
+            "visual_authority_canary": {
+                "enabled": True,
+                "digest": "d" * 64,
+            }
+        }
+    }
+
+    assert verified_facts_mode(artifacts) is True
+
+
+def test_verified_preparation_uses_canonical_evidence_instead_of_legacy_packs(tmp_path):
+    artifacts = _verified_artifacts()
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority-cleanup",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs={
+            "doc_map": {"summary": "Legacy extraction says 99%."},
+            "findings_legacy": {
+                "findings": [
+                    {"id": "legacy-1", "evidence": "Legacy extraction says 99%."}
+                ]
+            },
+        },
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts_inline",
+    )
+
+    prepared = prepare_validation_inputs(request, _settings(tmp_path), _ctx(), md5="")
+
+    evidence_text = "\n".join(prepared.evidence_texts)
+    assert "42%" in evidence_text
+    assert "99%" not in evidence_text
+    assert (
+        prepared.authority_evidence_packs["findings"]["findings"][0]["id"]
+        == "verified-fact:fact-1"
+    )
+
+
+def test_verified_grounding_does_not_promote_legacy_summary_evidence():
+    artifacts = _verified_artifacts()
+    artifacts["insights_final"][0]["text"] = (
+        "Adoption reached 99% among buyers in 2026."
+    )
+    artifacts["summary"] = {
+        "claim_evidence_map": [
+            {
+                "id": "summary-claim-1",
+                "claim": "Adoption reached 99% among buyers in 2026.",
+                "evidence_id": "verified-fact:fact-1",
+                "evidence": "Legacy extraction says 99%.",
+            }
+        ]
+    }
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority-cleanup",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs={
+            **_packs(),
+            "findings_legacy": {
+                "findings": [
+                    {"id": "legacy-1", "evidence": "Legacy extraction says 99%."}
+                ]
+            },
+        },
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts_grounding",
+    )
+
+    payload = grounding_payload(request, artifacts)
+
+    assert payload["summary"]["claim_evidence_map"][0]["evidence"] != (
+        "Legacy extraction says 99%."
+    )
+    public_items = payload["public_factual_items"]
+    false_claim = next(
+        item for item in public_items if item["section"] == "insights:fact-1.text"
+    )
+    assert "99%" in false_claim["text"]
+    assert "99%" not in false_claim["retained_evidence"]
+
+
+def test_grounding_cache_identity_separates_authority_modes_and_snapshots(tmp_path):
+    captured = []
+
+    class StopAfterCapture(Exception):
+        pass
+
+    def capture_reuse(request, _ctx):
+        captured.append(request)
+        raise StopAfterCapture
+
+    def run_until_reuse(request):
+        with pytest.raises(StopAfterCapture):
+            run_grounding_check(
+                request=request,
+                settings=_settings(tmp_path),
+                grounding_use_vector_store=False,
+                evidence_texts=[],
+                evidence_windows=[],
+                prompt_client=FakePromptClient(),
+                openai_client=FakeOpenAI(),
+                ctx=_ctx(),
+                source_id=SOURCE_IDENTITY,
+                prompt_family_reuse_reader=capture_reuse,
+            )
+
+    legacy_artifacts = _verified_artifacts()
+    legacy_artifacts["verified_facts"] = []
+    run_until_reuse(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="verified-authority-cleanup",
+            report=_report(),
+            artifacts=legacy_artifacts,
+            evidence_packs=_packs(),
+            source_id=SOURCE_IDENTITY,
+            validation_mode="full",
+        )
+    )
+    run_until_reuse(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="verified-authority-cleanup",
+            report=_report(),
+            artifacts=_verified_artifacts(),
+            evidence_packs=_packs(),
+            source_id=SOURCE_IDENTITY,
+            validation_mode="verified_facts",
+        )
+    )
+    alternate_fact = _fact()
+    alternate_fact["statement"] = "Adoption reached 43% among buyers in 2026."
+    alternate_fact["metric"]["value"] = "43%"
+    run_until_reuse(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="verified-authority-cleanup",
+            report=_report(),
+            artifacts=_verified_artifacts(fact=alternate_fact),
+            evidence_packs=_packs(alternate_fact),
+            source_id=SOURCE_IDENTITY,
+            validation_mode="verified_facts_inline",
+        )
+    )
+
+    assert len(captured) == 3
+    assert len({request.relevant_input_hash for request in captured}) == 3
 
 
 def test_verified_rule_modes_drop_legacy_rules_but_normal_keeps_them():

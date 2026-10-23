@@ -63,7 +63,7 @@ from src.utils.logging import child_context, log_event
 from src.utils.quantity import extract_quantities
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
-from .evidence import sanitize_citation_tokens
+from .evidence import build_evidence_windows, sanitize_citation_tokens
 from .models import EvidenceWindow, ValidationRuntime
 from .quantities import collect_quantities_from_texts
 from .shared import (
@@ -92,6 +92,20 @@ GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v3"
 GROUNDING_VALIDATOR_VERSION = CLAIM_GROUNDING_VALIDATOR_VERSION
 GROUNDING_MAX_CLAIMS_PER_CALL = 4
 GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL = 8
+
+
+def grounding_authority_policy(verified_mode: bool) -> str:
+    """Describe the sole factual authority for the grounding prompt."""
+
+    if verified_mode:
+        return (
+            "VERIFIED mode: use only attached canonical verified facts as factual "
+            "authority; do not retrieve or reinterpret the original PDF."
+        )
+    return (
+        "LEGACY mode: use attached evidence and corroborate chart/table associations "
+        "with file_search when supplied evidence may contain a tuple error."
+    )
 
 
 def _grounding_batches(
@@ -167,13 +181,13 @@ def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
     )
     package = validate_retained_claims(
         request.artifacts,
-        request.evidence_packs,
+        evidence_packs,
         source_identity=runtime.source_id,
         verified_facts_only=verified_mode,
     )
     semantic_inputs = retained_claim_semantic_inputs(
         package,
-        request.evidence_packs,
+        evidence_packs,
         source_identity=runtime.source_id,
         source_pages=request.source_pages,
     )
@@ -302,30 +316,34 @@ def run_grounding_check(
     prompt_namespace = "report_vs/validate/grounding"
     artifacts = request.artifacts if isinstance(request.artifacts, dict) else {}
     verified_mode = verified_facts_mode(artifacts, request.validation_mode)
+    evidence_packs = request.evidence_packs
     if verified_mode:
         grounding_use_vector_store = False
         facts = validated_verified_facts(
             artifacts,
-            request.evidence_packs,
+            evidence_packs,
             expected_source_identity=str(request.source_id or ""),
         )
+        evidence_packs = canonical_verified_evidence_packs(facts)
         request = replace(
             request,
-            evidence_packs=canonical_verified_evidence_packs(facts),
+            evidence_packs=evidence_packs,
             source_text="",
             source_pages=[],
         )
+        evidence_texts = tuple(canonical_evidence_map(facts).values())
+        evidence_windows = build_evidence_windows(evidence_texts)
     if retained_claim_package is None:
         retained_claim_package = validate_retained_claims(
             artifacts,
-            request.evidence_packs,
+            evidence_packs,
             source_identity=source_id or request.source_id,
             verified_facts_only=verified_mode,
         )
     if retained_claim_inputs is None:
         retained_claim_inputs = retained_claim_semantic_inputs(
             retained_claim_package,
-            request.evidence_packs,
+            evidence_packs,
             source_identity=source_id or request.source_id,
         )
     audit_payload = grounding_payload(
@@ -339,10 +357,12 @@ def run_grounding_check(
         set(public_item_ids.values()),
     )
     grounding_batches = _grounding_batches(audit_payload, retained_claim_inputs)
+    authority_policy = grounding_authority_policy(verified_mode)
     batch_prompt_vars = [
         {
             "report_json": json.dumps(batch_payload, ensure_ascii=False),
             "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
+            "authority_policy": authority_policy,
         }
         for batch_payload, _batch_semantic_inputs in grounding_batches
     ]
@@ -387,7 +407,7 @@ def run_grounding_check(
     if retained_claim_package is None:
         retained_claim_package = validate_retained_claims(
             artifacts,
-            request.evidence_packs,
+            evidence_packs,
             source_identity=source_id or request.source_id,
             verified_facts_only=verified_mode,
         )
@@ -435,6 +455,7 @@ def run_grounding_check(
             {
                 "report_json": json.dumps(batch_payload, ensure_ascii=False),
                 "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
+                "authority_policy": authority_policy,
             }
             for batch_payload, _batch_semantic_inputs in grounding_batches
         ]
@@ -561,6 +582,8 @@ def run_grounding_check(
             "vector_store_id": request.vector_store_id or "",
             "vector_store_content_hash": vector_store_content_hash,
             "retrieval_mode": grounding_retrieval_mode(grounding_use_vector_store),
+            "authority_mode": "verified_facts" if verified_mode else "legacy",
+            "authority_policy": authority_policy,
             "batch_policy": {
                 "schema_version": "1.0",
                 "max_claims_per_call": GROUNDING_MAX_CLAIMS_PER_CALL,
@@ -734,6 +757,7 @@ def run_grounding_check(
                             source_evidence={
                                 "report_json": variables["report_json"],
                                 "evidence_json": variables["evidence_json"],
+                                "authority_policy": variables["authority_policy"],
                             },
                             settings=settings,
                             ctx=batch_ctx,
@@ -1486,28 +1510,30 @@ def grounding_payload(
 ) -> dict:
     verified_mode = verified_facts_mode(artifacts, request.validation_mode)
     verified_facts: dict[str, dict[str, Any]] = {}
+    evidence_packs = request.evidence_packs
     if verified_mode:
         verified_facts = validated_verified_facts(
             artifacts,
-            request.evidence_packs,
+            evidence_packs,
             expected_source_identity=str(request.source_id or ""),
         )
+        evidence_packs = canonical_verified_evidence_packs(verified_facts)
         request = replace(
             request,
-            evidence_packs=canonical_verified_evidence_packs(verified_facts),
+            evidence_packs=evidence_packs,
             source_text="",
             source_pages=[],
         )
     if retained_claim_inputs is None:
         package = validate_retained_claims(
             artifacts,
-            request.evidence_packs,
+            evidence_packs,
             source_identity=request.source_id,
             verified_facts_only=verified_mode,
         )
         retained_claim_inputs = retained_claim_semantic_inputs(
             package,
-            request.evidence_packs,
+            evidence_packs,
             source_identity=request.source_id,
         )
     summary = artifacts.get("summary") if isinstance(artifacts, dict) else {}
@@ -1559,6 +1585,20 @@ def grounding_payload(
                 "now_what": sanitize_citation_tokens(s(insight.get("now_what"))),
             }
         )
+    raw_claim_evidence_map = (
+        summary.get("claim_evidence_map") if isinstance(summary, dict) else []
+    )
+    claim_evidence_map: Any = raw_claim_evidence_map
+    if verified_mode and isinstance(raw_claim_evidence_map, list):
+        canonical_claim_evidence_map: list[dict[str, Any]] = []
+        for entry in raw_claim_evidence_map:
+            if not isinstance(entry, dict):
+                continue
+            canonical_entry = dict(entry)
+            evidence_id = s(canonical_entry.get("evidence_id"))
+            canonical_entry["evidence"] = verified_evidence.get(evidence_id, "")
+            canonical_claim_evidence_map.append(canonical_entry)
+        claim_evidence_map = canonical_claim_evidence_map
     summary_clean: dict[str, Any] = {
         "tldr": s(summary.get("tldr")) if isinstance(summary, dict) else "",
         "executive_summary": sanitize_citation_tokens(
@@ -1571,9 +1611,7 @@ def grounding_payload(
         )
         if isinstance(summary, dict)
         else "",
-        "claim_evidence_map": summary.get("claim_evidence_map")
-        if isinstance(summary, dict)
-        else [],
+        "claim_evidence_map": claim_evidence_map,
     }
     title_is_canonical = (
         verified_mode

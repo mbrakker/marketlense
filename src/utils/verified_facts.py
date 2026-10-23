@@ -17,6 +17,9 @@ from typing import Any
 from src.utils.errors import AppError
 
 VERIFIED_FACT_EVIDENCE_PREFIX = "verified-fact:"
+VERIFIED_FACTS_MODES = frozenset(
+    {"verified_facts", "verified_facts_inline", "verified_facts_grounding"}
+)
 PDF_SHA256_RE = re.compile(
     r"(?:^|[|,; ])pdf-sha256[:=]([0-9a-f]{64})(?:$|[|,; ])", re.IGNORECASE
 )
@@ -46,10 +49,16 @@ PROTECTED_METRIC_FIELDS = (
 def verified_facts_mode(artifacts: object, validation_mode: str = "") -> bool:
     """Return whether the payload explicitly carries visual-authority facts."""
 
-    if str(validation_mode or "").strip() == "verified_facts":
+    if str(validation_mode or "").strip().casefold() in VERIFIED_FACTS_MODES:
         return True
     if not isinstance(artifacts, Mapping):
         return False
+    cache = artifacts.get("_cache")
+    canary = (
+        cache.get("visual_authority_canary") if isinstance(cache, Mapping) else None
+    )
+    if isinstance(canary, Mapping) and canary.get("enabled") is True:
+        return True
     facts = artifacts.get("verified_facts")
     return isinstance(facts, list) and bool(facts)
 
