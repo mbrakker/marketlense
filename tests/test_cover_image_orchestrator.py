@@ -161,7 +161,7 @@ def test_cover_image_orchestrator_missing_file_is_typed_error(
 def test_cover_fingerprint_reads_exact_persisted_compacted_artifact(tmp_path: Path):
     output_dir = tmp_path / ("deep-output-root-" + "x" * 20)
     report_slug = "long-report-" + "y" * 105
-    pack_name = "artifacts_regen_candidate_" + "z" * 80
+    pack_name = "artifacts_regen_candidate_" + "z" * 220
     payload = _artifact_payload()
     stored = store_pack(
         AnalysisStorePackRequest(
