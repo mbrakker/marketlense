@@ -3583,11 +3583,15 @@ evidence. No WordPress write occurred.
 
 Focused tests passed **281 tests**; the prompt fixture gate passed at the
 accepted baseline of **108,275 tokens / $0.024049** (validation family 9,486 /
-$0.001709). The targeted Ruff invocation found only the two pre-existing
-`storage.py` findings; the repository type gate is currently blocked by the
-user-owned dirty `artifact_normalization.py` and untracked duplicate file,
-which remove the `verified_mode` parameter and produce eight known mypy
-errors. A clean-worktree/hosted run is required for the final branch result.
+$0.001709). The clean affected-worktree suite passed **324 tests in 17.21s**;
+formatting, Ruff, and mypy passed there, including **786 source files with no
+type errors**. The actual shared worktree remains locally non-representative
+because the user-owned dirty `artifact_normalization.py` and untracked
+duplicate file remove the `verified_mode` parameter and produce eight known
+mypy errors; those files were not changed or staged. Hosted run
+`40002252041` on `1abff7409c5c68d49f35740aed6d808616996a49` passed `tests`,
+both mutation partitions, and `release_evidence`, including the prompt-fixture
+and release-evidence gates.
 
 **Current verdict: PARTIAL / Step 3 not ready.** The provider JSON contract,
 incomplete-response handling, output headroom, and canonical evidence clearing

@@ -664,3 +664,10 @@ targeted Ruff run has only the two pre-existing storage findings. E18 remains
 **unstarted/not ready**. No canonical, publication, or WordPress write
 occurred. Full evidence and limitations:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+Hosted verification for this latest correction passed on exact SHA
+`1abff7409c5c68d49f35740aed6d808616996a49` in run `40002252041`: the tests,
+both mutation partitions, and `release_evidence` all passed, including the
+accepted prompt-fixture baseline. The actual shared worktree still contains
+user-owned dirty `artifact_normalization.py` changes and an untracked duplicate
+file; they were excluded from the commits and remain a local limitation only.
