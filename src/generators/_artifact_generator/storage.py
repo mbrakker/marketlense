@@ -2302,8 +2302,30 @@ def finalize_regeneration_candidate_artifacts(
                         if isinstance(span, dict) and _s(span.get("text")).strip()
                     )
                 )
-                if texts:
-                    item["evidence"] = " ".join(texts)
+                canonical_spans = [
+                    deepcopy(span)
+                    for span in span_index.get(evidence_id.casefold(), [])
+                    if isinstance(span, dict)
+                ]
+                item["evidence_spans"] = canonical_spans
+                pages = list(
+                    dict.fromkeys(
+                        int(span["page"])
+                        for span in canonical_spans
+                        if isinstance(span.get("page"), int)
+                        and span["page"] > 0
+                    )
+                )
+                if "pages" in item:
+                    item["pages"] = pages
+                elif "page" in item:
+                    if pages:
+                        item["page"] = pages[0]
+                    else:
+                        item.pop("page", None)
+                # A verified-fact ID is authoritative only when its canonical
+                # spans resolve. Clear discovery-era text when it does not.
+                item["evidence"] = " ".join(texts)
 
         restore_authoritative_evidence_text(
             candidate_artifacts.get("insights_candidates")

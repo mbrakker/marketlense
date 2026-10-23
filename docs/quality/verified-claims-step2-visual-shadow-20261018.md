@@ -3492,3 +3492,106 @@ implemented without weakening factual safeguards. Fresh post-fix live
 editorial generation and reconciliation of the retained public artifacts are
 still required before promotion; the Algolia population wording and
 page-9/page-26 review findings remain unresolved quality blockers.
+
+#### Verified-facts JSON/provenance correction and fresh retained-PDF replay — 2026-10-23
+
+This correction pass addressed two producer-side P1 defects without adding a
+validator or another model stage:
+
+- Image-backed Responses requests now use the provider-supported JSON-object
+  response format. The existing first-complete-object recovery remains a
+  fallback, while a Responses result whose provider status is explicitly not
+  `completed` is treated as non-JSON for this path. Provider status and
+  `incomplete_details.reason` are retained as bounded diagnostics. Normal
+  Responses callers keep their existing behavior.
+- Visual verification now has an explicit `gpt-6-luna`/High policy with a
+  **16,384-token ceiling**. Correction remains **4,096**; the two correction
+  and two verification attempt limits are unchanged. The cache key already
+  includes response format and output budget, so old lower-budget entries
+  cannot satisfy the new verification policy.
+- Verified regeneration now reuses the existing
+  `artifact_evidence_span_index()`/`bind_artifact_evidence_spans()` boundary
+  and replaces `evidence_spans`, page fields, and evidence text from resolved
+  canonical spans. If a `verified-fact:` ID has no canonical span, those
+  fields are cleared instead of retaining discovery-era text. Normal-mode
+  finalization is unchanged.
+
+The retained malformed-response audit contains **16 classifications** (12
+concatenated objects reported as `Extra data`, four truncated strings reported
+as `Unterminated string`). The retained audit did not include raw response
+payloads, so those exact 16 payloads could not be replayed byte-for-byte.
+Provider-free recovery and incomplete-status regressions are covered by the
+focused tests; the fresh live run below had **zero malformed or incomplete
+responses**. This distinguishes syntax recovery coverage from evidence that a
+new provider request would have emitted malformed JSON.
+
+The exact frozen-five provider-free replay remained stable: **15 reference
+cases / 39 variants, 29 retained identities, 29 theme slots, five matching
+PDF SHA-256 values, and zero provider calls**. This is input/provenance
+evidence, not live selection-quality evidence.
+
+The fresh shadow replay used the retained real shortlist and the exact
+hash-matched PDFs for Criteo, Adjust, DoubleVerify, and Algolia. It evaluated
+all **21** available retained claims, with full rendered pages and GPT-6 Luna
+High (`reasoning_effort=high`), and made no canonical or publication write:
+
+| Report | Claims | First pass | After retry | Unresolved/failed/skipped | Pages inspected | Key source check |
+|---|---:|---:|---:|---:|---|---|
+| Criteo | 5 | 5 | 0 | 0 | 5, 7, 8 | 51/45 and 47/40 recommendations, 61% ROI expectation, and 22% US cost estimate match the cited text. |
+| Adjust | 5 | 5 | 0 | 0 | 6, 9, 11, 21, 34 | 10%/7% global growth, 31% cross-platform satisfaction, 5% day-30 retention, and finance install/session values match the cited pages. |
+| DoubleVerify | 5 | 5 | 0 | 0 | 3, 8, 9, 10 | APAC/North America rates, 20+ engagement inputs, normalized-100 context, and regional video indices match the composite tables. |
+| Algolia | 6 | 5 | 1 | 0 | 5, 9, 12, 22, 23, 27 | Total-row qualifiers, 49/27/23 search approaches, regional 68/57/63 purchase values, and 17/61 agentic-search categories are retained. |
+
+The terminal counts are mutually exclusive: **20 verified first pass, one
+verified after retry, zero unresolved, zero failed verification, and zero
+skipped**. The run made **44 provider calls** (22 corrections and 22
+verifications), used **678,301 input / 47,738 output / 726,039 total tokens**,
+cost **$0.091701**, rendered **19 pages**, and took **596.144 seconds**.
+Correction/verification configured ceilings were 4,096/16,384; observed
+maximum output usage was 1,741/2,341 tokens. All 44 ledger rows reported
+provider status `completed` and parse status `valid`; cache was enabled in an
+isolated directory, with no measured cache reuse. These are measured runtime
+values from `out/verified_claims_post_fix_live_four_20261023/result.json`, not
+reference estimates.
+
+The previous retained ledgers are not treated as a controlled before/after
+experiment. Their separate runs summed to 11 first-pass, four after-retry,
+and six failed-closed outcomes across 21 claims, 62 calls, approximately
+1,017,058 tokens, and $0.126052. The new run is observed post-fix evidence;
+the different retained inputs, page recovery, and provider sampling prevent a
+causal quality claim from the aggregate comparison alone.
+
+The source-page and wording review found no independently confirmed
+unsupported material claim in these 21 terminal results. In particular,
+`revenue-incentive-58` now says “Total 2025”/“Total 2024” for the 53%/51%
+search-investment rows, and `search-investment-and-adoption-activity` calls
+53%/51% adequate site-search investment rather than ongoing investment. The
+agentic-search correction inspected physical pages **26, 9, and 27**; the
+current verified fact uses the visual response's supporting page **9**, while
+the retained original page list is empty. Page 9 and page 26 both visibly
+contain the same 17% implemented / 61% next-12-months Total n=1,100 chart, so
+the current page-9 support is not an unsupported stale-original promotion.
+Exact reconciliation to page 26 remains a provenance-review limitation and
+is recorded rather than hidden.
+
+This replay stopped at the existing Step 2 visual-shadow boundary. It did not
+create a fresh canonical verified-fact snapshot and therefore did not claim a
+full post-fix PDF → verified-fact admission → editorial regeneration →
+grounding → public-quality artifact run. Existing retained downstream
+artifacts still contain legacy evidence-pack lineage and are not post-fix
+evidence. No WordPress write occurred.
+
+Focused tests passed **281 tests**; the prompt fixture gate passed at the
+accepted baseline of **108,275 tokens / $0.024049** (validation family 9,486 /
+$0.001709). The targeted Ruff invocation found only the two pre-existing
+`storage.py` findings; the repository type gate is currently blocked by the
+user-owned dirty `artifact_normalization.py` and untracked duplicate file,
+which remove the `verified_mode` parameter and produce eight known mypy
+errors. A clean-worktree/hosted run is required for the final branch result.
+
+**Current verdict: PARTIAL / Step 3 not ready.** The provider JSON contract,
+incomplete-response handling, output headroom, and canonical evidence clearing
+are corrected and covered. The fresh visual shadow replay is strong and
+fail-closed, but the missing raw malformed payloads, page-9/page-26
+reconciliation limitation, and absence of a fresh downstream canonical/public
+artifact keep promotion blocked.

@@ -628,3 +628,39 @@ write occurred. E18 remains **Active/PARTIAL**, Step 2 remains
 public evidence still uses the legacy findings pack and the Algolia lineage
 issues require downstream regeneration. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Verified-facts JSON/provenance correction and fresh retained-PDF replay —
+2026-10-23 (latest evidence):** Image-backed Responses now request provider
+JSON-object output and reject explicitly incomplete Responses results; the
+existing first-object recovery remains a fallback. Visual verification has an
+explicit GPT-6 Luna High policy with a 16,384-token ceiling while correction
+remains 4,096, and bounded retry counts are unchanged. Verified regeneration
+now reuses the canonical evidence-span index and clears evidence text, pages,
+and spans when a `verified-fact:` ID cannot resolve, preventing stale discovery
+text from masquerading as canonical evidence. Focused coverage passed 281
+tests. The exact frozen-five provider-free replay remains 15/39 cases/variants,
+29 identities, 29 theme slots, five matching hashes, and zero calls.
+
+The retained malformed audit has 12 `Extra data` and four `Unterminated
+string` classifications, but no raw payloads were retained for exact replay;
+synthetic recovery/incomplete-status regressions are covered. A fresh
+shadow-only GPT-6 Luna High replay of the retained Criteo, Adjust, DoubleVerify,
+and Algolia PDFs evaluated 21/21 claims: 20 first-pass, one after retry, zero
+unresolved/failed/skipped; 44 calls; 678,301 input / 47,738 output tokens;
+726,039 total tokens; `$0.091701`; 596.144 seconds; all provider statuses
+completed and parse-valid. Physical-page inspection found no independently
+confirmed unsupported material claim. Algolia's 53%/51% wording retains the
+Total 2025/2024 or total-sample qualifier. The agentic-search result inspected
+pages 26/9/27 and uses page 9 as the visual supporting page because the PDF
+contains the same 17%/61% Total n=1,100 chart on pages 9 and 26; exact
+page-26 reconciliation remains documented as a limitation.
+
+This is fresh Step 2 visual-shadow evidence, not a causal live-selection
+improvement claim and not a fresh downstream canonical/public artifact run.
+The user-owned dirty `artifact_normalization.py` plus an untracked duplicate
+file still make local full type/regeneration checks non-representative; the
+targeted Ruff run has only the two pre-existing storage findings. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. No canonical, publication, or WordPress write
+occurred. Full evidence and limitations:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

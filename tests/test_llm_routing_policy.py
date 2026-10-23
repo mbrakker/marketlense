@@ -222,6 +222,20 @@ def test_visual_claim_correction_has_budget_for_complete_structured_json() -> No
     assert decision.policy.reasoning_effort == "high"
     assert decision.policy.max_output_tokens == 4096
 
+    verification = resolve_execution_policy(
+        "report_vs/validate/visual_claim_verification",
+        policies,
+        default_model=ingest["openai_model"],
+        default_temperature=ingest["temperature"],
+        default_seed=ingest["seed"],
+        default_timeout_seconds=ingest["timeout_seconds"],
+        require_registered_namespace=False,
+    )
+    assert verification.policy_source == "report_vs/validate/visual_claim_verification"
+    assert verification.policy.model == "gpt-6-luna"
+    assert verification.policy.reasoning_effort == "high"
+    assert verification.policy.max_output_tokens == 16_384
+
     preserved_namespaces = {
         "report_vs/taxonomy": "low",
         "report_vs/figure_caption": "low",

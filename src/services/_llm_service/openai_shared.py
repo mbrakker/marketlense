@@ -791,6 +791,8 @@ class _OpenAIResponseMetadata:
     cached_input_tokens: int | None
     parsed_json: dict | None
     parse_strategy: str
+    provider_status: str = ""
+    incomplete_reason: str = ""
     reasoning_tokens: int | None = None
     file_search_call_count: int = 0
     file_search_results: list[OpenAIFileSearchResult] | None = None
@@ -822,6 +824,9 @@ def _build_response_metadata(
     total_tokens: int | None,
     cached_input_tokens: int | None,
     recover_json_object: bool,
+    provider_status: str = "",
+    incomplete_reason: str = "",
+    require_completed: bool = False,
     reasoning_tokens: int | None = None,
     file_search_call_count: int = 0,
     file_search_results: list[OpenAIFileSearchResult] | None = None,
@@ -830,6 +835,9 @@ def _build_response_metadata(
         text,
         recover_json_object=recover_json_object,
     )
+    if require_completed and provider_status and provider_status != "completed":
+        parsed_json = None
+        parse_strategy = f"provider_status_{provider_status}"
     resolved_total_tokens = total_tokens
     if resolved_total_tokens is None and (
         input_tokens is not None or output_tokens is not None
@@ -845,6 +853,8 @@ def _build_response_metadata(
         cached_input_tokens=cached_input_tokens,
         parsed_json=parsed_json,
         parse_strategy=parse_strategy,
+        provider_status=provider_status,
+        incomplete_reason=incomplete_reason,
         reasoning_tokens=reasoning_tokens,
         file_search_call_count=max(0, int(file_search_call_count or 0)),
         file_search_results=file_search_results or [],
@@ -866,7 +876,7 @@ def _adapt_chat_completion_metadata(run: Any) -> _OpenAIResponseMetadata:
 
 
 def _adapt_responses_metadata(
-    resp: Any, *, recover_json_object: bool
+    resp: Any, *, recover_json_object: bool, require_completed: bool = False
 ) -> _OpenAIResponseMetadata:
     input_tokens, output_tokens, reported_tool_calls, total_tokens = (
         _extract_responses_usage(resp)
@@ -883,6 +893,22 @@ def _adapt_responses_metadata(
         if isinstance(details, dict)
         else getattr(details, "reasoning_tokens", None)
     )
+    raw_status = (
+        resp.get("status")
+        if isinstance(resp, dict)
+        else getattr(resp, "status", None)
+    )
+    provider_status = str(raw_status or "").strip().lower()
+    incomplete_details = (
+        resp.get("incomplete_details")
+        if isinstance(resp, dict)
+        else getattr(resp, "incomplete_details", None)
+    )
+    incomplete_reason = (
+        incomplete_details.get("reason")
+        if isinstance(incomplete_details, dict)
+        else getattr(incomplete_details, "reason", None)
+    )
     return _build_response_metadata(
         text=_extract_responses_output_text(resp),
         request_id=getattr(resp, "id", None),
@@ -892,6 +918,9 @@ def _adapt_responses_metadata(
         total_tokens=total_tokens,
         cached_input_tokens=None,
         recover_json_object=recover_json_object,
+        provider_status=provider_status,
+        incomplete_reason=str(incomplete_reason or "").strip(),
+        require_completed=require_completed,
         reasoning_tokens=reasoning_tokens,
         file_search_call_count=file_search_call_count,
         file_search_results=_extract_responses_file_search_results(resp),

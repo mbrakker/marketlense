@@ -213,6 +213,53 @@ def test_verified_finalization_rebinds_canonical_fact_spans() -> None:
     }
 
 
+def test_verified_finalization_clears_legacy_text_when_span_is_missing() -> None:
+    evidence_id = "verified-fact:missing"
+    legacy_item = {
+        "id": "insight-missing",
+        "text": "Legacy claim.",
+        "evidence": "Legacy discovery excerpt.",
+        "evidence_id": evidence_id,
+        "evidence_spans": [
+            {
+                "evidence_id": evidence_id,
+                "source_pack": "findings",
+                "page": 7,
+                "text": "Legacy discovery excerpt.",
+            }
+        ],
+        "pages": [7],
+    }
+    baseline = {
+        "summary": {"claim_evidence_map": [deepcopy(legacy_item)]},
+        "insights_candidates": [deepcopy(legacy_item)],
+        "insights_final": [deepcopy(legacy_item)],
+        "quotes_final": [],
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload([]),
+    }
+    candidate = deepcopy(baseline)
+
+    finalize_regeneration_candidate_artifacts(
+        promoted_baseline=baseline,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+        atomic_source_patch={
+            root: deepcopy(candidate[root])
+            for root in ("summary", "insights_candidates", "insights_final")
+        },
+        verified_mode=True,
+    )
+
+    summary_item = candidate["summary"]["claim_evidence_map"][0]
+    assert summary_item["evidence"] == ""
+    assert summary_item["evidence_spans"] == []
+    assert summary_item["pages"] == []
+    for root in ("insights_candidates", "insights_final"):
+        assert candidate[root][0]["evidence"] == ""
+        assert candidate[root][0]["evidence_spans"] == []
+        assert candidate[root][0]["pages"] == []
+
+
 def test_finalization_preserves_unchanged_intentional_summary_abstention() -> None:
     summary_status = {
         "schema_version": "1.0",

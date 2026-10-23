@@ -737,6 +737,7 @@ def openai_chat_json_with_images(
                 },
                 {"role": "user", "content": user_content},
             ],
+            "text": {"format": {"type": "json_object"}},
         }
         if request.reasoning_effort:
             payload_args["reasoning"] = {"effort": request.reasoning_effort}
@@ -814,7 +815,11 @@ def openai_chat_json_with_images(
             },
         ) from exc
 
-    metadata = _adapt_responses_metadata(resp, recover_json_object=True)
+    metadata = _adapt_responses_metadata(
+        resp,
+        recover_json_object=True,
+        require_completed=True,
+    )
     accounting = _record_usage_accounting(
         ctx=ctx,
         step_name="openai_chat_json_with_images",
@@ -853,6 +858,8 @@ def openai_chat_json_with_images(
                 "output_tokens": metadata.output_tokens,
                 "tool_calls": metadata.tool_calls,
                 "parsed_json": metadata.parsed_json is not None,
+                "provider_status": metadata.provider_status,
+                "incomplete_reason": metadata.incomplete_reason,
             },
         )
     )

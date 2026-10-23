@@ -133,7 +133,7 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
 
 
 def _settings(tmp_path):
-    policy = {
+    base_policy = {
         "schema_version": "1.0",
         "provider": "openai",
         "model": "gpt-6-luna",
@@ -143,6 +143,14 @@ def _settings(tmp_path):
         "timeout_seconds": 60,
         "fallback_policy": "same_provider_only",
         "pricing_key": "gpt-6-luna",
+    }
+    correction_policy = {
+        **base_policy,
+        "max_output_tokens": 4096,
+    }
+    verification_policy = {
+        **base_policy,
+        "max_output_tokens": 16384,
     }
     return SimpleNamespace(
         openai_api_key="test-key",
@@ -161,7 +169,11 @@ def _settings(tmp_path):
                 "same_provider_fallback": True,
             }
         },
-        llm_execution_policies={"report_vs/validate": policy},
+        llm_execution_policies={
+            "report_vs/validate": base_policy,
+            "report_vs/validate/visual_claim_correction": correction_policy,
+            "report_vs/validate/visual_claim_verification": verification_policy,
+        },
         output_dir=str(tmp_path),
         cache_dir=str(tmp_path / "cache"),
         cost_ledger_path=str(tmp_path / "cost.jsonl"),
@@ -318,6 +330,12 @@ def test_first_verification_failure_is_repaired_once_and_then_verified(tmp_path)
     assert claims == original
     assert all(request.reasoning_effort == "high" for request in requests)
     assert all(request.response_cache_enabled for request in requests)
+    assert [request.max_output_tokens for request in requests] == [
+        4096,
+        16384,
+        4096,
+        16384,
+    ]
     assert "Original claim" in requests[1].user_prompt
 
 
