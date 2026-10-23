@@ -424,7 +424,7 @@ Update R8/proposal disposition with evidence; do not close the parent early. Com
 - **Residual scope:** R8 remains Active; PATH-05–PATH-06 remain open. No live OCR provider call was needed for this filesystem/chunk-path slice; provider-call preservation and MD5-backed cache-hit/no-extra-call behavior are covered by controlled boundary tests, while the representative run validates the real candidate and split/readback producers. When Drive omits MD5, a later replay must download once to establish content identity, but it performs no second download for hashing/publication. The aggregate CPython 3.14 run was not fully green only because of the version-gated wheelhouse test, and full-repository CPython 3.12 was not rerun. The existing benchmark runtime advisory and optional WordPress staging prerequisite remain operational follow-ups, not duplicate PATH-03 backlog items.
 
 <a id="path-04"></a>
-#### PATH-04 — Bound crop-refinement images and fingerprint paths (P1; merged and verified)
+#### PATH-04 — Bound crop-refinement images and fingerprint paths (P1)
 
 - **Modules:** src/services/_pdf/_crop/refine.py and its sidecar writer; compare already protected _crop/regions.py and _crop/preview.py.
 - **Problem:** The report-derived crop_refine_pages directory and longer image fingerprint/QA sidecars can breach Windows budgets.
