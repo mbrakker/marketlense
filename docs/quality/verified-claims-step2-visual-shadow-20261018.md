@@ -3599,3 +3599,52 @@ are corrected and covered. The fresh visual shadow replay is strong and
 fail-closed, but the missing raw malformed payloads, page-9/page-26
 reconciliation limitation, and absence of a fresh downstream canonical/public
 artifact keep promotion blocked.
+
+#### Downstream verified-fact E2E checkpoint — 2026-10-23
+
+This checkpoint exercised the existing downstream path after the retained
+Step 2 visual result: verified-fact admission, editorial generation, final
+insights, summary/metric-spine/key-figure projection, semantic grounding,
+public-report quality, and final artifact inspection. It used the retained
+hash-matched PDFs and the existing GPT-6 Luna High Step 2 result; it made no
+visual provider calls, canonical persistence, readiness mutation, publication,
+or WordPress write. It is therefore downstream integration evidence, not fresh
+Step 1 selection or live source-recall evidence.
+
+| Report | Admission | Final artifact | Downstream result | Observed calls / tokens / cost / wall time |
+|---|---:|---:|---|---|
+| Criteo | 5/5 | 5 insights; 5 metric-spine rows; 3 key figures | Validation **FAIL**: three substantive grounding errors about population/attribution scope; protected evidence and metrics passed | 14; 125,530 input + 67,938 output (14,526 cached input); $0.045216; 337.972 s |
+| Adjust | 5/5 | 5 insights; 5 metric-spine rows; 3 key figures | Validation **PASS** with warning-only quote abstention and summary-breadth warnings | 13; 111,414 input + 56,115 output (12,849 cached input); $0.038042; 257.975 s |
+| DoubleVerify | 5/5 | 5 insights; 5 metric-spine rows; 1 key figure | Validation **FAIL**: two grounding errors for unsupported unit/denominator/observation qualifiers; one comparison remained informational | 15; 144,114 input + 74,110 output (14,526 cached input); $0.050158; 399.882 s |
+| Algolia | 0/6 final admission | No final artifact | Fail-closed: the retained six-fact result did not map to the five selectable editorial themes/evidence-pack snapshot; no fact was promoted | Diagnostic attempts accumulated 19 ledger rows; not used as a quality/cost comparison |
+
+For the three completed artifacts, all five admitted facts per report remained
+`verified-fact:*` bindings; every final insight retained physical-page spans;
+field-level protected metric comparisons found **0 mismatches**; and no
+evidence ID, page, span, source hash, or protected binding was promoted from a
+final-only rewrite. The PDF review checked the cited native pages directly:
+Criteo pages 5/7/8, Adjust pages 6/9/11/21/34, and DoubleVerify pages
+3/8/9/10. Numeric values and category relationships in the final insight
+texts were present on the cited pages; the non-numeric Criteo omnichannel
+statement was supported by the page-8 narrative. Public-report quality passed
+for all three completed artifacts (one report each, no remediation targets,
+no duplicate-insight delta, and full advisory/so-what/now-what coverage).
+
+The production changes exercised here are deliberately narrow: the selector
+cache identity advanced to `evidence_backed_shortlisting:8` after stable
+verified-fact fallback identities were preserved; complete protected metric
+bindings are restored including empty fields; and exact repeated public
+grounding rows are collapsed only when their text, evidence IDs, retained
+evidence, classification, and source identity all match. Focused regressions
+cover those paths and retain fail-closed behavior for conflicting bindings.
+
+The Algolia result is an editorial coverage/lineage limitation, not a reason
+to weaken admission: the six evaluated verified facts include an extra
+`search-investment-and-adoption-activity` identity that the retained plan did
+not select, and a correctly scoped two-phase replay still failed the existing
+snapshot evidence-pack consistency check. No final artifact is claimed for
+Algolia. Criteo and DoubleVerify remain blocked by substantive downstream
+grounding validation, despite clean provenance and protected-field checks.
+These results do not show a causal live-selection improvement because the
+visual result and retained shortlist were replay inputs. **Verdict: PARTIAL /
+Step 3 not ready.**

@@ -20,9 +20,10 @@ from src.utils.numeric_display import preserve_unique_source_displays
 from src.utils.public_metric_display import normalize_public_metric_display
 from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
+from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:7"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:8"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -1482,7 +1483,7 @@ def _candidate_group_has_factual_conflict(
     }
     if len(evidence_ids) > 1:
         return True
-    for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS):
+    for field_name in PROTECTED_METRIC_FIELDS:
         values = {
             normalize_for_lookup(
                 (candidate.get("metric") or {}).get(field_name)
@@ -1714,10 +1715,16 @@ def _span_locations_match(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
 
 def _complete_protected_metric_binding(metric: Any) -> Dict[str, Any]:
     metric = metric if isinstance(metric, dict) else {}
-    return {
-        field_name: deepcopy(metric.get(field_name, ""))
-        for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
-    }
+    binding: Dict[str, Any] = {}
+    for field_name in PROTECTED_METRIC_FIELDS:
+        if field_name == "observations":
+            observations = metric.get(field_name)
+            binding[field_name] = (
+                deepcopy(observations) if isinstance(observations, list) else []
+            )
+        else:
+            binding[field_name] = deepcopy(metric.get(field_name, ""))
+    return binding
 
 
 def _restore_candidate_factual_fields(
@@ -2245,7 +2252,7 @@ def _insight_metric_signature(insight: Dict[str, Any]) -> tuple[tuple[str, str],
         return ()
     return tuple(
         (field_name, normalize_for_lookup(metric.get(field_name)))
-        for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
+        for field_name in PROTECTED_METRIC_FIELDS
         if normalize_for_lookup(metric.get(field_name))
     )
 
@@ -2389,7 +2396,7 @@ def fallback_artifact_insights_from_findings(
                 ),
                 source_order,
                 {
-                    "id": evidence_id,
+                    "id": _s(finding.get("verified_fact_id")) or evidence_id,
                     "text": text,
                     "evidence_id": evidence_id,
                     "evidence": evidence,

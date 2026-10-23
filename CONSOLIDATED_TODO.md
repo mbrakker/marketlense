@@ -671,3 +671,24 @@ both mutation partitions, and `release_evidence` all passed, including the
 accepted prompt-fixture baseline. The actual shared worktree still contains
 user-owned dirty `artifact_normalization.py` changes and an untracked duplicate
 file; they were excluded from the commits and remain a local limitation only.
+
+**Downstream verified-fact E2E checkpoint — 2026-10-23:** The existing
+verified-fact admission → editorial generation → metric-spine/key-figure →
+grounding → public-quality path was replayed from the retained hash-matched
+Step 2 PDFs/results for Criteo, Adjust, DoubleVerify, and Algolia without
+visual calls, canonical mutation, readiness mutation, publication, or
+WordPress writes. Criteo, Adjust, and DoubleVerify each admitted 5/5 facts and
+produced 5 final insights with zero protected-field mismatches; Adjust passed
+downstream validation with warnings, while Criteo and DoubleVerify failed
+substantive grounding checks and were not treated as publication-ready.
+Algolia correctly failed closed: its six-fact result did not fit the retained
+five-theme editorial/evidence-pack snapshot, so no final artifact was claimed.
+The completed artifacts passed the public-report quality gate and direct PDF
+page inspection. The replay used 42 downstream ledger rows, 381,058 input +
+198,163 output tokens, 41,901 cached input tokens, `$0.133416`, and
+995.829 seconds for the three completed reports; Algolia's 19 diagnostic rows
+are excluded from the quality comparison. This is post-selection integration
+evidence, not fresh live-selection evidence. Step 2 remains **PARTIAL/NO-GO**,
+Step 3 remains **unstarted/not ready**, and E18 remains **Active/PARTIAL**.
+Details and exact per-report failures are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

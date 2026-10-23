@@ -220,6 +220,52 @@ def test_public_soft_copy_and_retained_claim_use_distinct_grounding_item_ids() -
     assert retained[0]["text"] == sentence
 
 
+def test_public_grounding_inventory_collapses_only_identical_item_duplicates() -> None:
+    sentence = "Retailer wallet use grew across checkout channels in 2025."
+    claim_id = "soft_copy:summary:identical"
+    provenance = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="summary",
+        claim_id=claim_id,
+        text_hash=hashlib.sha256(sentence.encode("utf-8")).hexdigest(),
+        classification="factual",
+        evidence_ids=("f1",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/summary"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    artifacts = {
+        "summary": {
+            "tldr": sentence,
+            "card_tldr_compact": sentence,
+            "claim_evidence_map": [],
+        },
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [provenance]
+        ),
+    }
+    request = replace(
+        _retained_request(),
+        artifacts=artifacts,
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Retailer wallet use grew across channels.",
+                    }
+                ]
+            }
+        },
+    )
+
+    items = grounding_payload(request, artifacts)["public_factual_items"]
+
+    matching = [item for item in items if item["item_id"] == claim_id]
+    assert len(matching) == 1
+
+
 def test_public_numeric_soft_copy_uses_its_retained_provenance_source_span() -> None:
     sentence = (
         "Generative AI tools drove a 693% increase in retail-site traffic "

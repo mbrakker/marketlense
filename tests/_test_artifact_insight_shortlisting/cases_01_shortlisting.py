@@ -238,11 +238,8 @@ def test_selector_preserves_final_wording_over_higher_scored_candidate() -> None
     assert selected[0]["pages"] == [4]
     assert selected[0]["evidence_spans"] == candidate["evidence_spans"]
     assert selected[0]["metric"] == {
-        **dict.fromkeys(artifact_normalization.METRIC_FIELDS, ""),
-        **{
-            field_name: candidate_metric.get(field_name, "")
-            for field_name in artifact_normalization.METRIC_BINDING_FIELDS
-        },
+        **dict.fromkeys(artifact_normalization.PROTECTED_METRIC_FIELDS, ""),
+        "observations": [],
         **candidate_metric,
     }
 
@@ -396,11 +393,8 @@ def test_selector_accepts_same_id_source_consistent_representations() -> None:
     assert selected[0]["text"] == "The final editorial rewrite."
     assert selected[0]["evidence_id"] == "f1"
     assert selected[0]["metric"] == {
-        **dict.fromkeys(artifact_normalization.METRIC_FIELDS, ""),
-        **{
-            field_name: metric.get(field_name, "")
-            for field_name in artifact_normalization.METRIC_BINDING_FIELDS
-        },
+        **dict.fromkeys(artifact_normalization.PROTECTED_METRIC_FIELDS, ""),
+        "observations": [],
         **metric,
     }
 
@@ -742,15 +736,104 @@ def test_selector_removes_final_only_protected_metric_additions() -> None:
     assert len(selected) == 1
     assert selected[0]["text"] == "The final editorial rewrite."
     assert selected[0]["metric"] == {
-        **dict.fromkeys(
-            (*artifact_normalization.METRIC_FIELDS,)
-            + artifact_normalization.METRIC_BINDING_FIELDS,
-            "",
-        ),
+        **dict.fromkeys(artifact_normalization.PROTECTED_METRIC_FIELDS, ""),
+        "observations": [],
         "label": "Share",
         "value": "42%",
         "unit": "%",
     }
+
+
+def test_selector_preserves_verified_forecast_and_composite_binding() -> None:
+    observations = [
+        {"label": "Current", "value": "42%", "unit": "%", "timeframe": "2026"},
+        {"label": "Prior", "value": "35%", "unit": "%", "timeframe": "2025"},
+    ]
+    candidate = _insight(
+        "shared",
+        "f1",
+        "The retained source proposition.",
+        score=0.8,
+        metric={
+            "label": "Adoption",
+            "value": "42%; 35%",
+            "unit": "%",
+            "cohort": "Survey respondents",
+            "observation_status": "observed",
+            "forecast_status": "observed",
+            "observations": observations,
+        },
+    )
+    final = _insight(
+        "shared",
+        "f-drifted",
+        "The final editorial rewrite.",
+        score=0.2,
+        metric={
+            "label": "Adoption",
+            "value": "99%",
+            "unit": "%",
+            "cohort": "Enterprise buyers",
+            "observation_status": "forecast",
+            "forecast_status": "forecast",
+            "observations": [{"label": "Unsupported", "value": "99%"}],
+        },
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[final],
+        candidate_insights=[candidate],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert len(selected) == 1
+    assert selected[0]["text"] == "The final editorial rewrite."
+    assert selected[0]["metric"]["cohort"] == "Survey respondents"
+    assert selected[0]["metric"]["observation_status"] == "observed"
+    assert selected[0]["metric"]["forecast_status"] == "observed"
+    assert selected[0]["metric"]["observations"] == observations
+
+
+def test_selector_fails_closed_for_same_id_conflicting_verified_composite_binding(
+) -> None:
+    first = _insight(
+        "shared",
+        "f1",
+        "The first source proposition.",
+        score=0.99,
+        metric={
+            "label": "Adoption",
+            "value": "42%; 35%",
+            "unit": "%",
+            "forecast_status": "observed",
+            "observations": [
+                {"label": "Current", "value": "42%", "unit": "%"},
+            ],
+        },
+    )
+    second = _insight(
+        "shared",
+        "f1",
+        "The conflicting source proposition.",
+        score=0.01,
+        metric={
+            "label": "Adoption",
+            "value": "42%; 35%",
+            "unit": "%",
+            "forecast_status": "forecast",
+            "observations": [
+                {"label": "Current", "value": "35%", "unit": "%"},
+            ],
+        },
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[],
+        candidate_insights=[first, second],
+        editorial_plan=_plan("f1", "f2"),
+    )
+
+    assert selected == []
 
 
 def test_supported_candidate_numeric_binding_survives_downstream_metric_spine() -> None:

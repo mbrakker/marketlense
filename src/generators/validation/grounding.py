@@ -2071,6 +2071,18 @@ def _public_factual_items(
                 item["declared_classification"] = declared_classification
             if source_identity:
                 item["source_identity"] = source_identity
+            if any(
+                existing.get("item_id") == item_id
+                and existing.get("text") == claim
+                and existing.get("evidence_ids") == item["evidence_ids"]
+                and existing.get("retained_evidence") == item["retained_evidence"]
+                and existing.get("declared_classification", "")
+                == item.get("declared_classification", "")
+                and existing.get("source_identity", {})
+                == item.get("source_identity", {})
+                for existing in items
+            ):
+                return
             items.append(item)
 
     def add_soft_copy_sentences(
