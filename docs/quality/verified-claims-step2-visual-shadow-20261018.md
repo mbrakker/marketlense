@@ -3649,7 +3649,7 @@ These results do not show a causal live-selection improvement because the
 visual result and retained shortlist were replay inputs. **Verdict: PARTIAL /
 Step 3 not ready.**
 
-The final pushed checkpoint is `c384797db968063a5300b622e5ab6e3dfa20bdf9`.
-Hosted CI run `40020274051` passed `tests`, both mutation partitions, and
+The final pushed checkpoint is `3e85cca9acd317d32a32f40b195792ca76c28914`.
+Hosted CI run `40021563321` passed `tests`, both mutation partitions, and
 `release_evidence`; the formatting-only follow-up also left all production
 changes and the documented PARTIAL / Step 3-not-ready verdict unchanged.

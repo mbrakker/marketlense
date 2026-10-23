@@ -693,7 +693,7 @@ Step 3 remains **unstarted/not ready**, and E18 remains **Active/PARTIAL**.
 Details and exact per-report failures are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
-The final formatting follow-up is pushed as `c384797db968063a5300b622e5ab6e3dfa20bdf9`.
-Hosted CI run `40020274051` passed `tests`, both mutation partitions, and
+The final formatting follow-up is pushed as `3e85cca9acd317d32a32f40b195792ca76c28914`.
+Hosted CI run `40021563321` passed `tests`, both mutation partitions, and
 `release_evidence`; this does not change the downstream PARTIAL/NO-GO or
 Step 3 not-ready status.
