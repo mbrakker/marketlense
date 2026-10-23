@@ -3918,11 +3918,12 @@ rejecting a final sentence that adds unsupported content.
 
 Deterministic verification evidence:
 
-- `tests/test_verified_claims_visual_authority_canary.py` passed **33 tests**,
-  including stale same-ID wording/evidence/metric rejection, a changed-only
-  physical span rejection, roster-digest mismatch, equivalent duplicate
-  collapse, conflicting-ID fail-closed behavior, and a six-verified-facts to
-  five-editorial-insights case.
+- `tests/test_verified_claims_visual_authority_canary.py` and
+  `tests/test_verified_claims_visual_authority_snapshot_integrity.py` passed
+  **33 tests combined**, including stale same-ID wording/evidence/metric
+  rejection, a changed-only physical span rejection, roster-digest mismatch,
+  equivalent duplicate collapse, conflicting-ID fail-closed behavior, and a
+  six-verified-facts to five-editorial-insights case.
 - `tests/test_artifact_normalization_source_fidelity.py` covers complete
   nested metric preservation and final-only metric removal in verified mode.
 - The combined affected shortlisting, admission, regeneration, provenance,
