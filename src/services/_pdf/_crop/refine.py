@@ -41,7 +41,6 @@ from src.utils.path_utils import (
     windows_path_units,
 )
 
-
 _CROP_REFINE_PAGE_SUBDIR = "crop_refine_pages"
 # Reserve a realistic 12-digit page index so report-directory identity does not
 # depend on the width of the requested page number.
@@ -102,6 +101,8 @@ def _path_components(path: Path) -> tuple[str, ...]:
 def _crop_refine_path_violation(
     root: Path, artifact_paths: tuple[Path, ...]
 ) -> str | None:
+    if root.exists() and not root.is_dir():
+        return "resolved output root is not a directory"
     if windows_path_units(root) > WINDOWS_PATH_BUDGET:
         return "resolved output root exceeds the Windows full-path budget"
     for path in artifact_paths:

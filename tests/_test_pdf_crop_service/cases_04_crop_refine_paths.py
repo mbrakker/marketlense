@@ -12,8 +12,6 @@ import pymupdf as fitz
 import pytest
 from PIL import Image
 
-from ._shared import *  # noqa: F401,F403
-
 from src.services._pdf.fingerprint_cache import CROP_REFINE_PAGE_ARTIFACT_VERSION
 from src.utils.path_utils import (
     WINDOWS_COMPONENT_BUDGET,
@@ -23,6 +21,7 @@ from src.utils.path_utils import (
     windows_path_units,
 )
 
+from ._shared import *  # noqa: F401,F403
 
 _TEMP_WRITE_HEADROOM = 10
 _TEMP_WRITE_PREFIX = ".tmp-write-"
@@ -295,6 +294,20 @@ def test_crop_refine_invalid_root_component_fails_without_side_effects(
     assert sorted(path.name for path in tmp_path.iterdir()) == before
 
 
+def test_crop_refine_existing_file_root_fails_before_pdf_open(tmp_path):
+    out_file = tmp_path / "output-file"
+    out_file.write_text("not a directory", encoding="utf-8")
+    before = sorted(path.name for path in tmp_path.iterdir())
+
+    with pytest.raises(AppError) as exc_info:
+        render_page_for_crop_refine(
+            _render_request(tmp_path / "missing.pdf", out_file, "report"), _ctx()
+        )
+
+    assert exc_info.value.code == "crop_refine_page_path_invalid"
+    assert sorted(path.name for path in tmp_path.iterdir()) == before
+
+
 @pytest.mark.parametrize("component_length", [254, 255, 256])
 def test_crop_refine_near_component_budget_remains_bounded(tmp_path, component_length):
     pdf_path = tmp_path / f"component-{component_length}.pdf"
@@ -323,6 +336,23 @@ def test_crop_refine_unicode_names_use_utf16_path_budget(tmp_path):
         _render_request(pdf_path, out_dir, report_name), _ctx()
     )
 
+    _assert_rendered_artifact(out_dir, response)
+
+
+def test_crop_refine_utf16_root_path_uses_actual_windows_budget(tmp_path):
+    pdf_path = tmp_path / "utf16-root.pdf"
+    _build_basic_pdf(pdf_path)
+    out_dir = _make_deep_root(tmp_path, 100) / ("😀" * 30)
+    report_name = "utf16-report-" + ("long-name-" * 20)
+
+    assert windows_path_units(out_dir) > len(str(out_dir))
+    response = render_page_for_crop_refine(
+        _render_request(pdf_path, out_dir, report_name), _ctx()
+    )
+
+    assert _compact_component(response.image_path) != safe_path_segment(
+        report_name, fallback="report"
+    )
     _assert_rendered_artifact(out_dir, response)
 
 
