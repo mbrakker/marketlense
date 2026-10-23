@@ -595,3 +595,17 @@ non-substantive grounding output and made no canonical or publication writes.
 E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready**. Details are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Prompt fixture baseline acceptance — 2026-10-23 (working):** The canonical
+three-iteration baseline builder regenerated
+`docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json` after the
+verified-grounding prompt changes. The unchanged fixture gate passes at
+108,275 total tokens / `$0.024049` versus the prior 106,658 / `$0.023887`
+(+1,617 tokens, +$0.000162); validation is 9,486 / `$0.001709` versus 8,004 /
+`$0.001560` (+1,482, +$0.000149). The increase is accepted as the measured
+cost of canonical evidence authority, protected metric coverage, complete
+verdict requirements, and editorial factual review. Thresholds, pricing,
+fixtures, and factual safeguards were unchanged. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready** pending hosted CI and real-report verified-mode
+editorial evidence. Details: `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

@@ -3295,3 +3295,41 @@ canonical-input and prompt-authority changes pass the repository safety and
 mutation gates, but the release-evidence status remains red because the
 historical prompt corpus does not yet accept the existing Step 2 validation
 instruction inventory. **Overall status remains PARTIAL; Step 3 is not ready.**
+
+#### Prompt fixture baseline acceptance — 2026-10-23
+
+The prompt corpus baseline was regenerated with the repository tooling
+(`scripts/quality/build_prompt_fixture_corpus_baseline.py`, three iterations,
+current `src/config/app.yaml`). No token, price, threshold, fixture, model, or
+allowlist values were edited manually. The unchanged regression command now
+passes against the regenerated baseline.
+
+The stable old/new comparison is:
+
+| Scope | Old tokens | New tokens | Delta | Old cost | New cost | Cost delta |
+|---|---:|---:|---:|---:|---:|---:|
+| all fixture namespaces | 106,658 | 108,275 | +1,617 (+1.52%) | $0.023887 | $0.024049 | +$0.000162 |
+| validation family | 8,004 | 9,486 | +1,482 (+18.52%) | $0.001560 | $0.001709 | +$0.000149 |
+
+The affected namespaces are `report_vs/artifacts/insights_candidates` (+65
+tokens, +$0.000006), `report_vs/artifacts/insights_final` (+70, +$0.000007),
+`report_vs/validate/editorial_review` (+668, +$0.000067),
+`report_vs/validate/visual_claim_correction` (+239, +$0.000024), and
+`report_vs/validate/visual_claim_verification` (+735, +$0.000074).
+`report_vs/validate/grounding` decreased by 160 tokens and $0.000016 after the
+duplicate user-side policy text was removed. All other namespace token and
+cost values are unchanged. The regenerated runtime metadata is nondeterministic
+and the fixture path/timestamp reflect this worktree; neither is a quality
+assertion.
+
+The net increase is accepted because it comes from the intentional factual
+grounding inventory: canonical evidence authority, complete protected metric
+dimensions, complete verdict coverage, and independent editorial factual
+review. The increase is negligible in absolute cost and no factual-validation
+coverage or release threshold was reduced to fit the historical baseline.
+The prior hosted release-evidence failure was therefore a stale-baseline
+failure, not a prompt-quality failure. This update changes only the measured
+baseline; the regression gate and its enforcement remain unchanged.
+
+The current status remains **PARTIAL / Step 3 not ready** pending a fresh
+verified-mode real-report editorial-quality run and final hosted CI evidence.
