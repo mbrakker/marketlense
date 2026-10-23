@@ -5,7 +5,7 @@ import logging
 import re
 from copy import deepcopy
 from dataclasses import asdict, replace
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, cast
 
 from src.contracts.config import AppSettings
 from src.contracts.prompts import PromptLoadRequest
@@ -2051,6 +2051,7 @@ def finalize_regeneration_candidate_artifacts(
     evidence_packs: Dict[str, Any],
     atomic_source_patch: Dict[str, Any],
     regeneration_attempt: int = 0,
+    verified_mode: bool = False,
 ) -> frozenset[str]:
     """Finalize deterministic dependents and provenance on an atomic patch.
 
@@ -2242,6 +2243,93 @@ def finalize_regeneration_candidate_artifacts(
             for root, value in reconciled.items():
                 candidate_artifacts[root] = value
             rebuilt_roots = frozenset({*rebuilt_roots, *reconciliation_roots})
+
+    if verified_mode:
+        # Verified-mode regeneration must not carry discovery-era spans back
+        # into a canonical public projection.  Reuse the same evidence-span
+        # binder as assembly, then rebuild retained soft-copy spans from the
+        # canonical index without inferring new evidence IDs.  This runs after
+        # baseline provenance reconciliation, which may otherwise reintroduce
+        # its stale source spans for unchanged sentences.
+        span_index = artifact_evidence_span_index(
+            doc_map={}, evidence_packs=evidence_packs
+        )
+        verified_summary = (
+            cast(Dict[str, Any], candidate_artifacts.get("summary"))
+            if isinstance(candidate_artifacts.get("summary"), dict)
+            else {}
+        )
+        verified_insights_candidates = (
+            cast(
+                List[Dict[str, Any]],
+                candidate_artifacts.get("insights_candidates"),
+            )
+            if isinstance(candidate_artifacts.get("insights_candidates"), list)
+            else []
+        )
+        verified_insights_final = (
+            cast(List[Dict[str, Any]], candidate_artifacts.get("insights_final"))
+            if isinstance(candidate_artifacts.get("insights_final"), list)
+            else []
+        )
+        verified_quotes_final = (
+            cast(List[Dict[str, Any]], candidate_artifacts.get("quotes_final"))
+            if isinstance(candidate_artifacts.get("quotes_final"), list)
+            else []
+        )
+        bind_artifact_evidence_spans(
+            summary=verified_summary,
+            insights_candidates=verified_insights_candidates,
+            insights_final=verified_insights_final,
+            quotes_final=verified_quotes_final,
+            doc_map={},
+            evidence_packs=evidence_packs,
+        )
+
+        def restore_authoritative_evidence_text(items: object) -> None:
+            if not isinstance(items, list):
+                return
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                evidence_id = _s(item.get("evidence_id")).strip()
+                if not evidence_id.startswith("verified-fact:"):
+                    continue
+                texts = list(
+                    dict.fromkeys(
+                        _s(span.get("text")).strip()
+                        for span in span_index.get(evidence_id.casefold(), [])
+                        if isinstance(span, dict) and _s(span.get("text")).strip()
+                    )
+                )
+                if texts:
+                    item["evidence"] = " ".join(texts)
+
+        restore_authoritative_evidence_text(
+            candidate_artifacts.get("insights_candidates")
+        )
+        restore_authoritative_evidence_text(candidate_artifacts.get("insights_final"))
+        summary = candidate_artifacts.get("summary")
+        if isinstance(summary, dict):
+            restore_authoritative_evidence_text(summary.get("claim_evidence_map"))
+        raw_provenance = candidate_artifacts.get("soft_copy_claim_provenance")
+        if raw_provenance is not None:
+            claims = soft_copy_claim_provenance_from_payload(raw_provenance)
+            candidate_artifacts["soft_copy_claim_provenance"] = (
+                soft_copy_claim_provenance_to_payload(
+                    [
+                        replace(
+                            claim,
+                            source_spans=tuple(
+                                deepcopy(span)
+                                for evidence_id in claim.evidence_ids
+                                for span in span_index.get(evidence_id.casefold(), [])
+                            ),
+                        )
+                        for claim in claims
+                    ]
+                )
+            )
 
     changed_paths = artifact_diff_paths(promoted_baseline, candidate_artifacts)
     verified_roots = set(rebuilt_roots)

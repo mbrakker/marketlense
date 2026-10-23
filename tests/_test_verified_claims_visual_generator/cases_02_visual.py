@@ -192,6 +192,11 @@ def test_non_retryable_verification_error_does_not_retry_and_next_claim_runs(tmp
                         "relationship."
                     )
                 },
+                "verified_fact": {
+                    "statement": "Corrected",
+                    "metric": {},
+                    "qualifiers": [],
+                },
             },
             request_id=f"request-{calls}",
             model=request.model,

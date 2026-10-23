@@ -199,6 +199,8 @@ def _claim(candidate_id, text, page=5):
 
 
 def _dependencies(responses, render_calls, requests):
+    latest_corrected_claim = ""
+
     def render_page(request, _ctx):
         render_calls.append(request)
         return SimpleNamespace(
@@ -206,8 +208,15 @@ def _dependencies(responses, render_calls, requests):
         )
 
     def call_model(request: OpenAIJSONImagePromptRequest, _ctx):
+        nonlocal latest_corrected_claim
         requests.append(request)
         payload = next(responses)
+        if (
+            isinstance(payload, dict)
+            and payload.get("status") == "corrected"
+            and isinstance(payload.get("claim"), str)
+        ):
+            latest_corrected_claim = payload["claim"]
         if (
             isinstance(payload, dict)
             and payload.get("outcome") == "verified"
@@ -227,6 +236,20 @@ def _dependencies(responses, render_calls, requests):
                 "supporting_physical_pages": pages,
                 "source_truth_notes_by_page": {
                     str(page): payload["source_truth_notes"] for page in pages
+                },
+            }
+        if (
+            isinstance(payload, dict)
+            and payload.get("outcome") == "verified"
+            and "verified_fact" not in payload
+            and not payload.pop("_omit_verified_fact", False)
+        ):
+            payload = {
+                **payload,
+                "verified_fact": {
+                    "statement": latest_corrected_claim or "Verified source claim.",
+                    "metric": {},
+                    "qualifiers": [],
                 },
             }
         return SimpleNamespace(

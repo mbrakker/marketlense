@@ -239,6 +239,62 @@ def test_materially_rewritten_claim_does_not_retain_original_metric_binding(tmp_
     assert item.corrected_source_binding_status == "unbound"
 
 
+def test_verified_outcome_without_authoritative_fact_fails_closed(tmp_path):
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "Physical page 5 reports the corrected relationship for the "
+                    "named cohort and period."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": (
+                        "Physical page 5 reports the corrected relationship for the "
+                        "named cohort and period."
+                    )
+                },
+                "_omit_verified_fact": True,
+            },
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "Physical page 5 reports the same corrected relationship for the "
+                    "named cohort and period."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": (
+                        "Physical page 5 reports the same corrected relationship for "
+                        "the named cohort and period."
+                    )
+                },
+                "_omit_verified_fact": True,
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [_claim("candidate-1", "Original claim")]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "failed_verification"
+    assert len(item.verification_attempts) == 2
+    assert all(
+        "verification_verified_fact_missing" in attempt.diagnostics
+        for attempt in item.verification_attempts
+    )
+
+
 def test_identical_verified_claim_retains_authoritative_corrected_binding(tmp_path):
     claim = _claim("candidate-1", "The source reports 61% adoption among video users.")
     claim["metric"] = {

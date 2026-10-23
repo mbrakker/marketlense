@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from statistics import median
 from typing import Any, Iterable
 
@@ -9,6 +10,8 @@ from src.contracts.prompts import PromptDryRunRequest, PromptDryRunResult
 from src.contracts.run_context import RunContext
 from src.services.prompt_service import validate_prompt_dry_run
 from src.utils.costing import estimate_cost_usd, estimate_text_tokens
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass(frozen=True)
@@ -220,7 +223,23 @@ def collect_prompt_fixture_corpus_metrics(
 
 def metrics_to_payload(metrics: PromptFixtureCorpusMetrics) -> dict[str, Any]:
     payload = asdict(metrics)
+    payload["fixture_path"] = _repository_relative_path(payload.get("fixture_path"))
+    # Generation time is execution metadata, not a regression input. Keep the
+    # existing field for schema compatibility while making committed snapshots
+    # stable across repeated runs.
+    payload["generated_at_utc"] = ""
     return payload
+
+
+def _repository_relative_path(value: object) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    try:
+        path = Path(raw).resolve()
+        return path.relative_to(REPOSITORY_ROOT.resolve()).as_posix()
+    except (OSError, ValueError):
+        return raw.replace("\\", "/")
 
 
 def _sum_family_metrics(

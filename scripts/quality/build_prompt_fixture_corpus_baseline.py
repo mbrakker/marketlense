@@ -53,14 +53,60 @@ def main() -> int:
     )
     out_path = ROOT / args.baseline_out
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = _preserve_runtime_reference(
+        metrics_to_payload(metrics), baseline_path=out_path
+    )
     out_path.write_text(
-        json.dumps(
-            metrics_to_payload(metrics), ensure_ascii=False, indent=2, sort_keys=True
-        ),
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
         encoding="utf-8",
     )
     print(f"Prompt fixture corpus baseline written: {out_path}")
     return 0
+
+
+def _preserve_runtime_reference(
+    payload: dict[str, object], *, baseline_path: Path
+) -> dict[str, object]:
+    """Keep the prior runtime reference while refreshing stable metrics.
+
+    Prompt render runtime is still checked by the existing comparator, but its
+    host-dependent sample must not rewrite a committed baseline on every
+    regeneration. Token, cost, model, namespace, and coverage values remain
+    sourced from the current corpus measurement.
+    """
+
+    if not baseline_path.exists():
+        return payload
+    try:
+        prior = json.loads(baseline_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return payload
+    if not isinstance(prior, dict):
+        return payload
+    for group_name in ("families", "namespaces"):
+        current_group = payload.get(group_name)
+        prior_group = prior.get(group_name)
+        if not isinstance(current_group, dict) or not isinstance(prior_group, dict):
+            continue
+        for key, current_item in current_group.items():
+            prior_item = prior_group.get(key)
+            if (
+                isinstance(current_item, dict)
+                and isinstance(prior_item, dict)
+                and isinstance(prior_item.get("runtime_ms"), (int, float))
+                and not isinstance(prior_item.get("runtime_ms"), bool)
+            ):
+                current_item["runtime_ms"] = prior_item["runtime_ms"]
+    prior_totals = prior.get("totals")
+    current_totals = payload.get("totals")
+    if (
+        isinstance(prior_totals, dict)
+        and isinstance(current_totals, dict)
+        and isinstance(prior_totals.get("runtime_ms"), (int, float))
+        and not isinstance(prior_totals.get("runtime_ms"), bool)
+    ):
+        current_totals["runtime_ms"] = prior_totals["runtime_ms"]
+    return payload
 
 
 def _ctx(span_id: str) -> RunContext:

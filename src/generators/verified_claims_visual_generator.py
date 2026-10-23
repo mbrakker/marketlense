@@ -1086,6 +1086,12 @@ def _verification_attempt(
             [*diagnostics, *support_diagnostics] if diagnostics is not None else None
         )
         verified_fact, verified_fact_issues = _normalise_verified_fact_payload(payload)
+        if not verified_fact and not verified_fact_issues:
+            # A terminal visual verification is only authoritative when it
+            # carries the complete source-established fact that downstream
+            # admission will project.  Page notes alone are not a factual
+            # binding, even when the final claim is unchanged.
+            verified_fact_issues.append("verification_verified_fact_missing")
         raw_fact_pages = (
             payload.get("verified_fact", {}).get("supporting_physical_pages")
             if isinstance(payload.get("verified_fact"), Mapping)

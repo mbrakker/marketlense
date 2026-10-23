@@ -814,7 +814,7 @@ def openai_chat_json_with_images(
             },
         ) from exc
 
-    metadata = _adapt_responses_metadata(resp, recover_json_object=False)
+    metadata = _adapt_responses_metadata(resp, recover_json_object=True)
     accounting = _record_usage_accounting(
         ctx=ctx,
         step_name="openai_chat_json_with_images",

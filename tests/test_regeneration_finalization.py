@@ -88,6 +88,131 @@ def test_finalization_preserves_unrelated_derived_roots_byte_for_byte() -> None:
     assert repeated_paths == verified_paths
 
 
+def test_verified_finalization_rebinds_canonical_fact_spans() -> None:
+    text = "The source reports 61% adoption among video users."
+    evidence_id = "verified-fact:f1"
+    stale_span = {
+        "evidence_id": evidence_id,
+        "source_pack": "findings",
+        "page": 7,
+        "text": "Legacy discovery excerpt.",
+    }
+    canonical_span = {
+        "evidence_id": evidence_id,
+        "source_pack": "verified_facts",
+        "page": 7,
+        "text": text,
+    }
+    evidence_packs = {
+        "findings": {
+            "family_status": {
+                "status": "generated",
+                "policy_action": "keep",
+                "source": "verified_facts",
+            },
+            "findings": [
+                {
+                    "id": evidence_id,
+                    "text": text,
+                    "evidence": text,
+                    "pages": [7],
+                }
+            ],
+        }
+    }
+    insight = {
+        "id": "insight-f1",
+        "text": text,
+        "evidence": "Legacy discovery excerpt.",
+        "evidence_id": evidence_id,
+        "evidence_spans": [stale_span],
+        "pages": [7],
+    }
+    summary_claim = {
+        "claim": text,
+        "evidence": "Legacy discovery excerpt.",
+        "evidence_id": evidence_id,
+        "evidence_spans": [stale_span],
+        "pages": [7],
+    }
+    baseline = {
+        "summary": {"claim_evidence_map": [deepcopy(summary_claim)]},
+        "insights_candidates": [deepcopy(insight)],
+        "insights_final": [deepcopy(insight)],
+        "quotes_final": [],
+        "expert_comment": text,
+        "linkedin_post": text,
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [
+                *build_soft_copy_claim_provenance(
+                    artifact_family="expert_comment",
+                    text=text,
+                    declared_claims=[
+                        {
+                            "claim": text,
+                            "classification": "factual",
+                            "evidence_ids": [evidence_id],
+                        }
+                    ],
+                    evidence_span_index={evidence_id: [stale_span]},
+                    producing_prompt_identity={"namespace": "test"},
+                    generation_attempt=1,
+                    regeneration_attempt=0,
+                ),
+                *build_soft_copy_claim_provenance(
+                    artifact_family="linkedin_post",
+                    text=text,
+                    declared_claims=[
+                        {
+                            "claim": text,
+                            "classification": "factual",
+                            "evidence_ids": [evidence_id],
+                        }
+                    ],
+                    evidence_span_index={evidence_id: [stale_span]},
+                    producing_prompt_identity={"namespace": "test"},
+                    generation_attempt=1,
+                    regeneration_attempt=0,
+                ),
+            ]
+        ),
+    }
+    candidate = deepcopy(baseline)
+
+    finalize_regeneration_candidate_artifacts(
+        promoted_baseline=baseline,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        atomic_source_patch={
+            root: deepcopy(candidate[root])
+            for root in (
+                "summary",
+                "insights_candidates",
+                "insights_final",
+                "expert_comment",
+                "linkedin_post",
+            )
+        },
+        verified_mode=True,
+    )
+
+    assert candidate["summary"]["claim_evidence_map"] == [
+        {
+            **summary_claim,
+            "evidence": text,
+            "evidence_spans": [canonical_span],
+        }
+    ]
+    for root in ("insights_candidates", "insights_final"):
+        assert candidate[root][0]["evidence_spans"] == [canonical_span]
+        assert candidate[root][0]["evidence"] == text
+    claims = candidate["soft_copy_claim_provenance"]["claims"]
+    assert {claim["artifact_family"]: claim["source_spans"] for claim in claims} == {
+        "expert_comment": [canonical_span],
+        "linkedin_post": [canonical_span],
+    }
+
+
 def test_finalization_preserves_unchanged_intentional_summary_abstention() -> None:
     summary_status = {
         "schema_version": "1.0",
@@ -276,8 +401,7 @@ def test_finalization_uses_only_the_atomic_source_patch() -> None:
 
     assert candidate["insights_final"] == atomic_patch
     assert all(
-        item["id"] != "out-of-scope-sibling"
-        for item in candidate["insights_final"]
+        item["id"] != "out-of-scope-sibling" for item in candidate["insights_final"]
     )
 
 

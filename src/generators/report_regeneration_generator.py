@@ -507,12 +507,25 @@ def regenerate_artifacts(
         for root in ("toc_entries", "toc_topics", "toc_topics_expanded"):
             if root in updated_artifacts:
                 atomic_source_patch[root] = deepcopy(updated_artifacts[root])
+        # The admitted visual-fact pool owns these public source roots during
+        # verified regeneration.  Preserve their canonical spans and wording
+        # even when the requested repair targets another family.
+        for root in (
+            "summary",
+            "insights_candidates",
+            "insights_final",
+            "expert_comment",
+            "linkedin_post",
+        ):
+            if root in updated_artifacts:
+                atomic_source_patch[root] = deepcopy(updated_artifacts[root])
     finalized_derived_paths = finalize_regeneration_candidate_artifacts(
         promoted_baseline=request.current_artifacts,
         candidate_artifacts=updated_artifacts,
         evidence_packs=canonical_evidence,
         atomic_source_patch=atomic_source_patch,
         regeneration_attempt=request.attempt_index,
+        verified_mode=bool(state.visual_authority_digest),
     )
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.

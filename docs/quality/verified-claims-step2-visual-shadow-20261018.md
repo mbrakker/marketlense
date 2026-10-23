@@ -3416,3 +3416,79 @@ the population qualifier and source-page reconciliation, and the retained
 public evidence-pack lineage requires a real downstream regeneration before
 promotion. These are the remaining blockers; no factual safeguard was
 weakened.
+
+#### Verified-facts P1/P2 correction pass — 2026-10-23
+
+The finalizer/regeneration audit identified the remaining producer-side
+lineage defect. `assemble_artifacts_payload()` already builds fresh verified
+mode projections from the admitted visual-fact pool, but
+`finalize_regeneration_candidate_artifacts()` could restore the promoted
+baseline's discovery-era roots and soft-copy `source_spans` after assembly.
+That left canonical `verified-fact:<fact_id>` IDs paired with legacy
+`findings` provenance in retained public artifacts. Verified regeneration now
+keeps the assembled summary, insight candidates/finals, expert comment, and
+LinkedIn roots in its atomic patch, then reuses
+`bind_artifact_evidence_spans()` and `artifact_evidence_span_index()` after
+baseline reconciliation. Soft-copy spans and public evidence text are rebuilt
+only from the canonical index; an absent canonical span remains unbound and is
+not guessed. Normal-mode finalization is unchanged. A focused regression
+passes for insight candidates/finals and soft-copy provenance; the clean-head
+authority canary/regeneration suite passes **32 tests**.
+
+The visual verification boundary had a second structural gap:
+`_verification_attempt()` could return a terminal `verified` attempt when page
+notes were complete but `verified_fact` was absent. The result adapter later
+quarantined the claim, but the terminal attempt was misleading and did not
+exercise the normal bounded failure path. A missing authoritative fact now
+becomes a rejected verification attempt with
+`verification_verified_fact_missing`; the existing maximum of two verification
+attempts remains unchanged. Focused visual tests pass (**46 passed** in the
+task worktree), including the new missing-fact regression and continuation
+after permanent provider errors.
+
+The retained malformed-response audit classified **16** cached verification
+responses: **12** had `Extra data` from concatenated JSON objects and **4** had
+`Unterminated string` truncation. The existing response-payload recovery
+utility already extracts a complete first JSON object, so the image-backed
+OpenAI boundary now enables that recovery path. Incomplete recovered objects
+still fail the existing schema/completeness checks closed; no retry count or
+output budget was increased. A service regression covers concatenated image
+responses. The prior six claim failures therefore remain visible when the
+recovered object is incomplete rather than being promoted on page notes alone.
+
+The Algolia review did not demonstrate a missing canonical population field:
+the admitted `verified_fact` retains the total-respondent qualifier for the
+53%/51% page-23 metric. The retained final prose still omits that qualifier,
+so it remains an editorial revision blocker rather than a deterministic
+population rule. The agentic-search correction is authoritative on page 26;
+the independent review's additional page-9 binding is not in the Step 2
+supporting-page set and remains blocked by source-page reconciliation. No
+Algolia-specific parser or semantic judge was added.
+
+Prompt baseline reproducibility was corrected through the existing builder.
+`fixture_path` is repository-relative and `generated_at_utc` is retained as an
+empty schema-compatible field. Runtime references are preserved from the
+previous baseline because they are host-noisy, while current token, cost,
+model, namespace, and coverage values are still regenerated. Two consecutive
+builder runs produced the same SHA
+`12835943703A84A668843CCC779BB330389417F3059759D53362DC435FDB9066`.
+The unchanged prompt gate passes with **108,275 total tokens / $0.024049** and
+**9,486 validation-family tokens / $0.001709**; these are unchanged from the
+accepted corrected baseline. The focused prompt regression suite passes **9
+tests**.
+
+The retained real-report replay remains the latest live evidence: Adjust +
+Criteo + DoubleVerify had **7 first-pass, 3 after-retry, and 5 failed-closed**
+outcomes across 15 claims; Algolia had **4 first-pass, 1 after-retry, and 1
+failed-closed** across 6 claims. Those outcomes were recorded before the
+producer fixes above and must not be presented as a fresh post-fix quality
+improvement. The public-quality gate still reports historical retained-lineage
+failures where old spans use `findings`; the clean producer regression is the
+evidence for the correction, and no canonical or WordPress write was made.
+
+**Current verdict: PARTIAL / Step 3 not ready.** The new producer, visual
+completeness, parser-boundary, and reproducible-baseline regressions are
+implemented without weakening factual safeguards. Fresh post-fix live
+editorial generation and reconciliation of the retained public artifacts are
+still required before promotion; the Algolia population wording and
+page-9/page-26 review findings remain unresolved quality blockers.

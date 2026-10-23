@@ -8,7 +8,11 @@ from scripts.ci.check_prompt_fixture_regression import (
     _load_pricing,
     compare_prompt_fixture_metrics,
 )
+from scripts.quality.build_prompt_fixture_corpus_baseline import (
+    _preserve_runtime_reference,
+)
 from scripts.quality.prompt_fixture_corpus_metrics import (
+    _repository_relative_path,
     collect_prompt_fixture_corpus_metrics,
 )
 from src.services import prompt_service
@@ -132,6 +136,37 @@ def test_collect_prompt_fixture_corpus_metrics_warms_the_full_fixture_corpus(
     # A warm-up must not become a second measured corpus row.
     assert metrics.fixture_count == 1
     assert set(metrics.namespaces) == {"alpha"}
+
+
+def test_prompt_baseline_path_is_repository_relative() -> None:
+    assert (
+        _repository_relative_path(
+            str(Path("src/prompts/_dry_run_fixtures.yaml").resolve())
+        )
+        == "src/prompts/_dry_run_fixtures.yaml"
+    )
+
+
+def test_prompt_baseline_refresh_preserves_runtime_reference(tmp_path: Path) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(
+        '{"families":{"report":{"runtime_ms":12.5}},'
+        '"namespaces":{"report/alpha":{"runtime_ms":4.5}},'
+        '"totals":{"runtime_ms":12.5}}',
+        encoding="utf-8",
+    )
+    current = {
+        "families": {"report": {"runtime_ms": 99.0, "total_tokens": 210}},
+        "namespaces": {"report/alpha": {"runtime_ms": 33.0, "model": "gpt-6-luna"}},
+        "totals": {"runtime_ms": 99.0, "total_tokens": 210},
+    }
+
+    refreshed = _preserve_runtime_reference(current, baseline_path=baseline_path)
+
+    assert refreshed["families"]["report"]["runtime_ms"] == 12.5
+    assert refreshed["namespaces"]["report/alpha"]["runtime_ms"] == 4.5
+    assert refreshed["totals"]["runtime_ms"] == 12.5
+    assert refreshed["totals"]["total_tokens"] == 210
 
 
 def test_prompt_fixture_regression_allowlist_requires_unexpired_bound() -> None:
