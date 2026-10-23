@@ -9,8 +9,13 @@ from typing import List, Tuple
 from PIL import Image, ImageDraw, ImageFont
 
 from src.contracts.cover_images import CoverImageRenderRequest, CoverImageRenderResponse
+from src.contracts.files import ResolvePathWithinRootRequest
 from src.contracts.report_cards import GEOMETRY_FAMILIES
 from src.contracts.run_context import RunContext
+from src.services import file_service
+from src.utils.cover_path_utils import (
+    validate_cover_asset_output_path as validate_cover_asset_output_path_lexical,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -19,6 +24,79 @@ FONT_SIZE_STEP = 2
 RGB = Tuple[int, int, int]
 RGBA = Tuple[int, int, int, int]
 Point = Tuple[int, int]
+
+
+def _cover_asset_path_error(
+    output_path: str | Path,
+    output_root: str | Path,
+    reason: str,
+    *,
+    cause: Exception | None = None,
+) -> AppError:
+    return AppError(
+        code="cover_asset_path_invalid",
+        message=(
+            f"Cover asset destination is invalid: {output_path} ({reason}). "
+            f"Configured root: {output_root}."
+        ),
+        cause=cause,
+        retryable=False,
+        context={
+            "destination": str(output_path),
+            "configured_root": str(output_root),
+            "reason": reason,
+        },
+    )
+
+
+def validate_cover_asset_output_path(
+    output_path: str | Path,
+    *,
+    output_root: str | Path | None = None,
+    ctx: RunContext,
+) -> tuple[Path, Path]:
+    """Validate a cover destination through the canonical filesystem boundary."""
+
+    try:
+        destination, temporary = validate_cover_asset_output_path_lexical(output_path)
+    except AppError:
+        raise
+    configured_root = (
+        Path(output_root).expanduser()
+        if output_root is not None
+        else Path(output_path).expanduser().parent
+    )
+    for candidate in (destination, temporary):
+        try:
+            inspection = file_service.resolve_path_within_root(
+                ResolvePathWithinRootRequest(
+                    schema_version="1.0",
+                    root_dir=str(configured_root),
+                    path=str(candidate),
+                    reject_parent_components=False,
+                ),
+                ctx,
+            )
+        except AppError as exc:
+            reason = "path_inspection_failed"
+            if exc.code == "file_path_resolution_failed":
+                reason = (
+                    "path_inspection_failed; configured output root path "
+                    "could not be resolved"
+                )
+            raise _cover_asset_path_error(
+                output_path,
+                configured_root,
+                reason,
+                cause=exc,
+            ) from exc
+        if not inspection.valid:
+            raise _cover_asset_path_error(
+                output_path,
+                configured_root,
+                inspection.reason,
+            )
+    return destination, temporary
 
 
 def _normalize_text(value: str | None) -> str:
@@ -559,6 +637,11 @@ def render_cover_image(
     request: CoverImageRenderRequest,
     ctx: RunContext,
 ) -> CoverImageRenderResponse:
+    validate_cover_asset_output_path(
+        request.output_path,
+        output_root=request.output_root,
+        ctx=ctx,
+    )
     title = _normalize_text(request.title)
     publisher = _normalize_text(request.publisher)
     period = _normalize_text(request.time_period)

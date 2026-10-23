@@ -170,6 +170,7 @@ def generate_cover_images(
                         title=report.title,
                         publisher=report.publisher,
                         time_period=_covered_period(report),
+                        output_root=request.output_dir,
                         style=profile.style,
                         layout=layout,
                         fingerprint=report.fingerprint,

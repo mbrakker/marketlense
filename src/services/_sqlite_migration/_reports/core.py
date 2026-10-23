@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from ..runner import (
+    _add_column_if_missing,
     _fetch_columns,
     _normalize_url_key,
 )
@@ -323,4 +324,14 @@ def _reports_db_005_normalize_publishers(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_publishers_normalized_insights_url
         ON publishers(normalized_insights_url)
         """
+    )
+
+
+def _reports_db_032_add_artifacts_stale(conn: sqlite3.Connection) -> None:
+    """Retain source-replacement invalidation state for legacy fallback control."""
+    _add_column_if_missing(
+        conn,
+        table_name="reports",
+        column_name="artifacts_stale",
+        column_type="INTEGER NOT NULL DEFAULT 0",
     )

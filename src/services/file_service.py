@@ -60,6 +60,8 @@ from src.contracts.files import (
     ReadTextResponse,
     RepositoryRevisionReadRequest,
     RepositoryRevisionReadResponse,
+    ResolvePathWithinRootRequest,
+    ResolvePathWithinRootResponse,
     StructuredLogLoadRequest,
     StructuredLogLoadResponse,
     WriteBytesRequest,
@@ -802,6 +804,71 @@ def file_exists(request: FileExistsRequest, ctx: RunContext) -> FileExistsRespon
         )
     )
     return FileExistsResponse(schema_version="1.0", path=request.path, exists=exists)
+
+
+def resolve_path_within_root(
+    request: ResolvePathWithinRootRequest,
+    ctx: RunContext,
+) -> ResolvePathWithinRootResponse:
+    """Resolve and inspect one candidate path under a configured filesystem root."""
+
+    try:
+        root = Path(request.root_dir).expanduser().resolve(strict=False)
+        candidate = Path(request.path).expanduser()
+        if request.reject_parent_components and ".." in candidate.parts:
+            response = ResolvePathWithinRootResponse(
+                schema_version="1.0",
+                root_dir=request.root_dir,
+                path=request.path,
+                resolved_root=str(root),
+                resolved_path="",
+                valid=False,
+                reason="path_traversal_component",
+                root_exists=root.exists(),
+                root_is_dir=root.is_dir() if root.exists() else False,
+                path_exists=False,
+                path_is_file=False,
+            )
+            return response
+        resolved_candidate = candidate.resolve(strict=False)
+        root_exists = root.exists()
+        root_is_dir = root.is_dir() if root_exists else False
+        path_exists = resolved_candidate.exists()
+        path_is_file = resolved_candidate.is_file() if path_exists else False
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise AppError(
+            code="file_path_resolution_failed",
+            message=f"Unable to resolve filesystem path: {request.path}",
+            cause=exc,
+            retryable=False,
+            context={"root_dir": request.root_dir, "path": request.path},
+        ) from exc
+
+    if root_exists and not root_is_dir:
+        valid = False
+        reason = "root_not_directory"
+    elif resolved_candidate != root and root not in resolved_candidate.parents:
+        valid = False
+        reason = "outside_root"
+    elif path_exists and not path_is_file:
+        valid = False
+        reason = "not_a_regular_file"
+    else:
+        valid = True
+        reason = "resolved" if path_exists else "missing"
+    return ResolvePathWithinRootResponse(
+        schema_version="1.0",
+        root_dir=request.root_dir,
+        path=request.path,
+        resolved_root=str(root),
+        resolved_path=str(resolved_candidate),
+        valid=valid,
+        reason=reason,
+        root_exists=root_exists,
+        root_is_dir=root_is_dir,
+        path_exists=path_exists,
+        path_is_file=path_is_file,
+    )
 
 
 def write_bytes(

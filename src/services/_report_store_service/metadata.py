@@ -113,16 +113,32 @@ def _provenance_roles_from_json(raw: object) -> SourceProvenanceRoles:
         schema_version=str(payload.get("schema_version") or "1.0"),
         publication_name=str(payload.get("publication_name") or ""),
         publisher_name=str(payload.get("publisher_name") or ""),
-        author_names=tuple(str(value) for value in payload.get("author_names") or [] if str(value).strip()),
+        author_names=tuple(
+            str(value)
+            for value in payload.get("author_names") or []
+            if str(value).strip()
+        ),
         author_kind=str(payload.get("author_kind") or "unknown"),
-        data_provider_names=tuple(str(value) for value in payload.get("data_provider_names") or [] if str(value).strip()),
-        source_organization_names=tuple(str(value) for value in payload.get("source_organization_names") or [] if str(value).strip()),
+        data_provider_names=tuple(
+            str(value)
+            for value in payload.get("data_provider_names") or []
+            if str(value).strip()
+        ),
+        source_organization_names=tuple(
+            str(value)
+            for value in payload.get("source_organization_names") or []
+            if str(value).strip()
+        ),
         report_owner_name=str(payload.get("report_owner_name") or ""),
         status=str(payload.get("status") or "unknown"),
         resolution_method=str(payload.get("resolution_method") or ""),
-        issues=tuple(str(value) for value in payload.get("issues") or [] if str(value).strip()),
+        issues=tuple(
+            str(value) for value in payload.get("issues") or [] if str(value).strip()
+        ),
         evidence=tuple(evidence),
     )
+
+
 _REPORT_METADATA_IDENTITY_PLACEHOLDERS = {
     "",
     "...",
@@ -551,7 +567,11 @@ def _first_identity_value(
 def _provenance_publisher_rank(roles: SourceProvenanceRoles) -> int:
     if not roles.publisher_name:
         return 99
-    kinds = {evidence.evidence_kind for evidence in roles.evidence if evidence.role == "publisher"}
+    kinds = {
+        evidence.evidence_kind
+        for evidence in roles.evidence
+        if evidence.role == "publisher"
+    }
     if "pdf_metadata_title_brand" in kinds or "explicit_report_brand" in kinds:
         return 0
     if "copyright" in kinds:
@@ -669,7 +689,10 @@ def _resolve_identity_observations(
     identity_material = content_hash or "|".join(
         (
             _first_identity_value(observations, "canonical_landing_page_url"),
-            (provenance_roles.publisher_name or _first_identity_value(observations, "publisher_name")).casefold(),
+            (
+                provenance_roles.publisher_name
+                or _first_identity_value(observations, "publisher_name")
+            ).casefold(),
             _first_identity_value(observations, "canonical_title").casefold(),
         )
     )
@@ -1612,6 +1635,7 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
         source_metadata_hash=str(row[20] or "").strip(),
         source_identity_status=str(row[21] or "unknown").strip() or "unknown",
         source_publication_date_status=str(row[22] or "unknown").strip() or "unknown",
+        artifacts_stale=bool(row[23] or 0),
     )
 
 
@@ -1828,7 +1852,11 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     vector_store_id = (
         request.vector_store_id.strip() if request.vector_store_id else None
     )
-    evidence_packs = request.evidence_pack_paths or {}
+    evidence_packs = {
+        str(key).strip(): str(value).strip()
+        for key, value in (request.evidence_pack_paths or {}).items()
+        if str(key).strip() and str(value).strip()
+    }
     evidence_packs_json = json.dumps(evidence_packs, ensure_ascii=False)
     source_identity_id = request.source_identity_id.strip()
     source_metadata_hash = request.source_metadata_hash.strip()
@@ -1874,8 +1902,8 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
         )
         conn.execute(
             """
-            INSERT INTO reports(file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status, created_at, updated_at)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
+            INSERT INTO reports(file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status, artifacts_stale, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
             ON CONFLICT(file_id) DO UPDATE SET
                 file_name=COALESCE(excluded.file_name, reports.file_name),
                 title=excluded.title,
@@ -1886,17 +1914,177 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 time_period=excluded.time_period,
                 source_url=excluded.source_url,
                 html_path=excluded.html_path,
-                md5=excluded.md5,
+                md5=CASE
+                    WHEN (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN NULLIF(excluded.md5, '')
+                    ELSE COALESCE(excluded.md5, reports.md5)
+                END,
                 page_count=excluded.page_count,
                 contents_page=excluded.contents_page,
                 pdf_metadata_json=excluded.pdf_metadata_json,
                 analysis_mode=excluded.analysis_mode,
                 vector_store_id=excluded.vector_store_id,
-                evidence_packs_json=excluded.evidence_packs_json,
-                source_identity_id=COALESCE(NULLIF(excluded.source_identity_id, ''), reports.source_identity_id),
-                source_metadata_hash=COALESCE(NULLIF(excluded.source_metadata_hash, ''), reports.source_metadata_hash),
-                source_identity_status=COALESCE(NULLIF(excluded.source_identity_status, ''), reports.source_identity_status),
-                source_publication_date_status=COALESCE(NULLIF(excluded.source_publication_date_status, ''), reports.source_publication_date_status),
+                evidence_packs_json=CASE
+                    WHEN excluded.evidence_packs_json <> '{}'
+                    THEN excluded.evidence_packs_json
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN '{}'
+                    WHEN COALESCE(reports.evidence_packs_json, '') NOT IN ('', '{}')
+                    THEN reports.evidence_packs_json
+                    ELSE excluded.evidence_packs_json
+                END,
+                source_identity_id=CASE
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN NULLIF(excluded.source_identity_id, '')
+                    ELSE COALESCE(NULLIF(excluded.source_identity_id, ''), reports.source_identity_id)
+                END,
+                source_metadata_hash=CASE
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN NULLIF(excluded.source_metadata_hash, '')
+                    ELSE COALESCE(NULLIF(excluded.source_metadata_hash, ''), reports.source_metadata_hash)
+                END,
+                source_identity_status=CASE
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN COALESCE(NULLIF(excluded.source_identity_status, ''), 'unknown')
+                    ELSE COALESCE(NULLIF(excluded.source_identity_status, ''), reports.source_identity_status)
+                END,
+                source_publication_date_status=CASE
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN COALESCE(NULLIF(excluded.source_publication_date_status, ''), 'unknown')
+                    ELSE COALESCE(NULLIF(excluded.source_publication_date_status, ''), reports.source_publication_date_status)
+                END,
+                artifacts_stale=CASE
+                    WHEN json_type(excluded.evidence_packs_json, '$.artifacts') = 'text'
+                        AND NULLIF(
+                            TRIM(
+                                json_extract(excluded.evidence_packs_json, '$.artifacts')
+                            ),
+                            ''
+                        ) IS NOT NULL
+                    THEN 0
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN 1
+                    ELSE COALESCE(reports.artifacts_stale, 0)
+                END,
                 updated_at=strftime('%s','now')
             """,
             (
@@ -1921,6 +2109,7 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 source_metadata_hash,
                 source_identity_status,
                 source_publication_date_status,
+                0,
             ),
         )
     logger.info(
@@ -1949,7 +2138,7 @@ def get_metadata(
     with _metadata_conn(request.db_path, ctx) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status
+            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status, artifacts_stale
             FROM reports
             WHERE file_id=?
             """,
@@ -2019,7 +2208,7 @@ def list_metadata(
     with _metadata_conn(request.db_path, ctx) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status
+            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status, artifacts_stale
             FROM reports
             ORDER BY created_at ASC
             """
