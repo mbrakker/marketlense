@@ -835,9 +835,8 @@ def _build_response_metadata(
         text,
         recover_json_object=recover_json_object,
     )
-    if require_completed and provider_status and provider_status != "completed":
+    if require_completed and provider_status not in {"", "completed"}:
         parsed_json = None
-        parse_strategy = f"provider_status_{provider_status}"
     resolved_total_tokens = total_tokens
     if resolved_total_tokens is None and (
         input_tokens is not None or output_tokens is not None
@@ -882,31 +881,17 @@ def _adapt_responses_metadata(
         _extract_responses_usage(resp)
     )
     file_search_call_count = _extract_responses_file_search_call_count(resp)
+
+    def field(value: Any, key: str) -> Any:
+        return value.get(key) if isinstance(value, dict) else getattr(value, key, None)
+
     usage = getattr(resp, "usage", None)
-    details = (
-        usage.get("output_tokens_details")
-        if isinstance(usage, dict)
-        else getattr(usage, "output_tokens_details", None)
-    )
-    reasoning_tokens = (
-        details.get("reasoning_tokens")
-        if isinstance(details, dict)
-        else getattr(details, "reasoning_tokens", None)
-    )
-    raw_status = (
-        resp.get("status") if isinstance(resp, dict) else getattr(resp, "status", None)
-    )
+    details = field(usage, "output_tokens_details")
+    reasoning_tokens = field(details, "reasoning_tokens")
+    raw_status = field(resp, "status")
     provider_status = str(raw_status or "").strip().lower()
-    incomplete_details = (
-        resp.get("incomplete_details")
-        if isinstance(resp, dict)
-        else getattr(resp, "incomplete_details", None)
-    )
-    incomplete_reason = (
-        incomplete_details.get("reason")
-        if isinstance(incomplete_details, dict)
-        else getattr(incomplete_details, "reason", None)
-    )
+    incomplete_details = field(resp, "incomplete_details")
+    incomplete_reason = field(incomplete_details, "reason")
     return _build_response_metadata(
         text=_extract_responses_output_text(resp),
         request_id=getattr(resp, "id", None),
