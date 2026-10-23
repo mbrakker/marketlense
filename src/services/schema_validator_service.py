@@ -12,7 +12,7 @@ from src.contracts.schema_validation import (
     SchemaValidateRequest,
     SchemaValidateResponse,
 )
-from src.generators.validation.verified_facts import (
+from src.utils.verified_facts import (
     validated_verified_facts,
     verified_facts_mode,
 )
