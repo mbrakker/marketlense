@@ -3879,3 +3879,126 @@ The remaining blockers are the unmeasured fresh-model grounding outcome, the
 Algolia corrected-fact lineage conflict, the five-versus-six snapshot mismatch,
 and the physical-page binding reconciliation. No live quality improvement is
 claimed from this retained-artifact investigation.
+
+#### Verified-fact snapshot and editorial-selection separation — 2026-10-24
+
+This correction keeps one authoritative verified-fact snapshot after visual
+admission and makes editorial selection a later, narrower operation. The
+initial verified-mode selector now preserves the full eligible candidate pool
+for visual evaluation; it does not apply the existing five-insight editorial
+limit. After admission, the accepted `verified_facts` list is validated again
+with the existing canonical snapshot validator and materialized into
+artifact-shaped projections from the facts themselves. The admission's
+candidate projection is therefore not a second factual authority. The final
+selector then applies the existing editorial plan and minimum-count rules, so
+six valid verified facts may yield five published insights without treating
+the unselected fact as invalid. Legacy mode and the existing minimum insight
+gate are unchanged.
+
+The visual boundary is now bound to a deterministic
+`verified_claims_candidate_roster:1` digest over all non-ranking candidate
+fields. Requests carry the digest and evaluator responses return it; an
+explicit mismatch fails closed as `evaluation_candidate_roster_mismatch`.
+Equivalent score-only same-ID representations are collapsed before evaluation,
+while conflicting same-ID representations remain in the roster and are
+quarantined by the existing factual-conflict path. For legacy direct response
+callers without a roster digest, the existing result binding now additionally
+checks the original evidence spans exactly, including physical page and source
+identity fields. A changed claim, evidence ID, metric binding, or span cannot
+be selected by editorial score. These checks preserve the existing stable
+candidate IDs, canonical `verified-fact:*` IDs, evidence pages, spans, source
+hashes, and protected metric fields.
+
+Verified-mode factual restoration also preserves the complete candidate metric
+object, including unknown nested report-specific extensions, while removing
+final-only fields. This is deliberately limited to authoritative candidate
+materialization; it does not invent missing values or promote final editorial
+text into a fact. The existing semantic grounding path remains responsible for
+rejecting a final sentence that adds unsupported content.
+
+Deterministic verification evidence:
+
+- `tests/test_verified_claims_visual_authority_canary.py` passed **33 tests**,
+  including stale same-ID wording/evidence/metric rejection, a changed-only
+  physical span rejection, roster-digest mismatch, equivalent duplicate
+  collapse, conflicting-ID fail-closed behavior, and a six-verified-facts to
+  five-editorial-insights case.
+- `tests/test_artifact_normalization_source_fidelity.py` covers complete
+  nested metric preservation and final-only metric removal in verified mode.
+- The combined affected shortlisting, admission, regeneration, provenance,
+  grounding, prompt, and editorial-integrity suite passed **198 tests**; the
+  prompt/grounding subset passed **116 tests**. Selected Ruff passed after the
+  final test formatting correction. The repository type gate cannot represent
+  this worktree because it scans the user-owned untracked duplicate
+  `src/generators/artifact_normalization (2).py`, which has an unrelated
+  pre-existing type error; that file was not modified or staged.
+
+The exact provider-free frozen-five replay was rerun with the existing
+`python scripts/quality/replay_verified_claims_step2.py --provider-free`
+workflow. It retained the same **15 reference cases / 39 variants**, matched
+all five source hashes, and retained **29 selected identities** with the same
+report counts: Capgemini 5, Activate 7, KPMG 5, Reuters Institute 6, and
+Adjust 6. It made zero provider calls. This is selection/provenance replay
+evidence, not a live selection-quality claim.
+
+##### Fresh retained Criteo and DoubleVerify visual review
+
+The bounded live shadow command evaluated the exact retained five insights for
+each report with GPT-6 Luna High, using the local PDFs whose SHA-256 values
+matched the retained source identities:
+
+| Report | Visual claims | Outcomes | Calls / tokens / cost / wall time | PDF pages independently reviewed |
+|---|---:|---|---:|---|
+| Criteo | 5/5 | 5 verified first pass; 0 after retry; 0 unresolved/failed/skipped | 10 / 68,721 input + 9,058 output / $0.0109 / included in 207.133 s | 5, 7, 8 |
+| DoubleVerify | 5/5 | 5 verified first pass; 0 after retry; 0 unresolved/failed/skipped | 10 / 71,966 input + 9,606 output / $0.0125 / included in 207.133 s | 3, 8, 9, 10 |
+| **Total** | **10/10** | **10 verified first pass** | **20 / 140,687 + 18,664 = 159,351 tokens / $0.0234 / 207.133 s** | hash matched |
+
+The exact output is retained in ignored local evidence
+`out/verified_claims_step2_live_simplification_20261024.json`. The final
+visual wording was inspected against the native full pages, not just the
+model verdicts. The Criteo wording correctly keeps the 61% newer-channel ROI
+expectation separate from the page-5 global spend-recommendation table, and
+the page-7 22% estimate and page-8 plan/omnichannel statements match their
+populations and periods. DoubleVerify's final wording matches the page-3
+regional brand-suitability table, page-8 Engagement Index definition, page-9
+normalized-100/28-day context, and the page-10 APAC and North America video
+tables. No unsupported material claim was independently confirmed in this
+visual review. The visual result remained shadow-only: no canonical artifact,
+publication-readiness state, or WordPress write changed.
+
+##### Fresh complete-fact grounding replay
+
+The existing grounding boundary was then run live, without an additional
+validator or LLM stage, using the ten fresh verified facts above and the
+retained Criteo/DoubleVerify downstream editorial artifacts in memory. The
+run used validator identity `grounding_validation_output:1.8`, fresh isolated
+cache/database paths, and no vector-store retrieval. It made **16 grounding
+calls**, consumed **162,241 input + 101,357 output = 263,598 measured tokens**,
+cost **$0.064630**, and produced no canonical or publication write. The output
+is retained in `out/grounding_complete_fact_live_20261024.json`.
+
+| Report | Facts | Grounding terminal result | Interpretation |
+|---|---:|---:|---|
+| Criteo | 5 | 20 fail-closed issues | The retained downstream artifacts still combine the 61% ROI fact with separate spend-recommendation values and combine the broad 22% estimate with channel-specific chart values. The complete fact snapshot correctly rejects those unsupported single-fact promotions; the source page supports the values only when separately bound. |
+| DoubleVerify | 5 | 1 fail-closed issue | The only remaining issue is the retained North America `so_what` comparing to APAC without attaching the APAC fact. The separate APAC and North America facts both passed visual review, but the public comparison still lacks the required multi-fact binding. |
+
+This is a measured post-1.8 result, not a claim that the retained public
+artifacts are publication-ready. It shows that complete canonical context does
+not mask evidence-scope defects: the Criteo population/attribution and
+metric-composition failures remain fail-closed, while the DoubleVerify
+cross-region issue remains the previously documented evidence-binding defect.
+No individual report was patched and no unsupported value was enriched.
+
+The fresh results establish the requested architecture boundary and remove
+the previous “no post-1.8 grounding outcome” gap, but they do not close Step 2:
+the retained Criteo downstream artifact needs separate fact bindings for its
+additional chart values, and the DoubleVerify comparison needs both regional
+fact IDs or narrower wording. Algolia's corrected-proposition lineage and the
+original source-page convention remain unresolved and continue to fail closed.
+
+**Current verdict: PARTIAL / Step 2 remains NO-GO; Step 3 is not ready.** The
+authoritative snapshot and independent selection boundary are implemented and
+covered. Fresh visual claims are source-supported, but downstream retained
+editorial artifacts still contain genuine evidence-scope defects. No causal
+live selection improvement is claimed because the live evaluation used
+retained Step 1 candidates rather than a fresh end-to-end report selection.

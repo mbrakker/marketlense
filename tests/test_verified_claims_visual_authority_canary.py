@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -430,6 +431,74 @@ def test_material_correction_with_complete_independent_binding_replaces_facts():
     assert admitted["metric"] == corrected["metric"]
 
 
+def test_same_id_result_from_a_stale_candidate_snapshot_fails_closed():
+    current = _candidate()
+    stale = _candidate(
+        current["id"],
+        evidence_id="finding-2",
+        page=7,
+        text="A stale candidate proposition.",
+        metric=_metric("51%", cohort="repeat buyers"),
+    )
+
+    admission = admit_visual_authority_candidates(
+        candidates=[current],
+        evaluation=_response(_result(stale)),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(current),
+    )
+
+    assert admission.admitted_candidates == []
+    assert admission.audit["quarantined"] == [
+        {
+            "candidate_id": current["id"],
+            "reason": "evaluation_candidate_snapshot_mismatch",
+        }
+    ]
+
+
+def test_same_id_result_with_only_a_changed_evidence_span_fails_closed():
+    current = _candidate()
+    stale = deepcopy(current)
+    stale["pages"] = [7]
+    stale["evidence_spans"][0]["page"] = 7
+
+    admission = admit_visual_authority_candidates(
+        candidates=[current],
+        evaluation=_response(_result(stale)),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(current),
+    )
+
+    assert admission.admitted_candidates == []
+    assert admission.audit["quarantined"] == [
+        {
+            "candidate_id": current["id"],
+            "reason": "evaluation_candidate_snapshot_mismatch",
+        }
+    ]
+
+
+def test_mismatched_evaluation_roster_digest_fails_closed():
+    candidate = _candidate()
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=replace(
+            _response(_result(candidate)),
+            candidate_roster_digest="stale-roster",
+        ),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.admitted_candidates == []
+    assert admission.audit["terminal_error"] == "evaluation_candidate_roster_mismatch"
+
+
 @pytest.mark.parametrize(
     ("outcome", "source_identity"),
     [
@@ -770,7 +839,6 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         f"verified-fact:{candidates[0]['id']}"
     )
-
     payload = generate_artifacts(
         report_id="visual-authority-canary",
         report_name="Visual Authority Canary",
@@ -829,6 +897,83 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
             "evidence_json", ""
         )
     )
+
+
+def test_verified_visual_evaluation_sees_full_candidate_roster_before_editorial_limit(
+    tmp_path,
+):
+    candidates = [
+        _insight(f"f{index}", score=1.0 - index / 100)
+        for index in range(1, 7)
+    ]
+    evaluated_roster: list[str] = []
+
+    def admit(shortlisted):
+        evaluated_roster.extend(item["evidence_id"] for item in shortlisted)
+        return _verified_admission(shortlisted, digest="e" * 64)
+
+    responses = _generation_responses(
+        candidates,
+        plan_evidence_ids=[f"f{index}" for index in range(1, 6)],
+    )
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        "verified-fact:insight-f1-0.99"
+    )
+    payload = generate_artifacts(
+        report_id="visual-authority-roster-separation",
+        report_name="Visual Authority Roster Separation",
+        doc_map=_doc_map(6),
+        evidence_packs=_generation_evidence(6),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=admit,
+    )
+
+    assert evaluated_roster == [f"f{index}" for index in range(1, 7)]
+    assert len(payload["verified_facts"]) == 6
+    assert len(payload["insights_final"]) == 5
+
+
+def test_verified_generation_materializes_downstream_insights_from_snapshot(
+    tmp_path,
+):
+    candidates = [
+        _insight("f1", score=0.99),
+        _insight("f2", score=0.98),
+    ]
+
+    def admit(shortlisted):
+        admission = _verified_admission(shortlisted, digest="s" * 64)
+        admission.admitted_candidates[0]["text"] = "Stale projection wording."
+        admission.admitted_candidates[0]["metric"] = {
+            **admission.admitted_candidates[0]["metric"],
+            "value": "999%",
+        }
+        return admission
+
+    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        "verified-fact:insight-f1-0.99"
+    )
+    payload = generate_artifacts(
+        report_id="visual-authority-snapshot-materialization",
+        report_name="Visual Authority Snapshot Materialization",
+        doc_map=_doc_map(2),
+        evidence_packs=_generation_evidence(2),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=admit,
+    )
+
+    assert all(item["metric"]["value"] != "999%" for item in payload["insights_final"])
+    assert all(item["metric"]["value"] == "10" for item in payload["insights_final"])
+    assert payload["verified_facts"][0]["metric"]["value"] == "10"
 
 
 def test_verified_fact_context_removes_discovery_facts_and_omits_unmapped_themes():

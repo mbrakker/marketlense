@@ -26,6 +26,7 @@ from src.contracts.verified_claims import (
     VisualClaimVerificationAttempt,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.verified_claims_recovery import candidate_roster_digest
 from src.services import llm_service
 from src.services.file_service import hash_file_bundle as service_hash_file_bundle
 from src.services.pdf_service import render_page_for_crop_refine
@@ -1545,6 +1546,10 @@ def evaluate_shortlisted_claims(
         schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
         shadow_mode=True,
         claims=results,
+        candidate_roster_digest=(
+            str(getattr(request, "candidate_roster_digest", "") or "").strip()
+            or candidate_roster_digest(request.claims)
+        ),
         rendered_pages=rendered_pages,
     )
 

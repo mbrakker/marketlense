@@ -71,6 +71,7 @@ from src.generators.artifact_normalization import (
 )
 from src.generators.artifact_prompt_provenance import artifact_prompt_identity
 from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.verified_claims_canary import project_verified_facts_as_insights
 from src.services import prompt_service, report_analysis_store_service
 from src.services.prompt_family_materialization_service import (
     read_reusable_prompt_family,
@@ -82,6 +83,7 @@ from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
 from src.utils.structured_output import StructuredOutputFailure
+from src.utils.verified_facts import validated_verified_facts
 
 logger = logging.getLogger("market_lense.artifact_generator")
 
@@ -1302,6 +1304,7 @@ def generate_artifacts(
         final_insights=insights_candidates,
         candidate_insights=fallback_candidates,
         editorial_plan=editorial_plan,
+        preserve_all=visual_authority_admitter is not None,
     )
     visual_authority_digest = ""
     visual_authority_audit: Dict[str, Any] = {}
@@ -1351,6 +1354,14 @@ def generate_artifacts(
                     "quarantined": visual_authority_audit.get("quarantined", []),
                 },
             )
+        validated_facts = validated_verified_facts(
+            {"verified_facts": visual_authority_verified_facts},
+            visual_authority_evidence_packs,
+        )
+        visual_authority_verified_facts = list(validated_facts.values())
+        visual_authority_admitted_candidates = project_verified_facts_as_insights(
+            visual_authority_verified_facts
+        )
         active_doc_map = build_verified_fact_doc_map(safe_doc_map)
         active_evidence = deepcopy(visual_authority_evidence_packs)
         reference_evidence_packs = {**active_evidence, "doc_map": active_doc_map}
@@ -1416,6 +1427,7 @@ def generate_artifacts(
             final_insights=visual_authority_admitted_candidates,
             candidate_insights=[],
             editorial_plan=editorial_plan,
+            verified_mode=True,
         )
         if len(insights_candidates) < MIN_FINAL_ARTIFACT_INSIGHTS:
             raise AppError(
@@ -1543,6 +1555,7 @@ def generate_artifacts(
         candidate_insights=insights_candidates,
         editorial_plan=editorial_plan,
         require_final_candidate_lineage=True,
+        verified_mode=visual_authority_admitter is not None,
     )
     selected_lead_insight = next(
         (insight for insight in insights_final if _s(insight.get("text")).strip()),

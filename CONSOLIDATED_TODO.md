@@ -729,3 +729,21 @@ investigation. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**,
 and Step 3 remains **unstarted/not ready**. Required next tests and evidence
 are recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Verified-fact snapshot and selection separation — 2026-10-24:** The current
+branch now preserves the full eligible verified-mode candidate roster through
+visual evaluation, binds request/results to a deterministic roster digest, and
+derives downstream artifact candidates from the validated accepted
+`verified_facts` snapshot. Editorial selection remains independent, so a
+six-fact snapshot can produce five final insights under the existing plan and
+minimum-count rules. Same-ID stale claim, metric, evidence-span, and roster
+mismatches fail closed; complete unknown nested candidate metric fields survive
+verified restoration without accepting final-only fields. The exact frozen-five
+provider-free replay remains 15/39 cases/variants and 29 selected identities
+with five matching source hashes and zero calls. A fresh retained Criteo/DV
+visual shadow evaluated 10/10 claims first pass; the fresh complete-fact
+grounding replay remains fail-closed on retained Criteo evidence-scope mixing
+and the DV APAC/North America comparison without both bindings. No canonical,
+publication, or WordPress write occurred. E18 remains Active/PARTIAL, Step 2
+remains PARTIAL/NO-GO, and Step 3 remains unstarted/not ready. Details:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

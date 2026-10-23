@@ -318,3 +318,57 @@ def test_select_artifact_insights_preserves_chosen_candidate_factual_fields():
     # A stable-ID insight without a matching candidate keeps its own facts.
     untouched = next(item for item in selected if item["id"] == "insight-2")
     assert untouched["text"] == "Retention held at 88%."
+
+
+def test_verified_selection_preserves_complete_candidate_metric_extensions():
+    candidate_metric = {
+        "label": "Composite adoption",
+        "value": "42%",
+        "unit": "%",
+        "observations": [
+            {"population": "new buyers", "period": "2026", "value": "42%"}
+        ],
+        "report_specific_method": {
+            "denominator_rule": "eligible respondents",
+            "weighting": "region-adjusted",
+        },
+    }
+    selected = select_artifact_insights(
+        final_insights=[
+            {
+                "id": "insight-1",
+                "text": "Editorial wording remains concise.",
+                "evidence_id": "f1",
+                "metric": {
+                    "label": "Unsupported final metric",
+                    "value": "99%",
+                    "unit": "%",
+                    "final_only_context": "not authoritative",
+                },
+            }
+        ],
+        candidate_insights=[
+            {
+                "id": "insight-1",
+                "text": "The candidate fact is source-backed.",
+                "evidence_id": "f1",
+                "metric": candidate_metric,
+            }
+        ],
+        editorial_plan={
+            "report_thesis": "The canonical fact remains authoritative.",
+            "themes": [
+                {"theme": "Theme 1", "priority": 1, "evidence_ids": ["f1"]},
+                {"theme": "Theme 2", "priority": 2, "evidence_ids": ["f2"]},
+            ],
+        },
+        verified_mode=True,
+    )
+
+    metric = selected[0]["metric"]
+    assert metric["value"] == "42%"
+    assert metric["observations"] == candidate_metric["observations"]
+    assert metric["report_specific_method"] == candidate_metric[
+        "report_specific_method"
+    ]
+    assert "final_only_context" not in metric

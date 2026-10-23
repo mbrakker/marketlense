@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Mapping, Sequence
 from src.contracts.verified_claims import VisualClaimEvaluationResponse
 from src.generators.verified_claims_recovery import (
     build_verified_claims_shadow_request,
+    candidate_roster_digest,
     source_pdf_sha256,
 )
 from src.generators.verified_claims_visual_generator import (
@@ -24,6 +25,8 @@ from src.generators.verified_claims_visual_generator import (
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import stripped_string_value
 from src.utils.errors import AppError
+from src.utils.text_normalization import normalize_for_lookup
+from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 _TERMINAL_VERIFIED_OUTCOMES = frozenset({"verified", "verified_after_retry"})
 _TERMINAL_EVALUATION_OUTCOMES = frozenset(
@@ -102,13 +105,14 @@ def build_visual_authority_admitter(
     )
 
     def admit(candidates: Sequence[Mapping[str, Any]]) -> VisualAuthorityAdmission:
+        evaluation_candidates = _canonical_candidate_roster(candidates)
         request, _audit = build_verified_claims_shadow_request(
             source_identity=source_identity,
             pdf_path=resolved_pdf_path,
             output_dir=output_dir,
             report_name=report_name,
             evidence_packs=evidence_packs,
-            shortlisted_insights=candidates,
+            shortlisted_insights=evaluation_candidates,
             ctx=ctx,
             dpi=config.dpi,
             recovery_enabled=config.recovery_enabled,
@@ -121,7 +125,7 @@ def build_visual_authority_admitter(
             dependencies=config.dependencies,
         )
         return admit_visual_authority_candidates(
-            candidates=candidates,
+            candidates=evaluation_candidates,
             evaluation=evaluation,
             source_identity=source_identity,
             doc_map={},
@@ -172,6 +176,14 @@ def admit_visual_authority_candidates(
         for candidate in candidates
         if isinstance(candidate, Mapping)
     ]
+    expected_roster_digest = candidate_roster_digest(
+        _canonical_candidate_roster(raw_candidate_list)
+    )
+    actual_roster_digest = _response_field(evaluation, "candidate_roster_digest")
+    audit["candidate_roster_digest"] = expected_roster_digest
+    if actual_roster_digest and actual_roster_digest != expected_roster_digest:
+        audit["evaluation_candidate_roster_digest"] = actual_roster_digest
+        return _empty_admission(audit, "evaluation_candidate_roster_mismatch")
     candidate_groups: dict[str, list[dict[str, Any]]] = {}
     for candidate in raw_candidate_list:
         candidate_id = _candidate_id(candidate)
@@ -208,6 +220,12 @@ def admit_visual_authority_candidates(
     results_by_id: dict[str, Any] = {}
     duplicate_result_ids: set[str] = set()
     malformed_result_ids: set[str] = set()
+    snapshot_mismatch_ids: set[str] = set()
+    canonical_candidates_by_id = {
+        _candidate_id(candidate): candidate
+        for candidate in candidate_list
+        if _candidate_id(candidate)
+    }
     for raw_result in raw_results:
         candidate_id = _result_field(raw_result, "candidate_id")
         if not candidate_id:
@@ -221,13 +239,24 @@ def admit_visual_authority_candidates(
         if outcome not in _TERMINAL_EVALUATION_OUTCOMES:
             malformed_result_ids.add(candidate_id)
             continue
+        expected_candidate = canonical_candidates_by_id.get(candidate_id)
+        if expected_candidate is not None and not _result_matches_candidate_snapshot(
+            raw_result, expected_candidate
+        ):
+            snapshot_mismatch_ids.add(candidate_id)
+            continue
         results_by_id[candidate_id] = raw_result
         outcome_counts = audit["outcome_counts"]
         outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
 
     expected_ids = set(candidate_groups)
     result_ids = set(results_by_id)
-    missing_ids = expected_ids - result_ids - malformed_result_ids
+    missing_ids = (
+        expected_ids
+        - result_ids
+        - malformed_result_ids
+        - snapshot_mismatch_ids
+    )
     extra_ids = result_ids - expected_ids
     for candidate_id in sorted(duplicate_result_ids):
         _record_quarantine(audit, candidate_id, "duplicate_evaluation_id")
@@ -237,12 +266,17 @@ def admit_visual_authority_candidates(
         _record_quarantine(audit, candidate_id, "evaluation_unexpected_id")
     for candidate_id in sorted(malformed_result_ids):
         _record_quarantine(audit, candidate_id, "evaluation_outcome_invalid")
+    for candidate_id in sorted(snapshot_mismatch_ids):
+        _record_quarantine(
+            audit, candidate_id, "evaluation_candidate_snapshot_mismatch"
+        )
     audit["coverage_complete"] = (
         bool(expected_ids)
         and not missing_ids
         and not extra_ids
         and not duplicate_result_ids
         and not malformed_result_ids
+        and not snapshot_mismatch_ids
         and not conflicting_ids
         and audit["evaluated_count"] == len(expected_ids)
     )
@@ -526,6 +560,12 @@ def _response_is_shadow(response: Any) -> bool:
     return raw is True
 
 
+def _response_field(value: Any, field_name: str) -> str:
+    if isinstance(value, Mapping):
+        return stripped_string_value(value.get(field_name)).strip()
+    return stripped_string_value(getattr(value, field_name, "")).strip()
+
+
 def _response_claims(response: Any) -> list[Any] | None:
     claims = (
         response.get("claims")
@@ -594,6 +634,125 @@ def _candidate_signature(candidate: Mapping[str, Any]) -> str:
         if key not in _SCORE_ONLY_FIELDS
     }
     return sha256_json(payload)
+
+
+def _canonical_candidate_roster(
+    candidates: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Remove only equivalent score-only duplicate representations."""
+
+    raw = [
+        deepcopy(dict(candidate))
+        for candidate in candidates
+        if isinstance(candidate, Mapping)
+    ]
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for candidate in raw:
+        candidate_id = _candidate_id(candidate)
+        if candidate_id:
+            groups.setdefault(candidate_id, []).append(candidate)
+
+    roster: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for candidate in raw:
+        candidate_id = _candidate_id(candidate)
+        if not candidate_id or candidate_id in seen_ids:
+            continue
+        group = groups[candidate_id]
+        if len({_candidate_signature(item) for item in group}) == 1:
+            roster.append(candidate)
+        else:
+            roster.extend(group)
+        seen_ids.add(candidate_id)
+    return roster
+
+
+def _result_matches_candidate_snapshot(
+    result: Any, candidate: Mapping[str, Any]
+) -> bool:
+    """Bind a response without a roster digest to its requested candidate."""
+
+    original_claim = _result_field(result, "original_claim")
+    candidate_text = _field_text(candidate, "text") or _field_text(
+        candidate, "claim"
+    )
+    if not original_claim or normalize_for_lookup(
+        original_claim
+    ) != normalize_for_lookup(candidate_text):
+        return False
+    result_evidence_ids = _result_list(result, "evidence_ids")
+    if result_evidence_ids != _candidate_evidence_ids(candidate):
+        return False
+    result_spans = _result_list_of_mappings(result, "evidence_spans")
+    candidate_spans = candidate.get("evidence_spans")
+    if not isinstance(candidate_spans, list) or result_spans is None:
+        return False
+    if _canonical_evidence_spans(result_spans) != _canonical_evidence_spans(
+        candidate_spans
+    ):
+        return False
+    result_metric = _result_mapping(result, "original_metric_binding")
+    return bool(result_metric) and (
+        _canonical_metric(result_metric) == _canonical_metric(candidate.get("metric"))
+    )
+
+
+def _result_list(value: Any, field_name: str) -> list[str]:
+    raw = (
+        value.get(field_name)
+        if isinstance(value, Mapping)
+        else getattr(value, field_name, [])
+    )
+    if not isinstance(raw, list):
+        return []
+    return [
+        item
+        for item in (str(value or "").strip() for value in raw)
+        if item
+    ]
+
+
+def _result_list_of_mappings(
+    value: Any, field_name: str
+) -> list[dict[str, Any]] | None:
+    raw = (
+        value.get(field_name)
+        if isinstance(value, Mapping)
+        else getattr(value, field_name, None)
+    )
+    if not isinstance(raw, list) or any(not isinstance(item, Mapping) for item in raw):
+        return None
+    return [dict(item) for item in raw]
+
+
+def _canonical_evidence_spans(
+    value: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        {
+            str(key): deepcopy(item)
+            for key, item in span.items()
+        }
+        for span in value
+    ]
+
+
+def _canonical_metric(value: Any) -> dict[str, Any]:
+    metric = dict(value) if isinstance(value, Mapping) else {}
+    canonical = {
+        field_name: deepcopy(
+            metric.get(field_name, [] if field_name == "observations" else "")
+        )
+        for field_name in PROTECTED_METRIC_FIELDS
+    }
+    canonical.update(
+        {
+            str(key): deepcopy(item)
+            for key, item in metric.items()
+            if str(key) not in PROTECTED_METRIC_FIELDS
+        }
+    )
+    return canonical
 
 
 def _candidate_evidence_ids(candidate: Mapping[str, Any]) -> list[str]:

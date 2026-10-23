@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from typing import Any, Mapping, Sequence
 
 from src.contracts.files import FileBundleHashRequest
@@ -19,6 +20,7 @@ from src.generators.claim_validation_generator import (
 )
 from src.services.file_service import hash_file_bundle as service_hash_file_bundle
 from src.services.pdf_service import extract_pdf_text
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.text_normalization import normalize_for_lookup
 
@@ -26,6 +28,16 @@ _PDF_SHA256_PATTERN = re.compile(
     r"(?:^|[|,; ])pdf-sha256[:=]([0-9a-f]{64})(?:$|[|,; ])", re.I
 )
 _MAX_RECOVERY_CANDIDATES = 3
+_ROSTER_SCORE_FIELDS = frozenset(
+    {
+        "editorial_score",
+        "relevance_score",
+        "score",
+        "rank",
+        "selection_rank",
+        "_selection_score",
+    }
+)
 
 
 def source_pdf_sha256(source_identity: str) -> str:
@@ -36,6 +48,40 @@ def source_pdf_sha256(source_identity: str) -> str:
         for match in _PDF_SHA256_PATTERN.finditer(str(source_identity or ""))
     }
     return next(iter(matches), "") if len(matches) == 1 else ""
+
+
+def candidate_roster_digest(candidates: Sequence[Mapping[str, Any]]) -> str:
+    """Identify the factual candidate roster used by visual evaluation."""
+
+    roster: list[dict[str, Any]] = []
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            continue
+        candidate_id = str(
+            candidate.get("id")
+            or candidate.get("stable_candidate_id")
+            or candidate.get("candidate_id")
+            or ""
+        ).strip()
+        if not candidate_id:
+            continue
+        roster.append(
+            {
+                "candidate_id": candidate_id,
+                "candidate": {
+                    str(key): deepcopy(value)
+                    for key, value in candidate.items()
+                    if str(key) not in _ROSTER_SCORE_FIELDS
+                },
+            }
+        )
+    roster.sort(key=lambda item: (item["candidate_id"], sha256_json(item)))
+    return sha256_json(
+        {
+            "schema_version": "verified_claims_candidate_roster:1",
+            "candidates": roster,
+        }
+    )
 
 
 def load_verified_claims_recovery_context(
@@ -464,6 +510,7 @@ def build_verified_claims_shadow_request(
         report_name=report_name,
         source_identity=source_identity,
         claims=claims,
+        candidate_roster_digest=candidate_roster_digest(claims),
         shadow_mode=True,
         dpi=dpi,
         recovery_enabled=bool(recovery_candidates),
@@ -487,6 +534,7 @@ def build_verified_claims_shadow_request(
 
 __all__ = [
     "build_verified_claims_shadow_request",
+    "candidate_roster_digest",
     "load_verified_claims_recovery_context",
     "page_is_likely_divider",
     "recovery_candidates_for_claim",

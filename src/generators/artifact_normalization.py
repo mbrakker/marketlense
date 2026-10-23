@@ -1260,6 +1260,8 @@ def select_artifact_insights(
     candidate_insights: List[Dict[str, Any]],
     editorial_plan: Dict[str, Any],
     require_final_candidate_lineage: bool = False,
+    preserve_all: bool = False,
+    verified_mode: bool = False,
 ) -> List[Dict[str, Any]]:
     """Lead with the strongest evidence-bound insight and retain theme coverage.
 
@@ -1276,13 +1278,20 @@ def select_artifact_insights(
     """
     plan = normalize_artifact_editorial_plan(editorial_plan)
     conflicting_candidate_ids = _candidate_factual_conflict_ids(candidate_insights)
-    candidate_facts = _candidate_factual_fields(candidate_insights)
+    candidate_facts = _candidate_factual_fields(
+        candidate_insights,
+        preserve_unknown_metric_fields=verified_mode,
+    )
     unresolved_candidate_ids = set(_candidate_insight_groups(candidate_insights)) - set(
         candidate_facts
     )
     final_lineage_ids = set(candidate_facts)
     anchored_finals = [
-        _restore_candidate_factual_fields(item, candidate_facts)
+        _restore_candidate_factual_fields(
+            item,
+            candidate_facts,
+            preserve_unknown_metric_fields=verified_mode,
+        )
         if isinstance(item, dict)
         else item
         for item in final_insights
@@ -1326,7 +1335,7 @@ def select_artifact_insights(
                 selected, selected_keys, _best_ranked_insight(matching)[1]
             )
     for _, insight in ranked:
-        if len(selected) >= required_count:
+        if not preserve_all and len(selected) >= required_count:
             break
         _append_distinct_insight(selected, selected_keys, insight)
     return selected
@@ -1419,6 +1428,8 @@ def restore_artifact_insight_factual_fields(
 
 def _candidate_factual_fields(
     candidate_insights: List[Dict[str, Any]],
+    *,
+    preserve_unknown_metric_fields: bool = False,
 ) -> Dict[str, Dict[str, Any]]:
     """Index the retained factual payload of each stable-ID candidate."""
 
@@ -1435,7 +1446,10 @@ def _candidate_factual_fields(
     for insight_id, insight in best_candidates.items():
         fact: Dict[str, Any] = {}
         if "metric" in insight:
-            fact["metric"] = _complete_protected_metric_binding(insight.get("metric"))
+            fact["metric"] = _complete_protected_metric_binding(
+                insight.get("metric"),
+                preserve_unknown_fields=preserve_unknown_metric_fields,
+            )
         for field_name in ("evidence_id", "evidence", "pages", "evidence_spans"):
             if field_name not in insight:
                 continue
@@ -1713,9 +1727,15 @@ def _span_locations_match(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
     return values == other_values and any(value is not None for value in values)
 
 
-def _complete_protected_metric_binding(metric: Any) -> Dict[str, Any]:
+def _complete_protected_metric_binding(
+    metric: Any, *, preserve_unknown_fields: bool = False
+) -> Dict[str, Any]:
     metric = metric if isinstance(metric, dict) else {}
-    binding: Dict[str, Any] = {}
+    binding: Dict[str, Any] = (
+        deepcopy(metric)
+        if preserve_unknown_fields
+        else {}
+    )
     for field_name in PROTECTED_METRIC_FIELDS:
         if field_name == "observations":
             observations = metric.get(field_name)
@@ -1728,7 +1748,10 @@ def _complete_protected_metric_binding(metric: Any) -> Dict[str, Any]:
 
 
 def _restore_candidate_factual_fields(
-    insight: Dict[str, Any], candidate_facts: Dict[str, Dict[str, Any]]
+    insight: Dict[str, Any],
+    candidate_facts: Dict[str, Dict[str, Any]],
+    *,
+    preserve_unknown_metric_fields: bool = False,
 ) -> Dict[str, Any]:
     """Deterministically revert final-stage factual drift to the candidate."""
 
@@ -1739,9 +1762,15 @@ def _restore_candidate_factual_fields(
     restored = dict(insight)
     candidate_metric = candidate.get("metric")
     if isinstance(candidate_metric, dict):
-        restored["metric"] = _complete_protected_metric_binding(candidate_metric)
+        restored["metric"] = _complete_protected_metric_binding(
+            candidate_metric,
+            preserve_unknown_fields=preserve_unknown_metric_fields,
+        )
     elif "metric" in restored:
-        restored["metric"] = _complete_protected_metric_binding(None)
+        restored["metric"] = _complete_protected_metric_binding(
+            None,
+            preserve_unknown_fields=preserve_unknown_metric_fields,
+        )
     for field_name in ("evidence_id", "evidence", "pages", "evidence_spans"):
         if field_name not in candidate and field_name not in restored:
             continue

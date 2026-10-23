@@ -23,6 +23,15 @@ class VisualClaimEvaluationRequest:
     claims: List[Dict[str, Any]] = field(
         metadata={"doc": "Shortlisted claims with retained source bindings."}
     )
+    candidate_roster_digest: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Digest of the exact candidate roster evaluated; empty only for "
+                "legacy direct callers."
+            )
+        },
+    )
     shadow_mode: bool = field(
         default=True,
         metadata={"doc": "Evaluation must not mutate authoritative report artifacts."},
@@ -278,6 +287,10 @@ class VisualClaimEvaluationResponse:
     )
     claims: List[VisualClaimEvaluationResult] = field(
         default_factory=list, metadata={"doc": "Per-claim evaluation results."}
+    )
+    candidate_roster_digest: str = field(
+        default="",
+        metadata={"doc": "Digest of the exact candidate roster evaluated."},
     )
     rendered_pages: Dict[int, str] = field(
         default_factory=dict,
