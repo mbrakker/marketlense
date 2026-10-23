@@ -252,10 +252,7 @@ def admit_visual_authority_candidates(
     expected_ids = set(candidate_groups)
     result_ids = set(results_by_id)
     missing_ids = (
-        expected_ids
-        - result_ids
-        - malformed_result_ids
-        - snapshot_mismatch_ids
+        expected_ids - result_ids - malformed_result_ids - snapshot_mismatch_ids
     )
     extra_ids = result_ids - expected_ids
     for candidate_id in sorted(duplicate_result_ids):
@@ -673,9 +670,7 @@ def _result_matches_candidate_snapshot(
     """Bind a response without a roster digest to its requested candidate."""
 
     original_claim = _result_field(result, "original_claim")
-    candidate_text = _field_text(candidate, "text") or _field_text(
-        candidate, "claim"
-    )
+    candidate_text = _field_text(candidate, "text") or _field_text(candidate, "claim")
     if not original_claim or normalize_for_lookup(
         original_claim
     ) != normalize_for_lookup(candidate_text):
@@ -705,11 +700,7 @@ def _result_list(value: Any, field_name: str) -> list[str]:
     )
     if not isinstance(raw, list):
         return []
-    return [
-        item
-        for item in (str(value or "").strip() for value in raw)
-        if item
-    ]
+    return [item for item in (str(value or "").strip() for value in raw) if item]
 
 
 def _result_list_of_mappings(
@@ -728,13 +719,7 @@ def _result_list_of_mappings(
 def _canonical_evidence_spans(
     value: Sequence[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
-    return [
-        {
-            str(key): deepcopy(item)
-            for key, item in span.items()
-        }
-        for span in value
-    ]
+    return [{str(key): deepcopy(item) for key, item in span.items()} for span in value]
 
 
 def _canonical_metric(value: Any) -> dict[str, Any]:

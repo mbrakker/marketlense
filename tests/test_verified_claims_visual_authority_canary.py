@@ -903,8 +903,7 @@ def test_verified_visual_evaluation_sees_full_candidate_roster_before_editorial_
     tmp_path,
 ):
     candidates = [
-        _insight(f"f{index}", score=1.0 - index / 100)
-        for index in range(1, 7)
+        _insight(f"f{index}", score=1.0 - index / 100) for index in range(1, 7)
     ]
     evaluated_roster: list[str] = []
 

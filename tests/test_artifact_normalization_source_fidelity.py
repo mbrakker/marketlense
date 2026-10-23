@@ -368,7 +368,7 @@ def test_verified_selection_preserves_complete_candidate_metric_extensions():
     metric = selected[0]["metric"]
     assert metric["value"] == "42%"
     assert metric["observations"] == candidate_metric["observations"]
-    assert metric["report_specific_method"] == candidate_metric[
-        "report_specific_method"
-    ]
+    assert (
+        metric["report_specific_method"] == candidate_metric["report_specific_method"]
+    )
     assert "final_only_context" not in metric

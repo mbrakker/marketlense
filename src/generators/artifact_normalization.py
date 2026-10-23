@@ -1731,11 +1731,7 @@ def _complete_protected_metric_binding(
     metric: Any, *, preserve_unknown_fields: bool = False
 ) -> Dict[str, Any]:
     metric = metric if isinstance(metric, dict) else {}
-    binding: Dict[str, Any] = (
-        deepcopy(metric)
-        if preserve_unknown_fields
-        else {}
-    )
+    binding: Dict[str, Any] = deepcopy(metric) if preserve_unknown_fields else {}
     for field_name in PROTECTED_METRIC_FIELDS:
         if field_name == "observations":
             observations = metric.get(field_name)
