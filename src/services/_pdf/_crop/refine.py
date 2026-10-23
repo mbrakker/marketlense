@@ -6,6 +6,7 @@ reusing shared crop geometry guards.
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pymupdf as fitz
@@ -32,7 +33,185 @@ from src.services._pdf.page_artifacts import create_page_artifact_cache
 from src.services._pdf.shared import crop_logger
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-from src.utils.path_utils import safe_path_segment
+from src.utils.path_utils import (
+    WINDOWS_COMPONENT_BUDGET,
+    WINDOWS_PATH_BUDGET,
+    is_windows_reserved_component,
+    safe_path_segment,
+    windows_path_units,
+)
+
+
+_CROP_REFINE_PAGE_SUBDIR = "crop_refine_pages"
+_FINGERPRINT_SIDECAR_SUFFIX = ".fingerprint.json"
+_FINGERPRINT_TEMP_PREFIX = ".tmp-write-"
+# tempfile's current random name sequence is eight characters. Keep two extra
+# units in the preflight model so a future small increase cannot consume the
+# entire path budget.
+_FINGERPRINT_TEMP_RANDOM_HEADROOM = 10
+
+
+def _crop_refine_page_paths(
+    root: Path, report_component: str, page: int
+) -> tuple[Path, str, tuple[Path, ...]]:
+    filename = f"page-{page}.png"
+    relative_path = Path(report_component) / _CROP_REFINE_PAGE_SUBDIR / filename
+    image_path = root / relative_path
+    fingerprint_path = image_path.with_name(
+        f"{image_path.name}{_FINGERPRINT_SIDECAR_SUFFIX}"
+    )
+    temporary_path = image_path.parent / (
+        f"{_FINGERPRINT_TEMP_PREFIX}{'x' * _FINGERPRINT_TEMP_RANDOM_HEADROOM}"
+    )
+    return (
+        image_path,
+        relative_path.as_posix(),
+        (
+            image_path,
+            fingerprint_path,
+            temporary_path,
+        ),
+    )
+
+
+def _path_components(path: Path) -> tuple[str, ...]:
+    parts = list(path.parts)
+    anchor = path.anchor
+    if parts and anchor and parts[0] == anchor:
+        parts.pop(0)
+        if str(anchor).startswith(("\\\\", "//")):
+            parts[0:0] = tuple(
+                component
+                for component in str(anchor).replace("/", "\\").split("\\")
+                if component
+            )
+    return tuple(component for component in parts if component)
+
+
+def _crop_refine_path_violation(
+    root: Path, artifact_paths: tuple[Path, ...]
+) -> str | None:
+    if windows_path_units(root) > WINDOWS_PATH_BUDGET:
+        return "resolved output root exceeds the Windows full-path budget"
+    for path in artifact_paths:
+        if windows_path_units(path) > WINDOWS_PATH_BUDGET:
+            return f"artifact path exceeds the Windows full-path budget: {path}"
+        for component in _path_components(path):
+            component_units = windows_path_units(component)
+            if component_units > WINDOWS_COMPONENT_BUDGET:
+                return (
+                    "artifact component exceeds the Windows component budget: "
+                    f"{component}"
+                )
+            if is_windows_reserved_component(component):
+                return f"reserved Windows device component: {component}"
+    return None
+
+
+def _crop_refine_path_error(
+    request: CropRefinePageRenderRequest,
+    root: Path,
+    image_path: Path,
+    reason: str,
+    *,
+    cause: Exception | None = None,
+) -> AppError:
+    return AppError(
+        code="crop_refine_page_path_invalid",
+        message=(
+            "Crop-refine page artifact path is invalid before rendering: "
+            f"{image_path}. Root: {root}. Reason: {reason}. "
+            f"Windows limits are {WINDOWS_PATH_BUDGET} UTF-16 path units and "
+            f"{WINDOWS_COMPONENT_BUDGET} units per component; shorten "
+            "output_dir and retry."
+        ),
+        cause=cause,
+        retryable=False,
+        context={
+            "output_dir": str(request.out_dir),
+            "resolved_root": root.as_posix(),
+            "invalid_path": image_path.as_posix(),
+            "failure_reason": reason,
+            "windows_path_budget": WINDOWS_PATH_BUDGET,
+            "windows_component_budget": WINDOWS_COMPONENT_BUDGET,
+            "recommendation": "shorten output_dir",
+        },
+    )
+
+
+def _truncate_path_segment(value: str, budget: int) -> str:
+    if budget <= 0:
+        return ""
+    result: list[str] = []
+    used = 0
+    for character in value:
+        character_units = windows_path_units(character)
+        if used + character_units > budget:
+            break
+        result.append(character)
+        used += character_units
+    return "".join(result)
+
+
+def _resolve_crop_refine_page_paths(
+    request: CropRefinePageRenderRequest,
+) -> tuple[Path, str]:
+    try:
+        root = Path(request.out_dir).resolve()
+    except (OSError, RuntimeError) as exc:
+        unresolved_root = Path(request.out_dir)
+        raise _crop_refine_path_error(
+            request,
+            unresolved_root,
+            unresolved_root / _CROP_REFINE_PAGE_SUBDIR / "page.png",
+            f"output root could not be resolved: {exc}",
+            cause=exc,
+        ) from exc
+
+    safe_report_name = safe_path_segment(request.report_name, fallback="report")
+    image_path, relative_path, artifact_paths = _crop_refine_page_paths(
+        root, safe_report_name, request.page
+    )
+    violation = _crop_refine_path_violation(root, artifact_paths)
+    if violation is None:
+        return image_path, relative_path
+
+    digest = hashlib.sha256(str(request.report_name).encode("utf-8")).hexdigest()[:12]
+    compact_suffix = f"-{digest}"
+    compact_base, _, compact_base_paths = _crop_refine_page_paths(
+        root, digest, request.page
+    )
+    compact_base_violation = _crop_refine_path_violation(root, compact_base_paths)
+    if compact_base_violation is not None:
+        raise _crop_refine_path_error(
+            request,
+            root,
+            compact_base,
+            f"no compact report directory fits: {compact_base_violation}",
+        )
+
+    longest_base_path = max(windows_path_units(path) for path in compact_base_paths)
+    path_prefix_budget = (
+        WINDOWS_PATH_BUDGET - longest_base_path - windows_path_units("-")
+    )
+    component_prefix_budget = WINDOWS_COMPONENT_BUDGET - windows_path_units(
+        compact_suffix
+    )
+    prefix_budget = min(path_prefix_budget, component_prefix_budget)
+    prefix = _truncate_path_segment(safe_report_name, prefix_budget).rstrip(" .-_")
+    compact_report_name = f"{prefix}{compact_suffix}" if prefix else digest
+    compact_image, compact_relative, compact_paths = _crop_refine_page_paths(
+        root, compact_report_name, request.page
+    )
+    compact_violation = _crop_refine_path_violation(root, compact_paths)
+    if compact_violation is not None:
+        raise _crop_refine_path_error(
+            request,
+            root,
+            compact_image,
+            f"compacted report directory is still invalid: {compact_violation}",
+        )
+    return compact_image, compact_relative
 
 
 def _matrix_coefficients(
@@ -117,6 +296,7 @@ def render_page_for_crop_refine(
             },
         )
     )
+    abs_path, rel = _resolve_crop_refine_page_paths(request)
     local_doc = request.pdf_context.fitz_doc if request.pdf_context else None
     owns_doc = local_doc is None
     if local_doc is None:
@@ -130,12 +310,7 @@ def render_page_for_crop_refine(
                 context={"page_count": local_doc.page_count},
             )
         page = local_doc[request.page]
-        safe_report_name = safe_path_segment(request.report_name, fallback="report")
-        out_dir = Path(request.out_dir) / safe_report_name / "crop_refine_pages"
-        out_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"page-{request.page}.png"
-        abs_path = out_dir / filename
-        rel = (Path(safe_report_name) / "crop_refine_pages" / filename).as_posix()
+        abs_path.parent.mkdir(parents=True, exist_ok=True)
         descriptor = PdfArtifactFingerprintDescriptor(
             artifact_kind="crop_refine_page_render",
             source_pdf_path=request.pdf_path,
@@ -162,7 +337,7 @@ def render_page_for_crop_refine(
                     module=crop_logger.name,
                     fields={
                         "cache_key": cache_status.cache_key,
-                        "source_artifact": cache_status.output_rel_path,
+                        "source_artifact": rel,
                         "validity_reason": cache_status.reason,
                         "page": int(request.page),
                     },
