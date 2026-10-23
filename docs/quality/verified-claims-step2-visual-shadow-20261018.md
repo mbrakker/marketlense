@@ -3116,3 +3116,75 @@ verified-mode editorial quality. No current GPT-6 Luna High verified-facts
 generation, authoritative Algolia or ten-report snapshot, independent
 full-cohort PDF review, canonical promotion, publication-readiness mutation,
 or WordPress write occurred. **Verdict remains PARTIAL / Step 3 not ready.**
+
+#### Verified-facts authority-mode and prompt/cache follow-up — 2026-10-23 (`8bc5d67c`)
+
+The verified-facts cleanup now recognizes the explicit
+`verified_facts`/`verified_facts_inline`/`verified_facts_grounding` modes and
+the existing visual-authority canary marker as one authority policy. Every
+explicit verified request validates the complete hash-bound snapshot before
+preparation; missing, empty, malformed, duplicate, or source-inconsistent
+snapshots fail closed. Preparation, retained-claim validation, semantic
+inputs, grounding payloads, summary evidence, and prompt variables use the
+canonical verified-fact evidence projection. Legacy evidence remains available
+only in normal mode. The authority policy and mode are part of grounding cache
+identity, so a legacy response or a different snapshot cannot be reused across
+modes. The normal validation path was not changed.
+
+The focused clean-worktree suite passed **166 tests**. The repository-wide
+clean-worktree run passed **8,047 tests with 2 skips** in 5:30, excluding only
+the known CPython-3.14-incompatible wheelhouse test. Formatting, Ruff, mypy
+(`786` source files, zero issues), and diff checks passed. The target worktree
+still contains the user's two pre-existing `artifact_normalization.py` edits;
+with those edits present, the focused suite was **165 passed / 1 failed**
+because its changed `normalize_artifact_insights()` no longer accepts the
+already-covered `verified_mode` keyword. Those edits were not overwritten or
+committed.
+
+**Frozen retained replay.** The exact Step 0 five-report replay remained
+provider-free and unchanged: **15 cases / 39 variants**, **29 retained
+identities**, **29 theme slots**, all five PDF SHA-256 values matched, and zero
+provider calls. This is an input/provenance regression result, not evidence of
+improved live selection quality.
+
+**Live retained Adjust shadow claim.** One real shortlisted Adjust claim,
+`multiplatform-measurement`, was evaluated against the retained PDF and
+completed `verified` on the first correction and verification attempts. The
+source binding remained Adjust's expected SHA-256 and physical page **11**;
+the corrected response added the page-supported approximately-31% marketer
+satisfaction statistic and the independent verification accepted the final
+claim. The isolated run used **2 GPT-6 Luna calls**, **22,944 input + 1,607
+output tokens** (**24,551 total**), estimated **$0.003098**, and **23.39 s**.
+`canonical_mutation=false`; no canonical artifact, readiness state, or
+WordPress write changed.
+
+**Live verified-mode validation attempt.** A retained Adjust snapshot with
+**5 authoritative verified facts** and the matching PDF hash was projected in
+memory through the existing `project_verified_facts_as_insights` and canonical
+evidence-pack helpers, then sent through `validation_mode=verified_facts`.
+The run made **4 GPT-6 Luna grounding calls**, **20,383 input + 19,924 output
+tokens** (**40,307 total**), estimated **$0.011694**, and failed closed with
+**9 issues**: four artifact-quality, three grounding, and two retained
+soft-copy-provenance issues. The retained artifact's public spans still label
+verified-fact IDs with the legacy `findings` source pack, and the deliberately
+minimal in-memory projection did not supply all editorial/provenance context.
+This is evidence that the new boundary refuses an inconsistent retained
+snapshot; it is not a passing end-to-end editorial-generation result and no
+authority or validator was weakened to make it pass.
+
+**Prompt/cache evidence.** The required three-iteration fixture command still
+fails closed: runtime **51.0168 vs 61.6800 ms**, total tokens **108,348 vs
+106,658** (**+1.58%**), total cost **$0.024057 vs $0.023887**, and validation
+tokens **9,559 vs 8,004** (**+19.43%**) with validation cost **$0.001717 vs
+$0.001560** (**+10.06%**). Grounding prompt tokens decreased by **87**; the
+remaining validation drift is in the existing editorial-review and visual
+correction/verification prompt families. No threshold, baseline, allowlist,
+or factual safeguard was changed.
+
+**Verdict: PARTIAL / Step 3 not ready.** The verified-facts source authority,
+mode-separated cache identity, normal-mode compatibility, and fail-closed
+tests are complete. Live Step 2 shadow evidence is source-bound and safe, but
+the retained verified-mode editorial validation attempt did not pass, the
+prompt-fixture release gate remains red, and no full fresh verified five-report
+editorial cohort was run. Step 2 remains shadow-only; no canonical promotion,
+publication-readiness mutation, or WordPress write occurred.

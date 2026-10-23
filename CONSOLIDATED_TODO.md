@@ -562,3 +562,18 @@ weakened. This run provides no fresh verified-mode generation or ten-report
 authoritative snapshot, so E18 stays **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**; no canonical or
 WordPress write occurred.
+
+**Verified-facts authority-mode follow-up — 2026-10-23 (`8bc5d67c`):** Explicit
+verified validation modes now share one validated canonical snapshot boundary;
+legacy evidence cannot enter preparation, grounding, summary evidence, or
+verified-mode cache reuse. The exact frozen-five provider-free replay remains
+15/39 cases/variants, 29 retained IDs, 29 themes, five matching PDF hashes,
+and zero calls. Clean verification passed 166 focused and 8,047 repository
+tests (2 skips); the required prompt-fixture gate remains red at 108,348 vs
+106,658 total tokens and 9,559 vs 8,004 validation tokens. A retained Adjust
+shadow claim passed with 2 GPT-6 Luna calls, while an isolated verified-mode
+validation attempt correctly failed closed on retained legacy span labels and
+incomplete projection context. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. No canonical,
+publication, or WordPress write occurred; details are in the Step 2 evidence
+report.
