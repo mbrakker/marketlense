@@ -257,32 +257,27 @@ def test_verified_composite_metric_survives_normalization_and_metric_spine():
 
 
 @pytest.mark.parametrize(
-    ("text", "expected_rule"),
+    "text",
     [
-        (
-            "Adoption reached 99% among buyers in 2026.",
-            "public_editorial_quality.unsupported_numeric_claim",
-        ),
-        (
-            "Revenue reached 42% among buyers in 2026.",
-            "public_editorial_quality.metric_label_relationship",
-        ),
-        (
-            "Adoption reached 42% among buyers in 2024.",
-            "public_editorial_quality.temporal_integrity",
-        ),
+        "Adoption reached 99% among buyers in 2026.",
+        "Revenue reached 42% among buyers in 2026.",
+        "Adoption reached 42% among buyers in 2024.",
     ],
 )
-def test_verified_editorial_copy_is_checked_against_canonical_fact(text, expected_rule):
+def test_verified_editorial_copy_is_deferred_to_semantic_grounding(text):
     report = evaluate_public_editorial_quality(
         report_id="verified-authority",
         artifacts=_verified_artifacts(insight=_insight(text=text)),
     )
 
-    assert expected_rule in {issue.rule_id for issue in report.issues}
+    assert {
+        "public_editorial_quality.unsupported_numeric_claim",
+        "public_editorial_quality.metric_label_relationship",
+        "public_editorial_quality.temporal_integrity",
+    }.isdisjoint({issue.rule_id for issue in report.issues})
 
 
-def test_verified_expert_number_cannot_be_introduced_from_editorial_copy():
+def test_verified_expert_number_is_deferred_to_semantic_grounding():
     artifacts = _verified_artifacts()
     artifacts["expert_comment"] = "Revenue reached 99% and should drive expansion."
 
@@ -290,12 +285,12 @@ def test_verified_expert_number_cannot_be_introduced_from_editorial_copy():
         report_id="verified-authority", artifacts=artifacts
     )
 
-    assert "public_editorial_quality.unsupported_numeric_claim" in {
+    assert "public_editorial_quality.unsupported_numeric_claim" not in {
         issue.rule_id for issue in report.issues
     }
 
 
-def test_verified_composite_observation_cannot_swap_label_and_value():
+def test_verified_composite_observation_label_swap_is_deferred_to_semantic_grounding():
     observations = [
         {"label": "Creators", "value": "42%", "unit": "%", "timeframe": "2026"},
         {"label": "Views", "value": "18%", "unit": "%", "timeframe": "2026"},
@@ -311,7 +306,7 @@ def test_verified_composite_observation_cannot_swap_label_and_value():
         artifacts=_verified_artifacts(insight=insight, fact=_fact(metric=metric)),
     )
 
-    assert "public_editorial_quality.metric_label_relationship" in {
+    assert "public_editorial_quality.metric_label_relationship" not in {
         issue.rule_id for issue in report.issues
     }
 

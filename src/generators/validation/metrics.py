@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from typing import Any, Dict, List, Optional, Sequence
 
 from src.contracts.validation import ValidationIssue
@@ -105,7 +106,10 @@ def validate_insight_metrics(
             issues.append(
                 issue(
                     rule_id=RULE_ID,
-                    message=f"Metric value '{value}' not found in evidence for {label}{reason}",
+                    message=(
+                        f"Metric value '{value}' not found in evidence for "
+                        f"{label}{reason}"
+                    ),
                     severity="error",
                     section=f"insights:{label}",
                 )
@@ -130,7 +134,8 @@ def validate_insight_metrics(
                     message=(
                         "Metric value "
                         f"'{value}' not verbatim but semantically supported "
-                        f"(confidence={format_confidence(semantic_confidence)}) for {label}"
+                        f"(confidence={format_confidence(semantic_confidence)}) "
+                        f"for {label}"
                     ),
                     severity="info",
                     section=f"insights:{label}",
@@ -143,7 +148,8 @@ def validate_insight_metrics(
                         rule_id=RULE_ID,
                         message=(
                             f"Metric timeframe '{timeframe}' not verbatim but "
-                            f"semantically supported (confidence={format_confidence(semantic_confidence)}) "
+                            "semantically supported "
+                            f"(confidence={format_confidence(semantic_confidence)}) "
                             f"for {label}"
                         ),
                         severity="info",
@@ -154,7 +160,10 @@ def validate_insight_metrics(
                 issues.append(
                     issue(
                         rule_id=RULE_ID,
-                        message=f"Metric timeframe '{timeframe}' not present in evidence for {label}",
+                        message=(
+                            f"Metric timeframe '{timeframe}' not present in evidence "
+                            f"for {label}"
+                        ),
                         severity="warning",
                         section=f"insights:{label}",
                     )
@@ -189,15 +198,17 @@ def _validate_verified_fact_metrics(
         )
         if mismatches:
             issues.append(
-                issue(
-                    rule_id=RULE_ID,
-                    message=(
-                        f"Verified metric binding differs from fact for {label}: "
-                        + ", ".join(mismatches)
+                replace(
+                    issue(
+                        rule_id=RULE_ID,
+                        message=(
+                            f"Verified metric binding differs from fact for {label}: "
+                            + ", ".join(mismatches)
+                        ),
+                        severity="error",
+                        section=f"insights:{label}",
+                        entity_id=label,
                     ),
-                    severity="error",
-                    section=f"insights:{label}",
-                    entity_id=label,
                     evidence_ids=[evidence_id],
                 )
             )

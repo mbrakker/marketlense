@@ -3025,3 +3025,68 @@ an independent PDF review of every such final output remain outstanding.
 
 **Verdict: PARTIAL.** The implementation establishes the verified-fact
 authority boundary and preserves deterministic integrity checks, with normal
+mode unchanged. A fresh current-head verified-mode generation with injected
+authoritative snapshots is still unavailable, so this does not close the
+Step 3 readiness gate.
+
+#### Verified-facts validation authority cleanup — 2026-10-23 (c3dbb844)
+
+This correction narrows verified-facts validation to the authoritative
+grounding path without changing normal-mode validation. In
+`rules_for_validation_mode`, verified-facts modes no longer run the legacy
+`semantic` or `numbers` rules; `verified_facts_grounding` runs only the
+grounding rule. `_deterministic_claim_validation_issues` remains structural
+and provenance-aware in verified mode, while normal mode keeps its previous
+heuristics. `validate_retained_claims` and source/hash/page/reference checks
+remain fail-closed.
+
+`_validate_grounding_check_coverage` and `_public_factual_items` now require
+verified public items to use known authoritative evidence bindings, have
+exactly one identity verdict, carry a supported classification, and include a
+substantive explanation. Unknown or missing IDs, malformed verdicts, empty
+reasons, contradictory outcomes, and missing authoritative evidence fail
+closed. The public editorial `_text_issues` path defers temporal, metric-label,
+unsupported-number, and verified-metric-text heuristics in verified mode; the
+canonical metric-binding mismatch check remains active. The grounding schema
+and cache validator identity were versioned to invalidate incompatible cached
+responses. Normal full/inline/deferred registries are unchanged.
+
+The provider-free replay used the existing
+`canonical_verified_evidence_packs` projection in memory only. The retained
+snapshots for Criteo, Adjust, and DoubleVerify initially failed the existing
+validator because their old spans used `source_pack=findings` beside
+`verified-fact:*` IDs. That is a retained-artifact lineage limitation, not a
+reason to weaken validation; after a read-only canonical rebind, the same
+validator passed:
+
+| Report | Facts | Final insights | Metric spine before → after | Key figures before → after | Quality |
+|---|---:|---:|---:|---:|---|
+| Criteo | 5 | 5 | 4 → 4 | 2 → 2 | pass |
+| Adjust | 5 | 5 | 2 → 2 | 2 → 2 | pass |
+| DoubleVerify | 5 | 5 | 1 → 1 | 0 → 0 | pass |
+
+The replay made **0 provider calls**, wrote no artifacts, and exercised the
+retained outputs only. Algolia has no completed authoritative artifact, and
+the retained ten-report records have no authoritative verified-facts snapshots,
+so no ten-report verified-mode run or current GPT-6 Luna High quality claim is
+made. The earlier live ledgers in this document are historical normal-mode or
+prior canary evidence, not fresh evidence for this correction.
+
+Verification results on the clean worktree were **100 focused tests**, **790
+expanded affected tests**, and **8,035 tests passed / 2 skipped** in the
+repository-wide run with the CPython-3.14-incompatible wheelhouse test
+excluded. Type checking, formatting, Ruff F-lint, contract schemas, risk
+policy, documentation, agent policy, repository hygiene, public-report
+quality, and diff checks passed. The release-evidence prompt fixture remains
+red: runtime **66.1648 vs 61.68 seconds**, total tokens **108,624 vs
+106,658**, and validation-family tokens **9,835 vs 8,004** (**+22.88%**), with
+validation estimated cost **$0.001744 vs $0.001560** (**+11.79%**). This drift
+was not hidden or allowlisted because the verified grounding inventory is
+intentionally richer.
+
+**Current verdict: PARTIAL / Step 3 not ready.** The structural and grounding
+authority fixes are covered, normal mode remains green, and the retained
+downstream numeric projections did not lose supported content. Fresh verified
+mode generation with authoritative snapshots, Algolia completion, ten-report
+coverage, and independent editorial review remain open. No canonical claim,
+publication-readiness, or WordPress write occurred.

@@ -9,6 +9,11 @@ text: |
   Task:
   - Treat the listed `public_factual_items` as the complete public inventory
     for this batch. Audit each against its attached retained evidence.
+  - Return exactly one identity-matching verdict for every listed public item:
+    use a `checks` entry for supported items or an `unsupported` entry for
+    rejected items. Use the item's declared classification when it is present.
+    For a rejected factual item, also return a matching factual `checks` entry
+    with the same `item_id` and exact `text`.
   - Return one identity-matching factual check for every listed
     `retained_claims_to_ground` item, including supported claims.
   - Apply the system's factual classification, source-fidelity, table/chart

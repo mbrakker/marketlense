@@ -1185,7 +1185,9 @@ def normalize_artifact_insights(
         if not isinstance(item, dict):
             continue
         metric_raw = _to_dict(item.get("metric"))
-        metric = {key: _s(metric_raw.get(key, "")) for key in METRIC_FIELDS}
+        metric: Dict[str, Any] = {
+            key: _s(metric_raw.get(key, "")) for key in METRIC_FIELDS
+        }
         metric.update(
             {
                 key: _s(metric_raw.get(key, ""))

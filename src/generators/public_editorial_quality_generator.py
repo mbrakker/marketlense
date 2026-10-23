@@ -391,12 +391,12 @@ def _text_issues(
     text = item["text"]
     field = item["field"]
     target = item["repair_target"]
+    verified_mode = bool(item.get("verified_facts_mode"))
     issues: list[PublicEditorialQualityIssue] = []
     if not text.strip():
         return issues
     if item.get("verified_facts_mode") and (
-        not item.get("evidence_ids")
-        or not str(item.get("evidence_text") or "").strip()
+        not item.get("evidence_ids") or not str(item.get("evidence_text") or "").strip()
     ):
         issues.append(
             _issue(
@@ -467,7 +467,9 @@ def _text_issues(
                 "matches prohibited generic fallback boilerplate",
             )
         )
-    if incomplete_source_numeric_displays(text, str(item.get("evidence_text") or "")):
+    if not verified_mode and incomplete_source_numeric_displays(
+        text, str(item.get("evidence_text") or "")
+    ):
         issues.append(
             _issue(
                 report_id,
@@ -479,61 +481,65 @@ def _text_issues(
                 ),
             )
         )
-    temporal_explanation = _temporal_integrity_explanation(
-        text, str(item.get("evidence_text") or "")
-    )
-    if temporal_explanation:
-        issues.append(
-            _issue(
-                report_id,
-                "public_editorial_quality.temporal_integrity",
-                item,
-                temporal_explanation,
-            )
+    if not verified_mode:
+        temporal_explanation = _temporal_integrity_explanation(
+            text, str(item.get("evidence_text") or "")
         )
-    relationship_explanation = _metric_label_relationship_explanation(
-        text,
-        str(
-            item.get("metric_relationship_evidence_text")
-            or item.get("evidence_text")
-            or ""
-        ),
-    )
-    if relationship_explanation:
-        issues.append(
-            _issue(
-                report_id,
-                "public_editorial_quality.metric_label_relationship",
-                item,
-                relationship_explanation,
-            )
-        )
-    if item.get("verified_facts_mode") or any(
-        str(evidence_id).startswith("verified-fact:")
-        for evidence_id in item.get("evidence_ids") or []
-    ):
-        verified_evidence = str(item.get("evidence_text") or "")
-        verified_metric = item.get("verified_fact_metric")
-        if _unsupported_numbers(text, verified_evidence, verified_metric):
+        if temporal_explanation:
             issues.append(
                 _issue(
                     report_id,
-                    "public_editorial_quality.unsupported_numeric_claim",
+                    "public_editorial_quality.temporal_integrity",
                     item,
-                    "material numeric claim is absent from the canonical verified fact",
+                    temporal_explanation,
                 )
             )
-        verified_explanation = _verified_metric_text_explanation(
-            text, verified_metric, verified_evidence
+        relationship_explanation = _metric_label_relationship_explanation(
+            text,
+            str(
+                item.get("metric_relationship_evidence_text")
+                or item.get("evidence_text")
+                or ""
+            ),
         )
-        if verified_explanation:
-            rule_id = (
-                "public_editorial_quality.temporal_integrity"
-                if "timeframe" in verified_explanation
-                or "forecast" in verified_explanation
-                else "public_editorial_quality.metric_label_relationship"
+        if relationship_explanation:
+            issues.append(
+                _issue(
+                    report_id,
+                    "public_editorial_quality.metric_label_relationship",
+                    item,
+                    relationship_explanation,
+                )
             )
-            issues.append(_issue(report_id, rule_id, item, verified_explanation))
+        if any(
+            str(evidence_id).startswith("verified-fact:")
+            for evidence_id in item.get("evidence_ids") or []
+        ):
+            verified_evidence = str(item.get("evidence_text") or "")
+            verified_metric = item.get("verified_fact_metric")
+            if _unsupported_numbers(text, verified_evidence, verified_metric):
+                issues.append(
+                    _issue(
+                        report_id,
+                        "public_editorial_quality.unsupported_numeric_claim",
+                        item,
+                        (
+                            "material numeric claim is absent from the canonical "
+                            "verified fact"
+                        ),
+                    )
+                )
+            verified_explanation = _verified_metric_text_explanation(
+                text, verified_metric, verified_evidence
+            )
+            if verified_explanation:
+                rule_id = (
+                    "public_editorial_quality.temporal_integrity"
+                    if "timeframe" in verified_explanation
+                    or "forecast" in verified_explanation
+                    else "public_editorial_quality.metric_label_relationship"
+                )
+                issues.append(_issue(report_id, rule_id, item, verified_explanation))
     if field.endswith((".so_what", ".now_what")) and _is_nonspecific_action(text):
         issues.append(
             _issue(
@@ -543,9 +549,11 @@ def _text_issues(
                 "does not identify a report-specific decision or action",
             )
         )
-    if str(
-        item.get("evidence_status") or ""
-    ).casefold() in _LIMITED_EVIDENCE and _CERTAINTY.search(text):
+    if (
+        not verified_mode
+        and str(item.get("evidence_status") or "").casefold() in _LIMITED_EVIDENCE
+        and _CERTAINTY.search(text)
+    ):
         issues.append(
             _issue(
                 report_id,
@@ -591,16 +599,13 @@ def _insight_issues(
                         "public_editorial_quality.metric_binding_mismatch",
                         item,
                         "insight metric binding differs from its canonical verified "
-                        "fact: "
-                        + ", ".join(mismatches),
+                        "fact: " + ", ".join(mismatches),
                     )
                 )
         item["metric_relationship_evidence_text"] = (
-            (
-                item.get("evidence_text")
-                if item.get("verified_facts_mode")
-                else _preferred_metric_relationship_evidence(insight) or evidence
-            )
+            item.get("evidence_text")
+            if item.get("verified_facts_mode")
+            else _preferred_metric_relationship_evidence(insight) or evidence
         )
         if text and (
             not evidence_id
@@ -922,7 +927,9 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 evidence_items=summary_evidence,
             )
             if claim_items:
-                yield from claim_items
+                for item in claim_items:
+                    _annotate_verified_item(item, artifacts)
+                    yield item
             elif summary_evidence:
                 for evidence_id, evidence_text in summary_evidence:
                     item = _item(
@@ -957,7 +964,9 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 evidence_items=downstream_evidence,
             )
             if claim_items:
-                yield from claim_items
+                for item in claim_items:
+                    _annotate_verified_item(item, artifacts)
+                    yield item
             elif downstream_evidence:
                 for evidence_id, evidence_text in downstream_evidence:
                     item = _item(
@@ -1525,9 +1534,7 @@ def _verified_fact_index(artifacts: object) -> dict[str, dict[str, Any]]:
     cached = artifacts.get("_verified_fact_index")
     if isinstance(cached, dict):
         return {
-            str(key): value
-            for key, value in cached.items()
-            if isinstance(value, dict)
+            str(key): value for key, value in cached.items() if isinstance(value, dict)
         }
     if not verified_facts_mode(artifacts):
         return {}
@@ -1570,9 +1577,7 @@ def _annotate_verified_item(item: dict[str, Any], artifacts: object) -> None:
     item["verified_facts_mode"] = True
     evidence_ids = set(item.get("evidence_ids") or [])
     canonical_texts = [
-        canonical_evidence_map({fact_id: fact}).get(
-            f"verified-fact:{fact_id}", ""
-        )
+        canonical_evidence_map({fact_id: fact}).get(f"verified-fact:{fact_id}", "")
         for fact_id, fact in facts.items()
         if f"verified-fact:{fact_id}" in evidence_ids
     ]
@@ -1596,9 +1601,11 @@ def _verified_metric_text_explanation(
     claimed_years = set(re.findall(r"\b(?:19|20)\d{2}\b", text))
     if expected_years and claimed_years and not claimed_years.issubset(expected_years):
         return "uses a different timeframe from the canonical verified fact"
-    status = str(
-        metric.get("observation_status") or metric.get("forecast_status") or ""
-    ).strip().casefold()
+    status = (
+        str(metric.get("observation_status") or metric.get("forecast_status") or "")
+        .strip()
+        .casefold()
+    )
     if status in {"observed", "actual", "historical"} and _FORECAST_MARKER.search(text):
         return "adds a forecast marker to an observed canonical fact"
     label = str(metric.get("label") or "").strip()

@@ -180,6 +180,7 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
             "quotes": [],
         },
         "grounding_validation_output_v2": {"unsupported": [], "checks": []},
+        "grounding_validation_output_v3": {"unsupported": [], "checks": []},
         "context_category_fit_v1": {
             "schema_version": "1.0",
             "selected_category_ids": ["advertising_media"],
@@ -418,7 +419,10 @@ def _full_chain_response_factory(
             for section, claim, code in unsupported_claims
             if claim in json.dumps(call, default=str)
         ]
-        if schema_name == "grounding_validation_output_v2":
+        if schema_name in {
+            "grounding_validation_output_v2",
+            "grounding_validation_output_v3",
+        }:
             if detected_unsupported_claims is not None:
                 detected_unsupported_claims.extend(
                     claim for _section, claim, _code in seen_unsupported_claims
@@ -694,7 +698,10 @@ def _full_chain_chat_response_factory(
                 for section, claim, code in unsupported_claims
                 if claim in json.dumps(call, default=str)
             ]
-            if schema_name == "grounding_validation_output_v2":
+            if schema_name in {
+                "grounding_validation_output_v2",
+                "grounding_validation_output_v3",
+            }:
                 if detected_unsupported_claims is not None:
                     detected_unsupported_claims.extend(
                         claim for _section, claim, _code in seen_unsupported_claims

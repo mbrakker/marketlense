@@ -184,7 +184,14 @@ def test_provider_schema_types_const_values_for_strict_openai_responses():
         "classification"
     ]
 
-    assert classification == {"const": "factual_claim", "type": "string"}
+    assert classification == {
+        "enum": [
+            "factual_claim",
+            "analyst_interpretation",
+            "prescriptive_recommendation",
+        ],
+        "type": "string",
+    }
 
 
 def test_repair_decision_provider_schema_omits_unsupported_keywords():

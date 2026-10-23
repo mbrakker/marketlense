@@ -486,6 +486,29 @@ protected metric bindings, cache/regeneration lineage, editorial coverage, and
 publication-readiness fail-closed behavior; normal mode remains unchanged.
 Structured composite observations are retained without speculative numeric
 enrichment. The affected clean-worktree suite passed **726 tests**; selected
+file Ruff, compileall, and diff checks passed. Provider-free retained replay
+still covers 15 cases/39 variants with five matching hashes and zero calls, but
+the retained records contain no authoritative verified-fact snapshots. Four
+fresh GPT-6 Luna High frozen-member runs (Criteo, Adjust, DoubleVerify,
+Algolia) completed in unchanged normal mode with validation/readiness pass and
+no publication writes: 150 calls, 1,454,059 input tokens, 306,787 output
+tokens, `$0.345472`, and 2,605.674 seconds. Because the standard runner did
+not inject verified-fact snapshots, this is normal-mode regression evidence,
+not proof of verified-mode editorial quality. The subsequent exact ten-report
+normal-mode run completed terminal accounting for 10/10 members: 6
+validation/readiness passes and 4 fail-closed outcomes
+(`summary_safe_removal_target_unresolved`, `validation_failed` x2, and
+`publish_readiness_failed`), using 372 calls, 3,843,807 input tokens, 744,894
+output tokens, `$0.880189`, and 5,240.420 seconds. All remained unpublished
+with no WordPress writes. The four-report run had Adjust and Algolia pass, so
+the ten-run failures are recorded as live normal-mode reliability limits, not
+attributed to the verified-facts boundary without a controlled causal
+comparison. The standard runner produced no authoritative verified-fact
+snapshots; fresh live verified-mode editorial generation and independent PDF
+review remain open. Step 2 remains **PARTIAL/NO-GO** and Step 3 remains
+unstarted; no status is closed from this checkpoint alone. Details:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
 Ruff, compileall, and diff checks passed. Provider-free retained replay still
 covers 15 cases/39 variants with five matching hashes and zero calls, but the
 retained records contain no authoritative verified-fact snapshots. Four fresh
@@ -507,3 +530,21 @@ authoritative verified-fact snapshots; fresh live verified-mode editorial
 generation and independent PDF review remain open. Step 2 remains
 **PARTIAL/NO-GO** and Step 3 remains unstarted; no status is closed from this
 checkpoint alone. Details: `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Verified-facts validation-authority correction — 2026-10-23:** The current
+cleanup keeps normal full/inline/deferred validation unchanged while verified
+facts defer legacy semantic/numbers prose heuristics to the authoritative
+grounding path. Verified public grounding now fails closed on missing or
+unknown evidence IDs, missing public verdicts, malformed classifications,
+empty explanations, and contradictory outcomes; the existing structural,
+source/hash/page, metric-binding, regeneration, and publication safeguards
+remain active. Focused/expanded/current repository runs passed **100 / 790 /
+8,035** tests (the last with **2 skipped** and the CPython-3.14-incompatible
+wheelhouse test excluded). Provider-free retained replay passed after an
+in-memory use of the existing canonical verified-evidence projection for
+Criteo, Adjust, and DoubleVerify; no provider or publication calls occurred,
+and no authoritative Algolia or ten-report snapshots are available. The
+release-evidence prompt fixture still reports intentional validation-family
+drift (**9,835 vs 8,004 tokens; +22.88%**), so it was not weakened. E18 remains
+**Active/PARTIAL**, Step 3 remains **unstarted/not ready**, and the evidence
+report records the complete limitations.

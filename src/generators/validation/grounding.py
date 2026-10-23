@@ -87,8 +87,8 @@ from .verified_facts import (
 )
 
 RULE_ID = "grounding"
-GROUNDING_FAMILY_SCHEMA_VERSION = "1.3"
-GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v2"
+GROUNDING_FAMILY_SCHEMA_VERSION = "1.4"
+GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v3"
 GROUNDING_VALIDATOR_VERSION = CLAIM_GROUNDING_VALIDATOR_VERSION
 GROUNDING_MAX_CLAIMS_PER_CALL = 4
 GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL = 8
@@ -149,7 +149,7 @@ def _claim_prompt_content_hashes(
 
 
 def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
-    verified_mode = runtime.prepared.verified_facts_mode
+    verified_mode = bool(getattr(runtime.prepared, "verified_facts_mode", False))
     evidence_packs = (
         runtime.prepared.authority_evidence_packs
         if verified_mode
@@ -200,7 +200,8 @@ def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
     )
     issues.extend(
         _deterministic_claim_validation_issues(
-            runtime.retained_claim_validation or package
+            runtime.retained_claim_validation or package,
+            verified_mode=verified_mode,
         )
     )
     return issues
@@ -208,15 +209,23 @@ def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
 
 def _deterministic_claim_validation_issues(
     package: ClaimValidationPackage,
+    *,
+    verified_mode: bool = False,
 ) -> List[ValidationIssue]:
     """Expose deterministic retained-claim failures to candidate validation."""
     issues: List[ValidationIssue] = []
+    verified_structural_checks = {
+        "evidence_reference_completeness",
+        "soft_copy_provenance_integrity",
+    }
     for result in package.results:
         candidate = result.candidate
         if not candidate.factual or result.deterministic_status != "unsupported":
             continue
         for check in result.checks:
             if check.status != "failed":
+                continue
+            if verified_mode and check.name not in verified_structural_checks:
                 continue
             rule_id = f"retained_claim.{check.name}"
             issues.append(
@@ -566,9 +575,19 @@ def run_grounding_check(
         def validate_grounding_payload(
             payload: object,
             expected_inputs: Sequence[ClaimSemanticInput] | None = None,
+            expected_public_items: Sequence[Mapping[str, Any]] | None = None,
             *,
             ctx=prompt_ctx,
         ) -> None:
+            public_items_for_validation = (
+                (
+                    audit_payload.get("public_factual_items", [])
+                    if expected_public_items is None
+                    else expected_public_items
+                )
+                if verified_mode
+                else ()
+            )
             validate_schema(
                 SchemaValidateRequest(
                     schema_version="1.0",
@@ -581,6 +600,17 @@ def run_grounding_check(
                 payload,
                 retained_claim_inputs if expected_inputs is None else expected_inputs,
                 retained_item_ids,
+                tuple(
+                    public_item_ids.values()
+                    if not verified_mode
+                    else (
+                        s(item.get("item_id"))
+                        for item in public_items_for_validation
+                        if isinstance(item, dict)
+                    )
+                ),
+                expected_public_items=public_items_for_validation,
+                require_public_coverage=verified_mode,
             )
 
         reused_payload = None
@@ -741,7 +771,10 @@ def run_grounding_check(
 
                 def validate_recovery_payload(payload: Any) -> None:
                     validate_grounding_payload(
-                        payload, batch_semantic_inputs, ctx=batch_ctx
+                        payload,
+                        batch_semantic_inputs,
+                        batch_spec[0].get("public_factual_items") or [],
+                        ctx=batch_ctx,
                     )
 
                 recovery = execute_structured_output(
@@ -1152,8 +1185,11 @@ def _validate_grounding_check_coverage(
     payload: object,
     semantic_inputs: Sequence[ClaimSemanticInput],
     retained_item_ids: Mapping[str, str],
+    allowed_public_item_ids: Sequence[str] = (),
+    expected_public_items: Sequence[Mapping[str, Any]] = (),
+    require_public_coverage: bool = False,
 ) -> None:
-    """Require one exact structured check for each unique retained claim."""
+    """Require exact structured coverage for retained and verified public claims."""
 
     if not isinstance(payload, dict):
         return
@@ -1163,32 +1199,197 @@ def _validate_grounding_check_coverage(
         )
         for semantic_input in semantic_inputs
     }
-    if not expected:
-        return
+    public_items = list(expected_public_items)
+    if not public_items and isinstance(payload.get("public_factual_items"), list):
+        public_items = [
+            item for item in payload["public_factual_items"] if isinstance(item, dict)
+        ]
+    expected_public: dict[str, str] = {}
+    for item in public_items:
+        item_id = s(item.get("item_id"))
+        text = s(item.get("text"))
+        if not item_id or not text:
+            raise AppError(
+                code="grounding_claim_check_coverage_invalid",
+                message="Verified public grounding items require stable IDs and text",
+                retryable=False,
+            )
+        prior = expected_public.get(item_id)
+        if prior is not None and prior != text:
+            raise AppError(
+                code="grounding_claim_check_coverage_invalid",
+                message="Verified public grounding IDs refer to conflicting text",
+                retryable=False,
+                context={"item_id": item_id},
+            )
+        expected_public[item_id] = text
+    allowed_item_ids = set(expected)
+    allowed_item_ids.update(expected_public)
+    allowed_item_ids.update(
+        item_id for item_id in allowed_public_item_ids if s(item_id)
+    )
+    if not require_public_coverage and isinstance(
+        payload.get("public_factual_items"), list
+    ):
+        allowed_item_ids.update(
+            s(item.get("item_id"))
+            for item in payload["public_factual_items"]
+            if isinstance(item, dict) and s(item.get("item_id"))
+        )
+    response_entries = [
+        entry
+        for field_name in ("checks", "unsupported")
+        for entry in (payload.get(field_name) or [])
+        if isinstance(entry, dict)
+    ]
+    if require_public_coverage and any(
+        not s(entry.get("item_id")) for entry in response_entries
+    ):
+        raise AppError(
+            code="grounding_claim_check_coverage_invalid",
+            message="Verified grounding responses require stable item identifiers",
+            retryable=False,
+        )
+    unknown_item_ids = {
+        s(entry.get("item_id"))
+        for entry in response_entries
+        if s(entry.get("item_id")) and s(entry.get("item_id")) not in allowed_item_ids
+    }
+    if require_public_coverage and unknown_item_ids:
+        raise AppError(
+            code="grounding_claim_check_coverage_invalid",
+            message="Grounding response contains an unknown item identifier",
+            retryable=False,
+            context={"unknown_item_ids": sorted(unknown_item_ids)[:32]},
+        )
     checks_by_id: dict[str, list[dict[str, Any]]] = {}
     checks = payload.get("checks")
     if isinstance(checks, list):
         for check in checks:
             if isinstance(check, dict) and s(check.get("item_id")):
                 checks_by_id.setdefault(s(check.get("item_id")), []).append(check)
-    missing_claim_ids = [
-        claim_id
-        for claim_id, text in expected.items()
-        if len(checks_by_id.get(claim_id, [])) != 1
-        or s(checks_by_id[claim_id][0].get("text")) != text
-        or s(checks_by_id[claim_id][0].get("classification")) != "factual_claim"
-    ]
-    if missing_claim_ids:
+    if expected:
+        missing_claim_ids = [
+            claim_id
+            for claim_id, text in expected.items()
+            if len(checks_by_id.get(claim_id, [])) != 1
+            or s(checks_by_id[claim_id][0].get("text")) != text
+            or s(checks_by_id[claim_id][0].get("classification")) != "factual_claim"
+        ]
+        if missing_claim_ids:
+            raise AppError(
+                code="grounding_claim_check_coverage_invalid",
+                message=(
+                    "Grounding must return exactly one identity-matching factual "
+                    "check for each retained claim"
+                ),
+                retryable=False,
+                context={
+                    "missing_claim_ids": missing_claim_ids[:32],
+                    "missing_claim_count": len(missing_claim_ids),
+                },
+            )
+    if not require_public_coverage or not expected_public:
+        return
+    unsupported_by_id: dict[str, list[dict[str, Any]]] = {}
+    unsupported = payload.get("unsupported")
+    if isinstance(unsupported, list):
+        for entry in unsupported:
+            if isinstance(entry, dict) and s(entry.get("item_id")):
+                unsupported_by_id.setdefault(s(entry["item_id"]), []).append(entry)
+    if require_public_coverage:
+        malformed_checks = (
+            [
+                s(entry.get("item_id")) or "<missing>"
+                for entry in checks
+                if isinstance(entry, dict) and not s(entry.get("reason"))
+            ]
+            if isinstance(checks, list)
+            else []
+        )
+        if malformed_checks:
+            raise AppError(
+                code="grounding_claim_check_coverage_invalid",
+                message="Verified grounding checks require a substantive reason",
+                retryable=False,
+                context={"item_ids": malformed_checks[:32]},
+            )
+        valid_classifications = {
+            "factual_claim",
+            "analyst_interpretation",
+            "prescriptive_recommendation",
+        }
+        malformed_unsupported = (
+            [
+                s(entry.get("item_id")) or "<missing>"
+                for entry in unsupported
+                if isinstance(entry, dict)
+                and (
+                    s(entry.get("classification")) not in valid_classifications
+                    or s(entry.get("entailment_outcome"))
+                    not in {"contradicted", "not_established"}
+                    or not s(entry.get("reason"))
+                )
+            ]
+            if isinstance(unsupported, list)
+            else []
+        )
+        if malformed_unsupported:
+            raise AppError(
+                code="grounding_claim_check_coverage_invalid",
+                message="Verified unsupported grounding verdicts are incomplete",
+                retryable=False,
+                context={"item_ids": malformed_unsupported[:32]},
+            )
+    public_coverage_errors: list[str] = []
+    for item_id, text in expected_public.items():
+        matching_checks = checks_by_id.get(item_id, [])
+        matching_unsupported = unsupported_by_id.get(item_id, [])
+        if len(matching_checks) > 1 or len(matching_unsupported) > 1:
+            public_coverage_errors.append(item_id)
+            continue
+        if matching_checks:
+            check = matching_checks[0]
+            if s(check.get("text")) != text:
+                public_coverage_errors.append(item_id)
+                continue
+            classification = s(check.get("classification"))
+            outcome = s(check.get("entailment_outcome"))
+            comparison = ProtectedFactComparison.from_payload(
+                check.get("protected_facts"),
+                proposition_status=s(check.get("proposition_status")),
+            )
+            if outcome == "entailed":
+                if (
+                    (
+                        classification == "factual_claim"
+                        and comparison.proposition_status != "compatible"
+                    )
+                    or comparison.incompatible_dimensions
+                    or matching_unsupported
+                ):
+                    public_coverage_errors.append(item_id)
+            elif outcome in {"contradicted", "not_established"}:
+                if (
+                    not matching_unsupported
+                    or s(matching_unsupported[0].get("text")) != text
+                ):
+                    public_coverage_errors.append(item_id)
+            else:
+                public_coverage_errors.append(item_id)
+        elif not matching_unsupported or s(matching_unsupported[0].get("text")) != text:
+            public_coverage_errors.append(item_id)
+    if public_coverage_errors:
         raise AppError(
             code="grounding_claim_check_coverage_invalid",
             message=(
-                "Grounding must return exactly one identity-matching factual check "
-                "for each retained claim"
+                "Verified grounding must return one identity-matching verdict "
+                "for every public item"
             ),
             retryable=False,
             context={
-                "missing_claim_ids": missing_claim_ids[:32],
-                "missing_claim_count": len(missing_claim_ids),
+                "missing_or_ambiguous_public_item_ids": public_coverage_errors[:32],
+                "missing_or_ambiguous_public_item_count": len(public_coverage_errors),
             },
         )
 
@@ -1322,7 +1523,7 @@ def grounding_payload(
         evidence_id = s(insight.get("evidence_id"))
         fact = fact_for_evidence_id(verified_facts, evidence_id)
         authoritative_metric = (
-            fact.get("metric")
+            ensure_dict(fact.get("metric"))
             if isinstance(fact, dict) and isinstance(fact.get("metric"), dict)
             else metric
         )
@@ -1374,9 +1575,13 @@ def grounding_payload(
         if isinstance(summary, dict)
         else [],
     }
-    title_is_canonical = verified_mode or _matches_canonical_doc_map_identity(
-        request.report.title, request.evidence_packs.get("doc_map"), field="title"
-    ) or _matches_explicit_source_title(request.report.title, request)
+    title_is_canonical = (
+        verified_mode
+        or _matches_canonical_doc_map_identity(
+            request.report.title, request.evidence_packs.get("doc_map"), field="title"
+        )
+        or _matches_explicit_source_title(request.report.title, request)
+    )
     publisher_is_canonical = verified_mode or _matches_canonical_doc_map_identity(
         request.report.publisher,
         request.evidence_packs.get("doc_map"),
@@ -1635,6 +1840,27 @@ def _public_factual_items(
     ) -> None:
         claim = sanitize_citation_tokens(s(text))
         if claim:
+            if verified_evidence_by_id:
+                normalized_evidence_ids = [
+                    s(evidence_id) for evidence_id in evidence_ids if s(evidence_id)
+                ]
+                if (
+                    not normalized_evidence_ids
+                    or any(
+                        evidence_id not in verified_evidence_by_id
+                        for evidence_id in normalized_evidence_ids
+                    )
+                    or not s(evidence_text)
+                ):
+                    raise AppError(
+                        code="grounding_public_item_evidence_invalid",
+                        message=(
+                            "Verified public grounding items require one or more "
+                            "known authoritative evidence bindings"
+                        ),
+                        retryable=False,
+                        context={"item_id": item_id},
+                    )
             item: dict[str, Any] = {
                 "item_id": item_id,
                 "section": section,
@@ -1835,6 +2061,18 @@ def _public_factual_items(
             [evidence_id],
             evidence_text_for_id(evidence_id),
         )
+    if verified_evidence_by_id:
+        for index, metric in enumerate(artifacts.get("metric_spine", []), start=1):
+            if not isinstance(metric, dict):
+                continue
+            evidence_id = s(metric.get("evidence_id"))
+            add(
+                f"metric_spine:{index}:metric",
+                f"metric_spine:{index}",
+                metric_claim_text(metric, include_observations=True),
+                [evidence_id],
+                evidence_text_for_id(evidence_id),
+            )
     for family in ("expert_comment", "linkedin_post"):
         add_soft_copy_sentences(
             family,
