@@ -11,7 +11,7 @@ from src.contracts.cover_images import (
     CoverImageOrchestratorRequest,
     CoverImageReport,
 )
-from src.contracts.files import ReadTextRequest
+from src.contracts.files import ReadTextRequest, ResolvePathWithinRootRequest
 from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_cards import CoverFingerprintProjectionRequest
 from src.contracts.report_store import (
@@ -74,6 +74,7 @@ def _load_cover_fingerprint(
             persisted_reference,
             output_dir=output_dir,
             metadata=metadata,
+            ctx=ctx,
         )
         return _read_cover_fingerprint(metadata, artifact_path, ctx)
 
@@ -109,6 +110,8 @@ def _load_cover_fingerprint(
             candidate,
             output_dir=output_dir,
             metadata=metadata,
+            reject_parent_components=False,
+            ctx=ctx,
         )
         try:
             return _read_cover_fingerprint(metadata, resolved_candidate, ctx)
@@ -151,15 +154,6 @@ def _artifact_path_error(
     )
 
 
-def _resolved_output_root(output_dir: str, metadata) -> Path:
-    try:
-        return Path(output_dir).expanduser().resolve(strict=False)
-    except (OSError, RuntimeError) as exc:
-        raise _artifact_path_error(
-            metadata, output_dir, output_dir, "output_root_unresolvable", cause=exc
-        ) from exc
-
-
 def _starts_with_relative_output_dir(path: Path, output_dir: Path) -> bool:
     if output_dir.is_absolute():
         return False
@@ -173,42 +167,48 @@ def _starts_with_relative_output_dir(path: Path, output_dir: Path) -> bool:
     )
 
 
-def _resolve_artifact_path(candidate: Path, *, output_dir: str, metadata) -> Path:
-    root = _resolved_output_root(output_dir, metadata)
+def _resolve_artifact_path(
+    candidate: Path,
+    *,
+    output_dir: str,
+    metadata,
+    ctx: RunContext,
+    reject_parent_components: bool = True,
+) -> Path:
     try:
         raw_candidate = candidate.expanduser()
-        if ".." in raw_candidate.parts:
+        if reject_parent_components and ".." in raw_candidate.parts:
             raise _artifact_path_error(
                 metadata, output_dir, candidate, "path_traversal_component"
             )
-        if raw_candidate.is_absolute():
-            selected = raw_candidate
-        elif _starts_with_relative_output_dir(
+        if raw_candidate.is_absolute() or _starts_with_relative_output_dir(
             raw_candidate, Path(output_dir).expanduser()
         ):
             selected = raw_candidate
         else:
-            selected = root / raw_candidate
-        resolved = selected.resolve(strict=False)
-    except (OSError, RuntimeError) as exc:
-        raise _artifact_path_error(
-            metadata, output_dir, candidate, "path_unresolvable", cause=exc
-        ) from exc
-    if resolved != root and root not in resolved.parents:
-        raise _artifact_path_error(
-            metadata, output_dir, candidate, "outside_output_root"
+            selected = Path(output_dir).expanduser() / raw_candidate
+        inspection = file_service.resolve_path_within_root(
+            ResolvePathWithinRootRequest(
+                schema_version="1.0",
+                root_dir=output_dir,
+                path=str(selected),
+                reject_parent_components=reject_parent_components,
+            ),
+            ctx,
         )
-    try:
-        if resolved.exists():
-            if not resolved.is_file():
-                raise _artifact_path_error(
-                    metadata, output_dir, candidate, "not_a_regular_file"
-                )
-    except (OSError, RuntimeError) as exc:
+    except AppError as exc:
+        if exc.code == "cover_artifacts_invalid":
+            raise
         raise _artifact_path_error(
-            metadata, output_dir, candidate, "path_inspection_failed", cause=exc
+            metadata,
+            output_dir,
+            candidate,
+            "path_unresolvable",
+            cause=exc,
         ) from exc
-    return resolved
+    if not inspection.valid:
+        raise _artifact_path_error(metadata, output_dir, candidate, inspection.reason)
+    return Path(inspection.resolved_path)
 
 
 def _resolve_persisted_artifact_path(
@@ -216,6 +216,7 @@ def _resolve_persisted_artifact_path(
     *,
     output_dir: str,
     metadata,
+    ctx: RunContext,
 ) -> Path:
     try:
         candidate = Path(reference)
@@ -223,7 +224,13 @@ def _resolve_persisted_artifact_path(
         raise _artifact_path_error(
             metadata, output_dir, reference, "path_malformed", cause=exc
         ) from exc
-    return _resolve_artifact_path(candidate, output_dir=output_dir, metadata=metadata)
+    return _resolve_artifact_path(
+        candidate,
+        output_dir=output_dir,
+        metadata=metadata,
+        ctx=ctx,
+        reject_parent_components=True,
+    )
 
 
 def _read_cover_fingerprint(metadata, artifact_path: Path, ctx: RunContext):

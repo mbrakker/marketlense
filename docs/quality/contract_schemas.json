@@ -17586,6 +17586,16 @@
         "output_path": {
           "type": "string"
         },
+        "output_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "publisher": {
           "anyOf": [
             {
@@ -22710,6 +22720,81 @@
       "required": [
         "schema_version",
         "commit_sha"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.ResolvePathWithinRootRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "reject_parent_components": {
+          "type": "boolean"
+        },
+        "root_dir": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "root_dir",
+        "path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.ResolvePathWithinRootResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "path_exists": {
+          "type": "boolean"
+        },
+        "path_is_file": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "resolved_path": {
+          "type": "string"
+        },
+        "resolved_root": {
+          "type": "string"
+        },
+        "root_dir": {
+          "type": "string"
+        },
+        "root_exists": {
+          "type": "boolean"
+        },
+        "root_is_dir": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "root_dir",
+        "path",
+        "resolved_root",
+        "resolved_path",
+        "valid",
+        "reason",
+        "root_exists",
+        "root_is_dir",
+        "path_exists",
+        "path_is_file"
       ],
       "type": "object"
     },

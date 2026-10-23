@@ -11,17 +11,15 @@ from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
 )
+from src.generators.report_card_projection import stable_cover_seed
 from src.orchestrators.cover_image_orchestrator import _load_cover_fingerprint
+from src.services.cover_image_service import validate_cover_asset_output_path
 from src.services.report_analysis_store_service import store_pack
 from src.services.report_store_service import get_metadata, upsert_metadata
 from src.utils.cache_utils import sha256_json
+from src.utils.cover_path_utils import build_report_card_asset_path
 from src.utils.errors import AppError
 from src.utils.logging import new_run_context
-from src.utils.cover_path_utils import (
-    build_report_card_asset_path,
-    validate_cover_asset_output_path,
-)
-from src.generators.report_card_projection import stable_cover_seed
 
 
 def _artifact_payload(*, shape: str, direction: str) -> dict[str, object]:
@@ -255,6 +253,59 @@ def test_persisted_prefixed_relative_reference_does_not_try_root_joined_alternat
     assert exc_info.value.retryable is False
 
 
+def test_blank_artifact_reference_does_not_clear_stale_state(tmp_path: Path) -> None:
+    ctx = new_run_context(task_id="test_path05_blank_artifact_reference")
+    db_path = tmp_path / "reports.sqlite"
+    artifact_reference = str(tmp_path / "out" / "source-a" / "artifacts.json")
+    upsert_metadata(
+        ReportMetadataUpsertRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            file_id="blank-reference-file",
+            title="Source A",
+            md5="md5-a",
+            source_identity_id="source:a",
+            evidence_pack_paths={"artifacts": artifact_reference},
+        ),
+        ctx,
+    )
+    upsert_metadata(
+        ReportMetadataUpsertRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            file_id="blank-reference-file",
+            title="Source B",
+            md5="md5-b",
+            source_identity_id="source:b",
+        ),
+        ctx,
+    )
+    upsert_metadata(
+        ReportMetadataUpsertRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            file_id="blank-reference-file",
+            title="Source B with malformed evidence",
+            md5="md5-b",
+            source_identity_id="source:b",
+            evidence_pack_paths={"artifacts": "   "},
+        ),
+        ctx,
+    )
+
+    metadata = get_metadata(
+        ReportMetadataGetRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            file_id="blank-reference-file",
+        ),
+        ctx,
+    )
+    assert metadata is not None
+    assert metadata.evidence_pack_paths == {}
+    assert metadata.artifacts_stale is True
+
+
 @pytest.mark.parametrize(
     ("stored_md5", "stored_identity", "incoming_md5", "incoming_identity", "stale"),
     [
@@ -355,6 +406,29 @@ def test_persisted_prefixed_relative_reference_selects_cwd_candidate_when_both_e
     )
 
 
+def test_trusted_output_root_parent_component_keeps_legacy_fallback_compatible(
+    tmp_path: Path,
+) -> None:
+    ctx = new_run_context(task_id="test_path05_trusted_root_parent_component")
+    physical_root = tmp_path / "out"
+    artifact_path = physical_root / "report" / "report_analysis" / "artifacts.json"
+    artifact_path.parent.mkdir(parents=True)
+    payload = _artifact_payload(shape="trend", direction="rising")
+    artifact_path.write_text(json.dumps(payload), encoding="utf-8")
+    configured_root = tmp_path / "nested" / ".." / "out"
+    metadata = _metadata(
+        file_id="file-trusted-root",
+        output_dir=physical_root,
+        reference="",
+    )
+
+    fingerprint = _load_cover_fingerprint(metadata, str(configured_root), ctx)
+
+    assert fingerprint.seed == stable_cover_seed(
+        "file-trusted-root", sha256_json(payload)
+    )
+
+
 def test_persisted_artifact_symlink_escape_is_rejected(tmp_path: Path) -> None:
     ctx = new_run_context(task_id="test_path05_symlink_escape")
     output_dir = tmp_path / "out"
@@ -387,10 +461,15 @@ def test_cover_asset_preflight_rejects_existing_file_root_without_output_mutatio
 ) -> None:
     output_root = tmp_path / "output-file"
     output_root.write_text("not a directory", encoding="utf-8")
+    destination = build_report_card_asset_path(
+        str(output_root), "file-1", "Title", "report", "small"
+    )
 
     with pytest.raises(AppError) as exc_info:
-        build_report_card_asset_path(
-            str(output_root), "file-1", "Title", "report", "small"
+        validate_cover_asset_output_path(
+            destination,
+            output_root=output_root,
+            ctx=new_run_context(task_id="test_path05_file_root"),
         )
 
     assert exc_info.value.code == "cover_asset_path_invalid"
@@ -404,7 +483,9 @@ def test_cover_asset_output_preflight_accepts_existing_directory(
     output_root = tmp_path / "output"
     output_root.mkdir()
     destination, temporary = validate_cover_asset_output_path(
-        output_root / "report" / "assets" / "cover.png"
+        output_root / "report" / "assets" / "cover.png",
+        output_root=output_root,
+        ctx=new_run_context(task_id="test_path05_existing_directory"),
     )
 
     assert destination == output_root / "report" / "assets" / "cover.png"
@@ -419,8 +500,15 @@ def test_cover_asset_preflight_translates_unresolvable_root(tmp_path: Path) -> N
     except OSError as exc:
         pytest.skip(f"symlink creation unavailable: {exc}")
 
+    destination = build_report_card_asset_path(
+        str(cycle), "file-1", "Title", "report", "small"
+    )
     with pytest.raises(AppError) as exc_info:
-        build_report_card_asset_path(str(cycle), "file-1", "Title", "report", "small")
+        validate_cover_asset_output_path(
+            destination,
+            output_root=cycle,
+            ctx=new_run_context(task_id="test_path05_cycle_root"),
+        )
 
     assert exc_info.value.code == "cover_asset_path_invalid"
     assert exc_info.value.retryable is False

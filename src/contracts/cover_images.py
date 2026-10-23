@@ -232,6 +232,14 @@ class CoverImageRenderRequest:
     time_period: Optional[str] = field(
         default=None, metadata={"doc": "Optional time period label."}
     )
+    output_root: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": (
+                "Configured cover output root used for filesystem containment checks."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)

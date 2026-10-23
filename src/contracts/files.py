@@ -283,6 +283,53 @@ class FileExistsResponse:
 
 
 @dataclass(frozen=True)
+class ResolvePathWithinRootRequest:
+    schema_version: str = field(
+        metadata={"doc": "Contained-path resolution request schema version."}
+    )
+    root_dir: str = field(metadata={"doc": "Configured filesystem root to enforce."})
+    path: str = field(metadata={"doc": "Candidate filesystem path to inspect."})
+    reject_parent_components: bool = field(
+        default=True,
+        metadata={
+            "doc": "Reject explicit parent components before filesystem resolution."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class ResolvePathWithinRootResponse:
+    schema_version: str = field(
+        metadata={"doc": "Contained-path resolution response schema version."}
+    )
+    root_dir: str = field(metadata={"doc": "Configured root supplied by the caller."})
+    path: str = field(metadata={"doc": "Candidate path supplied by the caller."})
+    resolved_root: str = field(metadata={"doc": "Canonical resolved root path."})
+    resolved_path: str = field(
+        metadata={"doc": "Canonical resolved candidate path, when resolvable."}
+    )
+    valid: bool = field(
+        metadata={"doc": "True when the candidate is safely contained and usable."}
+    )
+    reason: str = field(
+        metadata={
+            "doc": (
+                "Stable result reason: resolved, missing, traversal, outside_root, "
+                "root_not_directory, or not_a_regular_file."
+            )
+        }
+    )
+    root_exists: bool = field(metadata={"doc": "True when the resolved root exists."})
+    root_is_dir: bool = field(
+        metadata={"doc": "True when the resolved root is a directory."}
+    )
+    path_exists: bool = field(metadata={"doc": "True when the resolved path exists."})
+    path_is_file: bool = field(
+        metadata={"doc": "True when the resolved path is a regular file."}
+    )
+
+
+@dataclass(frozen=True)
 class WriteBytesRequest:
     schema_version: str = field(metadata={"doc": "Write bytes request schema version."})
     path: str = field(metadata={"doc": "Filesystem path to write."})

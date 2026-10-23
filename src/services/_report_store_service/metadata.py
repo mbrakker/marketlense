@@ -1852,7 +1852,11 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     vector_store_id = (
         request.vector_store_id.strip() if request.vector_store_id else None
     )
-    evidence_packs = request.evidence_pack_paths or {}
+    evidence_packs = {
+        str(key).strip(): str(value).strip()
+        for key, value in (request.evidence_pack_paths or {}).items()
+        if str(key).strip() and str(value).strip()
+    }
     evidence_packs_json = json.dumps(evidence_packs, ensure_ascii=False)
     source_identity_id = request.source_identity_id.strip()
     source_metadata_hash = request.source_metadata_hash.strip()
@@ -2051,7 +2055,13 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                     ELSE COALESCE(NULLIF(excluded.source_publication_date_status, ''), reports.source_publication_date_status)
                 END,
                 artifacts_stale=CASE
-                    WHEN NULLIF(json_extract(excluded.evidence_packs_json, '$.artifacts'), '') IS NOT NULL
+                    WHEN json_type(excluded.evidence_packs_json, '$.artifacts') = 'text'
+                        AND NULLIF(
+                            TRIM(
+                                json_extract(excluded.evidence_packs_json, '$.artifacts')
+                            ),
+                            ''
+                        ) IS NOT NULL
                     THEN 0
                     WHEN (
                         NULLIF(excluded.md5, '') IS NOT NULL
