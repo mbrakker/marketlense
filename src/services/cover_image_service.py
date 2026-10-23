@@ -78,10 +78,16 @@ def validate_cover_asset_output_path(
                 ctx,
             )
         except AppError as exc:
+            reason = "path_inspection_failed"
+            if exc.code == "file_path_resolution_failed":
+                reason = (
+                    "path_inspection_failed; configured output root path "
+                    "could not be resolved"
+                )
             raise _cover_asset_path_error(
                 output_path,
                 configured_root,
-                "path_inspection_failed",
+                reason,
                 cause=exc,
             ) from exc
         if not inspection.valid:
