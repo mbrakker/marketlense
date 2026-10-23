@@ -3648,3 +3648,8 @@ grounding validation, despite clean provenance and protected-field checks.
 These results do not show a causal live-selection improvement because the
 visual result and retained shortlist were replay inputs. **Verdict: PARTIAL /
 Step 3 not ready.**
+
+The final pushed checkpoint is `085be848d0c73e1b302cecdb6a043125c30dc044`.
+Hosted CI run `40018706289` passed `tests`, both mutation partitions, and
+`release_evidence`; the formatting-only follow-up also left all production
+changes and the documented PARTIAL / Step 3-not-ready verdict unchanged.
