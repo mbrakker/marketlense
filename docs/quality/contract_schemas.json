@@ -48632,6 +48632,9 @@
     "src.contracts.verified_claims.VisualClaimEvaluationRequest": {
       "additionalProperties": false,
       "properties": {
+        "candidate_roster_digest": {
+          "type": "string"
+        },
         "claims": {
           "items": {
             "additionalProperties": {},
@@ -48693,6 +48696,9 @@
     "src.contracts.verified_claims.VisualClaimEvaluationResponse": {
       "additionalProperties": false,
       "properties": {
+        "candidate_roster_digest": {
+          "type": "string"
+        },
         "claims": {
           "items": {
             "$ref": "#/$defs/src.contracts.verified_claims.VisualClaimEvaluationResult"
