@@ -652,11 +652,10 @@ fixtures:
     temperature: 0.0
     benchmark: *benchmark_validation
     system_variables:
-      authority_policy: "Legacy mode: use attached evidence and corroborate chart/table associations with file_search when supplied evidence may contain a tuple error."
+      authority_policy: "LEGACY mode: use attached evidence and corroborate chart/table associations with file_search and the original visual when supplied evidence may contain a tuple error. Bind chart/table values by visible row, callout, connector, or legend key; OCR order alone is not the tuple. Confirm label reversals visually; unreadable or ambiguous layouts are not_established."
     user_variables:
       report_json: *report_json
       evidence_json: *evidence_json
-      authority_policy: "Legacy mode: use attached evidence and corroborate chart/table associations with file_search when supplied evidence may contain a tuple error."
   - namespace: "report_vs/identity_resolution"
     family: "report"
     model: "openai/gpt-5-mini"

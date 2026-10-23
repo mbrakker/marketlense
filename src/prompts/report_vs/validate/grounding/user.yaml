@@ -6,12 +6,7 @@ text: |
   Source text for corroborating those listed items (JSON):
   {{ evidence_json }}
 
-  Authority policy: {{ authority_policy }}
-
   Task:
-  Audit only the listed public inventory and retained claims. Return exactly
-  one identity-matching verdict for every public item and one factual check for
-  every retained claim. Rejected factual items also require a matching factual
-  check. Apply the system's classification, source-fidelity, table/chart and
-  violation-type rules; return only schema-valid JSON with `checks` and
-  `unsupported` arrays.
+  Return the schema-valid JSON required by the system for every listed public
+  item and retained claim, including required `checks`, `unsupported`, and
+  protected-dimension entries.

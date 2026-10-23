@@ -49,14 +49,12 @@ text: |
   - A value found elsewhere in the same visual is not support. Never transfer a
     value across rows, columns, legend labels, cohorts, categories, or
     denominators.
-  - Bind chart/table values by visible row, callout, connector, or legend key;
-    OCR order alone is not the tuple. Confirm label reversals visually before
-    marking contradiction; unreadable or ambiguous layouts are
-    `not_established`.
-  - Retained evidence may itself contain a transcription or association error
-    in legacy mode. Follow the authority policy for source corroboration. If the
-    authoritative source binds the value to a different tuple, return a factual
-    `contradicted` result even when supplied evidence repeats the artifact claim.
+  - In verified mode, validate the complete tuple only against the attached
+    canonical verified fact. A missing or ambiguous tuple is `not_established`.
+    In legacy mode, follow the authority policy for source corroboration before
+    accepting a tuple; if the authoritative source binds the value to a
+    different tuple, return a factual `contradicted` result even when supplied
+    evidence repeats the artifact claim.
 
   Editorial interpretation and recommendation policy:
   - Classify every material sentence as `factual_claim`, `analyst_interpretation`,

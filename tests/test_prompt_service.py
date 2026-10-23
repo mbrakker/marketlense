@@ -13,6 +13,7 @@ from src.contracts.prompts import (
     PromptTemplate,
 )
 from src.contracts.run_context import RunContext
+from src.generators.validation.grounding import grounding_authority_policy
 from src.services import prompt_service
 from src.services.prompt_service import (
     build_llm_execution_identity,
@@ -512,7 +513,17 @@ def test_grounding_prompt_uses_chart_layout_not_extraction_order_for_bindings() 
         ),
         _ctx(),
     )
-    prompt_text = f"{prompt.system.text}\n{prompt.user.text}"
+    rendered_system = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt.system,
+            variables={
+                "authority_policy": grounding_authority_policy(False),
+            },
+        ),
+        _ctx(),
+    )
+    prompt_text = f"{rendered_system.text}\n{prompt.user.text}"
     prompt_text = " ".join(prompt_text.lower().split())
 
     assert "bind chart/table values by visible row" in prompt_text

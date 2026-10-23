@@ -3188,3 +3188,91 @@ the retained verified-mode editorial validation attempt did not pass, the
 prompt-fixture release gate remains red, and no full fresh verified five-report
 editorial cohort was run. Step 2 remains shadow-only; no canonical promotion,
 publication-readiness mutation, or WordPress write occurred.
+
+#### Canonical semantic-input authority and grounding prompt cleanup — 2026-10-23
+
+This follow-up closes the lower-level verified-grounding bypass without adding a
+validator stage or provider call. `run_grounding_check()` still builds
+canonical verified-fact evidence once, but now checks any supplied retained
+semantic package and semantic inputs against the current source identity,
+candidate identity, canonical `verified-fact:*` statements, and the existing
+semantic evidence hash before prompt preparation or cache reuse. Stale text,
+source identity, duplicate, incomplete, or omitted inputs fail closed with a
+typed non-retryable error. Normal-mode construction and validation remain
+unchanged. The valid precomputed-input path is covered as well, so callers do
+not pay for unconditional reconstruction.
+
+The grounding authority policy now lives only in the system prompt. Legacy mode
+explicitly retains file-search/original-visual corroboration, visible
+row/callout/connector/legend binding, OCR-order caution, and visual label
+reversal checks. Verified mode instead checks complete metric tuples only
+against the canonical verified fact. The user prompt no longer repeats the
+authority policy or the system-owned coverage/classification/schema rules.
+
+The exact unchanged prompt-fixture gate was run with three iterations. It
+remains fail-closed, with no baseline, threshold, pricing, or allowlist change:
+
+| Prompt namespace/family | Current tokens | Baseline tokens | Delta | Current cost | Baseline cost | Delta |
+|---|---:|---:|---:|---:|---:|---:|
+| `report_vs/artifacts/insights_candidates` | 3,634 | 3,569 | +65 | $0.000643 | $0.000637 | +$0.000006 |
+| `report_vs/artifacts/insights_final` | 3,377 | 3,307 | +70 | $0.000618 | $0.000611 | +$0.000007 |
+| `report_vs/validate/editorial_review` | 2,030 | 1,362 | +668 | $0.000355 | $0.000288 | +$0.000067 |
+| `report_vs/validate/grounding` | 2,163 | 2,323 | -160 | $0.000368 | $0.000384 | -$0.000016 |
+| `report_vs/validate/visual_claim_correction` | 1,837 | 1,598 | +239 | $0.000336 | $0.000312 | +$0.000024 |
+| `report_vs/validate/visual_claim_verification` | 2,536 | 1,801 | +735 | $0.000406 | $0.000332 | +$0.000074 |
+| validation family | 9,486 | 8,004 | +1,482 (+18.52%) | $0.001709 | $0.001560 | +$0.000149 |
+| all fixture namespaces | 108,275 | 106,658 | +1,617 (+1.52%) | $0.024049 | $0.023887 | +$0.000162 |
+
+All other namespace token and cost deltas were zero. The increase is therefore
+not caused by the shared grounding policy change: grounding decreased. The
+remaining validation increase is concentrated in the existing independent
+editorial-review and visual correction/verification instructions that protect
+source pages, metric tuples, populations, periods, and output completeness.
+Those requirements were not removed merely to fit the historical baseline.
+
+The provider-free frozen replay passed for the exact **15 reference cases / 39
+variants**, with all five pinned PDF hashes present and matching, and **29
+retained real-report identities / 29 theme slots**. It made zero provider calls
+and is an input/provenance check rather than evidence of live model quality.
+The retained DoubleVerify and Adjust artifacts were inspected against the
+original PDFs. DoubleVerify pages 8, 9, and 10 support the Engagement Index
+definition, normalization, and the APAC/North America in-app versus mobile-web
+composite tables. Adjust pages 6, 9, 11, 21, and 34 support the retained
+install/session, AI-efficiency, marketer-satisfaction, retention, and
+finance-install/session bindings. The protected fields, source identities,
+physical pages, and evidence references in those retained artifacts were not
+enriched with unsupported values.
+
+An isolated live verified-mode validation replay used the existing GPT-6 Luna
+route, canonical in-memory verified-fact projections, and no publication path.
+The retained snapshots required a read-only source-pack rebind because their
+old verified-fact spans still carried `source_pack=findings`; the authoritative
+validator correctly rejected the unreconciled form. After that projection,
+Adjust made **9 ledger provider events** (**7 grounding batches plus 2
+structured-output recovery calls**), consumed **60,819 input + 52,890 output
+tokens**, and cost **$0.031622**. DoubleVerify made **10 ledger provider
+events** (**6 grounding batches plus structured-output recovery calls**),
+consumed **71,270 input + 52,435 output tokens**, and cost **$0.032438**.
+Both runs failed closed because the retained minimal replay did not produce a
+substantive schema-valid grounding artifact; neither marked an unsupported
+claim verified. Adjust retained only the quotes-missing warning in addition to
+that grounding error. DoubleVerify additionally exposed broader summary/core
+signal warnings. These runs are reliability evidence, not a passing end-to-end
+editorial result. No canonical artifact or WordPress write changed.
+
+Focused regression verification produced **169 passed / 1 failed**. The single
+failure is pre-existing worktree state: the user's uncommitted
+`artifact_normalization.py` edit removes the already-supported `verified_mode`
+keyword from `normalize_artifact_insights()`. The changed grounding module and
+three changed test modules pass targeted Ruff/format checks; grounding mypy
+passes. The repository Ruff gate passes. The repository formatting gate and
+full mypy are blocked only by the same unrelated worktree changes, including
+the untracked duplicate `artifact_normalization (2).py`; neither file is part
+of this correction.
+
+**Current verdict: PARTIAL / Step 3 not ready.** Canonical verified semantic
+inputs cannot bypass the verified-fact evidence/source boundary, authority
+instructions are unambiguous, normal mode is preserved, and no additional LLM
+stage was introduced. The release prompt-fixture gate remains red and a fresh
+verified five-report editorial-quality pass is not established; those are the
+remaining blockers.

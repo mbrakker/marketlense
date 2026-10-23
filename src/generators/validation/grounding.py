@@ -33,6 +33,7 @@ from src.generators.artifact_normalization import artifact_evidence_span_index
 from src.generators.claim_validation_generator import (
     apply_retained_claim_semantic_results,
     metric_claim_text,
+    retained_claim_semantic_evidence_hash,
     retained_claim_semantic_inputs,
     reuse_retained_claim_semantic_results,
     validate_retained_claims,
@@ -104,7 +105,11 @@ def grounding_authority_policy(verified_mode: bool) -> str:
         )
     return (
         "LEGACY mode: use attached evidence and corroborate chart/table associations "
-        "with file_search when supplied evidence may contain a tuple error."
+        "with file_search and the original visual when supplied evidence may contain "
+        "a tuple error. Bind chart/table values by visible row, callout, connector, "
+        "or legend "
+        "key; OCR order alone is not the tuple. Confirm label reversals visually; "
+        "unreadable or ambiguous layouts are not_established."
     )
 
 
@@ -317,21 +322,22 @@ def run_grounding_check(
     artifacts = request.artifacts if isinstance(request.artifacts, dict) else {}
     verified_mode = verified_facts_mode(artifacts, request.validation_mode)
     evidence_packs = request.evidence_packs
+    verified_facts: dict[str, dict[str, Any]] = {}
     if verified_mode:
         grounding_use_vector_store = False
-        facts = validated_verified_facts(
+        verified_facts = validated_verified_facts(
             artifacts,
             evidence_packs,
             expected_source_identity=str(request.source_id or ""),
         )
-        evidence_packs = canonical_verified_evidence_packs(facts)
+        evidence_packs = canonical_verified_evidence_packs(verified_facts)
         request = replace(
             request,
             evidence_packs=evidence_packs,
             source_text="",
             source_pages=[],
         )
-        evidence_texts = tuple(canonical_evidence_map(facts).values())
+        evidence_texts = tuple(canonical_evidence_map(verified_facts).values())
         evidence_windows = build_evidence_windows(evidence_texts)
     if retained_claim_package is None:
         retained_claim_package = validate_retained_claims(
@@ -345,6 +351,14 @@ def run_grounding_check(
             retained_claim_package,
             evidence_packs,
             source_identity=source_id or request.source_id,
+        )
+    if verified_mode:
+        _validate_verified_semantic_inputs(
+            retained_claim_package,
+            retained_claim_inputs,
+            verified_facts,
+            evidence_packs,
+            source_identity=(source_id or request.source_id),
         )
     audit_payload = grounding_payload(
         request,
@@ -374,7 +388,11 @@ def run_grounding_check(
             ctx=prompt_ctx,
             prompt_client=prompt_client,
             system_variables=variables,
-            user_variables=variables,
+            user_variables={
+                key: value
+                for key, value in variables.items()
+                if key != "authority_policy"
+            },
         )
 
     prompt_bundles = [
@@ -1203,6 +1221,149 @@ def _validate_semantic_input_identities(
                 context={"missing_claim_ids": [candidate.claim_id]},
             )
         identities[candidate.claim_id] = identity
+
+
+def _validate_verified_semantic_inputs(
+    package: ClaimValidationPackage,
+    semantic_inputs: Sequence[ClaimSemanticInput],
+    facts: Mapping[str, Mapping[str, Any]],
+    evidence_packs: dict,
+    *,
+    source_identity: str,
+) -> None:
+    """Bind supplied semantic inputs to the current verified-fact snapshot."""
+
+    expected_source_identity = next(
+        (
+            str(fact.get("source_identity") or "").strip()
+            for fact in facts.values()
+            if str(fact.get("source_identity") or "").strip()
+        ),
+        "",
+    )
+    if (
+        source_identity
+        and expected_source_identity
+        and source_identity.casefold() != expected_source_identity.casefold()
+    ):
+        raise AppError(
+            code="grounding_verified_semantic_input_invalid",
+            message="Verified semantic inputs use a conflicting source identity",
+            retryable=False,
+        )
+
+    candidates_by_id: dict[str, list[Any]] = {}
+    for result in package.results:
+        candidates_by_id.setdefault(result.candidate.claim_id, []).append(
+            result.candidate
+        )
+
+    canonical_evidence_texts = {
+        f"verified-fact:{fact_id}": str(fact.get("statement") or "").strip()
+        for fact_id, fact in facts.items()
+    }
+
+    expected_inputs: list[tuple[Any, tuple[str, ...], str, str]] = []
+    for result in package.results:
+        candidate = result.candidate
+        if (
+            not candidate.factual
+            or result.deterministic_status != "unresolved"
+            or any(check.status == "failed" for check in result.checks)
+            or not candidate.evidence_references
+        ):
+            continue
+        evidence_texts = tuple(
+            canonical_evidence_texts.get(reference.evidence_id, "")
+            for reference in candidate.evidence_references
+        )
+        if not all(evidence_texts):
+            continue
+        evidence_hash = retained_claim_semantic_evidence_hash(
+            candidate,
+            evidence_packs,
+        )
+        expected_identity = (candidate, evidence_texts, evidence_hash, source_identity)
+        if not any(
+            expected_identity[0] == existing[0]
+            and expected_identity[1:] == existing[1:]
+            for existing in expected_inputs
+        ):
+            expected_inputs.append(expected_identity)
+
+    for semantic_input in semantic_inputs:
+        candidate = semantic_input.candidate
+        matching_candidates = candidates_by_id.get(candidate.claim_id, [])
+        if not matching_candidates or not any(
+            candidate == expected for expected in matching_candidates
+        ):
+            raise AppError(
+                code="grounding_verified_semantic_input_invalid",
+                message=(
+                    "Verified semantic inputs do not match retained claim identities"
+                ),
+                retryable=False,
+                context={"claim_id": candidate.claim_id},
+            )
+        if (
+            expected_source_identity
+            and semantic_input.source_identity.casefold()
+            != expected_source_identity.casefold()
+        ):
+            raise AppError(
+                code="grounding_verified_semantic_input_invalid",
+                message="Verified semantic inputs use a stale source identity",
+                retryable=False,
+                context={"claim_id": candidate.claim_id},
+            )
+
+        expected_evidence_hash = retained_claim_semantic_evidence_hash(
+            candidate, evidence_packs
+        )
+        expected_evidence_texts = tuple(
+            canonical_evidence_texts.get(reference.evidence_id, "")
+            for reference in candidate.evidence_references
+        )
+        if (
+            semantic_input.evidence_hash != expected_evidence_hash
+            or tuple(semantic_input.evidence_texts) != expected_evidence_texts
+            or not all(expected_evidence_texts)
+        ):
+            raise AppError(
+                code="grounding_verified_semantic_input_invalid",
+                message=(
+                    "Verified semantic inputs are not bound to canonical fact evidence"
+                ),
+                retryable=False,
+                context={"claim_id": candidate.claim_id},
+            )
+
+        for index, expected in enumerate(expected_inputs):
+            if (
+                candidate == expected[0]
+                and tuple(semantic_input.evidence_texts) == expected[1]
+                and semantic_input.evidence_hash == expected[2]
+                and semantic_input.source_identity == expected[3]
+            ):
+                expected_inputs.pop(index)
+                break
+        else:
+            raise AppError(
+                code="grounding_verified_semantic_input_invalid",
+                message="Verified semantic inputs are incomplete or not eligible",
+                retryable=False,
+                context={"claim_id": candidate.claim_id},
+            )
+
+    if expected_inputs:
+        raise AppError(
+            code="grounding_verified_semantic_input_invalid",
+            message="Verified semantic inputs omit canonical retained claims",
+            retryable=False,
+            context={
+                "claim_ids": [item[0].claim_id for item in expected_inputs],
+            },
+        )
 
 
 def _validate_grounding_check_coverage(

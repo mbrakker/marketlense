@@ -174,8 +174,12 @@ def test_grounding_prompt_authority_policy_disables_file_search_for_verified_mod
     )
 
     assert "file_search" not in verified.text
+    assert "OCR" not in verified.text
     assert "canonical verified facts" in verified.text
     assert "file_search" in legacy.text
+    assert "OCR" in legacy.text
+    assert "visible row" in legacy.text
+    assert "Authority policy" not in prompt_set.user.text
 
 
 def test_grounding_prompt_distinguishes_editorial_interpretation_and_advice() -> None:

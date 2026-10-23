@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from copy import deepcopy
 import hashlib
+from copy import deepcopy
+from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 
@@ -11,7 +13,10 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_to_payload,
 )
 from src.contracts.validation import ValidationRequest
-from src.generators.claim_validation_generator import validate_retained_claims
+from src.generators.claim_validation_generator import (
+    retained_claim_semantic_inputs,
+    validate_retained_claims,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
@@ -26,7 +31,11 @@ from src.generators.validation.registry import (
     build_validation_rule_registry,
     rules_for_validation_mode,
 )
-from src.generators.validation.verified_facts import verified_facts_mode
+from src.generators.validation.verified_facts import (
+    canonical_verified_evidence_packs,
+    validated_verified_facts,
+    verified_facts_mode,
+)
 from src.utils.errors import AppError
 from tests._test_validation_generator._shared import (
     FakeOpenAI,
@@ -222,6 +231,184 @@ def test_verified_grounding_does_not_promote_legacy_summary_evidence():
     )
     assert "99%" in false_claim["text"]
     assert "99%" not in false_claim["retained_evidence"]
+
+
+def _canonical_verified_claim_inputs():
+    artifacts = _verified_artifacts()
+    facts = validated_verified_facts(artifacts, _packs())
+    evidence_packs = canonical_verified_evidence_packs(facts)
+    package = validate_retained_claims(
+        artifacts,
+        evidence_packs,
+        source_identity=SOURCE_IDENTITY,
+        verified_facts_only=True,
+    )
+    inputs = retained_claim_semantic_inputs(
+        package,
+        evidence_packs,
+        source_identity=SOURCE_IDENTITY,
+    )
+    return artifacts, evidence_packs, package, inputs
+
+
+def test_verified_grounding_rejects_stale_precomputed_evidence_before_prompt(tmp_path):
+    artifacts, evidence_packs, package, inputs = _canonical_verified_claim_inputs()
+    stale_input = replace(
+        inputs[0],
+        evidence_texts=["Legacy extraction says 99%."] * len(inputs[0].evidence_texts),
+    )
+
+    class PromptMustNotRender(FakePromptClient):
+        def load_prompt_set(self, request, ctx):
+            raise AssertionError(
+                "stale verified semantic input reached prompt rendering"
+            )
+
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority-cleanup",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_grounding_check(
+            request=request,
+            settings=_settings(tmp_path),
+            grounding_use_vector_store=False,
+            evidence_texts=[],
+            evidence_windows=[],
+            prompt_client=PromptMustNotRender(),
+            openai_client=FakeOpenAI(),
+            ctx=_ctx(),
+            source_id=SOURCE_IDENTITY,
+            retained_claim_package=package,
+            retained_claim_inputs=[stale_input, *inputs[1:]],
+        )
+
+    assert exc_info.value.code == "grounding_verified_semantic_input_invalid"
+
+
+def test_verified_grounding_rejects_stale_precomputed_source_identity_before_prompt(
+    tmp_path,
+):
+    artifacts, evidence_packs, package, inputs = _canonical_verified_claim_inputs()
+    stale_input = replace(inputs[0], source_identity="legacy-source")
+
+    class PromptMustNotRender(FakePromptClient):
+        def load_prompt_set(self, request, ctx):
+            raise AssertionError(
+                "stale verified semantic input reached prompt rendering"
+            )
+
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority-cleanup",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_grounding_check(
+            request=request,
+            settings=_settings(tmp_path),
+            grounding_use_vector_store=False,
+            evidence_texts=[],
+            evidence_windows=[],
+            prompt_client=PromptMustNotRender(),
+            openai_client=FakeOpenAI(),
+            ctx=_ctx(),
+            source_id=SOURCE_IDENTITY,
+            retained_claim_package=package,
+            retained_claim_inputs=[stale_input, *inputs[1:]],
+        )
+
+    assert exc_info.value.code == "grounding_verified_semantic_input_invalid"
+
+
+def test_verified_grounding_accepts_canonical_precomputed_semantic_inputs(tmp_path):
+    artifacts, evidence_packs, package, inputs = _canonical_verified_claim_inputs()
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority-cleanup",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+    payload = grounding_payload(
+        request,
+        artifacts,
+        retained_claim_inputs=inputs,
+    )
+    response = {
+        "checks": [
+            _grounding_check(item["item_id"], item["text"], "entailed")
+            for item in [
+                *payload["public_factual_items"],
+                *payload["retained_claims_to_ground"],
+            ]
+        ],
+        "unsupported": [],
+    }
+
+    result = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(),
+        ctx=_ctx(),
+        source_id=SOURCE_IDENTITY,
+        retained_claim_package=package,
+        retained_claim_inputs=inputs,
+        prompt_family_reuse_reader=lambda _request, _ctx: SimpleNamespace(
+            reusable=True,
+            output_payload=response,
+            reason="canonical-test-payload",
+        ),
+    )
+
+    assert result == []
+
+
+def test_verified_grounding_rejects_incomplete_precomputed_semantic_inputs(tmp_path):
+    artifacts, evidence_packs, package, inputs = _canonical_verified_claim_inputs()
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority-cleanup",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_grounding_check(
+            request=request,
+            settings=_settings(tmp_path),
+            grounding_use_vector_store=False,
+            evidence_texts=[],
+            evidence_windows=[],
+            prompt_client=FakePromptClient(),
+            openai_client=FakeOpenAI(),
+            ctx=_ctx(),
+            source_id=SOURCE_IDENTITY,
+            retained_claim_package=package,
+            retained_claim_inputs=inputs[:-1],
+        )
+
+    assert exc_info.value.code == "grounding_verified_semantic_input_invalid"
 
 
 def test_grounding_cache_identity_separates_authority_modes_and_snapshots(tmp_path):
