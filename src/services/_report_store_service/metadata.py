@@ -113,16 +113,32 @@ def _provenance_roles_from_json(raw: object) -> SourceProvenanceRoles:
         schema_version=str(payload.get("schema_version") or "1.0"),
         publication_name=str(payload.get("publication_name") or ""),
         publisher_name=str(payload.get("publisher_name") or ""),
-        author_names=tuple(str(value) for value in payload.get("author_names") or [] if str(value).strip()),
+        author_names=tuple(
+            str(value)
+            for value in payload.get("author_names") or []
+            if str(value).strip()
+        ),
         author_kind=str(payload.get("author_kind") or "unknown"),
-        data_provider_names=tuple(str(value) for value in payload.get("data_provider_names") or [] if str(value).strip()),
-        source_organization_names=tuple(str(value) for value in payload.get("source_organization_names") or [] if str(value).strip()),
+        data_provider_names=tuple(
+            str(value)
+            for value in payload.get("data_provider_names") or []
+            if str(value).strip()
+        ),
+        source_organization_names=tuple(
+            str(value)
+            for value in payload.get("source_organization_names") or []
+            if str(value).strip()
+        ),
         report_owner_name=str(payload.get("report_owner_name") or ""),
         status=str(payload.get("status") or "unknown"),
         resolution_method=str(payload.get("resolution_method") or ""),
-        issues=tuple(str(value) for value in payload.get("issues") or [] if str(value).strip()),
+        issues=tuple(
+            str(value) for value in payload.get("issues") or [] if str(value).strip()
+        ),
         evidence=tuple(evidence),
     )
+
+
 _REPORT_METADATA_IDENTITY_PLACEHOLDERS = {
     "",
     "...",
@@ -551,7 +567,11 @@ def _first_identity_value(
 def _provenance_publisher_rank(roles: SourceProvenanceRoles) -> int:
     if not roles.publisher_name:
         return 99
-    kinds = {evidence.evidence_kind for evidence in roles.evidence if evidence.role == "publisher"}
+    kinds = {
+        evidence.evidence_kind
+        for evidence in roles.evidence
+        if evidence.role == "publisher"
+    }
     if "pdf_metadata_title_brand" in kinds or "explicit_report_brand" in kinds:
         return 0
     if "copyright" in kinds:
@@ -669,7 +689,10 @@ def _resolve_identity_observations(
     identity_material = content_hash or "|".join(
         (
             _first_identity_value(observations, "canonical_landing_page_url"),
-            (provenance_roles.publisher_name or _first_identity_value(observations, "publisher_name")).casefold(),
+            (
+                provenance_roles.publisher_name
+                or _first_identity_value(observations, "publisher_name")
+            ).casefold(),
             _first_identity_value(observations, "canonical_title").casefold(),
         )
     )
@@ -1892,7 +1915,12 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 pdf_metadata_json=excluded.pdf_metadata_json,
                 analysis_mode=excluded.analysis_mode,
                 vector_store_id=excluded.vector_store_id,
-                evidence_packs_json=excluded.evidence_packs_json,
+                evidence_packs_json=CASE
+                    WHEN excluded.evidence_packs_json = '{}'
+                        AND COALESCE(reports.evidence_packs_json, '') NOT IN ('', '{}')
+                    THEN reports.evidence_packs_json
+                    ELSE excluded.evidence_packs_json
+                END,
                 source_identity_id=COALESCE(NULLIF(excluded.source_identity_id, ''), reports.source_identity_id),
                 source_metadata_hash=COALESCE(NULLIF(excluded.source_metadata_hash, ''), reports.source_metadata_hash),
                 source_identity_status=COALESCE(NULLIF(excluded.source_identity_status, ''), reports.source_identity_status),

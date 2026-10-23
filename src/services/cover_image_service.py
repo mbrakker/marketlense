@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 from src.contracts.cover_images import CoverImageRenderRequest, CoverImageRenderResponse
 from src.contracts.report_cards import GEOMETRY_FAMILIES
 from src.contracts.run_context import RunContext
+from src.utils.cover_path_utils import validate_cover_asset_output_path
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -559,6 +560,7 @@ def render_cover_image(
     request: CoverImageRenderRequest,
     ctx: RunContext,
 ) -> CoverImageRenderResponse:
+    validate_cover_asset_output_path(request.output_path)
     title = _normalize_text(request.title)
     publisher = _normalize_text(request.publisher)
     period = _normalize_text(request.time_period)

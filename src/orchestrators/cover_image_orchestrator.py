@@ -12,20 +12,23 @@ from src.contracts.cover_images import (
     CoverImageReport,
 )
 from src.contracts.files import ReadTextRequest
+from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_cards import CoverFingerprintProjectionRequest
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataListRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId
 from src.generators.cover_image_generator import generate_cover_images
 from src.generators.report_card_projection import build_cover_fingerprint
 from src.services import file_service
+from src.services.report_analysis_store_service import pack_path
 from src.services.report_store_service import get_metadata, list_metadata
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
-from src.utils.slugify import slugify
 from src.utils.logging import child_context, log_event, new_run_context
+from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.cover_image_orchestrator")
 
@@ -49,10 +52,173 @@ def _load_cover_fingerprint(
     output_dir: str,
     ctx: RunContext,
 ):
-    report_slug = _report_slug_from_metadata(metadata)
-    artifact_path = (
-        Path(output_dir) / report_slug / "report_analysis" / "artifacts.json"
+    evidence_pack_paths = getattr(metadata, "evidence_pack_paths", {}) or {}
+    persisted_reference = (
+        evidence_pack_paths.get("artifacts")
+        if isinstance(evidence_pack_paths, dict)
+        else None
     )
+    persisted_reference = str(persisted_reference or "").strip()
+    if persisted_reference:
+        artifact_path = _resolve_persisted_artifact_path(
+            persisted_reference,
+            output_dir=output_dir,
+            metadata=metadata,
+        )
+        return _read_cover_fingerprint(metadata, artifact_path, ctx)
+
+    report_slug = _report_slug_from_metadata(metadata)
+    try:
+        canonical_path = Path(
+            pack_path(
+                AnalysisPackPathRequest(
+                    schema_version="1.0",
+                    output_dir=output_dir,
+                    report_id=ReportId(metadata.file_id),
+                    pack_name="artifacts",
+                    report_slug=report_slug,
+                ),
+                ctx,
+            ).output_path
+        )
+    except AppError as exc:
+        raise AppError(
+            code="cover_artifacts_invalid",
+            message="The canonical report-analysis artifact path is invalid",
+            cause=exc,
+            retryable=False,
+            context={"file_id": metadata.file_id, "output_dir": output_dir},
+        ) from exc
+    legacy_path = Path(output_dir) / report_slug / "report_analysis" / "artifacts.json"
+    candidates = [canonical_path]
+    if legacy_path != canonical_path:
+        candidates.append(legacy_path)
+    last_missing: AppError | None = None
+    for candidate in candidates:
+        resolved_candidate = _resolve_artifact_path(
+            candidate,
+            output_dir=output_dir,
+            metadata=metadata,
+        )
+        try:
+            return _read_cover_fingerprint(metadata, resolved_candidate, ctx)
+        except AppError as exc:
+            if exc.code != "cover_artifacts_missing":
+                raise
+            last_missing = exc
+    if last_missing is not None:
+        raise last_missing
+    raise AppError(
+        code="cover_artifacts_missing",
+        message=f"Artifacts are required for cover generation: {canonical_path}",
+        retryable=False,
+        context={"file_id": metadata.file_id, "path": str(canonical_path)},
+    )
+
+
+def _artifact_path_error(
+    metadata,
+    output_dir: str,
+    path: object,
+    reason: str,
+    *,
+    cause: Exception | None = None,
+) -> AppError:
+    return AppError(
+        code="cover_artifacts_invalid",
+        message=(
+            "Persisted cover artifact path is invalid or outside the configured "
+            f"output tree ({reason}): {path}"
+        ),
+        cause=cause,
+        retryable=False,
+        context={
+            "file_id": metadata.file_id,
+            "path": str(path),
+            "output_dir": output_dir,
+            "reason": reason,
+        },
+    )
+
+
+def _resolved_output_root(output_dir: str, metadata) -> Path:
+    try:
+        return Path(output_dir).expanduser().resolve(strict=False)
+    except (OSError, RuntimeError) as exc:
+        raise _artifact_path_error(
+            metadata, output_dir, output_dir, "output_root_unresolvable", cause=exc
+        ) from exc
+
+
+def _starts_with_relative_output_dir(path: Path, output_dir: Path) -> bool:
+    if output_dir.is_absolute():
+        return False
+    configured_parts = tuple(
+        part.casefold() for part in output_dir.parts if part not in {"", "."}
+    )
+    path_parts = tuple(part.casefold() for part in path.parts)
+    return (
+        bool(configured_parts)
+        and path_parts[: len(configured_parts)] == configured_parts
+    )
+
+
+def _resolve_artifact_path(candidate: Path, *, output_dir: str, metadata) -> Path:
+    root = _resolved_output_root(output_dir, metadata)
+    raw_candidate = candidate.expanduser()
+    if ".." in raw_candidate.parts:
+        raise _artifact_path_error(
+            metadata, output_dir, candidate, "path_traversal_component"
+        )
+    try:
+        if raw_candidate.is_absolute():
+            possible = [raw_candidate.resolve(strict=False)]
+        else:
+            configured_output_dir = Path(output_dir).expanduser()
+            direct = raw_candidate.resolve(strict=False)
+            rooted = (root / raw_candidate).resolve(strict=False)
+            possible = (
+                [direct, rooted]
+                if _starts_with_relative_output_dir(
+                    raw_candidate, configured_output_dir
+                )
+                else [rooted, direct]
+            )
+        inside = [
+            resolved
+            for resolved in possible
+            if resolved == root or root in resolved.parents
+        ]
+    except (OSError, RuntimeError) as exc:
+        raise _artifact_path_error(
+            metadata, output_dir, candidate, "path_unresolvable", cause=exc
+        ) from exc
+    if not inside:
+        raise _artifact_path_error(
+            metadata, output_dir, candidate, "outside_output_root"
+        )
+    for resolved in inside:
+        if resolved.exists():
+            if not resolved.is_file():
+                raise _artifact_path_error(
+                    metadata, output_dir, candidate, "not_a_regular_file"
+                )
+            return resolved
+    return inside[0]
+
+
+def _resolve_persisted_artifact_path(
+    reference: str,
+    *,
+    output_dir: str,
+    metadata,
+) -> Path:
+    return _resolve_artifact_path(
+        Path(reference), output_dir=output_dir, metadata=metadata
+    )
+
+
+def _read_cover_fingerprint(metadata, artifact_path: Path, ctx: RunContext):
     try:
         response = file_service.read_text(
             ReadTextRequest(schema_version="1.0", path=str(artifact_path)),

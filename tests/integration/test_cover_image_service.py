@@ -19,6 +19,12 @@ from src.generators.cover_image_generator import generate_cover_images
 from src.services.cover_image_service import render_cover_image
 from src.services.cover_style_service import load_cover_styles
 from src.utils.errors import AppError
+from src.utils.path_utils import (
+    WINDOWS_COMPONENT_BUDGET,
+    WINDOWS_PATH_BUDGET,
+    is_windows_reserved_component,
+    windows_path_units,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -265,6 +271,102 @@ def test_real_cover_renderer_wraps_complete_long_covered_period(tmp_path) -> Non
     assert Image.open(outcomes[0].assets.small.output_path).size == (1600, 900)
     assert Image.open(outcomes[0].assets.medium.output_path).size == (1200, 1500)
     assert Image.open(outcomes[0].assets.large.output_path).size == (1200, 1600)
+
+
+def test_real_cover_renderer_replays_long_title_under_deep_root(tmp_path) -> None:
+    output_dir = tmp_path / ("deep-output-root-" + "x" * 25)
+    title = (
+        "Global Economic Conditions and Investment Outlook Across Major Markets "
+        "Through the Second Half 2026 and Regional Scenarios"
+    )
+    request = CoverImageGenerationRequest(
+        schema_version="2.0",
+        output_dir=str(output_dir),
+        style_config_path=str(STYLE_PATH),
+        reports=[
+            CoverImageReport(
+                schema_version="2.0",
+                file_id="deep-root-replay",
+                title=title,
+                publisher="Market Lense Research",
+                report_slug="long-report-" + "y" * 105,
+                time_period="Q2 2026",
+                region="Global",
+                fingerprint=_fingerprint(),
+            )
+        ],
+    )
+
+    first = generate_cover_images(request, _ctx())
+    assert first[0].status == "generated"
+    first_assets = first[0].assets
+    assert first_assets is not None
+    first_paths = {
+        size: Path(getattr(first_assets, size).output_path)
+        for size in ("small", "medium", "large")
+    }
+    assert len({path.parent for path in first_paths.values()}) == 1
+    first_bytes = {}
+    for path in first_paths.values():
+        resolved = path.resolve()
+        temporary = path.with_suffix(path.suffix + ".tmp").resolve()
+        assert windows_path_units(resolved) <= WINDOWS_PATH_BUDGET
+        assert windows_path_units(temporary) <= WINDOWS_PATH_BUDGET
+        for component in resolved.parts:
+            if component in {resolved.anchor, ".", ""}:
+                continue
+            assert windows_path_units(component) <= WINDOWS_COMPONENT_BUDGET
+            assert not is_windows_reserved_component(component)
+        with Image.open(path) as image:
+            image.load()
+            assert image.size in {(1600, 900), (1200, 1500), (1200, 1600)}
+        first_bytes[path.name] = path.read_bytes()
+    assert list(output_dir.rglob("*.png.tmp")) == []
+
+    second = generate_cover_images(request, _ctx())
+    assert second[0].status == "generated"
+    second_assets = second[0].assets
+    assert second_assets is not None
+    second_paths = {
+        size: Path(getattr(second_assets, size).output_path)
+        for size in ("small", "medium", "large")
+    }
+    assert second_paths == first_paths
+    assert {
+        path.name: path.read_bytes() for path in second_paths.values()
+    } == first_bytes
+    assert list(output_dir.rglob("*.png.tmp")) == []
+
+
+def test_real_cover_renderer_rejects_impossible_output_root_before_rendering(
+    tmp_path,
+) -> None:
+    config = load_cover_styles(
+        CoverStyleLoadRequest(schema_version="2.0", path=str(STYLE_PATH)),
+        _ctx(),
+    ).config
+    output_root = tmp_path / ("impossible-root-" + "q" * 190)
+
+    with pytest.raises(AppError) as captured:
+        render_cover_image(
+            CoverImageRenderRequest(
+                schema_version="2.0",
+                output_path=str(output_root / "cover.png"),
+                size="small",
+                title="A valid report title",
+                publisher="Market Lense Research",
+                time_period="Global | Q2 2026",
+                style=config.profiles["report"].style,
+                layout=config.profiles["report"].layouts["small"],
+                fingerprint=_fingerprint(),
+            ),
+            _ctx(),
+        )
+
+    assert captured.value.code == "cover_asset_path_invalid"
+    assert captured.value.retryable is False
+    assert "shorten output_dir" in captured.value.message
+    assert not output_root.exists()
 
 
 def test_real_cover_renderer_rejects_impossible_unbroken_title(

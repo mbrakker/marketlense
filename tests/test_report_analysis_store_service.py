@@ -11,6 +11,10 @@ from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
 )
+from src.contracts.report_store import (
+    ReportMetadataGetRequest,
+    ReportMetadataUpsertRequest,
+)
 from src.services.file_service import (
     WINDOWS_MAX_PATH_LENGTH,
     WINDOWS_SAFE_ATOMIC_PATH_LENGTH,
@@ -18,6 +22,7 @@ from src.services.file_service import (
     read_text,
 )
 from src.services.report_analysis_store_service import pack_path, store_pack
+from src.services.report_store_service import get_metadata, upsert_metadata
 from src.utils.errors import AppError
 
 
@@ -484,3 +489,40 @@ def test_store_pack_round_trips_long_validation_candidate_under_long_root(
     )
     assert expected_path.parent.parent.name != report_slug
     assert expected_path.stem != pack_name
+
+
+def test_metadata_update_preserves_authoritative_artifact_path(
+    run_context, tmp_path: Path
+) -> None:
+    db_path = tmp_path / "reports.sqlite"
+    artifact_path = tmp_path / "out" / "hashed-slug" / "report_analysis" / "a1b2.json"
+    first = ReportMetadataUpsertRequest(
+        schema_version="1.1",
+        db_path=str(db_path),
+        file_id="file-1",
+        title="Report",
+        file_name="report.pdf",
+        html_path=str(tmp_path / "out" / "report.html"),
+        evidence_pack_paths={"artifacts": str(artifact_path)},
+    )
+    upsert_metadata(first, run_context)
+
+    upsert_metadata(
+        ReportMetadataUpsertRequest(
+            schema_version="1.1",
+            db_path=str(db_path),
+            file_id="file-1",
+            title="Updated Report",
+            html_path=str(tmp_path / "out" / "report.html"),
+        ),
+        run_context,
+    )
+
+    metadata = get_metadata(
+        ReportMetadataGetRequest(
+            schema_version="1.1", db_path=str(db_path), file_id="file-1"
+        ),
+        run_context,
+    )
+    assert metadata is not None
+    assert metadata.evidence_pack_paths["artifacts"] == str(artifact_path)
