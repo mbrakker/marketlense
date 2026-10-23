@@ -726,8 +726,8 @@ def test_projection_store_migrates_legacy_reports_schema_and_records_ledger(
                 """
             ).fetchall()
         }
-    assert schema_version == (31,)
-    assert ledger_count == 31
+    assert schema_version == (32,)
+    assert ledger_count == 32
     assert analytics_tables == {
         "report_sections",
         "report_findings",

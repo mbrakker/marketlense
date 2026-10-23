@@ -9219,6 +9219,9 @@
         "analysis_mode": {
           "type": "string"
         },
+        "artifacts_stale": {
+          "type": "boolean"
+        },
         "categories": {
           "items": {
             "type": "string"

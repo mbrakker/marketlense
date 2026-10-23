@@ -50,8 +50,18 @@ def _cover_path_error(
 
 
 def _resolved_root(output_dir: str | Path) -> tuple[Path, Path]:
-    display_root = Path(output_dir)
-    return display_root, display_root.resolve(strict=False)
+    try:
+        display_root = Path(output_dir)
+        resolved_root = display_root.resolve(strict=False)
+    except (OSError, RuntimeError) as exc:
+        display_root = Path(str(output_dir))
+        raise _cover_path_error(
+            display_root,
+            display_root,
+            f"the configured root cannot be resolved ({type(exc).__name__})",
+            "output root path resolution",
+        ) from exc
+    return display_root, resolved_root
 
 
 def _path_parts(path: Path) -> tuple[str, ...]:
@@ -59,7 +69,21 @@ def _path_parts(path: Path) -> tuple[str, ...]:
 
 
 def _validate_root(display_root: Path, resolved_root: Path) -> None:
-    del display_root
+    try:
+        if resolved_root.exists() and not resolved_root.is_dir():
+            raise _cover_path_error(
+                display_root,
+                resolved_root,
+                "the configured root exists but is not a directory",
+                "output root directory",
+            )
+    except (OSError, RuntimeError) as exc:
+        raise _cover_path_error(
+            display_root,
+            resolved_root,
+            f"the configured root cannot be inspected ({type(exc).__name__})",
+            "output root inspection",
+        ) from exc
     if windows_path_units(str(resolved_root)) > WINDOWS_PATH_BUDGET:
         raise _cover_path_error(
             resolved_root,
@@ -89,8 +113,16 @@ def _validate_destination(
     resolved_root: Path,
 ) -> tuple[bool, str, str]:
     temporary = destination.with_suffix(destination.suffix + ".tmp")
-    resolved_destination = destination.resolve(strict=False)
-    resolved_temporary = temporary.resolve(strict=False)
+    try:
+        resolved_destination = destination.resolve(strict=False)
+        resolved_temporary = temporary.resolve(strict=False)
+    except (OSError, RuntimeError) as exc:
+        raise _cover_path_error(
+            destination,
+            resolved_root,
+            f"the destination cannot be resolved ({type(exc).__name__})",
+            "destination path resolution",
+        ) from exc
 
     for candidate, label in (
         (resolved_destination, "final PNG path"),
@@ -137,8 +169,7 @@ def validate_cover_asset_output_path(output_path: str | Path) -> tuple[Path, Pat
     """Validate a renderer destination before it allocates or writes anything."""
 
     destination = Path(output_path)
-    display_root = destination.parent
-    resolved_root = display_root.resolve(strict=False)
+    display_root, resolved_root = _resolved_root(destination.parent)
     _validate_root(display_root, resolved_root)
     _validate_or_raise(destination, resolved_root)
     return destination, destination.with_suffix(destination.suffix + ".tmp")

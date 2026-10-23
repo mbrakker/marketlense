@@ -9,6 +9,7 @@ from src.services._sqlite_migration._reports.core import (
     _reports_db_003_normalize_report_sources,
     _reports_db_004_create_publishers_base,
     _reports_db_005_normalize_publishers,
+    _reports_db_032_add_artifacts_stale,
 )
 from src.services._sqlite_migration._reports.projections import (
     _reports_db_009_add_reports_projection_columns,
@@ -233,5 +234,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_031_create_immutable_signal_candidate_manifests",
         version=31,
         apply_fn=_reports_db_031_create_immutable_signal_candidate_manifests,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_032_add_artifacts_stale",
+        version=32,
+        apply_fn=_reports_db_032_add_artifacts_stale,
     ),
 )

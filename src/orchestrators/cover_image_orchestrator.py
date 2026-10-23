@@ -52,6 +52,16 @@ def _load_cover_fingerprint(
     output_dir: str,
     ctx: RunContext,
 ):
+    if bool(getattr(metadata, "artifacts_stale", False)):
+        raise AppError(
+            code="cover_artifacts_stale",
+            message=(
+                "Cover generation is blocked because the persisted analysis "
+                "artifacts were invalidated by a source replacement"
+            ),
+            retryable=False,
+            context={"file_id": metadata.file_id, "output_dir": output_dir},
+        )
     evidence_pack_paths = getattr(metadata, "evidence_pack_paths", {}) or {}
     persisted_reference = (
         evidence_pack_paths.get("artifacts")
@@ -165,46 +175,40 @@ def _starts_with_relative_output_dir(path: Path, output_dir: Path) -> bool:
 
 def _resolve_artifact_path(candidate: Path, *, output_dir: str, metadata) -> Path:
     root = _resolved_output_root(output_dir, metadata)
-    raw_candidate = candidate.expanduser()
-    if ".." in raw_candidate.parts:
-        raise _artifact_path_error(
-            metadata, output_dir, candidate, "path_traversal_component"
-        )
     try:
-        if raw_candidate.is_absolute():
-            possible = [raw_candidate.resolve(strict=False)]
-        else:
-            configured_output_dir = Path(output_dir).expanduser()
-            direct = raw_candidate.resolve(strict=False)
-            rooted = (root / raw_candidate).resolve(strict=False)
-            possible = (
-                [direct, rooted]
-                if _starts_with_relative_output_dir(
-                    raw_candidate, configured_output_dir
-                )
-                else [rooted, direct]
+        raw_candidate = candidate.expanduser()
+        if ".." in raw_candidate.parts:
+            raise _artifact_path_error(
+                metadata, output_dir, candidate, "path_traversal_component"
             )
-        inside = [
-            resolved
-            for resolved in possible
-            if resolved == root or root in resolved.parents
-        ]
+        if raw_candidate.is_absolute():
+            selected = raw_candidate
+        elif _starts_with_relative_output_dir(
+            raw_candidate, Path(output_dir).expanduser()
+        ):
+            selected = raw_candidate
+        else:
+            selected = root / raw_candidate
+        resolved = selected.resolve(strict=False)
     except (OSError, RuntimeError) as exc:
         raise _artifact_path_error(
             metadata, output_dir, candidate, "path_unresolvable", cause=exc
         ) from exc
-    if not inside:
+    if resolved != root and root not in resolved.parents:
         raise _artifact_path_error(
             metadata, output_dir, candidate, "outside_output_root"
         )
-    for resolved in inside:
+    try:
         if resolved.exists():
             if not resolved.is_file():
                 raise _artifact_path_error(
                     metadata, output_dir, candidate, "not_a_regular_file"
                 )
-            return resolved
-    return inside[0]
+    except (OSError, RuntimeError) as exc:
+        raise _artifact_path_error(
+            metadata, output_dir, candidate, "path_inspection_failed", cause=exc
+        ) from exc
+    return resolved
 
 
 def _resolve_persisted_artifact_path(
@@ -213,9 +217,13 @@ def _resolve_persisted_artifact_path(
     output_dir: str,
     metadata,
 ) -> Path:
-    return _resolve_artifact_path(
-        Path(reference), output_dir=output_dir, metadata=metadata
-    )
+    try:
+        candidate = Path(reference)
+    except (TypeError, ValueError, OSError, RuntimeError) as exc:
+        raise _artifact_path_error(
+            metadata, output_dir, reference, "path_malformed", cause=exc
+        ) from exc
+    return _resolve_artifact_path(candidate, output_dir=output_dir, metadata=metadata)
 
 
 def _read_cover_fingerprint(metadata, artifact_path: Path, ctx: RunContext):

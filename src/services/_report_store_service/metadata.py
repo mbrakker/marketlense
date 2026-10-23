@@ -1635,6 +1635,7 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
         source_metadata_hash=str(row[20] or "").strip(),
         source_identity_status=str(row[21] or "unknown").strip() or "unknown",
         source_publication_date_status=str(row[22] or "unknown").strip() or "unknown",
+        artifacts_stale=bool(row[23] or 0),
     )
 
 
@@ -1897,8 +1898,8 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
         )
         conn.execute(
             """
-            INSERT INTO reports(file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status, created_at, updated_at)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
+            INSERT INTO reports(file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status, artifacts_stale, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
             ON CONFLICT(file_id) DO UPDATE SET
                 file_name=COALESCE(excluded.file_name, reports.file_name),
                 title=excluded.title,
@@ -1909,22 +1910,171 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 time_period=excluded.time_period,
                 source_url=excluded.source_url,
                 html_path=excluded.html_path,
-                md5=excluded.md5,
+                md5=CASE
+                    WHEN (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN NULLIF(excluded.md5, '')
+                    ELSE COALESCE(excluded.md5, reports.md5)
+                END,
                 page_count=excluded.page_count,
                 contents_page=excluded.contents_page,
                 pdf_metadata_json=excluded.pdf_metadata_json,
                 analysis_mode=excluded.analysis_mode,
                 vector_store_id=excluded.vector_store_id,
                 evidence_packs_json=CASE
-                    WHEN excluded.evidence_packs_json = '{}'
-                        AND COALESCE(reports.evidence_packs_json, '') NOT IN ('', '{}')
+                    WHEN excluded.evidence_packs_json <> '{}'
+                    THEN excluded.evidence_packs_json
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN '{}'
+                    WHEN COALESCE(reports.evidence_packs_json, '') NOT IN ('', '{}')
                     THEN reports.evidence_packs_json
                     ELSE excluded.evidence_packs_json
                 END,
-                source_identity_id=COALESCE(NULLIF(excluded.source_identity_id, ''), reports.source_identity_id),
-                source_metadata_hash=COALESCE(NULLIF(excluded.source_metadata_hash, ''), reports.source_metadata_hash),
-                source_identity_status=COALESCE(NULLIF(excluded.source_identity_status, ''), reports.source_identity_status),
-                source_publication_date_status=COALESCE(NULLIF(excluded.source_publication_date_status, ''), reports.source_publication_date_status),
+                source_identity_id=CASE
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN NULLIF(excluded.source_identity_id, '')
+                    ELSE COALESCE(NULLIF(excluded.source_identity_id, ''), reports.source_identity_id)
+                END,
+                source_metadata_hash=CASE
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN NULLIF(excluded.source_metadata_hash, '')
+                    ELSE COALESCE(NULLIF(excluded.source_metadata_hash, ''), reports.source_metadata_hash)
+                END,
+                source_identity_status=CASE
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN COALESCE(NULLIF(excluded.source_identity_status, ''), 'unknown')
+                    ELSE COALESCE(NULLIF(excluded.source_identity_status, ''), reports.source_identity_status)
+                END,
+                source_publication_date_status=CASE
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN COALESCE(NULLIF(excluded.source_publication_date_status, ''), 'unknown')
+                    ELSE COALESCE(NULLIF(excluded.source_publication_date_status, ''), reports.source_publication_date_status)
+                END,
+                artifacts_stale=CASE
+                    WHEN NULLIF(json_extract(excluded.evidence_packs_json, '$.artifacts'), '') IS NOT NULL
+                    THEN 0
+                    WHEN (
+                        NULLIF(excluded.md5, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.md5, '') IS NULL
+                            OR excluded.md5 <> reports.md5
+                        )
+                    )
+                    OR (
+                        NULLIF(excluded.source_identity_id, '') IS NOT NULL
+                        AND (
+                            NULLIF(reports.source_identity_id, '') IS NULL
+                            OR excluded.source_identity_id <> reports.source_identity_id
+                        )
+                        AND NOT (
+                            NULLIF(excluded.md5, '') IS NOT NULL
+                            AND NULLIF(reports.md5, '') IS NOT NULL
+                            AND excluded.md5 = reports.md5
+                        )
+                    )
+                    THEN 1
+                    ELSE COALESCE(reports.artifacts_stale, 0)
+                END,
                 updated_at=strftime('%s','now')
             """,
             (
@@ -1949,6 +2099,7 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 source_metadata_hash,
                 source_identity_status,
                 source_publication_date_status,
+                0,
             ),
         )
     logger.info(
@@ -1977,7 +2128,7 @@ def get_metadata(
     with _metadata_conn(request.db_path, ctx) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status
+            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status, artifacts_stale
             FROM reports
             WHERE file_id=?
             """,
@@ -2047,7 +2198,7 @@ def list_metadata(
     with _metadata_conn(request.db_path, ctx) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status
+            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status, artifacts_stale
             FROM reports
             ORDER BY created_at ASC
             """
