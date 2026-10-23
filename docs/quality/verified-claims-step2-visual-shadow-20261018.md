@@ -3729,3 +3729,153 @@ PARTIAL / NO-GO.** The canonical fact cannot be bypassed by the lossy metric
 projection and cache identity is invalidated. The provider-free replay does not
 establish that a new model call would change Criteo or DoubleVerify editorial
 verdicts, and no live improvement claim is made. Step 3 remains not ready.
+
+#### Root-cause investigation: Criteo, DoubleVerify and Algolia — 2026-10-24
+
+This investigation was provider-free and read-only. It used the retained
+`artifacts.json`, grounding materializations, retained validation results,
+selection/admission diagnostics, and the hash-matched PDFs. It did not call a
+provider, mutate a canonical artifact, or write to WordPress. The direct source
+identities were Criteo
+`17cf2e92c8804e35274faf3dd416db2fe6e4a81d7aa92418ada8ba90ee77c00c`,
+DoubleVerify
+`99f0cc4f7787cac52b7f89eefa7659053b3703ea100b9e0522fa500c64463d7e`, and
+Algolia
+`d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50`.
+
+The exact frozen-five provider-free gate was also rerun with the existing
+`scripts/quality/replay_verified_claims_step2.py --provider-free` workflow. It
+covered **15 reference cases / 39 variants**, found all five expected PDF
+hashes, and reported retained shortlist counts of **5/7/5/6/6 = 29** for
+Capgemini, Activate, KPMG, Reuters Institute, and Adjust. It made zero provider
+calls and therefore establishes input and provenance availability only, not
+visual correction or grounding quality.
+
+##### Criteo: source and canonical fact are supported; the retained failure is an old grounding-authority failure
+
+The chain is deterministic through the source and Step 1 artifact:
+
+| Stage | Retained evidence | Finding |
+|---|---|---|
+| PDF | `out/browser_downloads/www.criteo.com/1fd90493947a/Agency-Guide-Report-Criteo.pdf`, physical page 5 | The 61% newer-channel ROI expectation is printed on the page. The same page’s table identifies the recommended-spend population as global media agency professionals and shows 19% retail media, 20% search, and 19% social. Pages 7 and 8 separately support the 22% US cost estimate and 51%/45%, 47%/40% plan comparisons. |
+| Visual fact | `channel-roi-expectation`, page 5 | The verified fact preserves the separate ROI-response and global-spend populations, the recommendation/expectation status, and the source-truth note. Its source hash matches the PDF. |
+| Final artifact | `channel-roi-expectation` | The final insight wording is the valid 61% expectation. The downstream key figure, expert comment, and LinkedIn rows additionally state the spend recommendations. |
+| Retained grounding result | three `not_established` errors | The errors are on `key_figures:channel-roi-expectation.figure`, `expert_comment`, and `linkedin_post`; all reject the global-media-agency attribution for the spend rows. |
+
+The original failure is not a PDF or Step 1 extraction failure. Before the
+complete-fact correction, `grounding_payload()` reconstructed a fixed metric
+projection and did not provide a canonical verified-fact object bound to the
+`verified-fact:channel-roi-expectation` evidence ID. Some metric fields,
+including `cohort`, appeared in the public claim text, but they were not
+authoritative evidence with the source-truth/provenance contract. The old model
+therefore treated the population statement as an unsupported final-artifact
+addition even though the canonical fact and physical page support it. The
+current code’s complete metric and `canonical_verified_facts` map address that
+information boundary. A fresh model result has not been obtained, so it is not
+yet proven that the new input changes the verdict.
+
+##### DoubleVerify: two context failures and one genuine evidence-scope failure
+
+| Claim | Source review | Retained result | Root-cause classification |
+|---|---|---|---|
+| `q1-2026-north-america-video-attention-by-environment.metric` | Physical page 10 contains the North America video values 128 In-App, 93 Desktop, and 88 Mobile Web. | Error: unit, denominator, and observed/forecast qualifiers were not established. | **Probable old authority-context failure.** The canonical fact explicitly records the unit as an index value, denominator as not stated, and forecast status as not identified. Those fields were not available as a complete canonical object in the retained pre-correction grounding request. |
+| `q1-2026-brand-suitability-regional-spread.figure` | Physical page 3 contains 8.0% APAC and 3.7% North America under Brand Suitability Violation Rate; the source line identifies DV internal tag-based open-web data. | Error: denominator and observed/forecast characterization were not established. | **Probable old authority-context failure.** The canonical fact explicitly records the missing denominator/sample size and non-forecast ambiguity. The numeric tuple itself is source-supported. |
+| `q1-2026-north-america-video-attention-by-environment.so_what` | Page 10 supports North America only. The APAC comparison is supported by the separate APAC fact on the same page, but that evidence is not attached to this public item. | Informational `not_established`: the attached evidence does not establish APAC’s ranking or the cross-region comparison. | **Proven editorial/evidence-scope defect.** Complete metric context cannot authorize a comparison when the public item carries only the North America binding. The safe outcome is to attach both fact IDs or remove the comparison. |
+
+Page 9 independently confirms the normalized-100 Attention Index and 28-day
+rolling-window context. No reviewed DoubleVerify numeric value was shown to be
+wrong on the cited page. The provider-free corrected-boundary replay preserved
+the old two error-level and one informational outcome because it reapplied the
+retained model response; it did not make a new model call. Thus the first two
+rows are a strong context-loss diagnosis, not a measured post-fix pass.
+
+The retained grounding-input comparison quantifies the boundary:
+
+| Report | Old report-JSON tokens | Corrected report-JSON tokens | Change |
+|---|---:|---:|---:|
+| Criteo | 17,704 | 32,325 | +14,621 |
+| DoubleVerify | 17,408 | 34,758 | +17,350 |
+
+The corrected payload includes the complete authoritative metric and the
+batch-scoped canonical fact objects. It does not add an LLM stage or change the
+fail-closed verdict contract.
+
+##### Algolia: three separate lineage boundaries, with admission correctly failing closed
+
+The retained Step 1 ledger selected six identities:
+`revenue-incentive-58`, `search-capability-development-approaches`,
+`ai-search-purchase-agreement-regional-range`,
+`agentic-search-deployment-and-plans`, `agentic-adoption-considerations`, and
+`search-investment-and-adoption-activity`. The exact source PDF is 29 pages.
+Direct text inspection found the original 58% revenue-incentive sentence on
+physical page 4, while physical page 5 contains the 53%/51% investment chart
+and the 61% ROI text. The retained `ch2-revenue-incentive` binding says page 5.
+Because the visual renderer converts a one-based physical page to the zero-based
+render request (`page - 1`), this is a real source-page inconsistency unless a
+separate printed-page convention is intended and recorded. The convention is
+not recorded in the retained finding span.
+
+The next defect is proposition/lineage drift. The Step 2 ledger accepts a
+corrected `revenue-incentive-58` claim about 53% adequately invested and 39%
+under-invested, but retains the original `ch2-revenue-incentive` evidence ID
+and 58% candidate identity. The source-supported replacement is real, but the
+binding is not. The later `admission_debug_after_fix.json` candidate list makes
+the conflict explicit: its `revenue-incentive-58` row still says 58% while its
+evidence ID is `verified-fact:revenue-incentive-58`. The current canary checks
+fact ID, source identity/hash, pages, and source notes, but does not establish
+that a changed proposition has a compatible discovery/evidence identity before
+projection. This must remain blocked from canonical promotion.
+
+The admission roster mismatch is independently proven by the retained
+diagnostics:
+
+| Diagnostic | Candidate snapshot | Evaluation result snapshot | Admission outcome |
+|---|---|---|---|
+| `admission_debug.json` | Six candidates, including mixed bare and `verified-fact:` identity forms and two revenue-related representations | Six terminal results, but five prefixed IDs are missing and five bare IDs plus `search-investment-and-adoption-activity` are unexpected | 0 admitted; `evaluation_coverage_incomplete` |
+| `admission_debug_after_fix.json` | Five candidates: agentic deployment, adoption considerations, revenue incentive, regional purchase, and search approaches | Six terminal results; `search-investment-and-adoption-activity` is extra; expected count 5, evaluated count 6 | 0 admitted; `evaluation_coverage_incomplete`; digest unchanged at `138e41bbb3caa6f0ac7ebc806171cdac6965a724f924f4104d307d3ef453edf7` |
+
+The first proven inconsistent operation is the existing one-to-one admission
+check in `admit_visual_authority_candidates()`: it computes missing/extra IDs
+and fails closed before any fact is admitted. The request builder copies the
+shortlist exactly (`build_verified_claims_shadow_request()`), and
+`evaluate_shortlisted_claims()` emits one result per request claim, so a
+coherent single invocation cannot produce an extra sixth ID. The unchanged
+digest and the fact that the extra ID is one of the earlier six make a stale or
+mixed candidate/evaluation snapshot the most likely cause. The retained output
+does not include the exact request/result pair or cache record needed to prove
+which replay/cache boundary introduced the mix; that sub-stage remains
+unresolved. Admission’s fail-closed behavior is correct and must not be
+weakened to accept five of six results.
+
+The six Algolia visual results themselves are not equivalent to six clean
+editorial facts: the 58% row has an inherited binding, the agentic deployment
+row uses a provisional recovered page 26, and the search-investment row is a
+distinct 2025/2024 investment proposition rather than a duplicate of the
+agentic/revenue rows. The evidence report’s earlier distinction between
+editorial omission and factual error remains valid; no six-insight minimum is
+justified by this diagnostic alone.
+
+##### Cross-cutting disposition and next tests
+
+| Priority | Proven issue | Minimal next action | Confidence |
+|---|---|---|---|
+| P0 | Algolia corrected propositions can inherit the old stable ID/evidence binding. | At the existing visual-fact admission boundary, require a compatible evidence/proposition rebind for a changed fact; otherwise quarantine it. Reuse current source-hash, page, evidence-span, and fact-ID checks. | High |
+| P0 | Algolia admission can receive a five-candidate roster and six-result evaluation snapshot. | Bind the existing evaluation/admission exchange to one candidate-roster identity (using existing hashing/cache identity) and fail closed on mismatch; retain the full request/result diagnostic. | High at boundary; exact upstream mixing point unresolved |
+| P1 | Criteo population/attribution and two DoubleVerify qualifier failures were evaluated without the complete verified-fact authority object. | Run a fresh GPT-6 Luna High grounding replay with validator identity 1.8 and inspect the final text against the cited pages. Do not reuse the pre-correction retained response. | High for context loss; post-fix outcome unresolved |
+| P1 | DoubleVerify North America `so_what` compares against APAC without an attached APAC binding. | Attach the APAC fact as a second evidence binding or remove the comparison; keep the current fail-closed outcome until then. | High |
+| P1 | Algolia `ch2-revenue-incentive` page binding conflicts with direct physical PDF page content. | Reconcile the finding/page resolver’s physical-versus-printed convention and regenerate the binding; do not repair the row at admission. | High |
+
+Required regressions before any promotion are: changed-proposition same-ID
+rejection, source/evidence identity rebind, five-versus-six roster mismatch,
+correct multi-fact comparison, complete canonical metric authority, and a
+fresh Criteo/DoubleVerify model replay. The existing reference gate remains
+independent and passed provider-free; no evidence here supports changing its
+39-variant expectations.
+
+**Investigation verdict: PARTIAL / Step 2 remains NO-GO and Step 3 is not
+ready.** The grounding-input correction is proven at the payload boundary, the
+source-backed Criteo/DV facts are present, and Algolia correctly fails closed.
+The remaining blockers are the unmeasured fresh-model grounding outcome, the
+Algolia corrected-fact lineage conflict, the five-versus-six snapshot mismatch,
+and the physical-page binding reconciliation. No live quality improvement is
+claimed from this retained-artifact investigation.

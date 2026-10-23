@@ -712,3 +712,20 @@ not a reason to weaken grounding. No provider, canonical, publication, or
 WordPress write occurred. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Root-cause investigation — Criteo, DoubleVerify, and Algolia — 2026-10-24:**
+The provider-free frozen-five replay covered 15 cases / 39 variants, matched
+all five source hashes, retained 29 insights, and made zero provider calls.
+Direct PDF review confirms the Criteo and two DoubleVerify metric failures are
+old grounding-authority-context failures; DoubleVerify's APAC-versus-North
+America comparison is a separate missing-evidence-scope defect. Algolia has a
+proven five-candidate versus six-result admission mismatch and a corrected
+53%/39% replacement that inherited the 58% revenue candidate/evidence identity;
+admission correctly failed closed with no final artifact. The exact upstream
+snapshot/cache mixing point is not retained, and no fresh post-correction
+grounding result exists, so no live improvement is claimed. No production code,
+canonical artifact, publication, or WordPress write changed in this
+investigation. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**,
+and Step 3 remains **unstarted/not ready**. Required next tests and evidence
+are recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
