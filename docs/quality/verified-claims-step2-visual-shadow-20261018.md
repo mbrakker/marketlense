@@ -3333,3 +3333,86 @@ baseline; the regression gate and its enforcement remain unchanged.
 
 The current status remains **PARTIAL / Step 3 not ready** pending a fresh
 verified-mode real-report editorial-quality run and final hosted CI evidence.
+
+#### Post-CI prompt-baseline and retained-PDF editorial evaluation — 2026-10-23
+
+The regenerated prompt baseline was committed as `bd51264a` and pushed. Hosted
+run `39949908828` passed all jobs: tests/coverage, both mutation partitions,
+static/type/policy/schema/documentation/hygiene gates, the WordPress subproject
+checks, and `release_evidence`. The release gate now accepts the measured
+baseline; its thresholds, pricing, fixtures, model configuration, and factual
+validation inventory were not changed.
+
+The exact provider-free frozen-five replay still passed as an input and
+provenance check: **15 reference cases / 39 variants**, **29 retained real
+shortlist identities**, **29 theme slots**, and five matching pinned PDF
+hashes. It made zero provider calls and is not live model-quality evidence.
+
+The existing live Step 2 replay was then run against retained artifacts using
+GPT-6 Luna High, full rendered PDF pages, and the frozen source manifest. It
+was shadow-only (`canonical_mutation=false`, `publication_write=false`):
+
+| Scope | Claims | First pass | After retry | Failed closed | Provider calls | Input / output tokens | Cost | Wall time |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Adjust + Criteo + DoubleVerify | 15 | 7 | 3 | 5 | 46 | 393,955 / 43,184 | $0.060986 | 602.835 s |
+| Algolia | 6 | 4 | 1 | 1 | 16 | 562,234 / 17,685 | $0.065066 | 295.758 s |
+
+The outcomes are mutually exclusive. No claim was unavailable or skipped;
+failed claims exhausted the existing two correction/two verification attempt
+limits. Six terminal failures were rejected after malformed verification
+responses (`verification_response_invalid` and
+`verification_response_malformed`), rather than being promoted. All four
+source hashes matched the manifest. The replay selected no replacement
+artifact candidates because retained Step 1 artifacts do not carry the
+replacement-candidate structure required by the existing shadow selector; no
+downstream artifact was regenerated from this evaluation.
+
+Independent editorial review used the existing source-grounded review workflow
+and the same full PDF pages. For the 15-claim Adjust/Criteo/DoubleVerify set,
+identity and page coverage passed, all 10 terminally verified claims were
+approved, and the five failed Step 2 claims remained unresolved. The review
+made 10 calls, used 82,139 input + 8,504 output tokens, cost $0.012466, and
+took 110.537 s. DoubleVerify's five accepted claims match the Q1 2026
+composite/index relationships on PDF pages 8–10; Adjust's accepted claims
+match pages 6, 11, and 34; and Criteo's accepted claims match the 2023
+recommendation and cost pages 7–8. No render failures or page mismatches were
+found in this set.
+
+Algolia's independent review also had complete six-claim identity coverage
+and no render failures, but its acceptance status was PARTIAL: four claims
+were approved, one required revision, and one remained unresolved. The
+revision-required claim (`search-investment-and-adoption-activity`) has the
+right page-23 values but omits that the 53%/51% figures are total respondents'
+self-reported investment levels. The accepted `revenue-incentive-58` rewrite
+is visibly supported by page 5 and commercially relevant to the report's
+search topic, but its stable ID/evidence text still names the original revenue
+proposition; this is a retained-lineage limitation, not evidence that the
+original claim was true. The `agentic-search-deployment-and-plans` correction
+is factually supported by page 26, but the independent reviewer also found a
+page-9 binding and blocked acceptance pending source-page reconciliation.
+The `agentic-adoption-considerations` claim failed closed after two malformed
+verification responses. The Algolia review made 5 calls, used 162,215 input +
+5,746 output tokens, cost $0.019094, and took 80.583 s.
+
+The public-report quality gate was run against the retained Adjust, Criteo,
+and DoubleVerify artifacts. It found no internal-ID leaks or duplicate
+insights, but each artifact remains blocked by 20
+`public_editorial_quality.material_claim_evidence_missing` findings because
+its retained public spans still use the legacy `findings` source pack rather
+than the authoritative verified-fact pack. This is a known retained-lineage
+limitation; the current evaluation did not silently repair or publish it.
+
+Compared with the retained Step 1/verified-fact canary baseline, the new
+replay provides direct current-head factual and editorial evidence for the
+three completed downstream artifacts plus Algolia's retained visual claims,
+but it does not prove improved live selection quality or produce a new
+publishable artifact. No WordPress write, canonical mutation, or publication
+readiness change occurred.
+
+**Current verdict: PARTIAL / Step 3 not ready.** Prompt-fixture CI is green
+with the intentional negligible baseline increase accepted. Real-report
+verified-mode factual review is safe and fail-closed, but Algolia still needs
+the population qualifier and source-page reconciliation, and the retained
+public evidence-pack lineage requires a real downstream regeneration before
+promotion. These are the remaining blockers; no factual safeguard was
+weakened.

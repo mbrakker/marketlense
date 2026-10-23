@@ -596,7 +596,7 @@ E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready**. Details are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
-**Prompt fixture baseline acceptance — 2026-10-23 (working):** The canonical
+**Prompt fixture baseline acceptance — 2026-10-23 (accepted):** The canonical
 three-iteration baseline builder regenerated
 `docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json` after the
 verified-grounding prompt changes. The unchanged fixture gate passes at
@@ -609,3 +609,22 @@ fixtures, and factual safeguards were unchanged. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready** pending hosted CI and real-report verified-mode
 editorial evidence. Details: `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Post-CI prompt baseline and real-report editorial evaluation — 2026-10-23
+(latest evidence):** The regenerated prompt baseline is accepted and hosted
+run `39949908828` is green across tests/coverage, both mutation partitions,
+release evidence, static/type/policy/schema/documentation/hygiene gates, and
+WordPress subproject checks. The exact provider-free frozen-five replay still
+covers 15 cases/39 variants, 29 retained identities, 29 theme slots, and five
+matching PDF hashes with zero calls. Fresh GPT-6 Luna High Step 2 replay of
+the retained Adjust/Criteo/DoubleVerify set produced 7 first-pass verified, 3
+verified-after-retry, and 5 failed-closed outcomes; Algolia produced 4
+first-pass verified, 1 verified-after-retry, and 1 failed-closed outcome.
+Independent editorial review approved all 10 verified claims in the first set;
+Algolia was PARTIAL with 4 approved, 1 revision-required population qualifier,
+and 1 unresolved/source-page reconciliation issue. No canonical or WordPress
+write occurred. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready** because retained
+public evidence still uses the legacy findings pack and the Algolia lineage
+issues require downstream regeneration. Details:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
