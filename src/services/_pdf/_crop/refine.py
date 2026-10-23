@@ -101,8 +101,11 @@ def _path_components(path: Path) -> tuple[str, ...]:
 def _crop_refine_path_violation(
     root: Path, artifact_paths: tuple[Path, ...]
 ) -> str | None:
-    if root.exists() and not root.is_dir():
-        return "resolved output root is not a directory"
+    try:
+        if root.exists() and not root.is_dir():
+            return "resolved output root is not a directory"
+    except OSError:
+        return "resolved output root could not be inspected"
     if windows_path_units(root) > WINDOWS_PATH_BUDGET:
         return "resolved output root exceeds the Windows full-path budget"
     for path in artifact_paths:
