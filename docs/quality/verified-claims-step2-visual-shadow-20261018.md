@@ -3090,3 +3090,29 @@ downstream numeric projections did not lose supported content. Fresh verified
 mode generation with authoritative snapshots, Algolia completion, ten-report
 coverage, and independent editorial review remain open. No canonical claim,
 publication-readiness, or WordPress write occurred.
+
+#### Hosted CI follow-up — 2026-10-23 (`4a89aca0`, run `39910854380`)
+
+The follow-up hosted run passed the full tests/coverage job, both isolated
+mutation partitions, formatting, Ruff, risk policy, type checking, the
+architecture import gate, agent/role/service-boundary checks, repository
+hygiene, contract schemas, documentation/backlog gates, and WordPress
+subproject checks (the staging REST check was correctly skipped). The prior
+architecture failure was resolved by placing the verified-facts implementation
+in the utility layer and retaining a compatibility facade for existing imports;
+the latest architecture gate passed.
+
+The release-evidence job's only failed step was the existing prompt-fixture
+corpus regression gate. Its measured totals were runtime **43.579091 vs
+61.680000 ms**, total tokens **108,624 vs 106,658** (**+1.84%**), and estimated
+cost **$0.024084 vs $0.023887**. The validation family measured **9,835 vs
+8,004 tokens** (**+22.88%**) and **$0.001744 vs $0.001560** (**+11.79%**).
+The gate was not weakened, and all other release-evidence checks completed
+successfully; manifest/summary/review generation was skipped because this
+regression gate is fail-closed.
+
+This hosted result confirms repository and mutation safety, not fresh
+verified-mode editorial quality. No current GPT-6 Luna High verified-facts
+generation, authoritative Algolia or ten-report snapshot, independent
+full-cohort PDF review, canonical promotion, publication-readiness mutation,
+or WordPress write occurred. **Verdict remains PARTIAL / Step 3 not ready.**

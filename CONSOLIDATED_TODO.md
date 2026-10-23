@@ -548,3 +548,17 @@ release-evidence prompt fixture still reports intentional validation-family
 drift (**9,835 vs 8,004 tokens; +22.88%**), so it was not weakened. E18 remains
 **Active/PARTIAL**, Step 3 remains **unstarted/not ready**, and the evidence
 report records the complete limitations.
+
+**Hosted CI follow-up — 2026-10-23 (`4a89aca0`, run `39910854380`):** The full
+tests/coverage job, both mutation partitions, architecture import gate, type,
+policy, schema, documentation, hygiene, and WordPress subproject checks
+passed. The earlier architecture-import failure was corrected by moving the
+verified-facts implementation to the utility layer while preserving the
+existing compatibility import facade. Release evidence remains **PARTIAL**
+because its prompt-fixture gate measured **108,624 vs 106,658 total tokens
+(+1.84%)**, including **9,835 vs 8,004 validation tokens (+22.88%)**, and
+**$0.001744 vs $0.001560 validation cost (+11.79%)**. The gate was not
+weakened. This run provides no fresh verified-mode generation or ten-report
+authoritative snapshot, so E18 stays **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**; no canonical or
+WordPress write occurred.
