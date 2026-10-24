@@ -848,3 +848,17 @@ fact coverage but had the same safe-removal terminal failure. This is
 **PARTIAL / NO-GO** evidence; E18 remains Active/PARTIAL and Step 3 remains
 unstarted/not ready. No publication writes occurred. Full ledger and failure
 reasons: `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Verified-facts-first authority flow — 2026-10-24 (`fe77330b`):** The typed
+authority context is implemented and locally covered by 233 focused pipeline,
+checkpoint, evidence, selection, and readiness tests; the full local suite
+passed 8,098 with two pre-existing failures. One isolated retained Adjust run
+completed 17/17 visual verifications but failed before final artifact
+persistence on `artifact_final_insight_lineage_invalid` after the bounded two
+recovery calls; the architecture readback consequently found no persisted
+verified-fact snapshot. It used 66 provider calls, 738,548 input tokens,
+96,937 output tokens, `$0.139822`, and 1,066.351 seconds, with no publication
+write. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and
+Step 3 remains unstarted/not ready. The ten-report cohort was not started.
+Detailed causes and limitations are recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

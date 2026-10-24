@@ -4547,3 +4547,72 @@ This is **PARTIAL / NO-GO** evidence. It demonstrates genuine opt-in
 verified-facts admission for the seven completed reports and the dedicated
 Adjust run, but it is not a completed ten-report evaluation and does not clear
 the downstream readiness blockers. Step 3 remains unstarted/not ready.
+
+#### Verified-facts-first authority flow — 2026-10-24 (`fe77330b`)
+
+The pushed implementation adds a typed `VerifiedAuthorityContext` to the
+analysis state and checkpoint/resume contracts. In verified mode it binds the
+qualified canary source identity, PDF SHA-256, verified-fact digest, complete
+canonical verified facts, and canonical evidence packs. Discovery packs remain
+available for navigation/context only. Regeneration, metric-spine/key-figure
+inputs, retained-claim materialization, render provenance, and publication
+readiness now use the authoritative packs and qualified identity; verified
+structural failures are typed, non-retryable, and do not enter generic fallback
+or broad editorial regeneration. Normal mode remains on the existing
+discovery-evidence path.
+
+Focused verification passed **106 tests** for authority/selection/evidence
+regressions and **127 tests** for pipeline, checkpoint, resume, rendering, and
+readiness behavior. The full local suite passed **8,098**, skipped **2**, and
+deselected **32**; two pre-existing environment/repository failures remain:
+the CPython 3.14 wheelhouse test requires native CPython 3.12, and two existing
+test modules exceed the long-file threshold. Mypy reported no issues for the
+nine changed source files. Compileall and diff checks passed. Ruff reported
+only pre-existing findings in the touched checkpoint/resume modules.
+
+The exact retained Adjust member was then run once from a clean short-path
+worktree at this commit, with the ten-report manifest inventory and the
+hash-matched retained PDF (`MD5 b638414df0b1fccea1cd8a93eaf8f5aa`, PDF
+SHA-256 `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`).
+The initial long-path attempt failed before provider execution with the typed
+`analysis_pack_path_too_long` setup error. The first short-path retry stopped
+before execution because the runner validates the complete manifest inventory;
+copying only the ten retained PDFs into the isolated worktree resolved that
+input issue. Neither setup attempt changed source code or publication state.
+
+The completed provider-backed Adjust run used **66 calls**, **738,548 input
+tokens**, **96,937 output tokens**, **$0.139822**, and **1,066.351 seconds**.
+Admission, source ingest, and report selection passed. The visual claim stage
+completed **17/17** terminal `verified` responses. The run then failed before
+final artifact persistence with:
+
+- primary terminal outcome: `artifact_structured_output_invalid`;
+- inner cause: `artifact_final_insight_lineage_invalid` in `insights_final`;
+- bounded recovery: the existing maximum of **two** structured-output recovery
+  calls was exhausted;
+- secondary architecture readback: `verified_facts_artifact_unreadable`
+  (`FileNotFoundError`), because no final `artifacts.json` was emitted after
+  the lineage failure.
+
+The exact invalid/duplicate/missing final ID was not retained by the provider
+audit, so it is not attributed more narrowly. No final insights, metric spine,
+key figures, validation/readiness artifact, canonical mutation, or WordPress
+write can be claimed for this run. The prior retained Adjust artifact had six
+final insights, but its legacy downstream validation failed on
+`verified_fact_snapshot_invalid`; the current run therefore provides no valid
+before/after editorial comparison and no live quality improvement claim.
+
+The persisted evidence-fidelity pack contained 27 finding rows: 17
+deterministic passes, five fail-closed unsupported rows, and no unresolved row.
+The excluded rows were `gaming-europe-latam-sessions`,
+`gaming-casual-hypercasual-installs`, `gaming-casual-hypercasual-sessions`,
+and `gaming-strategy-casino-slots-sessions` for
+`protected_fact_timeframe_incompatible`, plus `finance-session-lengths` for
+`quantity_not_entailed`. These are finding-level exclusions, not promoted
+editorial claims. No unsupported factual finding was promoted.
+
+This is **PARTIAL / NO-GO** evidence. The authority-state implementation and
+deterministic safeguards are locally verified, but the retained real-report
+run is blocked at final insight lineage and has no persisted authoritative
+snapshot for downstream readiness. The requested stop boundary was honored:
+the ten-report cohort was not started. Step 3 remains unstarted/not ready.
