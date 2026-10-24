@@ -3,6 +3,10 @@ from __future__ import annotations
 import pytest
 
 from src.generators._artifact_generator.generation import generate_artifacts
+from src.generators.verified_claims_canary import (
+    VisualAuthorityCanaryConfig,
+    build_visual_authority_admitter,
+)
 from src.utils.errors import AppError
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
@@ -18,6 +22,20 @@ from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _insight,
 )
 from tests.test_verified_claims_visual_authority_canary import _verified_admission
+
+
+def test_canary_configuration_requires_expected_pdf_hash():
+    with pytest.raises(AppError, match="hash-bearing source identity"):
+        build_visual_authority_admitter(
+            config=VisualAuthorityCanaryConfig(source_identity="report-without-hash"),
+            pdf_path="report.pdf",
+            default_output_dir="out",
+            report_name="Report",
+            evidence_packs={},
+            ctx=_ctx(),
+            settings=object(),
+            doc_map={},
+        )
 
 
 def test_generation_fails_with_typed_minimum_coverage_error_after_remap(tmp_path):

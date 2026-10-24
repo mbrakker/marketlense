@@ -24,9 +24,7 @@ from src.generators.artifact_normalization import (
     remap_editorial_plan_to_verified_facts,
 )
 from src.generators.verified_claims_canary import (
-    VisualAuthorityCanaryConfig,
     admit_visual_authority_candidates,
-    build_visual_authority_admitter,
     default_visual_authority_output_dir,
 )
 from src.utils.errors import AppError
@@ -986,20 +984,6 @@ def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path)
     assert admission_calls == 2
     assert second["_cache"]["visual_authority_canary"]["digest"] == "c" * 64
     assert second["insights_final"] == first["insights_final"]
-
-
-def test_canary_configuration_requires_expected_pdf_hash():
-    with pytest.raises(AppError, match="hash-bearing source identity"):
-        build_visual_authority_admitter(
-            config=VisualAuthorityCanaryConfig(source_identity="report-without-hash"),
-            pdf_path="report.pdf",
-            default_output_dir="out",
-            report_name="Report",
-            evidence_packs={},
-            ctx=_ctx(),
-            settings=object(),
-            doc_map={},
-        )
 
 
 def test_canary_default_visual_output_avoids_nested_output_path(tmp_path):
