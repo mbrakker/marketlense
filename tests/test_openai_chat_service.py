@@ -214,6 +214,44 @@ def test_reasoning_effort_changes_semantic_cache_key(
     assert [call["reasoning_effort"] for call in calls] == ["low", "high"]
 
 
+def test_max_output_tokens_reaches_provider_and_changes_semantic_cache_key(
+    external_boundary_mocks_only, tmp_path
+) -> None:
+    calls: list[dict] = []
+
+    class _Chat:
+        def create(self, **kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(
+                id=f"chat_{len(calls)}",
+                choices=[
+                    SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))
+                ],
+                usage=SimpleNamespace(
+                    prompt_tokens=12, completion_tokens=5, total_tokens=17
+                ),
+            )
+
+    class _Client:
+        def __init__(self, **_kwargs):
+            self.chat = SimpleNamespace(completions=_Chat())
+
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _Client)
+    base = replace(
+        _chat_request(tmp_path),
+        max_output_tokens=19_661,
+        response_cache_enabled=True,
+        response_cache_dir=str(tmp_path / "cache"),
+    )
+
+    svc.openai_chat_json(base, _ctx())
+    svc.openai_chat_json(base, _ctx())
+    svc.openai_chat_json(replace(base, max_output_tokens=16_384), _ctx())
+
+    assert len(calls) == 2
+    assert [call["max_completion_tokens"] for call in calls] == [19_661, 16_384]
+
+
 def test_openai_chat_json_delegates_usage_accounting(
     external_boundary_mocks_only, tmp_path
 ) -> None:

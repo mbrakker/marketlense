@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators.verified_claims_canary import VisualAuthorityCanaryConfig
+
 from ._support_cases import *  # noqa: F401,F403
 
 
@@ -93,6 +95,57 @@ def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
     assert validation_max_active == [1]
     assert tracking_client.max_active["vector"] <= 2
     assert tracking_client.max_active["chat"] <= 2
+
+
+def test_run_report_pipeline_forwards_opt_in_visual_authority_canary() -> None:
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    canary = VisualAuthorityCanaryConfig(
+        source_identity="a|pdf-sha256:" + "a" * 64,
+        output_dir="./out/canary",
+    )
+    received: list[VisualAuthorityCanaryConfig | None] = []
+
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle=None,
+        resume_from_stage=None,
+        visual_authority_canary=None,
+    ):
+        del local_pdf_path, settings, ctx, client_bundle, resume_from_stage
+        received.append(visual_authority_canary)
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=file.name or file.file_id,
+            md5=md5,
+            html_path="./out/a.html",
+            status="processed",
+        )
+
+    response = orch.run_report_pipeline(
+        file,
+        local_pdf_path="./cache/a.pdf",
+        settings=_settings(),
+        md5="md5",
+        ctx=_ctx(),
+        retries=0,
+        generate_report_fn=_gen,
+        visual_authority_canary=canary,
+    )
+
+    assert response.status == "processed"
+    assert received == [canary]
 
 
 def test_run_report_pipeline_owns_retry_around_single_attempt_llm_service(

@@ -115,6 +115,7 @@ def run_frozen_reliability_cohort(
     staging_hostname: str = "",
     allow_insecure_staging_http: bool = False,
     enable_cross_report_analysis: bool = False,
+    verified_facts_architecture: bool = False,
     run_cohort_once: Callable[..., dict[str, Any]] = run_frozen_cohort_once,
 ) -> dict[str, Any]:
     """Run each selected frozen member with an independent isolated deadline."""
@@ -183,6 +184,8 @@ def run_frozen_reliability_cohort(
                 run_kwargs["allow_insecure_staging_http"] = True
         if enable_cross_report_analysis:
             run_kwargs["enable_cross_report_analysis"] = True
+        if verified_facts_architecture:
+            run_kwargs["verified_facts_architecture"] = True
         execution = run_cohort_once(**run_kwargs)
         report_results = list(execution.get("reports") or [])
         if len(report_results) != len(selected_members):
@@ -220,6 +223,11 @@ def run_frozen_reliability_cohort(
             runs_root=root / "members" / report_id,
             sources=[member],
             max_duration_seconds=max_duration_seconds,
+            **(
+                {"verified_facts_architecture": True}
+                if verified_facts_architecture
+                else {}
+            ),
         )
         report_results = list(execution["reports"])
         if len(report_results) != 1:
@@ -594,7 +602,10 @@ def main() -> int:
     parser.add_argument(
         "--enable-wordpress-staging",
         action="store_true",
-        help="Enable autonomous approval and WordPress drafts for the confirmed staging host",
+        help=(
+            "Enable autonomous approval and WordPress drafts for the confirmed "
+            "staging host"
+        ),
     )
     parser.add_argument("--staging-host", default="")
     parser.add_argument(
@@ -603,6 +614,11 @@ def main() -> int:
         help="Allow HTTP only for the explicitly confirmed staging host",
     )
     parser.add_argument("--enable-cross-report-analysis", action="store_true")
+    parser.add_argument(
+        "--verified-facts-architecture",
+        action="store_true",
+        help="Opt into the isolated visual-authority verified-facts benchmark path",
+    )
     args = parser.parse_args()
     try:
         if (
@@ -635,6 +651,7 @@ def main() -> int:
                 staging_hostname=args.staging_host,
                 allow_insecure_staging_http=args.allow_insecure_staging_http,
                 enable_cross_report_analysis=args.enable_cross_report_analysis,
+                verified_facts_architecture=args.verified_facts_architecture,
             )
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:

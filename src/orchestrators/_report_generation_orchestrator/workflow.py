@@ -33,6 +33,7 @@ from src.generators.report_render_generator import (
 )
 from src.generators.report_selection_generator import select_report_figures
 from src.generators.report_source_generator import prepare_report_source
+from src.generators.verified_claims_canary import VisualAuthorityCanaryConfig
 from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_manifest_stage,
 )
@@ -376,6 +377,7 @@ def run_report_generation(
     stop_after_stage: Optional[str] = None,
     projection_only: bool = False,
     skip_post_render_projection: bool = False,
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> IngestOutcome:
     if str(ctx.admission_decision_hash or "").strip():
         require_admitted_report_identity(
@@ -755,6 +757,7 @@ def run_report_generation(
             figure_caption_openai_client=figure_caption_openai_client,
             source_openai_client=source_openai_client,
             source_dependencies=deps.source,
+            visual_authority_canary=visual_authority_canary,
         )
         _write_stage_checkpoint(
             runtime,

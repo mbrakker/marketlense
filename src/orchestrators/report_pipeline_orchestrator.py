@@ -59,6 +59,7 @@ from src.generators.publish_readiness_generator import (
     complete_publish_readiness_refresh_plan,
     publish_readiness_refresh_plan_payload,
 )
+from src.generators.verified_claims_canary import VisualAuthorityCanaryConfig
 from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightRequest,
     admission_configuration_hash,
@@ -382,6 +383,7 @@ def _invoke_report_fn(
     projection_only: bool = False,
     skip_post_render_projection: bool = False,
     budget_override: BudgetOverrideContext | None = None,
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> IngestOutcome:
     arguments: dict[str, object] = {"resume_from_stage": resume_from_stage}
     if client_bundle is not None:
@@ -434,6 +436,13 @@ def _invoke_report_fn(
     )
     if supports_render_projection_skip:
         arguments["skip_post_render_projection"] = skip_post_render_projection
+    supports_visual_authority_canary = any(
+        parameter.kind == Parameter.VAR_KEYWORD
+        or parameter.name == "visual_authority_canary"
+        for parameter in parameters
+    )
+    if supports_visual_authority_canary:
+        arguments["visual_authority_canary"] = visual_authority_canary
     return report_fn(
         file,
         local_pdf_path,
@@ -643,6 +652,7 @@ def run_report_pipeline(
     projection_only: bool = False,
     skip_post_render_projection: bool = False,
     budget_override: BudgetOverrideContext | None = None,
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
     readiness_refresh_plan: PublishReadinessRefreshPlan | None = None,
     refresh_telemetry_path: str = "",
     _canonical_source_reuse_owner_id: str = "",
@@ -744,6 +754,7 @@ def run_report_pipeline(
                     projection_only=projection_only,
                     skip_post_render_projection=skip_post_render_projection,
                     budget_override=budget_override,
+                    visual_authority_canary=visual_authority_canary,
                     readiness_refresh_plan=readiness_refresh_plan,
                     refresh_telemetry_path=refresh_telemetry_path,
                     _canonical_source_reuse_owner_id=reuse.report_id,
@@ -1191,6 +1202,7 @@ def run_report_pipeline(
                 stop_after_stage=stop_after_stage,
                 projection_only=projection_only,
                 skip_post_render_projection=skip_post_render_projection,
+                visual_authority_canary=visual_authority_canary,
             )
         except AppError as exc:
             if (
@@ -1226,6 +1238,7 @@ def run_report_pipeline(
                     stop_after_stage=stop_after_stage,
                     projection_only=projection_only,
                     skip_post_render_projection=skip_post_render_projection,
+                    visual_authority_canary=visual_authority_canary,
                 )
             else:
                 raise

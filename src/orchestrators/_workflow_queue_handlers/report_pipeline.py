@@ -101,6 +101,7 @@ from src.contracts.workflow_queue import (
     WorkflowStageResult,
 )
 from src.generators.cover_image_generator import generate_cover_images
+from src.generators.verified_claims_canary import VisualAuthorityCanaryConfig
 from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_manifest_stage,
 )
@@ -329,6 +330,37 @@ def _report_publication_readiness_submission(
     )
 
 
+def _verified_facts_canary_config(
+    *,
+    payload: QueuePayload,
+    artifact_reference: str,
+    report_id: str,
+    ctx: RunContext,
+    settings,
+) -> VisualAuthorityCanaryConfig | None:
+    """Build the opt-in visual authority config for isolated benchmark runs."""
+
+    if payload.attributes.get("verified_facts_architecture") is not True:
+        return None
+    source_path = Path(artifact_reference)
+    if not source_path.is_file():
+        raise AppError(
+            code="verified_facts_canary_source_missing",
+            message="Verified-facts benchmark requires the retained source PDF",
+            retryable=False,
+            context={"report_id": report_id},
+        )
+    source_sha256 = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    source_label = str(ctx.source_identity_id or report_id).strip() or report_id
+    return VisualAuthorityCanaryConfig(
+        source_identity=f"{source_label}|pdf-sha256:{source_sha256}",
+        output_dir=str(Path(settings.output_dir) / "verified_claims_visual_canary"),
+        dpi=216,
+        recovery_enabled=True,
+        recovery_limit=3,
+    )
+
+
 def _report_stage_handler(
     *,
     resume_from_stage: str,
@@ -469,6 +501,13 @@ def _report_stage_handler(
                 return runtime_preflight
 
             preflight_fn = _admission_runtime_preflight
+        visual_authority_canary = _verified_facts_canary_config(
+            payload=payload,
+            artifact_reference=artifact_reference,
+            report_id=report_id,
+            ctx=report_ctx,
+            settings=settings,
+        )
         outcome = run_report_pipeline(
             source_file,
             artifact_reference,
@@ -481,6 +520,7 @@ def _report_stage_handler(
             projection_only=projection_only,
             budget_override=_requested_budget_override(payload),
             preflight_fn=preflight_fn,
+            visual_authority_canary=visual_authority_canary,
         )
         if outcome.status == "error":
             raise _report_pipeline_outcome_error(

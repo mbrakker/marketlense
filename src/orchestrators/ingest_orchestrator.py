@@ -1558,6 +1558,8 @@ def freeze_admitted_validation_cohort(
 def submit_preselected_frozen_validation_cohort(
     request: PreselectedFrozenValidationCohortSubmissionRequest,
     ctx: RunContext,
+    *,
+    verified_facts_architecture: bool = False,
 ) -> PreselectedFrozenValidationCohortSubmissionResponse:
     """Submit retained local reports through the canonical production workflow.
 
@@ -1657,7 +1659,14 @@ def submit_preselected_frozen_validation_cohort(
                     input_reference=source_paths[file.file_id],
                     input_content_hash=str(file.md5_checksum or ""),
                     processing_version="parser.v1",
-                    attributes={"config_path": request.config_path},
+                    attributes={
+                        "config_path": request.config_path,
+                        **(
+                            {"verified_facts_architecture": True}
+                            if verified_facts_architecture
+                            else {}
+                        ),
+                    },
                 )
                 for file in admitted
             ),

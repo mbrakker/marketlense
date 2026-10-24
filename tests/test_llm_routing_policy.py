@@ -188,9 +188,10 @@ def test_production_execution_policies_use_explicit_reasoning_effort() -> None:
         if namespace in {
             "report_vs/doc_map",
             "report_vs/artifacts/insights_candidates",
-            "report_vs/artifacts/insights_final",
         }:
             assert decision.policy.max_output_tokens == 16_384
+        if namespace == "report_vs/artifacts/insights_final":
+            assert decision.policy.max_output_tokens == 19_661
 
 
 def test_visual_claim_correction_has_budget_for_complete_structured_json() -> None:

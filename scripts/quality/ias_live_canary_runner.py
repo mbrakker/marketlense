@@ -1041,6 +1041,7 @@ def run_frozen_cohort_once(
     staging_hostname: str = "",
     allow_insecure_staging_http: bool = False,
     enable_cross_report_analysis: bool = False,
+    verified_facts_architecture: bool = False,
 ) -> dict[str, Any]:
     """Submit one immutable retained cohort through the production queue once."""
 
@@ -1072,7 +1073,8 @@ def run_frozen_cohort_once(
         "bounded_automatic_repair": None,
         "wordpress_staging_preflight": None,
         "wordpress_replay": None,
-        "duration_measurement": "runner entry to all five report workflows terminal",
+        "duration_measurement": "runner entry to all report workflows terminal",
+        "verified_facts_architecture": verified_facts_architecture,
     }
     terminal_observed_at_utc = ""
     terminal_observed_monotonic: float | None = None
@@ -1191,6 +1193,7 @@ def run_frozen_cohort_once(
                 sources=tuple(prepared_sources),
             ),
             ctx,
+            verified_facts_architecture=verified_facts_architecture,
         )
         decisions = {
             decision.file_id: decision for decision in submission.admission_decisions

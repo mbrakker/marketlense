@@ -17,6 +17,7 @@ text: |
   Target final insight count: {{ final_insight_target_count }}.
 
   Task: Choose {{ final_insight_target_count }} strongest, non-overlapping insights. Preserve the primary `evidence_id` per insight and, when the prose materially combines multiple supplied findings, include an `evidence_ids` array with the exact primary-first IDs for every necessary finding. Return JSON with an `insights_final` array of candidate-shaped entries containing scores, coverage_role, so_what, now_what, and report_type_lens.
+  Return only the requested JSON object and final insight entries. Do not repeat the candidate roster, evidence text, schema, editorial plan, or canonical fact objects in the response. Keep `so_what` and `now_what` to one or two concise sentences tied to the selected finding; preserve exact values, comparisons, qualifiers, and scope rather than shortening them into a misleading summary.
   Reuse selected candidate IDs; keep IDs unique.
   Keep one complete, source-backed insight sentence at 18 words or fewer for compact cards; preserve its material scope and never clip it.
   For numeric insights, keep the finding/quote ID and page. Its direct evidence
