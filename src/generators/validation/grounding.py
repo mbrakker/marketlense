@@ -7,10 +7,11 @@ import threading
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from copy import deepcopy
 from dataclasses import asdict, replace
-from typing import Any, Callable, List, Mapping, Sequence
+from typing import Any, Callable, List, Mapping, Sequence, cast
 
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
+    ClaimSemanticOutcome,
     ClaimSemanticGroundingResult,
     ClaimSemanticInput,
     ClaimSemanticValidationIdentity,
@@ -1695,7 +1696,7 @@ def _retained_claim_semantic_results(
         semantic_results.append(
             ClaimSemanticGroundingResult(
                 schema_version="1.0",
-                outcome=outcome,
+                outcome=cast(ClaimSemanticOutcome, outcome),
                 reason=s(entry.get("reason")),
                 identity=identity,
                 protected_facts=comparison,
