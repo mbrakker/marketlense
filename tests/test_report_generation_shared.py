@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -106,6 +107,9 @@ def test_cache_path_rejects_a_compact_candidate_that_still_exceeds_windows_budge
     assert_app_error(err.value, code="report_cache_path_invalid", retryable=False)
 
 
+@pytest.mark.skipif(
+    os.name != "nt", reason="requires a Windows path component beyond the UTF-16 budget"
+)
 def test_cache_path_rejects_utf16_component_over_windows_component_budget(
     tmp_path: Path,
     assert_app_error,
