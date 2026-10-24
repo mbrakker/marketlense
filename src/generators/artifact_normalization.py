@@ -23,7 +23,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:8"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:9"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -1214,6 +1214,7 @@ def normalize_artifact_insights(
         pages_raw = pages_raw_obj if isinstance(pages_raw_obj, list) else []
         pages = [int(p) for p in pages_raw if isinstance(p, int)]
         evidence_id = _s(item.get("evidence_id"))
+        evidence_ids = _ordered_item_evidence_ids(item)
         insight: Dict[str, Any] = {
             "id": _s(item.get("id") or f"{prefix}_{idx + 1}"),
             "text": _normalize_public_numeric_signs(_s(item.get("text"))),
@@ -1225,6 +1226,8 @@ def normalize_artifact_insights(
             "metric": metric,
             "pages": pages,
         }
+        if isinstance(item.get("evidence_ids"), list) and evidence_ids:
+            insight["evidence_ids"] = evidence_ids
         timeframe = _s(metric.get("timeframe")).strip()
         binding_evidence = " ".join(
             [
@@ -1286,11 +1289,17 @@ def select_artifact_insights(
         candidate_facts
     )
     final_lineage_ids = set(candidate_facts)
+    available_evidence_ids = {
+        evidence_id
+        for fact in candidate_facts.values()
+        for evidence_id in _ordered_item_evidence_ids(fact)
+    }
     anchored_finals = [
         _restore_candidate_factual_fields(
             item,
             candidate_facts,
             preserve_unknown_metric_fields=verified_mode,
+            allowed_evidence_ids=available_evidence_ids,
         )
         if isinstance(item, dict)
         else item
@@ -1421,8 +1430,15 @@ def restore_artifact_insight_factual_fields(
 ) -> Dict[str, Any]:
     """Restore a final insight from the authoritative candidate fact index."""
 
+    candidate_facts = _candidate_factual_fields(candidate_insights)
     return _restore_candidate_factual_fields(
-        insight, _candidate_factual_fields(candidate_insights)
+        insight,
+        candidate_facts,
+        allowed_evidence_ids={
+            evidence_id
+            for fact in candidate_facts.values()
+            for evidence_id in _ordered_item_evidence_ids(fact)
+        },
     )
 
 
@@ -1450,6 +1466,9 @@ def _candidate_factual_fields(
                 insight.get("metric"),
                 preserve_unknown_fields=preserve_unknown_metric_fields,
             )
+        evidence_ids = _ordered_item_evidence_ids(insight)
+        if isinstance(insight.get("evidence_ids"), list):
+            fact["evidence_ids"] = evidence_ids
         for field_name in ("evidence_id", "evidence", "pages", "evidence_spans"):
             if field_name not in insight:
                 continue
@@ -1460,6 +1479,21 @@ def _candidate_factual_fields(
                 fact[field_name] = deepcopy(value) if value else []
         facts[insight_id] = fact
     return facts
+
+
+def _ordered_item_evidence_ids(item: Any) -> List[str]:
+    """Return a primary-first, duplicate-free evidence binding list."""
+
+    if not isinstance(item, dict):
+        return []
+    values: List[str] = []
+    primary = _s(item.get("evidence_id")).strip()
+    if primary:
+        values.append(primary)
+    raw_ids = item.get("evidence_ids")
+    if isinstance(raw_ids, list):
+        values.extend(_s(value).strip() for value in raw_ids)
+    return list(dict.fromkeys(value for value in values if value))
 
 
 def _candidate_insight_groups(
@@ -1748,6 +1782,7 @@ def _restore_candidate_factual_fields(
     candidate_facts: Dict[str, Dict[str, Any]],
     *,
     preserve_unknown_metric_fields: bool = False,
+    allowed_evidence_ids: set[str] | None = None,
 ) -> Dict[str, Any]:
     """Deterministically revert final-stage factual drift to the candidate."""
 
@@ -1774,6 +1809,30 @@ def _restore_candidate_factual_fields(
             restored[field_name] = _s(candidate.get(field_name)).strip()
         else:
             restored[field_name] = deepcopy(candidate.get(field_name) or [])
+    candidate_evidence_ids = _ordered_item_evidence_ids(candidate)
+    if isinstance(insight.get("evidence_ids"), list):
+        final_evidence_ids = _ordered_item_evidence_ids(insight)
+        allowed = allowed_evidence_ids
+        if allowed is None:
+            allowed = set(candidate_evidence_ids)
+        allowed_lookup = {normalize_for_lookup(value) for value in allowed}
+        if (
+            final_evidence_ids
+            and candidate_evidence_ids
+            and normalize_for_lookup(candidate_evidence_ids[0])
+            == normalize_for_lookup(final_evidence_ids[0])
+            and all(
+                normalize_for_lookup(value) in allowed_lookup
+                for value in final_evidence_ids
+            )
+        ):
+            restored["evidence_ids"] = final_evidence_ids
+        elif len(candidate_evidence_ids) > 1:
+            restored["evidence_ids"] = candidate_evidence_ids
+        else:
+            restored.pop("evidence_ids", None)
+    elif len(candidate_evidence_ids) > 1:
+        restored["evidence_ids"] = candidate_evidence_ids
     return restored
 
 
@@ -1795,9 +1854,10 @@ def build_expert_synthesis_context(
         source_findings=source_findings,
     )
     implication_source_ids = {
-        _s(item.get("evidence_id")).casefold()
+        evidence_id.casefold()
         for item in implications
         if item.get("source_finding")
+        for evidence_id in _ordered_item_evidence_ids(item)
     }
     themes: List[Dict[str, Any]] = []
     for theme in plan["themes"]:
@@ -1878,39 +1938,65 @@ def _expert_insight_implications(
         implication = _s(insight.get("so_what")).strip()
         if not implication:
             continue
-        evidence_id = _s(insight.get("evidence_id")).strip()
-        source_finding = source_findings.get(evidence_id.casefold(), "")
-        spans = evidence_span_index.get(evidence_id.casefold(), [])
-        source_span = next(
+        evidence_ids = _ordered_item_evidence_ids(insight)
+        evidence_id = evidence_ids[0] if evidence_ids else ""
+        supporting_evidence: list[dict[str, Any]] = []
+        for bound_evidence_id in evidence_ids:
+            source_finding = source_findings.get(bound_evidence_id.casefold(), "")
+            source_span = next(
+                (
+                    span
+                    for span in evidence_span_index.get(
+                        bound_evidence_id.casefold(), []
+                    )
+                    if _s(span.get("text")).strip()
+                    and _s(span.get("evidence_id")).casefold()
+                    == bound_evidence_id.casefold()
+                ),
+                None,
+            )
+            if not source_finding and source_span is None:
+                continue
+            support: dict[str, Any] = {"evidence_id": bound_evidence_id}
+            if source_finding:
+                support["source_finding"] = source_finding
+            if source_span is not None:
+                support["source_excerpt"] = _s(source_span.get("text"))
+                source_page = source_span.get("page")
+                if isinstance(source_page, int) and source_page > 0:
+                    support["source_page"] = source_page
+            supporting_evidence.append(support)
+        primary_support = next(
             (
-                span
-                for span in spans
-                if _s(span.get("text")).strip()
-                and _s(span.get("evidence_id")).casefold() == evidence_id.casefold()
+                support
+                for support in supporting_evidence
+                if _s(support.get("evidence_id")).casefold() == evidence_id.casefold()
             ),
-            None,
+            {},
         )
         key = (
-            evidence_id.casefold(),
+            ",".join(value.casefold() for value in evidence_ids),
             normalize_text(implication),
-            normalize_text(source_finding),
+            normalize_text(_s(primary_support.get("source_finding"))),
         )
         if key in seen:
             continue
         seen.add(key)
         item: Dict[str, Any] = {"evidence_id": evidence_id}
+        if len(evidence_ids) > 1:
+            item["evidence_ids"] = evidence_ids
         if implication:
             item["so_what"] = implication
-        if source_finding and source_span is not None:
+        if primary_support:
             item.update(
                 {
-                    "source_finding": source_finding,
-                    "source_excerpt": _s(source_span.get("text")),
+                    key: primary_support[key]
+                    for key in ("source_finding", "source_excerpt")
+                    if key in primary_support
                 }
             )
-            source_page = source_span.get("page")
-            if isinstance(source_page, int) and source_page > 0:
-                item["source_page"] = source_page
+            if "source_page" in primary_support:
+                item["source_page"] = primary_support["source_page"]
             metric = insight.get("metric")
             if isinstance(metric, dict):
                 structured_metric = {
@@ -1923,6 +2009,8 @@ def _expert_insight_implications(
                     for field_name in required_metric_fields
                 ):
                     item["metric"] = structured_metric
+        if len(supporting_evidence) > 1:
+            item["supporting_evidence"] = supporting_evidence
         implications.append(item)
         if len(implications) == 7:
             break
@@ -2791,6 +2879,16 @@ def normalize_artifact_evidence_ids(
         _normalize_reference(item)
         if not isinstance(item, dict):
             return
+        if isinstance(item.get("evidence_ids"), list):
+            normalized_ids = _normalize_evidence_ids(item.get("evidence_ids"))
+            primary_evidence_id = _s(item.get("evidence_id")).strip()
+            item["evidence_ids"] = list(
+                dict.fromkeys(
+                    [primary_evidence_id, *normalized_ids]
+                    if primary_evidence_id
+                    else normalized_ids
+                )
+            )
         parent_evidence_id = _s(item.get("evidence_id")).strip()
         spans = item.get("evidence_spans")
         if isinstance(spans, list):
@@ -2949,14 +3047,20 @@ def bind_artifact_evidence_spans(
         nonlocal bound_count, unbound_count
         if not isinstance(item, dict):
             return
-        evidence_id = _s(item.get("evidence_id")).strip()
+        evidence_ids = _ordered_item_evidence_ids(item)
+        evidence_id = evidence_ids[0] if evidence_ids else ""
         if not evidence_id:
             item["evidence_spans"] = []
             return
         existing = _normalize_evidence_spans(
             item.get("evidence_spans"), evidence_id=evidence_id
         )
-        derived = [dict(span) for span in span_index.get(evidence_id.casefold(), [])]
+        derived: List[Dict[str, Any]] = []
+        for bound_evidence_id in evidence_ids:
+            derived.extend(
+                dict(span) for span in span_index.get(bound_evidence_id.casefold(), [])
+            )
+        derived = _normalize_evidence_spans(derived, evidence_id=evidence_id)
         # A resolvable evidence ID has an authoritative retained span.  Do not
         # let model-supplied page metadata override it: the generator may add
         # adjacent pages or retain stale spans while changing its copy.

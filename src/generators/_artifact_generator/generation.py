@@ -1568,6 +1568,7 @@ def generate_artifacts(
                 "id",
                 "text",
                 "evidence_id",
+                "evidence_ids",
             )
             if key in selected_lead_insight
         }

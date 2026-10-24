@@ -122,6 +122,188 @@ def test_grounding_payload_retains_final_insight_implications() -> None:
     )
 
 
+def test_grounding_payload_keeps_all_verified_fact_ids_for_a_comparison():
+    from copy import deepcopy
+
+    from src.generators.validation.grounding import grounding_payload
+
+    primary = deepcopy(_artifacts_for("expert_comment", "Expert comment."))
+    primary["verified_facts"] = [
+        {
+            "schema_version": "1.0",
+            "fact_id": "north-america",
+            "statement": "North America lists In-App at 128.",
+            "metric": {
+                "label": "North America In-App",
+                "value": "128",
+                "unit": "index",
+            },
+            "qualifiers": [],
+            "source_identity": "frozen-report|pdf-sha256:" + "a" * 64,
+            "source_pdf_sha256": "a" * 64,
+            "supporting_physical_pages": [8],
+            "verification_outcome": "verified",
+            "provenance": {
+                "inspected_physical_pages": [8],
+                "source_truth_notes_by_page": {
+                    "8": "North America lists In-App at 128."
+                },
+            },
+        },
+        {
+            "schema_version": "1.0",
+            "fact_id": "apac",
+            "statement": "APAC lists In-App at 131.",
+            "metric": {"label": "APAC In-App", "value": "131", "unit": "index"},
+            "qualifiers": [],
+            "source_identity": "frozen-report|pdf-sha256:" + "a" * 64,
+            "source_pdf_sha256": "a" * 64,
+            "supporting_physical_pages": [9],
+            "verification_outcome": "verified",
+            "provenance": {
+                "inspected_physical_pages": [9],
+                "source_truth_notes_by_page": {"9": "APAC lists In-App at 131."},
+            },
+        },
+    ]
+    primary["insights_final"] = [
+        {
+            "id": "north-america",
+            "text": "North America has the same top environment as APAC.",
+            "evidence_id": "verified-fact:north-america",
+            "evidence_ids": ["verified-fact:north-america", "verified-fact:apac"],
+            "metric": {
+                "label": "North America In-App",
+                "value": "128",
+                "unit": "index",
+            },
+            "evidence_spans": [
+                {
+                    "evidence_id": "verified-fact:north-america",
+                    "source_pack": "verified_facts",
+                    "page": 8,
+                    "text": "North America lists In-App at 128.",
+                    "source_identity": "frozen-report|pdf-sha256:" + "a" * 64,
+                },
+                {
+                    "evidence_id": "verified-fact:apac",
+                    "source_pack": "verified_facts",
+                    "page": 9,
+                    "text": "APAC lists In-App at 131.",
+                    "source_identity": "frozen-report|pdf-sha256:" + "a" * 64,
+                },
+            ],
+            "pages": [8, 9],
+        }
+    ]
+    # The fixture helper's normal-mode evidence packs are intentionally not
+    # reused here; verified grounding receives its canonical pack through the
+    # request and must expose both fact identities in the public inventory.
+    from src.utils.verified_facts import canonical_verified_evidence_packs
+
+    fact_one = primary["verified_facts"][0]
+    facts_by_id = {fact["fact_id"]: fact for fact in primary["verified_facts"]}
+    packs = canonical_verified_evidence_packs(facts_by_id)
+
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="multi-fact-grounding",
+        report=_report(),
+        artifacts=primary,
+        evidence_packs=packs,
+        source_id=fact_one["source_identity"],
+        validation_mode="verified_facts",
+    )
+    payload = grounding_payload(request, primary)
+    item = next(
+        item
+        for item in payload["public_factual_items"]
+        if item["item_id"] == "insight:north-america:text"
+    )
+
+    assert item["evidence_ids"] == [
+        "verified-fact:north-america",
+        "verified-fact:apac",
+    ]
+
+
+def test_grounding_payload_does_not_infer_a_secondary_fact_without_binding():
+    from copy import deepcopy
+
+    from src.generators.validation.grounding import grounding_payload
+    from src.utils.verified_facts import canonical_verified_evidence_packs
+
+    source_identity = "frozen-report|pdf-sha256:" + "b" * 64
+    facts = {
+        "north-america": {
+            "schema_version": "1.0",
+            "fact_id": "north-america",
+            "statement": "North America lists In-App at 128.",
+            "metric": {
+                "label": "North America In-App",
+                "value": "128",
+                "unit": "index",
+            },
+            "qualifiers": [],
+            "source_identity": source_identity,
+            "source_pdf_sha256": "b" * 64,
+            "supporting_physical_pages": [8],
+            "verification_outcome": "verified",
+            "provenance": {
+                "inspected_physical_pages": [8],
+                "source_truth_notes_by_page": {
+                    "8": "North America lists In-App at 128."
+                },
+            },
+        },
+        "apac": {
+            "schema_version": "1.0",
+            "fact_id": "apac",
+            "statement": "APAC lists In-App at 131.",
+            "metric": {"label": "APAC In-App", "value": "131", "unit": "index"},
+            "qualifiers": [],
+            "source_identity": source_identity,
+            "source_pdf_sha256": "b" * 64,
+            "supporting_physical_pages": [9],
+            "verification_outcome": "verified",
+            "provenance": {
+                "inspected_physical_pages": [9],
+                "source_truth_notes_by_page": {"9": "APAC lists In-App at 131."},
+            },
+        },
+    }
+    artifacts = deepcopy(_artifacts_for("expert_comment", "Expert comment."))
+    artifacts["verified_facts"] = list(facts.values())
+    artifacts["insights_final"] = [
+        {
+            "id": "north-america",
+            "text": "North America has a top listed video environment.",
+            "evidence_id": "verified-fact:north-america",
+            "metric": facts["north-america"]["metric"],
+            "pages": [8],
+        }
+    ]
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="single-fact-grounding",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=canonical_verified_evidence_packs(facts),
+        source_id=source_identity,
+        validation_mode="verified_facts",
+    )
+
+    payload = grounding_payload(request, artifacts)
+    item = next(
+        item
+        for item in payload["public_factual_items"]
+        if item["item_id"] == "insight:north-america:text"
+    )
+
+    assert item["evidence_ids"] == ["verified-fact:north-america"]
+    assert "APAC lists In-App at 131." not in item["retained_evidence"]
+
+
 def test_noncontradictory_insight_editorial_copy_is_not_a_grounding_blocker() -> None:
     section = "insights:insight-1.so_what"
     policy = section_policy(section)

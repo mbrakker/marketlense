@@ -179,6 +179,21 @@ def _dump_json(value: Any) -> str:
     return dump_json_text(value)
 
 
+def _artifact_evidence_ids(item: Any, *, fallback: Any = "") -> List[str]:
+    """Return the primary-first evidence IDs retained on one artifact row."""
+
+    if not isinstance(item, dict):
+        return []
+    values: List[str] = []
+    primary = _s(item.get("evidence_id") or fallback).strip()
+    if primary:
+        values.append(primary)
+    raw_ids = item.get("evidence_ids")
+    if isinstance(raw_ids, list):
+        values.extend(_s(value).strip() for value in raw_ids)
+    return list(dict.fromkeys(value for value in values if value))
+
+
 def _abstain_summary_without_short_direct_claim(
     *,
     summary: Dict[str, Any],
@@ -1058,7 +1073,10 @@ def build_universal_claim_ledger(
             artifact_section="insights_final",
             local_id=_s(item.get("id")).strip() or str(len(ledger) + 1),
             claim_text=_s(item.get("text")),
-            evidence_ids=_evidence_ids(item.get("evidence_id"), spans),
+            evidence_ids=_evidence_ids(
+                _artifact_evidence_ids(item),
+                spans,
+            ),
             spans=spans,
         )
     for item in metric_spine:
@@ -1072,7 +1090,7 @@ def build_universal_claim_ledger(
             artifact_section="metric_spine",
             local_id=_s(item.get("metric_id")).strip() or str(len(ledger) + 1),
             claim_text=claim_text,
-            evidence_ids=_evidence_ids(item.get("evidence_id")),
+            evidence_ids=_evidence_ids(_artifact_evidence_ids(item)),
             support_type="direct_metric",
             confidence=_s(item.get("confidence")).strip() or "source_backed",
             risk="medium" if item.get("missing_context_notes") else "low",
@@ -1157,6 +1175,7 @@ def _derive_metric_spine_from_insights(
         evidence_id = _s(
             insight.get("evidence_id") or metric.get("evidence_id")
         ).strip()
+        evidence_ids = _artifact_evidence_ids(insight, fallback=evidence_id)
         label = _s(metric.get("label") or metric.get("metric")).strip()
         if not label:
             label = _metric_label_from_insight_text(
@@ -1197,6 +1216,8 @@ def _derive_metric_spine_from_insights(
             "missing_context_notes": missing_context_notes,
             "evidence_id": evidence_id,
         }
+        if isinstance(insight.get("evidence_ids"), list) and evidence_ids:
+            item["evidence_ids"] = evidence_ids
         if verified_mode and isinstance(metric.get("observations"), list):
             item["observations"] = deepcopy(metric["observations"])
         numeric_metadata = numeric_metadata_for_complete_display(value)
@@ -1230,7 +1251,7 @@ def _metric_editorial_rank(
     *,
     editorial_plan: Dict[str, Any] | None,
 ) -> tuple[int, int]:
-    evidence_id = _s(metric.get("evidence_id")).strip().casefold()
+    metric_evidence_ids = {value.casefold() for value in _artifact_evidence_ids(metric)}
     raw_themes = (
         editorial_plan.get("themes") if isinstance(editorial_plan, dict) else []
     )
@@ -1240,18 +1261,20 @@ def _metric_editorial_rank(
         if not isinstance(theme, dict):
             continue
         priority = theme.get("priority")
-        evidence_ids = theme.get("evidence_ids")
+        theme_evidence_ids = theme.get("evidence_ids")
         if (
             not isinstance(priority, int)
             or priority <= 0
-            or not isinstance(evidence_ids, list)
-            or not evidence_id
+            or not isinstance(theme_evidence_ids, list)
+            or not theme_evidence_ids
         ):
             continue
-        if evidence_id in {
-            _s(theme_evidence_id).strip().casefold()
-            for theme_evidence_id in evidence_ids
-        }:
+        if metric_evidence_ids.intersection(
+            {
+                _s(theme_evidence_id).strip().casefold()
+                for theme_evidence_id in theme_evidence_ids
+            }
+        ):
             priorities.append(priority)
     if priorities:
         return (0, min(priorities))
@@ -1430,7 +1453,9 @@ def _artifact_evidence_ids_by_page(
     for claim in summary.get("claim_evidence_map") or []:
         if not isinstance(claim, dict):
             continue
-        register(_s(claim.get("evidence_id")).strip(), _int_list(claim.get("pages")))
+        claim_pages = _int_list(claim.get("pages"))
+        for evidence_id in _artifact_evidence_ids(claim):
+            register(evidence_id, claim_pages)
         for span in claim.get("evidence_spans") or []:
             if isinstance(span, dict):
                 register(
@@ -1439,9 +1464,9 @@ def _artifact_evidence_ids_by_page(
     for insight in insights_final:
         if not isinstance(insight, dict):
             continue
-        register(
-            _s(insight.get("evidence_id")).strip(), _int_list(insight.get("pages"))
-        )
+        insight_pages = _int_list(insight.get("pages"))
+        for evidence_id in _artifact_evidence_ids(insight):
+            register(evidence_id, insight_pages)
         for span in insight.get("evidence_spans") or []:
             if isinstance(span, dict):
                 register(
@@ -1510,6 +1535,12 @@ def build_key_figures(
         page_values = evidence_pages.get(evidence_id, []) or artifact_pages.get(
             evidence_id, []
         )
+        evidence_ids = _artifact_evidence_ids(metric)
+        evidence_text = "\n".join(
+            evidence_text_by_id.get(bound_evidence_id, "")
+            for bound_evidence_id in evidence_ids
+            if evidence_text_by_id.get(bound_evidence_id, "")
+        )
         missing = [
             _s(item).strip()
             for item in (metric.get("missing_context_notes") or [])
@@ -1518,7 +1549,7 @@ def build_key_figures(
         figure = _key_figure_display(
             value=value,
             unit=unit,
-            evidence_text=evidence_text_by_id.get(evidence_id, ""),
+            evidence_text=evidence_text,
         )
         figures.append(
             {
@@ -1548,6 +1579,12 @@ def build_key_figures(
                 ),
                 "caveat": ("Missing context: " + ", ".join(missing) if missing else ""),
                 "evidence_id": evidence_id,
+                **(
+                    {"evidence_ids": list(_artifact_evidence_ids(metric))}
+                    if isinstance(metric.get("evidence_ids"), list)
+                    and _artifact_evidence_ids(metric)
+                    else {}
+                ),
                 "related_chart_candidate": _related_chart_candidate_id(
                     evidence_packs=evidence_packs,
                     evidence_id=evidence_id,
@@ -1663,8 +1700,10 @@ def _select_key_figure_metrics(
             -_key_figure_score(
                 metric=metric,
                 summary=summary,
-                evidence_text=evidence_text_by_id.get(
-                    _s(metric.get("evidence_id")).strip(), ""
+                evidence_text="\n".join(
+                    evidence_text_by_id.get(evidence_id, "")
+                    for evidence_id in _artifact_evidence_ids(metric)
+                    if evidence_text_by_id.get(evidence_id, "")
                 ),
                 editorial_plan=editorial_plan,
             ),
@@ -1677,7 +1716,12 @@ def _select_key_figure_metrics(
         if len(selected) >= _KEY_FIGURE_MAXIMUM:
             break
         evidence_id = _s(metric.get("evidence_id")).strip()
-        evidence_text = evidence_text_by_id.get(evidence_id, "")
+        evidence_ids = _artifact_evidence_ids(metric)
+        evidence_text = "\n".join(
+            evidence_text_by_id.get(bound_evidence_id, "")
+            for bound_evidence_id in evidence_ids
+            if evidence_text_by_id.get(bound_evidence_id, "")
+        )
         display = _key_figure_display(
             value=_s(metric.get("value")).strip(),
             unit=_s(metric.get("unit")).strip(),
@@ -1726,9 +1770,10 @@ def _key_figure_evidence_text_by_id(
     for insight in insights_final:
         if not isinstance(insight, dict):
             continue
-        evidence_id = _s(insight.get("evidence_id")).strip()
         text = _s(insight.get("evidence")).strip()
-        if evidence_id and text:
+        for evidence_id in _artifact_evidence_ids(insight):
+            if not evidence_id or not text:
+                continue
             # A retained insight may carry a generated copy of the evidence.
             # Once the canonical evidence pack has supplied text for the same
             # identity, keep that source-backed text authoritative.
@@ -1756,9 +1801,10 @@ def _key_figure_score(
     if rank_group == 0:
         score += max(12, 26 - (priority * 2))
     claim_evidence_ids = {
-        _s(claim.get("evidence_id")).strip()
+        evidence_id
         for claim in (summary.get("claim_evidence_map") or [])
         if isinstance(claim, dict)
+        for evidence_id in _artifact_evidence_ids(claim)
     }
     if _s(metric.get("evidence_id")).strip() in claim_evidence_ids:
         score += 12
@@ -1923,6 +1969,7 @@ def build_chart_insight_cards(
     cards: List[Dict[str, Any]] = []
     for index, figure in enumerate(key_figures, start=1):
         evidence_id = _s(figure.get("evidence_id")).strip()
+        evidence_ids = _artifact_evidence_ids(figure)
         chart = _chart_candidate_for_evidence(chart_candidates, evidence_id)
         confidence = _s((chart or {}).get("confidence")).strip() or "medium"
         candidate_id = _s(
@@ -1968,6 +2015,11 @@ def build_chart_insight_cards(
                 "metric_mentions": metric_mentions,
                 "evidence_confidence": confidence,
                 "evidence_id": evidence_id,
+                **(
+                    {"evidence_ids": evidence_ids}
+                    if isinstance(figure.get("evidence_ids"), list) and evidence_ids
+                    else {}
+                ),
                 "source_page": (chart or {}).get("source_page")
                 or figure.get("source_page"),
                 "insight_id": _s(insight.get("insight_id")).strip(),

@@ -372,3 +372,60 @@ def test_verified_selection_preserves_complete_candidate_metric_extensions():
         metric["report_specific_method"] == candidate_metric["report_specific_method"]
     )
     assert "final_only_context" not in metric
+
+
+def test_verified_multi_fact_binding_survives_insight_normalization_and_selection():
+    primary_id = "verified-fact:north-america"
+    comparison_id = "verified-fact:apac"
+    final = normalize_artifact_insights(
+        [
+            {
+                "id": "regional-video",
+                "text": "North America has the same top environment as APAC.",
+                "evidence_id": primary_id,
+                "evidence_ids": [primary_id, comparison_id],
+                "metric": {
+                    "label": "North America video attention",
+                    "value": "128",
+                    "unit": "index",
+                },
+            }
+        ],
+        prefix="insight",
+        verified_mode=True,
+    )
+    selected = select_artifact_insights(
+        final_insights=final,
+        candidate_insights=[
+            {
+                "id": "regional-video",
+                "text": "North America video attention.",
+                "evidence_id": primary_id,
+                "metric": {
+                    "label": "North America video attention",
+                    "value": "128",
+                    "unit": "index",
+                },
+            },
+            {
+                "id": "apac-video",
+                "text": "APAC video attention.",
+                "evidence_id": comparison_id,
+                "metric": {
+                    "label": "APAC video attention",
+                    "value": "131",
+                    "unit": "index",
+                },
+            },
+        ],
+        editorial_plan={
+            "report_thesis": "Regional video attention differs by environment.",
+            "themes": [
+                {"theme": "North America", "priority": 1, "evidence_ids": [primary_id]},
+                {"theme": "APAC", "priority": 2, "evidence_ids": [comparison_id]},
+            ],
+        },
+        verified_mode=True,
+    )
+
+    assert selected[0]["evidence_ids"] == [primary_id, comparison_id]

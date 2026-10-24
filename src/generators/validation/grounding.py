@@ -97,6 +97,21 @@ GROUNDING_MAX_CLAIMS_PER_CALL = 4
 GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL = 8
 
 
+def _artifact_evidence_ids(item: object) -> list[str]:
+    """Return the primary-first evidence IDs retained on one artifact row."""
+
+    if not isinstance(item, dict):
+        return []
+    values: list[str] = []
+    primary = s(item.get("evidence_id")).strip()
+    if primary:
+        values.append(primary)
+    raw_ids = item.get("evidence_ids")
+    if isinstance(raw_ids, list):
+        values.extend(s(value).strip() for value in raw_ids)
+    return list(dict.fromkeys(value for value in values if value))
+
+
 def grounding_authority_policy(verified_mode: bool) -> str:
     """Describe the sole factual authority for the grounding prompt."""
 
@@ -1680,7 +1695,7 @@ def _retained_claim_semantic_results(
         semantic_results.append(
             ClaimSemanticGroundingResult(
                 schema_version="1.0",
-                outcome=outcome,  # type: ignore[arg-type]
+                outcome=outcome,
                 reason=s(entry.get("reason")),
                 identity=identity,
                 protected_facts=comparison,
@@ -1734,7 +1749,8 @@ def grounding_payload(
         if not isinstance(insight, dict):
             continue
         metric = ensure_dict(insight.get("metric"))
-        evidence_id = s(insight.get("evidence_id"))
+        evidence_ids = _artifact_evidence_ids(insight)
+        evidence_id = evidence_ids[0] if evidence_ids else ""
         fact = fact_for_evidence_id(verified_facts, evidence_id)
         authoritative_metric = (
             ensure_dict(fact.get("metric"))
@@ -1761,21 +1777,26 @@ def grounding_payload(
                 else [],
             }
         )
-        insights.append(
-            {
-                "id": s(insight.get("id")),
-                "text": s(insight.get("text")),
-                "evidence_id": evidence_id,
-                "evidence": (
-                    verified_evidence.get(evidence_id, s(insight.get("evidence")))
-                    if not verified_mode
-                    else verified_evidence.get(evidence_id, "")
-                ),
-                "metric": metric_payload,
-                "so_what": sanitize_citation_tokens(s(insight.get("so_what"))),
-                "now_what": sanitize_citation_tokens(s(insight.get("now_what"))),
-            }
-        )
+        insight_payload: dict[str, Any] = {
+            "id": s(insight.get("id")),
+            "text": s(insight.get("text")),
+            "evidence_id": evidence_id,
+            "evidence": (
+                "\n".join(
+                    verified_evidence.get(bound_id, "")
+                    for bound_id in evidence_ids
+                    if verified_evidence.get(bound_id, "")
+                )
+                if verified_mode
+                else verified_evidence.get(evidence_id, s(insight.get("evidence")))
+            ),
+            "metric": metric_payload,
+            "so_what": sanitize_citation_tokens(s(insight.get("so_what"))),
+            "now_what": sanitize_citation_tokens(s(insight.get("now_what"))),
+        }
+        if isinstance(insight.get("evidence_ids"), list) and evidence_ids:
+            insight_payload["evidence_ids"] = evidence_ids
+        insights.append(insight_payload)
     raw_claim_evidence_map = (
         summary.get("claim_evidence_map") if isinstance(summary, dict) else []
     )
@@ -2218,6 +2239,20 @@ def _public_factual_items(
             texts.append(fallback)
         return "\n".join(dict.fromkeys(texts))
 
+    def retained_evidence_text_for_ids(
+        evidence_ids: Sequence[str], *, statement: str = "", fallback: str = ""
+    ) -> str:
+        texts: list[str] = []
+        for index, evidence_id in enumerate(evidence_ids):
+            texts.append(
+                retained_evidence_text_for_id(
+                    evidence_id,
+                    statement=statement if index == 0 else "",
+                    fallback=fallback if index == 0 else "",
+                )
+            )
+        return "\n".join(dict.fromkeys(text for text in texts if text))
+
     summary_evidence = [
         entry
         for entry in (
@@ -2268,7 +2303,7 @@ def _public_factual_items(
 
     for insight in insights:
         insight_id = insight_entity_id(insight)
-        evidence_id = s(insight.get("evidence_id"))
+        evidence_ids = _artifact_evidence_ids(insight)
         for field_name in ("text", "so_what", "now_what"):
             declared_classification = {
                 "text": "factual_claim",
@@ -2279,9 +2314,9 @@ def _public_factual_items(
                 f"insight:{insight_id}:{field_name}",
                 f"insights:{insight_id}.{field_name}",
                 insight.get(field_name),
-                [evidence_id],
-                retained_evidence_text_for_id(
-                    evidence_id,
+                evidence_ids,
+                retained_evidence_text_for_ids(
+                    evidence_ids,
                     fallback=s(insight.get("evidence")),
                 ),
                 declared_classification,
@@ -2289,32 +2324,32 @@ def _public_factual_items(
     for index, figure in enumerate(artifacts.get("key_figures", []), start=1):
         if not isinstance(figure, dict):
             continue
-        evidence_id = s(figure.get("evidence_id"))
+        evidence_ids = _artifact_evidence_ids(figure)
         add(
             f"key_figure:{index}:figure",
             f"key_figures:{index}.figure",
             metric_claim_text(figure, include_observations=bool(verified_facts)),
-            [evidence_id],
-            evidence_text_for_id(evidence_id),
+            evidence_ids,
+            retained_evidence_text_for_ids(evidence_ids),
         )
         add(
             f"key_figure:{index}:why_it_matters",
             f"key_figures:{index}.why_it_matters",
             figure.get("why_it_matters"),
-            [evidence_id],
-            evidence_text_for_id(evidence_id),
+            evidence_ids,
+            retained_evidence_text_for_ids(evidence_ids),
         )
     if verified_evidence_by_id:
         for index, metric in enumerate(artifacts.get("metric_spine", []), start=1):
             if not isinstance(metric, dict):
                 continue
-            evidence_id = s(metric.get("evidence_id"))
+            evidence_ids = _artifact_evidence_ids(metric)
             add(
                 f"metric_spine:{index}:metric",
                 f"metric_spine:{index}",
                 metric_claim_text(metric, include_observations=True),
-                [evidence_id],
-                evidence_text_for_id(evidence_id),
+                evidence_ids,
+                retained_evidence_text_for_ids(evidence_ids),
             )
     for family in ("expert_comment", "linkedin_post"):
         add_soft_copy_sentences(

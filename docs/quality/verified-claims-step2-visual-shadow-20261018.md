@@ -4003,3 +4003,100 @@ covered. Fresh visual claims are source-supported, but downstream retained
 editorial artifacts still contain genuine evidence-scope defects. No causal
 live selection improvement is claimed because the live evaluation used
 retained Step 1 candidates rather than a fresh end-to-end report selection.
+
+#### Verified-mode downstream multi-fact binding correction — 2026-10-24
+
+The retained grounding failures were traced to one downstream representation
+gap, not twenty-one independent source or grounding failures. A generated
+insight, metric-spine row, or key figure could contain a proposition assembled
+from multiple verified findings while carrying only its primary
+`evidence_id`. The existing multi-fact contract was present for soft-copy
+provenance, but it was not retained consistently through final-insight
+normalization, evidence-span binding, metric-spine/key-figure projection, or
+the verified grounding inventory. The retained DoubleVerify comparison had the
+same asymmetry: its text compared North America with APAC, but its insight row
+exposed only the North America fact.
+
+The smallest correction was to carry an optional primary-first `evidence_ids`
+list alongside the backward-compatible primary `evidence_id` through the
+existing artifact schema and validators. `artifact_normalization.py` now
+preserves only exact known IDs, restores authoritative candidate metrics and
+source bindings, derives spans for every bound fact, and supplies all bound
+findings to expert synthesis. `generation.py` passes the list with the lead
+insight; `storage.py` retains it in the claim ledger, metric spine, key
+figures, and chart cards; `grounding.py` exposes all bound canonical evidence
+texts in verified mode; and `verified_facts.py` validates every referenced fact,
+the union of their authoritative pages, and each fact-specific span. The
+insights-final prompt now requests additional exact IDs only when prose
+materially combines supplied findings. Schema reference validation was updated
+for the same existing artifact families. The selection/cache identity advanced
+from `evidence_backed_shortlisting:8` to `:9`.
+
+This does not attach every fact to every sentence. An unknown additional ID,
+an unbound single-fact comparison, or a page/span outside the referenced facts
+still fails closed. A valid multi-fact comparison keeps its primary ID for
+compatibility and retains the secondary IDs needed to establish its other
+premises. No protected metric value, population, period, forecast status,
+source hash, physical page, or evidence span is synthesized.
+
+Before/after failure inventory:
+
+| Root cause | Retained baseline | Corrected behavior |
+|---|---:|---|
+| Criteo 61% newer-channel ROI expectation fused with separate 19%/20%/19% spend recommendations | 20 fail-closed grounding items, including executive summary, claim map, metric spine, key figures, insights, expert comment, and LinkedIn rows | Fresh Criteo generation keeps 61% as its own fact; no spend recommendations are transferred into that metric or binding |
+| Criteo 22% US digital-campaign cost estimate fused with channel-specific 24%/23% values | Included in the same 20 fail-closed items across summary, metric spine, key figure, insight, expert, and LinkedIn rows | Fresh Criteo generation keeps the 22% estimate separate and preserves its US-agency/2023 scope |
+| DoubleVerify North America `so_what` compared with APAC while carrying only North America | 1 fail-closed insight issue | A valid cross-region analytical sentence receives both APAC and North America IDs; an unbound comparison remains rejected |
+
+The exact frozen-five provider-free replay still covers 15 reference cases / 39
+variants, five matching PDF hashes, and 29 unchanged selected identities
+(Capgemini 5, Activate 7, KPMG 5, Reuters Institute 6, Adjust 6), with zero
+provider calls. This confirms stable selection/provenance replay only; it is
+not a live claim about new candidate-selection quality.
+
+##### Fresh downstream editorial and grounding replay
+
+The requested fresh downstream run used the retained verified-fact snapshots,
+isolated output/cache state, and the hash-matched local PDFs. It called the
+existing artifact and grounding paths only; no visual re-admission, canonical
+artifact mutation, readiness mutation, or WordPress write occurred.
+
+| Report | PDF hash | Fresh final insights | Artifact calls | Grounding calls | Measured input + output tokens | Cost | Wall time | Grounding issues |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Criteo | matched | 5 | 7 | 8 | 119,132 + 67,122 | $0.045475 | 321.113 s | 0 |
+| DoubleVerify | matched | 5 | 7 | 7 | 108,684 + 60,961 | $0.041350 | 296.769 s | 0 |
+| Adjust control | matched | 5 | 7 | 7 | 114,030 + 71,207 | $0.047007 | 327.082 s | 0 |
+| **Total** | **3/3 matched** | **15** | **21** | **22** | **341,846 + 199,290 = 541,136** | **$0.133832** | **944.964 s** | **0** |
+
+Independent PDF review found the generated text aligned with the authoritative
+pages: Criteo page 5 keeps the 61% expectation separate from page-7 cost and
+incrementality findings and page-8 planning shares; DoubleVerify pages 3, 9,
+and 10 preserve regional, normalization, and environment/value relationships;
+Adjust pages 6, 11, 21, and 34 preserve global/category, population, and
+period distinctions. The fresh Criteo expert analysis combines cost, expected
+relative returns, and incrementality only as three explicitly distinct,
+source-bound findings and gives conditional planning advice. The fresh
+DoubleVerify expert analysis binds both regional video findings before making
+the cross-region comparison. Adjust preserves the useful contrast between
+accelerating global totals and opposite-direction finance-app metrics.
+
+The generated artifacts are retained only in the ignored local replay output
+`out/verified_claims_downstream_multifact_20261024/`. The old retained
+artifacts remain unchanged; replaying them still correctly produces the old
+20/1 fail-closed inventory. The new zero-issue result is therefore evidence of
+fresh downstream generation after the binding correction, not retroactive
+repair of stale artifacts.
+
+Focused and affected tests passed **344 tests**, with **1 expected skip**.
+The prompt-fixture gate passed against the unchanged baseline: 108,572 total
+tokens versus 108,275 (+297), validation 9,640 versus 9,486 (+154), and
+estimated cost $0.024080 versus $0.024049 (+$0.000031). Targeted mypy passed
+for the six changed source modules; changed-file Ruff F checks and formatting
+passed. The repository-wide full-rule Ruff check still reports two unrelated
+pre-existing findings in `storage.py` (SIM102 and E501), outside this fix.
+
+The implementation and the fresh Criteo/DoubleVerify/Adjust downstream
+binding outcomes are **PASS** for this correction. Overall Step 2 remains
+**PARTIAL / NO-GO** because Algolia's previously documented visual-admission
+and lineage mismatch was not in scope for this correction and remains
+fail-closed; Step 3 remains unstarted and not ready. No claim is made that the
+provider-free 29-insight replay improves live selection effectiveness.

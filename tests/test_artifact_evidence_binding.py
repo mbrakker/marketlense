@@ -3,6 +3,48 @@ from __future__ import annotations
 from src.generators.artifact_normalization import bind_artifact_evidence_spans
 
 
+def test_multi_fact_insight_binding_retains_each_source_span_and_page() -> None:
+    insight = {
+        "id": "regional-comparison",
+        "text": "North America and APAC report different attention indices.",
+        "evidence_id": "fact-na",
+        "evidence_ids": ["fact-na", "fact-apac"],
+        "pages": [8, 9],
+    }
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=[insight],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "fact-na",
+                        "text": "North America lists 128.",
+                        "evidence": "North America lists 128.",
+                        "pages": [8],
+                    },
+                    {
+                        "id": "fact-apac",
+                        "text": "APAC lists 131.",
+                        "evidence": "APAC lists 131.",
+                        "pages": [9],
+                    },
+                ]
+            }
+        },
+    )
+
+    assert insight["pages"] == [8, 9]
+    assert [span["evidence_id"] for span in insight["evidence_spans"]] == [
+        "fact-na",
+        "fact-apac",
+    ]
+
+
 def test_doc_map_binding_retains_summary_and_key_points_for_numeric_claims() -> None:
     summary = {
         "claim_evidence_map": [
@@ -265,9 +307,7 @@ def test_doc_map_insight_does_not_choose_between_ambiguous_section_findings() ->
         insights_final=[insight],
         quotes_final=[],
         doc_map={
-            "sections": [
-                {"id": "shared-section", "summary": "Context", "pages": [8]}
-            ]
+            "sections": [{"id": "shared-section", "summary": "Context", "pages": [8]}]
         },
         evidence_packs={
             "findings": {
@@ -310,9 +350,7 @@ def test_doc_map_insight_does_not_promote_unsupported_finding() -> None:
         insights_final=[insight],
         quotes_final=[],
         doc_map={
-            "sections": [
-                {"id": "shared-section", "summary": "Context", "pages": [8]}
-            ]
+            "sections": [{"id": "shared-section", "summary": "Context", "pages": [8]}]
         },
         evidence_packs={
             "findings": {

@@ -15,6 +15,7 @@ from src.generators.validation.preparation import prepare_validation_inputs
 from src.generators.validation.verified_facts import validated_verified_facts
 from src.services.schema_validator_service import validate_evidence_references
 from src.utils.errors import AppError
+from src.utils.verified_facts import validate_verified_artifact_bindings
 from tests._test_validation_generator._shared import _ctx, _report, _settings
 
 SOURCE_IDENTITY = f"frozen-report|pdf-sha256:{'a' * 64}"
@@ -372,6 +373,73 @@ def test_verified_composite_metric_survives_normalization_and_metric_spine():
     assert normalized[0]["metric"]["observations"] == observations
     spine = derive_metric_spine_from_insights(normalized, verified_mode=True)
     assert spine[0]["observations"] == observations
+
+
+def test_verified_metric_spine_preserves_multi_fact_binding():
+    insight = _insight()
+    insight["evidence_ids"] = ["verified-fact:fact-1", "verified-fact:fact-2"]
+
+    spine = derive_metric_spine_from_insights([insight], verified_mode=True)
+
+    assert spine[0]["evidence_ids"] == [
+        "verified-fact:fact-1",
+        "verified-fact:fact-2",
+    ]
+
+
+def test_verified_multi_fact_artifact_uses_union_of_authoritative_pages():
+    first = _fact()
+    second = deepcopy(first)
+    second["fact_id"] = "fact-2"
+    second["supporting_physical_pages"] = [5]
+    second["provenance"] = {
+        "inspected_physical_pages": [5],
+        "source_truth_notes_by_page": {
+            "5": "The second verified fact is supported on page 5."
+        },
+    }
+    artifacts = _verified_artifacts(fact=first)
+    artifacts["verified_facts"] = [first, second]
+    artifacts["insights_final"][0].update(
+        {
+            "evidence_ids": ["verified-fact:fact-1", "verified-fact:fact-2"],
+            "pages": [4, 5],
+            "evidence_spans": [
+                {
+                    "evidence_id": "verified-fact:fact-1",
+                    "source_pack": "verified_facts",
+                    "page": 4,
+                    "text": "The first verified fact is supported on page 4.",
+                    "source_identity": SOURCE_IDENTITY,
+                },
+                {
+                    "evidence_id": "verified-fact:fact-2",
+                    "source_pack": "verified_facts",
+                    "page": 5,
+                    "text": "The second verified fact is supported on page 5.",
+                    "source_identity": SOURCE_IDENTITY,
+                },
+            ],
+        }
+    )
+
+    validate_verified_artifact_bindings(
+        artifacts,
+        {"fact-1": first, "fact-2": second},
+    )
+
+
+def test_verified_unknown_additional_binding_fails_closed():
+    artifacts = _verified_artifacts()
+    artifacts["insights_final"][0]["evidence_ids"] = [
+        "verified-fact:fact-1",
+        "verified-fact:missing",
+    ]
+
+    with pytest.raises(AppError) as exc_info:
+        validate_evidence_references(artifacts, _packs(), _ctx())
+
+    assert exc_info.value.code == "verified_fact_snapshot_invalid"
 
 
 @pytest.mark.parametrize(

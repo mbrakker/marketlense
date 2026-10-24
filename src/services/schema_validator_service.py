@@ -12,12 +12,12 @@ from src.contracts.schema_validation import (
     SchemaValidateRequest,
     SchemaValidateResponse,
 )
+from src.utils.errors import AppError
+from src.utils.logging import log_event
 from src.utils.verified_facts import (
     validated_verified_facts,
     verified_facts_mode,
 )
-from src.utils.errors import AppError
-from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.schema_validator_service")
 SCHEMAS_ROOT = Path(__file__).resolve().parents[1] / "schemas"
@@ -328,6 +328,10 @@ def validate_evidence_references(
                 value = str(claim.get("evidence_id") or "").strip()
                 if value:
                     references.append(value)
+                for evidence_id in claim.get("evidence_ids") or []:
+                    value = str(evidence_id or "").strip()
+                    if value:
+                        references.append(value)
                 for span in claim.get("evidence_spans") or []:
                     if not isinstance(span, dict):
                         continue
@@ -343,13 +347,24 @@ def validate_evidence_references(
                 value = str(evidence_id or "").strip()
                 if value:
                     references.append(value)
-    for key in ("insights_candidates", "insights_final", "quotes_final"):
+    for key in (
+        "insights_candidates",
+        "insights_final",
+        "quotes_final",
+        "metric_spine",
+        "key_figures",
+        "chart_insight_cards",
+    ):
         for item in artifacts_payload.get(key) or []:
             if not isinstance(item, dict):
                 continue
             value = str(item.get("evidence_id") or "").strip()
             if value:
                 references.append(value)
+            for evidence_id in item.get("evidence_ids") or []:
+                value = str(evidence_id or "").strip()
+                if value:
+                    references.append(value)
             for span in item.get("evidence_spans") or []:
                 if not isinstance(span, dict):
                     continue

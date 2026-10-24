@@ -262,7 +262,7 @@ def validate_verified_artifact_bindings(
                 facts,
                 family=family,
                 index=index,
-                evidence_ids=[item.get("evidence_id")],
+                evidence_ids=_artifact_evidence_ids(item),
                 spans=item.get("evidence_spans"),
             )
 
@@ -276,7 +276,7 @@ def validate_verified_artifact_bindings(
                 facts,
                 family="summary.claim_evidence_map",
                 index=index,
-                evidence_ids=[claim.get("evidence_id")],
+                evidence_ids=_artifact_evidence_ids(claim),
                 spans=claim.get("evidence_spans"),
             )
 
@@ -293,6 +293,19 @@ def validate_verified_artifact_bindings(
                 evidence_ids=claim.get("evidence_ids"),
                 spans=claim.get("source_spans"),
             )
+
+
+def _artifact_evidence_ids(item: Mapping[str, Any]) -> list[object]:
+    """Read primary and optional additional bindings without inventing IDs."""
+
+    values: list[object] = []
+    primary = item.get("evidence_id")
+    if primary is not None:
+        values.append(primary)
+    additional = item.get("evidence_ids")
+    if isinstance(additional, list):
+        values.extend(additional)
+    return list(dict.fromkeys(values))
 
 
 def _validate_artifact_binding(
@@ -322,13 +335,22 @@ def _validate_artifact_binding(
     ):
         return
 
+    supporting_pages: set[int] = set()
     for evidence_id in verified_ids:
         fact = fact_for_evidence_id(facts, evidence_id)
         if fact is None:
             raise _invalid(
                 f"{family}[{index}] references an unknown verified fact", evidence_id
             )
-        _validate_pages(item, fact, family=family, index=index, fact_id=evidence_id)
+        supporting_pages.update(fact.get("supporting_physical_pages") or [])
+    if verified_ids:
+        _validate_pages(
+            item,
+            supporting_pages,
+            family=family,
+            index=index,
+            fact_id=", ".join(verified_ids),
+        )
 
     if spans is None:
         return
@@ -357,20 +379,19 @@ def _validate_artifact_binding(
 
 def _validate_pages(
     item: Mapping[str, Any],
-    fact: Mapping[str, Any],
+    supporting_pages: set[int],
     *,
     family: str,
     index: int,
     fact_id: str,
 ) -> None:
-    supporting = set(fact.get("supporting_physical_pages") or [])
     raw_pages = item.get("pages")
     if raw_pages is not None:
         if not isinstance(raw_pages, list) or any(
             type(page) is not int or page <= 0 for page in raw_pages
         ):
             raise _invalid(f"{family}[{index}] pages are malformed", fact_id)
-        if not set(raw_pages).issubset(supporting):
+        if not set(raw_pages).issubset(supporting_pages):
             raise _invalid(
                 f"{family}[{index}] pages conflict with the verified fact", fact_id
             )
@@ -378,7 +399,7 @@ def _validate_pages(
         if key not in item or item.get(key) is None:
             continue
         page = item.get(key)
-        if type(page) is not int or page <= 0 or page not in supporting:
+        if type(page) is not int or page <= 0 or page not in supporting_pages:
             raise _invalid(
                 f"{family}[{index}] physical page conflicts with the verified fact",
                 fact_id,

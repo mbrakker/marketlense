@@ -68,3 +68,37 @@ def test_key_figure_does_not_add_an_inferred_unit_to_a_source_display() -> None:
     )
 
     assert figures[0]["figure"] == "58 thousand"
+
+
+def test_key_figure_preserves_multi_fact_binding_from_metric_spine() -> None:
+    figures = build_key_figures(
+        metric_spine=[
+            {
+                "metric_id": "regional-comparison",
+                "evidence_id": "fact-na",
+                "evidence_ids": ["fact-na", "fact-apac"],
+                "label": "Regional attention-index comparison",
+                "value": "128 versus 131",
+                "unit": "index",
+                "confidence": "high",
+            }
+        ],
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {"id": "fact-na", "text": "North America: 128."},
+                    {"id": "fact-apac", "text": "APAC: 131."},
+                ]
+            }
+        },
+        insights_final=[
+            {
+                "id": "regional-comparison",
+                "evidence_id": "fact-na",
+                "evidence_ids": ["fact-na", "fact-apac"],
+                "evidence": "North America: 128. APAC: 131.",
+            }
+        ],
+    )
+
+    assert figures[0]["evidence_ids"] == ["fact-na", "fact-apac"]

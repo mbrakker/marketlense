@@ -123,7 +123,12 @@
             "type": "array",
             "items": { "type": "string" }
           },
-          "evidence_id": { "type": "string" }
+          "evidence_id": { "type": "string" },
+          "evidence_ids": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1
+          }
         }
       }
     },
@@ -216,6 +221,11 @@
           "why_it_matters": { "type": "string" },
           "caveat": { "type": "string" },
           "evidence_id": { "type": "string" },
+          "evidence_ids": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1
+          },
           "related_chart_candidate": { "type": "string" }
         }
       }
@@ -249,6 +259,11 @@
           },
           "evidence_confidence": { "type": "string" },
           "evidence_id": { "type": "string" },
+          "evidence_ids": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1
+          },
           "source_page": { "type": ["integer", "null"] },
           "avoid_reason_if_weak": { "type": "string" }
         }
@@ -378,6 +393,11 @@
           "id": { "type": "string" },
           "text": { "type": "string" },
           "evidence_id": { "type": "string" },
+          "evidence_ids": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1
+          },
           "evidence": { "type": "string" },
           "evidence_spans": {
             "type": "array",
@@ -455,6 +475,11 @@
           "id": { "type": "string" },
           "text": { "type": "string" },
           "evidence_id": { "type": "string" },
+          "evidence_ids": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1
+          },
           "evidence": { "type": "string" },
           "evidence_spans": {
             "type": "array",

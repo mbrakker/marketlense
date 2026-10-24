@@ -747,3 +747,20 @@ and the DV APAC/North America comparison without both bindings. No canonical,
 publication, or WordPress write occurred. E18 remains Active/PARTIAL, Step 2
 remains PARTIAL/NO-GO, and Step 3 remains unstarted/not ready. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Verified-mode downstream multi-fact binding correction — 2026-10-24:** The
+downstream artifact path now carries exact primary-first `evidence_ids` for
+legitimate multi-fact insights through normalization, span binding,
+metric-spine/key-figure projection, grounding inventory, claim ledgers, and
+verified binding validation. Unknown or unbound additional IDs still fail
+closed, and the shortlisting cache identity advanced to `:9`. Focused and
+affected tests passed 344/1 skip. A fresh isolated GPT-6 Luna downstream replay
+with retained hash-matched PDFs produced zero grounding issues for Criteo (7
+artifact + 8 grounding calls), DoubleVerify (7 + 7), and Adjust (7 + 7), with
+measured total 541,136 tokens, $0.133832, and 944.964 seconds. The frozen-five
+provider-free selection replay remains 15/39 and 29 identities with zero calls;
+it does not prove live selection improvement. The old retained Criteo/DV
+artifacts remain unchanged and fail closed as before. Algolia's separate
+admission/lineage blocker remains fail-closed; E18 is Active/PARTIAL, Step 2 is
+PARTIAL/NO-GO, and Step 3 is not ready. Evidence:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
