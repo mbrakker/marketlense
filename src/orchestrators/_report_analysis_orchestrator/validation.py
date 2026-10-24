@@ -2020,8 +2020,7 @@ def _run_validation_regeneration_loop(
             issue
             for issue in current_validation_report.issues
             if str(issue.rule_id or "") in _VERIFIED_STRUCTURAL_VALIDATION_CODES
-            or str(issue.violation_type or "")
-            in _VERIFIED_STRUCTURAL_VALIDATION_CODES
+            or str(issue.violation_type or "") in _VERIFIED_STRUCTURAL_VALIDATION_CODES
         ]
         if structural_issues:
             code = str(

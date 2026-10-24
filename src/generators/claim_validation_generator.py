@@ -518,9 +518,7 @@ def _candidates(
         stable_id = str(
             raw.get("id") or raw.get("figure_id") or raw.get("key_figure_id") or index
         ).strip()
-        figure_text = metric_claim_text(
-            raw, include_observations=verified_facts_only
-        )
+        figure_text = metric_claim_text(raw, include_observations=verified_facts_only)
         if figure_text:
             add(
                 "key_figures",

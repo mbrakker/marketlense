@@ -93,9 +93,7 @@ def _render_build_provenance(
     """Expose existing run and lineage identities in the rendered review artifact."""
     authority = analysis.verified_authority_context
     factual_evidence_packs = (
-        authority.evidence_packs
-        if authority is not None
-        else analysis.evidence_packs
+        authority.evidence_packs if authority is not None else analysis.evidence_packs
     )
     artifact_hash = sha256_json(
         {

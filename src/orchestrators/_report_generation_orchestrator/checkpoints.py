@@ -1304,9 +1304,7 @@ def _analysis_checkpoint_payload(
             "data_dict": dict(analysis.data_dict),
             "evidence_paths": dict(analysis.evidence_paths),
             "evidence_packs": dict(analysis.evidence_packs),
-            "authoritative_evidence_packs": dict(
-                analysis.authoritative_evidence_packs
-            ),
+            "authoritative_evidence_packs": dict(analysis.authoritative_evidence_packs),
             "verified_authority_context": (
                 asdict(analysis.verified_authority_context)
                 if analysis.verified_authority_context is not None
@@ -1635,9 +1633,7 @@ def _analysis_state_from_checkpoint(
             schema_version=str(raw_authority.get("schema_version") or "1.0"),
             source_identity=str(raw_authority.get("source_identity") or ""),
             source_pdf_sha256=str(raw_authority.get("source_pdf_sha256") or ""),
-            verified_fact_digest=str(
-                raw_authority.get("verified_fact_digest") or ""
-            ),
+            verified_fact_digest=str(raw_authority.get("verified_fact_digest") or ""),
             verified_facts=dict(raw_authority.get("verified_facts") or {}),
             evidence_packs=dict(raw_authority.get("evidence_packs") or {}),
         )

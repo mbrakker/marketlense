@@ -1141,9 +1141,7 @@ def _require_verified_authority_snapshot(
             )
         return None
     cache = artifacts.get("_cache") if isinstance(artifacts, dict) else None
-    metadata = (
-        cache.get("visual_authority_canary") if isinstance(cache, dict) else None
-    )
+    metadata = cache.get("visual_authority_canary") if isinstance(cache, dict) else None
     if not isinstance(metadata, dict) or metadata.get("enabled") is not True:
         raise AppError(
             code="verified_facts_canary_artifacts_missing",

@@ -231,9 +231,7 @@ def build_verified_authority_context(
         raise _invalid("verified authority artifacts are missing")
     cache = artifacts.get("_cache")
     metadata = (
-        cache.get("visual_authority_canary")
-        if isinstance(cache, Mapping)
-        else None
+        cache.get("visual_authority_canary") if isinstance(cache, Mapping) else None
     )
     if not isinstance(metadata, Mapping) or metadata.get("enabled") is not True:
         raise _invalid("verified authority canary metadata is missing")
