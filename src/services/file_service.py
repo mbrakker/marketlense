@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import logging
@@ -114,6 +115,74 @@ _WRITE_LOCKS_GUARD = threading.Lock()
 _WRITE_LOCKS: dict[str, threading.Lock] = {}
 
 
+def _lexical_absolute_path(path: str | Path) -> Path:
+    candidate = Path(path).expanduser()
+    return candidate if candidate.is_absolute() else Path.cwd() / candidate
+
+
+def _path_component_redirect_state(path: Path) -> str | None:
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        if exc.errno in {errno.ENAMETOOLONG, errno.ENOTDIR}:
+            return None
+        return "path_inspection_failed"
+    if stat.S_ISLNK(metadata.st_mode):
+        return "path_redirected"
+    is_junction = getattr(path, "is_junction", None)
+    if callable(is_junction):
+        try:
+            if is_junction():
+                return "path_redirected"
+        except OSError:
+            return "path_inspection_failed"
+    if getattr(metadata, "st_file_attributes", 0) & 0x400:
+        return "path_redirected"
+    return None
+
+
+def path_redirect_reason(
+    path: str | Path,
+    *,
+    allowed_root: str | Path | None = None,
+) -> str | None:
+    """Return a typed reason when a path traverses a symlink or reparse point.
+
+    ``allowed_root`` is the configured root whose own alias is allowed.  Only
+    components below that root are inspected, so a caller may intentionally
+    configure an output root through a symlink while still rejecting a child
+    redirect that could escape the output boundary.
+    """
+
+    lexical_path = _lexical_absolute_path(path)
+    if allowed_root is not None:
+        lexical_root = _lexical_absolute_path(allowed_root)
+        try:
+            relative_parts = lexical_path.relative_to(lexical_root).parts
+        except ValueError:
+            current = Path(lexical_path.anchor)
+            parts = tuple(
+                part for part in lexical_path.parts if part != lexical_path.anchor
+            )
+        else:
+            current = lexical_root
+            parts = relative_parts
+    else:
+        current = Path(lexical_path.anchor)
+        parts = tuple(
+            part for part in lexical_path.parts if part != lexical_path.anchor
+        )
+
+    for component in parts:
+        current /= component
+        reason = _path_component_redirect_state(current)
+        if reason is not None:
+            return reason
+    return None
+
+
 def _normalize_glob_pattern(raw_pattern: str) -> str:
     pattern = str(raw_pattern or "").strip() or "*"
     normalized = pattern.replace("\\", "/")
@@ -192,6 +261,11 @@ def _pipeline_checkpoint_path(
         _validate_pipeline_checkpoint_candidate(root, path)
         return path
     except AppError as normal_error:
+        if normal_error.context.get("reason") in {
+            "path_redirected",
+            "path_inspection_failed",
+        }:
+            raise
         compact_path = (
             root
             / _COMPACT_PIPELINE_CHECKPOINT_DIR
@@ -260,6 +334,13 @@ def _pipeline_checkpoint_path_invalid(
 
 
 def _validate_pipeline_checkpoint_candidate(root: Path, path: Path) -> None:
+    redirect_reason = path_redirect_reason(path, allowed_root=root)
+    if redirect_reason is not None:
+        raise _pipeline_checkpoint_path_invalid(
+            checkpoint_root=str(root),
+            path=path,
+            reason=redirect_reason,
+        )
     try:
         resolved = path.resolve(strict=False)
         destination_units = windows_path_units(resolved)
@@ -944,6 +1025,10 @@ def resolve_path_within_root(
             )
             return response
         resolved_candidate = candidate.resolve(strict=False)
+        redirect_reason = path_redirect_reason(
+            candidate,
+            allowed_root=Path(request.root_dir).expanduser(),
+        )
         root_exists = root.exists()
         root_is_dir = root.is_dir() if root_exists else False
         path_exists = resolved_candidate.exists()
@@ -960,6 +1045,9 @@ def resolve_path_within_root(
     if root_exists and not root_is_dir:
         valid = False
         reason = "root_not_directory"
+    elif redirect_reason is not None:
+        valid = False
+        reason = redirect_reason
     elif resolved_candidate != root and root not in resolved_candidate.parents:
         valid = False
         reason = "outside_root"

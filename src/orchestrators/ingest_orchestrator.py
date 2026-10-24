@@ -130,6 +130,7 @@ from src.services.file_service import (
     delete_file,
     file_exists,
     file_stat,
+    path_redirect_reason,
     read_text,
     write_bytes,
 )
@@ -413,7 +414,27 @@ def _batch_should_skip(
 
 def _cache_pdf_path(settings: IngestSettings, file: DriveFile) -> str:
     cache_name = safe_pdf_name(file.file_id)
-    return str(Path(settings.cache_dir) / cache_name)
+    cache_path = Path(settings.cache_dir) / cache_name
+    redirect_reason = path_redirect_reason(
+        cache_path,
+        allowed_root=Path(settings.cache_dir).expanduser(),
+    )
+    if redirect_reason is not None:
+        raise AppError(
+            code="ingest_cache_path_invalid",
+            message=(
+                "Ingest source cache path traverses a symlink or reparse point "
+                "below the configured cache root"
+            ),
+            retryable=False,
+            context={
+                "cache_dir": str(settings.cache_dir),
+                "path": str(cache_path),
+                "reason": redirect_reason,
+                "next_action": "remove redirected cache children and retry",
+            },
+        )
+    return str(cache_path)
 
 
 def _ensure_file_name(

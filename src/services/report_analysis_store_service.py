@@ -110,12 +110,36 @@ def _safe_path_measurements(
         return None, None, f"path_measurement_failed:{type(exc).__name__}", exc
 
 
+def _raise_if_pack_path_redirected(output_dir: str, path: Path) -> None:
+    reason = file_service.path_redirect_reason(
+        path,
+        allowed_root=Path(output_dir).expanduser(),
+    )
+    if reason is None:
+        return
+    raise AppError(
+        code="analysis_pack_path_invalid",
+        message=(
+            "Report-analysis pack destination traverses a symlink or reparse "
+            "point below the configured output root; choose a clean output root"
+        ),
+        retryable=False,
+        context={
+            "output_dir": output_dir,
+            "path": str(path),
+            "reason": reason,
+            "next_action": "remove redirected child directories and retry",
+        },
+    )
+
+
 def _bounded_pack_components(
     output_dir: str, report_slug: str, pack_name: str
 ) -> tuple[str, str]:
     """Resolve deterministic names within both destination and atomic-temp budgets."""
 
     plain_path = _report_base_dir(output_dir, report_slug) / f"{pack_name}.json"
+    _raise_if_pack_path_redirected(output_dir, plain_path)
     if _path_fits(plain_path):
         return report_slug, pack_name
 
@@ -123,6 +147,7 @@ def _bounded_pack_components(
         :_PATH_COMPONENT_HASH_LENGTH
     ]
     slug_path = _report_base_dir(output_dir, hash_slug) / f"{pack_name}.json"
+    _raise_if_pack_path_redirected(output_dir, slug_path)
     if _path_fits(slug_path):
         slug_destination_units, slug_atomic_units, _, _ = _safe_path_measurements(
             slug_path
@@ -138,6 +163,7 @@ def _bounded_pack_components(
             compact_path = (
                 _report_base_dir(output_dir, compact_slug) / f"{pack_name}.json"
             )
+            _raise_if_pack_path_redirected(output_dir, compact_path)
             if compact_slug and _path_fits(compact_path):
                 return compact_slug, pack_name
 
@@ -145,6 +171,7 @@ def _bounded_pack_components(
         :_PATH_COMPONENT_HASH_LENGTH
     ]
     minimum_path = _report_base_dir(output_dir, hash_slug) / f"{pack_hash}.json"
+    _raise_if_pack_path_redirected(output_dir, minimum_path)
     (
         minimum_destination_units,
         minimum_atomic_units,
@@ -183,6 +210,7 @@ def _bounded_pack_components(
         report_slug, _PATH_COMPONENT_HASH_LENGTH + slug_room
     )
     compact_base = _report_base_dir(output_dir, compact_slug) / f"{pack_hash}.json"
+    _raise_if_pack_path_redirected(output_dir, compact_base)
     compact_base_destination_units, _, _, _ = _safe_path_measurements(compact_base)
     pack_room = max(
         0,
@@ -193,6 +221,7 @@ def _bounded_pack_components(
         pack_name, _PATH_COMPONENT_HASH_LENGTH + pack_room
     )
     compact_path = _report_base_dir(output_dir, compact_slug) / f"{compact_pack}.json"
+    _raise_if_pack_path_redirected(output_dir, compact_path)
     (
         compact_destination_units,
         compact_atomic_units,

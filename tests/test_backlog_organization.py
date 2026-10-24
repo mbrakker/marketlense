@@ -92,9 +92,19 @@ def test_every_proposal_has_one_mapping_and_one_full_specification() -> None:
         for status, task_id in REGISTER.findall(MASTER.read_text(encoding="utf-8"))
         if status == "Active"
     }
-    assert all(owner in active for _, owner in mappings), (
-        "technical slice has no Active canonical owner"
+    rows = REGISTER.findall(MASTER.read_text(encoding="utf-8"))
+    mapped_owners = {owner for _, owner in mappings}
+    closed_mapped_owners = mapped_owners - active
+    closed_ids = {task_id for status, task_id in rows if status == "Closed"}
+    assert closed_mapped_owners <= closed_ids, (
+        "technical slice has no Active or explicitly Closed canonical owner"
     )
+    if closed_mapped_owners:
+        for path in WORKSTREAMS:
+            text = path.read_text(encoding="utf-8")
+            if any(f"## {owner}. " in text for owner in closed_mapped_owners):
+                assert "Canonical status:** Closed" in text
+                assert "final closure evidence" in text.lower()
     for path in WORKSTREAMS:
         text = path.read_text(encoding="utf-8")
         assert text.count("Luna implementation prompt") >= len(OWNER.findall(text)), (
@@ -169,8 +179,8 @@ def test_master_remains_compatible_with_existing_backlog_validator() -> None:
 
     summary, violations = validate_canonical_backlog(MASTER.read_text(encoding="utf-8"))
     assert not violations, violations
-    assert summary.active_register_items == 33
-    assert summary.detailed_active_sections == 33
+    assert summary.active_register_items == 32
+    assert summary.detailed_active_sections == 32
 
 
 def test_migrated_quality_links_are_relative_to_workstream() -> None:

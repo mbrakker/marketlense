@@ -30,7 +30,13 @@ from src.orchestrators.remediation_orchestrator import (
 )
 from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.services.drive_service import download_pdf, list_pdfs
-from src.services.file_service import file_exists, file_md5, read_bytes, write_bytes
+from src.services.file_service import (
+    file_exists,
+    file_md5,
+    path_redirect_reason,
+    read_bytes,
+    write_bytes,
+)
 from src.services.pdf_service import check_pdf_eof
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
@@ -258,6 +264,15 @@ def _candidate_cache_paths(
     return canonical_path, legacy_candidate_path
 
 
+def _validate_candidate_cache_path(path: Path, settings: IngestSettings) -> None:
+    redirect_reason = path_redirect_reason(
+        path,
+        allowed_root=Path(settings.cache_dir).expanduser(),
+    )
+    if redirect_reason is not None:
+        raise _candidate_cache_path_error(path, reason=redirect_reason)
+
+
 def _download_if_needed(
     file: DriveFile,
     settings: IngestSettings,
@@ -265,6 +280,9 @@ def _download_if_needed(
     dependencies: CandidateExtractionDependencies,
 ) -> tuple[str, Optional[str]]:
     cache_path_obj, legacy_path_obj = _candidate_cache_paths(file, settings)
+    _validate_candidate_cache_path(cache_path_obj, settings)
+    if legacy_path_obj is not None:
+        _validate_candidate_cache_path(legacy_path_obj, settings)
     cache_path = str(cache_path_obj)
     md5 = None
     canonical_exists = False

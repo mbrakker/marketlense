@@ -177,6 +177,13 @@ def ocr_text_cache_key(
 
 
 def cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
+    cache_root = Path(cache_root)
+    redirect_reason = file_service.path_redirect_reason(
+        cache_root,
+        allowed_root=cache_root.parent.parent,
+    )
+    if redirect_reason is not None:
+        raise _cache_path_invalid(cache_root, cache_root, redirect_reason)
     try:
         cache_root.expanduser().resolve(strict=False)
     except (OSError, RuntimeError, TypeError, ValueError) as exc:
@@ -184,6 +191,12 @@ def cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
             cache_root, None, "root_resolution_failed", exc
         ) from exc
     path = cache_root / f"{prefix}_{cache_key}.json"
+    redirect_reason = file_service.path_redirect_reason(
+        path,
+        allowed_root=cache_root.parent.parent,
+    )
+    if redirect_reason is not None:
+        raise _cache_path_invalid(cache_root, path, redirect_reason)
     if _cache_path_fits(
         path, final_budget=file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
     ):
@@ -192,6 +205,12 @@ def cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
         cache_root.parent / sha256(cache_root.name.encode("utf-8")).hexdigest()[:12]
     )
     compact_path = compact_root / f"{prefix}_{cache_key[:12]}.json"
+    redirect_reason = file_service.path_redirect_reason(
+        compact_path,
+        allowed_root=cache_root.parent.parent,
+    )
+    if redirect_reason is not None:
+        raise _cache_path_invalid(cache_root, compact_path, redirect_reason)
     if _cache_path_fits(
         compact_path, final_budget=file_service.WINDOWS_MAX_PATH_LENGTH - 1
     ):
