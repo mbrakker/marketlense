@@ -11,6 +11,7 @@ from uuid import uuid4
 import typer
 
 from src._cli.app import cli_app, console
+from src._cli.pipeline import build_capability_preflight_request
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.deferred_work import DeferredWorkQueueMigrationRequest
 from src.contracts.files import FileStatRequest
@@ -37,6 +38,7 @@ from src.orchestrators.workflow_supervisor_orchestrator import (
     run_supervisor_once,
 )
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
+from src.orchestrators.pipeline_preflight_orchestrator import run_capability_preflight
 from src.services.config_service import (
     build_ingest_settings,
     load_settings,
@@ -103,6 +105,48 @@ def _state_db(ctx) -> str:
 
 def _stable_hash(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _capability_execution_request(
+    ctx, *, live: bool, queue_scope: tuple[str, ...] | None = None
+):
+    request = build_capability_preflight_request(
+        profile="autonomous_mvp",
+        ctx=ctx,
+        live=live,
+        queue_scope=queue_scope,
+        use_process_profile=True,
+    )
+    report = run_capability_preflight(request, ctx)
+    return request, report
+
+
+def _state_db_from_capability_request(request, ctx) -> str:
+    policies = request.queue_policies
+    seed_workflow_queue_controls(
+        request.settings.state_db,
+        [
+            WorkflowQueueControl(
+                schema_version=policy.schema_version,
+                queue_name=policy.queue_name,
+                mode="active",
+                enabled=policy.enabled,
+                worker_concurrency_limit=policy.max_workers,
+                maximum_pending=policy.maximum_pending,
+                maximum_fanout=policy.maximum_fanout,
+                max_attempts=policy.max_attempts,
+                lease_seconds=policy.lease_seconds,
+                budget_profile=policy.budget_profile,
+                retry_delay_seconds=policy.retry_delay_seconds,
+                emergency_stop_reason="",
+                updated_at_utc="",
+                updated_by="config_seed",
+            )
+            for policy in policies.values()
+        ],
+        ctx,
+    )
+    return request.settings.state_db
 
 
 @cli_app.command("queue-submit-discovery")
@@ -446,10 +490,25 @@ def workflow_worker(
     worker_id: str = typer.Option(
         "", help="Stable worker identity; generated if omitted"
     ),
+    live: bool = typer.Option(
+        False,
+        "--live",
+        help="Run bounded read-only provider capability probes before claiming work",
+    ),
 ) -> None:
     """Run a bounded worker invocation; an external supervisor owns recurrence."""
     ctx = _ctx("cli_workflow_worker")
-    state_db = _state_db(ctx)
+    request = None
+    report = None
+    try:
+        request, report = _capability_execution_request(
+            ctx, live=live, queue_scope=(queue,)
+        )
+        state_db = _state_db_from_capability_request(request, ctx)
+        capability_readiness = report.execution_readiness
+    except Exception:
+        state_db = _state_db(ctx)
+        capability_readiness = None
     identity = worker_id or f"workflow-worker:{uuid4()}"
     outcomes = []
     for _ in range(limit):
@@ -458,28 +517,48 @@ def workflow_worker(
             queue_name=queue,
             worker_id=identity,
             ctx=ctx,
+            capability_readiness=capability_readiness,
         )
         outcomes.append(asdict(result))
         if result.terminal_status == "idle":
             break
-    console.print_json(data=outcomes)
+    console.print_json(
+        data={
+            "preflight": asdict(report) if report is not None else None,
+            "outcomes": outcomes,
+        }
+    )
 
 
 @cli_app.command("supervise-workflows")
 def supervise_workflows(
     once: bool = typer.Option(False, "--once", help="Required: run one bounded pass"),
     worker_id: str = typer.Option("", help="Stable supervisor identity"),
+    live: bool = typer.Option(
+        False,
+        "--live",
+        help="Run bounded read-only provider capability probes before dispatch",
+    ),
 ) -> None:
     """Compose existing durable controls once; the host owns recurrence."""
 
     if not once:
         raise typer.BadParameter("--once is required; this command never loops")
     ctx = _ctx("cli_supervise_workflows")
-    state_db = _state_db(ctx)
-    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
-    control = load_workflow_control_settings(
-        ConfigLoadRequest(schema_version="1.0", path=""), ctx
-    )
+    report = None
+    try:
+        capability_request, report = _capability_execution_request(ctx, live=live)
+        state_db = _state_db_from_capability_request(capability_request, ctx)
+        settings = capability_request.settings
+        control = capability_request.workflow_control
+        capability_readiness = report.execution_readiness
+    except Exception:
+        state_db = _state_db(ctx)
+        settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+        control = load_workflow_control_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), ctx
+        )
+        capability_readiness = None
     ingest_settings = build_ingest_settings(
         IngestSettingsBuildRequest(schema_version="1.0", app_settings=settings), ctx
     )
@@ -495,6 +574,7 @@ def supervise_workflows(
             worker_id=worker_id or f"workflow-supervisor:{ctx.run_id}",
             now_utc=utc_now_seconds_iso(),
             settings=control.supervisor,
+            capability_readiness=capability_readiness,
         ),
         ctx,
         dependencies=SupervisorDependencies(
@@ -514,7 +594,12 @@ def supervise_workflows(
             ),
         ),
     )
-    console.print_json(data=asdict(result))
+    console.print_json(
+        data={
+            "preflight": asdict(report) if report is not None else None,
+            "result": asdict(result),
+        }
+    )
     exit_codes = {
         "healthy": 0,
         "partially_deferred": 3,

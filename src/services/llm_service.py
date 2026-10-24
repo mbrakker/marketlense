@@ -39,7 +39,10 @@ from src.services._llm_service.openrouter import (
     openrouter_chat_json,
 )
 from src.services._llm_service.openrouter_preflight import preflight_openrouter_model
-from src.services._llm_service.preflight import preflight_openai_model
+from src.services._llm_service.preflight import (
+    preflight_openai_model,
+    preflight_openai_vector_store,
+)
 from src.services._llm_service.vector_store import (
     openai_vector_store_attach_file,
     openai_vector_store_create,
@@ -86,4 +89,5 @@ __all__ = [
     "openai_vector_store_update_metadata",
     "openai_vector_store_upload_file",
     "preflight_openai_model",
+    "preflight_openai_vector_store",
 ]

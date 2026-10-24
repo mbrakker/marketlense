@@ -266,6 +266,7 @@ def test_parallel_supervisor_dispatches_materialized_downstream_work_in_same_pas
         worker_id="supervisor-autonomous-profile",
         now_utc="2026-08-11T00:00:00Z",
         settings=settings,
+        capability_readiness=ready_capability_readiness(WORKFLOW_QUEUE_NAMES),
     )
     result = run_supervisor_once(
         request,

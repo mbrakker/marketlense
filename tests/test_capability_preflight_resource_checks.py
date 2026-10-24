@@ -7,9 +7,16 @@ import pytest
 
 from src.contracts.llm import OpenAIModelPreflightResponse
 from src.contracts.pipeline_preflight import CapabilityPreflightRequest
-from src.contracts.files import ExecutableAvailabilityResponse
+from src.contracts.files import (
+    DeleteFileResponse,
+    ExecutableAvailabilityResponse,
+    FileStatResponse,
+    WriteBytesResponse,
+)
 from src.contracts.sqlite_migration import SqliteCapabilityInspectionResponse
 from src.orchestrators.pipeline_preflight_orchestrator import (
+    _probe_storage_path,
+    _probe_writable_path,
     run_capability_preflight,
 )
 from tests.test_capability_preflight_orchestrator import (
@@ -19,6 +26,7 @@ from tests.test_capability_preflight_orchestrator import (
     _queues,
     _settings,
 )
+from src.utils.errors import AppError
 
 
 @pytest.mark.parametrize(
@@ -33,6 +41,135 @@ def test_python_runtime_support_matches_project_minimum(
     )
 
     assert _python_runtime_supported(version, executable) is expected
+
+
+def test_storage_probe_cleans_owned_path_when_write_fails(tmp_path: Path) -> None:
+    probe_paths: list[str] = []
+
+    class Dependencies:
+        def file_stat(self, request, _ctx):
+            return FileStatResponse(
+                schema_version="1.0",
+                path=request.path,
+                exists=Path(request.path).exists() or request.path == str(tmp_path),
+                is_dir=request.path == str(tmp_path),
+            )
+
+        def write_bytes(self, request, _ctx):
+            probe_paths.append(request.path)
+            Path(request.path).write_bytes(b"owned")
+            raise AppError(code="file_write_failed", message="controlled write failure")
+
+        def delete_file(self, request, _ctx):
+            Path(request.path).unlink(missing_ok=True)
+            return DeleteFileResponse(
+                schema_version="1.0", path=request.path, deleted=True
+            )
+
+    writable, reason = _probe_storage_path(str(tmp_path), Dependencies(), _ctx())
+
+    assert writable is False
+    assert reason == "file_write_failed"
+    assert len(probe_paths) == 1
+    assert not Path(probe_paths[0]).exists()
+
+
+def test_storage_probe_reports_cleanup_failure_distinctly(tmp_path: Path) -> None:
+    class Dependencies:
+        def file_stat(self, request, _ctx):
+            return FileStatResponse(
+                schema_version="1.0",
+                path=request.path,
+                exists=request.path == str(tmp_path),
+                is_dir=request.path == str(tmp_path),
+            )
+
+        def write_bytes(self, request, _ctx):
+            Path(request.path).write_bytes(b"owned")
+            return WriteBytesResponse(
+                schema_version="1.0", path=request.path, bytes_written=5, md5=""
+            )
+
+        def delete_file(self, request, _ctx):
+            raise AppError(
+                code="file_delete_failed", message="controlled cleanup failure"
+            )
+
+    writable, reason = _probe_storage_path(str(tmp_path), Dependencies(), _ctx())
+
+    assert writable is False
+    assert reason == "storage_probe_cleanup_failed"
+    for leftover in tmp_path.glob(".marketlense-preflight-*.tmp"):
+        leftover.unlink()
+
+
+def test_legacy_writable_probe_uses_unique_owned_paths(tmp_path: Path) -> None:
+    probe_paths: list[str] = []
+
+    class Dependencies:
+        def file_stat(self, request, _ctx):
+            return FileStatResponse(
+                schema_version="1.0",
+                path=request.path,
+                exists=request.path == str(tmp_path),
+                is_dir=request.path == str(tmp_path),
+            )
+
+        def write_bytes(self, request, _ctx):
+            probe_paths.append(request.path)
+            return WriteBytesResponse(
+                schema_version="1.0", path=request.path, bytes_written=9, md5=""
+            )
+
+        def delete_file(self, request, _ctx):
+            return DeleteFileResponse(
+                schema_version="1.0", path=request.path, deleted=True
+            )
+
+    first = _probe_writable_path("output_dir", str(tmp_path), _ctx(), Dependencies())
+    second = _probe_writable_path("output_dir", str(tmp_path), _ctx(), Dependencies())
+
+    assert first.status == "pass"
+    assert second.status == "pass"
+    assert len(probe_paths) == 2
+    assert probe_paths[0] != probe_paths[1]
+
+
+def test_storage_preflight_blocks_when_filesystem_free_space_is_below_floor(
+    tmp_path: Path,
+) -> None:
+    settings = replace(_settings(tmp_path), preflight_min_free_space_bytes=100)
+    dependencies = replace(
+        _dependencies(),
+        inspect_filesystem_usage=lambda request, _ctx: type(
+            "Usage",
+            (),
+            {
+                "available_bytes": 99,
+                "free_bytes": 99,
+                "total_bytes": 1_000,
+                "path": request.path,
+            },
+        )(),
+    )
+
+    report = run_capability_preflight(
+        CapabilityPreflightRequest(
+            schema_version="1.0",
+            profile_name="manual",
+            settings=settings,
+            workflow_control=_control("manual"),
+            queue_policies=_queues(),
+            live_checks=False,
+        ),
+        _ctx(),
+        dependencies=dependencies,
+    )
+
+    checks = [item for item in report.checks if item.capability == "free_space"]
+    assert checks
+    assert all(item.status == "blocked" for item in checks)
+    assert all(item.reason_code == "insufficient_free_space" for item in checks)
 
 
 def test_manual_llm_workflow_checks_the_usage_ledger(tmp_path: Path) -> None:

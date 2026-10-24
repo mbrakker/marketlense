@@ -14455,6 +14455,214 @@
       "required": [],
       "type": "object"
     },
+    "src.contracts.capability_readiness.CapabilityExecutionReadiness": {
+      "additionalProperties": false,
+      "properties": {
+        "blocked_workflows": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
+        },
+        "decisions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.capability_readiness.CapabilityWorkflowDecision"
+          },
+          "type": "array"
+        },
+        "deferred_workflows": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
+        },
+        "executable_workflows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "profile_name": {
+          "enum": [
+            "manual",
+            "autonomous_mvp"
+          ]
+        },
+        "proof": {
+          "$ref": "#/$defs/src.contracts.capability_readiness.CapabilityReadinessProof"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "workflow_scope": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile_name",
+        "workflow_scope",
+        "executable_workflows",
+        "blocked_workflows",
+        "deferred_workflows",
+        "decisions",
+        "proof"
+      ],
+      "type": "object"
+    },
+    "src.contracts.capability_readiness.CapabilityReadinessProof": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_reference": {
+          "type": "string"
+        },
+        "asset_identity": {
+          "type": "string"
+        },
+        "build_identity": {
+          "type": "string"
+        },
+        "configuration_fingerprint": {
+          "type": "string"
+        },
+        "dependency_identity": {
+          "type": "string"
+        },
+        "execution_policy_fingerprint": {
+          "type": "string"
+        },
+        "expires_at_utc": {
+          "type": "string"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "profile_name": {
+          "enum": [
+            "manual",
+            "autonomous_mvp"
+          ]
+        },
+        "proof_id": {
+          "type": "string"
+        },
+        "provider_identity": {
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "remediation": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sqlite_identity": {
+          "type": "string"
+        },
+        "tool_identity": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "verification_mode": {
+          "type": "string"
+        },
+        "workflow_scope": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "proof_id",
+        "profile_name",
+        "workflow_scope",
+        "configuration_fingerprint",
+        "execution_policy_fingerprint",
+        "build_identity",
+        "dependency_identity",
+        "asset_identity",
+        "sqlite_identity",
+        "provider_identity",
+        "tool_identity",
+        "generated_at_utc",
+        "expires_at_utc",
+        "verification_mode",
+        "reason_codes",
+        "remediation"
+      ],
+      "type": "object"
+    },
+    "src.contracts.capability_readiness.CapabilityWorkflowDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "executable": {
+          "type": "boolean"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "remediations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "degraded",
+            "blocked",
+            "not_required",
+            "not_checked"
+          ]
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "status",
+        "executable",
+        "reason_codes",
+        "remediations"
+      ],
+      "type": "object"
+    },
     "src.contracts.categories.CategoryAssignment": {
       "additionalProperties": false,
       "properties": {
@@ -15862,6 +16070,9 @@
           "type": "number"
         },
         "pdf_text_sample_pages": {
+          "type": "integer"
+        },
+        "preflight_min_free_space_bytes": {
           "type": "integer"
         },
         "public_editorial_quality_disabled_rule_waivers": {
@@ -22168,6 +22379,50 @@
       ],
       "type": "object"
     },
+    "src.contracts.files.FileSystemUsageRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.FileSystemUsageResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "available_bytes": {
+          "type": "integer"
+        },
+        "free_bytes": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "total_bytes": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "total_bytes",
+        "free_bytes",
+        "available_bytes"
+      ],
+      "type": "object"
+    },
     "src.contracts.files.JsonObjectCacheReadRequest": {
       "additionalProperties": false,
       "properties": {
@@ -23847,6 +24102,9 @@
         "pdf_text_sample_pages": {
           "type": "integer"
         },
+        "preflight_min_free_space_bytes": {
+          "type": "integer"
+        },
         "public_editorial_quality_disabled_rule_waivers": {
           "additionalProperties": {
             "type": "string"
@@ -24560,6 +24818,45 @@
       "required": [
         "schema_version",
         "model",
+        "accessible",
+        "provider_calls"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.OpenAIVectorStorePreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "api_key"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.OpenAIVectorStorePreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accessible": {
+          "type": "boolean"
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
         "accessible",
         "provider_calls"
       ],
@@ -30949,6 +31246,16 @@
         "elapsed_ms": {
           "type": "integer"
         },
+        "execution_readiness": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.capability_readiness.CapabilityExecutionReadiness"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "external_writes": {
           "type": "integer"
         },
@@ -30957,6 +31264,9 @@
             "manual",
             "autonomous_mvp"
           ]
+        },
+        "proof_reference": {
+          "type": "string"
         },
         "provider_calls": {
           "type": "integer"
@@ -31009,6 +31319,12 @@
     "src.contracts.pipeline_preflight.CapabilityPreflightRequest": {
       "additionalProperties": false,
       "properties": {
+        "allow_degraded_workflows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "browser_settings": {
           "anyOf": [
             {
@@ -31057,6 +31373,9 @@
             "manual",
             "autonomous_mvp"
           ]
+        },
+        "proof_ttl_seconds": {
+          "type": "integer"
         },
         "publish_settings": {
           "anyOf": [
@@ -31112,6 +31431,12 @@
         },
         "workflow_control": {
           "$ref": "#/$defs/src.contracts.workflow_control.WorkflowControlSettings"
+        },
+        "workflow_scope": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -51752,6 +52077,22 @@
     "src.contracts.workflow_control.PipelineExecutionAuthorizationRequest": {
       "additionalProperties": false,
       "properties": {
+        "authorization_mode": {
+          "enum": [
+            "preview",
+            "execute"
+          ]
+        },
+        "capability_readiness": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.capability_readiness.CapabilityExecutionReadiness"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "expected_workflow": {
           "type": "string"
         },
@@ -52698,6 +53039,16 @@
     "src.contracts.workflow_control.SupervisorRunRequest": {
       "additionalProperties": false,
       "properties": {
+        "capability_readiness": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.capability_readiness.CapabilityExecutionReadiness"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "now_utc": {
           "type": "string"
         },

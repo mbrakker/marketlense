@@ -5,6 +5,8 @@ import logging
 from src.contracts.llm import (
     OpenAIModelPreflightRequest,
     OpenAIModelPreflightResponse,
+    OpenAIVectorStorePreflightRequest,
+    OpenAIVectorStorePreflightResponse,
 )
 from src.contracts.run_context import RunContext
 from src.services._llm_service.openai_client import _build_openai_client
@@ -12,6 +14,55 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.llm_service")
+
+
+def preflight_openai_vector_store(
+    request: OpenAIVectorStorePreflightRequest, ctx: RunContext
+) -> OpenAIVectorStorePreflightResponse:
+    """Verify vector-store authorization with one bounded read-only list call."""
+
+    if not str(request.api_key or "").strip():
+        raise AppError(
+            code="openai_missing_api_key",
+            message="OpenAI API credential is not configured",
+            retryable=False,
+        )
+    timeout = min(max(float(request.timeout_seconds), 0.1), 10.0)
+    client = _build_openai_client(
+        api_key=request.api_key,
+        timeout_seconds=timeout,
+        operation="capability_preflight_vector_store_access",
+    )
+    try:
+        vector_stores = getattr(client, "vector_stores", None)
+        list_method = getattr(vector_stores, "list", None)
+        if not callable(list_method):
+            raise AppError(
+                code="vector_store_capability_unsupported",
+                message="Configured OpenAI client does not expose vector-store listing",
+                retryable=False,
+            )
+        list_method(limit=1)
+    except AppError:
+        raise
+    except Exception as exc:
+        status_code = getattr(exc, "status_code", None)
+        if status_code in {401, 403}:
+            code, retryable = "vector_store_credentials_invalid", False
+        elif status_code == 404:
+            code, retryable = "vector_store_capability_unsupported", False
+        else:
+            code, retryable = "vector_store_provider_unavailable", True
+        raise AppError(
+            code=code,
+            message="Vector-store capability preflight failed",
+            cause=exc,
+            retryable=retryable,
+            context={"provider": "openai"},
+        ) from exc
+    return OpenAIVectorStorePreflightResponse(
+        schema_version="1.0", accessible=True, provider_calls=1
+    )
 
 
 def preflight_openai_model(

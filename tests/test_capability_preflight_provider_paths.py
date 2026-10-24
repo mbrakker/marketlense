@@ -19,6 +19,7 @@ from src.contracts.drive import (
     DriveFolderCapabilityPreflightResponse,
 )
 from src.contracts.files import ExecutableAvailabilityResponse
+from src.contracts.llm import OpenAIModelPreflightResponse
 from src.contracts.mailbox_acquisition import (
     MailboxAccessPreflightResponse,
     MailboxAcquisitionSettings,
@@ -467,6 +468,38 @@ def test_report_analysis_without_openai_key_is_scoped_blocked_without_calls(
     assert check.affected_workflows == ["report_analysis"]
     assert report.provider_calls == 0
     assert report.external_writes == 0
+
+
+def test_primary_openai_preflight_rejects_inaccessible_response(
+    tmp_path: Path,
+) -> None:
+    dependencies = _dependencies()
+    dependencies = replace(
+        dependencies,
+        preflight_openai_model=lambda request, _ctx: OpenAIModelPreflightResponse(
+            schema_version="1.0",
+            model=request.model,
+            accessible=False,
+            provider_calls=1,
+        ),
+    )
+    settings = _settings(tmp_path)
+    report = run_capability_preflight(
+        CapabilityPreflightRequest(
+            schema_version="1.0",
+            profile_name="autonomous_mvp",
+            settings=settings,
+            workflow_control=_control(),
+            queue_policies=_queues("report_analysis"),
+            live_checks=True,
+        ),
+        _ctx(),
+        dependencies=dependencies,
+    )
+
+    check = next(item for item in report.checks if item.capability == "llm_model")
+    assert check.status == "blocked"
+    assert check.reason_code == "openai_model_unavailable"
 
 
 def _mailbox_settings(tmp_path: Path) -> MailboxAcquisitionSettings:

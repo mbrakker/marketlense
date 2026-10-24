@@ -11,6 +11,7 @@ from src.contracts.performance_telemetry import (
     PerformanceTelemetrySpan,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.pipeline_preflight import CapabilityExecutionReadiness
 from src.orchestrators.workflow_queue_orchestrator import (
     WorkflowQueueHandlerRegistration,
     execute_workflow_queue_handler,
@@ -27,6 +28,9 @@ from src.services.workflow_queue_service import (
     release_expired_workflow_leases,
     start_workflow_job,
 )
+from src.orchestrators.pipeline_preflight_orchestrator import (
+    validate_execution_readiness,
+)
 from src.utils.errors import AppError
 from src.utils.logging import child_context
 
@@ -39,6 +43,7 @@ class WorkflowWorkerRunResult:
     claimed_job_id: str = ""
     terminal_status: str = "idle"
     downstream_queue_names: tuple[str, ...] = ()
+    error_code: str = ""
 
 
 def _is_budget_deferral_error(error: AppError) -> bool:
@@ -62,8 +67,31 @@ def run_workflow_worker_once(
     ctx: RunContext,
     registry: dict[tuple[str, str], WorkflowQueueHandlerRegistration] | None = None,
     now_utc: str = "",
+    capability_readiness: CapabilityExecutionReadiness | None = None,
 ) -> WorkflowWorkerRunResult:
     """Claim at most one job and never let a stale lease complete an outcome."""
+    if capability_readiness is None:
+        return WorkflowWorkerRunResult(
+            queue_name=queue_name,
+            worker_id=worker_id,
+            released_lease_job_ids=[],
+            terminal_status="blocked",
+            error_code="capability_readiness_missing",
+        )
+    try:
+        validate_execution_readiness(
+            capability_readiness,
+            expected_workflow=queue_name,
+            now_utc=now_utc,
+        )
+    except AppError as exc:
+        return WorkflowWorkerRunResult(
+            queue_name=queue_name,
+            worker_id=worker_id,
+            released_lease_job_ids=[],
+            terminal_status="blocked",
+            error_code=exc.code,
+        )
     released = release_expired_workflow_leases(
         state_db, ctx, now_utc=now_utc, actor=worker_id
     )

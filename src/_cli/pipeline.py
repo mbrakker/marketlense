@@ -40,9 +40,8 @@ from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.pipeline_preflight_orchestrator import (
-    derive_capability_workflows,
+    build_capability_preflight_request as _build_capability_preflight_request,
     run_capability_preflight,
-    workflow_profiles_for_runtime,
 )
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
@@ -149,6 +148,34 @@ def _capability_config_failure(
     )
 
 
+def build_capability_preflight_request(
+    *,
+    profile: CapabilityProfileName,
+    ctx,
+    live: bool,
+    queue_scope: tuple[str, ...] | None = None,
+    workflow_scope: tuple[str, ...] | None = None,
+    use_process_profile: bool = False,
+) -> CapabilityPreflightRequest:
+    """Keep the CLI patch surface while delegating resolution to preflight."""
+
+    return _build_capability_preflight_request(
+        profile=profile,
+        ctx=ctx,
+        live=live,
+        queue_scope=queue_scope,
+        workflow_scope=workflow_scope,
+        use_process_profile=use_process_profile,
+        load_settings_fn=load_settings,
+        load_workflow_control_settings_fn=load_workflow_control_settings,
+        load_workflow_queue_policies_fn=load_workflow_queue_policies,
+        load_browser_download_settings_fn=load_browser_download_settings,
+        load_mailbox_acquisition_settings_fn=load_mailbox_acquisition_settings,
+        load_publish_settings_fn=load_publish_settings,
+        load_publisher_inventory_settings_fn=load_publisher_inventory_settings,
+    )
+
+
 @cli_app.command("capability-preflight")
 def capability_preflight(
     profile: str = typer.Option(
@@ -169,94 +196,16 @@ def capability_preflight(
     selected_profile = cast(CapabilityProfileName, profile)
     ctx = new_run_context(task_id="cli_capability_preflight")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
-    config_request = ConfigLoadRequest(
-        schema_version="1.0",
-        path="",
-        profile_name="autonomous_mvp" if profile == "autonomous_mvp" else "",
-    )
     try:
-        settings = load_settings(config_request, ctx)
-        workflow_control = load_workflow_control_settings(config_request, ctx)
-        queue_policies = load_workflow_queue_policies(config_request, ctx)
-        workflows = derive_capability_workflows(
-            profile_name=selected_profile,
-            supervisor_enabled=workflow_control.supervisor.enabled,
-            queue_policies=queue_policies,
+        request = build_capability_preflight_request(
+            profile=selected_profile, ctx=ctx, live=live
         )
-        runtime_profiles = workflow_profiles_for_runtime(workflows)
-        workflow_profiles = [
-            workflow_control.preflight_profiles[name]
-            for name in runtime_profiles
-            if name in workflow_control.preflight_profiles
-        ]
-        browser_settings = None
-        browser_settings_config_error = None
-        if any(item.require_browser for item in workflow_profiles):
-            try:
-                browser_settings = load_browser_download_settings(config_request, ctx)
-            except AppError as exc:
-                browser_settings_config_error = exc.code
-            except Exception:
-                browser_settings_config_error = "browser_configuration_invalid"
-
-        mailbox_settings = None
-        mailbox_settings_config_error = None
-        if "mailbox_delivery" in workflows:
-            try:
-                mailbox_settings = load_mailbox_acquisition_settings(
-                    config_request, ctx
-                )
-            except AppError as exc:
-                mailbox_settings_config_error = exc.code
-            except Exception:
-                mailbox_settings_config_error = "mailbox_configuration_invalid"
-
-        publish_settings = None
-        publish_settings_config_error = None
-        if any(item.require_publish for item in workflow_profiles):
-            try:
-                publish_settings = load_publish_settings(config_request, ctx)
-            except AppError as exc:
-                publish_settings_config_error = exc.code
-            except Exception:
-                publish_settings_config_error = "publish_configuration_invalid"
-        publisher_inventory_settings = None
-        publisher_inventory_config_error = None
-        if "publisher_discovery" in workflows:
-            try:
-                publisher_inventory_settings = load_publisher_inventory_settings(
-                    config_request, ctx
-                )
-            except AppError as exc:
-                publisher_inventory_config_error = exc.code
-            except Exception:
-                publisher_inventory_config_error = (
-                    "publisher_inventory_configuration_invalid"
-                )
     except AppError as exc:
         report = _capability_config_failure(selected_profile, exc.code)
     except Exception:
         report = _capability_config_failure(selected_profile, "configuration_invalid")
     else:
-        report = run_capability_preflight(
-            CapabilityPreflightRequest(
-                schema_version="1.0",
-                profile_name=selected_profile,
-                settings=settings,
-                workflow_control=workflow_control,
-                queue_policies=queue_policies,
-                publish_settings=publish_settings,
-                publish_settings_config_error=publish_settings_config_error,
-                mailbox_settings=mailbox_settings,
-                mailbox_settings_config_error=mailbox_settings_config_error,
-                browser_settings=browser_settings,
-                browser_settings_config_error=browser_settings_config_error,
-                publisher_inventory_settings=publisher_inventory_settings,
-                publisher_inventory_config_error=publisher_inventory_config_error,
-                live_checks=live,
-            ),
-            ctx,
-        )
+        report = run_capability_preflight(request, ctx)
     console.print_json(
         data={
             "repository_commit_sha": _repository_commit_sha(ctx),
@@ -265,7 +214,7 @@ def capability_preflight(
     )
     if report.status == "blocked":
         raise typer.Exit(code=1)
-    if report.status == "degraded":
+    if report.status in {"degraded", "not_checked"}:
         raise typer.Exit(code=2)
 
 
@@ -319,6 +268,7 @@ def _resolve_cli_workflow_control(
     requested_side_effects: list[str] | None = None,
     run_profile: str = "",
     profile_overrides: dict[str, str | int | float | bool] | None = None,
+    execute: bool = False,
 ) -> dict[str, object]:
     settings = load_workflow_control_settings(
         ConfigLoadRequest(schema_version="1.0", path=""), ctx
@@ -357,12 +307,32 @@ def _resolve_cli_workflow_control(
         settings,
         ctx=ctx,
     )
+    capability_readiness = None
+    capability_report = None
+    if execute and plan.planned_side_effects and resolved.workflow:
+        capability_request = build_capability_preflight_request(
+            profile="manual",
+            ctx=ctx,
+            live=True,
+            workflow_scope=(resolved.workflow,),
+            use_process_profile=True,
+        )
+        capability_report = run_capability_preflight(capability_request, ctx)
+        capability_readiness = capability_report.execution_readiness
+        if capability_readiness is None:
+            raise AppError(
+                code="capability_readiness_missing",
+                message="Capability preflight did not produce execution readiness",
+                retryable=False,
+            )
     authorization = workflow_control.authorize_pipeline_execution(
         PipelineExecutionAuthorizationRequest(
             schema_version="1.0",
             plan=plan,
             expected_workflow=resolved.workflow,
             requested_side_effects=list(requested_side_effects or []),
+            capability_readiness=capability_readiness,
+            authorization_mode="execute" if execute else "preview",
         ),
         ctx=ctx,
     )
@@ -395,6 +365,15 @@ def _resolve_cli_workflow_control(
         "side_effect_plan": list(resolved.side_effect_plan),
         "alternatives": list(resolved.alternatives),
         "blockers": list(resolved.blockers),
+        "capability_preflight": (
+            {
+                "status": capability_report.status,
+                "proof_reference": capability_report.proof_reference,
+                "workflow_statuses": dict(capability_report.workflow_statuses),
+            }
+            if capability_report is not None
+            else None
+        ),
         "execution_plan": {
             "schema_version": plan.schema_version,
             "intent_key": plan.intent_key,
@@ -596,6 +575,7 @@ def ingest(
         intent="ingest new reports",
         ctx=ctx,
         requested_side_effects=["pdf", "model"],
+        execute=True,
     )
     s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
     settings = build_ingest_settings(
@@ -770,6 +750,7 @@ def publish_wp(
         intent="publish ready reports",
         ctx=ctx,
         requested_side_effects=["wordpress", "publish"],
+        execute=True,
     )
     settings = load_publish_settings(
         ConfigLoadRequest(schema_version="1.0", path=""), ctx

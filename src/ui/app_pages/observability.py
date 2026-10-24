@@ -3,6 +3,7 @@ from __future__ import annotations
 """Observability Streamlit pages owned by logs, cost, and storage workflows."""
 
 from dataclasses import asdict
+from pathlib import Path
 import streamlit as st
 
 from src.contracts.costs import (
@@ -10,8 +11,10 @@ from src.contracts.costs import (
     CostReportingRequest,
     CostRollupRequest,
 )
+from src.contracts.files import ListDirectoryRequest, ReadJsonRequest
 from src.contracts.semantic_ids import RunId
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
+from src.services import file_service
 from src.services.llm_usage_ledger_service import read_budget_authority_report
 from src.ui import state as ui_state
 from src.ui._streamlit_pages.read_models import (
@@ -34,6 +37,125 @@ from src.ui.common import (
     _tip,
 )
 from src.utils.gui_utils import compute_task_duration_rollups, filter_log_events
+
+
+def _load_latest_capability_report(settings) -> dict[str, object] | None:
+    """Read the newest retained, redacted preflight artifact without probing providers."""
+
+    root = str(Path(settings.output_dir) / "preflight")
+    try:
+        entries = file_service.list_directory(
+            ListDirectoryRequest(
+                schema_version="1.0",
+                root_dir=root,
+                glob_pattern="capability-*.json",
+                limit=100,
+            ),
+            _ctx("capability_readiness_view"),
+        ).entries
+    except UI_SURFACE_EXCEPTIONS:
+        return None
+    for entry in sorted(
+        entries,
+        key=lambda item: (float(item.mtime_utc or 0.0), item.path),
+        reverse=True,
+    ):
+        try:
+            payload = file_service.read_json(
+                ReadJsonRequest(schema_version="1.0", path=entry.path),
+                _ctx("capability_readiness_view"),
+            ).payload
+        except UI_SURFACE_EXCEPTIONS:
+            continue
+        if isinstance(payload, dict) and isinstance(
+            payload.get("execution_readiness"), dict
+        ):
+            return payload
+    return None
+
+
+def _render_capability_readiness(
+    payload: dict[str, object] | None,
+) -> None:
+    st.subheader("Capability Readiness")
+    if payload is None:
+        st.info(
+            "No retained capability proof is available. Run the CLI preflight; this page does not run live probes."
+        )
+        return
+    readiness = payload.get("execution_readiness")
+    if not isinstance(readiness, dict):
+        st.warning(
+            "The newest capability artifact has no execution-readiness decision."
+        )
+        return
+    proof = readiness.get("proof")
+    if not isinstance(proof, dict):
+        proof = {}
+    report_status = str(payload.get("status", "unknown"))
+    executable = list(readiness.get("executable_workflows") or [])
+    blocked = dict(readiness.get("blocked_workflows") or {})
+    deferred = dict(readiness.get("deferred_workflows") or {})
+    status_col, scope_col, proof_col = st.columns(3)
+    status_col.metric("Diagnostic status", report_status)
+    scope_col.metric("Executable workflows", len(executable))
+    proof_col.caption(f"Proof: {proof.get('artifact_reference') or 'in-memory only'}")
+
+    decisions = readiness.get("decisions")
+    if isinstance(decisions, list):
+        decision_rows = [
+            {
+                "workflow": item.get("workflow", ""),
+                "diagnostic_status": item.get("status", ""),
+                "execution_authorized": bool(item.get("executable", False)),
+                "reasons": ", ".join(item.get("reason_codes") or []),
+            }
+            for item in decisions
+            if isinstance(item, dict)
+        ]
+        if decision_rows:
+            st.dataframe(decision_rows, use_container_width=True, hide_index=True)
+
+    checks = payload.get("checks")
+    failed_rows = []
+    if isinstance(checks, list):
+        for item in checks:
+            if not isinstance(item, dict) or item.get("status") in {
+                "ready",
+                "not_required",
+            }:
+                continue
+            failed_rows.append(
+                {
+                    "capability": item.get("capability", ""),
+                    "affected_workflows": ", ".join(
+                        item.get("affected_workflows") or []
+                    ),
+                    "status": item.get("status", ""),
+                    "stable_code": item.get("reason_code", ""),
+                    "remediation_or_config": item.get("remediation", ""),
+                    "automatic_repair_permitted": False,
+                    "rerun_command": (
+                        "python -m src.cli capability-preflight "
+                        f"--profile {proof.get('profile_name', 'autonomous_mvp')}"
+                        + (
+                            " --live"
+                            if proof.get("verification_mode") == "live"
+                            else ""
+                        )
+                    ),
+                }
+            )
+    if failed_rows:
+        st.caption("Blockers and deferred capability checks")
+        st.dataframe(failed_rows, use_container_width=True, hide_index=True)
+    else:
+        st.caption("No retained capability blockers or deferred checks.")
+    if blocked or deferred:
+        st.json({"blocked_workflows": blocked, "deferred_workflows": deferred})
+    st.caption(
+        "Read-only view of the retained proof. Live provider/browser checks are explicit CLI actions."
+    )
 
 
 def render_cost_usage() -> None:
@@ -385,8 +507,10 @@ def render_system_storage() -> None:
     reports = _load_report_rows(settings)
     lock = _lock_snapshot(settings.ingest_lock_path)
     path_checks = _load_directory_count_rows(settings)
+    capability_report = _load_latest_capability_report(settings)
 
     with main_col:
+        _render_capability_readiness(capability_report)
         st.subheader("State DB - Processed")
         st.dataframe(processed[:200], use_container_width=True, hide_index=True)
         st.subheader("State DB - Published")

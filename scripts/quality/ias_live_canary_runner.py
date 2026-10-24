@@ -23,6 +23,10 @@ from urllib.parse import SplitResult, urlsplit
 import yaml
 
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.pipeline_preflight import (
+    CapabilityExecutionReadiness,
+    CapabilityPreflightRequest,
+)
 from src.contracts.drive import DriveFile
 from src.contracts.logging import REQUIRED_LOG_EVENT_FIELDS
 from src.contracts.report_analysis import AnalysisPackPathRequest
@@ -57,7 +61,10 @@ from src.orchestrators.admission_preflight_orchestrator import (
 from src.orchestrators.ingest_orchestrator import (
     submit_preselected_frozen_validation_cohort,
 )
-from src.orchestrators.pipeline_preflight_orchestrator import preflight_report_pipeline
+from src.orchestrators.pipeline_preflight_orchestrator import (
+    preflight_report_pipeline,
+    run_capability_preflight,
+)
 from src.orchestrators.workflow_supervisor_orchestrator import run_supervisor_once
 from src.services import file_service
 from src.services._config_service.yaml_mapping import deep_merge_mappings
@@ -81,6 +88,7 @@ from src.services.report_store_service import (
     record_report_source,
     record_source_identity_observation,
 )
+from src.services.llm_usage_ledger_service import read_budget_authority_report
 from src.services.wordpress_service import preflight_publish_capability
 from src.services.workflow_queue_service import (
     enqueue_workflow_job,
@@ -726,7 +734,17 @@ def _isolated_config(
     workflow_control["supervisor"] = {
         **dict(workflow_control.get("supervisor") or {}),
         "enabled": True,
+        "deferred_work_enabled": True,
+        "remediation_enabled": True,
         "worker_batches_enabled": True,
+    }
+    workflow_control["remediation_reaper"] = {
+        **dict(workflow_control.get("remediation_reaper") or {}),
+        "execution_enabled": True,
+    }
+    workflow_control["deferred_work_reaper"] = {
+        **dict(workflow_control.get("deferred_work_reaper") or {}),
+        "execution_enabled": True,
     }
     if publish_to_wordpress_staging:
         workflow_control["autonomous_publication_policy"] = {
@@ -939,6 +957,62 @@ def _seed_isolated_workflow_queue_controls(
         ctx,
     )
     return {control.queue_name: control for control in controls}
+
+
+def _canary_capability_readiness(
+    *, config_path: Path, ctx: Any, include_cross_report: bool
+) -> CapabilityExecutionReadiness:
+    """Verify the exact canary queue path once before supervisor polling."""
+
+    config_request = ConfigLoadRequest(schema_version="1.0", path=str(config_path))
+    app_settings = load_settings(config_request, ctx)
+    workflow_control = load_workflow_control_settings(config_request, ctx)
+    queue_policies = load_workflow_queue_policies(config_request, ctx)
+    selected_queues = {
+        *_FROZEN_REPORT_QUEUE_STAGES,
+        "analytics_projection",
+        "claim_embedding",
+    }
+    if include_cross_report:
+        selected_queues.update(_CROSS_REPORT_QUEUE_NAMES)
+        selected_queues.add("cover_generation")
+    if (
+        queue_policies.get("wordpress_publish")
+        and queue_policies["wordpress_publish"].enabled
+    ):
+        selected_queues.update({"wordpress_publish", "wordpress_projection"})
+    scoped_policies = {
+        name: replace(policy, enabled=policy.enabled and name in selected_queues)
+        for name, policy in queue_policies.items()
+    }
+    # This runner explicitly enables the supervisor and supplies a narrowed
+    # queue profile, so the autonomous profile derives the queue scope instead
+    # of collapsing back to the manual report-generation shortcut.
+    profile_name = "autonomous_mvp"
+    read_budget_authority_report(
+        usage_db_path=app_settings.usage_db_path,
+        run_id="",
+        ctx=ctx,
+    )
+    report = run_capability_preflight(
+        CapabilityPreflightRequest(
+            schema_version="1.0",
+            profile_name=profile_name,
+            settings=app_settings,
+            workflow_control=workflow_control,
+            queue_policies=scoped_policies,
+            live_checks=True,
+        ),
+        ctx,
+    )
+    readiness = report.execution_readiness
+    if readiness is None:
+        raise AppError(
+            code="capability_readiness_missing",
+            message="Canary capability preflight did not produce execution readiness",
+            retryable=False,
+        )
+    return readiness
 
 
 def _collect_frozen_cohort_queue_timing_evidence(
@@ -2029,6 +2103,11 @@ def _drain_report_paths(
     control = load_workflow_control_settings(
         ConfigLoadRequest(schema_version="1.0", path=str(config_path)), ctx
     )
+    capability_readiness = _canary_capability_readiness(
+        config_path=config_path,
+        ctx=ctx,
+        include_cross_report=drain_cross_report_handoffs,
+    )
     deadline = time.monotonic() + max(1, max_duration_seconds)
     started_at = time.monotonic()
     reports_terminal_at: float | None = None
@@ -2043,6 +2122,7 @@ def _drain_report_paths(
                 worker_id=worker_id,
                 now_utc=datetime.now(timezone.utc).isoformat(),
                 settings=control.supervisor,
+                capability_readiness=capability_readiness,
             ),
             ctx,
         )

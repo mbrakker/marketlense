@@ -226,8 +226,10 @@ class FakeOpenAIBoundary:
         self.calls: dict[str, list[dict[str, Any]]] = {
             "chat.completions.create": [],
             "embeddings.create": [],
+            "models.retrieve": [],
             "responses.create": [],
             "vector_stores.create": [],
+            "vector_stores.list": [],
             "vector_stores.delete": [],
             "vector_stores.retrieve": [],
             "vector_stores.update": [],
@@ -319,6 +321,9 @@ class _FakeVectorStoresResource:
     def create(self, **kwargs: Any) -> Any:
         return self._boundary._resolve("vector_stores.create", kwargs)
 
+    def list(self, **kwargs: Any) -> Any:
+        return self._boundary._resolve("vector_stores.list", kwargs)
+
     def retrieve(self, vector_store_id: str) -> Any:
         return self._boundary._resolve(
             "vector_stores.retrieve", {"vector_store_id": vector_store_id}
@@ -341,10 +346,19 @@ class _FakeFilesResource:
         return self._boundary._resolve("files.create", kwargs)
 
 
+class _FakeModelsResource:
+    def __init__(self, boundary: FakeOpenAIBoundary) -> None:
+        self._boundary = boundary
+
+    def retrieve(self, model: str) -> Any:
+        return self._boundary._resolve("models.retrieve", {"model": model})
+
+
 class _FakeOpenAIClient:
     def __init__(self, boundary: FakeOpenAIBoundary) -> None:
         self.chat = SimpleNamespace(completions=_FakeChatCompletionsResource(boundary))
         self.embeddings = _FakeEmbeddingsResource(boundary)
         self.responses = _FakeResponsesResource(boundary)
+        self.models = _FakeModelsResource(boundary)
         self.vector_stores = _FakeVectorStoresResource(boundary)
         self.files = _FakeFilesResource(boundary)

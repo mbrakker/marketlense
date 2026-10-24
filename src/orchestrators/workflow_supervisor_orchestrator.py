@@ -15,6 +15,10 @@ from src.orchestrators.workflow_worker_orchestrator import (
     WorkflowWorkerRunResult,
     run_workflow_worker_once,
 )
+from src.orchestrators.pipeline_preflight_orchestrator import (
+    validate_execution_readiness,
+)
+from src.utils.errors import AppError
 from src.services import workflow_queue_service
 from src.utils.clock import utc_now_seconds_iso
 from src.utils.logging import child_context, log_event
@@ -48,6 +52,28 @@ def run_supervisor_once(
         return SupervisorRunResult(
             schema_version="1.0", status="disabled", lease_acquired=False
         )
+    if settings.worker_batches_enabled:
+        readiness = request.capability_readiness
+        if readiness is None:
+            return SupervisorRunResult(
+                schema_version="1.0",
+                status="failed",
+                lease_acquired=False,
+                error_codes=["capability_readiness_missing"],
+            )
+        try:
+            validate_execution_readiness(
+                readiness,
+                expected_workflow="",
+                now_utc=request.now_utc,
+            )
+        except AppError as exc:
+            return SupervisorRunResult(
+                schema_version="1.0",
+                status="failed",
+                lease_acquired=False,
+                error_codes=[exc.code],
+            )
     deps = dependencies or SupervisorDependencies()
     if not deps.acquire_lease(
         request.state_db,
@@ -64,6 +90,14 @@ def run_supervisor_once(
     materialized = recovered = completed = deferred = reconciled = 0
     deferred_reaped = remediation_reaped = 0
     errors: list[str] = []
+    readiness_deferred = 0
+    if request.capability_readiness is not None:
+        readiness_deferred = sum(
+            1
+            for workflow in request.capability_readiness.workflow_scope
+            if workflow in WORKFLOW_QUEUE_NAMES
+            and not request.capability_readiness.is_workflow_executable(workflow)
+        )
     try:
         if settings.materialize_outbox_enabled:
             materialized = len(
@@ -133,7 +167,13 @@ def run_supervisor_once(
             if settings.evidence_enabled
             else []
         )
-        status = "failed" if errors else "partially_deferred" if deferred else "healthy"
+        status = (
+            "failed"
+            if errors
+            else "partially_deferred"
+            if deferred or readiness_deferred
+            else "healthy"
+        )
         result = SupervisorRunResult(
             schema_version="1.0",
             status=status,
@@ -190,6 +230,11 @@ def _run_worker_batches_serial(
     recovered = completed = deferred = 0
     errors: list[str] = []
     for queue_name in WORKFLOW_QUEUE_NAMES:
+        if (
+            request.capability_readiness is not None
+            and not request.capability_readiness.is_workflow_executable(queue_name)
+        ):
+            continue
         if (
             remaining <= 0
             or time.monotonic() - started >= request.settings.max_runtime_seconds
@@ -256,6 +301,8 @@ def _run_worker_batches_parallel(
             (queue_name, ordinal)
             for ordinal in range(request.settings.max_jobs_per_queue)
             for queue_name in ordered_queues
+            if request.capability_readiness is None
+            or request.capability_readiness.is_workflow_executable(queue_name)
         ]
 
     candidates = _candidate_sequence()
@@ -441,9 +488,7 @@ def _run_worker_batches_parallel(
                                 and queue_name_value
                                 not in pending_downstream_queue_names
                             ):
-                                pending_downstream_queue_names.append(
-                                    queue_name_value
-                                )
+                                pending_downstream_queue_names.append(queue_name_value)
                         # A successful worker may have enqueued work directly,
                         # outside the outbox. Make every previously idle queue
                         # eligible again while this pass still has capacity.
@@ -514,6 +559,7 @@ def _run_worker(
         worker_id=worker_id,
         ctx=child_context(ctx, task_id=f"supervisor:{queue_name}:{ordinal + 1}"),
         now_utc=utc_now_seconds_iso(),
+        capability_readiness=request.capability_readiness,
     )
 
 

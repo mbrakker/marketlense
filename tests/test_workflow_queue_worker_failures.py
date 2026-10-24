@@ -28,6 +28,7 @@ from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_o
 from src.services.workflow_queue_service import enqueue_workflow_job, get_workflow_job
 from src.utils.errors import AppError
 from src.utils.logging import new_run_context
+from tests._capability_readiness_support import ready_capability_readiness
 
 
 def _ctx():
@@ -73,6 +74,7 @@ def test_worker_claims_runs_and_completes_a_verified_reference_job(tmp_path) -> 
         queue_name="vector_retention",
         worker_id="worker-1",
         ctx=_ctx(),
+        capability_readiness=ready_capability_readiness(("vector_retention",)),
     )
 
     assert outcome.claimed_job_id == job.job_id
@@ -80,6 +82,40 @@ def test_worker_claims_runs_and_completes_a_verified_reference_job(tmp_path) -> 
     completed = get_workflow_job(db, job.job_id, _ctx())
     assert completed.status == "succeeded"
     assert completed.output_reference == "verified:inventory-snapshot"
+
+
+def test_worker_without_capability_readiness_leaves_pending_job_unclaimed(
+    tmp_path,
+) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="publisher_discovery",
+            job_type="publisher_discovery.v1",
+            payload=PublisherDiscoveryPayload(
+                publisher_id="publisher-1",
+                insights_url="https://example.test/insights",
+                discovery_policy_version="v1",
+            ),
+            idempotency_key="missing-readiness",
+            deduplication_scope="readiness-boundary",
+        ),
+        _ctx(),
+    )
+
+    outcome = run_workflow_worker_once(
+        state_db=db,
+        queue_name="publisher_discovery",
+        worker_id="worker-1",
+        ctx=_ctx(),
+    )
+
+    assert outcome.terminal_status == "blocked"
+    assert outcome.error_code == "capability_readiness_missing"
+    assert outcome.claimed_job_id == ""
+    assert get_workflow_job(db, job.job_id, _ctx()).status == "pending"
 
 
 @pytest.mark.parametrize(
@@ -248,6 +284,7 @@ def test_worker_fails_closed_for_invalid_queue_inputs(
         queue_name=queue_name,
         worker_id="worker-1",
         ctx=_ctx(),
+        capability_readiness=ready_capability_readiness((queue_name,)),
     )
 
     assert outcome.terminal_status == expected_status
@@ -311,6 +348,7 @@ def test_worker_classifies_canonical_pipeline_budget_stop_and_immutable_input(
         worker_id="worker-1",
         ctx=_ctx(),
         registry=registry,
+        capability_readiness=ready_capability_readiness(("publisher_discovery",)),
     )
 
     assert outcome.terminal_status == expected_status

@@ -118,6 +118,9 @@ from src.orchestrators.publisher_inventory_orchestrator import (
 )
 from src.orchestrators.report_download_orchestrator import run_report_download
 from src.orchestrators.report_pipeline_orchestrator import run_report_pipeline
+from src.orchestrators.workflow_queue_capabilities import (
+    canonical_external_effects,
+)
 from src.orchestrators.signal_candidate_orchestrator import (
     run_signal_candidate_extraction,
 )
@@ -165,6 +168,7 @@ from .shared import (
     WorkflowQueueHandler,
     WorkflowQueueHandlerRegistration,
     WorkflowQueueHandlerResult,
+    capabilities_from_external_effects,
     _verified_reference_handler,
 )
 from .signals import _signal_candidate_handler, _signal_generation_handler
@@ -181,7 +185,16 @@ def _registration(
     budget_profile: str = "default",
     retry_policy: str = "workflow_queue.default.v1",
     lease_seconds: int = 900,
+    required_capabilities: tuple[str, ...] = (),
 ) -> WorkflowQueueHandlerRegistration:
+    canonical_effects = canonical_external_effects(queue_name)
+    if tuple(sorted(effects)) != canonical_effects:
+        raise RuntimeError(
+            "Workflow queue handler effects do not match the canonical capability "
+            f"manifest for {queue_name}: declared={tuple(sorted(effects))}, "
+            f"canonical={canonical_effects}"
+        )
+    derived_capabilities = capabilities_from_external_effects(effects)
     return WorkflowQueueHandlerRegistration(
         queue_name=queue_name,
         job_type=f"{queue_name}.v1",
@@ -193,6 +206,9 @@ def _registration(
         budget_profile=budget_profile,
         expected_external_effects=effects,
         allowed_downstream_job_types=downstream,
+        required_capabilities=tuple(
+            sorted(set(derived_capabilities) | set(required_capabilities))
+        ),
     )
 
 
@@ -323,6 +339,7 @@ def default_workflow_queue_registry() -> dict[
             SignalGenerationResult,
             handler=_signal_generation_handler,
             downstream=("cover_generation.v1",),
+            effects=("model",),
             budget_profile="high_quality",
             lease_seconds=3600,
         ),
@@ -411,6 +428,7 @@ def default_workflow_queue_registry() -> dict[
             "vector_retention",
             MaintenancePayload,
             WorkflowStageResult,
+            effects=("vector",),
             budget_profile="maintenance",
         ),
         _registration(

@@ -52,6 +52,9 @@ ingest:
     max_retries: 40
     max_runtime_seconds: 43200
     limit_decision: "stop"
+  preflight:
+    # Zero disables the floor; production should set a non-zero operator floor.
+    min_free_space_bytes: 104857600
   pdf_text:
     max_pages: 5
     max_chars: 80000

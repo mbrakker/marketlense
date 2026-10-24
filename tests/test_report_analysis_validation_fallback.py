@@ -28,6 +28,7 @@ from src.orchestrators.workflow_queue_orchestrator import (
     WorkflowQueueHandlerResult,
 )
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
+from tests._capability_readiness_support import ready_capability_readiness
 from src.services.workflow_queue_service import (
     enqueue_workflow_job,
     get_workflow_job,
@@ -331,6 +332,7 @@ def _queue_validation_replay(
             ctx=ctx,
             registry=registry,
             now_utc=now_utc,
+            capability_readiness=ready_capability_readiness(("report_analysis",)),
         )
 
     return state_db, job, lambda: calls, stored, marker, run_worker

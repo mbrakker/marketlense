@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, Sequence
 
 from src.contracts.browser_download import BrowserDownloadSettings
+from src.contracts.capability_readiness import CapabilityExecutionReadiness
 from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
 from src.contracts.run_budget import (  # noqa: F401
     RunBudget,
@@ -497,6 +498,15 @@ class SupervisorRunRequest:
     usage_db_path: str = field(
         default="", metadata={"doc": "Deferred-work ledger path."}
     )
+    capability_readiness: CapabilityExecutionReadiness | None = field(
+        default=None,
+        metadata={
+            "doc": (
+                "Single configuration-bound readiness decision used before worker dispatch; "
+                "required when an enabled supervisor dispatches work."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -715,6 +725,23 @@ class PipelineExecutionAuthorizationRequest:
     )
     requested_side_effects: list[str] = field(
         metadata={"doc": "External side-effect families requested by the caller."}
+    )
+    capability_readiness: CapabilityExecutionReadiness | None = field(
+        default=None,
+        metadata={
+            "doc": (
+                "Capability proof required for plans with costly or external side effects."
+            )
+        },
+    )
+    authorization_mode: Literal["preview", "execute"] = field(
+        default="execute",
+        metadata={
+            "doc": (
+                "Preview validates the side-effect-free plan only; execute also "
+                "requires a current capability readiness proof."
+            )
+        },
     )
 
 

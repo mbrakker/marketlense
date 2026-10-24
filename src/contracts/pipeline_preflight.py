@@ -4,6 +4,13 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from src.contracts.browser_download import BrowserDownloadSettings
+from src.contracts.capability_readiness import (
+    CapabilityExecutionReadiness,
+    CapabilityProfileName,
+    CapabilityReadinessProof,  # noqa: F401
+    CapabilityStatus,
+    CapabilityWorkflowDecision,  # noqa: F401
+)
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
 from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
@@ -13,10 +20,6 @@ from src.contracts.workflow_control import WorkflowControlSettings
 from src.contracts.workflow_queue import WorkflowQueuePolicy
 
 PreflightCheckStatus = Literal["pass", "warning", "blocker", "auto_fixed"]
-CapabilityStatus = Literal[
-    "ready", "degraded", "blocked", "not_required", "not_checked"
-]
-CapabilityProfileName = Literal["manual", "autonomous_mvp"]
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,15 @@ class CapabilityPreflightRequest:
     queue_policies: dict[str, WorkflowQueuePolicy] = field(
         metadata={"doc": "Resolved queue enablement and budget policies."}
     )
+    workflow_scope: tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": (
+                "Exact workflow scope for a direct execution preflight; empty derives "
+                "the scope from the selected capability profile and enabled queues."
+            )
+        },
+    )
     publish_settings: PublishSettings | None = field(
         default=None,
         metadata={"doc": "Resolved publication settings when publication is enabled."},
@@ -116,6 +128,19 @@ class CapabilityPreflightRequest:
             "doc": "Whether bounded read-only external capability probes may run."
         },
     )
+    allow_degraded_workflows: tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": (
+                "Explicitly supported degraded workflows; empty means degraded and "
+                "not_checked remain non-executable."
+            )
+        },
+    )
+    proof_ttl_seconds: int = field(
+        default=900,
+        metadata={"doc": "Bounded lifetime of a retained execution proof."},
+    )
 
 
 @dataclass(frozen=True)
@@ -153,6 +178,14 @@ class CapabilityPreflightReport:
     )
     blocking_count: int = field(
         metadata={"doc": "Required capabilities not ready for execution."}
+    )
+    execution_readiness: CapabilityExecutionReadiness | None = field(
+        default=None,
+        metadata={"doc": "Typed execution decision derived from this report."},
+    )
+    proof_reference: str = field(
+        default="",
+        metadata={"doc": "Retained redacted proof artifact path, when persisted."},
     )
 
 

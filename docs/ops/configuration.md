@@ -36,6 +36,16 @@ target and authentication at configuration load.
 
 `MARKET_LENSE_PRODUCER_COMMIT` is an optional, non-secret 40-character commit SHA. The canonical configuration service reads it when CLI or UI code creates a runtime context, so retained manifest and log provenance identify the producing build without giving utilities environment access.
 
+`ingest.preflight.min_free_space_bytes` sets the minimum available space checked
+on the filesystems containing the selected output, cache, database, lock, and
+provider-artifact paths before capability readiness is established. The committed
+default is `104857600` (100 MiB); set it to `0` to disable the floor. The check is
+read-only and reports `insufficient_free_space` without changing files. Run
+`python -m src.cli capability-preflight --profile manual` or
+`python -m src.cli capability-preflight --profile autonomous_mvp --live` to
+produce the redacted retained proof; the observability page reads that artifact
+and never starts live probes itself.
+
 ## Claim embedding policy
 
 `llm_execution_policies.claim_embedding/generate` is the canonical policy for

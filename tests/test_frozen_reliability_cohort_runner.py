@@ -4,6 +4,7 @@ import hashlib
 import json
 import sqlite3
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -45,6 +46,8 @@ def test_first_attempt_canary_uses_production_submission_and_supervisor_path(
     """The canary reaches a terminal result through durable production queues."""
 
     external_boundary_mocks_only.setenv("OPENAI_API_KEY", "test-openai-key")
+    fake_openai.add("models.retrieve", lambda call: SimpleNamespace(id=call["model"]))
+    fake_openai.add("vector_stores.list", {"data": []})
     fake_openai.add("vector_stores.create", {"id": "vs_canary_test"})
     fake_openai.add("files.create", {"id": "file_canary_test"})
     fake_openai.add("vector_stores.files.create", {"id": "file_canary_test"})

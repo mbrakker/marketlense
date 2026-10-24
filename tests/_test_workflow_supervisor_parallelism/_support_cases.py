@@ -63,6 +63,7 @@ from src.services.workflow_queue_service import (
 )
 
 from src.utils.errors import AppError
+from tests._capability_readiness_support import ready_capability_readiness
 
 
 def _ctx() -> RunContext:
@@ -96,6 +97,7 @@ def _request(
             max_runtime_seconds=max_runtime_seconds,
             lease_seconds=supervisor_lease_seconds,
         ),
+        capability_readiness=ready_capability_readiness(WORKFLOW_QUEUE_NAMES),
     )
 
 

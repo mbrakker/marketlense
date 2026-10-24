@@ -43,6 +43,13 @@ def test_execute_ui_run_reports_missing_report_download_url() -> None:
     assert response.result_summary["failure_context"]["field"] == "url"
 
 
+def test_execute_ui_run_requires_a_capability_bound_execution_plan() -> None:
+    response = execute_ui_run(_worker("ingest", {"limit": 1}), _ctx())
+
+    assert response.status == "failed"
+    assert response.error_code == "capability_readiness_missing"
+
+
 def test_resolve_ui_run_config_snapshot_is_deterministic_for_invalid_payload() -> None:
     snapshot = resolve_ui_run_config_snapshot(
         _worker("publisher_discovery", {}),

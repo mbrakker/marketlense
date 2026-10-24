@@ -14,6 +14,7 @@ from src.orchestrators._workflow_queue_handlers.shared import (
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
 from src.services.performance_telemetry_service import build_performance_run_artifact
 from src.services.workflow_queue_service import enqueue_workflow_job
+from tests._capability_readiness_support import ready_capability_readiness
 
 
 def _ctx() -> RunContext:
@@ -95,6 +96,7 @@ def test_worker_persists_queue_wait_and_stage_wall_time(tmp_path) -> None:
         ctx=_ctx(),
         registry=registry,
         now_utc="2026-08-10T10:00:01.000+00:00",
+        capability_readiness=ready_capability_readiness(("publisher_discovery",)),
     )
     artifact = build_performance_run_artifact(state_db, "queue-run-1", _ctx())
 

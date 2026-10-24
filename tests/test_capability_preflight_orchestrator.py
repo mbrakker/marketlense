@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -187,6 +188,48 @@ def _dependencies(
     )
 
 
+def test_retained_capability_artifact_contains_redacted_report_and_proof(
+    tmp_path: Path,
+) -> None:
+    secret = "test-openai-key-not-secret"
+    settings = _settings(tmp_path, api_key=secret)
+    request = CapabilityPreflightRequest(
+        schema_version="1.0",
+        profile_name="manual",
+        settings=settings,
+        workflow_control=_control("manual"),
+        queue_policies=_queues(),
+        live_checks=False,
+    )
+
+    report = run_capability_preflight(request, _ctx(), dependencies=_dependencies())
+
+    assert report.proof_reference
+    artifact = Path(report.proof_reference)
+    assert artifact.is_file()
+    serialized = artifact.read_text(encoding="utf-8")
+    payload = json.loads(serialized)
+    assert payload["status"] == report.status
+    assert payload["checks"]
+    assert payload["execution_readiness"]["proof"]["artifact_reference"] == str(
+        artifact
+    )
+    assert secret not in serialized
+    proof = payload["execution_readiness"]["proof"]
+    assert (
+        len(
+            {
+                proof["dependency_identity"],
+                proof["asset_identity"],
+                proof["sqlite_identity"],
+                proof["provider_identity"],
+                proof["tool_identity"],
+            }
+        )
+        > 1
+    )
+
+
 def test_local_only_profile_preflight_makes_no_provider_calls_or_external_writes(
     tmp_path: Path,
 ) -> None:
@@ -204,13 +247,17 @@ def test_local_only_profile_preflight_makes_no_provider_calls_or_external_writes
         dependencies=_dependencies(),
     )
 
-    assert report.status == "degraded"
+    assert report.status == "not_checked"
     assert report.workflow_names == ["report_generation"]
     assert report.provider_calls == 0
     assert report.external_writes == 0
     llm = next(check for check in report.checks if check.capability == "llm_model")
     assert llm.status == "not_checked"
     assert llm.required is True
+    assert report.execution_readiness is not None
+    assert (
+        report.execution_readiness.is_workflow_executable("report_generation") is False
+    )
 
 
 def test_autonomous_preflight_only_checks_enabled_queue_capabilities(
@@ -557,7 +604,12 @@ def test_transient_openrouter_preflight_failure_is_retryable_degraded(
     )
     assert model.status == "degraded"
     assert model.retryable is True
-    assert report.workflow_statuses["publisher_discovery"] == "degraded"
+    assert report.workflow_statuses["publisher_discovery"] == "blocked"
+    assert report.execution_readiness is not None
+    assert (
+        report.execution_readiness.is_workflow_executable("publisher_discovery")
+        is False
+    )
     assert report.provider_calls == 1
 
 

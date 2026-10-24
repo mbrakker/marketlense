@@ -281,6 +281,28 @@ def test_write_bytes_uses_atomic_replace_and_cleans_stale_temp(tmp_path: Path) -
     assert list(tmp_path.glob("atomic.bin.tmp-write-*")) == []
 
 
+def test_write_bytes_require_absent_rejects_existing_probe_target(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    target = tmp_path / "probe.bin"
+    target.write_bytes(b"owned-by-another-invocation")
+
+    with pytest.raises(AppError) as exc_info:
+        write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0",
+                path=str(target),
+                content=b"probe",
+            ),
+            _ctx(),
+            require_absent=True,
+        )
+
+    assert_app_error(exc_info.value, code="file_write_conflict", retryable=False)
+    assert target.read_bytes() == b"owned-by-another-invocation"
+
+
 def test_write_bytes_wraps_parent_creation_failure_as_typed_error(
     tmp_path: Path,
     assert_app_error,

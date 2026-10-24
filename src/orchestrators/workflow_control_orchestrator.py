@@ -67,6 +67,7 @@ from src.orchestrators.mail_report_acquisition_orchestrator import (
 )
 from src.orchestrators.pipeline_preflight_orchestrator import (
     report_pipeline_prompt_namespaces,
+    validate_execution_readiness,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy
 from src.services.state_service import (
@@ -741,9 +742,11 @@ def _resolve_run_profile(
             context={"profile": selected_name},
         )
     workflow = resolved_intent.workflow
-    if workflow and definition.compatible_workflows and workflow not in {
-        _key(item) for item in definition.compatible_workflows
-    }:
+    if (
+        workflow
+        and definition.compatible_workflows
+        and workflow not in {_key(item) for item in definition.compatible_workflows}
+    ):
         raise AppError(
             code="workflow_run_profile_incompatible",
             message="Requested run profile is incompatible with the resolved workflow",
@@ -974,12 +977,24 @@ def authorize_pipeline_execution(
         reason = "plan_idempotency_key_invalid"
     elif any(value not in allowed_side_effects for value in requested_side_effects):
         reason = "requested_side_effect_not_planned"
+    elif plan.planned_side_effects and request.authorization_mode == "execute":
+        if request.capability_readiness is None:
+            reason = "capability_readiness_missing"
+        else:
+            try:
+                validate_execution_readiness(
+                    request.capability_readiness,
+                    expected_workflow=expected_workflow,
+                )
+            except AppError as exc:
+                reason = exc.code
     plan_checksum = sha256_json(asdict(plan))
     fields = {
         "workflow": plan.workflow,
         "expected_workflow": expected_workflow,
         "plan_checksum": plan_checksum,
         "requested_side_effects": requested_side_effects,
+        "authorization_mode": request.authorization_mode,
         "allowed_side_effects": allowed_side_effects,
         "reason": reason or "authorized",
     }
@@ -1830,6 +1845,7 @@ def _default_preflight_profiles() -> dict[str, WorkflowPreflightProfile]:
 
 def _default_run_profiles() -> dict[str, RunProfileDefinition]:
     """Legacy-safe catalogue used when a compact test config omits run_profiles."""
+
     def make(
         name: str,
         intended_outcome: str,
@@ -1845,9 +1861,7 @@ def _default_run_profiles() -> dict[str, RunProfileDefinition]:
         )
 
     return {
-        "safe_default": make(
-            "safe_default", "conservative cached-first execution", []
-        ),
+        "safe_default": make("safe_default", "conservative cached-first execution", []),
         "fast_cached": make(
             "fast_cached",
             "planner-safe cache-first execution",

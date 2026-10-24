@@ -38,6 +38,33 @@ class OpenAIModelPreflightResponse:
 
 
 @dataclass(frozen=True)
+class OpenAIVectorStorePreflightRequest:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI vector-store preflight request schema version."}
+    )
+    api_key: str = field(
+        metadata={"doc": "Resolved provider credential; never emitted in a result."}
+    )
+    timeout_seconds: float = field(
+        default=5.0,
+        metadata={"doc": "Maximum bounded vector-store metadata request duration."},
+    )
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStorePreflightResponse:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI vector-store preflight response schema version."}
+    )
+    accessible: bool = field(
+        metadata={"doc": "Whether the authenticated account can list vector stores."}
+    )
+    provider_calls: int = field(
+        metadata={"doc": "Bounded read-only provider requests made by the check."}
+    )
+
+
+@dataclass(frozen=True)
 class OpenRouterModelPreflightRequest:
     schema_version: str = field(
         metadata={"doc": "OpenRouter model-preflight request schema version."}

@@ -36,6 +36,8 @@ from src.contracts.files import (
     FileHashResponse,
     FileStatRequest,
     FileStatResponse,
+    FileSystemUsageRequest,
+    FileSystemUsageResponse,
     JsonObjectCacheReadRequest,
     JsonObjectCacheReadResponse,
     JsonObjectCacheWriteRequest,
@@ -1077,6 +1079,7 @@ def write_bytes(
     ctx: RunContext,
     *,
     reject_conflicting_existing: bool = False,
+    require_absent: bool = False,
 ) -> WriteBytesResponse:
     logger.info(
         log_event(
@@ -1092,6 +1095,18 @@ def write_bytes(
         if request.make_parents:
             path.parent.mkdir(parents=True, exist_ok=True)
         with _write_lock_for_path(path):
+            if require_absent:
+                aliases = (
+                    [
+                        candidate
+                        for candidate in path.parent.iterdir()
+                        if candidate.name.casefold() == path.name.casefold()
+                    ]
+                    if path.parent.is_dir()
+                    else []
+                )
+                if aliases:
+                    raise _file_write_identity_conflict()
             if reject_conflicting_existing:
                 aliases = (
                     [
@@ -1673,6 +1688,47 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
                 "mtime_utc": response.mtime_utc,
                 "mtime_ns": response.mtime_ns,
                 "md5": response.md5,
+            },
+        )
+    )
+    return response
+
+
+def inspect_filesystem_usage(
+    request: FileSystemUsageRequest, ctx: RunContext
+) -> FileSystemUsageResponse:
+    """Read filesystem capacity without creating or mutating local state."""
+
+    raw_path = Path(request.path).expanduser()
+    probe_path = raw_path
+    while not probe_path.exists() and probe_path != probe_path.parent:
+        probe_path = probe_path.parent
+    try:
+        usage = shutil.disk_usage(probe_path)
+    except OSError as exc:
+        raise AppError(
+            code="filesystem_usage_unavailable",
+            message="Filesystem capacity could not be inspected",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    response = FileSystemUsageResponse(
+        schema_version="1.0",
+        path=str(probe_path),
+        total_bytes=int(usage.total),
+        free_bytes=int(usage.free),
+        available_bytes=int(usage.free),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="filesystem_usage_inspected",
+            module=logger.name,
+            fields={
+                "path": response.path,
+                "total_bytes": response.total_bytes,
+                "available_bytes": response.available_bytes,
             },
         )
     )

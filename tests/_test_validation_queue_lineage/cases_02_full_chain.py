@@ -10,6 +10,7 @@ from ._shared import (
     _full_chain_response_factory,
     _isolated_app_config,
 )
+from tests._capability_readiness_support import ready_capability_readiness
 
 
 @pytest.mark.parametrize(
@@ -147,6 +148,7 @@ def test_a21_full_chain_preserves_grounding_disposition(
         queue_name="source_ingest",
         worker_id="validation-lineage-test-worker",
         ctx=_ctx(),
+        capability_readiness=ready_capability_readiness(("source_ingest",)),
     )
     assert worker_result.terminal_status == "succeeded"
     materialize_workflow_outbox(state_db, "validation-lineage-test-worker", _ctx())
@@ -161,6 +163,7 @@ def test_a21_full_chain_preserves_grounding_disposition(
             queue_name=queue_name,
             worker_id="validation-lineage-test-worker",
             ctx=_ctx(),
+            capability_readiness=ready_capability_readiness((queue_name,)),
         )
         completed_job = get_workflow_job(state_db, result.claimed_job_id, _ctx())
         assert result.terminal_status == "succeeded", (

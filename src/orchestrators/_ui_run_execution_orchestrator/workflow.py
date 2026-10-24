@@ -43,6 +43,11 @@ from src.orchestrators.signal_candidate_orchestrator import (
 )
 from src.orchestrators.signal_post_orchestrator import run_signal_post_workflow
 from src.orchestrators import workflow_control_orchestrator as workflow_control
+from src.orchestrators.pipeline_preflight_orchestrator import (
+    build_capability_preflight_request,
+    run_capability_preflight,
+    validate_execution_readiness,
+)
 from src.services.config_service import (
     build_ingest_settings,
     load_browser_download_settings,
@@ -745,6 +750,91 @@ def execute_ui_run(
     control_payload = worker_request.request_payload.get("workflow_control")
     control = control_payload if isinstance(control_payload, dict) else {}
     workflow_name = str(control.get("workflow") or worker_request.run_type).strip()
+    execution_plan = control.get("execution_plan")
+    if (
+        not isinstance(execution_plan, dict)
+        or "planned_side_effects" not in execution_plan
+    ):
+        return _execution_response(
+            worker_request=worker_request,
+            status="failed",
+            result_summary={},
+            artifact_paths=[],
+            config_snapshot={
+                "run_type": worker_request.run_type,
+                "workflow": workflow_name,
+            },
+            error_code="capability_readiness_missing",
+            error_message="UI execution requires a resolved capability-bound plan",
+            error_retryable=False,
+            error_severity="warning",
+        )
+    planned_side_effects = list(execution_plan.get("planned_side_effects") or [])
+    if planned_side_effects:
+        capability_report = None
+        try:
+            capability_request = build_capability_preflight_request(
+                profile="manual",
+                ctx=ctx,
+                live=True,
+                workflow_scope=(workflow_name,),
+                use_process_profile=True,
+            )
+            capability_report = run_capability_preflight(capability_request, ctx)
+            readiness = capability_report.execution_readiness
+            if readiness is None:
+                raise AppError(
+                    code="capability_readiness_missing",
+                    message="Capability preflight did not produce execution readiness",
+                    retryable=False,
+                )
+            validate_execution_readiness(
+                readiness,
+                expected_workflow=workflow_name,
+            )
+        except AppError as exc:
+            return _execution_response(
+                worker_request=worker_request,
+                status="failed",
+                result_summary={
+                    "planned_side_effects": planned_side_effects,
+                    "capability_preflight_status": (
+                        capability_report.status
+                        if capability_report is not None
+                        else "unavailable"
+                    ),
+                },
+                artifact_paths=[],
+                config_snapshot={
+                    "run_type": worker_request.run_type,
+                    "workflow": workflow_name,
+                    "capability_proof_reference": (
+                        capability_report.proof_reference
+                        if capability_report is not None
+                        else ""
+                    ),
+                },
+                error_code=exc.code,
+                error_message=exc.message,
+                error_retryable=exc.retryable,
+                error_severity=exc.severity,
+            )
+        except Exception:
+            return _execution_response(
+                worker_request=worker_request,
+                status="failed",
+                result_summary={"planned_side_effects": planned_side_effects},
+                artifact_paths=[],
+                config_snapshot={
+                    "run_type": worker_request.run_type,
+                    "workflow": workflow_name,
+                    "capability_proof_reference": "",
+                },
+                error_code="capability_preflight_failed",
+                error_message="Capability preflight failed before UI execution",
+                error_retryable=False,
+                error_severity="error",
+            )
     health_gate = workflow_control.evaluate_run_health_gate(
         workflow_control.RunHealthGateInput(
             schema_version="1.0",

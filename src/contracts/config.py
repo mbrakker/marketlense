@@ -582,6 +582,14 @@ class AppSettings:
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite path for durable LLM usage events."},
     )
+    preflight_min_free_space_bytes: int = field(
+        default=0,
+        metadata={
+            "doc": (
+                "Minimum free bytes on filesystems used by selected workflows; zero disables the floor."
+            )
+        },
+    )
     run_budget_max_spend_usd: float | None = field(
         default=None,
         metadata={

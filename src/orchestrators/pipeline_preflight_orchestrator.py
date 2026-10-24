@@ -6,9 +6,10 @@ import logging
 import sys
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Callable, Mapping, Protocol, cast
+from typing import Callable, Mapping, NoReturn, Protocol, cast
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
@@ -16,6 +17,7 @@ from src.contracts.browser_download import (
     BrowserExecutableAvailabilityResponse,
     BrowserRuntimeAvailabilityResponse,
 )
+from src.contracts.config import ConfigLoadRequest
 from src.contracts.drive import (
     DriveFolderCapabilityPreflightRequest,
     DriveWritePreflightRequest,
@@ -27,14 +29,21 @@ from src.contracts.files import (
     ExecutableAvailabilityRequest,
     FileStatRequest,
     FileStatResponse,
+    FileSystemUsageRequest,
+    FileSystemUsageResponse,
+    RepositoryRevisionReadRequest,
     WriteBytesResponse,
     WriteBytesRequest,
 )
 from src.contracts.pipeline_preflight import (
+    CapabilityProfileName,
     CapabilityStatus,
     CapabilityPreflightCheck,
     CapabilityPreflightReport,
     CapabilityPreflightRequest,
+    CapabilityExecutionReadiness,
+    CapabilityReadinessProof,
+    CapabilityWorkflowDecision,
     PipelinePreflightCheck,
     PipelinePreflightReport,
     PipelinePreflightRequest,
@@ -44,6 +53,7 @@ from src.contracts.prompts import PromptLoadRequest
 from src.contracts.llm import (
     OpenAIModelPreflightRequest,
     OpenRouterModelPreflightRequest,
+    OpenAIVectorStorePreflightRequest,
 )
 from src.contracts.mailbox_acquisition import (
     MailboxAccessPreflightResponse,
@@ -51,12 +61,18 @@ from src.contracts.mailbox_acquisition import (
 )
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId, TaskId
 from src.contracts.sqlite_migration import (
     SqliteCapabilityInspectionRequest,
     SqliteCapabilityInspectionResponse,
 )
-from src.contracts.workflow_queue import WorkflowQueuePolicy
+from src.contracts.workflow_queue import WORKFLOW_QUEUE_NAMES, WorkflowQueuePolicy
 from src.contracts.wordpress import WordPressPublishCapabilityRequirements
+from src.orchestrators.workflow_queue_capabilities import (
+    canonical_workflow_queue_capability_registration,
+    capabilities_from_external_effects,
+    preflight_profile_for_queue,
+)
 from src.services import (
     browser_report_download_service,
     drive_service,
@@ -67,7 +83,18 @@ from src.services import (
     sqlite_migration_service,
     wordpress_service,
 )
+from src.services.config_service import (
+    load_browser_download_settings,
+    load_mailbox_acquisition_settings,
+    load_publish_settings,
+    load_publisher_inventory_settings,
+    load_settings,
+    load_workflow_control_settings,
+    load_workflow_queue_policies,
+)
 from src.utils.errors import AppError
+from src.utils.cache_utils import sha256_json
+from src.utils.clock import utc_now_iso
 from src.utils.logging import log_event
 from src.utils.model_resolver import (
     execution_policies_from_config,
@@ -78,8 +105,137 @@ from src.utils.model_resolver import (
 logger = logging.getLogger("market_lense.pipeline_preflight_orchestrator")
 
 
+_SECRET_IDENTITY_KEYS = frozenset(
+    {
+        "api_key",
+        "app_password",
+        "authorization",
+        "bearer_token",
+        "client_secret",
+        "credential",
+        "password",
+        "secret",
+        "token",
+    }
+)
+
+
 def _python_runtime_supported(version: tuple[int, ...], executable: str) -> bool:
     return bool(str(executable or "").strip()) and version[:2] >= (3, 12)
+
+
+@dataclass(frozen=True)
+class CapabilityWorkflowRequirements:
+    """Resolved capability inputs for one registered workflow queue."""
+
+    workflow: str
+    preflight_profile: str | None
+    expected_external_effects: tuple[str, ...]
+    required_capabilities: tuple[str, ...]
+    job_type: str
+
+
+def derive_queue_capability_requirements(
+    queue_name: str,
+    policy: WorkflowQueuePolicy,
+    registration: object | None,
+    workflow_control: object,
+) -> CapabilityWorkflowRequirements:
+    """Derive a queue's capability families from its canonical registration."""
+
+    normalized_queue = str(queue_name or "").strip()
+    if normalized_queue not in WORKFLOW_QUEUE_NAMES:
+        raise AppError(
+            code="workflow_queue_unregistered",
+            message="Enabled workflow queue is not in the canonical queue contract",
+            retryable=False,
+            context={"queue_name": normalized_queue},
+        )
+    if (
+        registration is None
+        or str(getattr(registration, "queue_name", "")) != normalized_queue
+    ):
+        raise AppError(
+            code="workflow_queue_capability_mapping_missing",
+            message="Enabled workflow queue has no registered capability mapping",
+            retryable=False,
+            context={"queue_name": normalized_queue},
+        )
+    if str(getattr(policy, "queue_name", "")) != normalized_queue:
+        raise AppError(
+            code="workflow_queue_policy_mismatch",
+            message="Workflow queue policy does not match its canonical queue",
+            retryable=False,
+            context={"queue_name": normalized_queue},
+        )
+    effects = tuple(
+        sorted(
+            {
+                str(effect).strip()
+                for effect in getattr(registration, "expected_external_effects", ())
+                if str(effect).strip()
+            }
+        )
+    )
+    derived = capabilities_from_external_effects(effects)
+    declared = tuple(
+        sorted(
+            {
+                str(capability).strip()
+                for capability in getattr(registration, "required_capabilities", ())
+                if str(capability).strip()
+            }
+        )
+    )
+    profile_name = preflight_profile_for_queue(normalized_queue)
+    profile = getattr(workflow_control, "preflight_profiles", {}).get(profile_name)
+    if profile_name and profile is not None:
+        if bool(getattr(profile, "require_llm", False)):
+            declared = tuple(sorted(set(declared) | {"llm_model"}))
+        if bool(getattr(profile, "require_drive", False)):
+            declared = tuple(sorted(set(declared) | {"google_drive"}))
+        if bool(getattr(profile, "require_browser", False)):
+            declared = tuple(sorted(set(declared) | {"browser"}))
+        if bool(getattr(profile, "require_publish", False)):
+            declared = tuple(sorted(set(declared) | {"wordpress"}))
+    return CapabilityWorkflowRequirements(
+        workflow=normalized_queue,
+        preflight_profile=profile_name,
+        expected_external_effects=effects,
+        required_capabilities=tuple(sorted(set(derived) | set(declared))),
+        job_type=str(getattr(registration, "job_type", "") or ""),
+    )
+
+
+def validate_capability_registry_coverage(
+    queue_policies: Mapping[str, WorkflowQueuePolicy],
+    workflow_control: object,
+) -> dict[str, CapabilityWorkflowRequirements]:
+    """Resolve every enabled canonical queue or return no partial coverage."""
+
+    resolved: dict[str, CapabilityWorkflowRequirements] = {}
+    failures: list[str] = []
+    for queue_name in sorted(
+        name
+        for name, policy in queue_policies.items()
+        if bool(getattr(policy, "enabled", False))
+    ):
+        policy = queue_policies[queue_name]
+        registration = canonical_workflow_queue_capability_registration(queue_name)
+        try:
+            resolved[queue_name] = derive_queue_capability_requirements(
+                queue_name, policy, registration, workflow_control
+            )
+        except (AppError, ValueError):
+            failures.append(queue_name)
+    if failures:
+        raise AppError(
+            code="workflow_queue_capability_mapping_missing",
+            message="One or more enabled workflow queues lack capability coverage",
+            retryable=False,
+            context={"queue_names": sorted(failures)},
+        )
+    return resolved
 
 
 def derive_capability_workflows(
@@ -105,34 +261,718 @@ def derive_capability_workflows(
     )
 
 
-_QUEUE_PREFLIGHT_PROFILES: dict[str, str | None] = {
-    "publisher_discovery": "publisher_inventory",
-    "report_acquisition": "report_download",
-    "mailbox_delivery": "report_download",
-    "source_ingest": None,
-    "report_selection": "report_generation",
-    "report_analysis": "report_generation",
-    "report_render": None,
-    "analytics_projection": None,
-    "claim_embedding": None,
-    "signal_candidate": None,
-    "signal_generation": None,
-    "briefing_opportunity": None,
-    "briefing_generation": "cross_report_analysis",
-    "cover_generation": None,
-    "publication_readiness": None,
-    "wordpress_publish": "publishing",
-    "wordpress_projection": "wordpress_sync",
-    "artifact_repair": "report_generation",
-    "source_revalidation": "browser_acquisition",
-    "malformed_pdf_revalidation": None,
-    "recategorization": "report_generation",
-    "vector_retention": "report_generation",
-    "wordpress_category_update": "publishing",
-    "public_render_repair": "report_generation",
-    "cost_reconciliation": None,
-    "release_evidence_generation": None,
-}
+def build_capability_preflight_request(
+    *,
+    profile: CapabilityProfileName,
+    ctx: RunContext,
+    live: bool,
+    queue_scope: tuple[str, ...] | None = None,
+    workflow_scope: tuple[str, ...] | None = None,
+    use_process_profile: bool = False,
+    load_settings_fn: Callable = load_settings,
+    load_workflow_control_settings_fn: Callable = load_workflow_control_settings,
+    load_workflow_queue_policies_fn: Callable = load_workflow_queue_policies,
+    load_browser_download_settings_fn: Callable = load_browser_download_settings,
+    load_mailbox_acquisition_settings_fn: Callable = load_mailbox_acquisition_settings,
+    load_publish_settings_fn: Callable = load_publish_settings,
+    load_publisher_inventory_settings_fn: Callable = load_publisher_inventory_settings,
+) -> CapabilityPreflightRequest:
+    """Resolve one effective config/profile and build a shared preflight request."""
+
+    config_request = ConfigLoadRequest(
+        schema_version="1.0",
+        path="",
+        profile_name=(
+            None
+            if use_process_profile
+            else ("autonomous_mvp" if profile == "autonomous_mvp" else "")
+        ),
+    )
+    settings = load_settings_fn(config_request, ctx)
+    workflow_control = load_workflow_control_settings_fn(config_request, ctx)
+    queue_policies = load_workflow_queue_policies_fn(config_request, ctx)
+    if queue_scope is not None:
+        scope = set(queue_scope)
+        queue_policies = {
+            name: replace(policy, enabled=policy.enabled and name in scope)
+            for name, policy in queue_policies.items()
+        }
+    workflows = tuple(
+        sorted(
+            {
+                str(workflow).strip()
+                for workflow in (workflow_scope or ())
+                if str(workflow).strip()
+            }
+        )
+    ) or derive_capability_workflows(
+        profile_name=profile,
+        supervisor_enabled=workflow_control.supervisor.enabled,
+        queue_policies=queue_policies,
+    )
+    runtime_profiles = workflow_profiles_for_runtime(workflows)
+    runtime_profiles = tuple(
+        sorted(
+            set(runtime_profiles)
+            | {
+                workflow
+                for workflow in workflows
+                if workflow in workflow_control.preflight_profiles
+            }
+        )
+    )
+    workflow_profiles = [
+        workflow_control.preflight_profiles[name]
+        for name in runtime_profiles
+        if name in workflow_control.preflight_profiles
+    ]
+    browser_settings = None
+    browser_settings_config_error = None
+    if any(item.require_browser for item in workflow_profiles):
+        try:
+            browser_settings = load_browser_download_settings_fn(config_request, ctx)
+        except AppError as exc:
+            browser_settings_config_error = exc.code
+        except Exception:
+            browser_settings_config_error = "browser_configuration_invalid"
+
+    mailbox_settings = None
+    mailbox_settings_config_error = None
+    if "mailbox_delivery" in workflows:
+        try:
+            mailbox_settings = load_mailbox_acquisition_settings_fn(config_request, ctx)
+        except AppError as exc:
+            mailbox_settings_config_error = exc.code
+        except Exception:
+            mailbox_settings_config_error = "mailbox_configuration_invalid"
+
+    publish_settings = None
+    publish_settings_config_error = None
+    if any(item.require_publish for item in workflow_profiles):
+        try:
+            publish_settings = load_publish_settings_fn(config_request, ctx)
+        except AppError as exc:
+            publish_settings_config_error = exc.code
+        except Exception:
+            publish_settings_config_error = "publish_configuration_invalid"
+
+    publisher_inventory_settings = None
+    publisher_inventory_config_error = None
+    if "publisher_discovery" in workflows:
+        try:
+            publisher_inventory_settings = load_publisher_inventory_settings_fn(
+                config_request, ctx
+            )
+        except AppError as exc:
+            publisher_inventory_config_error = exc.code
+        except Exception:
+            publisher_inventory_config_error = (
+                "publisher_inventory_configuration_invalid"
+            )
+
+    return CapabilityPreflightRequest(
+        schema_version="1.0",
+        profile_name=profile,
+        settings=settings,
+        workflow_control=workflow_control,
+        queue_policies=queue_policies,
+        workflow_scope=tuple(workflow_scope or ()),
+        publish_settings=publish_settings,
+        publish_settings_config_error=publish_settings_config_error,
+        mailbox_settings=mailbox_settings,
+        mailbox_settings_config_error=mailbox_settings_config_error,
+        browser_settings=browser_settings,
+        browser_settings_config_error=browser_settings_config_error,
+        publisher_inventory_settings=publisher_inventory_settings,
+        publisher_inventory_config_error=publisher_inventory_config_error,
+        live_checks=live,
+    )
+
+
+def _redacted_identity_value(value: object, *, key: str = "") -> object:
+    """Normalize identity material without retaining secret values.
+
+    Credential fields retain only a one-way identity hash so rotating a provider
+    credential invalidates an old proof without persisting credential contents.
+    """
+
+    normalized_key = str(key or "").strip().lower()
+    if any(token in normalized_key for token in _SECRET_IDENTITY_KEYS):
+        if value in (None, "", [], {}, ()):
+            return "<absent>"
+        return f"redacted_sha256:{sha256_json(str(value))}"
+    if isinstance(value, dict):
+        return {
+            str(item_key): _redacted_identity_value(item_value, key=str(item_key))
+            for item_key, item_value in sorted(
+                value.items(), key=lambda item: str(item[0])
+            )
+        }
+    if isinstance(value, (list, tuple)):
+        return [_redacted_identity_value(item, key=normalized_key) for item in value]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def _proof_timestamp(value: str, *, fallback_now: str) -> str:
+    token = str(value or "").strip()
+    return token or fallback_now
+
+
+def _proof_expiry(generated_at_utc: str, ttl_seconds: int) -> str:
+    try:
+        current = datetime.fromisoformat(generated_at_utc.replace("Z", "+00:00"))
+    except ValueError:
+        current = datetime.now(timezone.utc)
+    return (
+        (current + timedelta(seconds=max(1, int(ttl_seconds or 900))))
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z")
+    )
+
+
+def _proof_identity_hash(
+    check_identity: list[dict[str, object]],
+    *,
+    family: str,
+) -> str:
+    """Hash only the normalized evidence relevant to one proof identity family."""
+
+    dependency_capabilities = {
+        "core_dependencies",
+        "pdf_dependencies",
+        "python_dependencies",
+        "python_runtime",
+        "openai_dependencies",
+        "google_dependencies",
+        "wordpress_dependencies",
+        "browser_dependencies",
+    }
+    provider_capabilities = {
+        "browser",
+        "google_drive",
+        "llm_model",
+        "mailbox",
+        "openai_embedding_model",
+        "ocr_model",
+        "openrouter_model",
+        "vector_store",
+        "wordpress",
+    }
+    sqlite_capabilities = {
+        "llm_usage_db",
+        "reports_db",
+        "signal_store_db",
+        "state_db",
+    }
+    tool_capabilities = {
+        "browser_dependencies",
+        "free_space",
+        "ocr_executable",
+        "writable_storage",
+    }
+
+    def belongs(capability: str) -> bool:
+        if family == "dependency":
+            return capability in dependency_capabilities or capability.endswith(
+                "_dependencies"
+            )
+        if family == "asset":
+            return capability.startswith("asset_") or capability == "prompt_assets"
+        if family == "sqlite":
+            return capability in sqlite_capabilities or capability.endswith("_db")
+        if family == "provider":
+            return capability in provider_capabilities
+        if family == "tool":
+            return capability in tool_capabilities
+        raise ValueError(f"Unsupported proof identity family: {family}")
+
+    def workflow_key(item: dict[str, object]) -> tuple[str, ...]:
+        raw_workflows = item.get("workflows", ())
+        if not isinstance(raw_workflows, (list, tuple)):
+            return ()
+        return tuple(str(workflow) for workflow in raw_workflows)
+
+    selected = sorted(
+        (item for item in check_identity if belongs(str(item.get("capability", "")))),
+        key=lambda item: (
+            str(item.get("capability", "")),
+            workflow_key(item),
+            str(item.get("status", "")),
+            str(item.get("reason_code", "")),
+            bool(item.get("required", False)),
+        ),
+    )
+    return sha256_json(selected)
+
+
+def _current_build_identity(ctx: RunContext | None) -> str:
+    configured = str(getattr(ctx, "producer_commit_sha", "") or "").strip().lower()
+    if configured:
+        return configured
+    try:
+        revision = file_service.read_repository_revision(
+            RepositoryRevisionReadRequest(schema_version="1.0"),
+            ctx
+            or RunContext(
+                schema_version="1.0",
+                run_id=RunId("preflight-build-identity"),
+                task_id=TaskId("preflight-build-identity"),
+                span_id="preflight-build-identity",
+            ),
+        )
+    except Exception:
+        return "unknown"
+    return str(getattr(revision, "commit_sha", "") or "unknown")
+
+
+def build_execution_readiness(
+    report: CapabilityPreflightReport,
+    request: CapabilityPreflightRequest | None = None,
+    ctx: RunContext | None = None,
+    *,
+    generated_at_utc: str = "",
+    expires_at_utc: str = "",
+    proof_reference: str = "",
+) -> CapabilityExecutionReadiness:
+    """Derive the fail-closed execution decision from one capability report.
+
+    Diagnostic summaries intentionally remain separate from execution policy:
+    a degraded or skipped required check is retained as-is and is not silently
+    promoted to runnable.
+    """
+
+    workflow_scope = sorted(
+        {
+            str(workflow).strip()
+            for workflow in report.workflow_names
+            if str(workflow).strip()
+        }
+    )
+    allow_degraded = {
+        str(workflow).strip()
+        for workflow in getattr(request, "allow_degraded_workflows", ())
+        if str(workflow).strip()
+    }
+    decisions: list[CapabilityWorkflowDecision] = []
+    blocked: dict[str, list[str]] = {}
+    deferred: dict[str, list[str]] = {}
+    for workflow in workflow_scope:
+        relevant = [
+            check
+            for check in report.checks
+            if check.required
+            and (not check.affected_workflows or workflow in check.affected_workflows)
+        ]
+        statuses = {check.status for check in relevant}
+        if "blocked" in statuses:
+            status: CapabilityStatus = "blocked"
+        elif "not_checked" in statuses:
+            status = "not_checked"
+        elif "degraded" in statuses:
+            status = "degraded"
+        elif relevant and all(check.status == "not_required" for check in relevant):
+            status = "not_required"
+        else:
+            status = cast(
+                CapabilityStatus, report.workflow_statuses.get(workflow, "ready")
+            )
+        reason_codes = sorted(
+            {
+                str(check.reason_code).strip()
+                for check in relevant
+                if str(check.reason_code).strip()
+                and check.status not in {"ready", "not_required"}
+            }
+        )
+        remediations = sorted(
+            {
+                str(check.remediation).strip()
+                for check in relevant
+                if str(check.remediation).strip()
+                and check.status not in {"ready", "not_required"}
+            }
+        )
+        executable = status == "ready" or (
+            status == "degraded" and workflow in allow_degraded
+        )
+        decision = CapabilityWorkflowDecision(
+            schema_version="2.0",
+            workflow=workflow,
+            status=status,
+            executable=executable,
+            reason_codes=reason_codes,
+            remediations=remediations,
+            required_capabilities=sorted(
+                {str(check.capability) for check in relevant if check.required}
+            ),
+        )
+        decisions.append(decision)
+        if not executable:
+            reasons = reason_codes or [f"workflow_{status}"]
+            if status in {"blocked", "not_checked"}:
+                blocked[workflow] = reasons
+            else:
+                deferred[workflow] = reasons
+
+    settings_identity = _redacted_identity_value(
+        asdict(request.settings) if request is not None else {}
+    )
+    configuration_fingerprint = sha256_json(
+        {"profile": report.profile_name, "settings": settings_identity}
+    )
+    execution_policy_fingerprint = sha256_json(
+        {
+            "queue_policies": _redacted_identity_value(
+                {
+                    name: asdict(policy)
+                    for name, policy in sorted(
+                        (request.queue_policies.items() if request is not None else []),
+                        key=lambda item: item[0],
+                    )
+                }
+            ),
+            "workflow_control": _redacted_identity_value(
+                asdict(request.workflow_control) if request is not None else {}
+            ),
+            "allow_degraded_workflows": sorted(allow_degraded),
+        }
+    )
+    check_identity = [
+        {
+            "capability": check.capability,
+            "workflows": sorted(check.affected_workflows),
+            "status": check.status,
+            "reason_code": check.reason_code,
+            "required": check.required,
+        }
+        for check in report.checks
+    ]
+    check_identity.sort(
+        key=lambda item: (
+            str(item["capability"]),
+            tuple(str(workflow) for workflow in item["workflows"])
+            if isinstance(item["workflows"], (list, tuple))
+            else (),
+            str(item["status"]),
+            str(item["reason_code"]),
+            bool(item["required"]),
+        )
+    )
+    check_hash = sha256_json(check_identity)
+    identity_hashes = {
+        family: _proof_identity_hash(check_identity, family=family)
+        for family in ("dependency", "asset", "sqlite", "provider", "tool")
+    }
+    generated = _proof_timestamp(generated_at_utc, fallback_now=utc_now_iso())
+    expires = str(expires_at_utc or "").strip() or _proof_expiry(
+        generated, getattr(request, "proof_ttl_seconds", 900)
+    )
+    verification_mode = (
+        "live" if bool(getattr(request, "live_checks", False)) else "offline"
+    )
+    reason_codes = sorted(
+        {code for decision in decisions for code in decision.reason_codes}
+    )
+    remediation = sorted(
+        {item for decision in decisions for item in decision.remediations}
+    )
+    proof_material = {
+        "schema_version": "2.0",
+        "profile_name": report.profile_name,
+        "workflow_scope": workflow_scope,
+        "configuration_fingerprint": configuration_fingerprint,
+        "execution_policy_fingerprint": execution_policy_fingerprint,
+        "build_identity": _current_build_identity(ctx),
+        "check_identity": check_hash,
+        "identity_hashes": identity_hashes,
+        "verification_mode": verification_mode,
+        "decisions": [asdict(decision) for decision in decisions],
+    }
+    proof_id = sha256_json(proof_material)
+    proof = CapabilityReadinessProof(
+        schema_version="2.0",
+        proof_id=proof_id,
+        profile_name=report.profile_name,
+        workflow_scope=workflow_scope,
+        configuration_fingerprint=configuration_fingerprint,
+        execution_policy_fingerprint=execution_policy_fingerprint,
+        build_identity=str(proof_material["build_identity"]),
+        dependency_identity=identity_hashes["dependency"],
+        asset_identity=identity_hashes["asset"],
+        sqlite_identity=identity_hashes["sqlite"],
+        provider_identity=identity_hashes["provider"],
+        tool_identity=identity_hashes["tool"],
+        generated_at_utc=generated,
+        expires_at_utc=expires,
+        verification_mode=verification_mode,
+        reason_codes=reason_codes,
+        remediation=remediation,
+        artifact_reference=str(proof_reference or ""),
+        valid=True,
+    )
+    return CapabilityExecutionReadiness(
+        schema_version="2.0",
+        profile_name=report.profile_name,
+        workflow_scope=workflow_scope,
+        executable_workflows=[
+            decision.workflow for decision in decisions if decision.executable
+        ],
+        blocked_workflows=blocked,
+        deferred_workflows=deferred,
+        decisions=decisions,
+        proof=proof,
+    )
+
+
+def validate_execution_readiness(
+    readiness: CapabilityExecutionReadiness,
+    *,
+    expected_workflow: str,
+    expected_profile_name: str = "",
+    expected_workflow_scope: tuple[str, ...] | list[str] = (),
+    expected_configuration_fingerprint: str = "",
+    expected_execution_policy_fingerprint: str = "",
+    now_utc: str = "",
+) -> None:
+    """Reject missing, expired, mismatched, or non-executable proof material."""
+
+    def reject_incomplete(detail: str) -> NoReturn:
+        raise AppError(
+            code="capability_readiness_incomplete",
+            message="Capability readiness proof is incomplete",
+            retryable=False,
+            context={"detail": detail},
+        )
+
+    proof = getattr(readiness, "proof", None)
+    if proof is None:
+        reject_incomplete("proof_missing")
+    if getattr(readiness, "schema_version", "") != "2.0":
+        reject_incomplete("readiness_schema_unsupported")
+    if getattr(proof, "schema_version", "") != "2.0":
+        reject_incomplete("proof_schema_unsupported")
+
+    scope = [str(item).strip() for item in getattr(readiness, "workflow_scope", [])]
+    normalized_scope = sorted({item for item in scope if item})
+    if scope != normalized_scope:
+        reject_incomplete("workflow_scope_not_normalized")
+    proof_scope = [str(item).strip() for item in getattr(proof, "workflow_scope", [])]
+    if proof_scope != normalized_scope or proof_scope != scope:
+        reject_incomplete("proof_scope_mismatch")
+    if str(getattr(proof, "profile_name", "")) != str(
+        getattr(readiness, "profile_name", "")
+    ):
+        reject_incomplete("proof_profile_missing_or_mismatched")
+
+    decisions = list(getattr(readiness, "decisions", []))
+    decision_workflows = [str(item.workflow).strip() for item in decisions]
+    if decision_workflows != scope or len(set(decision_workflows)) != len(
+        decision_workflows
+    ):
+        reject_incomplete("workflow_decisions_incomplete")
+    allowed_statuses = {"ready", "degraded", "blocked", "not_required", "not_checked"}
+    for decision in decisions:
+        if decision.status not in allowed_statuses:
+            reject_incomplete("workflow_decision_status_invalid")
+        if decision.executable and decision.status not in {"ready", "degraded"}:
+            reject_incomplete("blocked_workflow_marked_executable")
+        if decision.required_capabilities != sorted(
+            set(
+                str(item).strip()
+                for item in decision.required_capabilities
+                if str(item).strip()
+            )
+        ):
+            reject_incomplete("required_capabilities_not_normalized")
+
+    executable = [
+        str(item).strip() for item in getattr(readiness, "executable_workflows", [])
+    ]
+    expected_executable = [item.workflow for item in decisions if item.executable]
+    if executable != sorted(set(executable)) or executable != expected_executable:
+        reject_incomplete("executable_workflows_mismatch")
+    blocked = set(getattr(readiness, "blocked_workflows", {}))
+    deferred = set(getattr(readiness, "deferred_workflows", {}))
+    if blocked & deferred or not (blocked | deferred | set(executable)).issubset(
+        set(scope)
+    ):
+        reject_incomplete("workflow_outcome_partition_invalid")
+
+    def is_sha256(value: object) -> bool:
+        token = str(value or "")
+        return len(token) == 64 and all(
+            character in "0123456789abcdef" for character in token
+        )
+
+    for identity_field in (
+        "proof_id",
+        "configuration_fingerprint",
+        "execution_policy_fingerprint",
+        "dependency_identity",
+        "asset_identity",
+        "sqlite_identity",
+        "provider_identity",
+        "tool_identity",
+    ):
+        if not is_sha256(getattr(proof, identity_field, "")):
+            reject_incomplete(f"{identity_field}_missing_or_invalid")
+    if (
+        not str(getattr(proof, "build_identity", "")).strip()
+        or str(getattr(proof, "build_identity", "")).strip().lower() == "unknown"
+    ):
+        reject_incomplete("build_identity_missing")
+    if getattr(proof, "verification_mode", "") not in {"offline", "live"}:
+        reject_incomplete("verification_mode_invalid")
+    try:
+        generated_at = datetime.fromisoformat(
+            str(proof.generated_at_utc).replace("Z", "+00:00")
+        )
+        expiry_at = datetime.fromisoformat(
+            str(proof.expires_at_utc).replace("Z", "+00:00")
+        )
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise AppError(
+            code="capability_readiness_expiry_invalid",
+            message="Capability readiness proof timestamps are invalid",
+            retryable=False,
+            cause=exc,
+        ) from exc
+    if expiry_at <= generated_at:
+        reject_incomplete("proof_expiry_not_after_generation")
+
+    workflow = str(expected_workflow or "").strip()
+    if not proof.valid:
+        raise AppError(
+            code="capability_readiness_invalid",
+            message="Capability readiness proof is invalid",
+            retryable=False,
+        )
+    if expected_profile_name and readiness.profile_name != expected_profile_name:
+        raise AppError(
+            code="capability_readiness_profile_mismatch",
+            message="Capability readiness profile does not match execution",
+            retryable=False,
+        )
+    expected_scope = sorted(
+        {str(item).strip() for item in expected_workflow_scope if str(item).strip()}
+    )
+    if expected_scope and readiness.workflow_scope != expected_scope:
+        raise AppError(
+            code="capability_readiness_scope_mismatch",
+            message="Capability readiness workflow scope does not match execution",
+            retryable=False,
+        )
+    if expected_configuration_fingerprint and (
+        proof.configuration_fingerprint != expected_configuration_fingerprint
+    ):
+        raise AppError(
+            code="capability_readiness_configuration_mismatch",
+            message="Capability readiness configuration identity is stale",
+            retryable=False,
+        )
+    if expected_execution_policy_fingerprint and (
+        proof.execution_policy_fingerprint != expected_execution_policy_fingerprint
+    ):
+        raise AppError(
+            code="capability_readiness_policy_mismatch",
+            message="Capability readiness execution-policy identity is stale",
+            retryable=False,
+        )
+    if workflow and workflow not in readiness.workflow_scope:
+        raise AppError(
+            code="capability_readiness_workflow_unscoped",
+            message="Workflow is not included in the capability readiness scope",
+            retryable=False,
+        )
+    try:
+        current = datetime.fromisoformat(
+            (_proof_timestamp(now_utc, fallback_now=utc_now_iso())).replace(
+                "Z", "+00:00"
+            )
+        )
+        expiry = datetime.fromisoformat(proof.expires_at_utc.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise AppError(
+            code="capability_readiness_expiry_invalid",
+            message="Capability readiness proof expiry is invalid",
+            retryable=False,
+            cause=exc,
+        ) from exc
+    if expiry <= current:
+        raise AppError(
+            code="capability_readiness_expired",
+            message="Capability readiness proof has expired",
+            retryable=False,
+        )
+    if workflow and not readiness.is_workflow_executable(workflow):
+        raise AppError(
+            code="capability_readiness_workflow_blocked",
+            message="Required capability readiness is not executable for this workflow",
+            retryable=False,
+            severity="warning",
+            context={
+                "workflow": workflow,
+                "reason_codes": readiness.blocked_workflows.get(workflow)
+                or readiness.deferred_workflows.get(workflow)
+                or [],
+            },
+        )
+
+
+def retain_capability_proof(
+    readiness: CapabilityExecutionReadiness,
+    request: CapabilityPreflightRequest,
+    ctx: RunContext,
+    deps: CapabilityPreflightDependencies,
+    *,
+    report: CapabilityPreflightReport | None = None,
+) -> CapabilityExecutionReadiness:
+    """Retain one redacted proof/report through the canonical file service."""
+
+    output_dir = str(getattr(request.settings, "output_dir", "") or "").strip()
+    if not output_dir:
+        raise AppError(
+            code="capability_proof_path_missing",
+            message="Capability proof output path is not configured",
+            retryable=False,
+        )
+    proof_path = (
+        Path(output_dir)
+        / "preflight"
+        / f"capability-{readiness.proof.proof_id[:32]}-{uuid.uuid4().hex[:8]}.json"
+    )
+    proof = replace(readiness.proof, artifact_reference=str(proof_path))
+    retained = replace(readiness, proof=proof)
+    artifact_value: object = (
+        asdict(replace(report, execution_readiness=retained))
+        if report is not None
+        else asdict(retained)
+    )
+    payload = json.dumps(
+        artifact_value, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    ).encode("utf-8")
+    try:
+        deps.write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0",
+                path=str(proof_path),
+                content=payload,
+                make_parents=True,
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        raise AppError(
+            code="capability_proof_persist_failed",
+            message="Redacted capability proof could not be retained",
+            cause=exc,
+            retryable=False,
+            context={"path": str(proof_path)},
+        ) from exc
+    return retained
+
 
 _REPORTS_DB_WORKFLOWS = frozenset(
     {
@@ -244,6 +1084,13 @@ class CapabilityPreflightDependencies:
     preflight_wordpress_publish_target: Callable[
         [PublishSettings, RunContext, WordPressPublishCapabilityRequirements], object
     ]
+    inspect_filesystem_usage: (
+        Callable[[FileSystemUsageRequest, RunContext], FileSystemUsageResponse] | None
+    ) = None
+    preflight_vector_store: (
+        Callable[[OpenAIVectorStorePreflightRequest, RunContext], object] | None
+    ) = None
+    write_exclusive_bytes: _Callable2 | None = None
 
 
 def default_capability_preflight_dependencies() -> CapabilityPreflightDependencies:
@@ -271,6 +1118,11 @@ def default_capability_preflight_dependencies() -> CapabilityPreflightDependenci
                 )
             )
         ),
+        inspect_filesystem_usage=file_service.inspect_filesystem_usage,
+        preflight_vector_store=llm_service.preflight_openai_vector_store,
+        write_exclusive_bytes=lambda request, ctx: file_service.write_bytes(
+            request, ctx, require_absent=True
+        ),
     )
 
 
@@ -284,21 +1136,40 @@ def run_capability_preflight(
 
     started = time.perf_counter()
     deps = dependencies or default_capability_preflight_dependencies()
-    workflows = derive_capability_workflows(
+    workflows = tuple(
+        sorted(
+            {
+                str(workflow).strip()
+                for workflow in request.workflow_scope
+                if str(workflow).strip()
+            }
+        )
+    ) or derive_capability_workflows(
         profile_name=request.profile_name,
         supervisor_enabled=request.workflow_control.supervisor.enabled,
         queue_policies=request.queue_policies,
     )
-    ocr_workflows = tuple(
-        workflow
-        for workflow in workflows
-        if workflow in _OCR_WORKFLOWS
-        and bool(getattr(request.settings, "pdf_text_ocr_enabled", False))
-    )
+    ocr_workflows: tuple[str, ...] = ()
     checks: list[CapabilityPreflightCheck] = []
     provider_calls = 0
     profiles: dict[str, object] = {}
     workflow_profiles: dict[str, str] = {}
+    queue_requirements: dict[str, CapabilityWorkflowRequirements] = {}
+    if workflows and (
+        request.profile_name == "autonomous_mvp"
+        or any(
+            canonical_workflow_queue_capability_registration(workflow) is not None
+            for workflow in workflows
+        )
+    ):
+        try:
+            queue_requirements = validate_capability_registry_coverage(
+                request.queue_policies, request.workflow_control
+            )
+        except AppError:
+            # Keep the report complete for unaffected diagnostics, but the
+            # configuration check below will fail closed for every uncovered queue.
+            queue_requirements = {}
 
     if (
         request.profile_name == "autonomous_mvp"
@@ -346,11 +1217,18 @@ def run_capability_preflight(
         profile_name: str | None = None
         if workflow == "report_generation":
             profile_name = "report_generation"
-        elif workflow in _QUEUE_PREFLIGHT_PROFILES:
-            profile_name = _QUEUE_PREFLIGHT_PROFILES[workflow]
+        elif workflow in queue_requirements:
+            profile_name = queue_requirements[workflow].preflight_profile
             if profile_name is None:
                 workflow_profiles[workflow] = "local_runtime"
                 continue
+        elif canonical_workflow_queue_capability_registration(workflow) is not None:
+            profile_name = preflight_profile_for_queue(workflow)
+            if profile_name is None:
+                workflow_profiles[workflow] = "local_runtime"
+                continue
+        elif workflow in request.workflow_control.preflight_profiles:
+            profile_name = workflow
         else:
             profile_name = None
         if not profile_name:
@@ -383,7 +1261,51 @@ def run_capability_preflight(
         workflow_profiles[workflow] = profile_name
         profiles.setdefault(profile_name, profile)
 
-    llm_workflows = _profile_workflows(profiles, workflow_profiles, "require_llm")
+    ocr_workflows = tuple(
+        sorted(
+            workflow
+            for workflow in workflows
+            if bool(getattr(request.settings, "pdf_text_ocr_enabled", False))
+            and (
+                workflow == "report_generation"
+                or "ocr_model"
+                in queue_requirements.get(
+                    workflow,
+                    CapabilityWorkflowRequirements(
+                        workflow=workflow,
+                        preflight_profile=None,
+                        expected_external_effects=(),
+                        required_capabilities=(),
+                        job_type="",
+                    ),
+                ).required_capabilities
+            )
+        )
+    )
+    requirement_workflows = {
+        capability: tuple(
+            sorted(
+                workflow
+                for workflow, requirements in queue_requirements.items()
+                if workflow in workflows
+                and capability in requirements.required_capabilities
+            )
+        )
+        for capability in (
+            "llm_model",
+            "openai_embedding_model",
+            "google_drive",
+            "browser",
+            "wordpress",
+            "mailbox",
+        )
+    }
+    llm_workflows = tuple(
+        sorted(
+            set(_profile_workflows(profiles, workflow_profiles, "require_llm"))
+            | set(requirement_workflows["llm_model"])
+        )
+    )
     inventory_settings = request.publisher_inventory_settings
     if "publisher_discovery" in llm_workflows and not (
         inventory_settings is not None
@@ -395,12 +1317,33 @@ def run_capability_preflight(
             workflow for workflow in llm_workflows if workflow != "publisher_discovery"
         )
     embedding_workflows = tuple(
-        workflow for workflow in workflows if workflow == "claim_embedding"
+        sorted(
+            set(workflow for workflow in workflows if workflow == "claim_embedding")
+            | set(requirement_workflows["openai_embedding_model"])
+        )
+    )
+    vector_workflows = tuple(
+        sorted(
+            workflow
+            for workflow, requirements in queue_requirements.items()
+            if workflow in workflows
+            and "vector_store" in requirements.required_capabilities
+        )
     )
     openai_workflows = tuple(
-        sorted(set(llm_workflows) | set(embedding_workflows) | set(ocr_workflows))
+        sorted(
+            set(llm_workflows)
+            | set(embedding_workflows)
+            | set(ocr_workflows)
+            | set(vector_workflows)
+        )
     )
-    drive_workflows = _profile_workflows(profiles, workflow_profiles, "require_drive")
+    drive_workflows = tuple(
+        sorted(
+            set(_profile_workflows(profiles, workflow_profiles, "require_drive"))
+            | set(requirement_workflows["google_drive"])
+        )
+    )
     if request.browser_settings is not None and not (
         request.browser_settings.drive_upload_enabled
         and request.browser_settings.drive_upload_required
@@ -410,14 +1353,23 @@ def run_capability_preflight(
             for workflow in drive_workflows
             if workflow not in {"report_acquisition", "mailbox_delivery"}
         )
-    browser_workflows = _profile_workflows(
-        profiles, workflow_profiles, "require_browser"
+    browser_workflows = tuple(
+        sorted(
+            set(_profile_workflows(profiles, workflow_profiles, "require_browser"))
+            | set(requirement_workflows["browser"])
+        )
     )
-    wordpress_workflows = _profile_workflows(
-        profiles, workflow_profiles, "require_publish"
+    wordpress_workflows = tuple(
+        sorted(
+            set(_profile_workflows(profiles, workflow_profiles, "require_publish"))
+            | set(requirement_workflows["wordpress"])
+        )
     )
     mailbox_workflows = tuple(
-        workflow for workflow in workflows if workflow == "mailbox_delivery"
+        sorted(
+            set(workflow for workflow in workflows if workflow == "mailbox_delivery")
+            | set(requirement_workflows["mailbox"])
+        )
     )
     report_db_workflows = tuple(
         workflow
@@ -429,7 +1381,12 @@ def run_capability_preflight(
     )
 
     checks.extend(
-        _check_capability_configuration(request, workflows, workflow_profiles)
+        _check_capability_configuration(
+            request,
+            workflows,
+            workflow_profiles,
+            registry_requirements=queue_requirements,
+        )
     )
     checks.extend(
         _check_capability_dependencies(
@@ -519,9 +1476,8 @@ def run_capability_preflight(
                 )
             )
         else:
-            provider_calls += 1
             try:
-                deps.preflight_openai_model(
+                result = deps.preflight_openai_model(
                     OpenAIModelPreflightRequest(
                         schema_version="1.0",
                         api_key=settings.openai_api_key,
@@ -535,18 +1491,33 @@ def run_capability_preflight(
                     ),
                     ctx,
                 )
-                checks.append(
-                    _capability_check(
-                        "llm_model",
-                        llm_workflows,
-                        "ready",
-                        "openai_model_accessible",
-                        False,
-                        "continue",
-                        required=True,
+                provider_calls += max(1, int(getattr(result, "provider_calls", 1) or 0))
+                if not bool(getattr(result, "accessible", False)):
+                    checks.append(
+                        _capability_check(
+                            "llm_model",
+                            llm_workflows,
+                            "blocked",
+                            "openai_model_unavailable",
+                            False,
+                            "Check OPENAI_API_KEY and the configured model",
+                            required=True,
+                        )
                     )
-                )
+                else:
+                    checks.append(
+                        _capability_check(
+                            "llm_model",
+                            llm_workflows,
+                            "ready",
+                            "openai_model_accessible",
+                            False,
+                            "continue",
+                            required=True,
+                        )
+                    )
             except AppError as exc:
+                provider_calls += max(1, int(exc.context.get("provider_calls", 1) or 0))
                 checks.append(
                     _capability_check(
                         "llm_model",
@@ -561,6 +1532,7 @@ def run_capability_preflight(
                     )
                 )
             except Exception:
+                provider_calls += 1
                 checks.append(
                     _capability_check(
                         "llm_model",
@@ -644,6 +1616,12 @@ def run_capability_preflight(
                 required=False,
             )
         )
+
+    vector_check, vector_calls = _check_vector_store_capability(
+        request, vector_workflows, checks, deps, ctx
+    )
+    checks.append(vector_check)
+    provider_calls += vector_calls
 
     publisher_checks, calls = _check_publisher_inventory_model(
         request,
@@ -739,7 +1717,9 @@ def run_capability_preflight(
         ]
         if any(status == "blocked" for status in relevant):
             workflow_statuses[workflow] = "blocked"
-        elif any(status in {"degraded", "not_checked"} for status in relevant):
+        elif any(status == "not_checked" for status in relevant):
+            workflow_statuses[workflow] = "not_checked"
+        elif any(status == "degraded" for status in relevant):
             workflow_statuses[workflow] = "degraded"
         else:
             workflow_statuses[workflow] = "ready"
@@ -754,9 +1734,13 @@ def run_capability_preflight(
         and all(status == "blocked" for status in workflow_statuses.values())
     ):
         overall_status: CapabilityStatus = "blocked"
-    elif any(
-        status in {"degraded", "not_checked"} for status in global_required_statuses
-    ) or any(status != "ready" for status in workflow_statuses.values()):
+    elif any(status == "not_checked" for status in global_required_statuses) or any(
+        status == "not_checked" for status in workflow_statuses.values()
+    ):
+        overall_status = "not_checked"
+    elif any(status == "degraded" for status in global_required_statuses) or any(
+        status != "ready" for status in workflow_statuses.values()
+    ):
         overall_status = "degraded"
     elif workflow_statuses:
         overall_status = "ready"
@@ -776,6 +1760,49 @@ def run_capability_preflight(
             check.required and check.status != "ready" for check in checks
         ),
     )
+    report = replace(
+        report,
+        execution_readiness=build_execution_readiness(report, request, ctx),
+    )
+    try:
+        assert report.execution_readiness is not None
+        retained_readiness = retain_capability_proof(
+            report.execution_readiness,
+            request,
+            ctx,
+            deps,
+            report=report,
+        )
+        report = replace(
+            report,
+            execution_readiness=retained_readiness,
+            proof_reference=retained_readiness.proof.artifact_reference,
+        )
+    except AppError as exc:
+        proof_failure = _capability_check(
+            "capability_proof",
+            workflows,
+            "blocked",
+            _safe_reason_code(exc.code, "capability_proof_persist_failed"),
+            False,
+            "Restore the configured proof output path and rerun capability preflight",
+            required=bool(workflows),
+        )
+        failed_checks = [*report.checks, proof_failure]
+        failed_workflow_statuses: dict[str, CapabilityStatus] = {
+            workflow: "blocked" for workflow in workflows
+        }
+        failed_report = replace(
+            report,
+            status="blocked" if workflows else report.status,
+            workflow_statuses=failed_workflow_statuses or report.workflow_statuses,
+            checks=failed_checks,
+            blocking_count=report.blocking_count + int(bool(workflows)),
+        )
+        report = replace(
+            failed_report,
+            execution_readiness=build_execution_readiness(failed_report, request, ctx),
+        )
     logger.info(
         log_event(
             ctx,
@@ -967,6 +1994,147 @@ def _check_openai_model_capability(
         ),
         1,
     )
+
+
+def _check_vector_store_capability(
+    request: CapabilityPreflightRequest,
+    workflows: tuple[str, ...],
+    checks: list[CapabilityPreflightCheck],
+    deps: CapabilityPreflightDependencies,
+    ctx: RunContext,
+) -> tuple[CapabilityPreflightCheck, int]:
+    if not workflows:
+        return (
+            _capability_check(
+                "vector_store",
+                (),
+                "not_required",
+                "vector_store_not_required",
+                False,
+                "No enabled workflow requires vector-store access",
+                required=False,
+            ),
+            0,
+        )
+    settings = request.settings
+    if not str(settings.openai_api_key or "").strip():
+        return (
+            _capability_check(
+                "vector_store",
+                workflows,
+                "blocked",
+                "vector_store_missing_api_key",
+                False,
+                "Set OPENAI_API_KEY before vector-store work",
+                required=True,
+            ),
+            0,
+        )
+    if _dependency_blocked(checks, "openai_dependencies", workflows):
+        return (
+            _capability_check(
+                "vector_store",
+                workflows,
+                "blocked",
+                "vector_store_dependency_missing",
+                False,
+                "Install the locked OpenAI client dependency",
+                required=True,
+            ),
+            0,
+        )
+    if not request.live_checks:
+        return (
+            _capability_check(
+                "vector_store",
+                workflows,
+                "not_checked",
+                "vector_store_live_probe_skipped",
+                False,
+                "Rerun with --live to verify vector-store authorization",
+                required=True,
+            ),
+            0,
+        )
+    if deps.preflight_vector_store is None:
+        return (
+            _capability_check(
+                "vector_store",
+                workflows,
+                "not_checked",
+                "vector_store_probe_unavailable",
+                False,
+                "Use the supported vector-store preflight implementation",
+                required=True,
+            ),
+            0,
+        )
+    try:
+        result = deps.preflight_vector_store(
+            OpenAIVectorStorePreflightRequest(
+                schema_version="1.0",
+                api_key=settings.openai_api_key,
+                timeout_seconds=min(
+                    float(getattr(settings, "openai_timeout_seconds", 5.0) or 5.0),
+                    10.0,
+                ),
+            ),
+            ctx,
+        )
+        calls = max(1, int(getattr(result, "provider_calls", 1) or 0))
+        if not bool(getattr(result, "accessible", False)):
+            return (
+                _capability_check(
+                    "vector_store",
+                    workflows,
+                    "blocked",
+                    "vector_store_unavailable",
+                    False,
+                    "Check vector-store authorization for the configured provider",
+                    required=True,
+                ),
+                calls,
+            )
+        return (
+            _capability_check(
+                "vector_store",
+                workflows,
+                "ready",
+                "vector_store_accessible",
+                False,
+                "continue",
+                required=True,
+            ),
+            calls,
+        )
+    except AppError as exc:
+        return (
+            _capability_check(
+                "vector_store",
+                workflows,
+                "degraded" if exc.retryable else "blocked",
+                _safe_reason_code(exc.code, "vector_store_provider_unavailable"),
+                bool(exc.retryable),
+                "Rerun the capability preflight"
+                if exc.retryable
+                else "Check vector-store authorization for the configured provider",
+                required=True,
+            ),
+            max(1, int(exc.context.get("provider_calls", 1) or 0)),
+        )
+    except Exception:
+        return (
+            _capability_check(
+                "vector_store",
+                workflows,
+                "degraded",
+                "vector_store_provider_unavailable",
+                True,
+                "Rerun the capability preflight",
+                required=True,
+            ),
+            1,
+        )
 
 
 def _check_publisher_inventory_model(
@@ -1192,6 +2360,8 @@ def _check_capability_configuration(
     request: CapabilityPreflightRequest,
     workflows: tuple[str, ...],
     workflow_profiles: dict[str, str],
+    *,
+    registry_requirements: Mapping[str, CapabilityWorkflowRequirements] | None = None,
 ) -> list[CapabilityPreflightCheck]:
     checks = [
         _capability_check(
@@ -1246,7 +2416,11 @@ def _check_capability_configuration(
         unknown_queues = sorted(
             workflow
             for workflow in workflows
-            if workflow not in _QUEUE_PREFLIGHT_PROFILES
+            if (
+                workflow not in registry_requirements
+                if registry_requirements is not None
+                else canonical_workflow_queue_capability_registration(workflow) is None
+            )
         )
         checks.append(
             _capability_check(
@@ -1462,7 +2636,7 @@ def workflow_profiles_for_runtime(workflows: tuple[str, ...]) -> tuple[str, ...]
             {
                 "report_generation"
                 if workflow == "report_generation"
-                else _QUEUE_PREFLIGHT_PROFILES.get(workflow) or "local_runtime"
+                else preflight_profile_for_queue(workflow) or "local_runtime"
                 for workflow in workflows
             }
         )
@@ -1548,7 +2722,12 @@ def _check_capability_assets(
         workflow: (
             "report_generation"
             if workflow == "report_generation"
-            else _QUEUE_PREFLIGHT_PROFILES.get(workflow) or "local_runtime"
+            else preflight_profile_for_queue(workflow)
+            or (
+                workflow
+                if workflow in request.workflow_control.preflight_profiles
+                else "local_runtime"
+            )
         )
         for workflow in workflows
     }
@@ -1649,10 +2828,30 @@ def _check_capability_storage(
     if report_workflows:
         add_path(request.settings.output_dir, report_workflows)
         add_path(request.settings.cache_dir, report_workflows)
+        add_path(
+            str(Path(request.settings.reports_db).expanduser().parent), report_workflows
+        )
         lock_path = str(request.settings.ingest_lock_path or "").strip()
         add_path(
             str(Path(lock_path).expanduser().parent) if lock_path else "",
             report_workflows,
+        )
+    if workflows:
+        add_path(str(Path(request.settings.state_db).expanduser().parent), workflows)
+        add_path(
+            str(Path(request.settings.usage_db_path).expanduser().parent), workflows
+        )
+    signal_workflows = tuple(
+        workflow for workflow in workflows if workflow in _SIGNAL_STORE_WORKFLOWS
+    )
+    if signal_workflows:
+        add_path(
+            str(
+                Path(request.settings.signal_store_db or request.settings.reports_db)
+                .expanduser()
+                .parent
+            ),
+            signal_workflows,
         )
     if request.browser_settings is not None:
         if browser_workflows:
@@ -1678,6 +2877,48 @@ def _check_capability_storage(
                 required=True,
             )
         )
+    minimum_free_space = max(
+        0, int(getattr(request.settings, "preflight_min_free_space_bytes", 0) or 0)
+    )
+    if minimum_free_space > 0:
+        usage_probe = (
+            deps.inspect_filesystem_usage or file_service.inspect_filesystem_usage
+        )
+        for path, affected_workflows in sorted(paths.items()):
+            try:
+                usage = usage_probe(
+                    FileSystemUsageRequest(schema_version="1.0", path=str(path)),
+                    ctx,
+                )
+                available = int(
+                    getattr(usage, "available_bytes", getattr(usage, "free_bytes", -1))
+                )
+                status = "ready" if available >= minimum_free_space else "blocked"
+                reason_code = (
+                    "filesystem_free_space_ready"
+                    if status == "ready"
+                    else "insufficient_free_space"
+                )
+                retryable = False
+            except AppError as exc:
+                status = "degraded" if exc.retryable else "blocked"
+                reason_code = _safe_reason_code(
+                    exc.code, "filesystem_usage_unavailable"
+                )
+                retryable = bool(exc.retryable)
+            checks.append(
+                _capability_check(
+                    "free_space",
+                    affected_workflows,
+                    status,
+                    reason_code,
+                    retryable,
+                    "Free space on the filesystem or lower the configured preflight floor"
+                    if status != "ready"
+                    else "continue",
+                    required=True,
+                )
+            )
     if not paths:
         checks.append(
             _capability_check(
@@ -1726,7 +2967,21 @@ def _probe_storage_path(
         probe_dir = probe_dir.parent
     probe_path = str(probe_dir / f".marketlense-preflight-{uuid.uuid4().hex}.tmp")
     try:
-        deps.write_bytes(
+        if deps.file_stat(
+            FileStatRequest(schema_version="1.0", path=probe_path), ctx
+        ).exists:
+            return False, "storage_probe_path_collision"
+    except AppError as exc:
+        return False, _safe_reason_code(exc.code, "storage_probe_unavailable")
+
+    write_reason = "storage_writable"
+    cleanup_reason = ""
+    owned = True
+    try:
+        write_probe = getattr(deps, "write_exclusive_bytes", None)
+        if not callable(write_probe):
+            write_probe = deps.write_bytes
+        write_probe(
             WriteBytesRequest(
                 schema_version="1.0",
                 path=probe_path,
@@ -1735,13 +2990,28 @@ def _probe_storage_path(
             ),
             ctx,
         )
-        deps.delete_file(
-            DeleteFileRequest(schema_version="1.0", path=probe_path, missing_ok=True),
-            ctx,
-        )
     except AppError as exc:
-        return False, _safe_reason_code(exc.code, "storage_not_writable")
-    return True, "storage_writable"
+        if exc.code == "file_write_conflict":
+            owned = False
+        write_reason = _safe_reason_code(exc.code, "storage_not_writable")
+    finally:
+        if owned:
+            try:
+                deleted = deps.delete_file(
+                    DeleteFileRequest(
+                        schema_version="1.0", path=probe_path, missing_ok=True
+                    ),
+                    ctx,
+                )
+                if write_reason == "storage_writable" and not deleted.deleted:
+                    cleanup_reason = "storage_probe_cleanup_failed"
+            except AppError:
+                cleanup_reason = "storage_probe_cleanup_failed"
+    if cleanup_reason:
+        return False, cleanup_reason
+    if write_reason != "storage_writable":
+        return False, write_reason
+    return True, write_reason
 
 
 def _check_capability_databases(
@@ -2879,6 +4149,7 @@ class PipelinePreflightDependencies:
     load_prompt_set: _Callable2
     preflight_drive_write_access: _Callable2
     preflight_wordpress_publish_target: Callable[[PublishSettings, RunContext], object]
+    write_exclusive_bytes: _Callable2 | None = None
 
 
 def default_dependencies() -> PipelinePreflightDependencies:
@@ -2889,6 +4160,9 @@ def default_dependencies() -> PipelinePreflightDependencies:
         load_prompt_set=prompt_service.load_prompt_set,
         preflight_drive_write_access=drive_service.preflight_drive_write_access,
         preflight_wordpress_publish_target=wordpress_service.preflight_publish_target,
+        write_exclusive_bytes=lambda request, ctx: file_service.write_bytes(
+            request, ctx, require_absent=True
+        ),
     )
 
 
@@ -3114,13 +4388,33 @@ def _probe_writable_path(
     path = Path(raw_path)
     is_directory_target = label in {"output_dir", "cache_dir"}
     probe_dir = path if is_directory_target else path.parent
-    probe_path = probe_dir / f".marketlense-preflight-{label}.tmp"
+    probe_path = probe_dir / f".marketlense-preflight-{label}-{uuid.uuid4().hex}.tmp"
+    existed_before = False
+    write_reason = ""
+    cleanup_reason = ""
+    owned = False
     try:
         existed_before = deps.file_stat(
             FileStatRequest(schema_version="1.0", path=str(probe_dir)),
             ctx,
         ).exists
-        deps.write_bytes(
+        if deps.file_stat(
+            FileStatRequest(schema_version="1.0", path=str(probe_path)),
+            ctx,
+        ).exists:
+            return _check(
+                f"path_writable:{label}",
+                "blocker",
+                "probe_path_collision",
+                f"Probe path collided for {label}",
+                f"fix_path_permissions:{label}",
+                metadata={"path": str(raw_path)},
+            )
+        owned = True
+        write_probe = getattr(deps, "write_exclusive_bytes", None)
+        if not callable(write_probe):
+            write_probe = deps.write_bytes
+        write_probe(
             WriteBytesRequest(
                 schema_version="1.0",
                 path=str(probe_path),
@@ -3129,15 +4423,29 @@ def _probe_writable_path(
             ),
             ctx,
         )
-        deps.delete_file(
-            DeleteFileRequest(schema_version="1.0", path=str(probe_path)),
-            ctx,
-        )
     except AppError as exc:
+        if exc.code == "file_write_conflict":
+            owned = False
+        write_reason = exc.code
+    finally:
+        if owned:
+            try:
+                deleted = deps.delete_file(
+                    DeleteFileRequest(
+                        schema_version="1.0", path=str(probe_path), missing_ok=True
+                    ),
+                    ctx,
+                )
+                if not deleted.deleted:
+                    cleanup_reason = "probe_cleanup_failed"
+            except AppError:
+                cleanup_reason = "probe_cleanup_failed"
+    if write_reason or cleanup_reason:
+        reason = cleanup_reason or write_reason or "path_probe_failed"
         return _check(
             f"path_writable:{label}",
             "blocker",
-            exc.code,
+            reason,
             f"Path is not writable for {label}",
             f"fix_path_permissions:{label}",
             metadata={"path": str(raw_path)},

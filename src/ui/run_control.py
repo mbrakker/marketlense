@@ -140,6 +140,7 @@ def _resolve_ui_workflow_control_payload(
             plan=plan,
             expected_workflow=resolved.workflow,
             requested_side_effects=[],
+            authorization_mode="preview",
         ),
         ctx=ctx,
     )

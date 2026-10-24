@@ -1167,7 +1167,7 @@ def _apply_budget_authority_migrations(path: Path, ctx: RunContext) -> None:
         apply_llm_usage_ledger_migrations(
             SqliteMigrationApplyRequest(
                 schema_version="1.0",
-                database_key="llm_usage_ledger",
+                database_key="llm_usage_db",
                 db_path=str(path),
                 target_version=4,
                 ctx=ctx,

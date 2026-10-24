@@ -87,6 +87,24 @@ def _resolve_ingest_runtime_settings(
             ),
         ],
     )
+    preflight_cfg = ingest.get("preflight") or {}
+    if not isinstance(preflight_cfg, dict):
+        preflight_cfg = {}
+    raw_min_free_space = preflight_cfg.get("min_free_space_bytes")
+    if _is_missing(raw_min_free_space):
+        raw_min_free_space = _env_value("PREFLIGHT_MIN_FREE_SPACE_BYTES")
+    resolved["preflight_min_free_space_bytes"] = max(
+        0,
+        _to_int(
+            raw_min_free_space,
+            _to_int(
+                _default_config_value(
+                    "ingest", "preflight", "min_free_space_bytes", fallback=0
+                ),
+                0,
+            ),
+        ),
+    )
     run_budget_cfg = ingest.get("run_budget", {}) or {}
     if not isinstance(run_budget_cfg, dict):
         run_budget_cfg = {}

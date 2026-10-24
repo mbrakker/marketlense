@@ -13,7 +13,6 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Callable
@@ -146,6 +145,9 @@ from src.services.workflow_queue_service import (
 from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
 from src.utils.wp_auth import build_auth_header
+from src.orchestrators.workflow_queue_capabilities import (
+    capabilities_from_external_effects,
+)
 
 WorkflowQueueHandler = Callable[
     [WorkflowJob, QueuePayload, RunContext], "WorkflowQueueHandlerResult"
@@ -172,6 +174,7 @@ class WorkflowQueueHandlerRegistration:
     budget_profile: str
     expected_external_effects: tuple[str, ...]
     allowed_downstream_job_types: tuple[str, ...]
+    required_capabilities: tuple[str, ...] = field(default_factory=tuple)
 
 
 def _verified_reference_handler(

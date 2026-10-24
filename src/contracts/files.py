@@ -514,6 +514,31 @@ class FileStatResponse:
 
 
 @dataclass(frozen=True)
+class FileSystemUsageRequest:
+    schema_version: str = field(
+        metadata={"doc": "Filesystem-usage request schema version."}
+    )
+    path: str = field(
+        metadata={
+            "doc": "Existing or nearest existing path whose filesystem is inspected."
+        }
+    )
+
+
+@dataclass(frozen=True)
+class FileSystemUsageResponse:
+    schema_version: str = field(
+        metadata={"doc": "Filesystem-usage response schema version."}
+    )
+    path: str = field(metadata={"doc": "Path used for filesystem inspection."})
+    total_bytes: int = field(metadata={"doc": "Total bytes on the filesystem."})
+    free_bytes: int = field(metadata={"doc": "Free bytes on the filesystem."})
+    available_bytes: int = field(
+        metadata={"doc": "Bytes available to the current process."}
+    )
+
+
+@dataclass(frozen=True)
 class ExecutableAvailabilityRequest:
     schema_version: str = field(
         metadata={"doc": "Executable-availability request schema version."}
