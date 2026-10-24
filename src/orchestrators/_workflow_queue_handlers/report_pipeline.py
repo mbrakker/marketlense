@@ -14,7 +14,6 @@ import json
 import uuid
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field, replace
-from pathlib import Path
 from typing import Callable
 
 from src.contracts.acquisition_handoff import VerifiedAcquisitionIngestHandoffRequest
@@ -104,7 +103,10 @@ from src.contracts.workflow_queue import (
     WorkflowStageResult,
 )
 from src.generators.cover_image_generator import generate_cover_images
-from src.generators.verified_claims_canary import VisualAuthorityCanaryConfig
+from src.generators.verified_claims_canary import (
+    VisualAuthorityCanaryConfig,
+    default_visual_authority_output_dir,
+)
 from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_manifest_stage,
 )
@@ -371,7 +373,7 @@ def _verified_facts_canary_config(
     source_label = str(ctx.source_identity_id or report_id).strip() or report_id
     return VisualAuthorityCanaryConfig(
         source_identity=f"{source_label}|pdf-sha256:{source_sha256}",
-        output_dir=str(Path(settings.output_dir) / "verified_claims_visual_canary"),
+        output_dir=default_visual_authority_output_dir(settings.output_dir),
         dpi=216,
         recovery_enabled=True,
         recovery_limit=3,
