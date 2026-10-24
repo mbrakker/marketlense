@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from ._split_support_cases_01_render_output_and_cards import *  # noqa: F401,F403
 
 
@@ -349,6 +350,186 @@ def test_render_materializes_final_retained_claim_package_with_current_lineage(
         f"unresolved_factual_count={actual_unresolved_count}"
         in grounding_rule["detail"]
     )
+
+
+def test_verified_readiness_reuses_canonical_semantic_binding_without_raw_pdf_pages(
+    tmp_path,
+):
+    runtime = _runtime(tmp_path, md5="source-md5")
+    runtime = replace(
+        runtime,
+        ctx=replace(
+            runtime.ctx,
+            source_identity_id="report-1|pdf-sha256:" + "a" * 64,
+            configuration_hash="c" * 64,
+            policy_hash="d" * 64,
+        ),
+    )
+    source = _source(runtime)
+    source = replace(
+        source,
+        text_response=replace(
+            source.text_response,
+            pages=[PdfTextPage(page_number=99, text="Discovery-only page text.")],
+        ),
+    )
+    source_identity = runtime.ctx.source_identity_id
+    metric = {
+        "label": "Adoption",
+        "value": "42%",
+        "unit": "%",
+        "timeframe": "2026",
+        "subject": "buyers",
+    }
+    fact = {
+        "schema_version": "1.0",
+        "fact_id": "fact-1",
+        "statement": "Adoption reached 42% among buyers in 2026.",
+        "metric": metric,
+        "qualifiers": ["among buyers"],
+        "source_identity": source_identity,
+        "source_pdf_sha256": "a" * 64,
+        "supporting_physical_pages": [4],
+        "verification_outcome": "verified",
+        "provenance": {
+            "inspected_physical_pages": [4],
+            "source_truth_notes_by_page": {
+                "4": "Page 4 reports adoption among buyers in 2026."
+            },
+        },
+    }
+    evidence_id = "verified-fact:fact-1"
+    finding = {
+        "id": evidence_id,
+        "verified_fact_id": "fact-1",
+        "text": fact["statement"],
+        "statement": fact["statement"],
+        "evidence": fact["statement"],
+        "metric": metric,
+        "pages": [4],
+        "source_identity": source_identity,
+        "evidence_spans": [
+            {
+                "evidence_id": evidence_id,
+                "source_pack": "verified_facts",
+                "page": 4,
+                "text": fact["statement"],
+                "source_identity": source_identity,
+            }
+        ],
+    }
+    evidence_packs = {
+        "findings": {"findings": [finding]},
+        "verified_facts": {"verified_facts": [fact]},
+    }
+    insight = project_verified_facts_as_insights([fact])[0]
+    insight["text"] = "The adoption pattern signals a strategic shift for buyers."
+    insight["metric"] = {}
+    artifacts = {
+        "verified_facts": [fact],
+        "insights_candidates": [insight],
+        "insights_final": [insight],
+        "summary": {},
+        "key_figures": [],
+        "quotes_final": [],
+    }
+    package = validate_retained_claims(
+        artifacts,
+        evidence_packs,
+        source_identity=source_identity,
+        verified_facts_only=True,
+    )
+    semantic_inputs = retained_claim_semantic_inputs(
+        package,
+        evidence_packs,
+        source_identity=source_identity,
+        source_pages=[],
+    )
+    assert len(semantic_inputs) == 1, package
+    semantic_input = semantic_inputs[0]
+    semantic_result = ClaimSemanticGroundingResult(
+        schema_version="1.0",
+        outcome="entailed",
+        reason="canonical_verified_fact_supports_interpretation",
+        identity=ClaimSemanticValidationIdentity(
+            schema_version="1.0",
+            claim_id=semantic_input.candidate.claim_id,
+            claim_text_hash=semantic_input.candidate.text_hash,
+            evidence_ids=[
+                reference.evidence_id
+                for reference in semantic_input.candidate.evidence_references
+            ],
+            evidence_hash=semantic_input.evidence_hash,
+            source_identity=source_identity,
+            prompt_family="report_vs/validate/grounding",
+            prompt_content_hash="grounding-prompt-sha256",
+            execution_identity="grounding-execution-1",
+            validator_version=CLAIM_GROUNDING_VALIDATOR_VERSION,
+            model_provider="test",
+            model_name="test-model",
+            configuration_policy_identity="grounding-policy-sha256",
+            relevant_input_hash="grounding-input-sha256",
+        ),
+    )
+    candidate = apply_retained_claim_semantic_results(
+        package, semantic_inputs, [semantic_result]
+    )
+    candidate_payload = attach_claim_validation_execution_identity(
+        candidate,
+        report_id=runtime.file.file_id,
+        source_id=source_identity,
+        source_md5=runtime.md5 or "",
+        configuration_hash=runtime.ctx.configuration_hash,
+        policy_hash=runtime.ctx.policy_hash,
+    )
+    candidate_dependencies = _deps()
+    store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name="validation_retained_claim_validation_candidate",
+            payload=candidate_payload,
+            report_slug=runtime.report_name,
+        ),
+        runtime.ctx,
+    )
+    analysis = replace(
+        _analysis(runtime, source, _selection(runtime, source)),
+        artifacts_payload=artifacts,
+        evidence_packs=evidence_packs,
+        authoritative_evidence_packs=evidence_packs,
+        verified_authority_context=VerifiedAuthorityContext(
+            source_identity=source_identity,
+            source_pdf_sha256="a" * 64,
+            verified_fact_digest="authority-digest",
+            verified_facts={"fact-1": fact},
+            evidence_packs=evidence_packs,
+        ),
+    )
+    html_path = Path(runtime.settings.output_dir) / "final-report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text("<html><body>Verified report.</body></html>", encoding="utf-8")
+
+    _persist_publish_readiness(
+        runtime=runtime,
+        source=source,
+        analysis=analysis,
+        dependencies=candidate_dependencies,
+        final_html_path=str(html_path),
+        report_card_manifest_path=None,
+        build_provenance={},
+    )
+
+    retained_path = (
+        Path(runtime.settings.output_dir)
+        / runtime.report_name
+        / "report_analysis"
+        / "retained_claim_validation.json"
+    )
+    retained = json.loads(retained_path.read_text(encoding="utf-8"))
+    assert retained["semantic_validation_count"] == 1
+    assert retained["unresolved_factual_count"] == 0
 
 
 def test_render_projects_card_tldr_from_final_insight_when_summary_abstains(
@@ -709,4 +890,4 @@ def test_render_report_output_preserves_analysis_metadata_when_db_metadata_missi
     }
 
 
-from .cases_01_split_long_module import *  # noqa: F401,F403
+from .cases_01_split_long_module import *  # noqa: E402,F401,F403

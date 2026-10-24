@@ -591,6 +591,45 @@ def test_terminal_failure_retains_only_bounded_actionable_error_context(
     assert "schema_errors" not in json.dumps(record.diagnostics)
 
 
+def test_terminal_lineage_failure_retains_only_invalid_insight_identifiers(
+    tmp_path,
+) -> None:
+    record = record_workflow_failure(
+        state_db=str(tmp_path / "state.sqlite"),
+        workflow="report_generation",
+        stage="artifact_generation",
+        operation="generate_artifacts",
+        error=StructuredOutputFailure(
+            code="artifact_structured_output_invalid",
+            message="invalid artifact",
+            artifact_family="insights_final",
+            response_text='{"private":"provider response"}',
+            schema_errors="artifact_final_insight_lineage_invalid",
+            repair_attempt=2,
+            error_class="artifact_final_insight_lineage_invalid",
+            failure_context={
+                "invalid_insight_ids": ["candidate-1", "candidate-2"],
+                "duplicate_insight_ids": ["candidate-3"],
+                "raw_response": "must never persist",
+            },
+        ),
+        ctx=_ctx(),
+        workflow_run_id="run-lineage-diagnostic",
+        report_id="report-lineage-diagnostic",
+    )
+
+    assert record is not None
+    assert record.diagnostics["error_context"] == {
+        "artifact_family": "insights_final",
+        "error_class": "artifact_final_insight_lineage_invalid",
+        "duplicate_insight_ids": ["candidate-3"],
+        "invalid_insight_ids": ["candidate-1", "candidate-2"],
+        "repair_attempt": 2,
+    }
+    assert "provider response" not in json.dumps(record.diagnostics)
+    assert "must never persist" not in json.dumps(record.diagnostics)
+
+
 def test_terminal_artifact_failure_retains_bounded_filesystem_diagnostics(
     tmp_path,
 ) -> None:

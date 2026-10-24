@@ -51,6 +51,7 @@ from src.generators.artifact_normalization import (
     build_verified_fact_doc_map,
     discard_location_only_insights,
     discard_location_only_quotes,
+    eligible_final_insight_candidates,
     fallback_artifact_insights_from_evidence,
     fallback_artifact_insights_from_findings,
     fallback_artifact_quotes_from_candidates,
@@ -1311,6 +1312,7 @@ def generate_artifacts(
     visual_authority_admitted_candidates: List[Dict[str, Any]] = []
     visual_authority_verified_facts: List[Dict[str, Any]] = []
     visual_authority_evidence_packs: Dict[str, Any] = {}
+    final_insight_allowed_candidate_ids: List[str] = []
     if visual_authority_admitter is not None:
         admission = visual_authority_admitter(deepcopy(insights_candidates))
         visual_authority_admitted_candidates = getattr(
@@ -1429,7 +1431,13 @@ def generate_artifacts(
             editorial_plan=editorial_plan,
             verified_mode=True,
         )
-        if len(insights_candidates) < MIN_FINAL_ARTIFACT_INSIGHTS:
+        eligible_candidates = eligible_final_insight_candidates(insights_candidates)
+        final_insight_allowed_candidate_ids = [
+            _s(candidate.get("id")).strip()
+            for candidate in eligible_candidates
+            if _s(candidate.get("id")).strip()
+        ]
+        if len(final_insight_allowed_candidate_ids) < MIN_FINAL_ARTIFACT_INSIGHTS:
             raise AppError(
                 code="visual_authority_coverage_insufficient",
                 message=(
@@ -1440,10 +1448,16 @@ def generate_artifacts(
                 context={
                     "report_id": report_id,
                     "required_count": MIN_FINAL_ARTIFACT_INSIGHTS,
-                    "admitted_count": len(insights_candidates),
+                    "admitted_count": len(final_insight_allowed_candidate_ids),
                     "coverage_reason": "verified_facts_below_minimum_insight_count",
                 },
             )
+        # Admission can reduce the candidate roster below the generic report
+        # target.  In verified mode the final model may only select from the
+        # exact, evidence-bound IDs that survived that admission.
+        final_insight_target_count = min(
+            final_insight_target_count, len(final_insight_allowed_candidate_ids)
+        )
         if cache_meta is None:
             cache_meta = {}
         cache_meta["visual_authority_digest"] = visual_authority_digest
@@ -1516,6 +1530,10 @@ def generate_artifacts(
             else insights_candidates
         ),
         "final_insight_target_count": final_insight_target_count,
+        "verified_mode": visual_authority_admitter is not None,
+        "final_insight_allowed_candidate_ids_json": _dump_json(
+            final_insight_allowed_candidate_ids
+        ),
     }
 
     def validate_final_insight_references(payload: Dict[str, Any]) -> None:

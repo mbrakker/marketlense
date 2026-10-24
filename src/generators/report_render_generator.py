@@ -1550,6 +1550,7 @@ def _persist_publish_readiness(
         else str(runtime.ctx.source_identity_id or "").strip()
     )
     source_md5 = str(runtime.md5 or "").strip()
+    readiness_source_pages = [] if authority is not None else source.text_response.pages
     candidate_path = dependencies.analysis_pack_path(
         AnalysisPackPathRequest(
             schema_version="1.0",
@@ -1603,7 +1604,7 @@ def _persist_publish_readiness(
             evidence_packs=factual_evidence_packs,
             final_html=final_html,
             source_id=source_id,
-            source_pages=source.text_response.pages,
+            source_pages=readiness_source_pages,
             source_md5=source_md5,
             configuration_hash=runtime.ctx.configuration_hash,
             policy_hash=runtime.ctx.policy_hash,
@@ -1677,7 +1678,7 @@ def _persist_publish_readiness(
         metadata_evidence=_source_fidelity_metadata(runtime, source, analysis),
         retained_claim_package=retained_claim_payload,
         retained_claim_required=True,
-        source_pages=source.text_response.pages,
+        source_pages=readiness_source_pages,
         report_card_manifest_path=report_card_manifest_path or "",
         source_id=source_id,
         source_md5=source_md5,

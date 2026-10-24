@@ -391,6 +391,49 @@ def test_validation_loop_preflights_empty_summary_package_to_safe_removal(tmp_pa
     assert target.allowed_paths == ["summary.claim_evidence_map[0]"]
 
 
+def test_verified_validation_loop_does_not_use_broad_retry_for_unmappable_issue(
+    tmp_path,
+):
+    artifacts = _artifacts_without_retained_claims()
+    artifacts["verified_facts"] = [{"fact_id": "verified-fact-1"}]
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="The verified artifact has an unmappable failure.",
+        severity="error",
+        affected_section="unknown_verified_surface",
+        rule_id="unmapped_verified_failure",
+    )
+    runtime = _runtime(tmp_path)
+
+    def _unexpected_regeneration(_request):
+        raise AssertionError("verified validation must not broad-regenerate")
+
+    artifacts_result, validation_result, attempts, loop_state, _, _ = (
+        _run_validation_regeneration_loop(
+            runtime=runtime,
+            mode_ctx=runtime.ctx,
+            base_payload=_payload(),
+            current_artifacts=artifacts,
+            current_validation_report=ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                severity="error",
+                issues=[issue],
+            ),
+            evidence_packs={"findings": {"findings": []}, "doc_map": {"sections": []}},
+            source_status=artifacts["source_status"],
+            category_labels=["Category"],
+            vector_store_id=None,
+            dependencies=_deps(regenerate_artifacts=_unexpected_regeneration),
+        )
+    )
+
+    assert artifacts_result == artifacts
+    assert validation_result.status == "fail"
+    assert attempts == []
+    assert loop_state.final_status == "skipped"
+
+
 def test_insight_repair_authorizes_same_claim_grounding_warning_fields():
     insight_id = "insight-1"
     artifacts = {

@@ -16,6 +16,12 @@ text: |
 
   Target final insight count: {{ final_insight_target_count }}.
 
+  {% if verified_mode|default(false) %}
+  Verified authority selection contract: select only from the exact stable candidate IDs in this allowlist:
+  {{ final_insight_allowed_candidate_ids_json|default("[]") }}
+  Copy each selected stable `id` verbatim from that allowlist. The stable `id` identifies the candidate; it is distinct from the factual `evidence_id`. Do not create, alter, or substitute either identifier.
+  {% endif %}
+
   Task: Choose {{ final_insight_target_count }} strongest, non-overlapping insights. Preserve the primary `evidence_id` per insight and, when the prose materially combines multiple supplied findings, include an `evidence_ids` array with the exact primary-first IDs for every necessary finding. Return JSON with an `insights_final` array of candidate-shaped entries containing scores, coverage_role, so_what, now_what, and report_type_lens.
   Return only the requested JSON object and final insight entries. Do not repeat the candidate roster, evidence text, schema, editorial plan, or canonical fact objects in the response. Keep `so_what` and `now_what` to one or two concise sentences tied to the selected finding; preserve exact values, comparisons, qualifiers, and scope rather than shortening them into a misleading summary.
   Reuse selected candidate IDs; keep IDs unique.

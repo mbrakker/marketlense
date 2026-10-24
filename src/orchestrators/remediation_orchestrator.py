@@ -59,6 +59,8 @@ _FAILURE_CONTEXT_KEYS = {
     "missing_claim_count",
     "missing_claim_ids",
     "missing_evidence_ids",
+    "invalid_insight_ids",
+    "duplicate_insight_ids",
     "missing_path",
     "missing_references",
     "missing_reference_ids",
@@ -344,6 +346,8 @@ def _bounded_failure_context(context: object) -> dict[str, object]:
         if key in {
             "missing_claim_ids",
             "missing_evidence_ids",
+            "invalid_insight_ids",
+            "duplicate_insight_ids",
             "missing_references",
             "missing_reference_ids",
         }:

@@ -563,6 +563,17 @@ def test_verified_editorial_copy_is_deferred_to_semantic_grounding(text):
     }.isdisjoint({issue.rule_id for issue in report.issues})
 
 
+def test_verified_quality_propagates_invalid_authority_snapshot():
+    fact = _fact()
+    fact["source_pdf_sha256"] = "b" * 64
+
+    with pytest.raises(AppError, match="PDF hash"):
+        evaluate_public_editorial_quality(
+            report_id="verified-authority",
+            artifacts=_verified_artifacts(fact=fact),
+        )
+
+
 def test_verified_expert_number_is_deferred_to_semantic_grounding():
     artifacts = _verified_artifacts()
     artifacts["expert_comment"] = "Revenue reached 99% and should drive expansion."

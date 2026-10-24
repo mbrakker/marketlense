@@ -2015,7 +2015,8 @@ def _run_validation_regeneration_loop(
     Dict[str, str],
     Dict[str, str],
 ]:
-    if verified_facts_mode(current_artifacts, ""):
+    verified_mode = verified_facts_mode(current_artifacts, "")
+    if verified_mode:
         structural_issues = [
             issue
             for issue in current_validation_report.issues
@@ -2097,7 +2098,7 @@ def _run_validation_regeneration_loop(
         plan = _build_regeneration_plan(
             issues=current_validation_report.issues,
             artifacts=working_artifacts,
-            broad_retry_available=not broad_retry_used,
+            broad_retry_available=not verified_mode and not broad_retry_used,
             rejected_strategy_keys=rejected_strategy_keys,
             repair_memory=(),
         )
@@ -2108,7 +2109,7 @@ def _run_validation_regeneration_loop(
             evidence_packs=evidence_packs,
             doc_map=context_doc_map,
             rejected_strategy_keys=rejected_strategy_keys,
-            broad_retry_available=not broad_retry_used,
+            broad_retry_available=not verified_mode and not broad_retry_used,
             repair_memory=(),
         )
         if empty_grounding_strategies:

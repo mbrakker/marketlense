@@ -267,25 +267,10 @@ def evaluate_public_editorial_quality(
     issues: list[PublicEditorialQualityIssue] = []
     if verified_facts_mode(safe_artifacts):
         safe_artifacts = dict(safe_artifacts)
-        try:
-            verified_index = validated_verified_facts(safe_artifacts)
-        except AppError as exc:
-            verified_index = {}
-            invalid_item = _item(
-                "verified_facts",
-                "verified_facts",
-                "",
-                [],
-                "insights_bundle",
-            )
-            issues.append(
-                _issue(
-                    report_id,
-                    "public_editorial_quality.material_claim_evidence_missing",
-                    invalid_item,
-                    f"verified fact snapshot is invalid: {exc.message}",
-                )
-            )
+        # A verified-facts snapshot is structural authority, not an editorial
+        # quality issue that can be regenerated or waived.  Preserve the
+        # original typed failure so the orchestration boundary can fail closed.
+        verified_index = validated_verified_facts(safe_artifacts)
         safe_artifacts["_verified_fact_index"] = verified_index
         safe_artifacts["_verified_facts_mode"] = True
 

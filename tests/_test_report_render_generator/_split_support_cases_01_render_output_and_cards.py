@@ -18,10 +18,12 @@ import pytest
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
     CLAIM_VALIDATION_VALIDATOR_VERSION,
+    ClaimSemanticGroundingResult,
+    ClaimSemanticValidationIdentity,
 )
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
-from src.contracts.pdf_text import PdfTextExtractResponse
+from src.contracts.pdf_text import PdfTextExtractResponse, PdfTextPage
 from src.contracts.pdf_utils import PdfInfoResponse
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_cards import (
@@ -35,6 +37,7 @@ from src.contracts.report_generation import (
     ReportRuntimeState,
     ReportSelectionState,
     ReportSourceState,
+    VerifiedAuthorityContext,
 )
 from src.contracts.report_identity import ReportTitleResolution
 from src.contracts.report_models import Figure, Quote, ReportPayload
@@ -45,8 +48,10 @@ from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.contracts.validation import ValidationReport
 from src.generators.claim_validation_generator import (
+    apply_retained_claim_semantic_results,
     attach_claim_validation_execution_identity,
     claim_validation_package_hash_valid,
+    retained_claim_semantic_inputs,
     validate_retained_claims,
 )
 from src.generators.report_generation_dependencies import ReportRenderDependencies
@@ -56,6 +61,7 @@ from src.generators.report_generation_shared import (
     report_slug,
 )
 from src.generators.report_render_generator import (
+    _persist_publish_readiness,
     _public_source_note,
     _resolved_public_publisher,
     _resolved_report_title,
@@ -63,6 +69,7 @@ from src.generators.report_render_generator import (
     render_preview_asset,
     render_report_output,
 )
+from src.generators.verified_claims_canary import project_verified_facts_as_insights
 from src.services.file_service import write_report_card_manifest
 from src.services.report_analysis_store_service import store_pack
 from src.utils.cache_utils import sha256_json
