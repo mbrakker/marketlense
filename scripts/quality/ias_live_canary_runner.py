@@ -27,6 +27,7 @@ from src.contracts.drive import DriveFile
 from src.contracts.logging import REQUIRED_LOG_EVENT_FIELDS
 from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_store import (
+    ReportMetadataGetRequest,
     ReportSourceRecordRequest,
     SourceIdentityObservation,
     SourceIdentityObservationRecordRequest,
@@ -43,6 +44,9 @@ from src.contracts.validation_run_manifest import (
 )
 from src.contracts.workflow_control import SupervisorRunRequest
 from src.contracts.workflow_queue import WorkflowJobSubmission, WorkflowQueueControl
+from src.generators.report_generation_shared import (
+    cache_path as resolve_report_cache_path,
+)
 from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightRequest,
     admission_configuration_hash,
@@ -55,6 +59,7 @@ from src.orchestrators.ingest_orchestrator import (
 )
 from src.orchestrators.pipeline_preflight_orchestrator import preflight_report_pipeline
 from src.orchestrators.workflow_supervisor_orchestrator import run_supervisor_once
+from src.services import file_service
 from src.services._config_service.yaml_mapping import deep_merge_mappings
 from src.services.analytics_store_service import (
     read_signal_candidates,
@@ -72,6 +77,7 @@ from src.services.report_analysis_store_service import (
     pack_path as resolve_report_analysis_pack_path,
 )
 from src.services.report_store_service import (
+    get_metadata,
     record_report_source,
     record_source_identity_observation,
 )
@@ -85,6 +91,11 @@ from src.services.workflow_queue_service import (
     set_workflow_queue_control,
 )
 from src.utils.errors import AppError
+from src.utils.path_utils import (
+    WINDOWS_COMPONENT_BUDGET,
+    is_windows_reserved_component,
+    windows_path_units,
+)
 from src.utils.slugify import slugify
 
 _VALIDATION_REUSE_LOGGER_NAME = "market_lense.validation_generator"
@@ -306,30 +317,12 @@ _CROSS_REPORT_DESCENDANT_QUEUE_NAMES = (
 )
 _CROSS_REPORT_TERMINAL_STATUSES = {"succeeded", "blocked", "dead_letter", "cancelled"}
 _CONFIRMED_WORDPRESS_STAGING_HOST = "marketlense.medianewsonline.com"
+_CANARY_TEMP_ROOT_SUFFIX_LENGTH = 8
 
 
-def prepare_isolated_canary_run(
-    *,
-    runs_root: Path,
-    publish_to_wordpress_staging: bool = False,
-    staging_hostname: str = "",
-    allow_insecure_staging_http: bool = False,
-    enable_cross_report_analysis: bool = False,
-) -> IsolatedCanaryRun:
-    """Create a unique run root and config whose mutable paths stay within it."""
-
-    _validate_staging_mode(
-        publish_to_wordpress_staging=publish_to_wordpress_staging,
-        staging_hostname=staging_hostname,
-        allow_insecure_staging_http=allow_insecure_staging_http,
-    )
-
-    root_parent = runs_root.resolve()
-    root_parent.mkdir(parents=True, exist_ok=True)
-    root = Path(
-        tempfile.mkdtemp(prefix="ias-first-attempt-", dir=root_parent)
-    ).resolve()
-    config_path = root / "config" / "app.yaml"
+def _isolated_canary_path_layout(
+    root: Path,
+) -> tuple[dict[str, Path], dict[str, Path], tuple[Path, ...]]:
     paths = {
         "canary_state_root": root,
         "output_dir": root / "output",
@@ -359,6 +352,300 @@ def prepare_isolated_canary_run(
         root / "state" / "projection_cost_daily.json",
         root / "state" / "projection_cost_ledger.jsonl",
     )
+    return paths, cost_paths, mutable_paths
+
+
+def _ias_canary_path_invalid(
+    *,
+    runs_root: Path,
+    candidate: Path | None,
+    label: str,
+    reason: str,
+    cause: Exception | None = None,
+) -> AppError:
+    destination_units: int | None = None
+    atomic_units: int | None = None
+    resolved_candidate = ""
+    invalid_components: list[str] = []
+    if candidate is not None:
+        try:
+            resolved = candidate.resolve(strict=False)
+            resolved_candidate = str(resolved)
+            destination_units = windows_path_units(resolved)
+            atomic_units = file_service.atomic_write_temp_path_length(resolved)
+            anchor = resolved.anchor
+            for component in resolved.parts:
+                if component in {anchor, "/", "\\", ""}:
+                    continue
+                if windows_path_units(component) > WINDOWS_COMPONENT_BUDGET:
+                    invalid_components.append(f"{component}:component_length")
+                elif is_windows_reserved_component(component):
+                    invalid_components.append(f"{component}:reserved_component")
+        except (OSError, RuntimeError, TypeError, ValueError):
+            resolved_candidate = str(candidate)
+    return AppError(
+        code="ias_canary_run_root_invalid",
+        message=(
+            "IAS canary run root cannot fit its nested configuration, state, "
+            "artifact, cache, and atomic temporary paths; shorten runs_root"
+        ),
+        cause=cause,
+        retryable=False,
+        context={
+            "runs_root": str(runs_root),
+            "candidate": resolved_candidate,
+            "candidate_label": label,
+            "reason": reason,
+            "destination_path_units": destination_units,
+            "max_destination_path_units": file_service.WINDOWS_MAX_PATH_LENGTH - 1,
+            "atomic_temp_path_units": atomic_units,
+            "max_atomic_temp_path_units": file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH,
+            "invalid_components": ",".join(invalid_components),
+            "next_action": "Shorten the configured IAS canary runs_root and retry",
+        },
+    )
+
+
+def _validate_isolated_canary_candidate(
+    *,
+    runs_root: Path,
+    candidate: Path,
+    label: str,
+    atomic_temp_required: bool,
+    isolated_root: Path | None = None,
+) -> None:
+    try:
+        resolved = candidate.resolve(strict=False)
+        destination_units = windows_path_units(resolved)
+        atomic_units = file_service.atomic_write_temp_path_length(resolved)
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise _ias_canary_path_invalid(
+            runs_root=runs_root,
+            candidate=candidate,
+            label=label,
+            reason="path_resolution_failed",
+            cause=exc,
+        ) from exc
+    if isolated_root is not None:
+        try:
+            resolved_root = isolated_root.resolve(strict=False)
+        except (OSError, RuntimeError, TypeError, ValueError) as exc:
+            raise _ias_canary_path_invalid(
+                runs_root=runs_root,
+                candidate=isolated_root,
+                label="run_root",
+                reason="root_resolution_failed",
+                cause=exc,
+            ) from exc
+        if resolved != resolved_root and resolved_root not in resolved.parents:
+            raise _ias_canary_path_invalid(
+                runs_root=runs_root,
+                candidate=candidate,
+                label=label,
+                reason="outside_isolated_root",
+            )
+    invalid_components = []
+    anchor = resolved.anchor
+    for component in resolved.parts:
+        if component in {anchor, "/", "\\", ""}:
+            continue
+        if windows_path_units(component) > WINDOWS_COMPONENT_BUDGET:
+            invalid_components.append(f"{component}:component_length")
+        elif is_windows_reserved_component(component):
+            invalid_components.append(f"{component}:reserved_component")
+    if invalid_components:
+        raise _ias_canary_path_invalid(
+            runs_root=runs_root,
+            candidate=resolved,
+            label=label,
+            reason="component_invalid",
+        )
+    if destination_units >= file_service.WINDOWS_MAX_PATH_LENGTH:
+        raise _ias_canary_path_invalid(
+            runs_root=runs_root,
+            candidate=resolved,
+            label=label,
+            reason="destination_path_exceeded",
+        )
+    if (
+        atomic_temp_required
+        and atomic_units > file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    ):
+        raise _ias_canary_path_invalid(
+            runs_root=runs_root,
+            candidate=resolved,
+            label=label,
+            reason="atomic_temp_path_exceeded",
+        )
+
+
+def _preflight_isolated_canary_paths(
+    *,
+    runs_root: Path,
+    root: Path,
+    paths: dict[str, Path],
+    cost_paths: dict[str, Path],
+    mutable_paths: tuple[Path, ...],
+) -> None:
+    _validate_isolated_canary_candidate(
+        runs_root=runs_root,
+        candidate=root,
+        label="run_root",
+        atomic_temp_required=False,
+    )
+    config_path = root / "config" / "app.yaml"
+    _validate_isolated_canary_candidate(
+        runs_root=runs_root,
+        candidate=config_path,
+        label="config",
+        atomic_temp_required=True,
+        isolated_root=root,
+    )
+    directory_names = {"canary_state_root", "output_dir", "cache_dir"}
+    for label, candidate in (*paths.items(), *cost_paths.items()):
+        _validate_isolated_canary_candidate(
+            runs_root=runs_root,
+            candidate=candidate,
+            label=label,
+            atomic_temp_required=label not in directory_names,
+            isolated_root=root,
+        )
+    for index, candidate in enumerate(mutable_paths):
+        _validate_isolated_canary_candidate(
+            runs_root=runs_root,
+            candidate=candidate,
+            label=f"mutable_path_{index}",
+            atomic_temp_required=candidate.suffix != "" and not candidate.is_dir(),
+            isolated_root=root,
+        )
+    try:
+        checkpoint_path = file_service._pipeline_checkpoint_path(
+            str(paths["output_dir"]),
+            "report_generation",
+            "ias-canary",
+            "analysis_complete",
+        )
+        analysis_path = Path(
+            resolve_report_analysis_pack_path(
+                AnalysisPackPathRequest(
+                    schema_version="1.0",
+                    output_dir=str(paths["output_dir"]),
+                    report_id=ReportId("ias-canary"),
+                    pack_name="artifacts",
+                    report_slug="ias-canary",
+                ),
+                new_runtime_context(task_id="ias-canary-path-preflight"),
+            ).output_path
+        )
+        cache_json_path = resolve_report_cache_path(
+            paths["cache_dir"] / "pdf_cache" / ("a" * 32),
+            "pdf_info",
+            "b" * 64,
+        )
+    except AppError as exc:
+        raise _ias_canary_path_invalid(
+            runs_root=runs_root,
+            candidate=root,
+            label="nested_path_producer",
+            reason=exc.code,
+            cause=exc,
+        ) from exc
+    for label, candidate in (
+        ("checkpoint", checkpoint_path),
+        ("analysis_pack", analysis_path),
+        ("cache_json", cache_json_path),
+    ):
+        _validate_isolated_canary_candidate(
+            runs_root=runs_root,
+            candidate=candidate,
+            label=label,
+            atomic_temp_required=True,
+            isolated_root=root,
+        )
+
+
+def prepare_isolated_canary_run(
+    *,
+    runs_root: Path,
+    publish_to_wordpress_staging: bool = False,
+    staging_hostname: str = "",
+    allow_insecure_staging_http: bool = False,
+    enable_cross_report_analysis: bool = False,
+) -> IsolatedCanaryRun:
+    """Create a unique run root and config whose mutable paths stay within it."""
+
+    _validate_staging_mode(
+        publish_to_wordpress_staging=publish_to_wordpress_staging,
+        staging_hostname=staging_hostname,
+        allow_insecure_staging_http=allow_insecure_staging_http,
+    )
+
+    try:
+        root_parent = runs_root.expanduser().resolve(strict=False)
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise _ias_canary_path_invalid(
+            runs_root=runs_root,
+            candidate=runs_root,
+            label="runs_root",
+            reason="root_resolution_failed",
+            cause=exc,
+        ) from exc
+    if root_parent.exists() and not root_parent.is_dir():
+        raise _ias_canary_path_invalid(
+            runs_root=runs_root,
+            candidate=root_parent,
+            label="runs_root",
+            reason="root_not_directory",
+        )
+    probe_root = root_parent / (
+        "ias-first-attempt-" + "x" * _CANARY_TEMP_ROOT_SUFFIX_LENGTH
+    )
+    probe_paths, probe_cost_paths, probe_mutable_paths = _isolated_canary_path_layout(
+        probe_root
+    )
+    _validate_isolated_canary_candidate(
+        runs_root=runs_root,
+        candidate=root_parent,
+        label="runs_root",
+        atomic_temp_required=False,
+    )
+    _preflight_isolated_canary_paths(
+        runs_root=runs_root,
+        root=probe_root,
+        paths=probe_paths,
+        cost_paths=probe_cost_paths,
+        mutable_paths=probe_mutable_paths,
+    )
+    try:
+        root_parent.mkdir(parents=True, exist_ok=True)
+        root = Path(
+            tempfile.mkdtemp(prefix="ias-first-attempt-", dir=root_parent)
+        ).resolve()
+    except OSError as exc:
+        raise _ias_canary_path_invalid(
+            runs_root=runs_root,
+            candidate=root_parent,
+            label="runs_root",
+            reason="root_creation_failed",
+            cause=exc,
+        ) from exc
+    paths, cost_paths, mutable_paths = _isolated_canary_path_layout(root)
+    try:
+        _preflight_isolated_canary_paths(
+            runs_root=runs_root,
+            root=root,
+            paths=paths,
+            cost_paths=cost_paths,
+            mutable_paths=mutable_paths,
+        )
+    except AppError:
+        try:
+            if root.is_dir() and not any(root.iterdir()):
+                root.rmdir()
+        except OSError:
+            pass
+        raise
+    config_path = root / "config" / "app.yaml"
     config = _isolated_config(
         root=root,
         paths=paths,
@@ -2519,6 +2806,89 @@ def _queue_terminal_state(
     return "failed" if failure else "running"
 
 
+def _read_authoritative_repair_evidence(
+    *,
+    reports_db: str,
+    output_dir: Path,
+    report_id: str,
+    ctx,
+) -> bool:
+    """Read repair evidence only from the exact report metadata references."""
+
+    try:
+        isolated_output_root = output_dir.expanduser().resolve(strict=False)
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise AppError(
+            code="ias_canary_evidence_path_invalid",
+            message="IAS canary output root cannot be resolved for repair evidence",
+            cause=exc,
+            retryable=False,
+            context={"output_dir": str(output_dir), "report_id": report_id},
+        ) from exc
+    metadata = get_metadata(
+        ReportMetadataGetRequest(
+            schema_version="1.0",
+            db_path=reports_db,
+            file_id=report_id,
+        ),
+        ctx,
+    )
+    if metadata is None:
+        return False
+    evidence_paths = getattr(metadata, "evidence_pack_paths", {}) or {}
+    if not isinstance(evidence_paths, dict):
+        return False
+    repair_evidence = False
+    for logical_key, raw_reference in evidence_paths.items():
+        reference = str(raw_reference or "").strip()
+        if not reference:
+            continue
+        raw_path = Path(reference).expanduser()
+        candidate = raw_path if raw_path.is_absolute() else output_dir / raw_path
+        try:
+            resolved = candidate.resolve(strict=False)
+        except (OSError, RuntimeError, TypeError, ValueError) as exc:
+            raise AppError(
+                code="ias_canary_evidence_path_invalid",
+                message="Persisted IAS canary evidence path cannot be resolved",
+                cause=exc,
+                retryable=False,
+                context={
+                    "output_dir": str(output_dir),
+                    "report_id": report_id,
+                    "logical_key": str(logical_key),
+                    "path": reference,
+                },
+            ) from exc
+        if (
+            resolved != isolated_output_root
+            and isolated_output_root not in resolved.parents
+        ):
+            raise AppError(
+                code="ias_canary_evidence_path_invalid",
+                message=(
+                    "Persisted IAS canary evidence path escapes the isolated "
+                    "output root"
+                ),
+                retryable=False,
+                context={
+                    "output_dir": str(output_dir),
+                    "report_id": report_id,
+                    "logical_key": str(logical_key),
+                    "path": reference,
+                    "next_action": (
+                        "Repair the authoritative evidence reference before rerunning"
+                    ),
+                },
+            )
+        if (
+            str(logical_key).strip().startswith("regeneration_candidate_audit_")
+            and resolved.is_file()
+        ):
+            repair_evidence = True
+    return repair_evidence
+
+
 def _read_result(
     *,
     settings,
@@ -2703,7 +3073,12 @@ def _read_result(
         if terminal_failure
         else {}
     )
-    report_output_dir = Path(settings.output_dir) / slugify(source_path.name)
+    authoritative_repair_evidence = _read_authoritative_repair_evidence(
+        reports_db=str(settings.reports_db),
+        output_dir=Path(settings.output_dir),
+        report_id=report_id,
+        ctx=ctx,
+    )
     publication_evidence = _wordpress_publication_evidence(
         publication_outcome=publication_outcome,
         workflow_status=publication_workflow_status,
@@ -2723,7 +3098,7 @@ def _read_result(
         "bounded_automatic_repair": (
             automatic_repair_count > 0
             or workflow_retry_count > 0
-            or any(report_output_dir.rglob("regeneration_candidate_audit_*.json"))
+            or authoritative_repair_evidence
         ),
         "automatic_repair_count": automatic_repair_count,
         "repair_disposition_counts": repair_disposition_counts,

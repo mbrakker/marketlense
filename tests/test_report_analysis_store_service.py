@@ -424,6 +424,28 @@ def test_pack_path_compacts_long_candidate_after_report_slug_budget_is_exhausted
     assert different_pack != first
 
 
+def test_pack_path_rejects_utf16_root_component_before_returning_compact_candidate(
+    run_context,
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    output_dir = tmp_path / ("😀" * 130)
+
+    with pytest.raises(AppError) as err:
+        pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=str(output_dir),
+                report_id="cohort-11b0b55157f7d0636815",
+                pack_name="validation",
+                report_slug="2026-global-payments-and-fraud-report-pdf",
+            ),
+            run_context,
+        )
+
+    assert_app_error(err.value, code="analysis_pack_path_too_long", retryable=False)
+
+
 def test_store_pack_round_trips_long_validation_candidate_under_long_root(
     run_context, tmp_path: Path
 ) -> None:

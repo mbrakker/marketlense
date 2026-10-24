@@ -54,6 +54,7 @@ from src.services.file_service import (
     write_report_card_manifest,
 )
 from src.utils.errors import AppError
+from src.utils.path_utils import windows_path_units
 
 
 def _ctx() -> RunContext:
@@ -664,6 +665,120 @@ def test_pipeline_checkpoint_compacts_a_deep_atomic_write_path(tmp_path: Path) -
             _ctx(),
         ).checkpoint
         == checkpoint
+    )
+
+
+def _path_limit_checkpoint(
+    *,
+    pipeline_name: str = "pipeline",
+    file_id: str = "file",
+    stage_name: str = "stage",
+) -> PipelineStageCheckpoint:
+    return PipelineStageCheckpoint(
+        schema_version="1.0",
+        pipeline_name=pipeline_name,
+        file_id=file_id,
+        report_slug="report",
+        stage_name=stage_name,
+        stage_status="completed",
+        artifact_refs={},
+        payload={"schema_version": "1.0"},
+        completed_at_utc="2026-09-13T00:00:00+00:00",
+        source_run_id="run-1",
+        source_task_id="task-1",
+    )
+
+
+def test_pipeline_checkpoint_rejects_reserved_root_component_before_writing(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    checkpoint_root = tmp_path / "con"
+    checkpoint = _path_limit_checkpoint()
+
+    with pytest.raises(AppError) as err:
+        write_pipeline_checkpoint(
+            PipelineCheckpointWriteRequest(
+                schema_version="1.0",
+                checkpoint_root=str(checkpoint_root),
+                checkpoint=checkpoint,
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        err.value, code="pipeline_checkpoint_path_invalid", retryable=False
+    )
+    assert not checkpoint_root.exists()
+
+
+def test_pipeline_checkpoint_compacts_an_overlong_final_component(
+    tmp_path: Path,
+) -> None:
+    checkpoint_root = tmp_path / "checkpoint-root"
+    checkpoint = _path_limit_checkpoint(stage_name="s" * 256)
+
+    response = write_pipeline_checkpoint(
+        PipelineCheckpointWriteRequest(
+            schema_version="1.0",
+            checkpoint_root=str(checkpoint_root),
+            checkpoint=checkpoint,
+        ),
+        _ctx(),
+    )
+
+    stored_path = Path(response.checkpoint_path)
+    assert stored_path.parts[-4] == ".cp"
+    assert (
+        read_pipeline_checkpoint(
+            PipelineCheckpointReadRequest(
+                schema_version="1.0",
+                checkpoint_root=str(checkpoint_root),
+                pipeline_name=checkpoint.pipeline_name,
+                file_id=checkpoint.file_id,
+                stage_name=checkpoint.stage_name,
+            ),
+            _ctx(),
+        ).checkpoint
+        == checkpoint
+    )
+
+
+def test_pipeline_checkpoint_rejects_compact_candidate_that_still_exceeds_budget(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    checkpoint_root = tmp_path / ("isolated-cohort-" + "r" * 190)
+    checkpoint = _path_limit_checkpoint(
+        pipeline_name="report_generation-" + "p" * 72,
+        file_id="cohort-" + "x" * 86,
+        stage_name="source_prepared-" + "s" * 82,
+    )
+
+    with pytest.raises(AppError) as err:
+        write_pipeline_checkpoint(
+            PipelineCheckpointWriteRequest(
+                schema_version="1.0",
+                checkpoint_root=str(checkpoint_root),
+                checkpoint=checkpoint,
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        err.value, code="pipeline_checkpoint_path_invalid", retryable=False
+    )
+    assert not checkpoint_root.exists()
+
+
+def test_atomic_temp_budget_counts_utf16_code_units(tmp_path: Path) -> None:
+    path = tmp_path / ("😀" * 20) / "checkpoint.json"
+
+    expected = windows_path_units(str(path.resolve().parent)) + 1 + 34
+
+    assert atomic_write_temp_path_length(path) == expected
+    assert atomic_write_temp_path_length(path) > (
+        len(str(path.resolve().parent)) + 1 + 34
     )
 
 
