@@ -34,6 +34,7 @@ from src.contracts.report_artifacts import artifact_registry_from_payload
 from src.contracts.report_generation import (
     ReportAnalysisState,
     ReportRuntimeState,
+    VerifiedAuthorityContext,
 )
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
@@ -102,7 +103,10 @@ from src.services.report_store_service import check_artifact_reuse
 from src.utils.clock import utc_now_iso as _utc_now_iso
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
-from src.utils.verified_facts import validated_verified_facts
+from src.utils.verified_facts import (
+    build_verified_authority_context,
+    verified_facts_mode,
+)
 
 from .checkpoints import (
     _analysis_checkpoint_payload,
@@ -1121,11 +1125,21 @@ def _require_verified_authority_snapshot(
     runtime: ReportRuntimeState,
     artifacts: object,
     canary: VisualAuthorityCanaryConfig | None,
-) -> None:
+) -> VerifiedAuthorityContext | None:
     """Reject checkpoint reuse when an opt-in run has only legacy artifacts."""
 
     if canary is None:
-        return
+        if verified_facts_mode(artifacts, ""):
+            raise AppError(
+                code="verified_facts_canary_configuration_missing",
+                message=(
+                    "Verified-facts checkpoint reuse requires the trusted canary "
+                    "source identity"
+                ),
+                retryable=False,
+                context={"file_id": runtime.file.file_id},
+            )
+        return None
     cache = artifacts.get("_cache") if isinstance(artifacts, dict) else None
     metadata = (
         cache.get("visual_authority_canary") if isinstance(cache, dict) else None
@@ -1141,9 +1155,8 @@ def _require_verified_authority_snapshot(
             context={"file_id": runtime.file.file_id},
         )
     try:
-        validated_verified_facts(
+        return build_verified_authority_context(
             artifacts,
-            metadata.get("verified_evidence_packs"),
             expected_source_identity=canary.source_identity,
         )
     except AppError as exc:
@@ -1212,9 +1225,15 @@ def _resume_from_analysis_checkpoint(
     analysis = _analysis_state_from_checkpoint(
         runtime, source, selection, checkpoint_payload.get("analysis")
     )
-    _require_verified_authority_snapshot(
+    authority_context = _require_verified_authority_snapshot(
         runtime, analysis.artifacts_payload, visual_authority_canary
     )
+    if authority_context is not None:
+        analysis = replace(
+            analysis,
+            authoritative_evidence_packs=authority_context.evidence_packs,
+            verified_authority_context=authority_context,
+        )
     preview_resp = _preview_from_checkpoint(checkpoint_payload.get("preview"))
     if stop_after_stage == STAGE_ANALYSIS_COMPLETE:
         return _checkpoint_stage_outcome(runtime, STAGE_ANALYSIS_COMPLETE)
@@ -1345,15 +1364,32 @@ def _resume_prompt_family_repair(
     analysis = _analysis_state_from_checkpoint(
         runtime, source, selection, checkpoint_payload.get("analysis")
     )
-    if not isinstance(analysis.artifacts_payload, dict):
+    current_artifacts = analysis.artifacts_payload
+    if not isinstance(current_artifacts, dict):
         raise AppError(
             code="minimal_execution_prompt_family_artifacts_missing",
             message="Prompt-family repair requires retained artifacts from analysis",
             retryable=False,
             context={"file_id": runtime.file.file_id},
         )
-    _require_verified_authority_snapshot(
-        runtime, analysis.artifacts_payload, visual_authority_canary
+    authority_context = _require_verified_authority_snapshot(
+        runtime, current_artifacts, visual_authority_canary
+    )
+    if authority_context is not None:
+        analysis = replace(
+            analysis,
+            authoritative_evidence_packs=authority_context.evidence_packs,
+            verified_authority_context=authority_context,
+        )
+    factual_evidence_packs = (
+        authority_context.evidence_packs
+        if authority_context is not None
+        else analysis.evidence_packs
+    )
+    factual_source_identity = (
+        authority_context.source_identity
+        if authority_context is not None
+        else str(runtime.ctx.source_identity_id or "").strip()
     )
     repair_ctx = child_context(
         runtime.ctx, task_id=f"{runtime.ctx.task_id}:prompt_repair"
@@ -1375,9 +1411,9 @@ def _resume_prompt_family_repair(
                 unmappable_issues=[],
                 broad_retry_allowed=False,
             ),
-            current_artifacts=analysis.artifacts_payload,
+            current_artifacts=current_artifacts,
             doc_map=analysis.evidence_packs.get("doc_map", {}),
-            evidence_packs=analysis.evidence_packs,
+            evidence_packs=factual_evidence_packs,
             settings=runtime.settings,
             ctx=repair_ctx,
             source_status=source.text_status,
@@ -1390,17 +1426,34 @@ def _resume_prompt_family_repair(
         **regeneration_kwargs,
     )
     candidate_artifacts = regeneration.updated_artifacts
-    _require_verified_authority_snapshot(
+    candidate_authority_context = _require_verified_authority_snapshot(
         runtime, candidate_artifacts, visual_authority_canary
     )
+    if authority_context is not None and (
+        candidate_authority_context is None
+        or candidate_authority_context.source_identity
+        != authority_context.source_identity
+        or candidate_authority_context.verified_fact_digest
+        != authority_context.verified_fact_digest
+        or candidate_authority_context.verified_facts
+        != authority_context.verified_facts
+        or candidate_authority_context.evidence_packs
+        != authority_context.evidence_packs
+    ):
+        raise AppError(
+            code="verified_fact_snapshot_invalid",
+            message="Prompt-family repair changed the verified authority snapshot",
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
     candidate_artifacts_path = _candidate_artifacts_path(regeneration)
     candidate_enforced = bool(candidate_artifacts_path)
     current_artifacts_path = str(analysis.evidence_paths.get("artifacts") or "")
     candidate_result = (
         validate_regeneration_candidate(
-            current_artifacts=analysis.artifacts_payload,
+            current_artifacts=current_artifacts,
             candidate_artifacts=candidate_artifacts,
-            evidence_packs=analysis.evidence_packs,
+            evidence_packs=factual_evidence_packs,
             ctx=repair_ctx,
             baseline_retained_claim_severities=(
                 _retained_claim_severity_by_fingerprint(analysis.validation_report)
@@ -1420,7 +1473,7 @@ def _resume_prompt_family_repair(
                 runtime=runtime,
                 attempt_index=1,
                 transformation_scope=regeneration.regenerated_sections,
-                current_artifacts=analysis.artifacts_payload,
+                current_artifacts=current_artifacts,
                 candidate_artifacts=candidate_artifacts,
                 current_artifacts_path=current_artifacts_path,
                 candidate_artifacts_path=candidate_artifacts_path,
@@ -1455,9 +1508,9 @@ def _resume_prompt_family_repair(
             report_id=ReportId(runtime.file.file_id),
             report=regenerated_payload,
             artifacts=candidate_artifacts,
-            evidence_packs=analysis.evidence_packs,
+            evidence_packs=factual_evidence_packs,
             vector_store_id=analysis.vector_store_id,
-            source_id=str(runtime.ctx.source_identity_id or "").strip(),
+            source_id=factual_source_identity,
             deterministic_grounding_passed=candidate_result.passed,
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
@@ -1494,7 +1547,7 @@ def _resume_prompt_family_repair(
                     runtime=runtime,
                     attempt_index=1,
                     transformation_scope=regeneration.regenerated_sections,
-                    current_artifacts=analysis.artifacts_payload,
+                    current_artifacts=current_artifacts,
                     candidate_artifacts=candidate_artifacts,
                     current_artifacts_path=current_artifacts_path,
                     candidate_artifacts_path=candidate_artifacts_path,
@@ -1527,7 +1580,7 @@ def _resume_prompt_family_repair(
                     runtime=runtime,
                     attempt_index=1,
                     transformation_scope=regeneration.regenerated_sections,
-                    current_artifacts=analysis.artifacts_payload,
+                    current_artifacts=current_artifacts,
                     candidate_artifacts=candidate_artifacts,
                     current_artifacts_path=current_artifacts_path,
                     candidate_artifacts_path=candidate_artifacts_path,
@@ -1553,7 +1606,7 @@ def _resume_prompt_family_repair(
                 runtime=runtime,
                 attempt_index=1,
                 transformation_scope=regeneration.regenerated_sections,
-                current_artifacts=analysis.artifacts_payload,
+                current_artifacts=current_artifacts,
                 candidate_artifacts=candidate_artifacts,
                 current_artifacts_path=current_artifacts_path,
                 candidate_artifacts_path=candidate_artifacts_path,
@@ -1578,6 +1631,11 @@ def _resume_prompt_family_repair(
     data_dict = regenerated_payload.to_dict()
     data_dict["artifacts"] = candidate_artifacts
     data_dict["evidence_packs"] = analysis.evidence_packs
+    data_dict["authoritative_evidence_packs"] = (
+        factual_evidence_packs if authority_context is not None else {}
+    )
+    if authority_context is not None:
+        data_dict["verified_authority_context"] = asdict(authority_context)
     data_dict["validation_report"] = validation.to_dict()
     analysis = replace(
         analysis,
@@ -1661,9 +1719,15 @@ def _resume_crop_from_source_checkpoint(
         selection,
         analysis_checkpoint.payload.get("analysis"),
     )
-    _require_verified_authority_snapshot(
+    authority_context = _require_verified_authority_snapshot(
         runtime, analysis.artifacts_payload, visual_authority_canary
     )
+    if authority_context is not None:
+        analysis = replace(
+            analysis,
+            authoritative_evidence_packs=authority_context.evidence_packs,
+            verified_authority_context=authority_context,
+        )
     preview_resp = render_preview_asset(runtime, source, dependencies.render)
     return _render_project_and_cleanup(
         runtime,

@@ -125,6 +125,82 @@ def test_validation_does_not_retry_non_retryable_provider_failure():
     assert "OpenAI request was rejected permanently" not in result.issues[0].message
 
 
+def test_verified_snapshot_failure_is_typed_and_does_not_enter_fallback_or_retry():
+    calls = 0
+
+    def validate(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        raise AppError(
+            code="verified_fact_snapshot_invalid",
+            message="Verified authority snapshot is invalid",
+            retryable=False,
+        )
+
+    runtime, dependencies, stored = _fallback_inputs(validate)
+    validation_req = SimpleNamespace(
+        artifacts={
+            "_cache": {"visual_authority_canary": {"enabled": True}},
+        },
+        validation_mode="full",
+    )
+
+    with pytest.raises(AppError) as raised:
+        _run_validation_with_fallback(
+            runtime=runtime,
+            mode_ctx=RunContext("1.0", "run-1", "task-1", "span-1"),
+            dependencies=dependencies,
+            validation_req=validation_req,
+            pack_name="validation",
+        )
+
+    assert calls == 1
+    assert stored == []
+    assert raised.value.code == "verified_fact_snapshot_invalid"
+    assert raised.value.retryable is False
+
+
+def test_verified_snapshot_issue_report_is_not_converted_to_public_quality_fallback():
+    validation_report = ValidationReport(
+        schema_version="1.1",
+        status="fail",
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                rule_id="grounding",
+                violation_type="verified_fact_snapshot_invalid",
+                message="Verified authority snapshot is invalid.",
+                severity="error",
+                affected_section="validation",
+            )
+        ],
+        severity="error",
+    )
+
+    def validate(*_args, **_kwargs):
+        return validation_report
+
+    runtime, dependencies, stored = _fallback_inputs(validate)
+    validation_req = SimpleNamespace(
+        artifacts={
+            "_cache": {"visual_authority_canary": {"enabled": True}},
+        },
+        validation_mode="full",
+    )
+
+    with pytest.raises(AppError) as raised:
+        _run_validation_with_fallback(
+            runtime=runtime,
+            mode_ctx=RunContext("1.0", "run-1", "task-1", "span-1"),
+            dependencies=dependencies,
+            validation_req=validation_req,
+            pack_name="validation",
+        )
+
+    assert raised.value.code == "verified_fact_snapshot_invalid"
+    assert stored == []
+
+
 def test_validation_propagates_retryable_failure_after_one_owned_retry():
     calls = 0
 

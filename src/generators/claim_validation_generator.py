@@ -1524,6 +1524,7 @@ def materialize_retained_claim_package(
     source_md5: str = "",
     configuration_hash: str = "",
     policy_hash: str = "",
+    verified_facts_only: bool = False,
 ) -> tuple[dict | None, str]:
     """Bind current deterministic grounding and matching semantic results.
 
@@ -1550,6 +1551,7 @@ def materialize_retained_claim_package(
         artifacts,
         evidence_packs,
         source_identity=source_id,
+        verified_facts_only=verified_facts_only,
     )
     current_payload = attach_claim_validation_execution_identity(
         current,

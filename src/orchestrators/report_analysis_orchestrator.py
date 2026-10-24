@@ -22,6 +22,7 @@ from src.contracts.report_generation import (
     ReportRuntimeState,
     ReportSelectionState,
     ReportSourceState,
+    VerifiedAuthorityContext,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
@@ -116,7 +117,9 @@ from src.utils.report_identity import (
 )
 from src.utils.run_budget import report_runtime_run_budget
 from src.utils.structured_output import StructuredOutputFailure
-from src.utils.verified_facts import validated_verified_facts
+from src.utils.verified_facts import (
+    build_verified_authority_context,
+)
 
 __all__ = [
     "run_report_analysis",
@@ -1015,6 +1018,7 @@ def run_report_analysis(
 
     base_payload = normalize_report(data, runtime.ctx)
     artifacts_payload: dict | None = None
+    verified_authority_context: VerifiedAuthorityContext | None = None
     try:
         artifact_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts")
         if visual_authority_canary is not None:
@@ -1070,23 +1074,10 @@ def run_report_analysis(
                     retryable=False,
                     context={"report_id": runtime.file.file_id},
                 )
-            try:
-                validated_verified_facts(
-                    artifacts_payload,
-                    canary.get("verified_evidence_packs"),
-                    expected_source_identity=visual_authority_canary.source_identity,
-                )
-            except AppError as exc:
-                raise AppError(
-                    code="verified_facts_canary_artifacts_invalid",
-                    message="Verified-facts canary artifact authority is invalid",
-                    cause=exc,
-                    retryable=False,
-                    context={
-                        "report_id": runtime.file.file_id,
-                        "validation_code": exc.code,
-                    },
-                ) from exc
+            verified_authority_context = build_verified_authority_context(
+                artifacts_payload,
+                expected_source_identity=visual_authority_canary.source_identity,
+            )
         mode_evidence_paths["artifacts"] = pack_paths(
             runtime.settings.output_dir,
             runtime.file.file_id,
@@ -1150,15 +1141,33 @@ def run_report_analysis(
         vector_store_id=vector_state.vector_store_id,
         evidence_paths=mode_evidence_paths,
     )
+    authoritative_evidence_packs = (
+        verified_authority_context.evidence_packs
+        if verified_authority_context is not None
+        else {}
+    )
+    factual_evidence_packs = authoritative_evidence_packs or packs
+    factual_source_identity = (
+        verified_authority_context.source_identity
+        if verified_authority_context is not None
+        else _analysis_source_identity_id(mode_ctx)
+    )
+    caption_packs = factual_evidence_packs
     caption_result = generate_figure_captions(
         runtime=runtime,
         selection=selection,
         payload=normalized_payload,
-        doc_map=packs.get("doc_map", {})
-        if isinstance(packs.get("doc_map"), dict)
-        else {},
-        findings_pack=packs.get("findings", {})
-        if isinstance(packs.get("findings"), dict)
+        doc_map=(
+            {}
+            if verified_authority_context is not None
+            else (
+                packs.get("doc_map", {})
+                if isinstance(packs.get("doc_map"), dict)
+                else {}
+            )
+        ),
+        findings_pack=caption_packs.get("findings", {})
+        if isinstance(caption_packs.get("findings"), dict)
         else {},
         artifacts_payload=artifacts_payload or {},
         dependencies=dependencies.figure_caption,
@@ -1190,10 +1199,10 @@ def run_report_analysis(
             report_id=ReportId(runtime.file.file_id),
             report=normalized_payload,
             artifacts=artifacts_payload or {},
-            evidence_packs=packs,
+            evidence_packs=factual_evidence_packs,
             vector_store_id=vector_state.vector_store_id,
             vector_store_content_hash=vector_store_content_hash or "",
-            source_id=_analysis_source_identity_id(mode_ctx),
+            source_id=factual_source_identity,
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
@@ -1262,7 +1271,9 @@ def run_report_analysis(
             base_payload=base_payload,
             current_artifacts=artifacts_payload,
             current_validation_report=validation_report,
-            evidence_packs=packs,
+            evidence_packs=factual_evidence_packs,
+            discovery_evidence_packs=packs,
+            source_identity=factual_source_identity,
             source_status=source.text_status,
             source_text=source.text_response.text,
             source_pages=source.text_response.pages,
@@ -1346,6 +1357,9 @@ def run_report_analysis(
     if artifacts_payload:
         data_dict["artifacts"] = artifacts_payload
     data_dict["evidence_packs"] = packs
+    data_dict["authoritative_evidence_packs"] = authoritative_evidence_packs
+    if verified_authority_context is not None:
+        data_dict["verified_authority_context"] = asdict(verified_authority_context)
     if validation_report:
         data_dict["validation_report"] = validation_report.to_dict()
     source_authors = tuple(getattr(provenance_roles, "author_names", ()) or ())
@@ -1428,6 +1442,8 @@ def run_report_analysis(
         data_dict=data_dict,
         evidence_paths=dict(mode_evidence_paths),
         evidence_packs=packs,
+        authoritative_evidence_packs=authoritative_evidence_packs,
+        verified_authority_context=verified_authority_context,
         artifacts_payload=artifacts_payload,
         validation_report=validation_report,
         category_labels=list(category_assignment.category_labels),

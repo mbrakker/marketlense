@@ -49,6 +49,7 @@ from src.contracts.report_generation import (
     ReportRuntimeState,
     ReportSelectionState,
     ReportSourceState,
+    VerifiedAuthorityContext,
 )
 from src.contracts.report_identity import ReportTitleCandidate, ReportTitleResolution
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
@@ -1303,6 +1304,14 @@ def _analysis_checkpoint_payload(
             "data_dict": dict(analysis.data_dict),
             "evidence_paths": dict(analysis.evidence_paths),
             "evidence_packs": dict(analysis.evidence_packs),
+            "authoritative_evidence_packs": dict(
+                analysis.authoritative_evidence_packs
+            ),
+            "verified_authority_context": (
+                asdict(analysis.verified_authority_context)
+                if analysis.verified_authority_context is not None
+                else None
+            ),
             "artifacts_payload": analysis.artifacts_payload,
             "validation_report": validation_report,
             "category_labels": list(analysis.category_labels),
@@ -1613,6 +1622,25 @@ def _analysis_state_from_checkpoint(
             message="Checkpoint analysis state must be an object",
             retryable=False,
         )
+    raw_authority = raw_analysis.get("verified_authority_context")
+    authority_context = None
+    if raw_authority is not None:
+        if not isinstance(raw_authority, dict):
+            raise AppError(
+                code="report_pipeline_checkpoint_invalid",
+                message="Checkpoint verified authority context must be an object",
+                retryable=False,
+            )
+        authority_context = VerifiedAuthorityContext(
+            schema_version=str(raw_authority.get("schema_version") or "1.0"),
+            source_identity=str(raw_authority.get("source_identity") or ""),
+            source_pdf_sha256=str(raw_authority.get("source_pdf_sha256") or ""),
+            verified_fact_digest=str(
+                raw_authority.get("verified_fact_digest") or ""
+            ),
+            verified_facts=dict(raw_authority.get("verified_facts") or {}),
+            evidence_packs=dict(raw_authority.get("evidence_packs") or {}),
+        )
     return ReportAnalysisState(
         schema_version=str(raw_analysis["schema_version"]),
         runtime=runtime,
@@ -1627,6 +1655,10 @@ def _analysis_state_from_checkpoint(
             str(k): str(v) for k, v in dict(raw_analysis["evidence_paths"]).items()
         },
         evidence_packs=dict(raw_analysis["evidence_packs"]),
+        authoritative_evidence_packs=dict(
+            raw_analysis.get("authoritative_evidence_packs") or {}
+        ),
+        verified_authority_context=authority_context,
         artifacts_payload=raw_analysis.get("artifacts_payload")
         if isinstance(raw_analysis.get("artifacts_payload"), dict)
         else None,

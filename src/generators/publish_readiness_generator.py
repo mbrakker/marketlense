@@ -426,10 +426,16 @@ def evaluate_publish_readiness(
     report_card_manifest_path: str = "",
     source_id: str = "",
     source_md5: str = "",
+    context_evidence_packs: Mapping[str, Any] | None = None,
 ) -> PublishReadinessArtifact:
     """Evaluate the one release policy over artifacts, final HTML and projection."""
     safe_artifacts = artifacts if isinstance(artifacts, dict) else {}
     safe_packs = evidence_packs if isinstance(evidence_packs, dict) else {}
+    safe_context_packs = (
+        dict(context_evidence_packs)
+        if isinstance(context_evidence_packs, Mapping)
+        else safe_packs
+    )
     now = created_at or datetime.now(UTC)
     results: list[PublishReadinessRuleResult] = []
     results.append(_validation_result(validation_report))
@@ -449,7 +455,7 @@ def evaluate_publish_readiness(
             source_pages=source_pages,
         )
     )
-    results.append(_category_result(safe_artifacts, category_ids, safe_packs))
+    results.append(_category_result(safe_artifacts, category_ids, safe_context_packs))
     results.append(_material_evidence_result(safe_artifacts, safe_packs))
     results.append(_evidence_fidelity_result(safe_artifacts, safe_packs, final_html))
     results.append(_regeneration_result(regeneration_attempts))

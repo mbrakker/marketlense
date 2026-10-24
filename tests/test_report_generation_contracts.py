@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from types import SimpleNamespace
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
@@ -11,10 +12,15 @@ from src.contracts.report_generation import (
     ReportRuntimeState,
     ReportSelectionState,
     ReportSourceState,
+    VerifiedAuthorityContext,
 )
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
+from src.orchestrators._report_generation_orchestrator.checkpoints import (
+    _analysis_checkpoint_payload,
+    _analysis_state_from_checkpoint,
+)
 
 
 def _payload() -> ReportPayload:
@@ -245,3 +251,49 @@ def test_ingest_outcome_round_trip_includes_report_card_manifest_path(
 
     assert rebuilt == outcome
     assert_no_defaulted_required_fields(rebuilt)
+
+
+def test_analysis_checkpoint_round_trip_preserves_verified_authority_context():
+    runtime = _runtime()
+    source = _source(runtime)
+    selection = ReportSelectionState(
+        schema_version="1.0",
+        runtime=runtime,
+        source=source,
+        payload=source.payload,
+        rank_usage={},
+        candidate_count=1,
+    )
+    authority = VerifiedAuthorityContext(
+        source_identity="report-1|pdf-sha256:" + ("a" * 64),
+        source_pdf_sha256="a" * 64,
+        verified_fact_digest="b" * 64,
+        verified_facts={"fact-1": {"fact_id": "fact-1"}},
+        evidence_packs={"findings": {"findings": []}},
+    )
+    analysis = ReportAnalysisState(
+        schema_version="1.0",
+        runtime=runtime,
+        source=source,
+        selection=selection,
+        payload=source.payload,
+        normalized_payload=source.payload,
+        data_dict={"title": "Report Title"},
+        evidence_paths={"doc_map": "doc_map.json"},
+        evidence_packs={"doc_map": {"title": "Report Title"}},
+        authoritative_evidence_packs=authority.evidence_packs,
+        verified_authority_context=authority,
+    )
+
+    checkpoint = _analysis_checkpoint_payload(
+        source,
+        selection,
+        analysis,
+        SimpleNamespace(image_path="preview.png", page_number=1),
+    )
+    rebuilt = _analysis_state_from_checkpoint(
+        runtime, source, selection, checkpoint["analysis"]
+    )
+
+    assert rebuilt.verified_authority_context == authority
+    assert rebuilt.authoritative_evidence_packs == authority.evidence_packs

@@ -91,10 +91,16 @@ def _render_build_provenance(
     analysis: ReportAnalysisState,
 ) -> dict[str, str]:
     """Expose existing run and lineage identities in the rendered review artifact."""
+    authority = analysis.verified_authority_context
+    factual_evidence_packs = (
+        authority.evidence_packs
+        if authority is not None
+        else analysis.evidence_packs
+    )
     artifact_hash = sha256_json(
         {
             "artifacts": analysis.artifacts_payload or {},
-            "evidence_packs": analysis.evidence_packs or {},
+            "evidence_packs": factual_evidence_packs or {},
             "validation": (
                 analysis.validation_report.to_dict()
                 if analysis.validation_report is not None
@@ -106,7 +112,11 @@ def _render_build_provenance(
         "git_sha": str(runtime.ctx.producer_commit_sha or "unknown"),
         "generation_run_id": str(runtime.ctx.run_id or "unknown"),
         "validation_run_id": str(runtime.ctx.validation_run_id or "unknown"),
-        "source_id": str(runtime.ctx.source_identity_id or "").strip() or "unknown",
+        "source_id": (
+            authority.source_identity
+            if authority is not None
+            else str(runtime.ctx.source_identity_id or "").strip() or "unknown"
+        ),
         "source_md5": str(runtime.md5 or "unknown"),
         "artifact_hash": artifact_hash or "unknown",
         "generation_profile": str(
@@ -1530,7 +1540,17 @@ def _persist_publish_readiness(
         ),
     ).content
     artifacts = analysis.artifacts_payload or {}
-    source_id = str(runtime.ctx.source_identity_id or "").strip()
+    authority = analysis.verified_authority_context
+    factual_evidence_packs = (
+        analysis.authoritative_evidence_packs
+        if authority is not None
+        else analysis.evidence_packs
+    )
+    source_id = (
+        authority.source_identity
+        if authority is not None
+        else str(runtime.ctx.source_identity_id or "").strip()
+    )
     source_md5 = str(runtime.md5 or "").strip()
     candidate_path = dependencies.analysis_pack_path(
         AnalysisPackPathRequest(
@@ -1582,13 +1602,14 @@ def _persist_publish_readiness(
             candidate_claim_payload,
             report_id=str(runtime.file.file_id),
             artifacts=artifacts,
-            evidence_packs=analysis.evidence_packs,
+            evidence_packs=factual_evidence_packs,
             final_html=final_html,
             source_id=source_id,
             source_pages=source.text_response.pages,
             source_md5=source_md5,
             configuration_hash=runtime.ctx.configuration_hash,
             policy_hash=runtime.ctx.policy_hash,
+            verified_facts_only=authority is not None,
         )
     )
     if retained_claim_payload is not None:
@@ -1626,7 +1647,7 @@ def _persist_publish_readiness(
         ),
         **{
             f"evidence:{name}": sha256_json(payload)
-            for name, payload in sorted(analysis.evidence_packs.items())
+            for name, payload in sorted(factual_evidence_packs.items())
             if isinstance(payload, dict)
         },
     }
@@ -1637,7 +1658,8 @@ def _persist_publish_readiness(
     readiness = evaluate_publish_readiness(
         report_id=runtime.file.file_id,
         artifacts=artifacts,
-        evidence_packs=analysis.evidence_packs,
+        evidence_packs=factual_evidence_packs,
+        context_evidence_packs=analysis.evidence_packs,
         validation_report=analysis.validation_report,
         final_html=final_html,
         final_html_path=final_html_path,

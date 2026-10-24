@@ -14,6 +14,8 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+from src.contracts.report_generation import VerifiedAuthorityContext
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 
 VERIFIED_FACT_EVIDENCE_PREFIX = "verified-fact:"
@@ -207,6 +209,67 @@ def validated_verified_facts(
     _validate_verified_pack_consistency(facts, evidence_packs)
     validate_verified_artifact_bindings(artifacts, facts)
     return facts
+
+
+def build_verified_authority_context(
+    artifacts: object,
+    *,
+    expected_source_identity: str,
+) -> VerifiedAuthorityContext:
+    """Build the canonical authority context from a trusted canary snapshot.
+
+    The source identity is supplied by the workflow admission boundary.  The
+    artifact payload can only prove that its retained facts and evidence packs
+    agree with that identity and with the persisted snapshot digest.
+    """
+
+    expected_identity = str(expected_source_identity or "").strip()
+    expected_hash = expected_pdf_sha256(expected_identity)
+    if not expected_identity or not expected_hash:
+        raise _invalid("verified authority requires a hash-qualified source identity")
+    if not isinstance(artifacts, Mapping):
+        raise _invalid("verified authority artifacts are missing")
+    cache = artifacts.get("_cache")
+    metadata = (
+        cache.get("visual_authority_canary")
+        if isinstance(cache, Mapping)
+        else None
+    )
+    if not isinstance(metadata, Mapping) or metadata.get("enabled") is not True:
+        raise _invalid("verified authority canary metadata is missing")
+    retained_packs = metadata.get("verified_evidence_packs")
+    if not isinstance(retained_packs, Mapping):
+        raise _invalid("verified authority evidence packs are missing")
+    facts = validated_verified_facts(
+        artifacts,
+        retained_packs,
+        expected_source_identity=expected_identity,
+        expected_pdf_sha256=expected_hash,
+    )
+    fact_snapshot = list(facts.values())
+    digest = sha256_json(
+        {
+            "source_identity": expected_identity,
+            "verified_facts": fact_snapshot,
+        }
+    )
+    for field_name in ("digest", "verified_fact_digest"):
+        retained_digest = str(metadata.get(field_name) or "").strip().lower()
+        if not retained_digest or retained_digest != digest:
+            raise _invalid(
+                f"verified authority {field_name} conflicts with the snapshot"
+            )
+    retained_facts = metadata.get("verified_facts")
+    if retained_facts != fact_snapshot:
+        raise _invalid("verified authority facts conflict with the snapshot")
+    canonical_packs = canonical_verified_evidence_packs(facts)
+    return VerifiedAuthorityContext(
+        source_identity=expected_identity,
+        source_pdf_sha256=expected_hash,
+        verified_fact_digest=digest,
+        verified_facts=copy.deepcopy(facts),
+        evidence_packs=canonical_packs,
+    )
 
 
 def expected_pdf_sha256_from_identity(source_identity: object) -> str:

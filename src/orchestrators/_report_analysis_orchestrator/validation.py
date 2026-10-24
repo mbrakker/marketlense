@@ -86,6 +86,7 @@ from src.utils.cache_utils import sha256_json
 from src.utils.editorial_identity import failed_insight_id
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+from src.utils.verified_facts import verified_facts_mode
 
 __all__ = [
     "_evaluate_and_store_public_editorial_quality",
@@ -95,6 +96,34 @@ __all__ = [
     "_promote_regeneration_candidate",
     "_store_regeneration_candidate_audit",
 ]
+
+_VERIFIED_STRUCTURAL_VALIDATION_CODES = frozenset(
+    {
+        "verified_fact_snapshot_invalid",
+        "verified_facts_canary_artifacts_missing",
+        "verified_facts_canary_artifacts_invalid",
+    }
+)
+
+
+def _verified_validation_request(validation_req: object) -> bool:
+    return verified_facts_mode(
+        getattr(validation_req, "artifacts", None),
+        str(getattr(validation_req, "validation_mode", "") or ""),
+    )
+
+
+def _verified_structural_report_code(
+    validation_req: object, report: ValidationReport
+) -> str:
+    if not _verified_validation_request(validation_req):
+        return ""
+    for issue in report.issues:
+        for value in (issue.violation_type, issue.rule_id):
+            code = str(value or "").strip()
+            if code in _VERIFIED_STRUCTURAL_VALIDATION_CODES:
+                return code
+    return ""
 
 
 def _evaluate_and_store_public_editorial_quality(
@@ -320,7 +349,7 @@ def _run_validation_with_fallback(
         jitter_seconds=0.25,
     )
     try:
-        return run_with_retry(
+        result = run_with_retry(
             step_name=f"report_analysis_validation:{pack_name}",
             operation=run_validation,
             ctx=mode_ctx,
@@ -345,8 +374,33 @@ def _run_validation_with_fallback(
                 "retryable": retryable,
             },
         )
+        structural_code = _verified_structural_report_code(validation_req, result)
+        if structural_code:
+            raise AppError(
+                code=structural_code,
+                message="Verified-facts authority validation failed structurally",
+                retryable=False,
+                context={"report_id": runtime.file.file_id, "pack_name": pack_name},
+            )
+        return result
     except AppError as exc:
         error_code, cause_code, cause_type = _validation_error_identity(exc)
+        if _verified_validation_request(validation_req) and error_code in (
+            _VERIFIED_STRUCTURAL_VALIDATION_CODES
+        ):
+            raise AppError(
+                code=error_code,
+                message="Verified-facts authority validation failed structurally",
+                retryable=False,
+                severity=exc.severity,
+                context={
+                    "report_id": runtime.file.file_id,
+                    "pack_name": pack_name,
+                    "cause_code": cause_code,
+                    "cause_type": cause_type,
+                },
+                cause=exc,
+            ) from exc
         if exc.retryable:
             logger.warning(
                 log_event(
@@ -1755,6 +1809,7 @@ def _validate_regeneration_baseline(
     source_pages: Sequence[PdfTextPage] = (),
     source_title_resolution: ReportTitleResolution | None = None,
     validation_openai_client=None,
+    source_identity: str = "",
 ) -> ValidationReport:
     """Run the current production validation stack on unchanged artifacts."""
 
@@ -1788,7 +1843,9 @@ def _validate_regeneration_baseline(
             artifacts=current_artifacts,
             evidence_packs=evidence_packs,
             vector_store_id=vector_store_id,
-            source_id=str(runtime.ctx.source_identity_id or "").strip(),
+            source_id=str(
+                source_identity or runtime.ctx.source_identity_id or ""
+            ).strip(),
             deterministic_grounding_passed=baseline_integrity.passed,
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
@@ -1822,6 +1879,7 @@ def _preflight_empty_grounding_strategies(
     issues: List[ValidationIssue],
     artifacts: Dict[str, Any],
     evidence_packs: Dict[str, Any],
+    doc_map: Optional[Dict[str, Any]] = None,
     rejected_strategy_keys: set[str],
     broad_retry_available: bool,
     repair_memory: Sequence[RepairDelta] = (),
@@ -1856,7 +1914,7 @@ def _preflight_empty_grounding_strategies(
                 target=target,
                 artifacts=artifacts,
                 evidence_packs=evidence_packs,
-                doc_map=evidence_packs.get("doc_map", {}),
+                doc_map=doc_map or evidence_packs.get("doc_map", {}),
             )
             if evidence_ids:
                 continue
@@ -1947,6 +2005,8 @@ def _run_validation_regeneration_loop(
     source_title_resolution: ReportTitleResolution | None = None,
     validation_openai_client=None,
     regeneration_openai_client=None,
+    discovery_evidence_packs: Optional[Dict[str, Any]] = None,
+    source_identity: str = "",
 ) -> tuple[
     Dict[str, Any],
     ValidationReport,
@@ -1955,6 +2015,26 @@ def _run_validation_regeneration_loop(
     Dict[str, str],
     Dict[str, str],
 ]:
+    if verified_facts_mode(current_artifacts, ""):
+        structural_issues = [
+            issue
+            for issue in current_validation_report.issues
+            if str(issue.rule_id or "") in _VERIFIED_STRUCTURAL_VALIDATION_CODES
+            or str(issue.violation_type or "")
+            in _VERIFIED_STRUCTURAL_VALIDATION_CODES
+        ]
+        if structural_issues:
+            code = str(
+                structural_issues[0].violation_type
+                or structural_issues[0].rule_id
+                or "verified_fact_snapshot_invalid"
+            )
+            raise AppError(
+                code=code,
+                message="Verified-facts structural validation cannot be regenerated",
+                retryable=False,
+                context={"report_id": runtime.file.file_id},
+            )
     max_attempts = max(1, int(runtime.settings.validation_regeneration_max_attempts))
     attempts: List[RegenerationAttemptResult] = []
     evidence_paths: Dict[str, str] = {}
@@ -1963,6 +2043,15 @@ def _run_validation_regeneration_loop(
     rejected_candidate_hashes: set[str] = set()
     repair_memory: List[RepairDelta] = []
     promoted_payload_overrides: Dict[str, str] = {}
+    context_evidence_packs = discovery_evidence_packs or evidence_packs
+    context_doc_map = (
+        context_evidence_packs.get("doc_map", {})
+        if isinstance(context_evidence_packs.get("doc_map", {}), dict)
+        else {}
+    )
+    validation_source_identity = str(
+        source_identity or runtime.ctx.source_identity_id or ""
+    ).strip()
     current_artifacts_path = dependencies.analysis_pack_path(
         AnalysisPackPathRequest(
             schema_version="1.0",
@@ -2018,6 +2107,7 @@ def _run_validation_regeneration_loop(
             issues=current_validation_report.issues,
             artifacts=working_artifacts,
             evidence_packs=evidence_packs,
+            doc_map=context_doc_map,
             rejected_strategy_keys=rejected_strategy_keys,
             broad_retry_available=not broad_retry_used,
             repair_memory=(),
@@ -2169,7 +2259,7 @@ def _run_validation_regeneration_loop(
                 attempt_index=attempt_index,
                 plan=plan,
                 current_artifacts=working_artifacts,
-                doc_map=evidence_packs.get("doc_map", {}),
+                doc_map=context_doc_map,
                 evidence_packs=evidence_packs,
                 settings=runtime.settings,
                 ctx=attempt_ctx,
@@ -2204,7 +2294,7 @@ def _run_validation_regeneration_loop(
             before=artifacts_before,
             after=candidate_artifacts,
             plan=plan,
-            doc_map=evidence_packs.get("doc_map", {}),
+            doc_map=context_doc_map,
             evidence_packs=evidence_packs,
             repair_decisions=repair_decisions,
         )
@@ -2299,7 +2389,7 @@ def _run_validation_regeneration_loop(
             plan=plan,
             verified_derived_roots=candidate_result.verified_derived_roots,
             deterministic_mutation_paths=deterministic_mutation_paths,
-            doc_map=evidence_packs.get("doc_map", {}),
+            doc_map=context_doc_map,
             evidence_packs=evidence_packs,
             repair_decisions=repair_decisions,
         )
@@ -2361,7 +2451,7 @@ def _run_validation_regeneration_loop(
                 artifacts=candidate_artifacts,
                 evidence_packs=evidence_packs,
                 vector_store_id=vector_store_id,
-                source_id=str(runtime.ctx.source_identity_id or "").strip(),
+                source_id=validation_source_identity,
                 prior_claim_validation_package=(
                     promoted_claim_validation_package if claim_reuse_eligible else None
                 ),

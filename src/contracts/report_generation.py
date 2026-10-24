@@ -262,6 +262,36 @@ class ReportSelectionState:
 
 
 @dataclass(frozen=True)
+class VerifiedAuthorityContext:
+    """Canonical visual-authority snapshot carried across report phases."""
+
+    schema_version: str = field(
+        default="1.0",
+        metadata={"doc": "Verified-authority context schema version."},
+    )
+    source_identity: str = field(
+        default="",
+        metadata={"doc": "Hash-qualified trusted source identity."},
+    )
+    source_pdf_sha256: str = field(
+        default="",
+        metadata={"doc": "SHA-256 digest of the authoritative source PDF."},
+    )
+    verified_fact_digest: str = field(
+        default="",
+        metadata={"doc": "Digest of the canonical verified-fact snapshot."},
+    )
+    verified_facts: Dict[str, Dict[str, Any]] = field(
+        default_factory=dict,
+        metadata={"doc": "Validated canonical verified facts keyed by fact ID."},
+    )
+    evidence_packs: Dict[str, Dict[str, Any]] = field(
+        default_factory=dict,
+        metadata={"doc": "Canonical evidence packs derived from verified facts."},
+    )
+
+
+@dataclass(frozen=True)
 class ReportAnalysisState:
     schema_version: str = field(
         metadata={"doc": "Analysis-phase state schema version."}
@@ -287,6 +317,18 @@ class ReportAnalysisState:
     )
     evidence_packs: Dict[str, Dict[str, object]] = field(
         metadata={"doc": "Resolved evidence-pack payloads by pack name."}
+    )
+    authoritative_evidence_packs: Dict[str, Dict[str, object]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Canonical verified-fact evidence packs for factual downstream use."
+        },
+    )
+    verified_authority_context: Optional[VerifiedAuthorityContext] = field(
+        default=None,
+        metadata={
+            "doc": "Hash-qualified verified-fact authority carried across phases."
+        },
     )
     artifacts_payload: Optional[Dict[str, object]] = field(
         default=None,

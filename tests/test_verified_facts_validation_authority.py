@@ -7,6 +7,7 @@ import pytest
 from src.contracts.validation import ValidationRequest
 from src.generators._artifact_generator.storage import derive_metric_spine_from_insights
 from src.generators.artifact_normalization import normalize_artifact_insights
+from src.generators.claim_validation_generator import materialize_retained_claim_package
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
@@ -14,8 +15,12 @@ from src.generators.validation.grounding import _grounding_batches, grounding_pa
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.generators.validation.verified_facts import validated_verified_facts
 from src.services.schema_validator_service import validate_evidence_references
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
-from src.utils.verified_facts import validate_verified_artifact_bindings
+from src.utils.verified_facts import (
+    build_verified_authority_context,
+    validate_verified_artifact_bindings,
+)
 from tests._test_validation_generator._shared import _ctx, _report, _settings
 
 SOURCE_IDENTITY = f"frozen-report|pdf-sha256:{'a' * 64}"
@@ -149,6 +154,101 @@ def _verified_artifacts(
         "key_figures": [],
         "quotes_final": [],
     }
+
+
+def _authority_artifacts(*, fact: dict | None = None) -> dict:
+    fact = deepcopy(fact or _fact())
+    digest = sha256_json(
+        {
+            "source_identity": SOURCE_IDENTITY,
+            "verified_facts": [fact],
+        }
+    )
+    artifacts = _verified_artifacts(fact=fact)
+    artifacts["_cache"] = {
+        "visual_authority_canary": {
+            "enabled": True,
+            "digest": digest,
+            "verified_fact_digest": digest,
+            "verified_facts": [fact],
+            "verified_evidence_packs": _packs(fact),
+        }
+    }
+    return artifacts
+
+
+def test_verified_authority_context_is_hash_bound_and_canonical():
+    context = build_verified_authority_context(
+        _authority_artifacts(), expected_source_identity=SOURCE_IDENTITY
+    )
+
+    assert context.source_identity == SOURCE_IDENTITY
+    assert context.source_pdf_sha256 == SOURCE_SHA
+    assert context.verified_fact_digest
+    assert context.verified_facts["fact-1"]["metric"] == _metric()
+    assert (
+        context.evidence_packs["findings"]["findings"][0]["id"]
+        == "verified-fact:fact-1"
+    )
+
+
+def test_stale_verified_authority_digest_fails_closed():
+    artifacts = _authority_artifacts()
+    artifacts["_cache"]["visual_authority_canary"]["digest"] = "b" * 64
+
+    with pytest.raises(AppError) as raised:
+        build_verified_authority_context(
+            artifacts, expected_source_identity=SOURCE_IDENTITY
+        )
+
+    assert raised.value.code == "verified_fact_snapshot_invalid"
+
+
+def test_verified_materialization_retains_authoritative_composite_observations():
+    fact = _fact(
+        metric={
+            **_metric(
+                observations=[
+                    {
+                        "label": "Creators",
+                        "value": "42%",
+                        "unit": "%",
+                        "timeframe": "2026",
+                    },
+                    {
+                        "label": "Views",
+                        "value": "18m",
+                        "unit": "views",
+                        "timeframe": "2026 H2",
+                    },
+                ]
+            ),
+            "forecast_status": "conditional_forecast",
+        }
+    )
+    retained, failure_code = materialize_retained_claim_package(
+        None,
+        report_id="verified-authority",
+        artifacts=_verified_artifacts(fact=fact),
+        evidence_packs=_packs(fact),
+        final_html="<html><body>Verified report.</body></html>",
+        source_id=SOURCE_IDENTITY,
+        source_md5=SOURCE_SHA,
+        configuration_hash="config-sha256",
+        policy_hash="policy-sha256",
+        verified_facts_only=True,
+    )
+
+    assert failure_code == ""
+    assert retained is not None
+    metric_rows = [
+        result
+        for result in retained["results"]
+        if str(result.get("candidate", {}).get("claim_id", "")).endswith(":metric")
+    ]
+    assert metric_rows
+    assert "18m" in metric_rows[0]["candidate"]["text"]
+    assert metric_rows[0]["candidate"]["text"].find("2026 H2") >= 0
 
 
 def test_verified_preparation_excludes_original_pdf_and_non_authoritative_packs(
