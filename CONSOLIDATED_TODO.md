@@ -877,3 +877,22 @@ HTML/readiness artifact or publication was produced. Step 2 remains
 **PARTIAL/NO-GO**, E18 remains **Active/PARTIAL**, and Step 3 remains
 **unstarted/not ready**. Exact failure reasons and the source-page review are
 in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**CI ownership and Adjust editorial repair correction — 2026-10-25
+(`b926137d`):** The oversized frozen-cohort test module was split without
+changing the ownership gate; all original test names remain collected and the
+ownership checks pass. Verified Adjust repair now preserves composite
+forecast/observation boundaries in expert context and prevents canonical
+summary evidence rebinding from mutating an unrelated repair root. The fresh
+isolated Adjust run at `eb2495c9` admitted 22/24 facts and preserved the
+hash-bound source identity, but still failed closed at
+`regeneration_evidence_rebind_unresolved` after 93 provider calls,
+1,222,346 input tokens, 154,928 output tokens, `$0.216223`, and 1,374.874
+seconds; its candidate audit exposed five summary evidence paths, now covered
+by the targeted finalizer fix. Local tests and static gates pass, with only the
+known CPython-3.14 wheelhouse environment failure (the same test passes on
+CPython 3.12). This closes the confirmed CI ownership and producer-side scope
+defects but does not establish a final Adjust readiness pass. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. Detailed evidence is in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

@@ -4681,3 +4681,85 @@ failure no longer occurs in this run. The independent Adjust editorial
 grounding failure still blocks readiness; there is no claim of live quality
 improvement and Step 3 remains unstarted/not ready. The ten-report cohort was
 not started.
+
+#### CI ownership and Adjust editorial-repair correction — 2026-10-25 (`b926137d`)
+
+The hosted CI ownership failure was fixed without changing the ownership gate,
+allowlist, or threshold. The oversized
+`tests/test_frozen_reliability_cohort_runner.py` module was split by concern;
+the seven cohort-execution/summary tests moved to
+`tests/test_frozen_reliability_cohort_execution.py`. The original 23 test names
+remain present across the two modules, the ownership/collection check now
+collects **26 tests**, and the focused ownership tests pass. The preceding
+implementation commit `eb2495c9` passed hosted CI run `40136119645`.
+
+The retained Adjust failure was reproduced and traced to two producing-stage
+issues. Expert-comment context did not expose the full composite observation
+boundaries, and the verified finalizer rebound canonical summary evidence even
+when `summary` was not an authorized repair root. The first correction
+(`eb2495c9`) now retains `forecast_status` and named `observations` in expert
+context, requires explicit population/subsegment naming in both expert-comment
+prompts, and removes the verified-mode blanket replacement of all public source
+roots. The final correction (`b926137d`) applies the existing atomic patch-root
+boundary to verified summary span rebinding: summary binding is unchanged for
+an explicit summary repair, but an expert-comment-only repair cannot mutate the
+unrelated summary claim map. The focused regression is red before this change
+and green after it.
+
+The fresh isolated Adjust run was executed from clean commit `eb2495c9` with
+the verified-facts architecture, no shared batch, and no publication target.
+Its retained PDF identity matched
+`source:8cb648b6bbd9dbae4ec1d915c38cf235` plus SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`.
+Architecture admission evaluated **24** facts, admitted **22**, quarantined
+**2**, and reported complete coverage. The run used **93 provider calls**,
+**1,222,346 input tokens**, **154,928 output tokens**, estimated cost
+**$0.216223**, and **1,374.874 seconds**. It made no WordPress or publication
+write and ended fail-closed at
+`regeneration_evidence_rebind_unresolved`; validation and publication
+readiness were both `fail`.
+
+The run produced five retained final identities with authoritative bindings:
+
+| Stable ID | Evidence ID | Physical page |
+|---|---|---:|
+| `ecommerce-cpi-subvertical-divergence` | `verified-fact:ecommerce-cpi-subvertical-divergence` | 29 |
+| `cross-platform-data-satisfaction` | `verified-fact:cross-platform-data-satisfaction` | 11 |
+| `gaming-install-session-divergence` | `verified-fact:gaming-install-session-divergence` | 19 |
+| `finance-retention` | `verified-fact:finance-retention` | 37 |
+| `genai-maturity-and-reported-efficiency` | `verified-fact:genai-maturity-and-reported-efficiency` | 9 |
+
+The targeted candidate repair changed the CPI insight to:
+“From 2024 to 2025, reported global e-commerce CPI fell from $1.00 to $0.98,
+while deal-discovery CPI rose from $1.44 to $2.26.” The retained verified fact
+on page 29 contains the global and subvertical values, so this is a
+source-supported analytical improvement rather than an unsupported promotion.
+The audit shows evidence-lineage `pass` and no change to the five insight
+evidence IDs or pages. The earlier expert-comment grounding failure and its
+**33** undeclared paths did not recur. The remaining candidate audit exposed
+**five** undeclared `summary.claim_evidence_map[*].evidence` paths, caused by
+the finalizer’s verified canonical rebind; `b926137d` closes that producer-side
+scope defect. The run’s grounding artifact was still non-substantive and the
+terminal candidate was rolled back, so this is not evidence of a completed
+Adjust readiness pass.
+
+The `unresolved_retained_factual_claims: 29` run metric is terminal downstream
+validation accounting after the rebind failure, not 29 independently
+confirmed factual errors. No unsupported retained factual claim was reported
+by the architecture admission. Provider-free frozen-five replay remains
+unchanged: **5/5** PDF hashes, **15/39** reference cases/variants, and all
+**29** retained shortlisted identities are available with zero provider calls;
+that replay establishes input/provenance coverage only, not live editorial
+quality.
+
+Local verification for `b926137d` passed the affected **220-test** suite,
+ownership/collection checks, Ruff, formatting, forbidden-patching, contract
+schema, compileall, changed-source mypy, and the prompt-fixture gate. The full
+local suite reported **8,105 passed, 2 skipped, 32 deselected**, with the one
+known CPython-3.14-only wheelhouse failure; that test passes under CPython
+3.12. The prompt fixture baseline remains unchanged at **108,909 tokens /
+$0.024114** versus **108,751 / $0.024098** (**+158 tokens / +$0.000016**),
+because the intentional expert-context prompt requirement is within the
+existing gate. Step 2 therefore remains **PARTIAL / NO-GO**: the code-level
+ownership and targeted-repair safeguards are corrected, but the fresh report
+did not reach final HTML/readiness and Step 3 remains **unstarted/not ready**.
