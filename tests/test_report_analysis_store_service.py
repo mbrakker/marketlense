@@ -424,6 +424,62 @@ def test_pack_path_compacts_long_candidate_after_report_slug_budget_is_exhausted
     assert different_pack != first
 
 
+def test_pack_path_rejects_utf16_root_component_before_returning_compact_candidate(
+    run_context,
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    output_dir = tmp_path / ("😀" * 130)
+
+    with pytest.raises(AppError) as err:
+        pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=str(output_dir),
+                report_id="cohort-11b0b55157f7d0636815",
+                pack_name="validation",
+                report_slug="2026-global-payments-and-fraud-report-pdf",
+            ),
+            run_context,
+        )
+
+    assert_app_error(err.value, code="analysis_pack_path_too_long", retryable=False)
+
+
+def test_pack_path_returns_typed_error_when_root_resolution_fails(
+    run_context,
+    tmp_path: Path,
+    assert_app_error,
+    external_boundary_mocks_only,
+) -> None:
+    output_dir = tmp_path / "unresolvable-root"
+
+    def _raise_resolution_error(self, *args, **kwargs):
+        raise OSError("root resolution failed")
+
+    external_boundary_mocks_only.setattr(Path, "resolve", _raise_resolution_error)
+
+    with pytest.raises(AppError) as err:
+        pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=str(output_dir),
+                report_id="cohort-11b0b55157f7d0636815",
+                pack_name="validation",
+                report_slug="report",
+            ),
+            run_context,
+        )
+
+    assert_app_error(err.value, code="analysis_pack_path_too_long", retryable=False)
+    assert isinstance(err.value.cause, OSError)
+    assert err.value.context["destination_path_length"] is None
+    assert err.value.context["atomic_temp_path_length"] is None
+    assert err.value.context["measurement_failure"].startswith(
+        "path_measurement_failed:"
+    )
+
+
 def test_store_pack_round_trips_long_validation_candidate_under_long_root(
     run_context, tmp_path: Path
 ) -> None:

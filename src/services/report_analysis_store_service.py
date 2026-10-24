@@ -19,6 +19,11 @@ from src.services import file_service
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.path_utils import (
+    WINDOWS_COMPONENT_BUDGET,
+    is_windows_reserved_component,
+    windows_path_units,
+)
 from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.report_analysis_store_service")
@@ -50,21 +55,59 @@ def _compact_component(value: str, max_length: int) -> str:
     digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[
         :_PATH_COMPONENT_HASH_LENGTH
     ]
-    if max_length < len(digest):
+    if max_length < windows_path_units(digest):
         return ""
-    if len(value) <= max_length:
+    if windows_path_units(value) <= max_length:
         return value
-    prefix_budget = max(0, max_length - len(digest) - 1)
-    prefix = value[:prefix_budget].rstrip(" .-_")
+    prefix_budget = max(0, max_length - windows_path_units(digest) - 1)
+    prefix_chars: list[str] = []
+    prefix_units = 0
+    for character in value:
+        character_units = windows_path_units(character)
+        if prefix_units + character_units > prefix_budget:
+            break
+        prefix_chars.append(character)
+        prefix_units += character_units
+    prefix = "".join(prefix_chars).rstrip(" .-_")
     return f"{prefix}-{digest}" if prefix else digest
 
 
 def _path_fits(path: Path) -> bool:
-    return (
-        len(str(path.resolve())) <= _MAX_SUPPORTED_PATH_LENGTH
-        and file_service.atomic_write_temp_path_length(path)
-        <= file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
-    )
+    try:
+        resolved = path.resolve(strict=False)
+        if windows_path_units(resolved) > _MAX_SUPPORTED_PATH_LENGTH:
+            return False
+        if (
+            file_service.atomic_write_temp_path_length(resolved)
+            > file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+        ):
+            return False
+    except (OSError, RuntimeError, TypeError, ValueError):
+        return False
+    anchor = resolved.anchor
+    for component in resolved.parts:
+        if component in {anchor, "/", "\\", ""}:
+            continue
+        if windows_path_units(component) > WINDOWS_COMPONENT_BUDGET:
+            return False
+        if is_windows_reserved_component(component):
+            return False
+    return True
+
+
+def _safe_path_measurements(
+    path: Path,
+) -> tuple[int | None, int | None, str | None, Exception | None]:
+    try:
+        resolved = path.resolve(strict=False)
+        return (
+            windows_path_units(resolved),
+            file_service.atomic_write_temp_path_length(resolved),
+            None,
+            None,
+        )
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        return None, None, f"path_measurement_failed:{type(exc).__name__}", exc
 
 
 def _bounded_pack_components(
@@ -81,24 +124,38 @@ def _bounded_pack_components(
     ]
     slug_path = _report_base_dir(output_dir, hash_slug) / f"{pack_name}.json"
     if _path_fits(slug_path):
-        final_room = max(
-            0, _MAX_SUPPORTED_PATH_LENGTH - len(str(slug_path.resolve()))
+        slug_destination_units, slug_atomic_units, _, _ = _safe_path_measurements(
+            slug_path
         )
-        atomic_room = max(
-            0,
-            file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
-            - file_service.atomic_write_temp_path_length(slug_path),
-        )
-        slug_max_length = _PATH_COMPONENT_HASH_LENGTH + min(
-            final_room, atomic_room
-        )
-        return _compact_component(report_slug, slug_max_length), pack_name
+        if slug_destination_units is not None and slug_atomic_units is not None:
+            final_room = max(0, _MAX_SUPPORTED_PATH_LENGTH - slug_destination_units)
+            atomic_room = max(
+                0,
+                file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH - slug_atomic_units,
+            )
+            slug_max_length = _PATH_COMPONENT_HASH_LENGTH + min(final_room, atomic_room)
+            compact_slug = _compact_component(report_slug, slug_max_length)
+            compact_path = (
+                _report_base_dir(output_dir, compact_slug) / f"{pack_name}.json"
+            )
+            if compact_slug and _path_fits(compact_path):
+                return compact_slug, pack_name
 
     pack_hash = hashlib.sha256(pack_name.encode("utf-8")).hexdigest()[
         :_PATH_COMPONENT_HASH_LENGTH
     ]
     minimum_path = _report_base_dir(output_dir, hash_slug) / f"{pack_hash}.json"
-    if not _path_fits(minimum_path):
+    (
+        minimum_destination_units,
+        minimum_atomic_units,
+        minimum_measurement_failure,
+        minimum_measurement_cause,
+    ) = _safe_path_measurements(minimum_path)
+    if (
+        not _path_fits(minimum_path)
+        or minimum_destination_units is None
+        or minimum_atomic_units is None
+    ):
         raise AppError(
             code="analysis_pack_path_too_long",
             message=(
@@ -108,20 +165,17 @@ def _bounded_pack_components(
             retryable=False,
             context={
                 "pack_name": pack_name,
-                "destination_path_length": len(str(minimum_path.resolve())),
-                "atomic_temp_path_length": file_service.atomic_write_temp_path_length(
-                    minimum_path
-                ),
+                "destination_path_length": minimum_destination_units,
+                "atomic_temp_path_length": minimum_atomic_units,
+                "measurement_failure": minimum_measurement_failure or "",
             },
+            cause=minimum_measurement_cause,
         )
 
-    final_room = max(
-        0, _MAX_SUPPORTED_PATH_LENGTH - len(str(minimum_path.resolve()))
-    )
+    final_room = max(0, _MAX_SUPPORTED_PATH_LENGTH - minimum_destination_units)
     atomic_room = max(
         0,
-        file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
-        - file_service.atomic_write_temp_path_length(minimum_path),
+        file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH - minimum_atomic_units,
     )
     # Keep readable prefixes on both components when the remaining budget allows.
     slug_room = min(atomic_room, final_room // 2)
@@ -129,14 +183,23 @@ def _bounded_pack_components(
         report_slug, _PATH_COMPONENT_HASH_LENGTH + slug_room
     )
     compact_base = _report_base_dir(output_dir, compact_slug) / f"{pack_hash}.json"
+    compact_base_destination_units, _, _, _ = _safe_path_measurements(compact_base)
     pack_room = max(
-        0, _MAX_SUPPORTED_PATH_LENGTH - len(str(compact_base.resolve()))
+        0,
+        _MAX_SUPPORTED_PATH_LENGTH
+        - (compact_base_destination_units or _MAX_SUPPORTED_PATH_LENGTH),
     )
     compact_pack = _compact_component(
         pack_name, _PATH_COMPONENT_HASH_LENGTH + pack_room
     )
     compact_path = _report_base_dir(output_dir, compact_slug) / f"{compact_pack}.json"
-    if not _path_fits(compact_path):
+    (
+        compact_destination_units,
+        compact_atomic_units,
+        compact_measurement_failure,
+        compact_measurement_cause,
+    ) = _safe_path_measurements(compact_path)
+    if not compact_slug or not compact_pack or not _path_fits(compact_path):
         raise AppError(
             code="analysis_pack_path_too_long",
             message=(
@@ -145,11 +208,11 @@ def _bounded_pack_components(
             retryable=False,
             context={
                 "pack_name": pack_name,
-                "destination_path_length": len(str(compact_path.resolve())),
-                "atomic_temp_path_length": file_service.atomic_write_temp_path_length(
-                    compact_path
-                ),
+                "destination_path_length": compact_destination_units,
+                "atomic_temp_path_length": compact_atomic_units,
+                "measurement_failure": compact_measurement_failure or "",
             },
+            cause=compact_measurement_cause,
         )
     return compact_slug, compact_pack
 
@@ -168,9 +231,8 @@ def _schema_name_for_pack(pack_name: str) -> str:
         return "artifacts"
     if normalized.startswith("regeneration_candidate_audit_"):
         return "regeneration_candidate_audit"
-    if (
-        normalized.startswith("validation_regen_candidate_")
-        and normalized.endswith("_retained_claim_validation_candidate")
+    if normalized.startswith("validation_regen_candidate_") and normalized.endswith(
+        "_retained_claim_validation_candidate"
     ):
         return "claim_validation_package"
     if normalized.startswith("validation_regen_candidate_"):

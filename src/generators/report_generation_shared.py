@@ -21,6 +21,11 @@ from src.utils.analysis_family import family_is_abstained
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+from src.utils.path_utils import (
+    WINDOWS_COMPONENT_BUDGET,
+    is_windows_reserved_component,
+    windows_path_units,
+)
 from src.utils.slugify import slugify
 
 LOGGER_NAME = "market_lense.report_generator"
@@ -172,19 +177,100 @@ def ocr_text_cache_key(
 
 
 def cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
+    try:
+        cache_root.expanduser().resolve(strict=False)
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise _cache_path_invalid(
+            cache_root, None, "root_resolution_failed", exc
+        ) from exc
     path = cache_root / f"{prefix}_{cache_key}.json"
-    if (
-        max(
-            len(str(path.resolve())),
-            file_service.atomic_write_temp_path_length(path),
-        )
-        <= file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    if _cache_path_fits(
+        path, final_budget=file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
     ):
         return path
     compact_root = (
         cache_root.parent / sha256(cache_root.name.encode("utf-8")).hexdigest()[:12]
     )
-    return compact_root / f"{prefix}_{cache_key[:12]}.json"
+    compact_path = compact_root / f"{prefix}_{cache_key[:12]}.json"
+    if _cache_path_fits(
+        compact_path, final_budget=file_service.WINDOWS_MAX_PATH_LENGTH - 1
+    ):
+        return compact_path
+    raise _cache_path_invalid(
+        cache_root,
+        compact_path,
+        "compact_candidate_exceeds_budget",
+    )
+
+
+def _cache_path_fits(path: Path, *, final_budget: int) -> bool:
+    try:
+        resolved = path.resolve(strict=False)
+        final_units = windows_path_units(resolved)
+        atomic_units = file_service.atomic_write_temp_path_length(resolved)
+    except (OSError, RuntimeError, TypeError, ValueError):
+        return False
+    anchor = resolved.anchor
+    for component in resolved.parts:
+        if component in {anchor, "/", "\\", ""}:
+            continue
+        if windows_path_units(component) > WINDOWS_COMPONENT_BUDGET:
+            return False
+        if is_windows_reserved_component(component):
+            return False
+    return (
+        final_units <= final_budget
+        and final_units < file_service.WINDOWS_MAX_PATH_LENGTH
+        and atomic_units <= file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    )
+
+
+def _cache_path_invalid(
+    cache_root: Path,
+    path: Path | None,
+    reason: str,
+    cause: Exception | None = None,
+) -> AppError:
+    destination_units: int | None = None
+    atomic_units: int | None = None
+    resolved_path = ""
+    invalid_components: list[str] = []
+    if path is not None:
+        try:
+            resolved = path.resolve(strict=False)
+            resolved_path = str(resolved)
+            destination_units = windows_path_units(resolved)
+            atomic_units = file_service.atomic_write_temp_path_length(resolved)
+            anchor = resolved.anchor
+            for component in resolved.parts:
+                if component in {anchor, "/", "\\", ""}:
+                    continue
+                if windows_path_units(component) > WINDOWS_COMPONENT_BUDGET:
+                    invalid_components.append(f"{component}:component_length")
+                elif is_windows_reserved_component(component):
+                    invalid_components.append(f"{component}:reserved_component")
+        except (OSError, RuntimeError, TypeError, ValueError):
+            resolved_path = str(path)
+    return AppError(
+        code="report_cache_path_invalid",
+        message=(
+            "Report source cache path cannot fit the Windows destination and "
+            "atomic temporary-file budgets; shorten the configured cache root"
+        ),
+        cause=cause,
+        retryable=False,
+        context={
+            "cache_root": str(cache_root),
+            "path": resolved_path,
+            "reason": reason,
+            "destination_path_units": destination_units,
+            "max_destination_path_units": file_service.WINDOWS_MAX_PATH_LENGTH - 1,
+            "atomic_temp_path_units": atomic_units,
+            "max_atomic_temp_path_units": file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH,
+            "invalid_components": ",".join(invalid_components),
+            "next_action": "Shorten the configured cache root and retry",
+        },
+    )
 
 
 def template_sha256(

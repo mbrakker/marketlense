@@ -80,6 +80,11 @@ from src.utils.gui_utils import (
     parse_structured_log_line,
 )
 from src.utils.logging import log_event
+from src.utils.path_utils import (
+    WINDOWS_COMPONENT_BUDGET,
+    is_windows_reserved_component,
+    windows_path_units,
+)
 
 logger = logging.getLogger("market_lense.file_service")
 _WINDOWS_ABSOLUTE_PATH_RX = re.compile(r"^[A-Za-z]:[\\/]")
@@ -159,7 +164,20 @@ def _pipeline_checkpoint_path(
     file_id: str,
     stage_name: str,
 ) -> Path:
-    root = Path(checkpoint_root).expanduser().resolve()
+    try:
+        root = Path(checkpoint_root).expanduser().resolve(strict=False)
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise _pipeline_checkpoint_path_invalid(
+            checkpoint_root=checkpoint_root,
+            path=None,
+            cause=exc,
+        ) from exc
+    if root.exists() and not root.is_dir():
+        raise _pipeline_checkpoint_path_invalid(
+            checkpoint_root=checkpoint_root,
+            path=root,
+            reason="root_not_directory",
+        )
     pipeline_token = _require_checkpoint_token(pipeline_name, "pipeline_name")
     file_token = _require_checkpoint_token(file_id, "file_id")
     stage_token = _require_checkpoint_token(stage_name, "stage_name")
@@ -170,15 +188,110 @@ def _pipeline_checkpoint_path(
         / file_token
         / f"{stage_token}.json"
     )
-    if atomic_write_temp_path_length(path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH:
+    try:
+        _validate_pipeline_checkpoint_candidate(root, path)
         return path
-    return (
-        root
-        / _COMPACT_PIPELINE_CHECKPOINT_DIR
-        / _checkpoint_path_token(pipeline_token)
-        / _checkpoint_path_token(file_token)
-        / f"{_checkpoint_path_token(stage_token)}.json"
+    except AppError as normal_error:
+        compact_path = (
+            root
+            / _COMPACT_PIPELINE_CHECKPOINT_DIR
+            / _checkpoint_path_token(pipeline_token)
+            / _checkpoint_path_token(file_token)
+            / f"{_checkpoint_path_token(stage_token)}.json"
+        )
+        try:
+            _validate_pipeline_checkpoint_candidate(root, compact_path)
+        except AppError as compact_error:
+            compact_error.context.setdefault(
+                "normal_candidate_error", normal_error.code
+            )
+            raise
+        return compact_path
+
+
+def _pipeline_checkpoint_path_invalid(
+    *,
+    checkpoint_root: str,
+    path: Path | None,
+    reason: str = "path_budget_exceeded",
+    cause: Exception | None = None,
+) -> AppError:
+    resolved_path = ""
+    destination_units: int | None = None
+    atomic_units: int | None = None
+    invalid_components: list[str] = []
+    if path is not None:
+        try:
+            resolved = path.resolve(strict=False)
+            resolved_path = str(resolved)
+            destination_units = windows_path_units(resolved)
+            atomic_units = atomic_write_temp_path_length(resolved)
+            anchor = resolved.anchor
+            for component in resolved.parts:
+                if component in {anchor, os.sep, "", "."}:
+                    continue
+                if windows_path_units(component) > WINDOWS_COMPONENT_BUDGET:
+                    invalid_components.append(f"{component}:component_length")
+                elif is_windows_reserved_component(component):
+                    invalid_components.append(f"{component}:reserved_component")
+        except (OSError, RuntimeError, TypeError, ValueError):
+            resolved_path = str(path)
+    context = {
+        "checkpoint_root": str(checkpoint_root),
+        "path": resolved_path,
+        "reason": reason,
+        "destination_path_units": destination_units,
+        "max_destination_path_units": WINDOWS_MAX_PATH_LENGTH - 1,
+        "atomic_temp_path_units": atomic_units,
+        "max_atomic_temp_path_units": WINDOWS_SAFE_ATOMIC_PATH_LENGTH,
+        "invalid_components": ",".join(invalid_components),
+        "next_action": "Shorten the configured checkpoint root and retry",
+    }
+    return AppError(
+        code="pipeline_checkpoint_path_invalid",
+        message=(
+            "Pipeline checkpoint path cannot fit the Windows destination and "
+            "atomic temporary-file budgets; shorten the configured checkpoint root"
+        ),
+        cause=cause,
+        retryable=False,
+        context=context,
     )
+
+
+def _validate_pipeline_checkpoint_candidate(root: Path, path: Path) -> None:
+    try:
+        resolved = path.resolve(strict=False)
+        destination_units = windows_path_units(resolved)
+        atomic_units = atomic_write_temp_path_length(resolved)
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise _pipeline_checkpoint_path_invalid(
+            checkpoint_root=str(root),
+            path=path,
+            reason="path_resolution_failed",
+            cause=exc,
+        ) from exc
+    invalid_components = []
+    anchor = resolved.anchor
+    for component in resolved.parts:
+        if component in {anchor, os.sep, "", "."}:
+            continue
+        if windows_path_units(component) > WINDOWS_COMPONENT_BUDGET:
+            invalid_components.append(f"{component}:component_length")
+        elif is_windows_reserved_component(component):
+            invalid_components.append(f"{component}:reserved_component")
+    if (
+        destination_units >= WINDOWS_MAX_PATH_LENGTH
+        or atomic_units > WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+        or invalid_components
+    ):
+        raise _pipeline_checkpoint_path_invalid(
+            checkpoint_root=str(root),
+            path=resolved,
+            reason=(
+                "component_invalid" if invalid_components else "path_budget_exceeded"
+            ),
+        )
 
 
 def _checkpoint_path_token(value: str) -> str:
@@ -887,9 +1000,9 @@ def write_bytes(
         )
     )
     path = Path(request.path)
-    if request.make_parents:
-        path.parent.mkdir(parents=True, exist_ok=True)
     try:
+        if request.make_parents:
+            path.parent.mkdir(parents=True, exist_ok=True)
         with _write_lock_for_path(path):
             if reject_conflicting_existing:
                 aliases = (
@@ -1073,8 +1186,8 @@ def write_pipeline_checkpoint(
     content = (
         json.dumps(payload, ensure_ascii=True, sort_keys=True, indent=2) + "\n"
     ).encode("utf-8")
-    path.parent.mkdir(parents=True, exist_ok=True)
     try:
+        path.parent.mkdir(parents=True, exist_ok=True)
         _atomic_write_bytes(path, content)
     except OSError as exc:
         raise AppError(
@@ -1324,7 +1437,7 @@ def _atomic_temp_path(path: Path) -> Path:
 def atomic_write_temp_path_length(path: Path) -> int:
     """Return the maximum absolute path length used by an atomic-write temp file."""
 
-    return len(str(path.resolve().parent)) + 1 + _ATOMIC_TEMP_NAME_LENGTH
+    return windows_path_units(str(path.resolve().parent)) + 1 + _ATOMIC_TEMP_NAME_LENGTH
 
 
 def _cleanup_stale_atomic_temp_files(path: Path) -> None:
