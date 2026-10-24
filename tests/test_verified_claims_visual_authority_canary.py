@@ -27,6 +27,7 @@ from src.generators.verified_claims_canary import (
     VisualAuthorityCanaryConfig,
     admit_visual_authority_candidates,
     build_visual_authority_admitter,
+    default_visual_authority_output_dir,
 )
 from src.utils.errors import AppError
 from tests._test_artifact_generator._shared import (
@@ -995,3 +996,11 @@ def test_canary_configuration_requires_expected_pdf_hash():
             settings=object(),
             doc_map={},
         )
+
+
+def test_canary_default_visual_output_avoids_nested_output_path(tmp_path):
+    output_dir = tmp_path / ("r" * 160) / "output"
+
+    resolved = Path(default_visual_authority_output_dir(str(output_dir)))
+
+    assert resolved == output_dir.parent / "verified_claims_visual_canary"

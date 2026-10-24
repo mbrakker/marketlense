@@ -72,6 +72,12 @@ class VisualAuthorityCanaryConfig:
     dependencies: VerifiedClaimsVisualDependencies | None = None
 
 
+def default_visual_authority_output_dir(default_output_dir: str) -> str:
+    """Keep rendered canary pages short enough for PDF fingerprint sidecars."""
+
+    return str(Path(str(default_output_dir or ".")).parent / "verified_claims_visual_canary")
+
+
 def build_visual_authority_admitter(
     *,
     config: VisualAuthorityCanaryConfig,
@@ -101,7 +107,7 @@ def build_visual_authority_admitter(
             retryable=False,
         )
     output_dir = str(
-        config.output_dir or Path(default_output_dir) / "verified_claims_visual_canary"
+        config.output_dir or default_visual_authority_output_dir(default_output_dir)
     )
 
     def admit(candidates: Sequence[Mapping[str, Any]]) -> VisualAuthorityAdmission:
