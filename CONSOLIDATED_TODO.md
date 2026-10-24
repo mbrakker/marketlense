@@ -764,3 +764,21 @@ artifacts remain unchanged and fail closed as before. Algolia's separate
 admission/lineage blocker remains fail-closed; E18 is Active/PARTIAL, Step 2 is
 PARTIAL/NO-GO, and Step 3 is not ready. Evidence:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Algolia admission and downstream correction — 2026-10-24:** The current
+visual boundary now rejects material corrected claims that carry stale retained
+or partial discovery bindings, while accepting complete independently verified
+replacement facts. A coherent retained Algolia replay matched six requested
+and six evaluated results (`d650bb1de09357ef09d18651ac986193a37be50edb6506bc69657e93a6778564`),
+admitted six facts with zero quarantine, and preserved the page-5 investment
+replacement separately from the page-4 58% revenue discovery proposition. The
+exact six-fact downstream replay produced five final insights, passed public
+editorial quality, and grounding returned zero unsupported or unresolved
+factual claims; two non-factual recommendation sentences remain awaiting
+review under the existing workflow. A ten-candidate fallback replay exhausted
+the existing structured-output bound and failed closed, so this is not a claim
+of production fallback success. Provider-free frozen-five coverage remained
+15/39 cases/variants, 29 identities, five matching hashes, and zero calls.
+E18 remains Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
+unstarted/not ready. Full metrics and the per-page ledger are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

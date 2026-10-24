@@ -4100,3 +4100,142 @@ binding outcomes are **PASS** for this correction. Overall Step 2 remains
 and lineage mismatch was not in scope for this correction and remains
 fail-closed; Step 3 remains unstarted and not ready. No claim is made that the
 provider-free 29-insight replay improves live selection effectiveness.
+
+#### Algolia verified-fact admission and downstream E2E correction — 2026-10-24
+
+This isolated replay used the retained Algolia artifact and the local original
+PDF at physical-page level. The PDF SHA-256 was
+`d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50` and its
+29-page count matched the source manifest. No canonical artifact, readiness
+state, publication record, or WordPress write was changed.
+
+The remaining admission defect was at the visual-result-to-fact boundary. A
+materially corrected claim could still carry a `retained` or partial copied
+binding even though its proposition had changed. The correction in
+`verified_claims_canary.py` keeps the existing roster/digest and canonical
+validators, but requires the binding metadata to agree with the final fact:
+`retained` is allowed only for an unchanged proposition with the exact
+candidate evidence IDs, spans, and protected metric; `unbound` cannot carry
+copied discovery binding; and `independently_bound` must carry complete
+source-consistent metric and span metadata. Complete verified-fact metrics are
+not narrowed or enriched. Multi-page fact snapshots are normalized only for
+the existing canonical page-order contract.
+
+The historical five-candidate/six-result mismatch is not reproducible in the
+current coherent run. The request and response both covered these six IDs:
+
+| Candidate ID | Admitted supporting page | Corrected-fact status |
+|---|---:|---|
+| `revenue-incentive-58` | 5 | material replacement, unbound discovery lineage |
+| `search-capability-development-approaches` | 22 | retained source-supported fact |
+| `ai-search-purchase-agreement-regional-range` | 12 | retained source-supported fact |
+| `agentic-search-deployment-and-plans` | 26 | recovered source-supported fact |
+| `agentic-adoption-considerations` | 27 | retained source-supported fact |
+| `search-investment-and-adoption-activity` | 23 | retained source-supported fact |
+
+The normalized candidate-roster digest was
+`d650bb1de09357ef09d18651ac986193a37be50edb6506bc69657e93a6778564`.
+Admission recorded `evaluated=6`, `expected=6`, `admitted=6`,
+`verified_facts=6`, `quarantined=0`, and `coverage_complete=true`; the
+verified-fact snapshot digest was
+`301f73bce6e8a7834d4d8e4dee008ba88b40dda7b193e799161f70d338e480bb`.
+An extra, missing, duplicate, or stale result remains rejected by the roster
+boundary; the six-result outcome was not obtained by truncation or relabeling.
+
+The `revenue-incentive-58` result is now a separate source-backed fact rather
+than an inherited 58% revenue proposition. Physical page 4 contains the
+original 58% revenue statement, while physical page 5 contains the corrected
+Total 2025/2024 search-investment rows: 39% versus 32% under-invested and 53%
+versus 51% adequately invested. The admitted fact keeps the stable candidate
+ID and canonical `verified-fact:revenue-incentive-58` ID, but its authoritative
+statement, metric, page, span, and source notes describe only the page-5
+investment proposition. The original `ch2-revenue-incentive` ID remains
+diagnostic discovery lineage, not authority for the replacement. Page 23 is
+kept as the distinct FOMO/search-investment finding; its 53%/39% values are
+not merged with page 5 or substituted for the page-5 53%/51% year comparison.
+
+The fresh GPT-6 Luna visual shadow run evaluated all six retained candidates
+against full PDF pages:
+
+| Measure | Result |
+|---|---:|
+| Visual claims / terminal outcomes | 6 / 6 verified first pass |
+| Retries, unresolved, failed, skipped | 0 / 0 / 0 / 0 |
+| Provider calls | 12 (correction + verification per claim) |
+| Input / output / total tokens | 375,982 / 15,233 / 391,215 |
+| Estimated cost | $0.045215 |
+| Rendered physical pages | 7 |
+| Wall time | 207.15 s |
+
+Independent page review confirmed the final relationships on pages 5, 12, 22,
+23, 26, and 27: the purchase-likelihood values retain the USA/Australia-NZ
+respondent bases; the search-approach values retain their category labels and
+2025 Total row; the agentic 17%/61% values retain the implemented-versus-next-
+12-month-plan distinction; and the integration ratings retain the 47% very,
+43% somewhat, and 90% combined relationship.
+
+The exact six-fact downstream replay then produced five final editorial
+insights, five metric-spine rows, and four key figures. It retained all six
+verified facts, including the omitted page-23 fact, and omitted only the
+redundant investment insight under the existing editorial-plan/minimum-count
+rules. Final insight IDs/pages were:
+`agentic-search-deployment-and-plans`/26,
+`revenue-incentive-58`/5,
+`search-capability-development-approaches`/22,
+`ai-search-purchase-agreement-regional-range`/12, and
+`agentic-adoption-considerations`/27. The existing artifact path made six
+model calls (two bounded `insights_final` attempts and one for each other
+regenerated family), measured 102,590 input and 27,350 output tokens, cost
+$0.023933, and took 238.742 s. Public editorial quality returned
+`status=pass`, `publishable=true`, `hard_fail_count=0`, and `issue_count=0`.
+The summary, Expert View, and LinkedIn text were checked against the same
+pages; their recommendations remain conditional interpretations rather than
+new facts.
+
+A production-like ten-candidate replay also exercised the four available
+fidelity-approved fallback alternatives. All four fallback visual evaluations
+verified first pass, but the subsequent ten-candidate `insights_final` stage
+failed closed after its existing primary/repair/regenerate bound with
+`StructuredOutputFailure`; no artifact was accepted from that run and no
+retry policy was expanded. The successful six-candidate artifact used the
+existing explicit retained-roster replay seam to withhold those post-shortlist
+alternatives, so it is evidence for the six-fact downstream path, not proof of
+universal fallback-generation success.
+
+The normal verified-mode grounding workflow was run on the accepted six-fact
+artifact with the canonical verified evidence pack and no PDF/vector-store
+retrieval. It made seven parallel grounding calls, measured 91,833 input
+(9,025 cached) and 48,965 output tokens, cost $0.032855, and had an 89.256 s
+provider span (366.740 s aggregate provider latency across parallel calls).
+The retained claim package recorded 30 entailed factual/descriptive claims,
+zero unsupported factual claims, and zero unresolved factual claims. The two
+unresolved entries are non-factual recommendation sentences in Expert View
+and LinkedIn, which the existing claim workflow keeps at `awaiting_review`;
+they are not treated as verified facts. The overall validation result was
+`status=pass`, `severity=warning`, with the expected abstained-quotes warning
+and five deterministic breadth/quality warnings. No grounding error was
+returned.
+
+The provider-free frozen-five replay was rerun after the correction: all 15
+reference cases and 39 variants remained covered, all five source hashes
+matched, and the retained selection remained 29 IDs (Capgemini 5, Activate 7,
+KPMG 5, Reuters Institute 6, Adjust 6) with zero provider calls. The prompt
+fixture gate also remained green at 108,572 total tokens / `$0.024080` versus
+the accepted 108,275 / `$0.024049` baseline; validation was 9,640 versus 9,486
+tokens and `$0.001725` versus `$0.001709`.
+
+Focused visual-authority regressions passed **40 tests**. The final authority/
+grounding subset passed **146 tests**. The broader affected Step 2/provenance/
+regeneration suite passed **275 tests, 1 expected skip, and 1 deselection**.
+Changed-file Ruff check and formatting passed, targeted mypy passed,
+and the prompt-fixture gate passed. One initial test invocation referenced a
+nonexistent legacy test filename; it ran no tests and was immediately replaced
+with the repository's actual modules. This is not counted as a test failure.
+
+**Algolia shadow verdict: PASS for the coherent six-fact visual-admission →
+editorial → grounding → public-quality path; overall Step 2: PARTIAL / NO-GO.**
+The remaining qualification is the bounded ten-candidate generation failure
+and the fact that the six-fact downstream run used the retained-roster replay
+seam rather than a fresh end-to-end selection. Step 3 is not authorized by
+this evidence, and no live selection-quality improvement is claimed from
+post-selection replay.

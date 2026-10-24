@@ -398,6 +398,16 @@ def _verified_fact_from_result(
     if inspected_pages and not set(supporting_pages).issubset(inspected_pages):
         return "verified_fact_supporting_page_not_inspected", {}
 
+    corrected_binding_reason = _corrected_binding_conflict_reason(
+        candidate=candidate,
+        result=result,
+        raw_fact=raw_fact,
+        expected_source_identity=expected_source_identity,
+        supporting_pages=supporting_pages,
+    )
+    if corrected_binding_reason:
+        return corrected_binding_reason, {}
+
     result_hash = _result_field(result, "source_pdf_sha256").lower()
     fact_hash = _field_text(raw_fact, "source_pdf_sha256").lower()
     if result_hash and result_hash != expected_sha:
@@ -442,6 +452,114 @@ def _verified_fact_from_result(
         },
     }
     return "", fact
+
+
+def _corrected_binding_conflict_reason(
+    *,
+    candidate: Mapping[str, Any],
+    result: Any,
+    raw_fact: Mapping[str, Any],
+    expected_source_identity: str,
+    supporting_pages: Sequence[int],
+) -> str:
+    """Reject corrected-binding metadata that contradicts the final fact.
+
+    A changed proposition is authoritative only through its complete verified
+    fact.  The optional corrected-binding fields are therefore either empty
+    (the normal visual-generator representation) or a complete, source-
+    consistent binding.  A retained binding is allowed only for an unchanged
+    proposition and must match the requested candidate exactly.
+    """
+
+    status = _result_field(result, "corrected_source_binding_status").lower()
+    status = status or "unbound"
+    if status not in {"retained", "unbound", "independently_bound"}:
+        return "verified_fact_corrected_binding_conflict"
+
+    raw_ids = _result_value(result, "corrected_evidence_ids")
+    if raw_ids is None:
+        corrected_ids: list[str] = []
+    elif isinstance(raw_ids, list) and all(
+        isinstance(item, str) and item.strip() for item in raw_ids
+    ):
+        corrected_ids = [item.strip() for item in raw_ids]
+    else:
+        return "verified_fact_corrected_binding_conflict"
+    if len(set(corrected_ids)) != len(corrected_ids):
+        return "verified_fact_corrected_binding_conflict"
+
+    raw_spans = _result_value(result, "corrected_evidence_spans")
+    if raw_spans is None:
+        corrected_spans: list[dict[str, Any]] = []
+    elif isinstance(raw_spans, list) and all(
+        isinstance(item, Mapping) for item in raw_spans
+    ):
+        corrected_spans = [dict(item) for item in raw_spans]
+    else:
+        return "verified_fact_corrected_binding_conflict"
+
+    raw_metric = _result_value(result, "corrected_metric_binding")
+    if raw_metric is None:
+        corrected_metric: dict[str, Any] = {}
+    elif isinstance(raw_metric, Mapping):
+        corrected_metric = dict(raw_metric)
+    else:
+        return "verified_fact_corrected_binding_conflict"
+
+    final_claim = _result_field(result, "final_claim")
+    candidate_claim = _field_text(candidate, "text") or _field_text(candidate, "claim")
+    same_proposition = bool(final_claim) and normalize_for_lookup(
+        final_claim
+    ) == normalize_for_lookup(candidate_claim)
+
+    if status == "unbound":
+        # The authoritative verified_fact is the only binding for a changed
+        # proposition.  Carrying any copied discovery fields here would make
+        # the old candidate look authoritative again.
+        if corrected_ids or corrected_spans or corrected_metric:
+            return "verified_fact_corrected_binding_conflict"
+        return ""
+
+    candidate_ids = _candidate_evidence_ids(candidate)
+    if status == "retained":
+        if not same_proposition:
+            return "verified_fact_corrected_binding_conflict"
+        if corrected_ids != candidate_ids:
+            return "verified_fact_corrected_binding_conflict"
+        candidate_spans = _result_list_of_mappings(candidate, "evidence_spans")
+        if candidate_spans is None or _canonical_evidence_spans(
+            corrected_spans
+        ) != _canonical_evidence_spans(candidate_spans):
+            return "verified_fact_corrected_binding_conflict"
+        if _canonical_metric(corrected_metric) != _canonical_metric(
+            candidate.get("metric")
+        ):
+            return "verified_fact_corrected_binding_conflict"
+        return ""
+
+    # An explicitly independently-bound representation is accepted for
+    # callers that carry corrected evidence metadata, but every protected
+    # binding dimension must agree with the authoritative fact and pages.
+    if not corrected_ids or not corrected_spans or not corrected_metric:
+        return "verified_fact_corrected_binding_conflict"
+    fact_metric = raw_fact.get("metric")
+    if _protected_metric(corrected_metric) != _protected_metric(fact_metric):
+        return "verified_fact_corrected_binding_conflict"
+    span_ids: list[str] = []
+    span_pages: list[int] = []
+    for span in corrected_spans:
+        evidence_id = _field_text(span, "evidence_id")
+        page = span.get("page")
+        if not evidence_id or type(page) is not int or page <= 0:
+            return "verified_fact_corrected_binding_conflict"
+        span_ids.append(evidence_id)
+        span_pages.append(page)
+        span_identity = _field_text(span, "source_identity")
+        if span_identity and span_identity != expected_source_identity:
+            return "verified_fact_corrected_binding_conflict"
+    if set(span_ids) != set(corrected_ids) or set(span_pages) != set(supporting_pages):
+        return "verified_fact_corrected_binding_conflict"
+    return ""
 
 
 def _fact_projection(fact: Mapping[str, Any]) -> dict[str, Any]:
@@ -492,6 +610,7 @@ def project_verified_facts_as_insights(
 
 def _verified_evidence_packs(facts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     findings = []
+    packed_facts = []
     for fact in facts:
         projection = _fact_projection(fact)
         findings.append(
@@ -507,6 +626,18 @@ def _verified_evidence_packs(facts: Sequence[Mapping[str, Any]]) -> dict[str, An
                 "source_identity": projection["source_identity"],
             }
         )
+        packed_fact = deepcopy(dict(fact))
+        supporting_pages = packed_fact.get("supporting_physical_pages")
+        if isinstance(supporting_pages, list):
+            packed_fact["supporting_physical_pages"] = sorted(supporting_pages)
+        provenance = packed_fact.get("provenance")
+        if isinstance(provenance, Mapping):
+            packed_provenance = deepcopy(dict(provenance))
+            inspected_pages = packed_provenance.get("inspected_physical_pages")
+            if isinstance(inspected_pages, list):
+                packed_provenance["inspected_physical_pages"] = sorted(inspected_pages)
+            packed_fact["provenance"] = packed_provenance
+        packed_facts.append(packed_fact)
     return {
         "findings": {
             "family_status": {
@@ -524,7 +655,7 @@ def _verified_evidence_packs(facts: Sequence[Mapping[str, Any]]) -> dict[str, An
                 "status": "generated",
                 "policy_action": "keep",
             },
-            "verified_facts": [deepcopy(dict(fact)) for fact in facts],
+            "verified_facts": packed_facts,
         },
     }
 
@@ -576,6 +707,12 @@ def _result_field(value: Any, field_name: str) -> str:
     if isinstance(value, Mapping):
         return stripped_string_value(value.get(field_name)).strip()
     return stripped_string_value(getattr(value, field_name, "")).strip()
+
+
+def _result_value(value: Any, field_name: str) -> Any:
+    if isinstance(value, Mapping):
+        return value.get(field_name)
+    return getattr(value, field_name, None)
 
 
 def _result_mapping(value: Any, field_name: str) -> dict[str, Any]:
@@ -737,7 +874,22 @@ def _canonical_metric(value: Any) -> dict[str, Any]:
             if str(key) not in PROTECTED_METRIC_FIELDS
         }
     )
+    if canonical["observations"] in (None, "", []):
+        canonical["observations"] = []
+    for field_name in PROTECTED_METRIC_FIELDS:
+        if field_name != "observations" and canonical[field_name] is None:
+            canonical[field_name] = ""
     return canonical
+
+
+def _protected_metric(value: Any) -> dict[str, Any]:
+    metric = dict(value) if isinstance(value, Mapping) else {}
+    return {
+        field_name: deepcopy(
+            metric.get(field_name, [] if field_name == "observations" else "")
+        )
+        for field_name in PROTECTED_METRIC_FIELDS
+    }
 
 
 def _candidate_evidence_ids(candidate: Mapping[str, Any]) -> list[str]:
