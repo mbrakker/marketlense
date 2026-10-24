@@ -799,3 +799,23 @@ and 598.482 seconds. E18 remains Active/PARTIAL and Step 2 remains
 PARTIAL/NO-GO because one fact was unresolved and this run did not establish a
 new downstream grounding result; Step 3 remains unstarted/not ready. Evidence:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Ten-report verified-architecture output-cap benchmark — 2026-10-24:** The
+`report_vs/artifacts/insights_final` cap is now **19,661** (from 16,384),
+provider propagation and cache-identity regressions are covered, and the
+three-iteration fixture baseline was regenerated without changing thresholds
+or pricing. The accepted baseline moved from 108,275 to 108,751 total tokens
+(+$0.000049 estimated cost); validation moved from 2,163 to 2,317 tokens
+(+$0.000016). The exact frozen ten-report manifest was run fresh with the
+explicit verified-facts architecture and hash-matched PDFs: **360 calls,
+3,910,328 input tokens, 823,403 output tokens, $0.932674, 5,665.627 seconds**,
+8/10 readiness passes, and 2 typed fail-closed reports (DoubleVerify
+`validation_failed`, Emplifi `regeneration_repair_decision_invalid`). The
+separate Algolia stress replay is not substituted for the cohort result. It
+completed separately with 30 calls, 364,830 input tokens, 68,780 output
+tokens, $0.085104, and 669.490 seconds; its primary final-family call used
+19,661 tokens and completed with validation/readiness pass. The benchmark does not meet
+the 10/10 definition of success; Step 2 remains **PARTIAL/NO-GO**, E18 remains
+Active/PARTIAL, and Step 3 remains unstarted/not ready. Full ledger, PDF review,
+limitations, and the path-budget rerun evidence are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

@@ -4326,3 +4326,148 @@ this live run does not claim improved selection recall. The live result is a
 fail-closed behavior**, but the one unresolved visual fact and the absence of a
 new downstream grounding run keep overall Step 2 **PARTIAL / NO-GO**. Step 3
 remains unstarted and not ready.
+
+#### Ten-report verified-architecture benchmark and final-insight output headroom — 2026-10-24
+
+Commit `e1bbc17582c12ff7150eed508732e12f9b892af4` changes only the
+`report_vs/artifacts/insights_final` output policy from **16,384** to
+**19,661** tokens. The model remains GPT-6 Luna with high reasoning effort;
+unrelated artifact policies and the shared bounded recovery policies were not
+increased. The provider request regression confirms that the value reaches
+`max_completion_tokens` on the chat route and changes the semantic cache
+identity. The fresh Algolia artifact records the effective
+`max_output_tokens=19661` and a primary final-family result of 16,484 output
+tokens, below the new cap. No additional LLM stage or retry was introduced.
+
+The final-insight prompts now require one JSON object containing only the
+requested final entries, concise `so_what`/`now_what` text, and preservation of
+exact values, qualifiers, comparisons, and source bindings. The prompt does
+not repeat the candidate roster, evidence packs, schema, editorial plan, or
+large canonical fact objects; the authoritative verified evidence pack remains
+available to the model. The existing 18-word headline constraint is unchanged.
+
+The three-iteration prompt fixture baseline was regenerated with repository
+tooling. The accepted old/new totals are:
+
+| Scope | Old tokens | New tokens | Delta | Old cost | New cost | Delta |
+|---|---:|---:|---:|---:|---:|---:|
+| Total | 108,275 | 108,751 | +476 (+0.44%) | $0.024049 | $0.024098 | +$0.000049 |
+| `report_vs/artifacts/insights_candidates` | 3,634 | 3,656 | +22 | $0.000643 | $0.000646 | +$0.000003 |
+| `report_vs/artifacts/insights_final` | 3,377 | 3,677 | +300 | $0.000618 | $0.000648 | +$0.000030 |
+| `report_vs/validate/grounding` | 2,163 | 2,317 | +154 | $0.000368 | $0.000384 | +$0.000016 |
+
+The increase is the measured cost of the concise output instructions and the
+existing canonical-evidence/protected-dimension grounding text; thresholds,
+pricing, fixtures, and factual safeguards were not changed. The unchanged
+fixture regression command passed against the regenerated baseline. The first
+live attempt from the normal long worktree failed before provider calls with
+the typed `analysis_pack_path_too_long` Windows path-budget error for all ten
+members. It was discarded as an execution-environment failure and rerun from
+a clean short-path worktree, with the same commit and the exact retained PDFs.
+
+The successful fresh run used the exact
+`scripts/quality/frozen_reliability_cohort_10.json` manifest, isolated state,
+`--verified-facts-architecture`, and no publication or canonical writes:
+
+- Run root: `C:\vfa-runs-20261024\frozen-reliability-g2q9n49o\`
+- Cohort result: `frozen-reliability-g2q9n49o/cohort_result.json`
+- Git SHA recorded by the runner: `e1bbc17582c12ff7150eed508732e12f9b892af4`
+- Expected manifest MD5 equalled the actual retained-PDF MD5 for **10/10**
+  reports. The run completed terminal accounting for all 10 reports.
+- Cohort totals: **360 provider calls**, **3,910,328 input tokens**,
+  **823,403 output tokens**, **$0.932674**, and **5,665.627 seconds**
+  (94.43 minutes). No report was published.
+
+| Report | Final state / readiness | Final / candidate entries | Metric spine / key figures | Calls | Input / output tokens | Cost | Seconds | Terminal result |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| DoubleVerify | failed / fail | 5 / 5 | 0 / 0 | 35 | 330,693 / 66,544 | $0.073339 | 598.033 | `validation_failed`; public-quality metric-label relationship failure remained fail-closed |
+| KPMG | awaiting review / pass | 6 / 6 | 0 / 0 | 41 | 283,508 / 67,269 | $0.098384 | 463.203 | pass |
+| Reuters Institute | awaiting review / pass | 7 / 7 | 4 / 4 | 38 | 552,688 / 114,230 | $0.124247 | 723.632 | pass |
+| Adjust | awaiting review / pass | 5 / 5 | 2 / 2 | 45 | 537,276 / 119,334 | $0.123142 | 790.947 | pass; one structured-output repair |
+| Algolia | awaiting review / pass | 5 / 5 | 0 / 0 | 32 | 317,684 / 75,906 | $0.081454 | 744.690 | pass; one structured-output repair |
+| Bain & Company | awaiting review / pass | 5 / 5 | 1 / 1 | 24 | 201,344 / 57,144 | $0.062941 | 344.953 | pass |
+| Criteo | awaiting review / pass | 5 / 5 | 4 / 4 | 30 | 351,499 / 76,639 | $0.082537 | 467.164 | pass; one structured-output repair |
+| Deloitte | awaiting review / pass | 5 / 5 | 2 / 2 | 34 | 413,036 / 99,149 | $0.097311 | 484.081 | pass; three bounded repairs |
+| Emplifi | failed / fail | 5 / 5 | 0 / 0 | 45 | 589,816 / 79,646 | $0.115536 | 627.544 | `regeneration_repair_decision_invalid`; fail-closed |
+| StackAdapt | awaiting review / pass | 5 / 5 | 1 / 0 | 36 | 332,784 / 67,542 | $0.073783 | 421.380 | pass |
+
+The mutually exclusive cohort outcome was **8/10 readiness passes and 2/10
+failures**, with `typed_terminal_rate=1.0`, `missing_terminal_report_count=0`,
+and `published_report_count=0`. The persisted artifact ledger does not expose
+a separate per-candidate visual-admission file, so no candidate-level
+first-pass/retry/rejection counts are invented here. The durable downstream
+evidence is the hash-bound run, final/candidate artifacts, retained-claim
+validation, validation reuse telemetry, and typed terminal result above.
+The final-family usage ledger shows one primary call for eight reports, two
+calls for Adjust, and three for Emplifi; the other recovery calls are reflected
+in the report-level call totals and structured-output-repair counters.
+
+Independent PDF review found the following report-specific results:
+
+- DoubleVerify final insights match the Q1 2026 benchmark tables on physical
+  pages 3 and 10, including the APAC/EMEA/LATAM/North America labels and the
+  regional Video, Display, and Ad Interaction values. The report is not
+  accepted because the existing public-quality validator still flags a
+  metric-label relationship in the generated public artifact; the terminal
+  failure is not hidden by the source match.
+- KPMG pages 5, 17, 27, 28, and 36 support the six retained qualitative
+  findings. The AI execution and carve-out implications remain conditional
+  interpretations rather than fabricated measurements.
+- Reuters Institute pages 12, 17, 24, 25, 30, 33, and 38 support the search,
+  newsroom, creator, misinformation, jobs, and subscription findings. Bases
+  and respondent populations remain visible in the source pages.
+- Adjust pages 9, 19, 21, and 37 support the segmentation, gaming
+  install/session, retention, maturity, and finance-CPI findings, including
+  the 2024/2025 and global/regional qualifiers.
+- Algolia pages 12, 22, 26, and 27 support the geography, development-model,
+  agentic-adoption, and integration-factor findings. The `revenue-incentive`
+  artifact retains page 5, while the exact sentence is present on physical PDF
+  page 4 in the retained source; this page-binding discrepancy is a material
+  provenance limitation despite the report-level validation pass and requires
+  correction before treating Algolia as fully source-clean.
+- Bain page 1 supports all five final claims, including the 2015–20 valuation
+  comparison and the 52% born-tech / 20% tech-led-growth relationships.
+- Criteo pages 5–8 support the 61% ROI, 47% CTV, 50% incrementality,
+  performance-versus-awareness, and offline/online data claims.
+- Deloitte pages 3–7 support the trust, onsite-control, 693% traffic,
+  strategic-posture, and LLM-discovery findings.
+- Emplifi pages 2, 13–15, and 19 support the authenticity, disclosure,
+  source-trust, service, and operating-model findings, but the invalid
+  regeneration repair decision prevented an accepted terminal report.
+- StackAdapt pages 7, 11, 15, 17, and 19 support the budget mix, repeated
+  digital engagement, values alignment, relevance capabilities, and
+  programmatic-capability findings.
+
+The separate Algolia stress replay was started from the same clean short-path
+worktree and exact source PDF with `--report-ids
+cohort-86858bdcb370266f26c2 --verified-facts-architecture`. It is intentionally
+not included in the ten-report totals or used to replace the cohort's Algolia
+result. It completed as a separate pass: **30 provider calls**, **364,830 input
+tokens**, **68,780 output tokens**, **$0.085104**, and **669.490 seconds**;
+validation/readiness passed, no repair was required, and no report was
+published. The final-family call was primary, used `max_output_tokens=19661`,
+returned 10,383 output tokens, and produced five final insights, two
+metric-spine rows, and one key figure. Direct PDF checks found the final
+claims on pages 12, 26, and 27; no unsupported retained factual claims were
+reported. This stress pass is positive evidence that the new cap avoids the
+previous Algolia final-family truncation, but it does not replace the cohort
+Algolia result or remove the cohort's page-5/page-4 reconciliation issue. No
+WordPress, canonical-claim, or publication mutation was allowed by either
+run.
+
+Local focused prompt/routing/provider tests passed **114 tests**; focused
+pipeline/canary tests passed **59 tests**; the report-pipeline orchestrator
+subset passed **19 tests**. Changed-file Ruff, formatting, compileall, and
+diff checks passed. The first broad mypy invocation is not a clean signal: it
+reproduces pre-existing mailbox-acquisition typing and existing test/helper
+typing errors; the changed source subset is otherwise clear apart from that
+imported mailbox error. Hosted CI remains the release decision gate.
+
+**Ten-report verified-architecture verdict: PARTIAL / NO-GO.** The output cap
+change is implemented and provider-confirmed, the exact ten-report run is
+complete and fail-closed, and eight reports passed readiness. The definition
+of success is not met because DoubleVerify and Emplifi failed, Algolia has a
+physical-page reconciliation issue, and the benchmark ledger does not persist
+an independent visual candidate-outcome table. Verified-fact authority should
+not be enabled as the normal autonomous default from this evidence. Step 3
+remains unstarted/not ready.
