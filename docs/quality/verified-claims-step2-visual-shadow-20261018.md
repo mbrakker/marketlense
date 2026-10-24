@@ -4486,3 +4486,64 @@ ten-report verdict therefore remains **PARTIAL / NO-GO** on measured report
 quality, not CI health: DoubleVerify and Emplifi still fail closed, and the
 Algolia physical-page discrepancy remains unresolved. Step 3 remains
 unstarted/not ready.
+
+#### Verified-facts architecture admission validation — 2026-10-24 (stopped after Criteo)
+
+The latest run used commit `6784a8f2ed90a2ab64d4211baf66447132e70e93`, the
+explicit opt-in verified-facts architecture, and the exact frozen ten-report
+manifest with retained hash-matched PDFs. A dedicated Adjust run completed
+architecture admission validation: 17/17 facts were evaluated and admitted,
+coverage was complete, and the source PDF hash and verified-fact digest
+matched the persisted canary. It still terminated with the existing
+`summary_safe_removal_target_unresolved` workflow failure after artifacts were
+persisted. It made 66 provider calls, used 658,665 input and 80,655 output
+tokens, cost `$0.123596`, and ran for 1,199.545 seconds.
+
+Per the requested stop boundary, the ten-report replay was stopped after
+Criteo completed. Seven reports completed; Deloitte had initialized and made
+one `rank_candidates` call before interruption, and Emplifi and StackAdapt
+did not start. No cohort-level result exists for this stopped run. The
+completed-ledger totals were 431 provider calls, 4,946,180 input tokens,
+565,552 output tokens, and `$0.884213`.
+
+| Report | Calls | Input / output tokens | Cost | Verified facts (evaluated / admitted / quarantined) | Final insights | Architecture proof |
+|---|---:|---:|---:|---:|---:|---|
+| DoubleVerify | 48 | 409,222 / 64,448 | $0.080547 | 12 / 12 / 0 | 5 | pass |
+| KPMG | 47 | 291,559 / 58,204 | $0.090663 | 7 / 7 / 0 | 5 | pass |
+| Reuters Institute | 84 | 743,923 / 105,352 | $0.141969 | 27 / 27 / 0 | 7 | pass |
+| Adjust | 76 | 844,786 / 88,547 | $0.143654 | 22 / 21 / 1 | 6 | pass |
+| Algolia | 62 | 1,106,551 / 83,475 | $0.164795 | 15 / 14 / 1 | 5 | pass |
+| Bain & Company | 40 | 906,914 / 64,693 | $0.137940 | 10 / 10 / 0 | 5 | pass |
+| Criteo | 73 | 642,621 / 100,650 | $0.124493 | 24 / 24 / 0 | 5 | pass |
+| Deloitte (partial) | 1 | 604 / 183 | $0.000152 | not evaluated | 0 | unavailable |
+
+Failure ledger and limitations:
+
+- All seven completed reports ended with the typed
+  `summary_safe_removal_target_unresolved` terminal failure after their
+  artifacts were persisted; this is an existing downstream readiness/safe-
+  removal failure, not a verified-facts source-admission failure.
+- Every completed `validation.json` contains
+  `verified_fact_snapshot_invalid`, even though the independent architecture
+  proof passed. This is an unresolved downstream contract mismatch and is
+  intentionally not bypassed or downgraded.
+- Bain's public-quality artifact is rejected for
+  `public_editorial_quality.duplicate_insight` between `f1` and
+  `market-value-growth-share-breakdown`.
+- Adjust quarantined `finance-global-sessions-2025` because its corrected
+  binding conflicted with the retained authoritative binding; the report
+  remains fail-closed on that fact.
+- Algolia quarantined `revenue-incentive` as `outcome_unresolved`; its
+  retained artifact also has a page-5/page-4 physical-page reconciliation
+  limitation that remains unresolved.
+- Deloitte has no artifacts or architecture proof because the run was stopped
+  after its first ranking call. Emplifi and StackAdapt have no run members.
+- No source-hash, verified-fact-digest, or evidence-ID mismatch was found in
+  the seven completed architecture proofs. The separate Algolia retained
+  page-reconciliation limitation remains as stated above. No
+  WordPress/publication writes occurred.
+
+This is **PARTIAL / NO-GO** evidence. It demonstrates genuine opt-in
+verified-facts admission for the seven completed reports and the dedicated
+Adjust run, but it is not a completed ten-report evaluation and does not clear
+the downstream readiness blockers. Step 3 remains unstarted/not ready.

@@ -831,3 +831,20 @@ benchmark remains **PARTIAL / NO-GO** because two reports failed closed and
 Algolia retains a physical-page reconciliation issue; E18 remains Active/PARTIAL
 and Step 3 remains unstarted/not ready. Evidence:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Verified-facts architecture admission validation — 2026-10-24 (stopped):**
+The exact frozen ten-report replay on `6784a8f2` was stopped after Criteo as
+requested: seven reports completed, Deloitte made one ranking call before
+interruption, and Emplifi/StackAdapt did not start. The completed-ledger
+totals were 431 provider calls, 4,946,180 input tokens, 565,552 output
+tokens, and `$0.884213`. All seven completed reports passed independent
+hash-bound verified-fact architecture proof, but all ended with
+`summary_safe_removal_target_unresolved`; all also retain the existing
+`verified_fact_snapshot_invalid` downstream validation issue. Bain has a
+duplicate-insight quality failure, Adjust quarantined one conflicting fact,
+and Algolia quarantined one unresolved fact plus a physical-page
+reconciliation limitation. The dedicated Adjust admission run passed 17/17
+fact coverage but had the same safe-removal terminal failure. This is
+**PARTIAL / NO-GO** evidence; E18 remains Active/PARTIAL and Step 3 remains
+unstarted/not ready. No publication writes occurred. Full ledger and failure
+reasons: `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
