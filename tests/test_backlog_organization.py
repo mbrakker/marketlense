@@ -102,9 +102,7 @@ def test_every_proposal_has_one_mapping_and_one_full_specification() -> None:
     if closed_mapped_owners:
         for path in WORKSTREAMS:
             text = path.read_text(encoding="utf-8")
-            if any(
-                f"## {owner}. " in text for owner in closed_mapped_owners
-            ):
+            if any(f"## {owner}. " in text for owner in closed_mapped_owners):
                 assert "Canonical status:** Closed" in text
                 assert "final closure evidence" in text.lower()
     for path in WORKSTREAMS:
