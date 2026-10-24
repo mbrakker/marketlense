@@ -95,6 +95,15 @@ def test_cache_path_compacts_destination_and_temp_paths_for_atomic_write() -> No
     assert len(str(path.resolve())) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
 
 
+def test_cache_path_does_not_inspect_existing_file_root(tmp_path: Path) -> None:
+    cache_root = tmp_path / "cache-root"
+    cache_root.write_bytes(b"configured cache root is currently a file")
+
+    path = cache_path(cache_root, "pdf_info", "b" * 64)
+
+    assert path == cache_root / f"pdf_info_{'b' * 64}.json"
+
+
 def test_cache_path_rejects_a_compact_candidate_that_still_exceeds_windows_budget(
     tmp_path: Path,
     assert_app_error,
@@ -155,3 +164,30 @@ def test_report_source_cache_round_trips_through_persisted_compact_binding(
     assert Path(binding.cache_path).is_file()
     assert loaded.status == "hit"
     assert loaded.value == {"page_count": 4}
+
+
+def test_report_source_cache_surfaces_regular_parent_as_file_service_error(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    configured_root = tmp_path / "cache-root"
+    configured_root.write_bytes(b"configured cache root is currently a file")
+    settings = SimpleNamespace(cache_dir=str(configured_root))
+    binding = bind_report_source_cache(
+        settings=settings,
+        md5="a" * 32,
+        file_id="file-1",
+        phase="pdf_info",
+        prefix="pdf_info",
+        cache_key="b" * 64,
+    )
+
+    with pytest.raises(AppError) as err:
+        write_report_source_cache(
+            binding,
+            payload={"key": "b" * 64, "value": {"page_count": 4}},
+            ctx=_ctx(),
+            dependencies=ReportSourceDependencies.default(),
+        )
+
+    assert_app_error(err.value, code="file_write_failed", retryable=False)

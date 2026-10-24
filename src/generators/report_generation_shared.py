@@ -178,13 +178,11 @@ def ocr_text_cache_key(
 
 def cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
     try:
-        configured_root = cache_root.expanduser().resolve(strict=False)
+        cache_root.expanduser().resolve(strict=False)
     except (OSError, RuntimeError, TypeError, ValueError) as exc:
         raise _cache_path_invalid(
             cache_root, None, "root_resolution_failed", exc
         ) from exc
-    if configured_root.exists() and not configured_root.is_dir():
-        raise _cache_path_invalid(cache_root, configured_root, "root_not_directory")
     path = cache_root / f"{prefix}_{cache_key}.json"
     if _cache_path_fits(
         path, final_budget=file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH

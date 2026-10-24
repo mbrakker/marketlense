@@ -2840,6 +2840,8 @@ def _read_authoritative_repair_evidence(
         return False
     repair_evidence = False
     for logical_key, raw_reference in evidence_paths.items():
+        if not str(logical_key).strip().startswith("regeneration_candidate_audit_"):
+            continue
         reference = str(raw_reference or "").strip()
         if not reference:
             continue
@@ -2881,10 +2883,7 @@ def _read_authoritative_repair_evidence(
                     ),
                 },
             )
-        if (
-            str(logical_key).strip().startswith("regeneration_candidate_audit_")
-            and resolved.is_file()
-        ):
+        if resolved.is_file():
             repair_evidence = True
     return repair_evidence
 

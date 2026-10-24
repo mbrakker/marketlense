@@ -281,6 +281,27 @@ def test_write_bytes_uses_atomic_replace_and_cleans_stale_temp(tmp_path: Path) -
     assert list(tmp_path.glob("atomic.bin.tmp-write-*")) == []
 
 
+def test_write_bytes_wraps_parent_creation_failure_as_typed_error(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    parent_file = tmp_path / "cache-parent"
+    parent_file.write_bytes(b"not a directory")
+
+    with pytest.raises(AppError) as exc_info:
+        write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0",
+                path=str(parent_file / "payload.json"),
+                content=b"payload",
+                make_parents=True,
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(exc_info.value, code="file_write_failed", retryable=False)
+
+
 def test_write_bytes_uses_short_atomic_temp_for_long_target_name(
     tmp_path: Path,
 ) -> None:

@@ -1000,9 +1000,9 @@ def write_bytes(
         )
     )
     path = Path(request.path)
-    if request.make_parents:
-        path.parent.mkdir(parents=True, exist_ok=True)
     try:
+        if request.make_parents:
+            path.parent.mkdir(parents=True, exist_ok=True)
         with _write_lock_for_path(path):
             if reject_conflicting_existing:
                 aliases = (
