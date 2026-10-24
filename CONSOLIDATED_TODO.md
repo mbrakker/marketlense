@@ -782,3 +782,20 @@ of production fallback success. Provider-free frozen-five coverage remained
 E18 remains Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
 unstarted/not ready. Full metrics and the per-page ledger are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Algolia full-roster recovery and retained-binding hardening — 2026-10-24:**
+The fresh isolated production-like run exercised all 10 generated candidate
+IDs and completed the existing bounded final-insight recovery path after the
+primary response hit the output cap. Nine facts were admitted and one
+(`revenue-incentive-58`) remained unresolved and was correctly omitted; no
+unsupported fact was promoted. The final artifact contained five source-bound
+insights with five metric-spine rows and four key figures. The verified final
+prompt no longer duplicates each complete internal fact because the same full
+facts remain authoritative in the verified evidence pack; selection cache
+identity advanced to `:10`. Retained authoritative metric/page conflicts now
+fail closed, including focused valid multi-page coverage. Live measurements
+were 28 provider calls, 616,264 input tokens, 68,772 output tokens, `$0.096015`,
+and 598.482 seconds. E18 remains Active/PARTIAL and Step 2 remains
+PARTIAL/NO-GO because one fact was unresolved and this run did not establish a
+new downstream grounding result; Step 3 remains unstarted/not ready. Evidence:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

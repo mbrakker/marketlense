@@ -4239,3 +4239,90 @@ and the fact that the six-fact downstream run used the retained-roster replay
 seam rather than a fresh end-to-end selection. Step 3 is not authorized by
 this evidence, and no live selection-quality improvement is claimed from
 post-selection replay.
+
+#### Algolia full-roster structured-output recovery and retained-binding hardening — 2026-10-24
+
+This follow-up used the same retained Algolia PDF and source identity in a new
+isolated output, cache, state, and usage ledger. The PDF SHA-256 remained
+`d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50` across
+29 physical pages. No publication, canonical-claim persistence, readiness
+mutation, or WordPress write was performed.
+
+The prior ten-candidate failure is now characterized at the existing recovery
+boundary. Its primary `insights_final` response reached the provider output
+cap and parsed invalid; the prior repair and regeneration attempts did not
+produce an accepted artifact. The current run still reached the same primary
+cap once (`16,384` output tokens), but the existing bounded model-repair path
+accepted a valid result and the complete artifact workflow finished. The
+minimal change removes the duplicated internal `verified_fact` object from the
+verified final-selection candidate prompt. The complete canonical facts remain
+in the authoritative verified evidence pack, admission snapshot, downstream
+lineage, and validation inputs. The shortlisting cache identity advanced from
+`:9` to `:10`, so old selection results cannot bypass the changed prompt
+composition.
+
+The retained-binding correction in `verified_claims_canary.py` also checks that
+the authoritative raw verified-fact metric agrees with the copied retained
+metric and that every retained candidate page/span page is covered by the
+authoritative supporting pages. The existing independently-bound correction
+path remains available; valid multi-page snapshots continue to use the
+canonical page-order contract. Conflicting authoritative metric or page
+metadata is quarantined rather than resolved by editorial score.
+
+The fresh production-like roster and terminal admission ledger were:
+
+| Candidate ID | Physical page | Visual outcome | Final public insight |
+|---|---:|---|---|
+| `agentic-search-deployment-and-plans` | 26 | verified | selected |
+| `revenue-incentive-58` | 5 | unresolved after the bounded correction path | omitted; no fact promoted |
+| `purchase-likelihood-market-range` | 12 | verified | selected |
+| `search-capability-development-models` | 22 | verified | selected |
+| `agentic-search-adoption-considerations` | 27 | verified | selected |
+| `agentic-ai-no-concrete-plans` | 26 | verified | omitted by editorial selection |
+| `search-investment-postures` | 23 | verified | selected |
+| `ch5-integration-consideration` | 27 | verified | omitted by editorial selection |
+| `ch5-retailer-control-consideration` | 27 | verified | omitted by editorial selection |
+| `ch2-accelerating-ai-search` | 23 | verified | omitted by editorial selection |
+
+The run therefore evaluated all 10 roster entries, admitted 9 verified facts,
+and completed with `coverage_complete=true`; the one unresolved candidate was
+not promoted. The final artifact contained 5 candidates and 5 final insights,
+5 metric-spine rows, and 4 key figures. Final IDs/pages were
+`agentic-search-deployment-and-plans`/26,
+`search-investment-postures`/23,
+`purchase-likelihood-market-range`/12,
+`search-capability-development-models`/22, and
+`agentic-search-adoption-considerations`/27. Each retained final fact used a
+`verified-fact:<id>` evidence identity with its physical page and authoritative
+metric binding.
+
+Independent review of the full rendered pages confirmed the final content:
+the 17% implemented versus 61% planned distinction and `Total n=1,100` on
+page 26; the 39% acceleration statement and the separately labelled 53%/51%
+adequate-investment comparison on page 23; 63% overall with USA `n=300` and
+Australia/NZ `n=200` on page 12; the 49%/27%/23% category mapping for 2025 on
+page 22; and the 47%/39%/37% very-influential factor relationship on page 27.
+Expert View and LinkedIn preserved conditional commercial interpretation and
+did not turn stated plans into completed adoption. This replay did not execute
+the downstream verified-grounding workflow, so it is not reported as a new
+zero-grounding-error result; the prior six-fact grounding result remains the
+applicable grounding evidence.
+
+The isolated live ledger recorded 28 provider calls: 20 visual correction /
+verification calls (11 corrections and 9 verifications, including the bounded
+second correction for the unresolved candidate) and 8 artifact calls. It used
+`616,264` input and `68,772` output tokens, estimated cost `$0.096015`, and
+wall time `598.482 s`. The artifact primary/repair sequence was bounded and
+was not expanded. The final family status was `generated`; quotes remained
+abstained because the retained quote inputs were not part of the authoritative
+verified-fact pool.
+
+Focused visual-authority and related regression tests passed **35 tests**;
+the affected artifact/evidence/regeneration/public-quality subset passed
+**113 tests**. Ruff, formatting, and targeted mypy passed. The provider-free
+frozen-five replay and 15-reference-case/39-variant coverage remain unchanged;
+this live run does not claim improved selection recall. The live result is a
+**PASS for full-roster terminal artifact recovery and retained-binding
+fail-closed behavior**, but the one unresolved visual fact and the absence of a
+new downstream grounding run keep overall Step 2 **PARTIAL / NO-GO**. Step 3
+remains unstarted and not ready.

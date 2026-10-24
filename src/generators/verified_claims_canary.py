@@ -535,6 +535,17 @@ def _corrected_binding_conflict_reason(
             candidate.get("metric")
         ):
             return "verified_fact_corrected_binding_conflict"
+        if _protected_metric(corrected_metric) != _protected_metric(
+            raw_fact.get("metric")
+        ):
+            return "verified_fact_corrected_binding_conflict"
+
+        candidate_pages = set(_pages(candidate.get("pages")))
+        candidate_pages.update(
+            page for span in candidate_spans for page in _pages([span.get("page")])
+        )
+        if not candidate_pages or not candidate_pages.issubset(set(supporting_pages)):
+            return "verified_fact_corrected_binding_conflict"
         return ""
 
     # An explicitly independently-bound representation is accepted for

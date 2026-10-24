@@ -1507,7 +1507,14 @@ def generate_artifacts(
         **base_vars,
         **editorial_plan_dependency_vars,
         "editorial_plan_json": editorial_plan_json,
-        "insights_candidates_json": _dump_json(insights_candidates),
+        "insights_candidates_json": _dump_json(
+            [
+                {key: value for key, value in insight.items() if key != "verified_fact"}
+                for insight in insights_candidates
+            ]
+            if visual_authority_admitter is not None
+            else insights_candidates
+        ),
         "final_insight_target_count": final_insight_target_count,
     }
 

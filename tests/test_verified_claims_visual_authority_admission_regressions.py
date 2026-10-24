@@ -1,10 +1,25 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 from dataclasses import replace
 
+from src.generators._artifact_generator.generation import generate_artifacts
 from src.generators.verified_claims_canary import admit_visual_authority_candidates
 from src.utils.verified_facts import validated_verified_facts
+from tests._test_artifact_generator._shared import (
+    CapturingPromptClient,
+    FakeAnalysisStore,
+    FakeOpenAI,
+    _ctx,
+    _settings,
+)
+from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
+    _doc_map,
+    _generation_evidence,
+    _generation_responses,
+    _insight,
+)
 from tests.test_verified_claims_visual_authority_canary import (
     SOURCE_IDENTITY,
     _candidate,
@@ -12,6 +27,7 @@ from tests.test_verified_claims_visual_authority_canary import (
     _metric,
     _response,
     _result,
+    _verified_admission,
 )
 
 
@@ -102,6 +118,59 @@ def test_empty_metric_fields_are_equivalent_across_candidate_snapshot_shapes():
     assert [fact["fact_id"] for fact in admission.verified_facts] == [candidate["id"]]
 
 
+def test_retained_binding_rejects_authoritative_metric_conflict():
+    candidate = _candidate()
+    result = _result(
+        candidate,
+        verified_fact={
+            "statement": candidate["text"],
+            "metric": _metric("51%"),
+            "qualifiers": [],
+            "supporting_physical_pages": [4],
+        },
+    )
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(result),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["quarantined"][0]["reason"] == (
+        "verified_fact_corrected_binding_conflict"
+    )
+
+
+def test_retained_binding_rejects_authoritative_page_conflict():
+    candidate = _candidate()
+    result = _result(
+        candidate,
+        physical_page=5,
+        verified_fact={
+            "statement": candidate["text"],
+            "metric": deepcopy(candidate["metric"]),
+            "qualifiers": [],
+            "supporting_physical_pages": [5],
+        },
+    )
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(result),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["quarantined"][0]["reason"] == (
+        "verified_fact_corrected_binding_conflict"
+    )
+
+
 def test_multi_page_verified_fact_pack_matches_canonical_snapshot_order():
     candidate = _candidate()
     result = _result(
@@ -137,3 +206,54 @@ def test_multi_page_verified_fact_pack_matches_canonical_snapshot_order():
         admission.verified_evidence_packs,
     )
     assert validated[candidate["id"]]["supporting_physical_pages"] == [2, 4]
+
+
+def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
+    tmp_path,
+):
+    candidates = [
+        _insight(
+            f"f{index}",
+            score=1 - (index / 100),
+            text=f"Retained full-roster finding {index}.",
+        )
+        for index in range(1, 11)
+    ]
+    prompt_client = CapturingPromptClient()
+
+    def admit(shortlisted):
+        assert len(shortlisted) == 10
+        return _verified_admission(shortlisted, digest="e" * 64)
+
+    responses = _generation_responses(
+        candidates,
+        plan_evidence_ids=[f"f{index}" for index in range(1, 8)],
+    )
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        f"verified-fact:{candidates[0]['id']}"
+    )
+    payload = generate_artifacts(
+        report_id="visual-authority-full-roster",
+        report_name="Visual Authority Full Roster",
+        doc_map=_doc_map(10),
+        evidence_packs=_generation_evidence(10),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=admit,
+    )
+
+    final_vars = prompt_client.variables_for_namespace(
+        "report_vs/artifacts/insights_final"
+    )
+    prompt_candidates = json.loads(final_vars["insights_candidates_json"])
+    prompt_evidence = json.loads(final_vars["evidence_json"])
+
+    assert len(payload["verified_facts"]) == 10
+    assert len(prompt_candidates) == 7
+    assert all("verified_fact" not in item for item in prompt_candidates)
+    assert {
+        fact["fact_id"] for fact in prompt_evidence["verified_facts"]["verified_facts"]
+    } == {item["id"] for item in candidates}

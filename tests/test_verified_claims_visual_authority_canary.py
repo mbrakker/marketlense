@@ -823,6 +823,12 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
         "report_vs/artifacts/insights_final"
     )
     assert final_vars["_visual_authority_digest"] == "d" * 64
+    prompt_candidates = json.loads(final_vars["insights_candidates_json"])
+    assert all("verified_fact" not in item for item in prompt_candidates)
+    prompt_evidence = json.loads(final_vars["evidence_json"])
+    assert {
+        fact["fact_id"] for fact in prompt_evidence["verified_facts"]["verified_facts"]
+    } == {candidate["id"] for candidate in candidates}
     assert (
         f'"verified-fact:{candidates[0]["id"]}"'
         in final_vars["insights_candidates_json"]
