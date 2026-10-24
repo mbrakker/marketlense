@@ -10,7 +10,6 @@ the queue lifecycle remains unchanged.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import uuid
 from collections.abc import Sequence
@@ -37,7 +36,11 @@ from src.contracts.cross_report_analysis import (
     CrossReportPublishPackage,
 )
 from src.contracts.drive import DriveFile
-from src.contracts.files import ReadBytesRequest, WriteBytesRequest
+from src.contracts.files import (
+    FileBundleHashRequest,
+    ReadBytesRequest,
+    WriteBytesRequest,
+)
 from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
 from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.report_cards import CoverFingerprint
@@ -152,7 +155,7 @@ from src.services.config_service import (
     load_publisher_inventory_settings,
     load_settings,
 )
-from src.services.file_service import read_bytes, write_bytes
+from src.services.file_service import hash_file_bundle, read_bytes, write_bytes
 from src.services.workflow_queue_service import (
     freeze_briefing_opportunity,
     publication_approval_is_valid,
@@ -342,15 +345,29 @@ def _verified_facts_canary_config(
 
     if payload.attributes.get("verified_facts_architecture") is not True:
         return None
-    source_path = Path(artifact_reference)
-    if not source_path.is_file():
+    try:
+        hash_response = hash_file_bundle(
+            FileBundleHashRequest(schema_version="1.0", paths=[artifact_reference]),
+            ctx,
+        )
+    except AppError as error:
+        if error.code == "file_not_found":
+            raise AppError(
+                code="verified_facts_canary_source_missing",
+                message="Verified-facts benchmark requires the retained source PDF",
+                retryable=False,
+                context={"report_id": report_id},
+                cause=error,
+            ) from error
+        raise
+    source_sha256 = str(hash_response.file_sha256.get(artifact_reference) or "").strip()
+    if not source_sha256:
         raise AppError(
-            code="verified_facts_canary_source_missing",
-            message="Verified-facts benchmark requires the retained source PDF",
+            code="verified_facts_canary_source_hash_missing",
+            message="Verified-facts benchmark source hash was not returned",
             retryable=False,
             context={"report_id": report_id},
         )
-    source_sha256 = hashlib.sha256(source_path.read_bytes()).hexdigest()
     source_label = str(ctx.source_identity_id or report_id).strip() or report_id
     return VisualAuthorityCanaryConfig(
         source_identity=f"{source_label}|pdf-sha256:{source_sha256}",
