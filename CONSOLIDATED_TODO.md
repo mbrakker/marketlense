@@ -862,3 +862,18 @@ write. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and
 Step 3 remains unstarted/not ready. The ten-report cohort was not started.
 Detailed causes and limitations are recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Verified-facts architecture integration — 2026-10-24 (`b5d32e2f`):** The
+final verified-ID roster/target reconciliation, canonical readiness evidence
+identity, verified fail-closed regeneration policy, and contract snapshot are
+implemented and covered by 383 focused tests; Ruff, the prompt-fixture gate,
+contract gate, and committed-source mypy gate pass. Provider-free frozen-five
+coverage remains 15/39 reference cases/variants and 29 retained identities
+with matching source hashes and zero calls. One fresh Adjust-only verified
+run admitted 22/25 facts and preserved the source hash, but failed closed at
+the independent `expert_comment` grounding check after 88 calls, 1,073,888
+input tokens, 143,586 output tokens, `$0.193209`, and 1,200.874 seconds; no
+HTML/readiness artifact or publication was produced. Step 2 remains
+**PARTIAL/NO-GO**, E18 remains **Active/PARTIAL**, and Step 3 remains
+**unstarted/not ready**. Exact failure reasons and the source-page review are
+in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

@@ -4616,3 +4616,68 @@ deterministic safeguards are locally verified, but the retained real-report
 run is blocked at final insight lineage and has no persisted authoritative
 snapshot for downstream readiness. The requested stop boundary was honored:
 the ten-report cohort was not started. Step 3 remains unstarted/not ready.
+
+#### Verified-facts architecture integration — 2026-10-24 (`b5d32e2f`)
+
+This correction closes the four confirmed integration boundaries from the
+previous Adjust run. After verified visual admission, final-insight generation
+now derives one evidence-bound stable-ID roster, caps the requested final
+count to that roster, supplies the exact allowlist to the final prompt, and
+keeps the existing fail-closed lineage validator and identifier-only recovery
+diagnostics. Verified readiness now materializes and checks retained semantic
+claims with the canonical authority evidence and an empty raw-PDF page
+sequence. Verified regeneration disables broad fallback, while structurally
+invalid verified snapshots propagate their typed failure instead of entering
+editorial repair. The contract snapshot was regenerated through the existing
+schema gate.
+
+Focused affected tests passed **383 tests**. Ruff check and format checks
+passed; the contract snapshot gate passed; the unchanged prompt-fixture gate
+passed with **108,751 total tokens / $0.024098** and **9,640 validation-family
+tokens / $0.001725**, both exactly matching the approved baseline. The full
+repository type gate passed on the committed source (**786 source files, zero
+tracked mypy errors**) after temporarily relocating the unrelated preserved
+untracked duplicate `artifact_normalization (2).py`; with that user-owned file
+present, the gate reports its pre-existing single-file typing error.
+
+The provider-free exact frozen-five replay made **zero provider calls** and
+confirmed all five PDF hashes, all 15 reference cases / 39 variants, and all
+29 retained shortlisted identities (Capgemini 5, Activate 7, KPMG 5, Reuters
+6, Adjust 6). This is input-coverage and provenance evidence only; it does
+not claim live correction or selection improvement.
+
+One fresh isolated Adjust run used the clean commit `b5d32e2f8f695486be3e8d2cf00792cc958f4dd9`
+with the verified-facts architecture and no publication target. The source
+identity was `source:8cb648b6bbd9dbae4ec1d915c38cf235` qualified by PDF
+SHA-256 `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`.
+Architecture admission evaluated 25 facts, admitted 22, and quarantined 3;
+coverage was complete and no unsupported retained factual claim was reported.
+The generated final stable IDs were `global-finance-installs-sessions-2025`,
+`gaming-retention-curves-2024-2025`,
+`ecommerce-cpi-subvertical-divergence-2025`, `ai-advanced-efficiency`, and
+`gaming-subvertical-growth-2025`; their authoritative evidence IDs remained
+the corresponding `verified-fact:*` bindings.
+
+The report did not reach final HTML or `PublishReadinessArtifact`. It failed
+closed at `validation_failed` in `expert_comment` after **88 provider calls**,
+**1,073,888 input tokens**, **143,586 output tokens**, **$0.193209**, and
+**1,200.874 seconds**. The substantive issue was a grounding rejection of the
+sentence claiming that installs and sessions moved in opposite directions
+“across these two segments” after comparing finance and strategy. Physical
+PDF page 19 confirms the bounded strategy relationship (−1% installs, +57%
+sessions) but also shows casual and hyper-casual both rising; the validator
+treated the commentary as a broader gaming generalization. The source is not
+missing and no unsupported fact was promoted, but the final editorial
+composition was not accepted. The single warning was `quotes_missing`.
+Each of the exactly three targeted repair attempts then failed with the same
+safe-removal/revalidation shape: `deferred_grounding_required` (1),
+`regeneration_scope_violation` (33 undeclared paths), and the `quotes_missing`
+warning (1). No broad verified-mode rewrite ran, no canonical artifact was
+promoted, and no WordPress/publication write occurred.
+
+**Integration verdict: PARTIAL / NO-GO.** The four code-level boundaries and
+their local contracts are green, and the previous final-insight lineage
+failure no longer occurs in this run. The independent Adjust editorial
+grounding failure still blocks readiness; there is no claim of live quality
+improvement and Step 3 remains unstarted/not ready. The ten-report cohort was
+not started.
