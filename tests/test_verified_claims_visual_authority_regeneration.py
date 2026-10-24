@@ -140,6 +140,12 @@ def test_verified_expert_comment_repair_preserves_unrelated_source_roots(tmp_pat
     visual_admission = _verified_admission(admitted, digest="g" * 64)
     current["insights_candidates"] = deepcopy(visual_admission.admitted_candidates[:-1])
     current["insights_final"] = deepcopy(visual_admission.admitted_candidates[:-1])
+    current["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        "verified-fact:insight-1"
+    )
+    current["summary"]["claim_evidence_map"][0]["evidence"] = (
+        "Legacy summary evidence text"
+    )
     current["verified_facts"] = deepcopy(visual_admission.verified_facts)
     current["_cache"]["visual_authority_canary"] = {
         "enabled": True,
@@ -211,10 +217,20 @@ def test_verified_expert_comment_repair_preserves_unrelated_source_roots(tmp_pat
         == current["summary"]["executive_summary"]
     )
     assert [
-        (item.get("claim"), item.get("evidence_id"), item.get("pages"))
+        (
+            item.get("claim"),
+            item.get("evidence"),
+            item.get("evidence_id"),
+            item.get("pages"),
+        )
         for item in response.updated_artifacts["summary"]["claim_evidence_map"]
     ] == [
-        (item.get("claim"), item.get("evidence_id"), item.get("pages"))
+        (
+            item.get("claim"),
+            item.get("evidence"),
+            item.get("evidence_id"),
+            item.get("pages"),
+        )
         for item in current["summary"]["claim_evidence_map"]
     ]
 

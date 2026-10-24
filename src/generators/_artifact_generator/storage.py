@@ -2306,9 +2306,17 @@ def finalize_regeneration_candidate_artifacts(
         span_index = artifact_evidence_span_index(
             doc_map={}, evidence_packs=evidence_packs
         )
+        # The atomic source patch is the only authorized public-root change.
+        # Do not let verified span rebinding turn an unrelated summary into an
+        # incidental mutation while repairing another family (for example,
+        # expert_comment).  Summary binding is still performed when summary is
+        # explicitly part of the patch, preserving the direct finalization
+        # contract for summary repairs.
+        summary_is_patched = "summary" in patch_roots
         verified_summary = (
             cast(Dict[str, Any], candidate_artifacts.get("summary"))
-            if isinstance(candidate_artifacts.get("summary"), dict)
+            if summary_is_patched
+            and isinstance(candidate_artifacts.get("summary"), dict)
             else {}
         )
         verified_insights_candidates = (
@@ -2383,7 +2391,7 @@ def finalize_regeneration_candidate_artifacts(
         )
         restore_authoritative_evidence_text(candidate_artifacts.get("insights_final"))
         summary = candidate_artifacts.get("summary")
-        if isinstance(summary, dict):
+        if summary_is_patched and isinstance(summary, dict):
             restore_authoritative_evidence_text(summary.get("claim_evidence_map"))
         raw_provenance = candidate_artifacts.get("soft_copy_claim_provenance")
         if raw_provenance is not None:
