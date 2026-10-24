@@ -819,3 +819,15 @@ the 10/10 definition of success; Step 2 remains **PARTIAL/NO-GO**, E18 remains
 Active/PARTIAL, and Step 3 remains unstarted/not ready. Full ledger, PDF review,
 limitations, and the path-budget rerun evidence are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Hosted CI completion for ten-report output-cap benchmark — 2026-10-24:**
+The final correction commit `62fe58ad7987307838bbda48684e286894c5a438` passed
+hosted CI run `40092248838`: tests (`8,089 passed, 1 skipped`), mutation
+partitions `0` and `1`, and `release_evidence` all passed. The test-file-length
+failure in the preceding run was resolved by moving the provider-cap regression
+to a dedicated module; thresholds and factual gates were unchanged. This
+confirms repository/CI readiness only. The exact ten-report verified-facts
+benchmark remains **PARTIAL / NO-GO** because two reports failed closed and
+Algolia retains a physical-page reconciliation issue; E18 remains Active/PARTIAL
+and Step 3 remains unstarted/not ready. Evidence:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

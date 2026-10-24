@@ -4471,3 +4471,18 @@ physical-page reconciliation issue, and the benchmark ledger does not persist
 an independent visual candidate-outcome table. Verified-fact authority should
 not be enabled as the normal autonomous default from this evidence. Step 3
 remains unstarted/not ready.
+
+#### Hosted CI completion for output-cap benchmark — 2026-10-24
+
+The final pushed benchmark correction is `62fe58ad7987307838bbda48684e286894c5a438`.
+Hosted CI run `40092248838` passed all required jobs: `tests`, mutation
+partitions `0` and `1`, and `release_evidence`. The default suite reported
+`8,089 passed, 1 skipped`; the repository's static, architecture, role-I/O,
+documentation, prompt-fixture, coverage, mutation, and release-evidence gates
+were green. The provider-cap/cache regression was moved into a dedicated test
+module after the prior run correctly rejected the larger OpenAI service test
+file; no production behavior or gate threshold was weakened. The final
+ten-report verdict therefore remains **PARTIAL / NO-GO** on measured report
+quality, not CI health: DoubleVerify and Emplifi still fail closed, and the
+Algolia physical-page discrepancy remains unresolved. Step 3 remains
+unstarted/not ready.
