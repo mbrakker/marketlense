@@ -35,6 +35,11 @@ text: |
     return an empty Expert View rather than reuse the failed evidence or claim.
   - Use the plan to select, not prove, an angle; omit unsupported cross-section
     links or centrality.
+  - When a metric contains multiple named populations, subsegments, cohorts, or
+    observations, keep each comparison explicitly tied to the named subset(s).
+    Name the compared segments in interpretive sentences; do not use a broad
+    label or "these segments" when it could include other observations in the
+    same source.
   - A non-empty Expert View must connect at least two distinct supported findings or themes; do not restate one finding or summary sentence.
   - Do not add claims that are absent from the supplied editorial plan, synthesis context, or grounding package.
   - Treat `so_what` fields as interpretation cues, not independent factual evidence, and preserve limitations and counter-signals as constraints.

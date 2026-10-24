@@ -1920,6 +1920,8 @@ def _expert_insight_implications(
         "segment",
         "sample_size",
         "observation_status",
+        "forecast_status",
+        "observations",
     )
     required_metric_fields = (
         "label",
@@ -1999,11 +2001,14 @@ def _expert_insight_implications(
                 item["source_page"] = primary_support["source_page"]
             metric = insight.get("metric")
             if isinstance(metric, dict):
-                structured_metric = {
-                    field_name: _s(metric.get(field_name)).strip()
-                    for field_name in metric_context_fields
-                    if _s(metric.get(field_name)).strip()
-                }
+                structured_metric: Dict[str, Any] = {}
+                for field_name in metric_context_fields:
+                    value = metric.get(field_name)
+                    if field_name == "observations":
+                        if isinstance(value, list) and value:
+                            structured_metric[field_name] = deepcopy(value)
+                    elif _s(value).strip():
+                        structured_metric[field_name] = _s(value).strip()
                 if all(
                     field_name in structured_metric
                     for field_name in required_metric_fields

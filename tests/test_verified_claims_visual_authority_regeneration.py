@@ -129,6 +129,96 @@ def test_scoped_regeneration_preserves_visual_authority_pool(tmp_path):
     )
 
 
+def test_verified_expert_comment_repair_preserves_unrelated_source_roots(tmp_path):
+    current = _current_artifacts()
+    extra = deepcopy(current["insights_final"][0])
+    extra["id"] = "extra-verified-fact"
+    extra["text"] = "An additional admitted fact."
+    extra["evidence_id"] = "extra-finding"
+    extra["pages"] = [6]
+    admitted = deepcopy(current["insights_final"]) + [extra]
+    visual_admission = _verified_admission(admitted, digest="g" * 64)
+    current["insights_candidates"] = deepcopy(visual_admission.admitted_candidates[:-1])
+    current["insights_final"] = deepcopy(visual_admission.admitted_candidates[:-1])
+    current["verified_facts"] = deepcopy(visual_admission.verified_facts)
+    current["_cache"]["visual_authority_canary"] = {
+        "enabled": True,
+        "digest": "g" * 64,
+        "verified_fact_digest": "g" * 64,
+        "verified_facts": deepcopy(visual_admission.verified_facts),
+        "verified_evidence_packs": deepcopy(visual_admission.verified_evidence_packs),
+        "admitted_candidates": deepcopy(visual_admission.admitted_candidates),
+        "audit": {"admitted_count": 2},
+    }
+    evidence = _regeneration_evidence_packs()
+    claim = next(
+        item
+        for item in current["soft_copy_claim_provenance"]["claims"]
+        if item["artifact_family"] == "expert_comment"
+    )
+    evidence_ids = [f"verified-fact:{item['id']}" for item in admitted[:2]]
+    response = _test_regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="visual-authority-regeneration",
+            report_name="visual-authority-regeneration",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="expert_comment",
+                        regenerate_steps=["expert_comment"],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="grounding",
+                                affected_section="expert_comment",
+                                message="The retained expert comment needs repair.",
+                                severity="error",
+                                entity_id=claim["claim_id"],
+                                evidence_ids=evidence_ids,
+                            )
+                        ],
+                        allowed_paths=["expert_comment[claim_index=0]"],
+                    )
+                ],
+            ),
+            current_artifacts=current,
+            doc_map=evidence["doc_map"],
+            evidence_packs=evidence,
+            settings=_regeneration_settings(tmp_path),
+            ctx=_regeneration_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=_FakeOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.updated_artifacts["expert_comment"] != current["expert_comment"]
+    for root in ("insights_candidates", "insights_final"):
+        before = {
+            item["id"]: (item.get("text"), item.get("evidence_id"), item.get("pages"))
+            for item in current[root]
+        }
+        after = {
+            item["id"]: (item.get("text"), item.get("evidence_id"), item.get("pages"))
+            for item in response.updated_artifacts[root]
+        }
+        assert after == before
+    assert response.updated_artifacts["summary"]["tldr"] == current["summary"]["tldr"]
+    assert (
+        response.updated_artifacts["summary"]["executive_summary"]
+        == current["summary"]["executive_summary"]
+    )
+    assert [
+        (item.get("claim"), item.get("evidence_id"), item.get("pages"))
+        for item in response.updated_artifacts["summary"]["claim_evidence_map"]
+    ] == [
+        (item.get("claim"), item.get("evidence_id"), item.get("pages"))
+        for item in current["summary"]["claim_evidence_map"]
+    ]
+
+
 def test_enabled_visual_cache_without_fact_snapshot_fails_closed(tmp_path):
     current = _current_artifacts()
     current["_cache"]["visual_authority_canary"] = {

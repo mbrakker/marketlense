@@ -23,6 +23,7 @@ text: |
     watchpoint in direct prose. Do not force an action or watchpoint; do not emit
     labels such as "Observation:", "Implication:", or "Executive action:"
   - Keep each metric's source label before its value. If metrics conflict or lack context, state the supported tension.
+  - When a metric contains multiple named populations, subsegments, cohorts, or observations, keep each comparison explicitly tied to the named subset(s). Name the compared segments in interpretive sentences; do not use a broad label or "these segments" when it could include other observations in the same source.
   - No emojis, no hashtags
 
   Content constraints (strict):

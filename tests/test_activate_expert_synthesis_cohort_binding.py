@@ -187,6 +187,66 @@ def test_activate_cohort_relationships_survive_into_expert_context() -> None:
     assert theme_evidence[AUDIO_ID]["page"] == AUDIO_PAGE
 
 
+def test_expert_context_retains_composite_metric_observation_boundaries() -> None:
+    observations = [
+        {
+            "label": "Installs",
+            "value": "19",
+            "unit": "%",
+            "segment": "Casual games",
+            "timeframe": "YoY 2024–2025",
+        },
+        {
+            "label": "Installs",
+            "value": "-1",
+            "unit": "%",
+            "segment": "Strategy games",
+            "timeframe": "YoY 2024–2025",
+        },
+    ]
+    context = build_expert_synthesis_context(
+        editorial_plan={
+            "report_thesis": "Gaming subverticals diverge.",
+            "themes": [
+                {
+                    "theme": "Gaming subverticals",
+                    "priority": 1,
+                    "evidence_ids": [VIDEO_ID],
+                },
+                {
+                    "theme": "Gaming implications",
+                    "priority": 2,
+                    "evidence_ids": [VIDEO_ID],
+                },
+            ],
+        },
+        insights_final=[
+            {
+                "id": "gaming-subverticals",
+                "evidence_id": VIDEO_ID,
+                "so_what": "Acquisition and engagement can diverge by subvertical.",
+                "metric": {
+                    "label": "Gaming installs by subvertical",
+                    "value": "Casual +19%; strategy -1%",
+                    "unit": "% YoY",
+                    "subject": "Gaming installs",
+                    "cohort": "Named game subverticals",
+                    "denominator": "Percentage change",
+                    "timeframe": "YoY 2024–2025",
+                    "forecast_status": "Observed",
+                    "observations": observations,
+                },
+            }
+        ],
+        doc_map={},
+        evidence_packs=_activate_evidence_packs(),
+    )
+
+    implication = context["insight_implications"][0]
+    assert implication["metric"]["forecast_status"] == "Observed"
+    assert implication["metric"]["observations"] == observations
+
+
 def test_activate_cohort_relationship_validator_rejects_top_cohort_value_swaps() -> (
     None
 ):
