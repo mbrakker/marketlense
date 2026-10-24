@@ -164,4 +164,6 @@
 - [x] **Step 3: Run any available offline/guarded live checks only with explicit flags and sandbox/read-only credentials. Record Windows/Ubuntu/provider criteria as verified only when actually executed; leave unavailable criteria open.
 - [x] **Step 4: Inspect final diff and retained artifacts for scope, secret exposure, source/prompt/response leakage, and unintended queue side effects.
 - [x] **Step 5: Update A20 evidence and `CONSOLIDATED_TODO.md`; keep A20 Active if any acceptance criterion lacks evidence.
-- [ ] **Step 6: Commit the scoped implementation, run the final verification again at the commit SHA, push only to the authorized branch, and record the commit SHA/CI URL or explicitly state when CI/provider access is unavailable.
+- [x] **Step 6: Commit the scoped implementation, run the final verification again at the commit SHA, push only to the authorized branch, and record the commit SHA/CI URL or explicitly state when CI/provider access is unavailable.
+
+**Execution record (2026-10-24):** Implementation commit `ae4be3587d285ac86d6616f27a787341a23c2101` and evidence commit `c36089d2` were verified and pushed to `origin/codex/r8-final-closure`. The affected A20 suite passed `2,555`; repository-wide pytest retained the documented CPython 3.14 wheelhouse limitation; the bounded live canary passed with no publication. No CI URL was available from this environment. Clean-room Windows/Ubuntu installation and the complete provider/capability matrix remain open; A20 stays Active.
