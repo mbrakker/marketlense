@@ -73,6 +73,7 @@ from src.generators.validation.regeneration_candidate import (
     CandidateIntegrityResult,
     validate_regeneration_candidate,
 )
+from src.generators.verified_claims_canary import VisualAuthorityCanaryConfig
 from src.orchestrators._report_analysis_orchestrator.payload import (
     _attach_payload_analysis_metadata,
     _ensure_report_payload_complete,
@@ -101,6 +102,7 @@ from src.services.report_store_service import check_artifact_reuse
 from src.utils.clock import utc_now_iso as _utc_now_iso
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+from src.utils.verified_facts import validated_verified_facts
 
 from .checkpoints import (
     _analysis_checkpoint_payload,
@@ -1115,6 +1117,48 @@ def _render_project_and_cleanup(
     return _cleanup_transient_vector_store(outcome, runtime, dependencies)
 
 
+def _require_verified_authority_snapshot(
+    runtime: ReportRuntimeState,
+    artifacts: object,
+    canary: VisualAuthorityCanaryConfig | None,
+) -> None:
+    """Reject checkpoint reuse when an opt-in run has only legacy artifacts."""
+
+    if canary is None:
+        return
+    cache = artifacts.get("_cache") if isinstance(artifacts, dict) else None
+    metadata = (
+        cache.get("visual_authority_canary") if isinstance(cache, dict) else None
+    )
+    if not isinstance(metadata, dict) or metadata.get("enabled") is not True:
+        raise AppError(
+            code="verified_facts_canary_artifacts_missing",
+            message=(
+                "Verified-facts checkpoint reuse requires a persisted authority "
+                "snapshot"
+            ),
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
+    try:
+        validated_verified_facts(
+            artifacts,
+            metadata.get("verified_evidence_packs"),
+            expected_source_identity=canary.source_identity,
+        )
+    except AppError as exc:
+        raise AppError(
+            code="verified_facts_canary_artifacts_invalid",
+            message="Verified-facts checkpoint authority is invalid",
+            cause=exc,
+            retryable=False,
+            context={
+                "file_id": runtime.file.file_id,
+                "validation_code": exc.code,
+            },
+        ) from exc
+
+
 def _outcome_from_render_checkpoint(raw_outcome: object) -> IngestOutcome:
     if not isinstance(raw_outcome, dict):
         raise AppError(
@@ -1154,6 +1198,7 @@ def _resume_from_analysis_checkpoint(
     skip_post_render_projection: bool = False,
     stop_after_stage: str = "",
     projection_only: bool = False,
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> IngestOutcome:
     checkpoint, checkpoint_path = _read_validated_checkpoint(
         runtime, stage_name=STAGE_ANALYSIS_COMPLETE
@@ -1167,11 +1212,16 @@ def _resume_from_analysis_checkpoint(
     analysis = _analysis_state_from_checkpoint(
         runtime, source, selection, checkpoint_payload.get("analysis")
     )
+    _require_verified_authority_snapshot(
+        runtime, analysis.artifacts_payload, visual_authority_canary
+    )
     preview_resp = _preview_from_checkpoint(checkpoint_payload.get("preview"))
     if stop_after_stage == STAGE_ANALYSIS_COMPLETE:
         return _checkpoint_stage_outcome(runtime, STAGE_ANALYSIS_COMPLETE)
     if projection_only:
-        outcome = _resume_from_render_checkpoint(runtime)
+        outcome = _resume_from_render_checkpoint(
+            runtime, visual_authority_canary=visual_authority_canary
+        )
         _run_projection(runtime, analysis, outcome, analytics_projection_fn)
         return outcome
     return _render_project_and_cleanup(
@@ -1221,6 +1271,7 @@ def _resume_prompt_family_repair(
     regeneration_openai_client=None,
     validation_openai_client=None,
     stop_after_stage: str = "",
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> IngestOutcome:
     """Regenerate only approved retained artifact families and validate them.
 
@@ -1301,6 +1352,9 @@ def _resume_prompt_family_repair(
             retryable=False,
             context={"file_id": runtime.file.file_id},
         )
+    _require_verified_authority_snapshot(
+        runtime, analysis.artifacts_payload, visual_authority_canary
+    )
     repair_ctx = child_context(
         runtime.ctx, task_id=f"{runtime.ctx.task_id}:prompt_repair"
     )
@@ -1336,6 +1390,9 @@ def _resume_prompt_family_repair(
         **regeneration_kwargs,
     )
     candidate_artifacts = regeneration.updated_artifacts
+    _require_verified_authority_snapshot(
+        runtime, candidate_artifacts, visual_authority_canary
+    )
     candidate_artifacts_path = _candidate_artifacts_path(regeneration)
     candidate_enforced = bool(candidate_artifacts_path)
     current_artifacts_path = str(analysis.evidence_paths.get("artifacts") or "")
@@ -1563,6 +1620,8 @@ def _resume_crop_from_source_checkpoint(
     analytics_projection_fn: Optional[
         Callable[[AnalyticsProjectionRunRequest], object]
     ],
+    *,
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> IngestOutcome:
     """Regenerate crop-dependent presentation from proven source and analysis state.
 
@@ -1602,6 +1661,9 @@ def _resume_crop_from_source_checkpoint(
         selection,
         analysis_checkpoint.payload.get("analysis"),
     )
+    _require_verified_authority_snapshot(
+        runtime, analysis.artifacts_payload, visual_authority_canary
+    )
     preview_resp = render_preview_asset(runtime, source, dependencies.render)
     return _render_project_and_cleanup(
         runtime,
@@ -1631,6 +1693,7 @@ def _resume_from_source_checkpoint(
     regeneration_openai_client=None,
     figure_caption_openai_client=None,
     stop_after_stage: str = "",
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> IngestOutcome:
     checkpoint, checkpoint_path = _read_validated_checkpoint(
         runtime, stage_name=STAGE_SOURCE_PREPARED
@@ -1675,6 +1738,7 @@ def _resume_from_source_checkpoint(
         validation_openai_client=validation_openai_client,
         regeneration_openai_client=regeneration_openai_client,
         figure_caption_openai_client=figure_caption_openai_client,
+        visual_authority_canary=visual_authority_canary,
     )
     _write_stage_checkpoint(
         runtime,
@@ -1715,6 +1779,7 @@ def _resume_from_selection_checkpoint(
     regeneration_openai_client=None,
     figure_caption_openai_client=None,
     stop_after_stage: str = "",
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> IngestOutcome:
     checkpoint, checkpoint_path = _read_validated_checkpoint(
         runtime, stage_name=STAGE_SELECTION_COMPLETE
@@ -1750,6 +1815,7 @@ def _resume_from_selection_checkpoint(
         validation_openai_client=validation_openai_client,
         regeneration_openai_client=regeneration_openai_client,
         figure_caption_openai_client=figure_caption_openai_client,
+        visual_authority_canary=visual_authority_canary,
     )
     analysis_refs = _analysis_checkpoint_refs(runtime, source, analysis, preview_resp)
     _write_stage_checkpoint(
@@ -1774,11 +1840,23 @@ def _resume_from_selection_checkpoint(
 
 def _resume_from_render_checkpoint(
     runtime: ReportRuntimeState,
+    *,
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> IngestOutcome:
     checkpoint, checkpoint_path = _read_validated_checkpoint(
         runtime, stage_name=STAGE_RENDER_COMPLETE
     )
     _log_semantic_restart(runtime, checkpoint, checkpoint_path)
+    if visual_authority_canary is not None:
+        analysis_payload = checkpoint.payload.get("analysis")
+        artifacts = (
+            analysis_payload.get("artifacts_payload")
+            if isinstance(analysis_payload, dict)
+            else None
+        )
+        _require_verified_authority_snapshot(
+            runtime, artifacts, visual_authority_canary
+        )
     return _outcome_from_render_checkpoint(checkpoint.payload.get("outcome"))
 
 
@@ -1848,6 +1926,7 @@ def _resume_from_checkpoint_stage(
     skip_post_render_projection: bool = False,
     stop_after_stage: str = "",
     projection_only: bool = False,
+    visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> IngestOutcome:
     stage_name = str(requested_resume_stage or "").strip()
     if stage_name == LATEST_SAFE_RESTART_STAGE:
@@ -1885,6 +1964,7 @@ def _resume_from_checkpoint_stage(
             regeneration_openai_client=regeneration_openai_client,
             figure_caption_openai_client=figure_caption_openai_client,
             stop_after_stage=stop_after_stage,
+            visual_authority_canary=visual_authority_canary,
         )
     if stage_name == STAGE_SELECTION_COMPLETE:
         return _resume_from_selection_checkpoint(
@@ -1899,6 +1979,7 @@ def _resume_from_checkpoint_stage(
             regeneration_openai_client=regeneration_openai_client,
             figure_caption_openai_client=figure_caption_openai_client,
             stop_after_stage=stop_after_stage,
+            visual_authority_canary=visual_authority_canary,
         )
     if stage_name == STAGE_ANALYSIS_COMPLETE:
         return _resume_from_analysis_checkpoint(
@@ -1908,8 +1989,11 @@ def _resume_from_checkpoint_stage(
             skip_post_render_projection=skip_post_render_projection,
             stop_after_stage=stop_after_stage,
             projection_only=projection_only,
+            visual_authority_canary=visual_authority_canary,
         )
-    return _resume_from_render_checkpoint(runtime)
+    return _resume_from_render_checkpoint(
+        runtime, visual_authority_canary=visual_authority_canary
+    )
 
 
 def _pdf_text_unextractable_outcome(

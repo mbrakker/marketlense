@@ -11,6 +11,7 @@ import sqlite3
 import subprocess
 import tempfile
 import time
+from collections.abc import Mapping
 from contextlib import closing
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
@@ -84,8 +85,10 @@ from src.services.workflow_queue_service import (
     seed_workflow_queue_controls,
     set_workflow_queue_control,
 )
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
+from src.utils.verified_facts import validated_verified_facts
 
 _VALIDATION_REUSE_LOGGER_NAME = "market_lense.validation_generator"
 _VALIDATION_REUSE_EVENT_NAME = "validation_claim_reuse_decided"
@@ -1298,8 +1301,27 @@ def run_frozen_cohort_once(
                         validation_run_id=str(queue_submission.validation_run_id),
                         root_workflow_id=root_workflow_id,
                         ctx=ctx,
+                        require_verified_facts=verified_facts_architecture,
                     )
                 )
+            if verified_facts_architecture:
+                architecture_failures = [
+                    str(
+                        result.get("verified_facts_architecture_evidence", {}).get(
+                            "failure_code"
+                        )
+                        or "verified_facts_architecture_evidence_missing"
+                    )
+                    for result in results
+                    if result.get("verified_facts_architecture_passed") is not True
+                ]
+                cohort_metrics["verified_facts_architecture_outcome"] = (
+                    "pass" if not architecture_failures else "fail"
+                )
+                cohort_metrics["verified_facts_architecture_failure_codes"] = {
+                    code: architecture_failures.count(code)
+                    for code in sorted(set(architecture_failures))
+                }
             if publish_to_wordpress_staging:
                 cohort_metrics["wordpress_replay"] = _replay_completed_wordpress_jobs(
                     state_db=settings.state_db,
@@ -1400,6 +1422,28 @@ def run_frozen_cohort_once(
             if not result["terminal_failure_code"]:
                 result["terminal_failure_code"] = "frozen_cohort_runner_defect"
     finally:
+        if (
+            verified_facts_architecture
+            and "verified_facts_architecture_outcome" not in cohort_metrics
+        ):
+            architecture_failures = [
+                str(
+                    result.get("verified_facts_architecture_evidence", {}).get(
+                        "failure_code"
+                    )
+                    or result.get("terminal_failure_code")
+                    or "verified_facts_architecture_evidence_missing"
+                )
+                for result in results
+                if result.get("verified_facts_architecture_passed") is not True
+            ]
+            cohort_metrics["verified_facts_architecture_outcome"] = (
+                "pass" if not architecture_failures else "fail"
+            )
+            cohort_metrics["verified_facts_architecture_failure_codes"] = {
+                code: architecture_failures.count(code)
+                for code in sorted(set(architecture_failures))
+            }
         if reuse_event_handler is not None and reuse_events_path.is_file():
             cohort_metrics["validation_reuse_telemetry"] = (
                 _validation_reuse_telemetry_summary(
@@ -2530,6 +2574,7 @@ def _read_result(
     validation_run_id: str,
     root_workflow_id: str,
     ctx,
+    require_verified_facts: bool = False,
 ) -> dict[str, Any]:
     with sqlite3.connect(settings.state_db) as conn:
         readiness_job = conn.execute(
@@ -2686,6 +2731,27 @@ def _read_result(
         report_id=report_id,
         ctx=ctx,
     )
+    report_output_dir = Path(settings.output_dir) / slugify(source_path.name)
+    verified_facts_evidence: dict[str, Any] | None = None
+    if require_verified_facts:
+        try:
+            artifacts_path = _report_analysis_pack_path(
+                output_dir=Path(settings.output_dir),
+                source_path=source_path,
+                report_id=report_id,
+                pack_name="artifacts",
+                ctx=ctx,
+            )
+            verified_facts_evidence = _read_verified_facts_architecture_evidence(
+                artifact_path=artifacts_path,
+                source_path=source_path,
+            )
+        except AppError as exc:
+            verified_facts_evidence = {
+                "passed": False,
+                "failure_code": "verified_facts_artifact_path_unavailable",
+                "detail": exc.code,
+            }
     terminal_failure = ""
     final_state = status
     if status not in {"awaiting_review", "published"}:
@@ -2694,6 +2760,17 @@ def _read_result(
         # otherwise make the elapsed bound explicit and typed.
         final_state = "failed"
         terminal_failure = str((failure or ("ias_canary_timeout",))[0])
+    if (
+        require_verified_facts
+        and verified_facts_evidence is not None
+        and verified_facts_evidence.get("passed") is not True
+    ):
+        final_state = "failed"
+        if not terminal_failure:
+            terminal_failure = str(
+                verified_facts_evidence.get("failure_code")
+                or "verified_facts_architecture_evidence_missing"
+            )
     failure_diagnostic = (
         _read_failure_diagnostic(
             state_db=Path(settings.state_db),
@@ -2706,7 +2783,6 @@ def _read_result(
         if terminal_failure
         else {}
     )
-    report_output_dir = Path(settings.output_dir) / slugify(source_path.name)
     publication_evidence = _wordpress_publication_evidence(
         publication_outcome=publication_outcome,
         workflow_status=publication_workflow_status,
@@ -2715,7 +2791,7 @@ def _read_result(
         expected_file_id=report_id,
         expected_post_type=str(published_post[1]) if published_post else "",
     )
-    return {
+    result = {
         "workflow_attempt_count": attempts,
         "final_state": final_state,
         "awaiting_review": final_state == "awaiting_review",
@@ -2756,6 +2832,19 @@ def _read_result(
         "terminal_failure_code": terminal_failure,
         **({"failure_diagnostic": failure_diagnostic} if failure_diagnostic else {}),
     }
+    if require_verified_facts:
+        result["verified_facts_architecture_evidence"] = (
+            verified_facts_evidence
+            or {
+                "passed": False,
+                "failure_code": "verified_facts_architecture_evidence_missing",
+            }
+        )
+        result["verified_facts_architecture_passed"] = bool(
+            verified_facts_evidence
+            and verified_facts_evidence.get("passed") is True
+        )
+    return result
 
 
 def _replay_completed_wordpress_jobs(
@@ -3132,6 +3221,120 @@ def _report_analysis_pack_path(
     return Path(response.output_path)
 
 
+def _read_verified_facts_architecture_evidence(
+    *, artifact_path: Path, source_path: Path
+) -> dict[str, Any]:
+    """Prove that a verified-architecture run persisted its authority snapshot."""
+
+    try:
+        payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        return {
+            "passed": False,
+            "failure_code": "verified_facts_artifact_unreadable",
+            "detail": type(exc).__name__,
+        }
+    if not isinstance(payload, Mapping):
+        return {
+            "passed": False,
+            "failure_code": "verified_facts_artifact_malformed",
+        }
+    cache = payload.get("_cache")
+    canary = (
+        cache.get("visual_authority_canary")
+        if isinstance(cache, Mapping)
+        else None
+    )
+    if not isinstance(canary, Mapping) or canary.get("enabled") is not True:
+        return {
+            "passed": False,
+            "failure_code": "verified_facts_artifacts_missing",
+        }
+    try:
+        source_sha256 = hashlib.sha256(source_path.read_bytes()).hexdigest()
+        raw_evidence_packs = canary.get("verified_evidence_packs")
+        if not isinstance(raw_evidence_packs, Mapping):
+            return {
+                "passed": False,
+                "failure_code": "verified_facts_evidence_pack_missing",
+            }
+        facts = validated_verified_facts(
+            payload,
+            raw_evidence_packs,
+            expected_pdf_sha256=source_sha256,
+        )
+    except AppError as exc:
+        return {
+            "passed": False,
+            "failure_code": "verified_facts_artifact_invalid",
+            "detail": exc.code,
+        }
+    if not facts:
+        return {
+            "passed": False,
+            "failure_code": "verified_facts_artifacts_missing",
+        }
+    source_identity = str(next(iter(facts.values())).get("source_identity") or "")
+    digest = sha256_json(
+        {"source_identity": source_identity, "verified_facts": list(facts.values())}
+    )
+    if (
+        str(canary.get("digest") or "") != digest
+        or str(canary.get("verified_fact_digest") or "") != digest
+        or canary.get("verified_facts") != list(facts.values())
+    ):
+        return {
+            "passed": False,
+            "failure_code": "verified_facts_snapshot_digest_mismatch",
+        }
+    audit = canary.get("audit")
+    if not isinstance(audit, Mapping) or audit.get("coverage_complete") is not True:
+        return {
+            "passed": False,
+            "failure_code": "verified_facts_admission_coverage_incomplete",
+        }
+    for family in ("insights_candidates", "insights_final"):
+        items = payload.get(family)
+        if not isinstance(items, list) or not items:
+            return {
+                "passed": False,
+                "failure_code": "verified_facts_editorial_coverage_missing",
+            }
+        for item in items:
+            if not isinstance(item, Mapping):
+                return {
+                    "passed": False,
+                    "failure_code": "verified_facts_editorial_reference_invalid",
+                }
+            evidence_id = str(item.get("evidence_id") or "").strip()
+            fact_id = evidence_id.removeprefix("verified-fact:")
+            if not evidence_id.startswith("verified-fact:") or fact_id not in facts:
+                return {
+                    "passed": False,
+                    "failure_code": "verified_facts_editorial_reference_missing",
+                }
+    return {
+        "passed": True,
+        "failure_code": "",
+        "source_identity": source_identity,
+        "source_pdf_sha256": source_sha256,
+        "digest": digest,
+        "verified_fact_count": len(facts),
+        "verified_fact_ids": sorted(facts),
+        "admission_audit": {
+            key: audit.get(key)
+            for key in (
+                "expected_count",
+                "evaluated_count",
+                "admitted_count",
+                "verified_fact_count",
+                "quarantined_count",
+                "coverage_complete",
+            )
+        },
+    }
+
+
 def report_validation_passed(
     output_dir: Path, source_path: Path, *, report_id: str, ctx
 ) -> bool:
@@ -3398,6 +3601,12 @@ def summarize_frozen_cohort_results(
                 ),
                 "cohort_input_tokens": cohort_metrics.get("input_tokens"),
                 "cohort_output_tokens": cohort_metrics.get("output_tokens"),
+                "verified_facts_architecture_outcome": cohort_metrics.get(
+                    "verified_facts_architecture_outcome"
+                ),
+                "verified_facts_architecture_failure_codes": cohort_metrics.get(
+                    "verified_facts_architecture_failure_codes", {}
+                ),
                 "per_report_metric_scope": (
                     "report_scoped_excludes_shared_handoffs"
                     if per_report_attribution

@@ -116,6 +116,7 @@ from src.utils.report_identity import (
 )
 from src.utils.run_budget import report_runtime_run_budget
 from src.utils.structured_output import StructuredOutputFailure
+from src.utils.verified_facts import validated_verified_facts
 
 __all__ = [
     "run_report_analysis",
@@ -1048,6 +1049,44 @@ def run_report_analysis(
                 source_url=runtime.source_url,
                 **artifact_kwargs,
             )
+        if visual_authority_canary is not None:
+            cache = (
+                artifacts_payload.get("_cache")
+                if isinstance(artifacts_payload, dict)
+                else None
+            )
+            canary = (
+                cache.get("visual_authority_canary")
+                if isinstance(cache, dict)
+                else None
+            )
+            if not isinstance(canary, dict) or canary.get("enabled") is not True:
+                raise AppError(
+                    code="verified_facts_canary_artifacts_missing",
+                    message=(
+                        "Verified-facts canary generation returned a legacy "
+                        "artifact without its authority snapshot"
+                    ),
+                    retryable=False,
+                    context={"report_id": runtime.file.file_id},
+                )
+            try:
+                validated_verified_facts(
+                    artifacts_payload,
+                    canary.get("verified_evidence_packs"),
+                    expected_source_identity=visual_authority_canary.source_identity,
+                )
+            except AppError as exc:
+                raise AppError(
+                    code="verified_facts_canary_artifacts_invalid",
+                    message="Verified-facts canary artifact authority is invalid",
+                    cause=exc,
+                    retryable=False,
+                    context={
+                        "report_id": runtime.file.file_id,
+                        "validation_code": exc.code,
+                    },
+                ) from exc
         mode_evidence_paths["artifacts"] = pack_paths(
             runtime.settings.output_dir,
             runtime.file.file_id,

@@ -8,20 +8,133 @@ from pathlib import Path
 import pytest
 
 from scripts.quality.ias_live_canary_runner import (
+    _read_verified_facts_architecture_evidence,
     run_first_attempt_canary,
     summarize_frozen_cohort_results,
 )
 from scripts.quality.run_frozen_reliability_cohort import (
     DEFAULT_SOURCES_MANIFEST,
     STAGING_FROZEN_COHORT_REPORT_IDS,
-    _shared_batch_passes,
     _load_members,
+    _shared_batch_passes,
     run_frozen_reliability_cohort,
 )
+from src.utils.cache_utils import sha256_json
+from src.utils.verified_facts import canonical_verified_evidence_packs
 from tests._test_validation_queue_lineage._shared import (
     _full_chain_chat_response_factory,
     _full_chain_response_factory,
 )
+
+
+def test_verified_architecture_rejects_a_legacy_artifact_snapshot(
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "retained.pdf"
+    source_path.write_bytes(b"retained source snapshot")
+    artifacts_path = tmp_path / "artifacts.json"
+    artifacts_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "3.0",
+                "insights_final": [
+                    {
+                        "id": "legacy-1",
+                        "text": "A legacy insight",
+                        "evidence_id": "finding-1",
+                    }
+                ],
+                "_cache": {"visual_authority_canary": {"enabled": False}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    evidence = _read_verified_facts_architecture_evidence(
+        artifact_path=artifacts_path,
+        source_path=source_path,
+    )
+
+    assert evidence["passed"] is False
+    assert evidence["failure_code"] == "verified_facts_artifacts_missing"
+
+
+def test_verified_architecture_accepts_a_hash_bound_canonical_snapshot(
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "retained.pdf"
+    source_path.write_bytes(b"retained source snapshot")
+    source_sha256 = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    source_identity = f"report|pdf-sha256:{source_sha256}"
+    fact = {
+        "schema_version": "1.0",
+        "fact_id": "fact-1",
+        "statement": "Revenue reached 12% in 2025.",
+        "metric": {"label": "Revenue", "value": "12%", "unit": "percent"},
+        "qualifiers": [],
+        "source_identity": source_identity,
+        "source_pdf_sha256": source_sha256,
+        "supporting_physical_pages": [1],
+        "verification_outcome": "verified",
+        "provenance": {
+            "inspected_physical_pages": [1],
+            "source_truth_notes_by_page": {"1": "The page supports the fact."},
+        },
+    }
+    facts = [fact]
+    evidence_packs = canonical_verified_evidence_packs({"fact-1": fact})
+    digest = sha256_json(
+        {"source_identity": source_identity, "verified_facts": facts}
+    )
+    verified_evidence_id = "verified-fact:fact-1"
+    span = {
+        "evidence_id": verified_evidence_id,
+        "source_pack": "verified_facts",
+        "page": 1,
+        "text": "The page supports the fact.",
+        "source_identity": source_identity,
+    }
+    artifact_item = {
+        "id": "fact-1",
+        "text": fact["statement"],
+        "evidence_id": verified_evidence_id,
+        "pages": [1],
+        "evidence_spans": [span],
+    }
+    artifacts = {
+        "schema_version": "3.0",
+        "verified_facts": facts,
+        "insights_candidates": [artifact_item],
+        "insights_final": [artifact_item],
+        "_cache": {
+            "visual_authority_canary": {
+                "enabled": True,
+                "digest": digest,
+                "verified_fact_digest": digest,
+                "verified_facts": facts,
+                "verified_evidence_packs": evidence_packs,
+                "audit": {
+                    "expected_count": 1,
+                    "evaluated_count": 1,
+                    "admitted_count": 1,
+                    "verified_fact_count": 1,
+                    "quarantined_count": 0,
+                    "coverage_complete": True,
+                },
+            }
+        },
+    }
+    artifacts_path = tmp_path / "artifacts.json"
+    artifacts_path.write_text(json.dumps(artifacts), encoding="utf-8")
+
+    evidence = _read_verified_facts_architecture_evidence(
+        artifact_path=artifacts_path,
+        source_path=source_path,
+    )
+
+    assert evidence["passed"] is True
+    assert evidence["verified_fact_ids"] == ["fact-1"]
+    assert evidence["source_pdf_sha256"] == source_sha256
 
 
 def test_cohort_member_missing_source_has_typed_terminal_result(tmp_path: Path) -> None:

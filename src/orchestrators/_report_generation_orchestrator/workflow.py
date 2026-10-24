@@ -553,12 +553,14 @@ def run_report_generation(
             ),
             stop_after_stage=requested_stop_stage,
             projection_only=projection_only,
+            visual_authority_canary=visual_authority_canary,
         )
     if enforced_crop_only:
         return _resume_crop_from_source_checkpoint(
             runtime,
             deps,
             analytics_projection_fn,
+            visual_authority_canary=visual_authority_canary,
         )
     if (
         enforce_minimal_execution
@@ -588,6 +590,7 @@ def run_report_generation(
             regeneration_openai_client=regeneration_openai_client,
             validation_openai_client=validation_openai_client,
             stop_after_stage=requested_stop_stage,
+            visual_authority_canary=visual_authority_canary,
         )
     if client_bundle is not None:
         bundle = require_report_generation_client_bundle(client_bundle)
@@ -667,6 +670,7 @@ def run_report_generation(
             ),
             stop_after_stage=requested_stop_stage,
             projection_only=projection_only,
+            visual_authority_canary=visual_authority_canary,
         )
     logger.info(
         log_event(
