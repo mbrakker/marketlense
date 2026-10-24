@@ -18,6 +18,7 @@ from PIL import Image
 from src.contracts.report_assets import CropOutcome, CropRequest, CropResponse
 from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
+from src.services import file_service
 from src.services._pdf._crop.geometry import (
     _canonical_page_rect,
     _legacy_chart_border_trim,
@@ -46,6 +47,7 @@ from src.services._pdf.fingerprint_cache import (
 )
 from src.services._pdf.page_artifacts import create_page_artifact_cache
 from src.services._pdf.shared import crop_logger
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.path_utils import bounded_artifact_filename, safe_path_segment
 from src.utils.slugify import slugify
@@ -204,6 +206,25 @@ def _crop_regions(
         provisional_filename,
     )
     output_dir = out_root / safe_report_name / safe_subdir
+    redirect_reason = file_service.path_redirect_reason(
+        output_dir,
+        allowed_root=out_root,
+    )
+    if redirect_reason is not None:
+        raise AppError(
+            code="crop_region_path_invalid",
+            message=(
+                "Crop-region destination traverses a symlink or reparse point "
+                "below the configured output root"
+            ),
+            retryable=False,
+            context={
+                "output_dir": str(out_root),
+                "path": str(output_dir),
+                "reason": redirect_reason,
+                "next_action": "remove redirected child directories and retry",
+            },
+        )
     output_dir.mkdir(parents=True, exist_ok=True)
     paths: list[str] = []
     outcomes: list[CropOutcome] = []
@@ -270,6 +291,34 @@ def _crop_regions(
             page = local_doc[it.page]
             rel = Path(safe_report_name) / safe_subdir / region.filename
             output_path = output_dir / region.filename
+            for candidate_path in (
+                output_path,
+                output_path.with_name(
+                    f"{output_path.name}{_FINGERPRINT_SIDECAR_SUFFIX}"
+                ),
+                output_path.with_name(f"{output_path.name}.qa.json"),
+            ):
+                redirect_reason = file_service.path_redirect_reason(
+                    candidate_path,
+                    allowed_root=out_root,
+                )
+                if redirect_reason is not None:
+                    raise AppError(
+                        code="crop_region_path_invalid",
+                        message=(
+                            "Crop-region artifact path traverses a symlink or "
+                            "reparse point below the configured output root"
+                        ),
+                        retryable=False,
+                        context={
+                            "output_dir": str(out_root),
+                            "path": str(candidate_path),
+                            "reason": redirect_reason,
+                            "next_action": (
+                                "remove redirected crop artifacts and retry"
+                            ),
+                        },
+                    )
             content_fingerprint_payload = {
                 "page": build_page_content_fingerprint(
                     page,

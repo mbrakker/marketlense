@@ -14,6 +14,7 @@ import pymupdf as fitz
 
 from src.contracts.report_assets import PreviewRequest, PreviewResponse
 from src.contracts.run_context import RunContext
+from src.services import file_service
 from src.services._pdf._crop.image_ops import (
     PREVIEW_RENDER_EXCEPTIONS,
     _png_safe_pixmap,
@@ -26,6 +27,7 @@ from src.services._pdf.fingerprint_cache import (
     write_artifact_sidecar,
 )
 from src.services._pdf.shared import preview_logger
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.path_utils import bounded_artifact_filename, safe_path_segment
 from src.utils.slugify import slugify
@@ -125,8 +127,27 @@ def _page_png(
         filename,
     )
     img_dir = out_root / safe_report_name / "assets"
-    img_dir.mkdir(parents=True, exist_ok=True)
     abs_png = img_dir / filename
+    redirect_reason = file_service.path_redirect_reason(
+        abs_png,
+        allowed_root=out_root,
+    )
+    if redirect_reason is not None:
+        raise AppError(
+            code="pdf_preview_path_invalid",
+            message=(
+                "PDF preview destination traverses a symlink or reparse point "
+                "below the configured output root"
+            ),
+            retryable=False,
+            context={
+                "output_dir": str(out_root),
+                "path": str(abs_png),
+                "reason": redirect_reason,
+                "next_action": "remove redirected child directories and retry",
+            },
+        )
+    img_dir.mkdir(parents=True, exist_ok=True)
 
     local_doc = doc or fitz.open(pdf_path)
     try:

@@ -20,6 +20,7 @@ from src.contracts.report_assets import (
     CropRefinePageRenderResponse,
 )
 from src.contracts.run_context import RunContext
+from src.services import file_service
 from src.services._pdf._crop.geometry import _crop_refine_edge_guard_rect
 from src.services._pdf._crop.image_ops import _png_safe_pixmap
 from src.services._pdf.fingerprint_cache import (
@@ -109,6 +110,15 @@ def _crop_refine_path_violation(
     if windows_path_units(root) > WINDOWS_PATH_BUDGET:
         return "resolved output root exceeds the Windows full-path budget"
     for path in artifact_paths:
+        redirect_reason = file_service.path_redirect_reason(
+            path,
+            allowed_root=root,
+        )
+        if redirect_reason is not None:
+            return (
+                "artifact path traverses a redirected filesystem component: "
+                f"{redirect_reason}"
+            )
         if windows_path_units(path) > WINDOWS_PATH_BUDGET:
             return f"artifact path exceeds the Windows full-path budget: {path}"
         for component in _path_components(path):
@@ -190,6 +200,18 @@ def _resolve_crop_refine_page_paths(
     budget_artifact_paths = _crop_refine_page_budget_paths(root, safe_report_name)
     budget_violation = _crop_refine_path_violation(root, budget_artifact_paths)
     actual_violation = _crop_refine_path_violation(root, artifact_paths)
+    redirect_reason = None
+    for path in budget_artifact_paths:
+        redirect_reason = file_service.path_redirect_reason(path, allowed_root=root)
+        if redirect_reason is not None:
+            break
+    if redirect_reason is not None:
+        raise _crop_refine_path_error(
+            request,
+            root,
+            image_path,
+            f"requested page artifact path is invalid: {redirect_reason}",
+        )
     if budget_violation is None:
         if actual_violation is not None:
             raise _crop_refine_path_error(

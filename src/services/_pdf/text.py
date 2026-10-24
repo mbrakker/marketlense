@@ -997,8 +997,12 @@ def _ocr_split_conflict(path: Path, *, cause: Exception | None = None) -> AppErr
 
 
 def _resolve_ocr_path(path_value: str, *, role: str) -> Path:
+    lexical_path = Path(path_value).expanduser()
+    redirect_reason = file_service.path_redirect_reason(lexical_path)
+    if redirect_reason is not None:
+        raise _ocr_split_path_error(lexical_path, reason=redirect_reason)
     try:
-        path = Path(path_value).expanduser().resolve()
+        path = lexical_path.resolve()
     except (OSError, RuntimeError, TypeError, ValueError) as exc:
         raise _ocr_split_path_error(
             Path(str(path_value)), reason=f"{role}_resolution_failed"

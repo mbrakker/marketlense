@@ -24,6 +24,7 @@ from src.generators.report_generation_shared import (
     read_cache_json,
     write_cache_json,
 )
+from src.services import file_service
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
@@ -68,6 +69,20 @@ def _validate_ocr_path_components(path: Path, *, role: str) -> None:
             or is_windows_reserved_component(component)
         ):
             raise _ocr_path_error(path, role=role, reason="path_component_invalid")
+
+
+def _validate_ocr_redirect(
+    path: Path,
+    *,
+    allowed_root: Path,
+    role: str,
+) -> None:
+    redirect_reason = file_service.path_redirect_reason(
+        path,
+        allowed_root=allowed_root,
+    )
+    if redirect_reason is not None:
+        raise _ocr_path_error(path, role=role, reason=redirect_reason)
 
 
 def _resolve_ocr_path(path_value: str | Path, *, role: str) -> Path:
@@ -146,6 +161,7 @@ def _bounded_ocr_component(
 
 
 def _ocr_cache_root(runtime: ReportRuntimeState) -> Path:
+    configured_root = Path(runtime.settings.cache_dir).expanduser()
     settings_root = _resolve_ocr_path(
         runtime.settings.cache_dir,
         role="OCR cache root",
@@ -153,6 +169,11 @@ def _ocr_cache_root(runtime: ReportRuntimeState) -> Path:
     raw_key = str(runtime.md5 or runtime.report_name or runtime.file.file_id or "ocr")
     base_candidates = (settings_root / "pdf_cache", settings_root / ".pdf-cache")
     for base in base_candidates:
+        _validate_ocr_redirect(
+            base,
+            allowed_root=configured_root,
+            role="OCR cache root",
+        )
         _validate_ocr_path_components(base, role="OCR cache root")
         base_units = windows_path_units(base)
         key_budget = min(
@@ -171,6 +192,11 @@ def _ocr_cache_root(runtime: ReportRuntimeState) -> Path:
             fallback="ocr",
         )
         cache_root = base / key_component
+        _validate_ocr_redirect(
+            cache_root,
+            allowed_root=configured_root,
+            role="OCR cache root",
+        )
         _validate_ocr_path_components(cache_root, role="OCR cache root")
         try:
             _ocr_parent_file_name_budget(cache_root, role="OCR cache root")
@@ -362,6 +388,13 @@ def recover_pdf_text_with_ocr(
     cache_json_path: Path | None = None
     cache_pdf_path: Path | None = None
     cache_root = _ocr_cache_root(runtime)
+    configured_cache_root = Path(runtime.settings.cache_dir).expanduser()
+    if noncached_output_path is not None:
+        _validate_ocr_redirect(
+            noncached_output_path,
+            allowed_root=configured_cache_root,
+            role="OCR output artifact",
+        )
     if runtime.md5 and runtime.settings.pdf_text_ocr_cache_enabled:
         cache_key = sha256_json(
             {
@@ -385,6 +418,16 @@ def recover_pdf_text_with_ocr(
             prefix="ocr_text",
             cache_key=cache_key,
             extension=".pdf",
+        )
+        _validate_ocr_redirect(
+            cache_json_path,
+            allowed_root=configured_cache_root,
+            role="OCR cache metadata",
+        )
+        _validate_ocr_redirect(
+            cache_pdf_path,
+            allowed_root=configured_cache_root,
+            role="OCR cache PDF",
         )
         cached_payload = read_cache_json(cache_json_path, ocr_ctx, dependencies)
         cached_pdf_exists = False
@@ -450,11 +493,20 @@ def recover_pdf_text_with_ocr(
             },
         )
 
+    chunk_directory = _ocr_chunk_directory(runtime, cache_root, cache_key)
+    _validate_ocr_redirect(
+        chunk_directory,
+        allowed_root=configured_cache_root,
+        role="OCR chunk directory",
+    )
     split_response = dependencies.split_pdf_for_ocr(
+        # The split service repeats the check at its public boundary; this
+        # generator-side check also prevents cache reads/writes from following
+        # a redirected descendant before that service is called.
         PdfOcrSplitRequest(
             schema_version="1.0",
             source_pdf_path=runtime.local_pdf_path,
-            output_dir=str(_ocr_chunk_directory(runtime, cache_root, cache_key)),
+            output_dir=str(chunk_directory),
             chunk_page_count=runtime.settings.pdf_text_ocr_chunk_page_count,
         ),
         ocr_ctx,
