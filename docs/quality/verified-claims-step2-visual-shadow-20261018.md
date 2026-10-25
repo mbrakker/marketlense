@@ -5113,10 +5113,12 @@ and fails closed with bounded identifier-only context.
 
 Focused provider-free regressions passed: **7** new recovery/grounding tests,
 the affected grounding/validation/recovery cohort **250 passed**, changed-source
-mypy passed, and Ruff/formatting passed for changed clean files. The repository
-type-gate invocation was blocked by the pre-existing protected untracked
-`src/generators/artifact_normalization (2).py` duplicate (one unrelated
-unbaselined mypy error plus the environment's CPython 3.14 mypy assertion); no
+mypy passed, and Ruff/formatting passed for changed clean files. A clean
+committed-source worktree also passed the full repository type gate: **786
+source files, 0 tracked errors**. The dirty task worktree still contains the
+pre-existing protected untracked `src/generators/artifact_normalization (2).py`
+duplicate (one unrelated unbaselined mypy error plus the environment's CPython
+3.14 mypy assertion), so its direct type-gate result is not a clean signal; no
 new error was reported for the changed production file. No provider call,
 publication write, visual-parallelism run, or E17.2 work was performed.
 
