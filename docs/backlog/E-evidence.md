@@ -1318,3 +1318,23 @@ breakout was not retained in the compact result. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. This evidence does not close the repeated-run/live
 selection gap or authorize Step 2/3 promotion.
+
+**Candidate recovery diagnostics and corrected fallback — 2026-10-25
+(`492b85a9` / `163ecfe2`):** The empty Adjust candidate checkpoint is now
+explained by bounded diagnostics: the provider returned a present list root,
+but all 11 primary, 6 repair, and 6 regeneration candidates normalized to
+location-only `source:page:*` references and failed the existing evidence
+contract. The existing three-attempt recovery remained bounded and the
+fidelity-approved fallback supplied six safe candidates. Selection identity is
+`evidence_backed_shortlisting:17`; the candidate pool bound now covers model
+and fallback paths, and canonical `evidence:findings:` ID handling restores
+four eligible fallback theme opportunities without fuzzy merging or quota
+padding. One fresh isolated Adjust replay used 48 calls, 626,134 input tokens,
+124,280 output tokens, `$0.138615`, and 807.477 seconds; it evaluated/admitted
+6/6, produced six final insights, passed validation and all 16 readiness rules,
+and made no canonical or WordPress writes. Full-page review found no material
+factual or editorial defect. The provider still failed to produce usable model
+candidates in this one stochastic run, so live selection effectiveness remains
+unproven; E18 stays **Active/PARTIAL**, Step 2 **PARTIAL/NO-GO**, and Step 3
+**unstarted/not ready**. See
+`docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.

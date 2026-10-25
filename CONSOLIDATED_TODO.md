@@ -1026,6 +1026,22 @@ is complete; E18 remains **Active/PARTIAL**, Step 2 remains
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md` and
 `docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.
 
+**Candidate recovery diagnostics and fallback coverage — 2026-10-25
+(`492b85a9` / `163ecfe2`):** The Adjust empty candidate checkpoint is
+explained: each of the primary, model-repair, and regeneration responses had
+a present list root, but normalized only to unsafe location-only page IDs, so
+the existing bounded recovery exhausted and the evidence-backed fallback was
+used. Selection identity is `evidence_backed_shortlisting:17`; canonical
+fallback ID membership restores four eligible theme opportunities, while the
+candidate pool bound applies consistently to model and fallback paths. The
+fresh isolated replay evaluated/admitted 6/6, produced six final insights,
+passed validation and publication readiness, and made no publication or
+canonical writes (48 calls, `$0.138615`, 807.477 seconds). This is a
+deterministic recovery/coverage correction, not proof of stable live model
+shortlisting. E18 remains **Active/PARTIAL**, Step 2 **PARTIAL/NO-GO**, and
+Step 3 **unstarted/not ready**. Full evidence:
+`docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.
+
 **Final insight-coverage correction — 2026-10-25 (`3eb0eadc`):** Theme
 coverage now uses original-finding relationships rather than fallback-filled
 source order; short rosters use a bounded six-to-eight opportunity pool; and

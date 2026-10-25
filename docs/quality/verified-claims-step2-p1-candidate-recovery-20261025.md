@@ -289,8 +289,157 @@ accounting, final central-theme protection, and focused regression coverage;
 **PARTIAL/NO-GO** for live selection effectiveness and broader Step 2
 promotion. Step 3 remains unstarted/not ready.
 
+## Candidate recovery diagnostics and theme-coverage correction — 2026-10-25 (`492b85a9`, finalized test `163ecfe2`)
+
+This is the first replay of the diagnostic and canonical-ID corrections. The
+selection identity is now `evidence_backed_shortlisting:17`; the candidate
+pool bound applies to both model and fallback paths, and fallback theme
+membership is canonicalized once before ranking and audit.
+
+### What produced the empty model checkpoint
+
+The Adjust candidate checkpoint was not a successful explicit empty result and
+was not a missing-root result. The bounded parser diagnostics recorded a
+present list root on every attempt, but every normalized candidate was a
+location-only `source:page:*` reference and therefore failed the existing
+candidate evidence contract. The provider response was parse-valid; the
+failure was recorded as `structured_output_empty` after normalization.
+
+| Attempt | Mode | Root | Raw / normalized | Location-only | Response chars | Terminal result |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 0 | primary | present list | 11 / 11 | 11 | 15,256 | `structured_output_empty` |
+| 1 | model repair | present list | 6 / 6 | 6 | 8,463 | `structured_output_empty` |
+| 2 | regeneration | present list | 6 / 6 | 6 | 8,463 | `structured_output_empty` |
+
+The exact provider JSON is intentionally not retained in the checkpoint; only
+bounded structural diagnostics are recorded. Accordingly, the evidence
+supports the root type, counts, response size and normalization disposition,
+but not a claim about wording inside the discarded response. No new retry,
+budget or reasoning setting was introduced. Since the IDs were not safe
+evidence bindings, promoting them would have weakened provenance. The existing
+fidelity-approved findings fallback was therefore the correct fail-closed
+recovery path. An explicit `insights_candidates: []` remains distinguishable
+from this failure, and a missing required root now raises a structural error.
+
+### Fallback coverage correction
+
+The prior fallback replay exposed an ID-form mismatch: fidelity IDs used the
+`evidence:findings:` prefix while editorial-plan eligibility used the same
+finding identity in another canonical form. The old intersection therefore
+disabled theme-priority matching and allowed one topic to consume the bounded
+roster. Canonicalizing the eligible set once fixes the membership decision
+without fuzzy matching or quota padding.
+
+| Planned theme from the prior replay | Earlier disposition | Corrected disposition | Evidence-based reason |
+| --- | --- | --- | --- |
+| Gaming retention | Eligible finding, omitted before visual evaluation | `gaming-overall-retention` is retained as a ranked alternative | Existing fidelity-approved finding was hidden by ID-form mismatch |
+| E-commerce retention | Eligible finding, omitted before visual evaluation | `ecommerce-retention` is retained as a ranked alternative | Existing fidelity-approved finding was hidden by ID-form mismatch |
+| Finance session performance | Eligible finding(s), omitted before visual evaluation | `finance-sessions` is retained as a ranked alternative | Existing fidelity-approved finding was hidden by ID-form mismatch |
+| Platform satisfaction | Reached the prior fallback/selection path but was quarantined during admission | `platform-satisfaction` is available to the corrected path | The corrected mapping preserves the eligible binding; it does not bypass visual admission |
+| Methodology | No eligible finding/evidence binding | Still omitted | No source-backed candidate exists; no weak substitute was manufactured |
+
+On the deterministic replay, the old fallback roster was
+`intro-installs-growth`, `ai-maturity`, `platform-satisfaction`,
+`gaming-casual-installs`, `ecommerce-installs`, `finance-installs`, and
+`ecommerce-install-session-growth`. With the corrected canonical membership,
+the strongest eligible roster became `finance-installs`,
+`gaming-overall-retention`, `ecommerce-retention`, `finance-sessions`,
+`ai-maturity`, `platform-satisfaction`, and `intro-installs-growth`. This
+restores four addressable theme opportunities; methodology remains a correct
+fail-closed omission.
+
+### Fresh isolated Adjust replay
+
+The run used the frozen Adjust PDF with SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`, commit
+`492b85a9`, and no canonical-artifact or WordPress write.
+
+| Measure | Model-success baseline | Prior fallback replay | Corrected replay |
+| --- | ---: | ---: | ---: |
+| Provider calls | 56 | 51 | 48 |
+| Input tokens | 545,144 | 645,698 | 626,134 |
+| Output tokens | 113,908 | 103,218 | 124,280 |
+| Estimated cost | `$0.125492` | `$0.135208` | `$0.138615` |
+| Wall-clock | 924.187 s | 782.212 s | 807.477 s |
+| Model / fallback candidates | 8 / 0 | 0 / 7 | 0 / 6 |
+| Visual evaluated / admitted / quarantined | 8 / 7 / 1 | 7 / 5 / 2 | 6 / 6 / 0 |
+| Final insights | 5 | 5 | 6 |
+| Automatic repairs | 0 | 0 | 0 |
+
+The corrected replay used three bounded candidate attempts and one recorded
+structured-output recovery call; it did not trigger automatic report repairs.
+Compared with the prior fallback replay it used three fewer provider calls
+(-5.88%), 19,564 fewer input tokens (-3.03%), 21,062 more output tokens
+(+20.41%), `$0.003407` more estimated cost (+2.52%), and 25.265 more seconds
+(+3.23%). These are not a causal live-quality improvement claim: provider
+candidate content and downstream routing are stochastic. The current
+grounding ledger retained 12,635 cached input tokens versus 10,830 in the
+prior replay; a compact cohort-level cached-token total was not retained.
+
+Current stage ledger:
+
+| Stage | Calls | Input | Output | Estimated cost |
+| --- | ---: | ---: | ---: | ---: |
+| Candidate primary | 1 | 58,114 | 10,314 | `$0.010968` |
+| Candidate model repair | 1 | 64,081 | 2,210 | `$0.007513` |
+| Candidate regeneration | 1 | 62,372 | 2,543 | `$0.007509` |
+| Visual correction | 6 | 66,935 | 2,128 | `$0.007758` |
+| Visual verification | 6 | 70,163 | 6,182 | `$0.010108` |
+| Grounding | 8 | 73,010 | 48,144 | `$0.030235` |
+
+### Final insight ledger and source review
+
+All six final insights were inspected against full rendered PDF pages 6, 9,
+11, 19, 30 and 35. The stable IDs, evidence IDs, protected factual fields,
+physical pages and editorial wording remained aligned.
+
+| Stable ID | Evidence ID / page | Final claim and independent review |
+| --- | --- | --- |
+| `finance-regional-growth-latam` | `verified-fact:finance-regional-growth-latam` / 35 | 76% installs and 57% sessions, 2024–2025, LATAM; the two metrics remain separate and the action is conditional benchmarking |
+| `global-app-growth-2025` | `verified-fact:global-app-growth-2025` / 6 | 10% global installs in 2025 versus 8% in 2024; used as a historical acquisition benchmark, not a forecast |
+| `gaming-casual-growth` | `verified-fact:gaming-casual-growth` / 19 | 19% installs and 37% sessions, 2024–2025, global casual gaming; install and engagement implications remain distinct |
+| `ecommerce-paid-organic-ratio` | `verified-fact:ecommerce-paid-organic-ratio` / 30 | Global median paid/organic ratio 0.48 to 0.54; the wording does not turn channel mix into a performance verdict |
+| `cross-platform-satisfaction` | `verified-fact:cross-platform-satisfaction` / 11 | Around 31% of marketers report complete satisfaction; the action is a diagnostic/data-priority implication, not an unsupported solution claim |
+| `ai-efficiency-gains` | `verified-fact:ai-efficiency-gains` / 9 | Low/moderate maturity and a small advanced group above 20% efficiency gains; the qualifier and diligence recommendation are preserved |
+
+Validation passed with two non-factual warnings: quotes abstained because no
+quote was required, and the summary opening was broader than the retained
+source-supported finding. Publication readiness passed all 16 rules. The
+rendered HTML contained zero internal `verified-fact:`, `evidence:findings:` or
+`source:page:` identifiers. The final artifact contains six metric-spine
+entries and four key figures. No unsupported or materially incorrect numeric,
+population, period, qualifier or page binding was found in this inspection.
+
+The prior e-commerce installs/session pair remains two distinct source-backed
+facts rather than a fuzzy merge. The existing final-selection contract already
+permits a future multi-evidence synthesis when a final claim genuinely needs
+both IDs; this replay did not demonstrate such a synthesis, and no distinct
+decision was collapsed.
+
+### Limitations and status
+
+The run demonstrates bounded diagnostics, safe fallback, corrected theme
+membership and a source-consistent final report. It does not demonstrate that
+the provider will reliably produce usable model candidates: all three
+candidate attempts again emitted location-only references. Exact discarded
+provider content is unavailable by design, and this is one stochastic live
+run. The dirty-worktree preflight failure occurred before any provider call
+and is excluded from the measurements.
+
+**Verdict:** PASS for the deterministic recovery diagnosis, fail-closed root
+handling, canonical fallback membership, bounded candidate pool and current
+report factual/readiness review; **PARTIAL/NO-GO** for live model shortlisting
+effectiveness and Step 2/3 promotion. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains unstarted/not ready.
+
 ## Artifact references
 
+- Corrected fresh cohort result: `C:\ml-step1-adjust-p1-live-corrected\frozen-reliability-6s6d_312\cohort_result.json`
+- Corrected final artifacts: `C:\ml-step1-adjust-p1-live-corrected\frozen-reliability-6s6d_312\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-xl7ef0zi\output\mobile-app-trends-2026-pdf\report_analysis\artifacts.json`
+- Corrected candidate checkpoint: `C:\ml-step1-adjust-p1-live-corrected\frozen-reliability-6s6d_312\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-xl7ef0zi\output\mobile-app-trends-2026-pdf\report_analysis\prompt_family_report_vs_artifacts_insights_candidates.json`
+- Corrected validation result: `C:\ml-step1-adjust-p1-live-corrected\frozen-reliability-6s6d_312\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-xl7ef0zi\output\mobile-app-trends-2026-pdf\report_analysis\validation.json`
+- Corrected publication-readiness result: `C:\ml-step1-adjust-p1-live-corrected\frozen-reliability-6s6d_312\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-xl7ef0zi\output\mobile-app-trends-2026-pdf\report_analysis\publish_readiness.json`
+- Corrected rendered report: `C:\ml-step1-adjust-p1-live-corrected\frozen-reliability-6s6d_312\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-xl7ef0zi\output\mobile-app-trends-2026-pdf\report_analysis\report.html`
 - Fresh cohort result: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\cohort_result.json`
 - Final artifacts: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobile-app-a5407b768f97\report_analysis\artifacts.json`
 - Candidate checkpoint: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobil-a5407b768f97\report_analysis\prompt_family_report_vs_artifacts_insights_candidates.json`
