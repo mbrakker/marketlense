@@ -1188,3 +1188,25 @@ historically indeterminate: its primary response was parse-valid but failed
 persisted grounding acceptance, while both later responses were invalid at the
 8,192-token output cap; the original coverage IDs were not retained. No live
 effectiveness or cost improvement is claimed. E18 remains **Active/PARTIAL**.
+
+**P1 grounding recovery output budget and feedback correction — 2026-10-25:**
+The governed primary grounding cap remains 16,384, and the shared structured
+recovery family plus its explicit model-repair and regeneration policies now
+resolve to the same 16,384 cap. The existing explicit repair effort is aligned
+to medium; no prompt, schema, validator, retry-budget or publication behavior
+changed. Provider-free contract tests prove that the prepared bundle's cap,
+policy hash and execution identity reach `OpenAIJSONPromptRequest` and the
+provider's `max_completion_tokens`, while a smaller call-site value cannot
+override the governed policy. The cap is part of the existing execution/cache
+identity.
+
+The empty-repair path now carries the original primary response and exact
+validation errors into regeneration, joined with the bounded repair failure;
+non-empty repair behavior is unchanged. Terminal recovery retains the original
+primary and final error classes through existing bounded diagnostics. Focused
+and affected tests passed **576**; Ruff and formatting passed. The full mypy
+gate remains locally blocked by the protected untracked duplicate source file
+and CPython 3.14 assertion. The accepted Adjust baseline was not rerun and no
+live provider or publication call was made, so no live recovery improvement or
+cost result is claimed. This is a reliability correction, not E17.2 output
+compaction; E17 remains Active and broader Step 2 remains **PARTIAL/NO-GO**.

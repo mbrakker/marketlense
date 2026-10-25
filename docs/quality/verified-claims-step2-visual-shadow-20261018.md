@@ -5128,3 +5128,64 @@ now reach bounded recovery, while the retained batch-04 cause and any live
 first-repair improvement remain unproven because the original diagnostics were
 not retained. Step 2 remains **PARTIAL/NO-GO** and Step 3 remains
 **unstarted/not ready**.
+
+#### P1 grounding recovery output budget and feedback correction — 2026-10-25
+
+Current-source inspection confirmed two independent recovery defects exposed by
+the retained Adjust batch-04 audit. The primary grounding policy already
+allowed 16,384 output tokens, while the shared structured-output recovery
+family and its explicit `repair` and `regenerate` policies allowed only 8,192.
+The effective recovery policies were corrected to 16,384 in
+`src/config/app.yaml`; the explicit repair policy was also aligned to the
+required existing medium reasoning effort. Model, timeout, seed/temperature,
+JSON-schema identity, zero provider retries, and same-provider fallback remain
+governed by the existing policies. No prompt, schema, validator, batch-size or
+publication behavior changed. The shared-family change applies to other
+structured-output recovery callers that resolve through the same policy.
+
+The provider-free contract path now proves
+`app.yaml -> execution policy -> PreparedPromptBundle.effective_max_output_tokens
+-> OpenAIJSONPromptRequest.max_output_tokens -> provider max_completion_tokens`.
+The configured cap remains authoritative when a smaller compatibility
+call-site value is supplied. The cap is already included in the execution
+identity and policy hash, so a changed cap cannot reuse the prior semantic
+cache identity.
+
+When model repair returns empty text, regeneration now receives the original
+primary response plus the original exact validation feedback and the bounded
+empty-repair error. A non-empty repair continues to be the sole regeneration
+source with its latest validation feedback. Recovery remains exactly primary,
+deterministic evaluation, model repair, and regeneration; no fourth provider
+call was added. Exhausted recovery now retains the original primary
+`error_class` alongside the terminal recovery class in the existing bounded
+attempt/outcome and `StructuredOutputFailure` context, without retaining raw
+responses or prompts.
+
+| Contract | Before | After |
+| --- | ---: | ---: |
+| Primary grounding output cap | 16,384 | 16,384 |
+| Model-repair output cap | 8,192 | 16,384 |
+| Regeneration output cap | 8,192 | 16,384 |
+| Empty-repair regeneration feedback | repair-only error | primary exact errors + repair error |
+| Exhaustion diagnostic | terminal error class | original primary + terminal classes |
+
+Focused provider-free verification passed **47 tests** for structured-output
+service, policy resolution, governed request construction and provider request
+translation. The broader recovery, prompt, routing, report-generation,
+grounding, claim-validation and readiness cohort passed **576 tests**. Ruff and
+format checks passed for all five changed Python service/test files. The full
+repository type gate remains blocked by the protected pre-existing untracked
+`src/generators/artifact_normalization (2).py` error and the local CPython 3.14
+mypy assertion; no changed-file error was reported before that assertion.
+
+The accepted retained Adjust reference (74 calls, 831,132 input tokens,
+142,426 output tokens, `$0.168355`, 1,063 seconds, five insights and passing
+grounding/editorial/readiness) was **not rerun**. No provider call, live
+recovery replay, visual parallelism run, E17.2 output compaction or publication
+write was performed. Consequently this correction proves the governed budget,
+feedback and diagnostic contracts but does not claim that a fresh provider run
+would recover the historical batch-04 response or improve live quality.
+
+**Verdict: PASS for the deterministic recovery correction; PARTIAL for live
+recovery effectiveness.** Step 2 remains **PARTIAL/NO-GO**, Step 3 remains
+**unstarted/not ready**, and E17 remains Active.

@@ -100,6 +100,36 @@ def test_openai_chat_json_uses_modern_chat_completion(
     assert captured_payloads[0]["seed"] == 7
 
 
+def test_openai_chat_json_forwards_governed_output_cap_to_provider(
+    external_boundary_mocks_only, tmp_path
+) -> None:
+    captured_payloads = []
+
+    class _FakeChatCompletions:
+        def create(self, **kwargs):
+            captured_payloads.append(dict(kwargs))
+            return SimpleNamespace(
+                id="chat_cap",
+                choices=[
+                    SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))
+                ],
+                usage=SimpleNamespace(
+                    prompt_tokens=1, completion_tokens=1, total_tokens=2
+                ),
+            )
+
+    class _FakeClient:
+        def __init__(self, **_kwargs):
+            self.chat = SimpleNamespace(completions=_FakeChatCompletions())
+
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
+    svc.openai_chat_json(
+        replace(_chat_request(tmp_path), max_output_tokens=16384), _ctx()
+    )
+
+    assert captured_payloads[0]["max_completion_tokens"] == 16384
+
+
 def test_gpt6_chat_sends_reasoning_effort_and_omits_sampling(
     external_boundary_mocks_only, tmp_path
 ) -> None:

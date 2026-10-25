@@ -237,14 +237,19 @@ def execute_structured_output(
         model_pricing=model_pricing,
     )
 
-    repaired_response = str(repaired.text or original_response)
+    repair_text = str(repaired.text or "")
+    reuse_primary = not repair_text.strip()
     regenerated = _call_model(
         request=request,
         ctx=ctx,
         call_model=call_model,
         mode="regeneration",
-        original_response=repaired_response,
-        schema_errors=repaired_evaluation.error_detail,
+        original_response=original_response if reuse_primary else repair_text,
+        schema_errors=(
+            _join_errors(exact_errors, repaired_evaluation.error_detail)
+            if reuse_primary
+            else repaired_evaluation.error_detail
+        ),
         attempt=2,
         model_pricing=model_pricing,
         repair_responses=(repaired,),
@@ -308,15 +313,20 @@ def execute_structured_output(
         repair_responses=(repaired, regenerated),
         elapsed_repair_ms=(time.perf_counter() - recovery_started) * 1000,
         terminal="failure",
+        original_error_class=initial.error_class,
         model_pricing=model_pricing,
     )
+    failure_context = dict(
+        regenerated_evaluation.bounded_context
+        or repaired_evaluation.bounded_context
+        or initial.bounded_context
+        or {}
+    )
+    if initial.error_class:
+        failure_context["original_error_class"] = initial.error_class
     raise StructuredOutputFailure(
         code=request.terminal_failure_code,
-        failure_context=(
-            regenerated_evaluation.bounded_context
-            or repaired_evaluation.bounded_context
-            or initial.bounded_context
-        ),
+        failure_context=failure_context,
         message=(
             f"{request.artifact_family} did not produce a substantive "
             "schema-valid JSON artifact"
@@ -541,6 +551,7 @@ def _record_outcome(
     elapsed_repair_ms: float,
     model_pricing: dict[str, dict],
     terminal: str = "success",
+    original_error_class: str = "",
 ) -> None:
     """Retain one bounded, output-level outcome beside attempt-level telemetry."""
 
@@ -577,41 +588,44 @@ def _record_outcome(
     model_repair_succeeded = repair_strategy == "model_repair"
     retry_exhausted = repair_strategy == "retry_exhaustion"
     model = str(result.model or request.model)
+    fields = {
+        "outcome_schema_version": "1.0",
+        "outcome_id": _outcome_id(request, ctx),
+        "workflow": request.workflow,
+        "artifact_family": request.artifact_family,
+        "prompt_namespace": request.prompt_family or request.artifact_family,
+        "schema_name": request.schema_name,
+        "schema_root_key": request.schema_root_key,
+        "provider": request.provider,
+        "model": model,
+        "provider_model": f"{request.provider}:{model}",
+        "failure_reason": result.error_class,
+        "repair_strategy": repair_strategy,
+        "first_pass_valid": first_pass_valid,
+        "deterministic_repair_attempted": deterministic_repair_attempted,
+        "deterministic_repair_succeeded": deterministic_repair_succeeded,
+        "model_repair_attempted": model_repair_attempted,
+        "model_repair_succeeded": model_repair_succeeded,
+        "retry_exhausted": retry_exhausted,
+        "terminal_failure": terminal == "failure",
+        "retry_attempt": max(0, result.attempts - 1),
+        "provider_attempts": result.attempts,
+        "repair_model_calls": len(repair_responses),
+        "repair_input_tokens": repair_input_tokens,
+        "repair_output_tokens": repair_output_tokens,
+        "repair_cost_usd": repair_cost_usd,
+        "elapsed_repair_ms": round(max(0.0, elapsed_repair_ms), 3),
+        "terminal": terminal,
+    }
+    if original_error_class:
+        fields["original_error_class"] = original_error_class
     logger.info(
         log_event(
             ctx,
             role="service",
             event="structured_output_recovery_outcome",
             module=logger.name,
-            fields={
-                "outcome_schema_version": "1.0",
-                "outcome_id": _outcome_id(request, ctx),
-                "workflow": request.workflow,
-                "artifact_family": request.artifact_family,
-                "prompt_namespace": request.prompt_family or request.artifact_family,
-                "schema_name": request.schema_name,
-                "schema_root_key": request.schema_root_key,
-                "provider": request.provider,
-                "model": model,
-                "provider_model": f"{request.provider}:{model}",
-                "failure_reason": result.error_class,
-                "repair_strategy": repair_strategy,
-                "first_pass_valid": first_pass_valid,
-                "deterministic_repair_attempted": deterministic_repair_attempted,
-                "deterministic_repair_succeeded": deterministic_repair_succeeded,
-                "model_repair_attempted": model_repair_attempted,
-                "model_repair_succeeded": model_repair_succeeded,
-                "retry_exhausted": retry_exhausted,
-                "terminal_failure": terminal == "failure",
-                "retry_attempt": max(0, result.attempts - 1),
-                "provider_attempts": result.attempts,
-                "repair_model_calls": len(repair_responses),
-                "repair_input_tokens": repair_input_tokens,
-                "repair_output_tokens": repair_output_tokens,
-                "repair_cost_usd": repair_cost_usd,
-                "elapsed_repair_ms": round(max(0.0, elapsed_repair_ms), 3),
-                "terminal": terminal,
-            },
+            fields=fields,
         )
     )
 

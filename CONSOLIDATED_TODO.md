@@ -966,3 +966,17 @@ recoveries were invalid at the 8,192-token output cap. No live improvement or
 provider-backed cost result is claimed. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**P1 grounding recovery output budget and feedback correction — 2026-10-25:**
+The shared structured-output recovery policies and explicit repair/regeneration
+policies now use the governed 16,384-token cap already used by primary
+grounding, with medium recovery reasoning, unchanged model/provider/schema,
+timeout, retry and fallback controls. Empty model repair no longer discards
+the primary validation feedback before regeneration, and exhausted recovery
+retains bounded original and terminal error classes separately. Focused and
+affected provider-free tests passed **576**; no provider, retained Adjust
+replay, publication write or E17.2 optimization was performed. The accepted
+Adjust baseline remains the reference and live recovery efficacy is unproven.
+E17 remains **Active**, E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

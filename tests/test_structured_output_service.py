@@ -247,6 +247,167 @@ def test_verified_grounding_recovery_feedback_names_missing_public_item_and_repa
     )
 
 
+def test_empty_model_repair_preserves_primary_feedback_for_regeneration():
+    """An empty repair must not discard the primary semantic failure details."""
+
+    primary = {"covered": False}
+    complete = {"covered": True}
+    calls: list[tuple[str, str, str]] = []
+
+    def validate_payload(candidate: dict) -> None:
+        if candidate.get("covered"):
+            return
+        raise AppError(
+            code="grounding_claim_check_coverage_invalid",
+            message="The requested public item was omitted",
+            retryable=False,
+            context={
+                "missing_or_ambiguous_public_item_ids": ["insight:fact-1:so_what"]
+            },
+        )
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        calls.append((mode, original_response, schema_errors))
+        if mode == "primary":
+            return _response(primary)
+        if mode == "model_repair":
+            return OpenAIResponseResult(
+                schema_version="1.0", text="", model="gpt-5-mini"
+            )
+        return _response(complete)
+
+    result = execute_structured_output(
+        StructuredOutputExecutionRequest(
+            schema_version="1.0",
+            report_id="empty-repair-feedback-1",
+            artifact_family="validation_grounding",
+            schema_name="grounding_validation_output",
+            model="gpt-5-mini",
+            terminal_failure_code="validation_grounding_invalid_json",
+        ),
+        _ctx(),
+        call_model=call_model,
+        normalize_payload=lambda payload: payload,
+        validate_payload=validate_payload,
+        is_substantive=lambda candidate: bool(candidate),
+        model_pricing={},
+    )
+
+    assert result.payload == complete
+    assert [call[0] for call in calls] == [
+        "primary",
+        "model_repair",
+        "regeneration",
+    ]
+    assert calls[2][1] == calls[1][1]
+    assert "grounding_claim_check_coverage_invalid" in calls[2][2]
+    assert "missing or ambiguous public item ids: insight:fact-1:so_what" in calls[2][2]
+    assert "empty_response:empty" in calls[2][2]
+
+
+def test_non_empty_model_repair_remains_the_regeneration_source():
+    """A substantive repair response keeps its latest response and feedback."""
+
+    primary = {"stage": "primary"}
+    repaired = {"stage": "repair"}
+    calls: list[tuple[str, str, str]] = []
+
+    def validate_payload(candidate: dict) -> None:
+        if candidate.get("stage") == "final":
+            return
+        code = (
+            "primary_grounding_invalid"
+            if candidate.get("stage") == "primary"
+            else "repair_grounding_invalid"
+        )
+        raise AppError(code=code, message=code, retryable=False)
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        calls.append((mode, original_response, schema_errors))
+        if mode == "primary":
+            return _response(primary)
+        if mode == "model_repair":
+            return _response(repaired)
+        return _response({"stage": "final"})
+
+    result = execute_structured_output(
+        StructuredOutputExecutionRequest(
+            schema_version="1.0",
+            report_id="non-empty-repair-feedback-1",
+            artifact_family="validation_grounding",
+            schema_name="grounding_validation_output",
+            model="gpt-5-mini",
+        ),
+        _ctx(),
+        call_model=call_model,
+        normalize_payload=lambda payload: payload,
+        validate_payload=validate_payload,
+        is_substantive=lambda candidate: bool(candidate),
+        model_pricing={},
+    )
+
+    assert result.payload == {"stage": "final"}
+    assert json.loads(calls[2][1]) == repaired
+    assert "repair_grounding_invalid" in calls[2][2]
+    assert "primary_grounding_invalid" not in calls[2][2]
+
+
+def test_recovery_exhaustion_retains_primary_and_terminal_error_classes(caplog):
+    """Exhaustion remains fail-closed and keeps both bounded failure causes."""
+
+    calls: list[str] = []
+
+    def validate_payload(candidate: dict) -> None:
+        stage = (
+            "repair"
+            if candidate.get("stage") == "model_repair"
+            else candidate.get("stage")
+        )
+        code = {
+            "primary": "primary_grounding_invalid",
+            "repair": "repair_grounding_invalid",
+            "regeneration": "terminal_grounding_invalid",
+        }.get(str(stage), "unknown_grounding_invalid")
+        raise AppError(code=code, message=code, retryable=False)
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        del original_response, schema_errors
+        calls.append(mode)
+        return _response({"stage": mode})
+
+    caplog.set_level(logging.INFO, logger="market_lense.structured_output_service")
+    with pytest.raises(StructuredOutputFailure) as exc_info:
+        execute_structured_output(
+            StructuredOutputExecutionRequest(
+                schema_version="1.0",
+                report_id="recovery-exhaustion-1",
+                artifact_family="validation_grounding",
+                schema_name="grounding_validation_output",
+                model="gpt-5-mini",
+                terminal_failure_code="validation_grounding_invalid_json",
+            ),
+            _ctx(),
+            call_model=call_model,
+            normalize_payload=lambda payload: payload,
+            validate_payload=validate_payload,
+            is_substantive=lambda candidate: bool(candidate),
+            model_pricing={},
+        )
+
+    assert calls == ["primary", "model_repair", "regeneration"]
+    assert exc_info.value.context["error_class"] == "terminal_grounding_invalid"
+    assert exc_info.value.context["original_error_class"] == (
+        "primary_grounding_invalid"
+    )
+    outcome = next(
+        json.loads(record.message)["fields"]
+        for record in caplog.records
+        if '"event": "structured_output_recovery_outcome"' in record.message
+    )
+    assert outcome["failure_reason"] == "terminal_grounding_invalid"
+    assert outcome["original_error_class"] == "primary_grounding_invalid"
+
+
 def test_verified_grounding_unknown_item_feedback_and_terminal_context_are_bounded():
     safe_id = "insight:fact-1:so_what"
     unsafe_id = "item id with spaces and <source text>"
