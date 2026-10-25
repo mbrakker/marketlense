@@ -177,9 +177,7 @@ def artifact_candidate_allowed_evidence_ids(
 
     findings_pack = evidence_packs.get("findings")
     raw_findings = (
-        findings_pack.get("findings")
-        if isinstance(findings_pack, dict)
-        else None
+        findings_pack.get("findings") if isinstance(findings_pack, dict) else None
     )
     if isinstance(raw_findings, list) and raw_findings:
         eligible_findings = fallback_artifact_insights_from_findings(
@@ -220,14 +218,10 @@ def artifact_candidate_allowed_evidence_ids(
                 or (
                     page is not None
                     and (
-                        not isinstance(page, int)
-                        or isinstance(page, bool)
-                        or page < 1
+                        not isinstance(page, int) or isinstance(page, bool) or page < 1
                     )
                 )
-                or re.fullmatch(
-                    r"source:page:\d+", evidence_id, flags=re.IGNORECASE
-                )
+                or re.fullmatch(r"source:page:\d+", evidence_id, flags=re.IGNORECASE)
             ):
                 continue
             key = evidence_id.casefold()
@@ -3218,9 +3212,7 @@ def validate_artifact_candidate_evidence_ids(
             spans = item.get("evidence_spans")
             if isinstance(spans, list):
                 references.extend(
-                    span.get("evidence_id")
-                    for span in spans
-                    if isinstance(span, dict)
+                    span.get("evidence_id") for span in spans if isinstance(span, dict)
                 )
             for reference in references:
                 value = _s(reference).strip()
@@ -3580,7 +3572,11 @@ def bind_artifact_evidence_spans(
                     span
                     for span in derived
                     if span.get("source_pack")
-                    in {"findings", "findings_statement", "quote_candidates"}
+                    in {
+                        "findings",
+                        "quote_candidates",
+                        "verified_facts",
+                    }
                 ]
                 canonical_spans = source_bound or derived
                 canonical_evidence = " ".join(
@@ -3829,7 +3825,8 @@ def page_bound_direct_evidence_packs(
         evidence_id
         for evidence_id, spans in span_index.items()
         if any(
-            span.get("source_pack") in {"findings", "quote_candidates"}
+            span.get("source_pack")
+            in {"findings", "quote_candidates", "verified_facts"}
             and isinstance(span.get("page"), int)
             and span["page"] > 0
             and _s(span.get("text")).strip()

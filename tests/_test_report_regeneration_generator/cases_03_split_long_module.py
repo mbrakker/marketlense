@@ -1,6 +1,9 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
+
+from src.generators.artifact_normalization import page_bound_direct_evidence_packs
 
 __file__ = str(
     _SplitPath(__file__).resolve().parent.parent
@@ -344,11 +347,15 @@ def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("selected_evidence_id", "expect_rejection"),
-    [("sec-1", True), ("repair-finding", False)],
+    ("selected_evidence_id", "expect_rejection", "source_pack"),
+    [
+        ("sec-1", True, "doc_map"),
+        ("repair-finding", False, "findings"),
+        ("verified-fact:repair-finding", False, "verified_facts"),
+    ],
 )
 def test_insight_evidence_rebind_requires_relevant_direct_source_with_page(
-    tmp_path, selected_evidence_id: str, expect_rejection: bool
+    tmp_path, selected_evidence_id: str, expect_rejection: bool, source_pack: str
 ):
     current = _current_artifacts()
     evidence_packs = {
@@ -369,6 +376,13 @@ def test_insight_evidence_rebind_requires_relevant_direct_source_with_page(
             ]
         }
     }
+    if source_pack == "verified_facts":
+        evidence_packs["findings"]["family_status"] = {
+            "status": "generated",
+            "policy_action": "keep",
+            "source": "verified_facts",
+        }
+        evidence_packs["findings"]["findings"][1]["id"] = selected_evidence_id
     doc_map = {
         "doc_id": "doc-1",
         "sections": [
@@ -441,15 +455,48 @@ def test_insight_evidence_rebind_requires_relevant_direct_source_with_page(
     )
 
     repaired = response.updated_artifacts["insights_final"][0]
-    assert repaired["evidence_id"] == "repair-finding"
+    assert repaired["evidence_id"] == selected_evidence_id
     assert repaired["pages"] == [7]
     assert repaired["evidence"] == "A separately retained direct source finding."
     assert repaired["evidence_spans"] == [
         {
-            "evidence_id": "repair-finding",
-            "source_pack": "findings",
+            "evidence_id": selected_evidence_id,
+            "source_pack": source_pack,
             "page": 7,
             "text": "A separately retained direct source finding.",
+        }
+    ]
+
+
+def test_page_bound_rebind_keeps_authoritative_verified_fact_pages() -> None:
+    evidence_packs = {
+        "findings": {
+            "family_status": {
+                "status": "generated",
+                "policy_action": "keep",
+                "source": "verified_facts",
+            },
+            "findings": [
+                {
+                    "id": "verified-fact:repair-finding",
+                    "text": "A verified fact retained on page seven.",
+                    "evidence": "A verified fact retained on page seven.",
+                    "pages": [7],
+                }
+            ],
+        }
+    }
+
+    filtered = page_bound_direct_evidence_packs(evidence_packs)
+
+    assert filtered["findings"]["findings"] == evidence_packs["findings"]["findings"]
+    spans = artifact_evidence_span_index(doc_map={}, evidence_packs=filtered)
+    assert spans["verified-fact:repair-finding"] == [
+        {
+            "evidence_id": "verified-fact:repair-finding",
+            "source_pack": "verified_facts",
+            "page": 7,
+            "text": "A verified fact retained on page seven.",
         }
     ]
 

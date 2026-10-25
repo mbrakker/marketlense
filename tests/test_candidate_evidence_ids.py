@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from src.generators.artifact_generator import generate_artifacts
 from src.generators.artifact_normalization import (
     artifact_candidate_allowed_evidence_ids,
+    validate_artifact_candidate_evidence_ids,
 )
+from src.utils.errors import AppError
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
     FakeAnalysisStore,
@@ -23,8 +27,7 @@ from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
 
 def test_candidate_prompt_receives_all_eligible_factual_evidence_ids(tmp_path):
     candidates = [
-        _insight(f"f{index}", score=1 - (index / 100))
-        for index in range(1, 9)
+        _insight(f"f{index}", score=1 - (index / 100)) for index in range(1, 9)
     ]
     evidence = _generation_evidence(10)
     prompt_client = CapturingPromptClient()
@@ -60,8 +63,7 @@ def test_candidate_docmap_reference_is_rejected_before_shortlisting(tmp_path):
     invalid = _insight("f1", score=0.99)
     invalid["evidence_id"] = "section-1"
     candidates = [invalid] + [
-        _insight(f"f{index}", score=1 - (index / 100))
-        for index in range(2, 9)
+        _insight(f"f{index}", score=1 - (index / 100)) for index in range(2, 9)
     ]
     responses = _generation_responses(
         candidates,
@@ -147,3 +149,21 @@ def test_candidate_evidence_vocabulary_reuses_fidelity_and_source_eligibility():
     }
 
     assert artifact_candidate_allowed_evidence_ids(evidence_packs) == ["f1", "q1"]
+
+
+def test_candidate_secondary_evidence_ids_must_use_the_same_allowed_vocabulary():
+    with pytest.raises(AppError) as error:
+        validate_artifact_candidate_evidence_ids(
+            [
+                {
+                    "evidence_id": "f1",
+                    "evidence_ids": ["f1", "f2", "section-1"],
+                }
+            ],
+            ["f1", "f2"],
+        )
+
+    assert error.value.code == "artifact_candidate_evidence_reference_invalid"
+    assert error.value.context["invalid_references"] == [
+        {"index": 0, "evidence_id": "section-1"}
+    ]

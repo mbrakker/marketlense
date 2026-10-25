@@ -977,7 +977,12 @@ def _claim_scoped_grounding_package(
             evidence_id
             for evidence_id, spans in direct_spans.items()
             if any(
-                span.get("source_pack") in {"findings", "quote_candidates"}
+                span.get("source_pack")
+                in {
+                    "findings",
+                    "quote_candidates",
+                    "verified_facts",
+                }
                 and isinstance(span.get("page"), int)
                 and span["page"] > 0
                 and _s(span.get("text")).strip()
@@ -5216,7 +5221,12 @@ def _regenerate_one_final_insight(
         canonical_spans = [
             span
             for span in canonical_span_index.get(rebound_evidence_id.casefold(), [])
-            if span.get("source_pack") in {"findings", "quote_candidates"}
+            if span.get("source_pack")
+            in {
+                "findings",
+                "quote_candidates",
+                "verified_facts",
+            }
             and isinstance(span.get("page"), int)
             and span["page"] > 0
             and _s(span.get("text")).strip()
@@ -5252,7 +5262,12 @@ def _regenerate_one_final_insight(
         rebound_spans = canonical_insight.get("evidence_spans")
         if not any(
             isinstance(span, dict)
-            and span.get("source_pack") in {"findings", "quote_candidates"}
+            and span.get("source_pack")
+            in {
+                "findings",
+                "quote_candidates",
+                "verified_facts",
+            }
             and isinstance(span.get("page"), int)
             and span["page"] > 0
             and _s(span.get("text")).strip()
