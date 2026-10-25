@@ -221,6 +221,74 @@ effectiveness and broader Step 2 promotion. Step 3 remains unstarted/not
 ready. The follow-up does not claim a causal live-quality improvement from one
 stochastic run.
 
+## Step 1 coverage correction and fresh Adjust replay — 2026-10-25
+
+Commit `3eb0eadcdddf90b973e955cb41d78b531ec6021b` closes the three targeted
+selection defects without adding a provider call. Theme coverage now resolves
+against original findings and fidelity-approved evidence IDs; the findings
+fallback is no longer used as a membership oracle. Short rosters receive a
+bounded six-to-eight opportunity pool, ranked by the existing quality,
+fidelity, plan, and deduplication rules. Final selection uses the same shared
+validator to retain supported central themes while allowing weaker optional
+themes to be omitted. Selection identity advanced to
+`evidence_backed_shortlisting:15`.
+
+The required fresh isolated Adjust run used the exact frozen PDF with
+SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`, commit
+`3eb0eadc`, and no publication or canonical-artifact write. The candidate
+checkpoint is not an unexplained empty success: the provider produced an
+empty candidate roster after three structured-output attempts
+(`structured_output_empty`, recovery exhausted). The existing findings
+fallback then supplied and retained seven fidelity-approved opportunities;
+the audit records model output `0`, fallback `7`, selected `7`, pool bound
+`7`, and no unresolved supplementation theme. A separate report-level
+structured-output repair call was recorded; automatic repairs were `0`.
+
+| Funnel measure | Latest Step 1 baseline | Fresh corrected run |
+| --- | ---: | ---: |
+| Provider calls | 56 | 51 |
+| Input tokens | 545,144 | 645,698 |
+| Output tokens | 113,908 | 103,218 |
+| Estimated cost | `$0.125492` | `$0.135208` |
+| Wall-clock | 924.187 s | 782.212 s |
+| Model / fallback candidates | 8 / 0 | 0 / 7 |
+| Evaluated / admitted / quarantined | 8 / 7 / 1 | 7 / 5 / 2 |
+| Final insights | 5 | 5 |
+
+Relative to that stochastic baseline, the run used 5 fewer calls (-8.9%),
+100,554 more input tokens (+18.4%), 10,690 fewer output tokens (-9.4%),
+`$0.009716` more estimated cost (+7.7%), and 141.975 fewer seconds
+(-15.4%). A separate current cached-input-token breakout was not retained in
+the compact cohort result, so no cached-token improvement is claimed.
+
+The pre-admission plan contained seven themes. Visual admission left two
+supported themes and lost five optional themes; no central theme was lost.
+The final selection retained both supported central themes and omitted no
+central theme. The five final, independently checked claims were:
+
+| Stable ID | PDF page | Source-grounded result |
+| --- | ---: | --- |
+| `ecommerce-installs` | 27 | Global e-commerce installs fell 10% year over year in 2025. |
+| `ecommerce-install-session-growth` | 27 | Global e-commerce sessions increased 5% year over year in 2025. |
+| `ai-maturity` | 9 | A small advanced-deployment group reportedly achieved efficiency gains over 20%; the qualifier was preserved. |
+| `intro-installs-growth` | 6 | Global app installs grew 10% year over year in 2025 versus 8% in 2024. |
+| `gaming-casual-installs` | 19 | Casual-game installs grew 19% and sessions 37% year over year from 2024 to 2025. |
+
+Full-page PDF text and rendered-page review found the quantities, populations,
+periods, qualifiers, evidence IDs, and physical pages consistent. Validation
+and publication-readiness both passed; no unsupported retained claim or
+public-citation identifier leak was observed. The run does demonstrate that
+the empty candidate checkpoint is explained and safely recovered, but it does
+not demonstrate improved live model shortlisting: the model roster was empty,
+five of seven post-admission themes were optional losses, and the comparison
+is stochastic.
+
+**Verdict:** PASS for deterministic theme mapping, bounded fallback
+accounting, final central-theme protection, and focused regression coverage;
+**PARTIAL/NO-GO** for live selection effectiveness and broader Step 2
+promotion. Step 3 remains unstarted/not ready.
+
 ## Artifact references
 
 - Fresh cohort result: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\cohort_result.json`

@@ -5481,3 +5481,38 @@ is **PASS** for deterministic coverage/selection and renderer corrections but
 **PARTIAL/NO-GO** for broader Step 2 live selection effectiveness; Step 3
 remains unstarted/not ready. Full ledger and artifact paths are in the
 [P1 candidate-recovery supplement](verified-claims-step2-p1-candidate-recovery-20261025.md).
+
+**Final Step 1 coverage correction and fresh Adjust replay — 2026-10-25
+(`3eb0eadc`):** The selector now uses original-finding theme relationships,
+not fallback-filled source order, and the shared final validator protects
+supported central themes. The selection cache identity is
+`evidence_backed_shortlisting:15`. Focused and affected tests passed 355;
+formatting, Ruff, mypy, architecture imports, and generated-documentation
+checks passed. The exact deterministic and live evidence ledger is in the
+[candidate-recovery supplement](verified-claims-step2-p1-candidate-recovery-20261025.md).
+
+One fresh isolated Adjust run completed without publication or canonical
+mutation. It made 51 provider calls, used 645,698 input and 103,218 output
+tokens, cost `$0.135208`, and took 782.212 seconds. The candidate model
+returned an empty roster after three structured-output attempts, with recovery
+exhausted; the existing evidence-backed fallback supplied and retained seven
+opportunities. This is recorded as fallback recovery, not model selection
+success. Five of seven admitted candidates survived visual admission (two
+quarantined), and five final claims were selected. Validation and
+publication-readiness passed. Direct review of full PDF pages 6, 9, 19, and
+27 confirmed the five final claims' values, periods, populations, qualifiers,
+and provenance; no unsupported retained claim was found.
+
+The run supported two of seven post-admission planned themes and lost five
+optional themes, but lost no central theme; final selection retained all
+supported central coverage. Against the latest corrected Step 1 baseline
+(56 calls, 545,144 input, 113,908 output, `$0.125492`, 924.187 seconds,
+8 model candidates, 7 admitted, 5 final), the run had -5 calls, +100,554
+input tokens, -10,690 output tokens, +`$0.009716`, and -141.975 seconds.
+These differences are stochastic and are not attributed to the selector. The
+current compact result does not retain a separate cached-token breakdown.
+
+**Current status:** PASS for the deterministic coverage/fallback/final-
+selection correction and source-faithful retained output; **PARTIAL/NO-GO**
+for live selection effectiveness and Step 2 promotion. Step 3 remains
+unstarted/not ready.

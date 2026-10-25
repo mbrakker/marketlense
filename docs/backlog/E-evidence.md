@@ -1291,3 +1291,30 @@ second live run was made. This supports the deterministic correction but does
 not establish repeated live selection effectiveness; E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+**Final insight-coverage correction evidence — 2026-10-25
+(`3eb0eadc`):** The selector now resolves editorial themes through original
+findings and supported canonical evidence IDs, bounds supplementation to the
+strongest six-to-eight eligible opportunities, and applies one shared
+verified final-selection coverage check to serial/DAG/cache paths. Selection
+identity advanced to `evidence_backed_shortlisting:15`. Focused affected
+coverage/regeneration/quality tests passed 348; formatting, Ruff, mypy,
+architecture imports, and generated-documentation checks passed.
+
+One fresh isolated frozen Adjust run used 51 calls, 645,698 input tokens,
+103,218 output tokens, `$0.135208`, and 782.212 seconds. The model candidate
+roster was empty after three structured-output attempts and exhausted recovery;
+the existing evidence-backed fallback supplied and retained seven candidates,
+which is now explicitly distinguished from model success. Five were admitted,
+two quarantined, and five final claims passed validation and publication
+readiness. Two of seven post-admission themes were supported, five optional
+themes were lost, and no central theme was lost or omitted at final selection.
+Full-page review confirmed the final pages, metrics, periods, qualifiers, and
+provenance. Compared with the latest corrected 56-call baseline, this run had
+five fewer calls, 100,554 more input tokens, 10,690 fewer output tokens,
+`$0.009716` higher estimated cost, and 141.975 fewer seconds; the differences
+are stochastic and do not establish live selection improvement. Cached-token
+breakout was not retained in the compact result. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. This evidence does not close the repeated-run/live
+selection gap or authorize Step 2/3 promotion.

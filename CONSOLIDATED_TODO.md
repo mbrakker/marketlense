@@ -1026,6 +1026,27 @@ is complete; E18 remains **Active/PARTIAL**, Step 2 remains
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md` and
 `docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.
 
+**Final insight-coverage correction — 2026-10-25 (`3eb0eadc`):** Theme
+coverage now uses original-finding relationships rather than fallback-filled
+source order; short rosters use a bounded six-to-eight opportunity pool; and
+the shared final validator rejects omission of supported central themes while
+allowing optional omissions. Cache identity is
+`evidence_backed_shortlisting:15`. The fresh isolated Adjust run explained
+the retained empty candidate checkpoint: three structured-output attempts
+exhausted recovery, then the existing fallback supplied and retained seven
+fidelity-approved candidates. It admitted five, quarantined two, and selected
+five final claims; grounding/validation and publication readiness passed with
+no publication or canonical write. Two of seven post-admission themes were
+supported, five optional themes were lost, and no central theme was lost or
+omitted at final selection. The run used 51 calls, 645,698 input tokens,
+103,218 output tokens, `$0.135208`, and 782.212 seconds, versus the latest
+corrected baseline's 56 calls, 545,144 input, 113,908 output, `$0.125492`,
+and 924.187 seconds. These stochastic differences are not attributed to the
+selector. The deterministic slice is complete, but E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. See the Step 2 report and candidate-recovery
+supplement for the full claim ledger and artifact paths.
+
 **Selection-coverage and documentation-CI correction — 2026-10-25:** The
 `e0e7cb22` correction now uses a bounded six-to-eight opportunity pool when a
 short model roster omits strong fidelity-approved findings, while preserving

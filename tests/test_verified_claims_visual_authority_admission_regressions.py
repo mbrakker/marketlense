@@ -229,6 +229,16 @@ def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
         candidates,
         plan_evidence_ids=[f"f{index}" for index in range(1, 8)],
     )
+    responses["insights_final"] = {
+        "insights_final": [
+            {
+                **candidate,
+                "evidence_id": f"verified-fact:{candidate['id']}",
+                "evidence_spans": [],
+            }
+            for candidate in candidates[:2]
+        ]
+    }
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         f"verified-fact:{candidates[0]['id']}"
     )
