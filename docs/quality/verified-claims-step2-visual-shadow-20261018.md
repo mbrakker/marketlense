@@ -4996,3 +4996,69 @@ default tests/coverage, both mutation partitions, static gates, and
 `release_evidence`. E17 P1.1 is therefore **Complete**. E17 remains Active,
 broader verified-facts Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 unstarted/not ready. No E17.2 work was started.
+
+#### E17 P1 visual-claim parallelism experiment — 2026-10-25 (`b27dd1c0`, reverted)
+
+This bounded experiment prepared all source-bound pages sequentially and used
+an opt-in two-worker pool only for independent `_evaluate_claim()` calls. It
+preserved indexed result order, per-claim correction/verification sequencing,
+the existing provider limiter, cache, usage ledger, retries, and fail-closed
+worker-exception handling. Deterministic acceptance tests passed before the
+live run; the production/configuration change was then reverted in
+`d064e39d` and the experiment-only test was removed in `a594cea7` after the
+quality gate failed. The default sequential implementation is restored.
+
+The one fresh isolated Adjust run used clean `b27dd1c0`, the retained source
+identity and PDF SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`,
+`VERIFIED_VISUAL_CLAIM_PARALLEL_WORKERS=2`, verified-facts architecture,
+`shared_batch=False`, and no publication target. Output was isolated under
+`C:\\ml-vfa-20261025-adjust-p1-parallel-run`; no WordPress write occurred.
+
+| Measure | Retained P1.1 scorecard | Parallel run | Change |
+|---|---:|---:|---:|
+| Provider calls | 74 | 78 | +4 (+5.41%) |
+| Input tokens | 831,132 | 942,509 | +111,377 (+13.40%) |
+| Output tokens | 142,426 | 164,256 | +21,830 (+15.33%) |
+| Estimated provider cost | $0.168355 | $0.192903 | +$0.024548 (+14.58%) |
+| Total runner duration | 1,063.000s | 963.246s | -99.754s (-9.38%) |
+| Structured-output recoveries | 3 | 2 | -1; one recovery exhausted |
+| Automatic repairs | 0 | 0 | unchanged |
+
+The retained per-namespace profile records 18 visual correction and 17 visual
+verification calls; the task's retained scorecard describes 20 candidates and
+19 admitted facts. That source-evidence discrepancy is preserved rather than
+normalized. Against the available profile, the candidate recorded 20/20
+visual calls. The visual provider-request envelope fell from **362.039s to
+218.996s (-39.51%)**, with measured overlap of **190.060s** and maximum
+simultaneous visual calls increasing from **1 to 2**. Summed provider elapsed
+time increased from **344.050s to 408.952s (+18.86%)**, so overlapping call
+durations are not reported as wall time. Visual limiter wait was 0ms in both
+profiles; total report limiter wait was 4,226ms versus 4,229ms. One candidate
+needed a second correction attempt in each run; the parallel run's second
+attempt also produced the paired second verification call. No visual provider
+call failed or retried at the transport layer.
+
+The parallel terminal audit evaluated 19 of 19 supplied candidates, admitted
+16 facts and quarantined 3, while the requested retained scorecard expects 20
+candidates and 19 admitted facts. It still produced five final insights. Full
+PDF review found those five final texts source-supported: finance CPI and
+retention on page 37, gaming installs/sessions on page 19, e-commerce partner
+counts on page 31, and the qualified advanced-GenAI result on page 9. Public
+editorial quality passed and no independently confirmed unsupported material
+claim was found in those five texts. Nevertheless, the terminal grounding
+artifact was non-substantive, the report ended `validation_failed`, reported
+28 unresolved retained factual claims, and publication readiness failed. The
+two structured-output recovery sequences were: grounding batch 01 repair and
+regeneration succeeded; grounding batch 04 repair and regeneration remained
+invalid. These are the observed recovery records, not newly invented repair
+scenarios.
+
+**Decision: REVERT / FAIL for the optimization.** The end-to-end reduction
+was below the required 10% threshold, cost and raw token usage increased, and
+the only fresh candidate run did not preserve the grounding/readiness gate or
+the requested admitted-fact coverage. The single stochastic run does not prove
+that concurrency caused the grounding failure, but it is sufficient to reject
+this candidate under the pre-declared quality rule. No broader worker setting
+was enabled, and no additional optimization was started. Step 2 remains
+**PARTIAL/NO-GO** and Step 3 remains **unstarted/not ready**.

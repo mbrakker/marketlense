@@ -940,3 +940,17 @@ historical trigger is explicitly unknown because no failure diagnostic was
 persisted. The focused suite passed 236 tests. **E17 P1.1 is complete.** E17
 remains Active; E17.2, broader Step 2, and Step 3 remain unstarted or not
 ready as documented in the Step 2 evidence report.
+
+**E17 P1 visual-claim parallelism experiment — 2026-10-25 (reverted):** One
+fresh isolated Adjust run with two opt-in visual workers reduced the measured
+visual provider-request envelope by 39.51% and showed actual two-call overlap,
+but end-to-end duration improved only **9.38%**, below the 10% acceptance
+target. Calls/tokens/cost increased from **74 / 831,132 / 142,426 /
+`$0.168355`** to **78 / 942,509 / 164,256 / `$0.192903`**. The run ended
+`validation_failed` with a non-substantive grounding artifact, failed
+publication readiness, and 16 admitted facts against the retained scorecard's
+19; five final texts were source-supported on direct PDF review, but the
+quality gate was not preserved. The implementation was reverted in
+`d064e39d` and the experiment-only test removed in `a594cea7`; E17 remains
+Active, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not
+ready**. See the detailed Step 2 evidence report.

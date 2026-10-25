@@ -1030,6 +1030,20 @@ live benchmark changed. **E17 P1.1 is complete; E17 remains Active.** E17.2
 and later E17 slices remain unstarted. See the completion subsection in the
 [Step 2 evidence report](../quality/verified-claims-step2-visual-shadow-20261018.md).
 
+**Evidence update — 2026-10-25 (E17 P1 visual-claim parallelism; reverted):**
+One isolated two-worker Adjust experiment at `b27dd1c0` reduced the visual
+provider-request envelope from 362.039s to 218.996s with observed two-call
+overlap, but whole-run duration improved only 9.38% (1,063.000s to 963.246s).
+Calls, input tokens, output tokens, and estimated cost increased from 74 /
+831,132 / 142,426 / `$0.168355` to 78 / 942,509 / 164,256 / `$0.192903`.
+The run ended `validation_failed`, with 16 admitted facts versus the retained
+scorecard's 19, non-substantive grounding, and failed publication readiness.
+The production change was reverted in `d064e39d` and its experiment-only test
+removed in `a594cea7`; sequential behavior remains the only enabled mode.
+This is **no change needed** evidence for E17's parallelism slice, not a claim
+that concurrency caused the stochastic grounding failure. Full measurements
+and source review are in the Step 2 evidence report.
+
 ### Luna implementation prompt — E17
 
 ```text
