@@ -896,3 +896,18 @@ defects but does not establish a final Adjust readiness pass. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. Detailed evidence is in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Final verified-mode Adjust integration — 2026-10-25 (`9b6ce50c`):** The
+canonical verified-fact text now preserves validated page-bound source-truth
+notes for grounding, and verified regeneration authorizes nested summary
+claim-map rebinding only for the repaired item(s). Provider-free checks showed
+that expert-only repair leaves the summary map unchanged and that a direct
+summary repair restores canonical page-29 Adjust CPI evidence. A fresh clean
+isolated Adjust run completed with 19 admitted verified facts, five final
+insights, grounding and publication-readiness pass, zero unresolved retained
+factual claims, and no publication writes (`81` calls, `$0.197232`). Direct
+PDF review covered pages 6, 9, 13, 19, 27, 29, and 35; the result is a
+verified-mode Adjust integration **PASS**, while broader Step 2 effectiveness
+remains **PARTIAL/NO-GO** and Step 3 remains **unstarted/not ready**. Full
+evidence is recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

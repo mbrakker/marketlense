@@ -4763,3 +4763,69 @@ because the intentional expert-context prompt requirement is within the
 existing gate. Step 2 therefore remains **PARTIAL / NO-GO**: the code-level
 ownership and targeted-repair safeguards are corrected, but the fresh report
 did not reach final HTML/readiness and Step 3 remains **unstarted/not ready**.
+
+#### Final verified-mode Adjust integration — 2026-10-25 (`9b6ce50c`)
+
+The two producer-side defects exposed by the preceding isolated run are now
+corrected. `canonical_fact_text()` carries the validated
+`provenance.source_truth_notes_by_page` into the canonical grounding evidence,
+so page-bound methodology qualifiers are not lost before semantic grounding.
+Verified regeneration now receives explicit nested summary claim-map
+authorization: an executive-summary-only repair does not rebind the claim map,
+and a claim-map repair rebinds only the authorized item indices. The existing
+scope validator and fail-closed evidence rebind remain unchanged.
+
+Provider-free retained-artifact checks on the corrected code showed that an
+expert-comment-only repair leaves the summary claim-map hash unchanged, while
+a direct summary claim-map repair restores the canonical Adjust CPI evidence
+on PDF page 29 (`source_pack: verified_facts`) rather than retaining stale
+candidate text. These checks used the existing finalizer and validators and
+made no provider calls.
+
+The required fresh isolated Adjust run was executed from clean committed SHA
+`9b6ce50cba401a64de17f9aec86fe3f243e211c1` with
+`--verified-facts-architecture`, the frozen cohort manifest, and no publication
+target. It completed with the following mutually exclusive terminal results:
+
+| Stage/result | Observed outcome |
+| --- | --- |
+| Visual admission | 20 evaluated; 19 admitted; 1 quarantined; coverage complete |
+| Verified facts | 19; source hash `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` |
+| Final editorial | 5 insights; 5 summary claims; 0 automatic repairs |
+| Grounding/readiness | validation pass (27 semantic validations); publication readiness pass; 0 unresolved retained factual claims; 0 unsupported claims |
+| Workflow state | `awaiting_review`; publication false; no WordPress writes |
+| Provider usage | 81 calls; 9 file-search calls; 1,017,364 input tokens; 148,466 output tokens; `$0.197232`; 1,151.925 seconds |
+
+The final stable insight identities and authoritative pages were:
+
+| Stable identity | Subject | Physical page |
+| --- | --- | ---: |
+| `insight-ecommerce-cpi-divergence` | E-commerce CPI divergence | 29 |
+| `global-app-growth-2025` | Global app growth | 6 |
+| `insight-genai-maturity-efficiency` | GenAI maturity and efficiency | 9 |
+| `insight-gaming-subvertical-growth-divergence` | Gaming strategy divergence | 19 |
+| `insight-finance-regional-growth` | Finance regional growth | 35 |
+
+Direct PDF review covered pages 6, 9, 13, 19, 27, 29, and 35. The claims
+match the cited values, categories, populations, and 2024–2025 timeframe. The
+page-13 methodology caveat remains source evidence for grounding but was not
+promoted into unsupported final editorial wording. The generated HTML retained
+the five report-specific claims, including the conditional gaming
+recommendation and the expert-comment distinction between installs and
+sessions. Static inspection found one H1, the expected section structure, 57
+paragraphs, one image, and nine links; the unsupported methodology-caveat
+phrase was absent. The rendered contents preview was also inspected. The
+browser-use DOM tool could not load under the available Python 3.14 SDK
+(event-loop initialization failure), and no CUA browser surface was available;
+therefore browser-DOM inspection is an explicit limitation, not a claimed
+pass.
+
+Focused tests passed (`45`), relevant regeneration/grounding/evidence tests
+passed (`323`), and scope-regression tests passed (`9`). Ruff, changed-source
+mypy, and the contract/prompt gates pass. The full local suite reports
+`8,111 passed, 2 skipped, 32 deselected`; its only failure under the default
+CPython 3.14 runner is the supported-wheelhouse test, which passes under
+CPython 3.12 (`1 passed`). This isolated run is a **PASS** for the Adjust
+verified-mode integration gate. Broader Step 2 shadow/live effectiveness
+remains **PARTIAL / NO-GO** until the retained frozen cohort has equivalent
+fresh evidence, and Step 3 remains **unstarted/not ready**.
