@@ -136,6 +136,91 @@ full frozen cohort.
 and this fresh Adjust report; **PARTIAL/NO-GO** for broader Step 2 live
 selection effectiveness. Step 3 remains unstarted/not ready.
 
+## Coverage-aware shortlist follow-up — e0e7cb22 and 8bd2b15f
+
+The follow-up correction separates the existing minimum viable two-insight
+check from the default five-insight editorial target. Before visual admission,
+the selector now considers a bounded six-to-eight candidate opportunity pool,
+uses the existing finding/evidence-fidelity signals, and resolves section-ID
+plan references through their original findings. An adequate eight-item model
+roster remains on the model path with no fallback call. A short roster is
+supplemented only when additional distinct, fidelity-approved opportunities
+exist; a report with only two eligible findings remains a valid two-insight
+report. The verified final selector now preserves the final model's explicit
+selection rather than padding it from the candidate roster.
+
+The same follow-up records planned, supported, lost, and central themes after
+visual admission. In the fresh run below, four of five planned themes were
+supported, one optional cross-platform theme was lost, no central theme was
+lost, and seven admitted alternatives remained available. This is an honest
+coverage result, not restoration of the quarantined fact.
+
+The first attempted invocation failed before provider work because the nested
+temporary path exceeded the Windows path limit (`analysis_pack_path_too_long`).
+It is retained as an environment/preflight limitation and excluded from the
+quality denominator. One corrected isolated provider run was then executed
+from the short worktree path. It used producer commit
+`e0e7cb22c043c794dc6540094e04b65245092e29`; the public-render citation
+correction is `8bd2b15f`. The run root was
+`C:\ml-step1-adjust-p1-live-coverage\tmp\verified-claims-coverage-20261025\frozen-reliability-wt1szsyw`.
+
+| Funnel measure | Corrected run |
+| --- | ---: |
+| Model candidates / fallback candidates | 8 / 0 |
+| Pre-visual candidates | 8 |
+| Evaluated / admitted / quarantined | 8 / 7 / 1 |
+| Planned / supported themes | 5 / 4 |
+| Lost optional / central themes | 1 / 0 |
+| Available final alternatives | 7 |
+| Explicit final model selections | 5 |
+
+The admitted stable identities were
+`global-ecommerce-installs-sessions-2025`,
+`finance-regional-install-session-growth-2024-2025`,
+`global-casino-slots-install-session-divergence-2025`,
+`genai-maturity-and-reported-efficiency-gains`,
+`global-finance-installs-sessions-2025`,
+`global-casual-game-growth-2025`, and
+`global-gaming-retention-2024-2025`. The quarantined identity was
+`cross-platform-data-satisfaction` because its corrected binding conflicted
+with the authoritative verified fact. The final five were
+`global-finance-installs-sessions-2025` (page 34),
+`global-casino-slots-install-session-divergence-2025` (page 19),
+`genai-maturity-and-reported-efficiency-gains` (page 9),
+`global-ecommerce-installs-sessions-2025` (page 27), and
+`global-gaming-retention-2024-2025` (page 21). Direct review of the original
+PDF pages found no material factual error, unsupported causality, or binding
+mismatch in these five.
+
+| Measure | Accepted `5182502` baseline | Corrected run | Change |
+| --- | ---: | ---: | ---: |
+| Provider calls | 53 | 56 | +3 (+5.7%) |
+| Input tokens | 566,731 | 545,144 | -21,587 (-3.8%) |
+| Output tokens | 118,909 | 113,908 | -5,001 (-4.2%) |
+| Reasoning tokens | 49,057 | 47,106 | -1,951 (-4.0%) |
+| Cached input tokens | 10,830 | 10,830 | 0 |
+| Estimated cost | `$0.135151` | `$0.125492` | -`$0.009659` (-7.1%) |
+| Wall-clock | 831.0 s | 924.187 s | +93.187 s (+11.2%) |
+| Automatic repairs / recovery | 0 / 0 | 0 / 0 | unchanged |
+| Validation | pass | pass | unchanged |
+| Provider-backed readiness | pass | fail | renderer leak, corrected deterministically |
+
+The provider-backed readiness failure was solely the existing public
+identifier-leak rule: the new `verified-fact:<stable-id>` citations were not
+covered by the renderer's older `insight-*` suppression. The minimal renderer
+correction in `8bd2b15f` suppresses that internal label while preserving the
+underlying artifact evidence. A provider-free rerender of the retained output
+reported zero internal-ID leaks, zero editorial blockers, five insights, five
+metric-spine entries, and complete evidence linkage. The original provider
+readiness JSON remains an honest record of the pre-fix run and was not
+overwritten; no second provider run was made.
+
+**Follow-up verdict:** PASS for the deterministic coverage, final-selection,
+renderer, and regression slices; **PARTIAL/NO-GO** for fresh live selection
+effectiveness and broader Step 2 promotion. Step 3 remains unstarted/not
+ready. The follow-up does not claim a causal live-quality improvement from one
+stochastic run.
+
 ## Artifact references
 
 - Fresh cohort result: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\cohort_result.json`

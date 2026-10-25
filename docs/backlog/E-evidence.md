@@ -1271,3 +1271,23 @@ correctness slice, but does not prove repeated live selection stability; E18
 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. Full evidence is in the Step 2 report and its
 candidate-recovery supplement.
+
+**Selection-coverage correction evidence — 2026-10-25:** The follow-up
+`e0e7cb22` change separates the two-insight minimum from the five-insight
+editorial target, bounds short-roster supplementation at six-to-eight
+opportunities using existing fidelity-approved findings, resolves section-ID
+theme coverage through original findings, and preserves explicit verified
+final-model selection without padding. Post-admission diagnostics recorded
+five planned themes, four supported themes, one lost optional theme, no lost
+central theme, and seven admitted alternatives. The one fresh corrected Adjust
+run returned eight model candidates, used no fallback, admitted seven facts,
+quarantined one conflicting cross-platform fact, and selected five final
+facts. It used 56 calls, 545,144 input tokens, 113,908 output tokens,
+`$0.125492`, and 924.187 seconds; validation passed. Readiness recorded an
+internal `verified-fact:` public-identifier leak, fixed deterministically in
+`8bd2b15f`; provider-free rerender then reported zero leaks and zero editorial
+blockers. The provider-backed readiness record was not overwritten and no
+second live run was made. This supports the deterministic correction but does
+not establish repeated live selection effectiveness; E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.

@@ -5453,3 +5453,31 @@ review, audit fields, artifact paths and limitations are in
 fresh Adjust report; PARTIAL/NO-GO for broader Step 2 live selection
 effectiveness.** Step 3 remains unstarted/not ready. No canonical artifact was
 promoted or mutated.
+
+**Step 1 selection-coverage correction and fresh Adjust follow-up —
+2026-10-25:** `e0e7cb22c043c794dc6540094e04b65245092e29` separates the two-item
+minimum from the five-item editorial target, supplements a short model roster
+only from bounded, distinct, fidelity-approved findings, resolves section-ID
+theme references through original findings, and preserves explicit verified
+final-model selection without arbitrary padding. Post-admission diagnostics
+record planned/supported/lost themes and alternatives. The fresh run returned
+8 model candidates, invoked no fallback, admitted 7 of 8 facts, quarantined
+the conflicting `cross-platform-data-satisfaction` fact, supported 4 of 5
+planned themes, lost one optional (not central) cross-platform theme, and kept
+7 admitted alternatives. The explicit final model selected five facts on
+pages 34, 19, 9, 27, and 21; direct PDF review found no material factual or
+editorial defect. It used 56 calls, 545,144 input tokens, 113,908 output
+tokens, 47,106 reasoning tokens, `$0.125492`, and 924.187 seconds, versus the
+accepted `5182502` run's 53 calls, 566,731 input, 118,909 output, 49,057
+reasoning, `$0.135151`, and 831.0 seconds. These stochastic run deltas are
+not attributed to the selector. Provider-backed readiness failed only on the
+existing renderer's internal `verified-fact:` public-identifier leak; the
+minimal correction `8bd2b15f` suppresses that label, and provider-free
+rerender evidence reports zero leaks and zero editorial blockers. The
+provider-backed readiness record was not rewritten and no second provider run
+was made. The first nested invocation failed preflight with
+`analysis_pack_path_too_long` and is excluded from quality counts. The result
+is **PASS** for deterministic coverage/selection and renderer corrections but
+**PARTIAL/NO-GO** for broader Step 2 live selection effectiveness; Step 3
+remains unstarted/not ready. Full ledger and artifact paths are in the
+[P1 candidate-recovery supplement](verified-claims-step2-p1-candidate-recovery-20261025.md).

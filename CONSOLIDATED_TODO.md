@@ -1025,3 +1025,23 @@ is complete; E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md` and
 `docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.
+
+**Selection-coverage and documentation-CI correction — 2026-10-25:** The
+`e0e7cb22` correction now uses a bounded six-to-eight opportunity pool when a
+short model roster omits strong fidelity-approved findings, while preserving
+the existing two-item minimum and the successful eight-candidate/no-fallback
+path. It records planned/supported/lost themes after admission and respects
+explicit verified final-model selection rather than padding. The fresh run
+returned 8 model candidates, admitted 7, quarantined 1, lost 1 optional
+theme (0 central), retained 7 alternatives, and selected 5 final insights.
+It used 56 provider calls, 545,144 input tokens, 113,908 output tokens,
+`$0.125492`, and 924.187 seconds; validation passed. Readiness exposed a
+pre-existing renderer leak for the new `verified-fact:` IDs; `8bd2b15f`
+corrects the public label and provider-free rerender reports zero leaks and
+zero editorial blockers. The original provider-backed readiness record was
+preserved and no second provider or publication run was made. This is a
+deterministic coverage/renderer correction, not proof of stable live selection
+quality. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and
+Step 3 remains **unstarted/not ready**. Details:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md` and
+`docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.

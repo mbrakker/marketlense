@@ -783,16 +783,10 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
         return _verified_admission(shortlisted, digest="d" * 64)
 
     responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
-    responses["insights_final"] = {
-        "insights_final": [
-            {
-                **deepcopy(candidate),
-                "evidence_id": f"verified-fact:{candidate['id']}",
-                "evidence_spans": [],
-            }
-            for candidate in candidates
-        ]
-    }
+    responses["insights_final"]["insights_final"] = [
+        dict(candidate, evidence_id=f"verified-fact:{candidate['id']}")
+        for candidate in candidates
+    ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         f"verified-fact:{candidates[0]['id']}"
     )
