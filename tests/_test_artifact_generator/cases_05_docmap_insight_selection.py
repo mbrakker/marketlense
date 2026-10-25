@@ -261,7 +261,7 @@ def test_generate_artifacts_repairs_a_clustered_broad_plan_with_early_middle_and
         "f2",
     ]
     candidate_ids = [item["evidence_id"] for item in payload["insights_candidates"]]
-    assert candidate_ids == ["f1", "f3", "f6", "f7", "f2"], candidate_ids
+    assert candidate_ids == ["f1", "f3", "f6", "f7", "f2", "f4"], candidate_ids
     insight_ids = [item["evidence_id"] for item in payload["insights_final"]]
     assert insight_ids == ["f1", "f3", "f6", "f7", "f2"], insight_ids
     assert len(payload["insights_final"]) == 5, payload["insights_final"]
