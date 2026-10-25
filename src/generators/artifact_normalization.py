@@ -23,7 +23,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:14"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:15"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -254,23 +254,7 @@ def remap_editorial_plan_to_verified_facts(
                         aliases.setdefault(alias, set()).add(evidence_id)
         fact_discovery_ids[evidence_id] = discovery_identifiers
 
-    finding_sections: dict[str, set[str]] = {}
-    raw_findings = (
-        source_findings.get("findings")
-        if isinstance(source_findings, dict)
-        else source_findings
-    )
-    if isinstance(raw_findings, dict):
-        raw_findings = raw_findings.get("findings")
-    if isinstance(raw_findings, list):
-        for finding in raw_findings:
-            if not isinstance(finding, dict):
-                continue
-            finding_id = _s(finding.get("id")).strip()
-            section_id = normalize_text(finding.get("section_id"))
-            if finding_id and section_id:
-                finding_key = _fallback_evidence_key(finding_id)
-                finding_sections.setdefault(finding_key, set()).add(section_id)
+    finding_sections = _finding_section_ids(source_findings)
 
     section_fact_targets: dict[str, list[str]] = {}
     for evidence_id in fact_evidence_ids:
@@ -1363,6 +1347,8 @@ def select_artifact_insights(
     require_final_candidate_lineage: bool = False,
     preserve_all: bool = False,
     verified_mode: bool = False,
+    source_findings: Any = None,
+    max_count: int | None = None,
 ) -> List[Dict[str, Any]]:
     """Lead with the strongest evidence-bound insight and retain theme coverage.
 
@@ -1422,6 +1408,13 @@ def select_artifact_insights(
     required_count = max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
     selected: List[Dict[str, Any]] = []
     selected_keys: set[str] = set()
+    theme_bindings = editorial_plan_theme_bindings(
+        plan,
+        source_findings=source_findings,
+    )
+    selection_limit = (
+        max_count if isinstance(max_count, int) and max_count > 0 else None
+    )
     # A high-scored final claim may still lack its source binding; allow only
     # evidence-bound candidates to bypass the editorial plan's coverage order.
     grounded_ranked = [
@@ -1431,10 +1424,10 @@ def select_artifact_insights(
         _append_distinct_insight(
             selected, selected_keys, _best_ranked_insight(grounded_ranked)[1]
         )
-    for theme in plan["themes"]:
-        evidence_ids = {
-            normalize_text(evidence_id) for evidence_id in theme["evidence_ids"]
-        }
+    for binding in theme_bindings:
+        if selection_limit is not None and len(selected) >= selection_limit:
+            break
+        evidence_ids = set(binding["coverage_keys"])
         matching = [
             item
             for item in ranked
@@ -1445,7 +1438,13 @@ def select_artifact_insights(
                 selected, selected_keys, _best_ranked_insight(matching)[1]
             )
     for _, insight in ranked:
-        if not preserve_all and len(selected) >= required_count:
+        if selection_limit is not None and len(selected) >= selection_limit:
+            break
+        if (
+            selection_limit is None
+            and not preserve_all
+            and len(selected) >= required_count
+        ):
             break
         _append_distinct_insight(selected, selected_keys, insight)
     return selected
@@ -1501,6 +1500,93 @@ def validate_final_insight_candidate_lineage(
         ),
         retryable=False,
         context=context,
+    )
+
+
+def final_insight_editorial_coverage(
+    *,
+    final_insights: List[Dict[str, Any]],
+    candidate_insights: List[Dict[str, Any]],
+    editorial_plan: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Report which planned themes are represented by final candidate facts."""
+
+    candidate_facts = _candidate_factual_fields(candidate_insights)
+    selected_evidence_keys: set[str] = set()
+    for insight in final_insights:
+        if not isinstance(insight, dict):
+            continue
+        candidate_fact = candidate_facts.get(_s(insight.get("id")).strip())
+        evidence_ids = (
+            _ordered_item_evidence_ids(candidate_fact)
+            if candidate_fact is not None
+            else _ordered_item_evidence_ids(insight)
+        )
+        selected_evidence_keys.update(
+            _fallback_evidence_key(evidence_id) for evidence_id in evidence_ids
+        )
+
+    theme_bindings = editorial_plan_theme_bindings(editorial_plan)
+    theme_coverage: List[Dict[str, Any]] = []
+    for binding in theme_bindings:
+        coverage_keys = set(binding["coverage_keys"])
+        theme_coverage.append(
+            {
+                "theme": binding["theme"],
+                "priority": binding["priority"],
+                "selected": bool(coverage_keys & selected_evidence_keys),
+                "evidence_keys": sorted(coverage_keys),
+            }
+        )
+    priorities = [
+        item["priority"]
+        for item in theme_coverage
+        if isinstance(item.get("priority"), int)
+    ]
+    central_priority = min(priorities) if priorities else None
+    omitted_themes = [item["theme"] for item in theme_coverage if not item["selected"]]
+    omitted_central_themes = [
+        item["theme"]
+        for item in theme_coverage
+        if not item["selected"] and item["priority"] == central_priority
+    ]
+    return {
+        "planned_theme_count": len(theme_coverage),
+        "selected_theme_count": sum(1 for item in theme_coverage if item["selected"]),
+        "selected_themes": [
+            item["theme"] for item in theme_coverage if item["selected"]
+        ],
+        "omitted_themes": omitted_themes,
+        "omitted_central_themes": omitted_central_themes,
+        "selected_evidence_keys": sorted(selected_evidence_keys),
+        "theme_coverage": theme_coverage,
+    }
+
+
+def validate_final_insight_editorial_coverage(
+    *,
+    final_insights: List[Dict[str, Any]],
+    candidate_insights: List[Dict[str, Any]],
+    editorial_plan: Dict[str, Any],
+    coverage_diagnostics: Dict[str, Any] | None = None,
+) -> None:
+    """Fail closed when a supported central theme is silently omitted."""
+
+    coverage = final_insight_editorial_coverage(
+        final_insights=final_insights,
+        candidate_insights=candidate_insights,
+        editorial_plan=editorial_plan,
+    )
+    if coverage_diagnostics is not None:
+        coverage_diagnostics.clear()
+        coverage_diagnostics.update(coverage)
+    if not coverage["omitted_central_themes"]:
+        return
+    raise AppError(
+        code="artifact_final_insight_coverage_invalid",
+        message=("Final insight selection omitted a supported central editorial theme"),
+        retryable=False,
+        context={"omitted_central_themes": coverage["omitted_central_themes"]},
     )
 
 
@@ -2513,6 +2599,107 @@ def _fallback_evidence_key(value: Any) -> str:
     return normalize_text(value).removeprefix("evidence:findings:")
 
 
+def _finding_section_ids(source_findings: Any) -> dict[str, set[str]]:
+    """Index original finding IDs by their unambiguous source section."""
+
+    raw_findings = (
+        source_findings.get("findings")
+        if isinstance(source_findings, dict)
+        else source_findings
+    )
+    if isinstance(raw_findings, dict):
+        raw_findings = raw_findings.get("findings")
+    finding_sections: dict[str, set[str]] = {}
+    if not isinstance(raw_findings, list):
+        return finding_sections
+    for finding in raw_findings:
+        if not isinstance(finding, dict):
+            continue
+        finding_key = _fallback_evidence_key(finding.get("id"))
+        if not finding_key:
+            continue
+        finding_sections.setdefault(finding_key, set())
+        section_id = normalize_text(finding.get("section_id"))
+        if section_id:
+            finding_sections[finding_key].add(section_id)
+    return finding_sections
+
+
+def editorial_plan_theme_bindings(
+    editorial_plan: Dict[str, Any] | None,
+    *,
+    source_findings: Any = None,
+    eligible_finding_ids: set[str] | None = None,
+) -> List[Dict[str, Any]]:
+    """Resolve each plan theme to direct or unambiguous finding identities.
+
+    The result is deliberately a small shared mapping contract used by both
+    fallback selection and candidate coverage checks.  Section names remain
+    navigation hints: they cover a candidate only through a finding that is
+    explicitly linked to that section.
+    """
+
+    if not isinstance(editorial_plan, dict):
+        return []
+    finding_sections = _finding_section_ids(source_findings)
+    finding_ids = set(finding_sections)
+    bindings: List[Dict[str, Any]] = []
+    for theme in editorial_plan.get("themes") or []:
+        if not isinstance(theme, dict):
+            continue
+        reference_keys = {
+            _fallback_evidence_key(evidence_id)
+            for evidence_id in theme.get("evidence_ids") or []
+            if _fallback_evidence_key(evidence_id)
+        }
+        direct_finding_ids = reference_keys & finding_ids
+        section_finding_ids = {
+            finding_id
+            for finding_id, sections in finding_sections.items()
+            if len(sections) == 1 and next(iter(sections)) in reference_keys
+        }
+        if eligible_finding_ids is not None:
+            direct_finding_ids &= eligible_finding_ids
+            section_finding_ids &= eligible_finding_ids
+        coverage_keys = (
+            (direct_finding_ids | section_finding_ids)
+            if source_findings is not None
+            else reference_keys
+        )
+        bindings.append(
+            {
+                "theme": _s(theme.get("theme")).strip(),
+                "priority": theme.get("priority"),
+                "reference_keys": reference_keys,
+                "direct_finding_ids": direct_finding_ids,
+                "section_finding_ids": section_finding_ids,
+                "coverage_keys": coverage_keys,
+            }
+        )
+    return bindings
+
+
+def supported_fidelity_evidence_ids(evidence_fidelity: Any) -> set[str] | None:
+    """Return canonical finding IDs that passed the existing fidelity gate."""
+
+    results = (
+        evidence_fidelity.get("results")
+        if isinstance(evidence_fidelity, dict)
+        else None
+    )
+    if not isinstance(results, list):
+        return None
+    return {
+        claim_id.removeprefix("evidence:findings:").casefold()
+        for result in results
+        if isinstance(result, dict) and result.get("status") == "supported"
+        for candidate in [result.get("candidate")]
+        if isinstance(candidate, dict)
+        for claim_id in [_s(candidate.get("claim_id")).strip()]
+        if claim_id.startswith("evidence:findings:")
+    }
+
+
 def fallback_artifact_insights_from_findings(
     findings_pack: Any,
     *,
@@ -2541,26 +2728,20 @@ def fallback_artifact_insights_from_findings(
         if isinstance(findings_pack.get("evidence_fidelity"), dict)
         else None
     )
-    fidelity_ids: set[str] | None = None
-    if isinstance(fidelity_results, list):
-        fidelity_ids = {
-            claim_id.removeprefix("evidence:findings:").casefold()
-            for result in fidelity_results
-            if isinstance(result, dict) and result.get("status") == "supported"
-            for candidate in [result.get("candidate")]
-            if isinstance(candidate, dict)
-            for claim_id in [_s(candidate.get("claim_id")).strip()]
-            if claim_id.startswith("evidence:findings:")
-        }
-    finding_sections: dict[str, str] = {}
-    finding_ids: set[str] = set()
+    fidelity_ids = supported_fidelity_evidence_ids(
+        {"results": fidelity_results} if isinstance(fidelity_results, list) else None
+    )
+    finding_section_ids = _finding_section_ids(findings_pack)
+    finding_sections = {
+        finding_id: next(iter(sections)) if len(sections) == 1 else ""
+        for finding_id, sections in finding_section_ids.items()
+    }
     for finding in raw_findings:
         if not isinstance(finding, dict):
             continue
         finding_id = _fallback_evidence_key(finding.get("id"))
         if not finding_id:
             continue
-        finding_ids.add(finding_id)
         section_id = normalize_text(finding.get("section_id"))
         if finding_id not in finding_sections:
             finding_sections[finding_id] = section_id
@@ -2569,37 +2750,26 @@ def fallback_artifact_insights_from_findings(
 
     theme_priority: dict[str, int] = {}
     theme_evidence_ids: list[tuple[int, set[str], set[str], set[str]]] = []
-    if isinstance(editorial_plan, dict):
-        for theme in editorial_plan.get("themes") or []:
-            if not isinstance(theme, dict) or not isinstance(
-                theme.get("priority"), int
-            ):
-                continue
-            reference_keys = {
-                _fallback_evidence_key(evidence_id)
-                for evidence_id in theme.get("evidence_ids") or []
-                if _fallback_evidence_key(evidence_id)
-            }
-            direct_keys = reference_keys & finding_ids
-            section_candidate_ids = {
-                finding_id
-                for finding_id, section_id in finding_sections.items()
-                if section_id and section_id in reference_keys
-            }
-            if reference_keys:
-                theme_evidence_ids.append(
-                    (
-                        theme["priority"],
-                        reference_keys,
-                        direct_keys,
-                        section_candidate_ids,
-                    )
-                )
-            for finding_id in direct_keys | section_candidate_ids:
-                theme_priority[finding_id] = min(
-                    theme_priority.get(finding_id, theme["priority"]),
-                    theme["priority"],
-                )
+    for binding in editorial_plan_theme_bindings(
+        editorial_plan,
+        source_findings=findings_pack,
+        eligible_finding_ids=fidelity_ids,
+    ):
+        priority = binding["priority"]
+        if not isinstance(priority, int):
+            continue
+        reference_keys = set(binding["reference_keys"])
+        direct_keys = set(binding["direct_finding_ids"])
+        section_candidate_ids = set(binding["section_finding_ids"])
+        if reference_keys:
+            theme_evidence_ids.append(
+                (priority, reference_keys, direct_keys, section_candidate_ids)
+            )
+        for finding_id in direct_keys | section_candidate_ids:
+            theme_priority[finding_id] = min(
+                theme_priority.get(finding_id, priority),
+                priority,
+            )
     seen_evidence_ids: set[str] = set()
     ranked_findings: list[tuple[tuple[float, ...], int, str, str, Dict[str, Any]]] = []
     for source_order, finding in enumerate(raw_findings):

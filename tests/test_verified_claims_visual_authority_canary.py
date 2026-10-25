@@ -40,6 +40,7 @@ from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _generation_evidence,
     _generation_responses,
     _insight,
+    _verified_generation_responses,
 )
 
 SOURCE_IDENTITY = f"frozen-report|pdf-sha256:{'a' * 64}"
@@ -964,7 +965,7 @@ def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path)
         return _verified_admission(shortlisted, digest="c" * 64)
 
     def generate():
-        responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+        responses = _verified_generation_responses(candidates)
         responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
             f"verified-fact:{candidates[0]['id']}"
         )
@@ -984,7 +985,6 @@ def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path)
 
     first = generate()
     second = generate()
-
     assert admission_calls == 2
     assert second["_cache"]["visual_authority_canary"]["digest"] == "c" * 64
     assert second["insights_final"] == first["insights_final"]

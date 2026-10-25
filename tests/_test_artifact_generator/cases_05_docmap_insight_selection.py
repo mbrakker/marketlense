@@ -312,6 +312,83 @@ def test_candidate_coverage_maps_section_theme_to_linked_finding():
     )
 
 
+def test_candidate_coverage_does_not_use_unrelated_fallback_fill():
+    findings = _section_linked_findings(2)["findings"]
+    candidates = [
+        _insight("f1", score=0.99),
+        {
+            **_insight("f1", score=0.98),
+            "id": "candidate-f1-secondary",
+        },
+    ]
+
+    assert not _candidate_selection_covers_plan(
+        candidates,
+        _editorial_plan("f1", "f2"),
+        2,
+        source_findings=findings,
+    )
+    assert _candidate_selection_covers_plan(
+        [*candidates, _insight("f2", score=0.8)],
+        _editorial_plan("f1", "f2"),
+        2,
+        source_findings=findings,
+    )
+
+
+def test_candidate_coverage_does_not_treat_a_section_name_as_evidence():
+    section_only = {
+        **_insight("f1", score=0.99),
+        "evidence_id": "section-1",
+        "id": "section-only",
+    }
+
+    assert not _candidate_selection_covers_plan(
+        [section_only, {**section_only, "id": "section-only-2"}],
+        _editorial_plan("section-1"),
+        2,
+        source_findings=_section_linked_findings(1)["findings"],
+    )
+
+
+def test_generate_artifacts_supplements_full_model_pool_for_uncovered_themes(
+    tmp_path,
+):
+    evidence = _generation_evidence(9)
+    findings = evidence["findings"]["findings"]
+    for finding in findings[:6]:
+        finding["section_id"] = "section-1"
+    for finding, section_id in zip(
+        findings[6:], ("section-2", "section-3", "section-4"), strict=True
+    ):
+        finding["section_id"] = section_id
+    candidates = [_insight(f"f{index}", score=1 - index / 100) for index in range(1, 7)]
+    responses = _generation_responses(
+        candidates,
+        plan_evidence_ids=["section-1", "section-2", "section-3", "section-4"],
+    )
+    responses["insights_final"] = {"insights_final": candidates[:5]}
+
+    payload = generate_artifacts(
+        report_id="full-model-pool-uncovered-themes",
+        report_name="Full model pool uncovered themes",
+        doc_map=_doc_map(4),
+        evidence_packs=evidence,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    audit = payload["_cache"]["candidate_generation"]
+    selected_ids = {item["evidence_id"] for item in payload["insights_candidates"]}
+    assert audit["fallback_invoked"] is True
+    assert audit["fallback_candidate_count"] >= 2
+    assert audit["selected_candidate_count"] <= 8
+    assert {"f7", "f8"}.issubset(selected_ids)
+
+
 def test_generate_artifacts_supplements_short_model_roster_from_strong_findings(
     tmp_path,
 ):
@@ -424,6 +501,29 @@ def _generation_responses(
             "linkedin_post": "The report identifies retained planning themes."
         },
     }
+
+
+def _verified_final_candidates(
+    candidates: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    return [
+        {
+            **candidate,
+            "evidence_id": f"verified-fact:{candidate['id']}",
+            "evidence_spans": [],
+        }
+        for candidate in candidates
+    ]
+
+
+def _verified_generation_responses(
+    candidates: list[dict[str, object]],
+) -> dict[str, object]:
+    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+    responses["insights_final"] = {
+        "insights_final": _verified_final_candidates(candidates)
+    }
+    return responses
 
 
 def test_generate_artifacts_retains_broad_doc_map_theme_coverage(tmp_path):

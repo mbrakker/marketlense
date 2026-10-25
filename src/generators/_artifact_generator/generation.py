@@ -51,6 +51,7 @@ from src.generators.artifact_normalization import (
     build_verified_fact_doc_map,
     discard_location_only_insights,
     discard_location_only_quotes,
+    editorial_plan_theme_bindings,
     eligible_final_insight_candidates,
     fallback_artifact_insights_from_evidence,
     fallback_artifact_insights_from_findings,
@@ -68,7 +69,9 @@ from src.generators.artifact_normalization import (
     soft_copy_context_evidence_anchors,
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
+    supported_fidelity_evidence_ids,
     validate_final_insight_candidate_lineage,
+    validate_final_insight_editorial_coverage,
 )
 from src.generators.artifact_prompt_provenance import artifact_prompt_identity
 from src.generators.prompt_preparation import prepare_prompt_bundle
@@ -283,30 +286,16 @@ def _candidate_selection_covers_plan(
     if len(candidates) < required_count:
         return False
     candidate_evidence_ids = {
-        normalize_text(candidate.get("evidence_id"))
+        normalize_text(candidate.get("evidence_id")).removeprefix("evidence:findings:")
         for candidate in candidates
         if isinstance(candidate, dict) and normalize_text(candidate.get("evidence_id"))
     }
-    for theme in editorial_plan.get("themes") or []:
-        if not isinstance(theme, dict):
-            continue
-        theme_evidence_ids = {
-            normalize_text(evidence_id)
-            for evidence_id in theme.get("evidence_ids") or []
-            if normalize_text(evidence_id)
-        }
-        if source_findings is not None and theme_evidence_ids:
-            theme_findings = fallback_artifact_insights_from_findings(
-                source_findings,
-                limit=max(required_count, 1),
-                editorial_plan={"themes": [theme]},
-                evidence_fidelity=evidence_fidelity,
-            )
-            theme_evidence_ids.update(
-                normalize_text(item.get("evidence_id"))
-                for item in theme_findings
-                if isinstance(item, dict) and normalize_text(item.get("evidence_id"))
-            )
+    for binding in editorial_plan_theme_bindings(
+        editorial_plan,
+        source_findings=source_findings,
+        eligible_finding_ids=supported_fidelity_evidence_ids(evidence_fidelity),
+    ):
+        theme_evidence_ids = set(binding["coverage_keys"])
         if theme_evidence_ids and not candidate_evidence_ids.intersection(
             theme_evidence_ids
         ):
@@ -624,6 +613,7 @@ def generate_artifacts(
         "family_usage": {},
     }
     family_state_lock = Lock()
+    final_selection_coverage: Dict[str, Any] = {}
 
     def update_family_reuse(namespace: str, **fields: object) -> None:
         with family_state_lock:
@@ -657,6 +647,13 @@ def generate_artifacts(
                         final_insights=payload.get("insights_final") or [],
                         candidate_insights=insights_candidates,
                     )
+                    if visual_authority_admitter is not None:
+                        validate_final_insight_editorial_coverage(
+                            final_insights=payload.get("insights_final") or [],
+                            candidate_insights=insights_candidates,
+                            editorial_plan=editorial_plan,
+                            coverage_diagnostics=final_selection_coverage,
+                        )
 
         elif task.step_name == "summary":
 
@@ -1415,6 +1412,7 @@ def generate_artifacts(
         candidate_insights=[],
         editorial_plan=editorial_plan,
         preserve_all=visual_authority_admitter is not None,
+        source_findings=safe_evidence.get("findings"),
     )
     primary_selection_adequate = _candidate_selection_covers_plan(
         primary_selected_candidates,
@@ -1424,17 +1422,30 @@ def generate_artifacts(
         evidence_fidelity=safe_evidence.get("evidence_fidelity"),
     )
     candidate_evidence_ids = {
-        normalize_text(candidate.get("evidence_id"))
+        normalize_text(candidate.get("evidence_id")).removeprefix("evidence:findings:")
         for candidate in insights_candidates
         if isinstance(candidate, dict) and normalize_text(candidate.get("evidence_id"))
     }
     eligible_candidate_evidence_ids = {
-        normalize_text(candidate.get("evidence_id"))
+        normalize_text(candidate.get("evidence_id")).removeprefix("evidence:findings:")
         for candidate in eligible_candidate_findings
         if isinstance(candidate, dict) and normalize_text(candidate.get("evidence_id"))
     }
+    uncovered_theme_bindings = [
+        binding
+        for binding in editorial_plan_theme_bindings(
+            editorial_plan,
+            source_findings=safe_evidence.get("findings"),
+            eligible_finding_ids=supported_fidelity_evidence_ids(
+                safe_evidence.get("evidence_fidelity")
+            ),
+        )
+        if binding["coverage_keys"]
+        and not candidate_evidence_ids.intersection(binding["coverage_keys"])
+    ]
     candidate_supplement_limit = max(
         candidate_pool_target - len(candidate_evidence_ids),
+        len(uncovered_theme_bindings),
         1 if not primary_selection_adequate else 0,
     )
     candidate_supplement_limit = min(
@@ -1483,22 +1494,67 @@ def generate_artifacts(
             candidate_insights=fallback_candidates,
             editorial_plan=editorial_plan,
             preserve_all=visual_authority_admitter is not None,
+            source_findings=safe_evidence.get("findings"),
+            max_count=candidate_pool_target,
         )
+    retained_fallback_ids = {
+        normalize_text(candidate.get("evidence_id")).removeprefix("evidence:findings:")
+        for candidate in insights_candidates
+        if isinstance(candidate, dict)
+        and normalize_text(candidate.get("evidence_id"))
+        in {
+            normalize_text(item.get("evidence_id")).removeprefix("evidence:findings:")
+            for item in fallback_candidates
+            if isinstance(item, dict) and normalize_text(item.get("evidence_id"))
+        }
+    }
+    unresolved_theme_bindings = [
+        binding["theme"]
+        for binding in editorial_plan_theme_bindings(
+            editorial_plan,
+            source_findings=safe_evidence.get("findings"),
+            eligible_finding_ids=supported_fidelity_evidence_ids(
+                safe_evidence.get("evidence_fidelity")
+            ),
+        )
+        if binding["coverage_keys"]
+        and not {
+            normalize_text(candidate.get("evidence_id")).removeprefix(
+                "evidence:findings:"
+            )
+            for candidate in insights_candidates
+            if isinstance(candidate, dict)
+            and normalize_text(candidate.get("evidence_id"))
+        }.intersection(binding["coverage_keys"])
+    ]
     candidate_generation_audit.update(
         {
             "fallback_candidate_count": len(fallback_candidates),
             "fallback_invoked": fallback_attempted,
-            "fallback_reason": fallback_reason,
+            "fallback_reason": (
+                "candidate_opportunities_not_retained"
+                if fallback_attempted
+                and fallback_candidates
+                and not retained_fallback_ids
+                else fallback_reason
+            ),
             "candidate_pool_target": candidate_pool_target,
             "candidate_opportunity_count": len(eligible_candidate_findings),
             "selected_candidate_count": len(insights_candidates),
+            "candidate_pool_bound": candidate_pool_target,
+            "missing_theme_opportunities": [
+                binding["theme"] for binding in uncovered_theme_bindings
+            ],
+            "supplementation_attempted_count": len(fallback_candidates),
+            "supplementation_retained_count": len(retained_fallback_ids),
+            "supplementation_unresolved_themes": unresolved_theme_bindings,
             "selected_candidate_source": (
                 "model_and_fallback"
-                if initial_candidate_count and fallback_candidates
+                if initial_candidate_count and retained_fallback_ids
                 else "model"
                 if initial_candidate_count
                 else "fallback"
-                if fallback_candidates
+                if retained_fallback_ids
                 else "none"
             ),
         }
@@ -1788,6 +1844,13 @@ def generate_artifacts(
             final_insights=payload.get("insights_final") or [],
             candidate_insights=insights_candidates,
         )
+        if visual_authority_admitter is not None:
+            validate_final_insight_editorial_coverage(
+                final_insights=payload.get("insights_final") or [],
+                candidate_insights=insights_candidates,
+                editorial_plan=editorial_plan,
+                coverage_diagnostics=final_selection_coverage,
+            )
 
     insights_final_result: Dict[str, Any]
     if dependency_dag_enabled:
@@ -1827,6 +1890,23 @@ def generate_artifacts(
         require_final_candidate_lineage=True,
         verified_mode=visual_authority_admitter is not None,
     )
+    if visual_authority_admitter is not None:
+        final_selection_coverage.clear()
+        validate_final_insight_editorial_coverage(
+            final_insights=insights_final,
+            candidate_insights=insights_candidates,
+            editorial_plan=editorial_plan,
+            coverage_diagnostics=final_selection_coverage,
+        )
+        editorial_plan_coverage["final_selected_theme_coverage"] = deepcopy(
+            final_selection_coverage
+        )
+        visual_authority_audit["editorial_plan_coverage"] = deepcopy(
+            editorial_plan_coverage
+        )
+        candidate_generation_audit["editorial_plan_coverage"] = deepcopy(
+            editorial_plan_coverage
+        )
     selected_lead_insight = next(
         (insight for insight in insights_final if _s(insight.get("text")).strip()),
         {},

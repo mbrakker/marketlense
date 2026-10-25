@@ -137,6 +137,131 @@ def test_verified_visual_evaluation_sees_full_candidate_roster_before_editorial_
     ]
 
 
+def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
+    tmp_path,
+):
+    candidates = [_insight("f1", score=0.99), _insight("f2", score=0.98)]
+
+    def admit(shortlisted):
+        return _verified_admission(shortlisted, digest="c" * 64)
+
+    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+    responses["insights_final"] = [
+        {
+            "insights_final": [
+                {
+                    **deepcopy(candidates[1]),
+                    "evidence_id": "verified-fact:insight-f2-0.98",
+                    "evidence_spans": [],
+                }
+            ]
+        },
+        {
+            "insights_final": [
+                {
+                    **deepcopy(candidate),
+                    "evidence_id": f"verified-fact:{candidate['id']}",
+                    "evidence_spans": [],
+                }
+                for candidate in candidates
+            ]
+        },
+    ]
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        "verified-fact:insight-f1-0.99"
+    )
+    openai_client = FakeOpenAI(responses)
+
+    payload = generate_artifacts(
+        report_id="verified-central-theme-recovery",
+        report_name="Verified central theme recovery",
+        doc_map=_doc_map(2),
+        evidence_packs=_generation_evidence(2),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=openai_client,
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=admit,
+    )
+
+    final_requests = [
+        request for request in openai_client.requests if request[2] == "insights_final"
+    ]
+    assert len(final_requests) == 2
+    assert {item["id"] for item in payload["insights_final"]} == {
+        "insight-f1-0.99",
+        "insight-f2-0.98",
+    }
+    assert (
+        payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
+            "final_selected_theme_coverage"
+        ]["omitted_central_themes"]
+        == []
+    )
+
+
+def test_verified_final_selection_may_omit_an_optional_theme(tmp_path):
+    candidates = [
+        _insight("f1", score=0.99),
+        _insight("f2", score=0.98),
+        _insight("f3", score=0.97),
+    ]
+
+    def admit(shortlisted):
+        return _verified_admission(shortlisted, digest="o" * 64)
+
+    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2", "f3"])
+    responses["editorial_plan"] = {
+        "editorial_plan": {
+            "report_thesis": "The retained evidence defines the decision surface.",
+            "themes": [
+                {"theme": "Central", "priority": 1, "evidence_ids": ["f1"]},
+                {"theme": "Optional", "priority": 2, "evidence_ids": ["f2"]},
+                {"theme": "Supported", "priority": 3, "evidence_ids": ["f3"]},
+            ],
+        }
+    }
+    responses["insights_final"] = {
+        "insights_final": [
+            {
+                **deepcopy(candidates[0]),
+                "evidence_id": "verified-fact:insight-f1-0.99",
+                "evidence_spans": [],
+            },
+            {
+                **deepcopy(candidates[2]),
+                "evidence_id": "verified-fact:insight-f3-0.97",
+                "evidence_spans": [],
+            },
+        ]
+    }
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        "verified-fact:insight-f1-0.99"
+    )
+
+    payload = generate_artifacts(
+        report_id="verified-optional-theme-omission",
+        report_name="Verified optional theme omission",
+        doc_map=_doc_map(3),
+        evidence_packs=_generation_evidence(3),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=admit,
+    )
+
+    assert [item["id"] for item in payload["insights_final"]] == [
+        "insight-f1-0.99",
+        "insight-f3-0.97",
+    ]
+    assert payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
+        "final_selected_theme_coverage"
+    ]["omitted_themes"] == ["Optional"]
+
+
 def test_verified_generation_materializes_downstream_insights_from_snapshot(
     tmp_path,
 ):
