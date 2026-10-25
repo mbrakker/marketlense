@@ -1252,3 +1252,22 @@ seconds; no publication or canonical write occurred. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. Full ledger and artifact paths are in the Step 2
 evidence report.
+
+**P1 autonomous candidate recovery and fresh Adjust verification — 2026-10-25
+(`5182502d`):** The empty/missing candidate root is now recoverable through
+the existing bounded model-repair/regeneration path when eligible evidence is
+sufficient; findings fallback remains conditional and fail-closed. The
+interpretation-only regeneration boundary keeps canonical evidence available
+for targeted wording repair, while factual/metric failures still quarantine.
+The selection cache version advanced to 13. One fresh isolated Adjust run
+returned 8 model candidates, invoked no fallback or recovery, admitted 7 facts
+and quarantined 1 conflicting fact, then produced five final insights. It
+completed with 53 calls, 566,731 input tokens, 118,909 output tokens,
+`$0.135151`, and 831.0 seconds; grounding, validation, public editorial
+quality, and publication readiness passed with no publication or WordPress
+write. Direct full-PDF review found no material factual or editorial defect in
+the five final insights. This closes the P1 candidate-generation/recovery
+correctness slice, but does not prove repeated live selection stability; E18
+remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. Full evidence is in the Step 2 report and its
+candidate-recovery supplement.

@@ -1008,3 +1008,20 @@ final insights but failed grounding on an unsupported “acquisition”
 interpretation of supported installs. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. See the
 Step 2 evidence report for measured results and artifact paths.
+
+**P1 autonomous candidate recovery and fresh Adjust verification — 2026-10-25
+(`5182502d`):** The retained empty candidate checkpoint was traced to an
+accepted parse-valid primary result with no recovery, followed by unconditional
+findings fallback. Empty/missing roots now use the existing bounded recovery
+path when eligible evidence is sufficient; fallback is conditional on minimum
+and editorial-plan coverage; and interpretation-only grounding failures keep
+canonical evidence available for targeted wording repair. Cache version 13
+invalidates prior candidate selections. The fresh Adjust run returned 8 model
+candidates, used no fallback or recovery, admitted 7 facts and quarantined 1,
+and produced five final insights with validation/readiness pass (53 calls,
+566,731 input tokens, `$0.135151`, 831.0 seconds). Direct PDF review found no
+material defect in the final five. The P1 candidate-generation/recovery slice
+is complete; E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md` and
+`docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.

@@ -5387,3 +5387,69 @@ gate.** The empty checkpoint is now explainable and no significant candidate
 coverage was silently lost, but the one unsupported qualitative interpretation
 keeps grounding/readiness failed. Step 2 remains **PARTIAL/NO-GO** and Step 3
 remains **unstarted/not ready**. No further stochastic rerun was performed.
+
+#### P1 autonomous candidate recovery and fresh Adjust verification — 2026-10-25 (`5182502d`)
+
+The retained empty candidate checkpoint was traced to an accepted, parse-valid
+empty primary result at the candidate-generation boundary. The old usage row
+has no schema/provider error or recovery attempt, and the old normalizer then
+invoked findings fallback unconditionally. The raw provider response was not
+retained, so the evidence cannot distinguish an explicit `[]` from a missing
+root normalized to the same checkpoint; it does establish that empty output
+was accepted without bounded recovery. The preceding `83870a1c` run supplied
+seven model candidates plus 17 fallback candidates and reached the grounding
+gate with a qualitative “acquisition” broadening of supported finance-app
+installs.
+
+The correction is confined to existing boundaries. When eligible
+fidelity-approved findings satisfy the existing minimum, empty/missing
+candidate output is no longer accepted as an abstention: the existing bounded
+model-repair/regeneration path is available. Findings fallback remains the
+fail-closed safety path when the primary roster lacks minimum or editorial-plan
+theme coverage, but is not invoked when the primary is already adequate. The
+interpretation-only regeneration path now keeps the canonical fact available
+for targeted `so_what`/`now_what` wording repair; factual/metric failures still
+quarantine as before. Selection cache version advanced to 13 and the private
+candidate audit records the source, counts, recovery disposition, fallback
+reason and verified admission.
+
+One fresh provider-backed Adjust run from commit `5182502d` used the frozen
+PDF (SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`). It
+completed with 53 provider calls, 566,731 input tokens, 118,909 output tokens,
+`$0.135151`, and 831.0 seconds; no automatic repair, structured-output
+recovery, workflow retry, publication, or WordPress write occurred. The final
+state was `awaiting_review`, validation passed, and publication readiness
+passed. Candidate audit values were model output 8/8 raw-to-normalized,
+eligible evidence available, fallback not invoked (`primary_adequate`), 8
+selected, 7 admitted verified facts, and one quarantined conflicting fact.
+
+The final five were independently checked against the original full PDF:
+
+| Stable ID | Page | Result |
+| --- | ---: | --- |
+| `insight-ecommerce-install-session-divergence` | 27 | -10% installs / +5% sessions; distinct signals retained. |
+| `insight-ecommerce-retention-by-day` | 29 | Day-1 retention 13.2% to 12.6%; no cause asserted. |
+| `insight-finance-install-session-divergence` | 34 | -4% installs / +21% sessions; no “acquisition” broadening. |
+| `insight-genai-maturity-efficiency` | 9 | Over-20% result remains scoped to the small advanced-deployment group. |
+| `insight-ecommerce-cpi-subvertical-divergence` | 29 | Deal-discovery CPI $1.44 to $2.26; not generalized to all e-commerce. |
+
+All five retained one direct `verified-fact:` evidence ID and physical page,
+and independent review found no material factual, numeric, provenance, or
+unsupported-causality defect. Compared with the failed `83870a1c` run, the
+fresh run used 31 fewer calls, 416,533 fewer input tokens, `$0.046899` less
+cost, and 267.765 fewer seconds; compared with the preceding accepted
+`654a5cf1` run, it used 22 fewer calls and `$0.012263` less cost. These are
+stochastic run comparisons, not proof of universal live selection improvement.
+
+Focused tests and static checks passed; the full default suite had 8,141
+passes, 2 skips, 32 deselections and 24 subtests, with one local CPython 3.14
+native-wheelhouse failure that passed under CPython 3.12. The PDF candidate
+benchmark passed all four rows with matching hashes/signatures. Full per-claim
+review, audit fields, artifact paths and limitations are in
+[the P1 evidence supplement](verified-claims-step2-p1-candidate-recovery-20261025.md).
+
+**Verdict: PASS for the P1 candidate-generation/recovery correction and this
+fresh Adjust report; PARTIAL/NO-GO for broader Step 2 live selection
+effectiveness.** Step 3 remains unstarted/not ready. No canonical artifact was
+promoted or mutated.
