@@ -4931,3 +4931,68 @@ editorial regression. The aggregate provider-elapsed increase and the
 single-run/stochastic attribution limits remain documented. E17 remains
 Active, broader Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 unstarted/not ready.
+
+#### E17 P1.1 completion verification — 2026-10-25 (`cdb649c5`)
+
+The completion pass made no production change. It closes the two remaining
+verification gaps with provider-free regressions. The multi-fact test now
+constructs a real verified assertion through `grounding_payload()` and
+`_grounding_batches()`: the provider batch contains exactly the two referenced
+`verified-fact:*` records, including complete metric observations, source-truth
+notes, provenance, and qualifiers; an unrelated third report fact is absent;
+and an unknown evidence ID still fails at the existing verified snapshot
+boundary. The recovery integration test runs `run_grounding_check()` with the
+existing fake provider, captures the actual structured-recovery prompt
+variables, and proves that verified recovery receives `evidence_json="[]"`
+with the same batch `report_json` as the initial call. The parametrized legacy
+case confirms that normal recovery still receives its original serialized
+evidence list. The bounded recovery count and incomplete-response gates remain
+unchanged.
+
+The retained Adjust audit was reconciled without rerunning either report. Both
+runs have seven primary grounding calls. The accepted baseline producer is
+`9b6ce50c`; the optimized producer is
+`ee5ea1754f03014452fad0deb6eb90f1cb1bc217`. Both use the same source PDF SHA
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` and the
+optimized source identity is
+`source:8cb648b6bbd9dbae4ec1d915c38cf235|pdf-sha256:ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`.
+The primary grounding namespace reconciles exactly to 138,905 → 76,560 input
+tokens, 40,564 → 45,617 output tokens, 3,593 → 4,987 reasoning tokens,
+12,635 → 10,830 reported cached-input tokens, and $0.033034 → $0.029490
+estimated cost. The $0.003544 reduction is therefore a primary grounding
+namespace saving, not a cached-token saving. The optimized batch-06 recovery
+cost of $0.002326 is recorded under the separate structured-output-repair
+namespace and is included once in the authoritative whole-run total; adding
+that recovery gives an observed grounding-plus-batch-06-repair cost of
+$0.031816 versus the baseline primary grounding cost. No ledger event was
+double-counted.
+
+The summed grounding provider elapsed time increased by 59.482 seconds
+(269.454 → 328.936 seconds). This is an observation only; retained request
+bodies do not support a deterministic same-input latency attribution. It is
+distinct from report wall-clock duration, which decreased from 1,144.0 to
+1,063.0 seconds. The retained records do not expose provider cache-write
+quantity or the removed prompt body, so no additional cache or duplication
+estimate is claimed.
+
+Batch 06 remains explicitly **unknown in trigger cause**. Its primary event
+(`validation_grounding_batch_06_primary`) was parse-valid with blank
+`error_code`, `error_stage`, and `schema_validation_status=not_applicable`;
+the retained structured-output event does not persist the validation failure
+that caused the model-repair call. The repair was parse-valid and completed
+successfully (8,912 input / 2,869 output / 192 reasoning tokens, $0.002326,
+22.293 seconds). The final validation and publication-readiness artifacts show
+zero unsupported or unresolved retained factual claims, so no factual issue
+remained. No diagnostic production change was justified by this missing
+historical field.
+
+The optimized run recorded three successful structured-output recovery calls,
+zero automatic artifact-regeneration repairs, zero workflow retries, and one
+workflow attempt. The existing Adjust factual/editorial review remains valid:
+five final insights, five metric-spine rows, three key figures, grounding and
+publication readiness passing, and no publication write. The new focused suite
+passed **236 tests**; the hosted CI run for the follow-up commit passed the
+default tests/coverage, both mutation partitions, static gates, and
+`release_evidence`. E17 P1.1 is therefore **Complete**. E17 remains Active,
+broader verified-facts Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+unstarted/not ready. No E17.2 work was started.

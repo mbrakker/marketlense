@@ -929,3 +929,14 @@ succeeded, with zero automatic repairs and no publication write. E17 remains
 Active, broader Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 unstarted/not ready. Detailed evidence:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**E17 P1.1 completion verification — 2026-10-25:** Added provider-free
+integration coverage for real verified multi-fact grounding batches and actual
+structured-output recovery context. The retained Adjust audit reconciles the
+seven-call grounding comparison at 138,905 → 76,560 input tokens and
+$0.033034 → $0.029490 primary grounding cost ($0.003544 / 10.73% saved);
+recovery costs are included once in whole-run accounting, and batch-06's
+historical trigger is explicitly unknown because no failure diagnostic was
+persisted. The focused suite passed 236 tests. **E17 P1.1 is complete.** E17
+remains Active; E17.2, broader Step 2, and Step 3 remain unstarted or not
+ready as documented in the Step 2 evidence report.

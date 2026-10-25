@@ -1011,6 +1011,25 @@ saving; E17 remains Active pending broader staged economics evidence. Full
 metrics, repair ledger, and limitations are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
+**Completion evidence — E17 P1.1 — 2026-10-25:** Provider-free integration
+tests now exercise real verified multi-fact batch construction and the actual
+structured-output recovery path. They prove exact linked-fact retention,
+exclusion of unrelated report facts, existing rejection of unknown evidence
+IDs, verified recovery with `evidence_json="[]"`, and unchanged legacy recovery
+serialization. The retained Adjust audit reconciles seven primary grounding
+calls in each run: 138,905 → 76,560 input tokens and $0.033034 → $0.029490
+primary grounding cost, a measured $0.003544 (10.73%) saving. The optimized
+run's three successful structured-output recoveries are accounted for once in
+the whole-run total; batch 06's trigger remains unknown because its retained
+primary and recovery usage events contain no failure code or validation
+diagnostic. The 59.482-second summed grounding-provider increase is retained
+as an observation, distinct from the 1,144.0 → 1,063.0-second report
+wall-clock decrease. The focused provider-free suite passed 236 tests; no
+production behavior, prompt, schema, repair policy, publication state, or
+live benchmark changed. **E17 P1.1 is complete; E17 remains Active.** E17.2
+and later E17 slices remain unstarted. See the completion subsection in the
+[Step 2 evidence report](../quality/verified-claims-step2-visual-shadow-20261018.md).
+
 ### Luna implementation prompt — E17
 
 ```text

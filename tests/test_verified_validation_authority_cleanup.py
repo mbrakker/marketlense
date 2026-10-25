@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from copy import deepcopy
 from dataclasses import replace
 from types import SimpleNamespace
@@ -86,6 +87,123 @@ def _grounding_check(
         },
         "reason": f"semantic_{outcome}",
     }
+
+
+@pytest.mark.parametrize("verified_mode", [True, False])
+def test_grounding_recovery_uses_actual_scoped_prompt_context(tmp_path, verified_mode):
+    if verified_mode:
+        fact = _fact()
+        artifacts = _verified_artifacts(fact=fact)
+        request = ValidationRequest(
+            schema_version="1.0",
+            report_id="verified-recovery-context",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs=_packs(fact),
+            source_id=SOURCE_IDENTITY,
+            validation_mode="verified_facts",
+        )
+        evidence_texts = []
+        expected_facts = {"fact-1": fact}
+    else:
+        artifacts = {
+            "expert_comment": "Legacy evidence-bound claim.",
+            "insights_final": [],
+            "summary": {},
+            "quotes_final": [],
+            "key_figures": [],
+        }
+        request = ValidationRequest(
+            schema_version="1.0",
+            report_id="legacy-recovery-context",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            validation_mode="full",
+        )
+        evidence_texts = ["Legacy evidence-bound claim."]
+        expected_facts = {}
+
+    expected_payload = grounding_payload(request, artifacts)
+    expected_entries = (
+        expected_payload["retained_claims_to_ground"]
+        + expected_payload["public_factual_items"]
+    )
+    assert expected_entries
+    valid_recovery_payload = {
+        "unsupported": [],
+        "checks": [
+            _grounding_check(
+                entry["item_id"],
+                entry["text"],
+                "entailed",
+                classification=entry.get("declared_classification", "factual_claim"),
+            )
+            for entry in expected_entries
+        ],
+    }
+
+    class RecordingPromptClient(FakePromptClient):
+        def __init__(self):
+            self.rendered = []
+
+        def render_prompt(self, prompt_request, ctx):
+            self.rendered.append(
+                (prompt_request.template.path, dict(prompt_request.variables))
+            )
+            return super().render_prompt(prompt_request, ctx)
+
+    prompt_client = RecordingPromptClient()
+    openai_client = FakeOpenAI(
+        None,
+        valid_recovery_payload,
+    )
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=evidence_texts,
+        evidence_windows=[],
+        prompt_client=prompt_client,
+        openai_client=openai_client,
+        ctx=_ctx(),
+        source_id=SOURCE_IDENTITY if verified_mode else "",
+        prompt_family_reuse_reader=lambda *_args: SimpleNamespace(
+            reusable=False,
+            output_payload=None,
+            reason="test_recovery_context",
+        ),
+    )
+
+    assert issues == []
+    assert len(openai_client.requests) == 2
+    initial_variables = [
+        variables
+        for path, variables in prompt_client.rendered
+        if path == "report_vs/validate/grounding/system"
+    ]
+    recovery_variables = [
+        variables
+        for path, variables in prompt_client.rendered
+        if path == "report_vs/structured_output/repair/system"
+    ]
+    assert len(initial_variables) == 1
+    assert len(recovery_variables) == 1
+
+    initial = initial_variables[0]
+    recovery_source = json.loads(recovery_variables[0]["source_evidence_json"])
+    assert recovery_source["report_json"] == initial["report_json"]
+    assert recovery_source["authority_policy"] == initial["authority_policy"]
+    assert recovery_source["evidence_json"] == initial["evidence_json"]
+    if verified_mode:
+        assert recovery_source["evidence_json"] == "[]"
+        recovery_report = json.loads(recovery_source["report_json"])
+        assert recovery_report["canonical_verified_facts"] == expected_facts
+        assert "Legacy evidence-bound claim." not in recovery_source["report_json"]
+    else:
+        assert recovery_source["evidence_json"] == json.dumps(
+            evidence_texts, ensure_ascii=False
+        )
 
 
 @pytest.mark.parametrize(
@@ -745,7 +863,9 @@ def test_grounding_rejects_unknown_response_item_ids():
 def test_verified_grounding_accepts_case_only_provider_text_normalization():
     _validate_grounding_check_coverage(
         {
-            "checks": [_grounding_check("public-item", "A SUPPORTED CLAIM.", "entailed")],
+            "checks": [
+                _grounding_check("public-item", "A SUPPORTED CLAIM.", "entailed")
+            ],
             "unsupported": [],
         },
         [],
