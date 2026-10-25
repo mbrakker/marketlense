@@ -6,7 +6,6 @@ import copy
 import json
 import logging
 import re
-from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping
@@ -89,18 +88,6 @@ class VerifiedClaimsVisualDependencies:
             openai_chat_json_with_images=llm_service.openai_chat_json_with_images,
             hash_file_bundle=service_hash_file_bundle,
         )
-
-
-@dataclass(frozen=True)
-class _PreparedVisualClaim:
-    """Immutable claim inputs prepared before any visual provider work starts."""
-
-    index: int
-    claim: Mapping[str, Any]
-    image_paths: tuple[str, ...]
-    inspected_physical_pages: tuple[int, ...]
-    recovery_candidates: tuple[dict[str, Any], ...]
-    ctx: RunContext
 
 
 def _text(value: Any) -> str:
@@ -1384,112 +1371,6 @@ def _evaluate_claim(
     )
 
 
-def _evaluate_prepared_claim(
-    *,
-    prepared: _PreparedVisualClaim,
-    request: VisualClaimEvaluationRequest,
-    settings: Any,
-    dependencies: VerifiedClaimsVisualDependencies,
-    correction_bundle: Any,
-    verification_bundle: Any,
-) -> VisualClaimEvaluationResult:
-    return _evaluate_claim(
-        claim=prepared.claim,
-        request=request,
-        image_paths=list(prepared.image_paths),
-        settings=settings,
-        ctx=prepared.ctx,
-        dependencies=dependencies,
-        correction_bundle=correction_bundle,
-        verification_bundle=verification_bundle,
-        inspected_physical_pages=list(prepared.inspected_physical_pages),
-        recovery_candidates=copy.deepcopy(list(prepared.recovery_candidates)),
-    )
-
-
-def _visual_claim_parallel_workers(settings: Any, eligible_count: int) -> int:
-    try:
-        configured = int(
-            getattr(settings, "verified_visual_claim_parallel_workers", 1) or 1
-        )
-    except (TypeError, ValueError):
-        configured = 1
-    return min(max(1, configured), max(0, eligible_count))
-
-
-def _evaluate_prepared_claims(
-    *,
-    prepared_claims: list[_PreparedVisualClaim],
-    request: VisualClaimEvaluationRequest,
-    settings: Any,
-    dependencies: VerifiedClaimsVisualDependencies,
-    correction_bundle: Any,
-    verification_bundle: Any,
-) -> dict[int, VisualClaimEvaluationResult]:
-    """Evaluate prepared candidates with bounded, indexed worker scheduling."""
-
-    if not prepared_claims:
-        return {}
-
-    worker_count = _visual_claim_parallel_workers(settings, len(prepared_claims))
-    results: dict[int, VisualClaimEvaluationResult] = {}
-
-    def evaluate_one(
-        prepared: _PreparedVisualClaim,
-    ) -> VisualClaimEvaluationResult:
-        return _evaluate_prepared_claim(
-            prepared=prepared,
-            request=request,
-            settings=settings,
-            dependencies=dependencies,
-            correction_bundle=correction_bundle,
-            verification_bundle=verification_bundle,
-        )
-
-    if worker_count <= 1:
-        for prepared in prepared_claims:
-            results[prepared.index] = evaluate_one(prepared)
-        return results
-
-    executor = ThreadPoolExecutor(max_workers=worker_count)
-    active: dict[Future[VisualClaimEvaluationResult], _PreparedVisualClaim] = {}
-    next_index = 0
-    try:
-        while next_index < min(worker_count, len(prepared_claims)):
-            prepared = prepared_claims[next_index]
-            active[executor.submit(evaluate_one, prepared)] = prepared
-            next_index += 1
-
-        while active:
-            completed, _ = wait(active, return_when=FIRST_COMPLETED)
-            completed_items = sorted(
-                ((future, active[future]) for future in completed),
-                key=lambda item: item[1].index,
-            )
-            completed_results: list[
-                tuple[_PreparedVisualClaim, VisualClaimEvaluationResult]
-            ] = []
-            for future, prepared in completed_items:
-                active.pop(future)
-                completed_results.append((prepared, future.result()))
-            for prepared, result in completed_results:
-                results[prepared.index] = result
-            for _ in completed_results:
-                if next_index >= len(prepared_claims):
-                    break
-                prepared = prepared_claims[next_index]
-                active[executor.submit(evaluate_one, prepared)] = prepared
-                next_index += 1
-    except BaseException:
-        for future in active:
-            future.cancel()
-        executor.shutdown(wait=True, cancel_futures=True)
-        raise
-    else:
-        executor.shutdown(wait=True)
-    return results
-
-
 def evaluate_shortlisted_claims(
     *,
     request: VisualClaimEvaluationRequest,
@@ -1539,12 +1420,9 @@ def evaluate_shortlisted_claims(
         dependencies=dependencies,
     )
     rendered_pages: dict[int, str] = {}
-    result_slots: list[VisualClaimEvaluationResult | None] = [None] * len(
-        request.claims
-    )
-    prepared_claims: list[_PreparedVisualClaim] = []
+    results: list[VisualClaimEvaluationResult] = []
     for index, raw_claim in enumerate(request.claims):
-        claim = copy.deepcopy(dict(raw_claim)) if isinstance(raw_claim, Mapping) else {}
+        claim = raw_claim if isinstance(raw_claim, Mapping) else {}
         physical_pages = _physical_pages(claim)
         recovery_candidates = _recovery_candidates(request, claim)
         raw_recovered_pages = [
@@ -1559,22 +1437,26 @@ def evaluate_shortlisted_claims(
             inspected_physical_pages[0] if inspected_physical_pages else None
         )
         if not inspected_physical_pages:
-            result_slots[index] = _record_result(
-                claim=claim,
-                request=request,
-                physical_page=0,
-                outcome="skipped",
-                failure_reason="physical_page_missing",
+            results.append(
+                _record_result(
+                    claim=claim,
+                    request=request,
+                    physical_page=0,
+                    outcome="skipped",
+                    failure_reason="physical_page_missing",
+                )
             )
             continue
         binding_conflict = _binding_conflict_reason(claim, request.source_identity)
         if binding_conflict:
-            result_slots[index] = _record_result(
-                claim=claim,
-                request=request,
-                physical_page=physical_page or 0,
-                outcome="skipped",
-                failure_reason="source_binding_conflict",
+            results.append(
+                _record_result(
+                    claim=claim,
+                    request=request,
+                    physical_page=physical_page or 0,
+                    outcome="skipped",
+                    failure_reason="source_binding_conflict",
+                )
             )
             continue
         missing_page = False
@@ -1604,58 +1486,42 @@ def evaluate_shortlisted_claims(
                 break
             rendered_pages[page] = image_path
         if missing_page:
-            result_slots[index] = _record_result(
-                claim=claim,
-                request=request,
-                physical_page=physical_page or 0,
-                outcome="skipped",
-                failure_reason="page_render_failed",
-                inspected_physical_pages=inspected_physical_pages,
-                recovered_physical_pages=recovered_pages,
-                recovery_reason=_text(recovery_candidates[0].get("reason"))
-                if recovery_candidates
-                else "",
-                source_binding_status=(
-                    "provisional_recovered" if recovery_candidates else "retained"
-                ),
+            results.append(
+                _record_result(
+                    claim=claim,
+                    request=request,
+                    physical_page=physical_page or 0,
+                    outcome="skipped",
+                    failure_reason="page_render_failed",
+                    inspected_physical_pages=inspected_physical_pages,
+                    recovered_physical_pages=recovered_pages,
+                    recovery_reason=_text(recovery_candidates[0].get("reason"))
+                    if recovery_candidates
+                    else "",
+                    source_binding_status=(
+                        "provisional_recovered" if recovery_candidates else "retained"
+                    ),
+                )
             )
             continue
-        prepared_claims.append(
-            _PreparedVisualClaim(
-                index=index,
+        image_paths = [rendered_pages[page] for page in inspected_physical_pages]
+        claim_ctx = child_context(
+            evaluation_ctx, task_id=f"{evaluation_ctx.task_id}:claim:{index}"
+        )
+        results.append(
+            _evaluate_claim(
                 claim=claim,
-                image_paths=tuple(
-                    rendered_pages[page] for page in inspected_physical_pages
-                ),
-                inspected_physical_pages=tuple(inspected_physical_pages),
-                recovery_candidates=tuple(copy.deepcopy(recovery_candidates)),
-                ctx=child_context(
-                    evaluation_ctx, task_id=f"{evaluation_ctx.task_id}:claim:{index}"
-                ),
+                request=request,
+                image_paths=image_paths,
+                settings=settings,
+                ctx=claim_ctx,
+                dependencies=dependencies,
+                correction_bundle=correction_bundle,
+                verification_bundle=verification_bundle,
+                inspected_physical_pages=inspected_physical_pages,
+                recovery_candidates=recovery_candidates,
             )
         )
-    evaluated_results = _evaluate_prepared_claims(
-        prepared_claims=prepared_claims,
-        request=request,
-        settings=settings,
-        dependencies=dependencies,
-        correction_bundle=correction_bundle,
-        verification_bundle=verification_bundle,
-    )
-    for index, result in evaluated_results.items():
-        result_slots[index] = result
-    results: list[VisualClaimEvaluationResult] = []
-    for index, slot_result in enumerate(result_slots):
-        if slot_result is None:
-            raise AppError(
-                code="verified_claims_visual_result_incomplete",
-                message=(
-                    "Visual evaluation did not produce one terminal result per claim"
-                ),
-                retryable=False,
-                context={"claim_index": index},
-            )
-        results.append(slot_result)
     LOGGER.info(
         log_event(
             evaluation_ctx,

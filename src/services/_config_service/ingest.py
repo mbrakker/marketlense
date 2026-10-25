@@ -51,20 +51,6 @@ def _resolve_ingest_runtime_settings(
                 minimum=1,
             ),
             _SettingSpec(
-                field_name="verified_visual_claim_parallel_workers",
-                config_key="verified_visual_claim_parallel_workers",
-                default=_to_int(
-                    _default_config_value(
-                        "ingest", "verified_visual_claim_parallel_workers", fallback=1
-                    ),
-                    1,
-                ),
-                coerce=_to_int,
-                env_key="VERIFIED_VISUAL_CLAIM_PARALLEL_WORKERS",
-                env_first=True,
-                minimum=1,
-            ),
-            _SettingSpec(
                 field_name="openai_timeout_seconds",
                 config_key="timeout_seconds",
                 default=_to_float(
