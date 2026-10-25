@@ -638,6 +638,9 @@ _ACTIONABLE_CONTEXT_LIST_KEYS = (
     "missing_reference_ids",
     "missing_evidence_ids",
     "missing_claim_ids",
+    "missing_or_ambiguous_public_item_ids",
+    "unknown_item_ids",
+    "item_ids",
     "invalid_insight_ids",
     "duplicate_insight_ids",
 )
@@ -653,7 +656,11 @@ def _app_error_feedback(error: AppError) -> str:
         if not isinstance(value, list):
             continue
         tokens = [
-            token for token in (str(item or "").strip() for item in value) if token
+            token
+            for token in (str(item or "").strip() for item in value)
+            if token
+            and len(token) <= 128
+            and set(token) <= SAFE_ERROR_CONTEXT_TOKEN_CHARS
         ][:6]
         if tokens:
             detail = f"{detail}; {key.replace('_', ' ')}: {', '.join(tokens)}"
@@ -681,6 +688,13 @@ def _bounded_app_error_context(error: AppError) -> dict[str, Any]:
     count = context.get("missing_claim_count")
     if isinstance(count, int) and not isinstance(count, bool) and count > 0:
         retained["missing_claim_count"] = min(count, 999)
+    public_item_count = context.get("missing_or_ambiguous_public_item_count")
+    if (
+        isinstance(public_item_count, int)
+        and not isinstance(public_item_count, bool)
+        and public_item_count >= 0
+    ):
+        retained["missing_or_ambiguous_public_item_count"] = min(public_item_count, 999)
     return retained
 
 

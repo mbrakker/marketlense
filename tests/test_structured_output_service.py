@@ -12,6 +12,7 @@ import pytest
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.run_context import RunContext
 from src.contracts.structured_output import StructuredOutputExecutionRequest
+from src.generators.validation.grounding import _validate_grounding_check_coverage
 from src.services.schema_validator_service import provider_output_schema
 from src.services.structured_output_service import execute_structured_output
 from src.utils.errors import AppError
@@ -165,6 +166,139 @@ def test_recovery_feedback_names_invalid_final_insight_ids() -> None:
         for error in seen_schema_errors
     )
     assert exc_info.value.context["invalid_insight_ids"] == ["unmatched-final-id"]
+
+
+def test_verified_grounding_recovery_feedback_names_missing_public_item_and_repairs():
+    seen_schema_errors: list[str] = []
+    first_item = {
+        "item_id": "insight:fact-1:so_what",
+        "section": "insights:fact-1.so_what",
+        "text": "The finding changes the buying decision.",
+    }
+    second_item = {
+        "item_id": "insight:fact-2:so_what",
+        "section": "insights:fact-2.so_what",
+        "text": "The second finding changes the buying decision.",
+    }
+    requested_items = [first_item, second_item]
+    primary = {
+        "checks": [],
+        "unsupported": [
+            {
+                "item_id": first_item["item_id"],
+                "text": first_item["text"],
+                "classification": "factual_claim",
+                "entailment_outcome": "not_established",
+                "reason": "The source does not establish the first claim.",
+            }
+        ],
+    }
+    repaired = {
+        "checks": [],
+        "unsupported": [
+            {
+                "item_id": item["item_id"],
+                "text": item["text"],
+                "classification": "factual_claim",
+                "entailment_outcome": "not_established",
+                "reason": "The source does not establish this claim.",
+            }
+            for item in requested_items
+        ],
+    }
+
+    def validate_payload(candidate: dict) -> None:
+        _validate_grounding_check_coverage(
+            candidate,
+            [],
+            {},
+            expected_public_items=requested_items,
+            require_public_coverage=True,
+        )
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        del original_response
+        seen_schema_errors.append(schema_errors)
+        return _response(primary if mode == "primary" else repaired)
+
+    result = execute_structured_output(
+        StructuredOutputExecutionRequest(
+            schema_version="1.0",
+            report_id="verified-grounding-repair-1",
+            artifact_family="validation_grounding",
+            schema_name="grounding_validation_output",
+            model="gpt-5-mini",
+            terminal_failure_code="validation_grounding_invalid_json",
+        ),
+        _ctx(),
+        call_model=call_model,
+        normalize_payload=lambda payload: payload,
+        validate_payload=validate_payload,
+        is_substantive=lambda candidate: bool(candidate),
+        model_pricing={},
+    )
+
+    assert result.disposition == "model_repair"
+    assert result.attempts == 2
+    assert len(seen_schema_errors) == 2
+    assert (
+        "missing or ambiguous public item ids: insight:fact-2:so_what"
+        in (seen_schema_errors[1])
+    )
+
+
+def test_verified_grounding_unknown_item_feedback_and_terminal_context_are_bounded():
+    safe_id = "insight:fact-1:so_what"
+    unsafe_id = "item id with spaces and <source text>"
+    oversized_id = "x" * 129
+    error = AppError(
+        code="grounding_claim_check_coverage_invalid",
+        message="Grounding response contains an unknown item identifier",
+        retryable=False,
+        context={
+            "unknown_item_ids": [safe_id, unsafe_id, oversized_id],
+            "missing_or_ambiguous_public_item_ids": [safe_id],
+            "missing_or_ambiguous_public_item_count": 10000,
+        },
+    )
+
+    def validate_payload(candidate: dict) -> None:
+        del candidate
+        raise error
+
+    seen_schema_errors: list[str] = []
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        del mode, original_response
+        seen_schema_errors.append(schema_errors)
+        return _response({"checks": [], "unsupported": []})
+
+    with pytest.raises(StructuredOutputFailure) as exc_info:
+        execute_structured_output(
+            StructuredOutputExecutionRequest(
+                schema_version="1.0",
+                report_id="verified-grounding-terminal-1",
+                artifact_family="validation_grounding",
+                schema_name="grounding_validation_output",
+                model="gpt-5-mini",
+                terminal_failure_code="validation_grounding_invalid_json",
+            ),
+            _ctx(),
+            call_model=call_model,
+            normalize_payload=lambda payload: payload,
+            validate_payload=validate_payload,
+            is_substantive=lambda candidate: bool(candidate),
+            model_pricing={},
+        )
+
+    assert len(seen_schema_errors) == 3
+    assert all(len(error) <= 600 for error in seen_schema_errors)
+    assert "unknown item ids: insight:fact-1:so_what" in seen_schema_errors[1]
+    assert unsafe_id not in seen_schema_errors[1]
+    assert oversized_id not in seen_schema_errors[1]
+    assert exc_info.value.context["unknown_item_ids"] == [safe_id]
+    assert exc_info.value.context["missing_or_ambiguous_public_item_ids"] == [safe_id]
+    assert exc_info.value.context["missing_or_ambiguous_public_item_count"] == 999
 
 
 def test_recovery_repairs_retained_empty_document_map_and_records_attempts(
