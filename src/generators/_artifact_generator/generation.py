@@ -1684,6 +1684,7 @@ def generate_artifacts(
             distribution_insights,
             editorial_plan=editorial_plan,
             verified_mode=visual_authority_admitter is not None,
+            verified_facts=visual_authority_verified_facts,
         )
         metric_spine_json = _dump_json(metric_spine)
         context_anchor_evidence_ids.clear()
@@ -1847,6 +1848,7 @@ def generate_artifacts(
             insights_final,
             editorial_plan=editorial_plan,
             verified_mode=visual_authority_admitter is not None,
+            verified_facts=visual_authority_verified_facts,
         )
         metric_spine_json = _dump_json(metric_spine)
         context_anchor_evidence_ids.clear()

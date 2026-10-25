@@ -101,6 +101,7 @@ from src.utils.model_resolver import (
 from src.utils.numeric_display import numeric_metadata_for_complete_display
 from src.utils.public_metric_display import normalize_public_metric_display
 from src.utils.quantity import extract_quantities
+from src.utils.verified_facts import VERIFIED_FACT_EVIDENCE_PREFIX
 
 ARTIFACT_ROOT_DEPENDENCIES = {
     "metric_spine": frozenset({"insights_final", "editorial_plan"}),
@@ -531,6 +532,7 @@ def assemble_artifacts_payload(
         insights_final,
         editorial_plan=editorial_plan,
         verified_mode=bool(visual_authority_canary or verified_facts),
+        verified_facts=verified_facts,
     )
     topics_covered = build_topics_covered(
         toc_entries=toc_entries,
@@ -545,6 +547,7 @@ def assemble_artifacts_payload(
         insights_final=insights_final,
         editorial_plan=editorial_plan,
         verified_mode=bool(visual_authority_canary or verified_facts),
+        verified_facts=verified_facts,
     )
     chart_insight_cards = build_chart_insight_cards(
         key_figures=key_figures,
@@ -1142,12 +1145,14 @@ def derive_metric_spine_from_insights(
     *,
     editorial_plan: Dict[str, Any] | None = None,
     verified_mode: bool = False,
+    verified_facts: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     return _derive_metric_spine_from_insights(
         insights_final,
         editorial_plan=editorial_plan,
         limit=6,
         verified_mode=verified_mode,
+        verified_facts=verified_facts,
     )
 
 
@@ -1157,7 +1162,17 @@ def _derive_metric_spine_from_insights(
     editorial_plan: Dict[str, Any] | None,
     limit: int | None,
     verified_mode: bool = False,
+    verified_facts: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
+    verified_fact_statements = {
+        f"{VERIFIED_FACT_EVIDENCE_PREFIX}{_s(fact.get('fact_id')).strip()}": _s(
+            fact.get("statement")
+        ).strip()
+        for fact in (verified_facts or [])
+        if isinstance(fact, dict)
+        and _s(fact.get("fact_id")).strip()
+        and _s(fact.get("statement")).strip()
+    }
     spine: List[Dict[str, Any]] = []
     for index, insight in enumerate(insights_final, start=1):
         if not isinstance(insight, dict):
@@ -1220,6 +1235,8 @@ def _derive_metric_spine_from_insights(
             item["evidence_ids"] = evidence_ids
         if verified_mode and isinstance(metric.get("observations"), list):
             item["observations"] = deepcopy(metric["observations"])
+        if verified_mode and evidence_id in verified_fact_statements:
+            item["source_statement"] = verified_fact_statements[evidence_id]
         numeric_metadata = numeric_metadata_for_complete_display(value)
         if numeric_metadata is not None:
             item["source_display_value"] = value
@@ -1483,6 +1500,7 @@ def build_key_figures(
     insights_final: List[Dict[str, Any]] | None = None,
     editorial_plan: Dict[str, Any] | None = None,
     verified_mode: bool = False,
+    verified_facts: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     candidate_metrics = list(metric_spine)
     retained_metric_ids = {
@@ -1496,6 +1514,7 @@ def build_key_figures(
             editorial_plan=editorial_plan,
             limit=None,
             verified_mode=verified_mode,
+            verified_facts=verified_facts,
         ):
             metric_id = _s(metric.get("metric_id")).strip()
             if metric_id and metric_id not in retained_metric_ids:
@@ -1568,6 +1587,11 @@ def build_key_figures(
                 **(
                     {"observations": deepcopy(metric["observations"])}
                     if verified_mode and isinstance(metric.get("observations"), list)
+                    else {}
+                ),
+                **(
+                    {"source_statement": _s(metric.get("source_statement")).strip()}
+                    if verified_mode and _s(metric.get("source_statement")).strip()
                     else {}
                 ),
                 "source_page": page_values[0] if page_values else None,
@@ -2566,6 +2590,7 @@ def build_canonical_regeneration_derived_artifacts(
             insights,
             editorial_plan=editorial_plan,
             verified_mode=verified_mode,
+            verified_facts=artifacts.get("verified_facts") or [],
         )
     if "topics_covered" in builder_roots:
         canonical["topics_covered"] = build_topics_covered(
@@ -2582,6 +2607,7 @@ def build_canonical_regeneration_derived_artifacts(
             insights_final=insights,
             editorial_plan=editorial_plan,
             verified_mode=verified_mode,
+            verified_facts=artifacts.get("verified_facts") or [],
         )
     if "chart_insight_cards" in builder_roots:
         canonical["chart_insight_cards"] = build_chart_insight_cards(

@@ -545,6 +545,7 @@ def metric_claim_text(metric: dict, *, include_observations: bool = False) -> st
     """Create the canonical factual display from retained metric fields."""
 
     display_value = metric.get("value") or metric.get("figure")
+    source_statement = str(metric.get("source_statement") or "").strip()
     values = [
         str(metric.get(key) or "").strip()
         for key in (
@@ -559,6 +560,8 @@ def metric_claim_text(metric: dict, *, include_observations: bool = False) -> st
             "observation_status",
         )
     ]
+    if source_statement:
+        values.insert(0, source_statement)
     values.insert(2, str(display_value or "").strip())
     observations = metric.get("observations")
     if include_observations and isinstance(observations, list):

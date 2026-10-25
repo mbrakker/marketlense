@@ -7,7 +7,10 @@ import pytest
 from src.contracts.validation import ValidationRequest
 from src.generators._artifact_generator.storage import derive_metric_spine_from_insights
 from src.generators.artifact_normalization import normalize_artifact_insights
-from src.generators.claim_validation_generator import materialize_retained_claim_package
+from src.generators.claim_validation_generator import (
+    materialize_retained_claim_package,
+    metric_claim_text,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
@@ -485,6 +488,37 @@ def test_verified_metric_spine_preserves_multi_fact_binding():
         "verified-fact:fact-1",
         "verified-fact:fact-2",
     ]
+
+
+def test_verified_metric_spine_preserves_authoritative_statement_qualifier():
+    fact = _fact(
+        metric={
+            **_metric(),
+            "label": "Businesses reporting use of AI in their daily work",
+            "value": "88",
+            "unit": "%",
+        }
+    )
+    fact["statement"] = (
+        "The report says as many as 88% of businesses now report using AI "
+        "in their daily work."
+    )
+    insight = {
+        "id": fact["fact_id"],
+        "text": fact["statement"],
+        "evidence_id": "verified-fact:fact-1",
+        "evidence": fact["statement"],
+        "metric": deepcopy(fact["metric"]),
+    }
+
+    spine = derive_metric_spine_from_insights(
+        [insight], verified_mode=True, verified_facts=[fact]
+    )
+
+    assert spine[0]["source_statement"] == fact["statement"]
+    assert fact["statement"] in metric_claim_text(
+        spine[0], include_observations=True
+    )
 
 
 def test_verified_multi_fact_artifact_uses_union_of_authoritative_pages():

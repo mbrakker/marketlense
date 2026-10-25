@@ -131,6 +131,12 @@ def grounding_authority_policy(verified_mode: bool) -> str:
     )
 
 
+def _grounding_text_matches(expected: str, actual: str) -> bool:
+    """Match provider text without treating case-only normalization as drift."""
+
+    return expected == actual or expected.casefold() == actual.casefold()
+
+
 def _grounding_batches(
     audit_payload: dict,
     semantic_inputs: Sequence[ClaimSemanticInput],
@@ -1501,7 +1507,9 @@ def _validate_grounding_check_coverage(
             claim_id
             for claim_id, text in expected.items()
             if len(checks_by_id.get(claim_id, [])) != 1
-            or s(checks_by_id[claim_id][0].get("text")) != text
+            or not _grounding_text_matches(
+                text, s(checks_by_id[claim_id][0].get("text"))
+            )
             or s(checks_by_id[claim_id][0].get("classification")) != "factual_claim"
         ]
         if missing_claim_ids:
@@ -1578,7 +1586,7 @@ def _validate_grounding_check_coverage(
             continue
         if matching_checks:
             check = matching_checks[0]
-            if s(check.get("text")) != text:
+            if not _grounding_text_matches(text, s(check.get("text"))):
                 public_coverage_errors.append(item_id)
                 continue
             classification = s(check.get("classification"))
@@ -1600,12 +1608,16 @@ def _validate_grounding_check_coverage(
             elif outcome in {"contradicted", "not_established"}:
                 if (
                     not matching_unsupported
-                    or s(matching_unsupported[0].get("text")) != text
+                    or not _grounding_text_matches(
+                        text, s(matching_unsupported[0].get("text"))
+                    )
                 ):
                     public_coverage_errors.append(item_id)
             else:
                 public_coverage_errors.append(item_id)
-        elif not matching_unsupported or s(matching_unsupported[0].get("text")) != text:
+        elif not matching_unsupported or not _grounding_text_matches(
+            text, s(matching_unsupported[0].get("text"))
+        ):
             public_coverage_errors.append(item_id)
     if public_coverage_errors:
         raise AppError(
@@ -1661,7 +1673,7 @@ def _retained_claim_semantic_results(
         outcome = normalize_entailment_outcome(s(entry.get("entailment_outcome")))
         if (
             not outcome
-            or s(entry.get("text")) != candidate.text
+            or not _grounding_text_matches(candidate.text, s(entry.get("text")))
             or s(entry.get("classification")) != "factual_claim"
         ):
             continue

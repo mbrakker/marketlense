@@ -742,6 +742,25 @@ def test_grounding_rejects_unknown_response_item_ids():
     assert exc_info.value.code == "grounding_claim_check_coverage_invalid"
 
 
+def test_verified_grounding_accepts_case_only_provider_text_normalization():
+    _validate_grounding_check_coverage(
+        {
+            "checks": [_grounding_check("public-item", "A SUPPORTED CLAIM.", "entailed")],
+            "unsupported": [],
+        },
+        [],
+        {},
+        expected_public_items=[
+            {
+                "item_id": "public-item",
+                "section": "insights:fact-1.text",
+                "text": "A supported claim.",
+            }
+        ],
+        require_public_coverage=True,
+    )
+
+
 def test_verified_grounding_requires_verdicts_for_every_public_item():
     with pytest.raises(AppError) as exc_info:
         _validate_grounding_check_coverage(
