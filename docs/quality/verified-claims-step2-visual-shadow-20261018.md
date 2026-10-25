@@ -5062,3 +5062,67 @@ that concurrency caused the grounding failure, but it is sufficient to reject
 this candidate under the pre-declared quality rule. No broader worker setting
 was enabled, and no additional optimization was started. Step 2 remains
 **PARTIAL/NO-GO** and Step 3 remains **unstarted/not ready**.
+#### P1 verified-grounding recovery diagnostics — 2026-10-25 (`1d496ece`)
+
+The retained Adjust experiment was inspected provider-free from the exact run
+under `C:\\ml-vfa-20261025-adjust-p1-parallel-run`, including the usage ledger,
+validation artifacts, workflow stage records, and the original PDF identity
+(`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`). Batch
+04's earliest observable failed contract was post-provider grounding acceptance:
+the primary provider event was parse-valid, but the persisted validation result
+was non-substantive for grounding and recorded `28` unresolved factual results.
+The exact coverage/protected-fact sub-rule and offending IDs were not persisted;
+the remediation record retained `context_keys=[]`. Therefore the historical
+trigger is **unknown**, and the diagnostic correction is not claimed to explain
+that run's failure.
+
+| Batch-04 attempt | Provider result | Tokens (input / output / reasoning / cached input) | Cost | Provider time |
+| --- | --- | ---: | ---: | ---: |
+| Primary | completed; parse `valid`; schema status `not_applicable`; no provider error | 13,731 / 8,688 / 785 / 1,805 | `$0.005555` | 71.698 s |
+| Model repair | completed; parse `invalid`; schema status `not_applicable`; no provider error | 21,247 / 8,192 / 8,192 / 0 | `$0.006221` | 62.926 s |
+| Regeneration | completed; parse `invalid`; schema status `not_applicable`; no provider error | 21,234 / 8,192 / 8,192 / 0 | `$0.006219` | 56.737 s |
+| **Total** | **1 parse-valid primary, 2 invalid bounded recoveries** | **56,212 / 25,072 / 17,169 / 1,805** | **`$0.017995`** | **191.360 s** |
+
+Both recovery responses reached the configured 8,192-token output ceiling,
+which is evidence of a separate truncation/invalid-JSON failure after the
+primary semantic/coverage failure. No retained artifact contains the original
+model response or its missing/unknown item list, so no stronger causal claim is
+made. The grounding stage and semantic-validation stage were recorded as
+`validation_failed`; regeneration was skipped at the workflow layer. The five
+final insights were not treated as factually false solely because the grounding
+artifact was incomplete.
+
+The confirmed production defect was the structured-output recovery allowlist:
+`missing_or_ambiguous_public_item_ids`, `unknown_item_ids`, and `item_ids` were
+emitted by the existing grounding validator but dropped before model repair and
+terminal retention. `structured_output_service.py` now admits those existing
+identifier lists, applies the existing safe identifier character/length policy
+to repair feedback, and retains the bounded
+`missing_or_ambiguous_public_item_count`. The grounding validator, protected
+dimensions, source bindings, schemas, retry budget and prompts were unchanged.
+
+Before the correction, a coverage error reached repair as only
+`grounding_claim_check_coverage_invalid:Verified grounding must return one
+identity-matching verdict for every public item`. Afterward the same existing
+validator path reaches repair as that message plus
+`missing or ambiguous public item ids: insight:fact-2:so_what`; unsafe and
+overlong identifiers are excluded. A fake repair then succeeds on the same
+single model-repair attempt. Repeated invalid output still makes exactly the
+existing primary → deterministic check → model repair → regeneration sequence
+and fails closed with bounded identifier-only context.
+
+Focused provider-free regressions passed: **7** new recovery/grounding tests,
+the affected grounding/validation/recovery cohort **250 passed**, changed-source
+mypy passed, and Ruff/formatting passed for changed clean files. The repository
+type-gate invocation was blocked by the pre-existing protected untracked
+`src/generators/artifact_normalization (2).py` duplicate (one unrelated
+unbaselined mypy error plus the environment's CPython 3.14 mypy assertion); no
+new error was reported for the changed production file. No provider call,
+publication write, visual-parallelism run, or E17.2 work was performed.
+
+**Verdict: PASS for the confirmed recovery-diagnostics correction; PARTIAL for
+historical/live effectiveness.** Deterministic evidence proves actionable IDs
+now reach bounded recovery, while the retained batch-04 cause and any live
+first-repair improvement remain unproven because the original diagnostics were
+not retained. Step 2 remains **PARTIAL/NO-GO** and Step 3 remains
+**unstarted/not ready**.

@@ -1175,3 +1175,16 @@ quality, cost, speed, source identities and exact commits. No WordPress writes.
 Do not claim stable or improved quality without comparative evidence.
 Commit and push the verified changes; update E18 status only if all gates pass.
 ```
+**P1 verified-grounding recovery diagnostics — 2026-10-25 (`1d496ece`):** The
+existing grounding validator already produced actionable public-item IDs, but
+the shared structured-output recovery allowlist dropped
+`missing_or_ambiguous_public_item_ids`, `unknown_item_ids`, and `item_ids`.
+The correction retains those bounded safe identifiers and the missing-public
+item count without changing grounding rules, prompts, schemas, or the bounded
+retry sequence. Provider-free regressions prove a missing public verdict can
+be repaired on the existing single model-repair attempt and that terminal
+exhaustion remains fail-closed. The retained Adjust batch-04 run remains
+historically indeterminate: its primary response was parse-valid but failed
+persisted grounding acceptance, while both later responses were invalid at the
+8,192-token output cap; the original coverage IDs were not retained. No live
+effectiveness or cost improvement is claimed. E18 remains **Active/PARTIAL**.

@@ -954,3 +954,15 @@ quality gate was not preserved. The implementation was reverted in
 `d064e39d` and the experiment-only test removed in `a594cea7`; E17 remains
 Active, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not
 ready**. See the detailed Step 2 evidence report.
+**Verified-grounding recovery diagnostics — 2026-10-25 (`1d496ece`):** The
+existing validator's public-item diagnostics now reach structured-output model
+repair and bounded terminal retention under the repository's safe identifier
+policy. Seven focused regressions and the affected 250-test cohort passed;
+grounding rules, protected facts, prompts, schemas, retries and fail-closed
+publication safeguards were unchanged. Retained Adjust batch 04 remains
+historically unresolved: the primary response parsed but failed grounding
+acceptance, the exact offending IDs were not persisted, and both bounded
+recoveries were invalid at the 8,192-token output cap. No live improvement or
+provider-backed cost result is claimed. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
