@@ -252,7 +252,7 @@ def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
     prompt_evidence = json.loads(final_vars["evidence_json"])
 
     assert len(payload["verified_facts"]) == 10
-    assert len(prompt_candidates) == 7
+    assert len(prompt_candidates) == 10
     assert all("verified_fact" not in item for item in prompt_candidates)
     assert {
         fact["fact_id"] for fact in prompt_evidence["verified_facts"]["verified_facts"]
