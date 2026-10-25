@@ -22,6 +22,8 @@ from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.verified_facts import (
     build_verified_authority_context,
+    canonical_evidence_map,
+    canonical_fact_text,
     validate_verified_artifact_bindings,
 )
 from tests._test_validation_generator._shared import _ctx, _report, _settings
@@ -340,6 +342,38 @@ def test_verified_grounding_payload_uses_fact_snapshot_over_discovery_copy(tmp_p
     assert insight_payload["metric"]["value"] == "42%"
     assert all(
         "99%" not in str(item.get("retained_evidence") or "")
+        for item in payload["public_factual_items"]
+        if isinstance(item, dict)
+    )
+
+
+def test_verified_grounding_retains_page_bound_source_truth_notes():
+    fact = _fact()
+    fact["statement"] = "The methodology describes the tracked-app dataset."
+    note = (
+        "The page states that the data are aggregated and anonymized and may not "
+        "reflect the entire global app market."
+    )
+    fact["provenance"]["source_truth_notes_by_page"]["4"] = note
+
+    canonical_text = canonical_fact_text(fact)
+    assert note in canonical_text
+    assert note in canonical_evidence_map({"fact-1": fact})["verified-fact:fact-1"]
+
+    payload = grounding_payload(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="verified-authority",
+            report=_report(),
+            artifacts=_verified_artifacts(fact=fact),
+            evidence_packs=_packs(fact),
+            source_id=SOURCE_IDENTITY,
+            validation_mode="verified_facts",
+        ),
+        _verified_artifacts(fact=fact),
+    )
+    assert any(
+        note in str(item.get("retained_evidence") or "")
         for item in payload["public_factual_items"]
         if isinstance(item, dict)
     )

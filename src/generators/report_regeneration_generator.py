@@ -507,6 +507,55 @@ def regenerate_artifacts(
         for root in ("toc_entries", "toc_topics", "toc_topics_expanded"):
             if root in updated_artifacts:
                 atomic_source_patch[root] = deepcopy(updated_artifacts[root])
+    summary_claim_map_is_patched = False
+    summary_claim_map_item_indices: List[int] | None = []
+    for target in request.plan.targets:
+        if target.target_section != "summary":
+            continue
+        if not target.allowed_paths:
+            summary_claim_map_is_patched = True
+            summary_claim_map_item_indices = None
+            break
+        for path in target.allowed_paths:
+            normalized_path = str(path).strip()
+            if normalized_path == "summary":
+                summary_claim_map_is_patched = True
+                summary_claim_map_item_indices = None
+                break
+            if not normalized_path.startswith("summary.claim_evidence_map"):
+                continue
+            summary_claim_map_is_patched = True
+            item_path_match = re.match(
+                r"^(summary\.claim_evidence_map\[[^\]]+\])", normalized_path
+            )
+            if item_path_match and summary_claim_map_item_indices is not None:
+                summary_claim_map_item_indices.append(
+                    _summary_claim_map_item_index(
+                        original_family=request.current_artifacts.get("summary"),
+                        full_path=item_path_match.group(1),
+                    )
+                )
+        if summary_claim_map_item_indices is None:
+            break
+    if summary_claim_map_item_indices is not None:
+        for path in state.deterministic_mutation_paths:
+            normalized_path = str(path).strip()
+            if not normalized_path.startswith("summary.claim_evidence_map"):
+                continue
+            summary_claim_map_is_patched = True
+            item_path_match = re.match(
+                r"^(summary\.claim_evidence_map\[[^\]]+\])", normalized_path
+            )
+            if item_path_match:
+                summary_claim_map_item_indices.append(
+                    _summary_claim_map_item_index(
+                        original_family=request.current_artifacts.get("summary"),
+                        full_path=item_path_match.group(1),
+                    )
+                )
+            else:
+                summary_claim_map_item_indices = None
+                break
     finalized_derived_paths = finalize_regeneration_candidate_artifacts(
         promoted_baseline=request.current_artifacts,
         candidate_artifacts=updated_artifacts,
@@ -514,6 +563,8 @@ def regenerate_artifacts(
         atomic_source_patch=atomic_source_patch,
         regeneration_attempt=request.attempt_index,
         verified_mode=bool(state.visual_authority_digest),
+        summary_claim_map_is_patched=summary_claim_map_is_patched,
+        summary_claim_map_item_indices=summary_claim_map_item_indices,
     )
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.

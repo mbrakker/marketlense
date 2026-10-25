@@ -2128,6 +2128,8 @@ def finalize_regeneration_candidate_artifacts(
     atomic_source_patch: Dict[str, Any],
     regeneration_attempt: int = 0,
     verified_mode: bool = False,
+    summary_claim_map_is_patched: bool | None = None,
+    summary_claim_map_item_indices: Optional[List[int]] = None,
 ) -> frozenset[str]:
     """Finalize deterministic dependents and provenance on an atomic patch.
 
@@ -2337,12 +2339,42 @@ def finalize_regeneration_candidate_artifacts(
         # explicitly part of the patch, preserving the direct finalization
         # contract for summary repairs.
         summary_is_patched = "summary" in patch_roots
-        verified_summary = (
-            cast(Dict[str, Any], candidate_artifacts.get("summary"))
-            if summary_is_patched
-            and isinstance(candidate_artifacts.get("summary"), dict)
-            else {}
+        if summary_claim_map_is_patched is None:
+            # Preserve the direct finalization contract for callers that patch
+            # the complete summary root.  The regeneration orchestrator passes
+            # the narrower nested authorization when only another summary
+            # field, such as executive_summary, is being repaired.
+            summary_claim_map_is_patched = summary_is_patched
+        summary_claim_map_indices = (
+            set(summary_claim_map_item_indices)
+            if summary_claim_map_item_indices is not None
+            else None
         )
+        verified_summary: Dict[str, Any]
+        if (
+            summary_claim_map_is_patched
+            and summary_is_patched
+            and isinstance(candidate_artifacts.get("summary"), dict)
+        ):
+            if summary_claim_map_indices is None:
+                verified_summary = cast(
+                    Dict[str, Any], candidate_artifacts["summary"]
+                )
+            else:
+                verified_summary = {
+                    "claim_evidence_map": [
+                        item
+                        for index, item in enumerate(
+                            candidate_artifacts["summary"].get(
+                                "claim_evidence_map"
+                            )
+                            or []
+                        )
+                        if index in summary_claim_map_indices
+                    ]
+                }
+        else:
+            verified_summary = {}
         verified_insights_candidates = (
             cast(
                 List[Dict[str, Any]],
@@ -2370,10 +2402,14 @@ def finalize_regeneration_candidate_artifacts(
             evidence_packs=evidence_packs,
         )
 
-        def restore_authoritative_evidence_text(items: object) -> None:
+        def restore_authoritative_evidence_text(
+            items: object, *, item_indices: set[int] | None = None
+        ) -> None:
             if not isinstance(items, list):
                 return
-            for item in items:
+            for index, item in enumerate(items):
+                if item_indices is not None and index not in item_indices:
+                    continue
                 if not isinstance(item, dict):
                     continue
                 evidence_id = _s(item.get("evidence_id")).strip()
@@ -2415,8 +2451,15 @@ def finalize_regeneration_candidate_artifacts(
         )
         restore_authoritative_evidence_text(candidate_artifacts.get("insights_final"))
         summary = candidate_artifacts.get("summary")
-        if summary_is_patched and isinstance(summary, dict):
-            restore_authoritative_evidence_text(summary.get("claim_evidence_map"))
+        if (
+            summary_claim_map_is_patched
+            and summary_is_patched
+            and isinstance(summary, dict)
+        ):
+            restore_authoritative_evidence_text(
+                summary.get("claim_evidence_map"),
+                item_indices=summary_claim_map_indices,
+            )
         raw_provenance = candidate_artifacts.get("soft_copy_claim_provenance")
         if raw_provenance is not None:
             claims = soft_copy_claim_provenance_from_payload(raw_provenance)

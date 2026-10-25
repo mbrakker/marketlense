@@ -213,6 +213,128 @@ def test_verified_finalization_rebinds_canonical_fact_spans() -> None:
     }
 
 
+def test_verified_finalization_preserves_summary_for_executive_repair() -> None:
+    evidence_id = "verified-fact:f1"
+    baseline_summary = {
+        "executive_summary": "Existing summary.",
+        "claim_evidence_map": [
+            {
+                "claim": "Existing claim.",
+                "evidence_id": evidence_id,
+                "evidence": "Legacy summary evidence.",
+                "evidence_spans": [
+                    {
+                        "evidence_id": evidence_id,
+                        "source_pack": "findings",
+                        "page": 7,
+                        "text": "Legacy summary evidence.",
+                    }
+                ],
+                "pages": [7],
+            }
+        ],
+    }
+    baseline = {
+        "summary": baseline_summary,
+        "insights_candidates": [],
+        "insights_final": [],
+        "quotes_final": [],
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload([]),
+    }
+    candidate = deepcopy(baseline)
+    candidate["summary"]["executive_summary"] = "Repaired summary."
+
+    finalize_regeneration_candidate_artifacts(
+        promoted_baseline=baseline,
+        candidate_artifacts=candidate,
+        evidence_packs={
+            "findings": {
+                "family_status": {
+                    "status": "generated",
+                    "policy_action": "keep",
+                    "source": "verified_facts",
+                },
+                "findings": [
+                    {
+                        "id": evidence_id,
+                        "text": "Canonical summary evidence.",
+                        "evidence": "Canonical summary evidence.",
+                        "pages": [7],
+                    }
+                ]
+            }
+        },
+        atomic_source_patch={"summary": deepcopy(candidate["summary"])},
+        regeneration_attempt=1,
+        verified_mode=True,
+        summary_claim_map_is_patched=False,
+    )
+
+    assert candidate["summary"]["executive_summary"] == "Repaired summary."
+    assert candidate["summary"]["claim_evidence_map"] == baseline_summary[
+        "claim_evidence_map"
+    ]
+
+
+def test_verified_finalization_rebinds_changed_summary_claim_map() -> None:
+    evidence_id = "verified-fact:f1"
+    baseline = {
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "claim": "Existing claim.",
+                    "evidence_id": evidence_id,
+                    "evidence": "Legacy summary evidence.",
+                    "evidence_spans": [],
+                    "pages": [7],
+                }
+            ]
+        },
+        "insights_candidates": [],
+        "insights_final": [],
+        "quotes_final": [],
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload([]),
+    }
+    candidate = deepcopy(baseline)
+    candidate["summary"]["claim_evidence_map"][0]["claim"] = "Repaired claim."
+
+    finalize_regeneration_candidate_artifacts(
+        promoted_baseline=baseline,
+        candidate_artifacts=candidate,
+        evidence_packs={
+            "findings": {
+                "family_status": {
+                    "status": "generated",
+                    "policy_action": "keep",
+                    "source": "verified_facts",
+                },
+                "findings": [
+                    {
+                        "id": evidence_id,
+                        "text": "Canonical summary evidence.",
+                        "evidence": "Canonical summary evidence.",
+                        "pages": [7],
+                    }
+                ]
+            }
+        },
+        atomic_source_patch={"summary": deepcopy(candidate["summary"])},
+        verified_mode=True,
+    )
+
+    claim = candidate["summary"]["claim_evidence_map"][0]
+    assert claim["claim"] == "Repaired claim."
+    assert claim["evidence"] == "Canonical summary evidence."
+    assert claim["evidence_spans"] == [
+        {
+            "evidence_id": evidence_id,
+            "source_pack": "verified_facts",
+            "page": 7,
+            "text": "Canonical summary evidence.",
+        }
+    ]
+
+
 def test_verified_finalization_clears_legacy_text_when_span_is_missing() -> None:
     evidence_id = "verified-fact:missing"
     legacy_item = {

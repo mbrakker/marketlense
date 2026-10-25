@@ -525,6 +525,23 @@ def canonical_fact_text(fact: Mapping[str, Any]) -> str:
                         )
             elif isinstance(value, (str, int, float)) and str(value).strip():
                 parts.append(str(value).strip())
+    provenance = fact.get("provenance")
+    notes = (
+        provenance.get("source_truth_notes_by_page")
+        if isinstance(provenance, Mapping)
+        else None
+    )
+    supporting_pages = fact.get("supporting_physical_pages")
+    if isinstance(notes, Mapping):
+        pages = (
+            supporting_pages
+            if isinstance(supporting_pages, list)
+            else sorted(notes, key=str)
+        )
+        for page in pages:
+            note = notes.get(str(page))
+            if str(note).strip():
+                parts.append(str(note).strip())
     return " ".join(part for part in parts if part)
 
 
