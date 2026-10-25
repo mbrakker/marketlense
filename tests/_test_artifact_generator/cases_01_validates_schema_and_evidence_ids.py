@@ -432,7 +432,7 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     ]
     assert payload["family_status"]["summary"]["status"] == "generated"
     assert payload["family_status"]["quotes"]["status"] == "generated"
-    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 9
+    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 11
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 0
     summary_requests = [
         request
@@ -571,7 +571,7 @@ def test_generate_artifacts_recovers_quotes_from_retained_candidates_after_abste
                 "claim_evidence_map": [],
             }
         },
-        "insights_candidates": {"insights_candidates": []},
+        "insights_candidates": _candidate_recovery_responses(),
         "insights_final": {"insights_final": []},
         "quotes": {"quotes_final": []},
         "expert_comment": {"expert_comment": "Keep the editorial note short."},

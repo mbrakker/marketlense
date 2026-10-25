@@ -431,6 +431,17 @@ def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
         # A contradicted statement needs correction against the same source;
         # quarantine is appropriate for unsupported claims, not contradictions.
         return False
+    if (
+        rule_id == "grounding"
+        and violation_type == "not_established"
+        and _insight_issue_field(issue.entity_id, issue.affected_section)
+        in {"so_what", "now_what"}
+    ):
+        # A failed implication/recommendation is a wording defect. Keep the
+        # retained fact available so the existing targeted repair can rewrite
+        # the interpretation or remove only that leaf. Metric, population,
+        # timeframe and other factual failures remain quarantined.
+        return False
     if rule_id.startswith("retained_claim."):
         return rule_id == "retained_claim.evidence_reference_completeness"
     return str(issue.severity or "").strip().lower() == "error" and (
@@ -1405,7 +1416,7 @@ def _insight_issue_groups(
         return [issues]
 
     grouped: Dict[str, List[RegenerationIssue]] = {}
-    for issue, identity in zip(issues, identities):
+    for issue, identity in zip(issues, identities, strict=True):
         grouped.setdefault(identity, []).append(issue)
     return [grouped[identity] for identity in sorted(grouped)]
 

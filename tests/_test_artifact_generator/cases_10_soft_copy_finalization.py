@@ -32,7 +32,7 @@ def test_fresh_and_cached_soft_copy_share_source_display_finalization(tmp_path) 
                     "claim_evidence_map": [],
                 }
             },
-            "insights_candidates": {"insights_candidates": []},
+            "insights_candidates": _candidate_recovery_responses(),
             "quotes": {"quotes_final": []},
             "insights_final": {"insights_final": []},
             "cover_semantics": _cover_semantics_response(),

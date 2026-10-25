@@ -544,7 +544,23 @@ def test_insight_candidate_structured_output_failure_defers_to_source_fallback()
 
     assert _render_insights_candidates_or_defer_to_fallback(
         task, terminal_model_failure
-    ) == {"insights_candidates": [], "_deferred_to_source_fallback": True}
+    ) == {
+        "insights_candidates": [],
+        "_deferred_to_source_fallback": True,
+        "_artifact_response_structure": {
+            "expected_root_present": None,
+            "root_value_type": "unavailable",
+            "raw_candidate_count": 0,
+            "normalized_candidate_count": 0,
+            "location_only_candidates_removed": 0,
+            "invalid_evidence_reference_candidates_rejected": 0,
+        },
+        "_structured_output_recovery": {
+            "attempts": 3,
+            "disposition": "recovery_exhausted",
+            "error_class": "artifact_json_invalid",
+        },
+    }
 
 
 def test_non_candidate_structured_output_failure_is_not_masked():

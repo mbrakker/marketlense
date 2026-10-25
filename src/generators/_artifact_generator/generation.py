@@ -84,6 +84,7 @@ from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
 from src.utils.structured_output import StructuredOutputFailure
+from src.utils.text_normalization import normalize_text
 from src.utils.verified_facts import validated_verified_facts
 
 logger = logging.getLogger("market_lense.artifact_generator")
@@ -244,7 +245,58 @@ def _render_insights_candidates_or_defer_to_fallback(
                 },
             )
         )
-        return {"insights_candidates": [], "_deferred_to_source_fallback": True}
+        return {
+            "insights_candidates": [],
+            "_deferred_to_source_fallback": True,
+            "_artifact_response_structure": {
+                "expected_root_present": None,
+                "root_value_type": "unavailable",
+                "raw_candidate_count": 0,
+                "normalized_candidate_count": 0,
+                "location_only_candidates_removed": 0,
+                "invalid_evidence_reference_candidates_rejected": 0,
+            },
+            "_structured_output_recovery": {
+                "attempts": min(
+                    3, max(1, int(exc.context.get("repair_attempt", 0) or 0) + 1)
+                ),
+                "disposition": "recovery_exhausted",
+                "error_class": str(
+                    exc.context.get("error_class")
+                    or exc.code
+                    or "structured_output_failure"
+                ),
+            },
+        }
+
+
+def _candidate_selection_covers_plan(
+    candidates: Sequence[Dict[str, Any]],
+    editorial_plan: Dict[str, Any],
+    required_count: int,
+) -> bool:
+    """Return whether the primary candidate set is already publication-sized."""
+
+    if len(candidates) < required_count:
+        return False
+    candidate_evidence_ids = {
+        normalize_text(candidate.get("evidence_id"))
+        for candidate in candidates
+        if isinstance(candidate, dict) and normalize_text(candidate.get("evidence_id"))
+    }
+    for theme in editorial_plan.get("themes") or []:
+        if not isinstance(theme, dict):
+            continue
+        theme_evidence_ids = {
+            normalize_text(evidence_id)
+            for evidence_id in theme.get("evidence_ids") or []
+            if normalize_text(evidence_id)
+        }
+        if theme_evidence_ids and not candidate_evidence_ids.intersection(
+            theme_evidence_ids
+        ):
+            return False
+    return True
 
 
 def _execute_artifact_tasks_serial(
@@ -1106,6 +1158,15 @@ def generate_artifacts(
         "_editorial_plan_dependency_hash": editorial_plan_dependency_hash
     }
     editorial_plan_json = _dump_json(editorial_plan)
+    eligible_candidate_findings = fallback_artifact_insights_from_findings(
+        safe_evidence.get("findings"),
+        limit=MIN_FINAL_ARTIFACT_INSIGHTS,
+        editorial_plan=editorial_plan,
+        evidence_fidelity=safe_evidence.get("evidence_fidelity"),
+    )
+    candidate_evidence_sufficient = (
+        len(eligible_candidate_findings) >= MIN_FINAL_ARTIFACT_INSIGHTS
+    )
     summary_evidence_json = _summary_prioritized_evidence_json(
         safe_evidence, editorial_plan
     )
@@ -1194,6 +1255,9 @@ def generate_artifacts(
                 **base_vars,
                 **editorial_plan_dependency_vars,
                 "editorial_plan_json": editorial_plan_json,
+                "_candidate_evidence_sufficient": str(
+                    candidate_evidence_sufficient
+                ).lower(),
             },
             ctx=child_context(ctx, task_id=f"{ctx.task_id}:insights_candidates"),
         ),
@@ -1270,16 +1334,60 @@ def generate_artifacts(
     candidate_generation_deferred = bool(
         candidate_stage_output.get("_deferred_to_source_fallback")
     )
+    recovery_metadata = candidate_stage_output.get("_structured_output_recovery")
+    recovery_metadata = recovery_metadata if isinstance(recovery_metadata, dict) else {}
+    response_structure = candidate_stage_output.get("_artifact_response_structure")
+    response_structure = (
+        response_structure if isinstance(response_structure, dict) else {}
+    )
+    recovery_attempts = max(1, int(recovery_metadata.get("attempts") or 1))
+    recovery_disposition = _s(recovery_metadata.get("disposition")).strip()
+    recovery_error_class = _s(recovery_metadata.get("error_class")).strip()
+    recovery_attempted = recovery_attempts > 1 or recovery_disposition in {
+        "deterministic_repair",
+        "model_repair",
+        "regeneration",
+        "recovery_exhausted",
+    }
     candidate_generation_audit: Dict[str, Any] = {
         "model_output_count": initial_candidate_count,
         "model_output_status": (
             "structured_output_failure_deferred"
             if candidate_generation_deferred
+            else "accepted_after_recovery"
+            if initial_candidate_count and recovery_attempted
+            else "abstained_insufficient_evidence"
+            if not initial_candidate_count and recovery_disposition == "abstained"
             else "accepted_non_empty"
             if initial_candidate_count
             else "accepted_empty_after_normalization"
         ),
-        "fallback_invoked": True,
+        "candidate_evidence_sufficient": candidate_evidence_sufficient,
+        "expected_root_present": response_structure.get("expected_root_present"),
+        "root_value_type": response_structure.get("root_value_type", "unknown"),
+        "raw_candidate_count": int(
+            response_structure.get("raw_candidate_count") or initial_candidate_count
+        ),
+        "normalized_candidate_count": int(
+            response_structure.get("normalized_candidate_count")
+            or initial_candidate_count
+        ),
+        "location_only_candidates_removed": int(
+            response_structure.get("location_only_candidates_removed") or 0
+        ),
+        "invalid_evidence_reference_candidates_rejected": int(
+            response_structure.get("invalid_evidence_reference_candidates_rejected")
+            or 0
+        ),
+        "eligible_supported_findings_available": candidate_evidence_sufficient,
+        "structured_output_attempts": recovery_attempts,
+        "structured_output_recovery_attempted": recovery_attempted,
+        "structured_output_recovery_disposition": recovery_disposition,
+        "structured_output_error_class": recovery_error_class,
+        "accepted_abstention": recovery_disposition == "abstained",
+        "model_repair_attempted": recovery_attempted,
+        "model_repair_outcome": recovery_disposition,
+        "fallback_invoked": False,
         "raw_model_output_retained": False,
     }
     final_insight_target_count = max(
@@ -1289,41 +1397,64 @@ def generate_artifacts(
         final_insight_target_count * 2,
         sum(len(theme["evidence_ids"]) for theme in editorial_plan["themes"]),
     )
-    fallback_candidates = (
-        fallback_artifact_insights_from_evidence(
-            safe_evidence.get("findings"),
-            safe_evidence.get("quote_candidates"),
-            limit=fallback_limit,
-            editorial_plan=editorial_plan,
-            evidence_fidelity=safe_evidence.get("evidence_fidelity"),
-            covered_evidence_ids=[
-                _s(candidate.get("evidence_id"))
-                for candidate in insights_candidates
-                if isinstance(candidate, dict)
-            ],
-        )
-        if candidate_generation_deferred
-        else fallback_artifact_insights_from_findings(
-            safe_evidence.get("findings"),
-            limit=fallback_limit,
-            editorial_plan=editorial_plan,
-            evidence_fidelity=safe_evidence.get("evidence_fidelity"),
-            covered_evidence_ids=[
-                _s(candidate.get("evidence_id"))
-                for candidate in insights_candidates
-                if isinstance(candidate, dict)
-            ],
-        )
-    )
-    insights_candidates = select_artifact_insights(
+    primary_selected_candidates = select_artifact_insights(
         final_insights=insights_candidates,
-        candidate_insights=fallback_candidates,
+        candidate_insights=[],
         editorial_plan=editorial_plan,
         preserve_all=visual_authority_admitter is not None,
     )
+    primary_selection_adequate = _candidate_selection_covers_plan(
+        primary_selected_candidates,
+        editorial_plan,
+        MIN_FINAL_ARTIFACT_INSIGHTS,
+    )
+    fallback_candidates: List[Dict[str, Any]] = []
+    if primary_selection_adequate:
+        insights_candidates = primary_selected_candidates
+        fallback_reason = "primary_adequate"
+    else:
+        fallback_reason = (
+            "structured_output_failure"
+            if candidate_generation_deferred
+            else "primary_incomplete"
+        )
+        fallback_candidates = (
+            fallback_artifact_insights_from_evidence(
+                safe_evidence.get("findings"),
+                safe_evidence.get("quote_candidates"),
+                limit=fallback_limit,
+                editorial_plan=editorial_plan,
+                evidence_fidelity=safe_evidence.get("evidence_fidelity"),
+                covered_evidence_ids=[
+                    _s(candidate.get("evidence_id"))
+                    for candidate in insights_candidates
+                    if isinstance(candidate, dict)
+                ],
+            )
+            if candidate_generation_deferred
+            else fallback_artifact_insights_from_findings(
+                safe_evidence.get("findings"),
+                limit=fallback_limit,
+                editorial_plan=editorial_plan,
+                evidence_fidelity=safe_evidence.get("evidence_fidelity"),
+                covered_evidence_ids=[
+                    _s(candidate.get("evidence_id"))
+                    for candidate in insights_candidates
+                    if isinstance(candidate, dict)
+                ],
+            )
+        )
+        insights_candidates = select_artifact_insights(
+            final_insights=insights_candidates,
+            candidate_insights=fallback_candidates,
+            editorial_plan=editorial_plan,
+            preserve_all=visual_authority_admitter is not None,
+        )
     candidate_generation_audit.update(
         {
             "fallback_candidate_count": len(fallback_candidates),
+            "fallback_invoked": not primary_selection_adequate,
+            "fallback_reason": fallback_reason,
             "selected_candidate_count": len(insights_candidates),
             "selected_candidate_source": (
                 "model_and_fallback"

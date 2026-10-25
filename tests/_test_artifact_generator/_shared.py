@@ -455,6 +455,26 @@ def _default_editorial_plan():
     }
 
 
+def _candidate_recovery_responses():
+    """Return a valid recovery sequence for an evidence-backed empty roster."""
+
+    return [
+        {"insights_candidates": []},
+        {
+            "insights_candidates": [
+                {
+                    "id": "candidate-f1",
+                    "text": "Revenue growth is a planning signal.",
+                    "evidence_id": "f1",
+                    "evidence": "Revenue +10% YoY",
+                    "metric": {},
+                    "pages": [2],
+                }
+            ]
+        },
+    ]
+
+
 def _low_text_status():
     path = Path(__file__).parent / "fixtures" / "low_text_status.json"
     return json.loads(path.read_text(encoding="utf-8"))

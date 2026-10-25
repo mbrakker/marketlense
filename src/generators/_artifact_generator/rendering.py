@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Callable
 from typing import Any, Dict, Optional
 
@@ -229,6 +230,15 @@ def render_artifact_json_model(
         )
     )
     resolved_report_id = str(report_id or getattr(ctx, "report_id", "") or report_name)
+    candidate_evidence_sufficient = (
+        str(variables.get("_candidate_evidence_sufficient") or "").strip().lower()
+        == "true"
+    )
+    artifact_abstention_allowed = (
+        not response_contract_name
+        and root_key in _ARTIFACT_ABSTAINABLE_ROOTS
+        and not (root_key == "insights_candidates" and candidate_evidence_sufficient)
+    )
 
     def call_model(mode: str, original_response: str, schema_errors: str):
         bundle = prompt_bundle
@@ -323,9 +333,7 @@ def render_artifact_json_model(
             model=prompt_bundle.resolved_model,
             workflow="report_analysis",
             prompt_family=prompt_bundle.routing_decision.namespace,
-            allow_abstention=(
-                not response_contract_name and root_key in _ARTIFACT_ABSTAINABLE_ROOTS
-            ),
+            allow_abstention=artifact_abstention_allowed,
             allow_model_recovery=not bool(response_contract_name),
             terminal_failure_code="artifact_structured_output_invalid",
         ),
@@ -353,7 +361,7 @@ def render_artifact_json_model(
             if response_contract_name
             else (
                 lambda payload: (
-                    root_key in _ARTIFACT_ABSTAINABLE_ROOTS
+                    artifact_abstention_allowed
                     and not _artifact_response_substantive(payload, root_key)
                 )
             )
@@ -362,6 +370,11 @@ def render_artifact_json_model(
     result = dict(recovery.payload)
     if response_contract_name:
         return result
+    result["_structured_output_recovery"] = {
+        "attempts": recovery.attempts,
+        "disposition": recovery.disposition,
+        "error_class": recovery.error_class,
+    }
     if root_key in _SOFT_COPY_ROOTS:
         result["_soft_copy_claim_bindings"] = list(
             result.pop("claim_provenance", [])
@@ -395,6 +408,19 @@ def _normalize_artifact_response(
     if not isinstance(payload, dict):
         return payload  # type: ignore[return-value]
     normalized = dict(payload)
+    root_present = root_key in normalized
+    raw_value = normalized.get(root_key)
+    raw_items = raw_value if isinstance(raw_value, list) else []
+    location_only_count = sum(
+        1
+        for item in raw_items
+        if isinstance(item, dict)
+        and re.fullmatch(
+            r"source:page:\d+",
+            str(item.get("evidence_id") or "").strip(),
+            flags=re.IGNORECASE,
+        )
+    )
     if root_key not in normalized:
         if root_key == "quotes_final" and isinstance(normalized.get("quotes"), list):
             normalized[root_key] = normalized.pop("quotes")
@@ -463,4 +489,20 @@ def _normalize_artifact_response(
             if isinstance(bindings, list)
             else []
         )
+    normalized_value = normalized.get(root_key)
+    normalized_candidate_count = (
+        len(normalized_value)
+        if root_key == "insights_candidates" and isinstance(normalized_value, list)
+        else 0
+    )
+    normalized["_artifact_response_structure"] = {
+        "expected_root_present": root_present,
+        "root_value_type": (type(raw_value).__name__ if root_present else "missing"),
+        "raw_candidate_count": (
+            len(raw_items) if root_key == "insights_candidates" else 0
+        ),
+        "normalized_candidate_count": normalized_candidate_count,
+        "location_only_candidates_removed": location_only_count,
+        "invalid_evidence_reference_candidates_rejected": 0,
+    }
     return normalized

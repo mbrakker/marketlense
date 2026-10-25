@@ -328,6 +328,46 @@ def test_mobile_numbers_failure_targets_exact_insight_so_what_leaf():
     ]
 
 
+def test_grounding_interpretation_failure_keeps_authoritative_evidence_available():
+    insight = {
+        "id": "finance-latam-growth-2025",
+        "text": "LATAM finance installs grew 76% and sessions grew 57%.",
+        "so_what": "The result proves acquisition accelerated.",
+        "evidence_id": "verified-fact:finance-latam-growth-2025",
+        "pages": [35],
+        "metric": {"value": "Installs: 76%; sessions: 57%", "unit": "%"},
+    }
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message=(
+            "[grounding] [factual_claim|not_established] The source supports "
+            "installs, not acquisition."
+        ),
+        severity="error",
+        affected_section="insights:finance-latam-growth-2025.so_what",
+        rule_id="grounding",
+        violation_type="not_established",
+        entity_id="insight:finance-latam-growth-2025:so_what",
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts={
+            "insights_final": [insight],
+            "insights_candidates": [dict(insight)],
+        },
+        broad_retry_available=False,
+    )
+
+    assert plan.mode == "targeted"
+    target = plan.targets[0]
+    assert target.allowed_paths == [
+        "insights_final[item=finance-latam-growth-2025].so_what"
+    ]
+    assert target.selected_evidence_ids == ["verified-fact:finance-latam-growth-2025"]
+    assert target.quarantined_evidence_ids == []
+
+
 def test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy():
     metric = {
         "label": "Regional Ad Attention Index",

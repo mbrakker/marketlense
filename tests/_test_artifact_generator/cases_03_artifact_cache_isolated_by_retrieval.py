@@ -602,7 +602,7 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
                     "claim_evidence_map": [],
                 }
             },
-            "insights_candidates": {"insights_candidates": []},
+            "insights_candidates": _candidate_recovery_responses(),
             "quotes": {"quotes_final": []},
             "insights_final": {"insights_final": []},
             "cover_semantics": _cover_semantics_response(),
@@ -665,10 +665,10 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
     assert replay["summary"] == first["summary"]
     assert first["_cache"]["family_reuse_telemetry"] == {
         **first["_cache"]["family_reuse_telemetry"],
-        "actual_model_calls": 8,
-        "input_tokens": 800,
-        "output_tokens": 160,
-        "estimated_cost_usd": 0.00336,
+        "actual_model_calls": 9,
+        "input_tokens": 900,
+        "output_tokens": 180,
+        "estimated_cost_usd": 0.00378,
     }
     assert replay["_cache"]["family_reuse_telemetry"] == {
         **replay["_cache"]["family_reuse_telemetry"],
@@ -764,7 +764,7 @@ def test_legacy_soft_copy_reuse_regenerates_missing_provenance(tmp_path) -> None
                         "claim_evidence_map": [],
                     }
                 },
-                "insights_candidates": {"insights_candidates": []},
+                "insights_candidates": _candidate_recovery_responses(),
                 "quotes": {"quotes_final": []},
                 "insights_final": {"insights_final": []},
                 "cover_semantics": _cover_semantics_response(),
@@ -879,7 +879,7 @@ def test_soft_copy_reuse_regenerates_when_sentence_grid_changes(tmp_path) -> Non
                     "claim_evidence_map": [],
                 }
             },
-            "insights_candidates": {"insights_candidates": []},
+            "insights_candidates": _candidate_recovery_responses(),
             "quotes": {"quotes_final": []},
             "insights_final": {"insights_final": []},
             "cover_semantics": _cover_semantics_response(),

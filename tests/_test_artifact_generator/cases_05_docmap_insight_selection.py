@@ -184,7 +184,7 @@ def test_select_artifact_insights_maps_pages_within_doc_map_section_ranges():
     assert [item["evidence_id"] for item in selected] == ["f4", "f6", "f5"]
 
 
-def test_generate_artifacts_repairs_a_clustered_broad_plan_with_early_middle_and_late_themes(
+def test_generate_artifacts_repairs_a_clustered_broad_plan_with_early_middle_and_late_themes(  # noqa: E501
     tmp_path,
 ):
     doc_map = _doc_map(7)
@@ -294,6 +294,7 @@ def test_generate_artifacts_does_not_expand_a_narrow_editorial_plan(tmp_path):
     ]
     assert len(payload["insights_final"]) == 2, payload["insights_final"]
     assert {item["evidence_id"] for item in payload["insights_final"]} == {"f1", "f2"}
+    assert payload["_cache"]["candidate_generation"]["fallback_invoked"] is False
     assert payload["family_status"]["insights_bundle"]["status"] == "generated"
 
 
@@ -428,6 +429,7 @@ def test_generate_artifacts_audits_empty_candidate_model_output_and_fallback_sou
     responses["insights_final"] = {
         "insights_final": fallback_candidates,
     }
+    openai_client = FakeOpenAI(responses)
 
     payload = generate_artifacts(
         report_id="empty-candidate-audit",
@@ -436,18 +438,74 @@ def test_generate_artifacts_audits_empty_candidate_model_output_and_fallback_sou
         evidence_packs=_generation_evidence(2),
         settings=_settings(tmp_path),
         ctx=_ctx(),
-        openai_client=FakeOpenAI(responses),
+        openai_client=openai_client,
         prompt_client=CapturingPromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
 
     audit = payload["_cache"]["candidate_generation"]
     assert audit["model_output_count"] == 0
-    assert audit["model_output_status"] == "accepted_empty_after_normalization"
+    assert audit["model_output_status"] == "structured_output_failure_deferred"
+    assert audit["structured_output_recovery_attempted"] is True
+    assert audit["structured_output_attempts"] == 3
     assert audit["fallback_candidate_count"] > 0
     assert audit["selected_candidate_source"] == "fallback"
     assert audit["selected_candidate_count"] >= 2
     assert audit["raw_model_output_retained"] is False
+
+
+@pytest.mark.parametrize(
+    "incomplete_response",
+    [{"insights_candidates": []}, {}],
+    ids=["empty_array", "missing_root"],
+)
+def test_generate_artifacts_recovers_empty_candidate_output_when_findings_are_eligible(
+    tmp_path, incomplete_response
+):
+    recovered_candidates = [
+        _insight("f1", score=0.99),
+        _insight("f2", score=0.98),
+    ]
+    responses = _generation_responses(
+        recovered_candidates,
+        plan_evidence_ids=["f1", "f2"],
+    )
+    responses["insights_candidates"] = [
+        incomplete_response,
+        {"insights_candidates": recovered_candidates},
+    ]
+    responses["insights_final"] = {
+        "insights_final": recovered_candidates,
+    }
+    openai_client = FakeOpenAI(responses)
+
+    payload = generate_artifacts(
+        report_id="empty-candidate-recovery",
+        report_name="Empty candidate recovery",
+        doc_map=_doc_map(2),
+        evidence_packs=_generation_evidence(2),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=openai_client,
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    candidate_requests = [
+        request
+        for request in openai_client.requests
+        if request[2] == "insights_candidates"
+    ]
+    audit = payload["_cache"]["candidate_generation"]
+    assert len(candidate_requests) == 2
+    assert audit["model_output_status"] == "accepted_after_recovery"
+    assert audit["structured_output_recovery_attempted"] is True
+    assert audit["structured_output_attempts"] == 2
+    assert audit["expected_root_present"] is True
+    assert audit["raw_candidate_count"] == 2
+    assert audit["normalized_candidate_count"] == 2
+    assert audit["eligible_supported_findings_available"] is True
+    assert audit["selected_candidate_source"] == "model"
 
 
 def test_generate_artifacts_completes_broad_theme_coverage_from_findings(tmp_path):
