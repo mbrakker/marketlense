@@ -273,6 +273,33 @@ def test_selector_does_not_use_differently_bound_candidate_wording() -> None:
     assert selected == []
 
 
+def test_verified_final_selection_does_not_insert_unselected_candidates() -> None:
+    candidates = [
+        _insight(
+            f"candidate-{index}",
+            f"f{index}",
+            f"Supported proposition {index}.",
+            score=1.0 - index / 100,
+            pages=[index + 1],
+        )
+        for index in range(8)
+    ]
+
+    selected = select_artifact_insights(
+        final_insights=candidates[:3],
+        candidate_insights=candidates,
+        editorial_plan=_plan("f0", "f1"),
+        require_final_candidate_lineage=True,
+        verified_mode=True,
+    )
+
+    assert [item["id"] for item in selected] == [
+        "candidate-0",
+        "candidate-1",
+        "candidate-2",
+    ]
+
+
 def test_selector_fails_closed_for_candidate_only_duplicate_wording() -> None:
     claim = "The strategy segment recorded a 57% increase."
     selected = select_artifact_insights(
@@ -561,7 +588,7 @@ def test_verified_finding_fallback_preserves_stable_fact_identity() -> None:
 
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION == (
-        "evidence_backed_shortlisting:13"
+        "evidence_backed_shortlisting:14"
     )
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
         "stable_id_unique_selection:2"

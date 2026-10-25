@@ -23,7 +23,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:13"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:14"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -199,6 +199,7 @@ def remap_editorial_plan_to_verified_facts(
     verified_facts: List[Dict[str, Any]],
     *,
     source_findings: Any = None,
+    coverage_diagnostics: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     """Keep planning themes while replacing discovery IDs with fact IDs.
 
@@ -304,6 +305,43 @@ def remap_editorial_plan_to_verified_facts(
             unmapped_themes.append(theme["theme"])
             continue
         themes.append({**theme, "evidence_ids": mapped})
+
+    central_priority = min(theme["priority"] for theme in plan["themes"])
+    lost_central_themes = [
+        theme["theme"]
+        for theme in plan["themes"]
+        if theme["theme"] in unmapped_themes and theme["priority"] == central_priority
+    ]
+    if coverage_diagnostics is not None:
+        coverage_diagnostics.clear()
+        coverage_diagnostics.update(
+            {
+                "planned_themes": [theme["theme"] for theme in plan["themes"]],
+                "planned_theme_bindings": deepcopy(plan["themes"]),
+                "supported_themes": [theme["theme"] for theme in themes],
+                "supported_theme_bindings": deepcopy(themes),
+                "lost_themes": list(unmapped_themes),
+                "lost_central_themes": list(lost_central_themes),
+                "planned_theme_count": len(plan["themes"]),
+                "supported_theme_count": len(themes),
+                "lost_theme_count": len(unmapped_themes),
+            }
+        )
+    if lost_central_themes:
+        raise AppError(
+            code="verified_fact_editorial_coverage_insufficient",
+            message=(
+                "Verified-fact editorial coverage lost the central planned theme: "
+                + ", ".join(lost_central_themes)
+            ),
+            retryable=False,
+            context={
+                "verified_fact_count": len(fact_evidence_ids),
+                "mapped_theme_count": len(themes),
+                "unmapped_themes": unmapped_themes,
+                "lost_central_themes": lost_central_themes,
+            },
+        )
     if len(themes) < MIN_FINAL_ARTIFACT_INSIGHTS:
         raise AppError(
             code="verified_fact_editorial_coverage_insufficient",
@@ -1377,7 +1415,10 @@ def select_artifact_insights(
             )
         )
     ]
-    ranked = _ranked_unique_insights(anchored_finals, candidate_insights)
+    ranked = _ranked_unique_insights(
+        anchored_finals,
+        [] if require_final_candidate_lineage and verified_mode else candidate_insights,
+    )
     required_count = max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
     selected: List[Dict[str, Any]] = []
     selected_keys: set[str] = set()

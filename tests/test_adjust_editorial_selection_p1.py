@@ -188,6 +188,91 @@ def test_verified_plan_drops_section_refs_without_admitted_finding_bindings():
         )
 
 
+def test_verified_plan_records_lost_optional_theme_after_admission():
+    facts = [
+        {
+            "fact_id": "fact-a",
+            "provenance": {"discovery_candidate_id": "finding-a"},
+        },
+        {
+            "fact_id": "fact-c",
+            "provenance": {"discovery_candidate_id": "finding-c"},
+        },
+    ]
+    source_findings = {
+        "findings": [
+            _finding("finding-a", "section-a"),
+            _finding("finding-b", "section-b"),
+            _finding("finding-c", "section-c"),
+        ]
+    }
+    diagnostics: dict[str, object] = {}
+    plan = {
+        "report_thesis": "The retained evidence defines the decision surface.",
+        "themes": [
+            {"theme": "Central", "priority": 1, "evidence_ids": ["finding-a"]},
+            {"theme": "Optional", "priority": 2, "evidence_ids": ["finding-b"]},
+            {"theme": "Supported", "priority": 3, "evidence_ids": ["finding-c"]},
+        ],
+    }
+
+    remapped = remap_editorial_plan_to_verified_facts(
+        plan,
+        facts,
+        source_findings=source_findings,
+        coverage_diagnostics=diagnostics,
+    )
+
+    assert [theme["theme"] for theme in remapped["themes"]] == [
+        "Central",
+        "Supported",
+    ]
+    assert diagnostics["planned_themes"] == ["Central", "Optional", "Supported"]
+    assert diagnostics["supported_themes"] == ["Central", "Supported"]
+    assert diagnostics["lost_themes"] == ["Optional"]
+    assert diagnostics["lost_central_themes"] == []
+
+
+def test_verified_plan_fails_closed_when_central_theme_is_lost():
+    facts = [
+        {
+            "fact_id": "fact-b",
+            "provenance": {"discovery_candidate_id": "finding-b"},
+        },
+        {
+            "fact_id": "fact-c",
+            "provenance": {"discovery_candidate_id": "finding-c"},
+        },
+    ]
+    source_findings = {
+        "findings": [
+            _finding("finding-a", "section-a"),
+            _finding("finding-b", "section-b"),
+            _finding("finding-c", "section-c"),
+        ]
+    }
+    diagnostics: dict[str, object] = {}
+    plan = {
+        "report_thesis": "The retained evidence defines the decision surface.",
+        "themes": [
+            {"theme": "Central", "priority": 1, "evidence_ids": ["finding-a"]},
+            {"theme": "Supported B", "priority": 2, "evidence_ids": ["finding-b"]},
+            {"theme": "Supported C", "priority": 3, "evidence_ids": ["finding-c"]},
+        ],
+    }
+
+    with pytest.raises(AppError, match="central") as error:
+        remap_editorial_plan_to_verified_facts(
+            plan,
+            facts,
+            source_findings=source_findings,
+            coverage_diagnostics=diagnostics,
+        )
+
+    assert error.value.code == "verified_fact_editorial_coverage_insufficient"
+    assert diagnostics["lost_central_themes"] == ["Central"]
+
+
 def test_verified_selection_can_retain_all_admitted_facts_as_final_model_alternatives():
     candidates = [
         {

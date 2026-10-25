@@ -274,8 +274,11 @@ def _candidate_selection_covers_plan(
     candidates: Sequence[Dict[str, Any]],
     editorial_plan: Dict[str, Any],
     required_count: int,
+    *,
+    source_findings: Any = None,
+    evidence_fidelity: Any = None,
 ) -> bool:
-    """Return whether the primary candidate set is already publication-sized."""
+    """Return whether the primary candidate set meets the existing minimum."""
 
     if len(candidates) < required_count:
         return False
@@ -292,6 +295,18 @@ def _candidate_selection_covers_plan(
             for evidence_id in theme.get("evidence_ids") or []
             if normalize_text(evidence_id)
         }
+        if source_findings is not None and theme_evidence_ids:
+            theme_findings = fallback_artifact_insights_from_findings(
+                source_findings,
+                limit=max(required_count, 1),
+                editorial_plan={"themes": [theme]},
+                evidence_fidelity=evidence_fidelity,
+            )
+            theme_evidence_ids.update(
+                normalize_text(item.get("evidence_id"))
+                for item in theme_findings
+                if isinstance(item, dict) and normalize_text(item.get("evidence_id"))
+            )
         if theme_evidence_ids and not candidate_evidence_ids.intersection(
             theme_evidence_ids
         ):
@@ -1158,9 +1173,13 @@ def generate_artifacts(
         "_editorial_plan_dependency_hash": editorial_plan_dependency_hash
     }
     editorial_plan_json = _dump_json(editorial_plan)
+    final_insight_target_count = max(
+        REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(editorial_plan["themes"])
+    )
+    candidate_pool_target = min(8, max(6, final_insight_target_count))
     eligible_candidate_findings = fallback_artifact_insights_from_findings(
         safe_evidence.get("findings"),
-        limit=MIN_FINAL_ARTIFACT_INSIGHTS,
+        limit=candidate_pool_target,
         editorial_plan=editorial_plan,
         evidence_fidelity=safe_evidence.get("evidence_fidelity"),
     )
@@ -1390,13 +1409,7 @@ def generate_artifacts(
         "fallback_invoked": False,
         "raw_model_output_retained": False,
     }
-    final_insight_target_count = max(
-        REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(editorial_plan["themes"])
-    )
-    fallback_limit = max(
-        final_insight_target_count * 2,
-        sum(len(theme["evidence_ids"]) for theme in editorial_plan["themes"]),
-    )
+    fallback_limit = candidate_pool_target
     primary_selected_candidates = select_artifact_insights(
         final_insights=insights_candidates,
         candidate_insights=[],
@@ -1407,42 +1420,63 @@ def generate_artifacts(
         primary_selected_candidates,
         editorial_plan,
         MIN_FINAL_ARTIFACT_INSIGHTS,
+        source_findings=safe_evidence.get("findings"),
+        evidence_fidelity=safe_evidence.get("evidence_fidelity"),
     )
+    candidate_evidence_ids = {
+        normalize_text(candidate.get("evidence_id"))
+        for candidate in insights_candidates
+        if isinstance(candidate, dict) and normalize_text(candidate.get("evidence_id"))
+    }
+    eligible_candidate_evidence_ids = {
+        normalize_text(candidate.get("evidence_id"))
+        for candidate in eligible_candidate_findings
+        if isinstance(candidate, dict) and normalize_text(candidate.get("evidence_id"))
+    }
+    candidate_supplement_limit = max(
+        candidate_pool_target - len(candidate_evidence_ids),
+        1 if not primary_selection_adequate else 0,
+    )
+    candidate_supplement_limit = min(
+        candidate_supplement_limit,
+        len(eligible_candidate_evidence_ids - candidate_evidence_ids),
+    )
+    fallback_attempted = candidate_supplement_limit > 0
     fallback_candidates: List[Dict[str, Any]] = []
-    if primary_selection_adequate:
+    if candidate_supplement_limit > 0:
+        covered_candidate_evidence_ids = [
+            _s(candidate.get("evidence_id"))
+            for candidate in insights_candidates
+            if isinstance(candidate, dict)
+        ]
+        fallback_candidates = (
+            fallback_artifact_insights_from_evidence(
+                safe_evidence.get("findings"),
+                safe_evidence.get("quote_candidates"),
+                limit=min(fallback_limit, candidate_supplement_limit),
+                editorial_plan=editorial_plan,
+                evidence_fidelity=safe_evidence.get("evidence_fidelity"),
+                covered_evidence_ids=covered_candidate_evidence_ids,
+            )
+            if candidate_generation_deferred
+            else fallback_artifact_insights_from_findings(
+                safe_evidence.get("findings"),
+                limit=min(fallback_limit, candidate_supplement_limit),
+                editorial_plan=editorial_plan,
+                evidence_fidelity=safe_evidence.get("evidence_fidelity"),
+                covered_evidence_ids=covered_candidate_evidence_ids,
+            )
+        )
+    if primary_selection_adequate and not fallback_candidates:
         insights_candidates = primary_selected_candidates
         fallback_reason = "primary_adequate"
     else:
         fallback_reason = (
             "structured_output_failure"
             if candidate_generation_deferred
+            else "candidate_pool_incomplete"
+            if primary_selection_adequate
             else "primary_incomplete"
-        )
-        fallback_candidates = (
-            fallback_artifact_insights_from_evidence(
-                safe_evidence.get("findings"),
-                safe_evidence.get("quote_candidates"),
-                limit=fallback_limit,
-                editorial_plan=editorial_plan,
-                evidence_fidelity=safe_evidence.get("evidence_fidelity"),
-                covered_evidence_ids=[
-                    _s(candidate.get("evidence_id"))
-                    for candidate in insights_candidates
-                    if isinstance(candidate, dict)
-                ],
-            )
-            if candidate_generation_deferred
-            else fallback_artifact_insights_from_findings(
-                safe_evidence.get("findings"),
-                limit=fallback_limit,
-                editorial_plan=editorial_plan,
-                evidence_fidelity=safe_evidence.get("evidence_fidelity"),
-                covered_evidence_ids=[
-                    _s(candidate.get("evidence_id"))
-                    for candidate in insights_candidates
-                    if isinstance(candidate, dict)
-                ],
-            )
         )
         insights_candidates = select_artifact_insights(
             final_insights=insights_candidates,
@@ -1453,8 +1487,10 @@ def generate_artifacts(
     candidate_generation_audit.update(
         {
             "fallback_candidate_count": len(fallback_candidates),
-            "fallback_invoked": not primary_selection_adequate,
+            "fallback_invoked": fallback_attempted,
             "fallback_reason": fallback_reason,
+            "candidate_pool_target": candidate_pool_target,
+            "candidate_opportunity_count": len(eligible_candidate_findings),
             "selected_candidate_count": len(insights_candidates),
             "selected_candidate_source": (
                 "model_and_fallback"
@@ -1546,10 +1582,21 @@ def generate_artifacts(
         active_doc_map = build_verified_fact_doc_map(safe_doc_map)
         active_evidence = deepcopy(visual_authority_evidence_packs)
         reference_evidence_packs = {**active_evidence, "doc_map": active_doc_map}
+        editorial_plan_coverage: Dict[str, Any] = {}
         editorial_plan = remap_editorial_plan_to_verified_facts(
             editorial_plan,
             visual_authority_verified_facts,
             source_findings=safe_evidence.get("findings"),
+            coverage_diagnostics=editorial_plan_coverage,
+        )
+        editorial_plan_coverage["admitted_candidate_count"] = len(
+            visual_authority_admitted_candidates
+        )
+        visual_authority_audit["editorial_plan_coverage"] = deepcopy(
+            editorial_plan_coverage
+        )
+        candidate_generation_audit["editorial_plan_coverage"] = deepcopy(
+            editorial_plan_coverage
         )
         editorial_plan_json = _dump_json(editorial_plan)
         base_vars = artifact_base_variables(active_doc_map, active_evidence)
@@ -1621,6 +1668,15 @@ def generate_artifacts(
             }
         )
         eligible_candidates = eligible_final_insight_candidates(insights_candidates)
+        editorial_plan_coverage["available_final_alternatives"] = len(
+            eligible_candidates
+        )
+        visual_authority_audit["editorial_plan_coverage"] = deepcopy(
+            editorial_plan_coverage
+        )
+        candidate_generation_audit["editorial_plan_coverage"] = deepcopy(
+            editorial_plan_coverage
+        )
         final_insight_allowed_candidate_ids = [
             _s(candidate.get("id")).strip()
             for candidate in eligible_candidates

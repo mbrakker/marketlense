@@ -1,6 +1,9 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators._artifact_generator.generation import (
+    _candidate_selection_covers_plan,
+)
 from src.generators.artifact_normalization import select_artifact_insights
 
 from ._shared import *  # noqa: F401,F403
@@ -296,6 +299,76 @@ def test_generate_artifacts_does_not_expand_a_narrow_editorial_plan(tmp_path):
     assert {item["evidence_id"] for item in payload["insights_final"]} == {"f1", "f2"}
     assert payload["_cache"]["candidate_generation"]["fallback_invoked"] is False
     assert payload["family_status"]["insights_bundle"]["status"] == "generated"
+
+
+def test_candidate_coverage_maps_section_theme_to_linked_finding():
+    candidates = [_insight("f1", score=0.99)]
+
+    assert _candidate_selection_covers_plan(
+        candidates,
+        _editorial_plan("section-1"),
+        1,
+        source_findings=_section_linked_findings(1)["findings"],
+    )
+
+
+def test_generate_artifacts_supplements_short_model_roster_from_strong_findings(
+    tmp_path,
+):
+    model_candidates = [
+        _insight("f1", score=0.99),
+        _insight("f2", score=0.98),
+    ]
+    responses = _generation_responses(model_candidates, plan_evidence_ids=["f1", "f2"])
+    responses["insights_final"] = {"insights_final": model_candidates}
+
+    payload = generate_artifacts(
+        report_id="short-model-roster",
+        report_name="Short model roster",
+        doc_map=_doc_map(6),
+        evidence_packs=_generation_evidence(6),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    audit = payload["_cache"]["candidate_generation"]
+    assert audit["model_output_count"] == 2
+    assert audit["fallback_invoked"] is True
+    assert audit["fallback_reason"] == "candidate_pool_incomplete"
+    assert 1 <= audit["fallback_candidate_count"] <= 4
+    assert audit["selected_candidate_source"] == "model_and_fallback"
+    assert len(payload["insights_candidates"]) >= 5
+    assert len({item["evidence_id"] for item in payload["insights_candidates"]}) == len(
+        payload["insights_candidates"]
+    )
+
+
+def test_generate_artifacts_keeps_eight_model_candidates_without_fallback(tmp_path):
+    candidates = [_insight(f"f{index}", score=1 - index / 100) for index in range(1, 9)]
+    responses = _generation_responses(
+        candidates, plan_evidence_ids=[f"f{index}" for index in range(1, 7)]
+    )
+    responses["insights_final"] = {"insights_final": candidates[:5]}
+
+    payload = generate_artifacts(
+        report_id="eight-model-candidates",
+        report_name="Eight model candidates",
+        doc_map=_doc_map(8),
+        evidence_packs=_generation_evidence(8),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    audit = payload["_cache"]["candidate_generation"]
+    assert audit["model_output_count"] == 8
+    assert audit["fallback_invoked"] is False
+    assert audit["selected_candidate_source"] == "model"
 
 
 def _generation_evidence(section_count: int) -> dict[str, object]:

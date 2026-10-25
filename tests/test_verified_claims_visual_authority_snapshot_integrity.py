@@ -104,6 +104,16 @@ def test_verified_visual_evaluation_sees_full_candidate_roster_before_editorial_
     responses = _generation_responses(
         candidates, plan_evidence_ids=[f"f{i}" for i in range(1, 6)]
     )
+    responses["insights_final"] = {
+        "insights_final": [
+            {
+                **deepcopy(candidate),
+                "evidence_id": f"verified-fact:{candidate['id']}",
+                "evidence_spans": [],
+            }
+            for candidate in candidates[:2]
+        ]
+    }
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         "verified-fact:insight-f1-0.99"
     )
@@ -121,7 +131,10 @@ def test_verified_visual_evaluation_sees_full_candidate_roster_before_editorial_
     )
     assert evaluated_roster == [f"f{i}" for i in range(1, 7)]
     assert len(payload["verified_facts"]) == 6
-    assert len(payload["insights_final"]) == 5
+    assert [item["id"] for item in payload["insights_final"]] == [
+        "insight-f1-0.99",
+        "insight-f2-0.98",
+    ]
 
 
 def test_verified_generation_materializes_downstream_insights_from_snapshot(
@@ -139,6 +152,16 @@ def test_verified_generation_materializes_downstream_insights_from_snapshot(
         return admission
 
     responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+    responses["insights_final"] = {
+        "insights_final": [
+            {
+                **deepcopy(candidate),
+                "evidence_id": f"verified-fact:{candidate['id']}",
+                "evidence_spans": [],
+            }
+            for candidate in candidates
+        ]
+    }
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         "verified-fact:insight-f1-0.99"
     )

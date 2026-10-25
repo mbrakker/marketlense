@@ -138,8 +138,8 @@ selection effectiveness. Step 3 remains unstarted/not ready.
 
 ## Artifact references
 
-- [Fresh cohort result](<C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\cohort_result.json>)
-- [Final artifacts](<C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobile-app-a5407b768f97\report_analysis\artifacts.json>)
-- [Candidate checkpoint](<C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobil-a5407b768f97\report_analysis\prompt_family_report_vs_artifacts_insights_candidates.json>)
-- [Validation result](<C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobile-app-a5407b768f97\report_analysis\validation.json>)
-- [Publication-readiness result](<C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobile-app-a5407b768f97\report_analysis\publish_readiness.json>)
+- Fresh cohort result: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\cohort_result.json`
+- Final artifacts: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobile-app-a5407b768f97\report_analysis\artifacts.json`
+- Candidate checkpoint: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobil-a5407b768f97\report_analysis\prompt_family_report_vs_artifacts_insights_candidates.json`
+- Validation result: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobile-app-a5407b768f97\report_analysis\validation.json`
+- Publication-readiness result: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobile-app-a5407b768f97\report_analysis\publish_readiness.json`

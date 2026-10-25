@@ -248,7 +248,7 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
         "f5",
     ]
     actual_insight_ids = [item["evidence_id"] for item in payload["insights_final"]]
-    assert actual_insight_ids == ["f2", "f3"], actual_insight_ids
+    assert actual_insight_ids == ["f2", "f3", "f1", "f4", "f5"], actual_insight_ids
     assert [item["evidence_id"] for item in payload["quotes_final"]] == ["q1"]
     assert "retention-led efficiency" in payload["summary"]["executive_summary"].lower()
     assert "operating tradeoff" in payload["expert_comment"].lower()
