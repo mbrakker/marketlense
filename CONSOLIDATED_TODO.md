@@ -996,3 +996,15 @@ fresh run, so live recovery efficacy and the historical batch-04 cause remain
 open. E17 remains Active, E18 remains Active/PARTIAL, Step 2 remains
 PARTIAL/NO-GO, and Step 3 remains unstarted/not ready. See the detailed Step 2
 evidence report for the source hash, full ledger and PDF review.
+
+**P1 editorial-selection quality and fresh Adjust funnel — 2026-10-25
+(`83870a1c`):** The empty retained candidate checkpoint is now explained as
+an accepted model abstention followed by the evidence-backed fallback; the
+audit records model, fallback and selection counts. Deterministic replay and
+focused tests cover direct-versus-section plan references, admitted-fact
+remapping, concentration-aware fallback coverage and preservation of verified
+alternatives. The one fresh Adjust run admitted 24 facts and produced five
+final insights but failed grounding on an unsupported “acquisition”
+interpretation of supported installs. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. See the
+Step 2 evidence report for measured results and artifact paths.

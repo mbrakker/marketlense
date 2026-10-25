@@ -1236,3 +1236,19 @@ intermediate findings were correctly rejected. E17 remains Active, E18
 remains Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
 unstarted/not ready. Full measurements and artifact paths are in the Step 2
 evidence report.
+
+**P1 editorial-selection quality and fresh Adjust funnel — 2026-10-25
+(`83870a1c`):** The retained empty Adjust candidate checkpoint is now
+explained as an accepted, parse-valid model abstention followed by the
+evidence-backed fallback; the new audit records model, fallback and selection
+counts. Exact provider-free replay of the retained findings improved bounded
+fallback coverage across admitted sections, and verified plan remapping now
+accepts section references only through original findings that map to admitted
+canonical facts. One fresh isolated Adjust run admitted 24/24 visual facts and
+produced five final insights, but failed the existing grounding gate because
+one qualitative rewrite called supported installs “acquisition”. It used 84
+calls, 983,264 input tokens, 134,403 output tokens, `$0.182050`, and 1,098.765
+seconds; no publication or canonical write occurred. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. Full ledger and artifact paths are in the Step 2
+evidence report.

@@ -5290,3 +5290,100 @@ exercise recovery. **Verdict: PASS for the deterministic P1/P2 correction and
 this Adjust report; PARTIAL/NO-GO for broader Step 2.** Step 3 remains
 unstarted/not ready. No canonical artifact was promoted or mutated, and no
 WordPress publication occurred.
+
+#### P1 editorial-selection quality and Adjust candidate-funnel verification — 2026-10-25 (`83870a1c`)
+
+The retained Adjust checkpoint was traced before the fresh evaluation. The
+archived `report_vs/artifacts/insights_candidates` record contained an empty
+normalized output, but its raw provider response was not retained. The usage
+ledger shows one completed primary candidate call (4,687 input / 704 output /
+675 reasoning tokens; `$0.000821`; parse-valid; no schema or provider error;
+no recovery call). The existing artifact contract treats an empty candidate
+array as a permitted abstention, so normalization preserved the empty result
+and the existing findings fallback supplied the downstream roster. The retained
+evidence therefore establishes **accepted empty output followed by fallback**;
+it cannot prove whether the provider explicitly returned `[]` or omitted the
+root before normalization. No independent candidate-generation defect is
+confirmed, and the fallback remains the safety mechanism.
+
+The implementation changes are limited to the existing selection boundaries:
+
+- `fallback_artifact_insights_from_findings()` now resolves exact finding IDs
+  and exact `finding.section_id` references, with direct IDs taking precedence;
+  fidelity-approved findings retain their real IDs, pages and evidence. Theme
+  coverage is selected before a concentration-aware fill, using existing
+  confidence, score, plan priority and section metadata without keyword
+  scoring or fixed quotas.
+- `remap_editorial_plan_to_verified_facts()` receives the original findings
+  pack and maps section references only through admitted fact provenance. Direct
+  aliases remain authoritative; absent, conflicting or unadmitted mappings are
+  dropped and the existing minimum-coverage error remains fail-closed.
+- Verified final selection now passes `preserve_all=True`, so every admitted
+  fact remains an alternative until the final model chooses the existing target
+  count. The selection cache identity advanced from `evidence_backed_shortlisting:11`
+  to `:12`. A bounded `_cache.candidate_generation` audit records model output,
+  fallback output, selected source and verified-admission counts without raw
+  prompts or responses.
+
+Provider-free replay of the exact retained 36-finding Adjust input reproduced
+the old bounded roster as 17 items: gaming 9, finance 5, ecommerce 1,
+introduction 2, and AI/cross-platform 0. The corrected fallback still returned
+17 items, but its coverage was gaming 4, finance 4, ecommerce 3,
+introduction 4, AI 1 and cross-platform 1. The supported
+`ecommerce-finding-retention-cpi` finding was present and assessed in the
+eligible inventory; it was not forced into the bounded replay shortlist. The
+old admitted 17-fact roster became only 5 pre-final candidates; the corrected
+verified selector retains all 17 as final-model alternatives. The original old
+roster did not contain admitted AI or cross-platform facts, so those themes
+correctly remain absent in that replay; the new section remapping admits them
+only when their source-linked facts are actually present.
+
+One fresh isolated Adjust run was then executed from clean commit
+`83870a1cb0064a1d37ecd5d5cb70653938c927f8` using the frozen source manifest,
+`--verified-facts-architecture`, sequential visual processing, and no
+WordPress target. The source PDF SHA-256 was
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`.
+
+| Funnel stage | Observed result |
+| --- | ---: |
+| Fidelity-supported findings in fresh run | 27 |
+| Model candidate checkpoint | 7 |
+| Findings fallback candidates | 17 |
+| Pre-visual selected candidates | 24 (`model_and_fallback`) |
+| Visual candidates evaluated / admitted / quarantined | 24 / 24 / 0 |
+| Remapped verified-plan themes | 4; only admitted source-linked themes retained |
+| Eligible final-model candidates | 24 |
+| Final insights | 5 |
+
+The fresh run completed terminally but failed the existing semantic grounding
+gate: 84 provider calls, 983,264 input tokens, 134,403 output tokens, 56,271
+reasoning tokens, 10,830 cached input tokens, `$0.182050`, and 1,098.765
+seconds. It used 24 visual-correction and 24 visual-verification calls, 7
+grounding calls, and zero structured-output recovery or automatic repairs. All
+provider calls completed. Visual admission passed 24/24 with 24 canonical
+facts; public editorial quality passed with zero listed issues, but validation
+failed on `insight:finance-latam-growth-2025:so_what`: the final wording
+described the supported install result as “acquisition”. The source supports
+installs and sessions, not that broader acquisition interpretation. This is a
+real fail-closed downstream quality result, not an unsupported claim promotion.
+No final HTML/PDF publication artifact was produced and no WordPress or
+canonical write occurred.
+
+The fresh final five were source-bound to PDF pages 6 (global app growth), 19
+(strategy-game divergence), 27 (global ecommerce installs/sessions), 35
+(LATAM finance growth), and 29 (deal-discovery CPI). Direct inspection of the
+retained full-page images confirmed the numeric/category relationships for
+these five; the grounding blocker remains on the qualitative interpretation.
+Compared with the immediately preceding retained run (75 calls, 707,174
+input, 115,340 output, `$0.147414`, 1,001.563 seconds, 17 admitted facts),
+the fresh run used +9 calls, +276,090 input tokens, +19,063 output tokens,
+`+$0.034636` and +97.202 seconds. The additional visual workload was 7
+correction and 7 verification calls. These are measured run differences, not
+causal quality claims; the provider generated a different 27-finding input.
+
+**Verdict: PASS for the deterministic selection/fallback correction and
+candidate-funnel audit; PARTIAL/FAIL for the required fresh report-quality
+gate.** The empty checkpoint is now explainable and no significant candidate
+coverage was silently lost, but the one unsupported qualitative interpretation
+keeps grounding/readiness failed. Step 2 remains **PARTIAL/NO-GO** and Step 3
+remains **unstarted/not ready**. No further stochastic rerun was performed.
