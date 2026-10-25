@@ -198,6 +198,28 @@ def _grounding_batches(
     return batches
 
 
+def _grounding_batch_prompt_variables(
+    grounding_batches: Sequence[tuple[dict, list[ClaimSemanticInput]]],
+    *,
+    evidence_texts: Sequence[str],
+    authority_policy: str,
+    verified_mode: bool,
+) -> list[dict[str, str]]:
+    """Build the scoped prompt variables shared by primary and recovery calls."""
+
+    evidence_json = (
+        "[]" if verified_mode else json.dumps(list(evidence_texts), ensure_ascii=False)
+    )
+    return [
+        {
+            "report_json": json.dumps(batch_payload, ensure_ascii=False),
+            "evidence_json": evidence_json,
+            "authority_policy": authority_policy,
+        }
+        for batch_payload, _batch_semantic_inputs in grounding_batches
+    ]
+
+
 def _claim_prompt_content_hashes(
     grounding_batches: Sequence[tuple[dict, list[ClaimSemanticInput]]],
     prompt_bundles: Sequence[Any],
@@ -421,14 +443,12 @@ def run_grounding_check(
     )
     grounding_batches = _grounding_batches(audit_payload, retained_claim_inputs)
     authority_policy = grounding_authority_policy(verified_mode)
-    batch_prompt_vars = [
-        {
-            "report_json": json.dumps(batch_payload, ensure_ascii=False),
-            "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
-            "authority_policy": authority_policy,
-        }
-        for batch_payload, _batch_semantic_inputs in grounding_batches
-    ]
+    batch_prompt_vars = _grounding_batch_prompt_variables(
+        grounding_batches,
+        evidence_texts=evidence_texts,
+        authority_policy=authority_policy,
+        verified_mode=verified_mode,
+    )
 
     def prepare_batch_bundle(variables: dict[str, str]):
         return prepare_prompt_bundle(
@@ -518,14 +538,12 @@ def run_grounding_check(
             set(public_item_ids.values()),
         )
         grounding_batches = _grounding_batches(audit_payload, retained_claim_inputs)
-        batch_prompt_vars = [
-            {
-                "report_json": json.dumps(batch_payload, ensure_ascii=False),
-                "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
-                "authority_policy": authority_policy,
-            }
-            for batch_payload, _batch_semantic_inputs in grounding_batches
-        ]
+        batch_prompt_vars = _grounding_batch_prompt_variables(
+            grounding_batches,
+            evidence_texts=evidence_texts,
+            authority_policy=authority_policy,
+            verified_mode=verified_mode,
+        )
         prompt_bundles = [
             prepare_batch_bundle(variables) for variables in batch_prompt_vars
         ]
@@ -642,22 +660,23 @@ def run_grounding_check(
     vector_provenance_verified = not grounding_use_vector_store or bool(
         str(vector_store_content_hash or "").strip()
     )
-    relevant_input_hash = sha256_json(
-        {
-            "grounding_payload": audit_payload,
-            "evidence_texts": list(evidence_texts),
-            "vector_store_id": request.vector_store_id or "",
-            "vector_store_content_hash": vector_store_content_hash,
-            "retrieval_mode": grounding_retrieval_mode(grounding_use_vector_store),
-            "authority_mode": "verified_facts" if verified_mode else "legacy",
-            "authority_policy": authority_policy,
-            "batch_policy": {
-                "schema_version": "1.0",
-                "max_claims_per_call": GROUNDING_MAX_CLAIMS_PER_CALL,
-                "max_public_items_per_call": GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL,
-            },
-        }
-    )
+    relevant_input_identity: dict[str, Any] = {
+        "grounding_payload": audit_payload,
+        "evidence_texts": list(evidence_texts),
+        "vector_store_id": request.vector_store_id or "",
+        "vector_store_content_hash": vector_store_content_hash,
+        "retrieval_mode": grounding_retrieval_mode(grounding_use_vector_store),
+        "authority_mode": "verified_facts" if verified_mode else "legacy",
+        "authority_policy": authority_policy,
+        "batch_policy": {
+            "schema_version": "1.0",
+            "max_claims_per_call": GROUNDING_MAX_CLAIMS_PER_CALL,
+            "max_public_items_per_call": GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL,
+        },
+    }
+    if verified_mode:
+        relevant_input_identity["evidence_context_scope"] = "linked_batch_v1"
+    relevant_input_hash = sha256_json(relevant_input_identity)
     try:
         output_schema = provider_output_schema("grounding_validation_output")
         _validate_semantic_input_identities(retained_claim_inputs)
@@ -1606,11 +1625,8 @@ def _validate_grounding_check_coverage(
                 ):
                     public_coverage_errors.append(item_id)
             elif outcome in {"contradicted", "not_established"}:
-                if (
-                    not matching_unsupported
-                    or not _grounding_text_matches(
-                        text, s(matching_unsupported[0].get("text"))
-                    )
+                if not matching_unsupported or not _grounding_text_matches(
+                    text, s(matching_unsupported[0].get("text"))
                 ):
                     public_coverage_errors.append(item_id)
             else:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 
 import pytest
 
@@ -14,7 +15,11 @@ from src.generators.claim_validation_generator import (
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
-from src.generators.validation.grounding import _grounding_batches, grounding_payload
+from src.generators.validation.grounding import (
+    _grounding_batch_prompt_variables,
+    _grounding_batches,
+    grounding_payload,
+)
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.generators.validation.verified_facts import validated_verified_facts
 from src.services.schema_validator_service import validate_evidence_references
@@ -452,6 +457,142 @@ def test_verified_grounding_passes_complete_canonical_fact_to_batches():
     )
 
 
+def test_verified_grounding_batch_variables_scope_report_wide_evidence():
+    fact = _fact()
+    batch_payload = {
+        "public_factual_items": [
+            {
+                "item_id": "insights:fact-1.text",
+                "text": fact["statement"],
+                "evidence_ids": ["verified-fact:fact-1"],
+                "retained_evidence": [fact["statement"]],
+            }
+        ],
+        "retained_claims_to_ground": [],
+        "canonical_verified_facts": {"fact-1": fact},
+    }
+
+    variables = _grounding_batch_prompt_variables(
+        [(batch_payload, [])],
+        evidence_texts=(fact["statement"], "Unrelated report-wide evidence."),
+        authority_policy="verified_facts",
+        verified_mode=True,
+    )[0]
+
+    assert variables["evidence_json"] == "[]"
+    rendered_batch = json.loads(variables["report_json"])
+    assert rendered_batch["canonical_verified_facts"] == {"fact-1": fact}
+    assert rendered_batch["public_factual_items"][0]["retained_evidence"] == [
+        fact["statement"]
+    ]
+    assert (
+        rendered_batch["canonical_verified_facts"]["fact-1"]["provenance"]
+        == fact["provenance"]
+    )
+
+
+def test_verified_grounding_batch_variables_preserve_multi_fact_qualifiers():
+    first = _fact()
+    second = deepcopy(first)
+    second["fact_id"] = "fact-2"
+    second["statement"] = "Views reached 18m among all respondents in 2026 H2."
+    second["metric"] = _metric(
+        observations=[
+            {
+                "label": "Views",
+                "value": "18m",
+                "unit": "views",
+                "timeframe": "2026 H2",
+                "population": "all respondents",
+                "methodology": {"weighting": "raw"},
+            }
+        ]
+    )
+    second["provenance"]["source_truth_notes_by_page"]["7"] = (
+        "The page describes the population and reporting period."
+    )
+    batch_payload = {
+        "public_factual_items": [],
+        "retained_claims_to_ground": [],
+        "canonical_verified_facts": {
+            "fact-1": first,
+            "fact-2": second,
+        },
+    }
+
+    variables = _grounding_batch_prompt_variables(
+        [(batch_payload, [])],
+        evidence_texts=(first["statement"], second["statement"]),
+        authority_policy="verified_facts",
+        verified_mode=True,
+    )[0]
+    rendered_batch = json.loads(variables["report_json"])
+
+    assert rendered_batch["canonical_verified_facts"] == {
+        "fact-1": first,
+        "fact-2": second,
+    }
+    assert (
+        rendered_batch["canonical_verified_facts"]["fact-2"]["metric"]["observations"][
+            0
+        ]["population"]
+        == "all respondents"
+    )
+    assert (
+        rendered_batch["canonical_verified_facts"]["fact-2"]["provenance"][
+            "source_truth_notes_by_page"
+        ]["7"]
+        in variables["report_json"]
+    )
+
+
+def test_grounding_batch_variables_keep_legacy_evidence_serialization_unchanged():
+    batch_payload = {
+        "public_factual_items": [],
+        "retained_claims_to_ground": [],
+    }
+    evidence_texts = ("Legacy evidence one.", "Legacy evidence two.")
+
+    variables = _grounding_batch_prompt_variables(
+        [(batch_payload, [])],
+        evidence_texts=evidence_texts,
+        authority_policy="legacy",
+        verified_mode=False,
+    )[0]
+
+    assert variables["evidence_json"] == json.dumps(
+        list(evidence_texts), ensure_ascii=False
+    )
+
+
+def test_grounding_batch_variables_are_reused_for_initial_and_recovery_context():
+    batch_payload = {
+        "public_factual_items": [],
+        "retained_claims_to_ground": [],
+    }
+    kwargs = {
+        "evidence_texts": ("Canonical fact evidence.", "Unrelated evidence."),
+        "authority_policy": "verified_facts",
+        "verified_mode": True,
+    }
+
+    initial = _grounding_batch_prompt_variables([(batch_payload, [])], **kwargs)[0]
+    post_reuse = _grounding_batch_prompt_variables([(batch_payload, [])], **kwargs)[0]
+    recovery_source_evidence = {
+        "report_json": initial["report_json"],
+        "evidence_json": initial["evidence_json"],
+        "authority_policy": initial["authority_policy"],
+    }
+
+    assert post_reuse == initial
+    assert recovery_source_evidence["evidence_json"] == "[]"
+    assert recovery_source_evidence == {
+        "report_json": post_reuse["report_json"],
+        "evidence_json": post_reuse["evidence_json"],
+        "authority_policy": post_reuse["authority_policy"],
+    }
+
+
 def test_verified_grounding_keeps_authoritative_fact_when_editorial_value_matches():
     fact = _fact(
         metric={
@@ -550,9 +691,7 @@ def test_verified_metric_spine_preserves_authoritative_statement_qualifier():
     )
 
     assert spine[0]["source_statement"] == fact["statement"]
-    assert fact["statement"] in metric_claim_text(
-        spine[0], include_observations=True
-    )
+    assert fact["statement"] in metric_claim_text(spine[0], include_observations=True)
 
 
 def test_verified_multi_fact_artifact_uses_union_of_authoritative_pages():
