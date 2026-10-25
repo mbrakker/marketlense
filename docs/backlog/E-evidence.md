@@ -989,6 +989,28 @@ Commit and push the smallest proven change.
   - Each accepted change shows a **measured** improvement in total billed provider cost per successfully ready/publishable report, with wall-clock time non-regressing; report raw token changes separately from billed cache savings, retries, and any quality-recovery overhead. Savings targets are not assumed or achieved by narrowing the evidence corpus.
   - E9/A15/E10/R1/A21 and existing immutable provenance, privacy, budget, review/approval and sandbox publication safeguards remain authoritative. Before marking E17 Closed, retain results and producer SHAs in the existing `docs/quality/` or `docs/CTO_evidence/` evidence structure. If the cohort cannot substantiate a change, record `no change needed` and leave it unimplemented.
 
+**Evidence update — 2026-10-25 (E17 P1.1 scoped verified-grounding input):**
+The minimal `ee5ea175` slice removes only the repeated report-wide
+`evidence_json` from verified grounding batches; complete canonical facts and
+linked evidence remain in the existing batch payload, normal mode is
+unchanged, recovery uses the same scoped variables, and the verified cache
+identity advances with a `linked_batch_v1` scope marker. The accepted Adjust
+baseline at `9b6ce50c` was not rerun. One fresh isolated optimized run on the
+same hash-matched PDF reduced grounding input from **138,905 to 76,560
+tokens (-44.88%)** and grounding cost from **$0.033034 to $0.029490
+(-10.73%)**. The whole run observed **81 to 74 calls**, **1,017,364 to
+831,132 input tokens**, **$0.197232 to $0.168355 (-$0.028877)**, and **1,144.0
+to 1,063.0 seconds**; the whole-run deltas are not fully attributed because
+the fresh model run selected a different non-grounding call mix. Three
+structured-output recovery calls succeeded, with zero automatic repairs and
+no workflow retry. Five final insights, five metric-spine rows, validation,
+public editorial quality, and publication readiness passed; unsupported and
+unresolved retained factual counts were zero. Direct PDF review confirmed
+pages 9, 19, 29, and 35. The change is **KEPT** for the measured grounding
+saving; E17 remains Active pending broader staged economics evidence. Full
+metrics, repair ledger, and limitations are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
 ### Luna implementation prompt — E17
 
 ```text

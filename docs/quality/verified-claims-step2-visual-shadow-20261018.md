@@ -4829,3 +4829,105 @@ CPython 3.12 (`1 passed`). This isolated run is a **PASS** for the Adjust
 verified-mode integration gate. Broader Step 2 shadow/live effectiveness
 remains **PARTIAL / NO-GO** until the retained frozen cohort has equivalent
 fresh evidence, and Step 3 remains **unstarted/not ready**.
+
+#### E17 P1.1 — scoped verified-grounding input optimization — 2026-10-25 (`ee5ea175`)
+
+This is the requested single-report optimization slice, not a new five-report
+cohort. The only production change adds the private
+`_grounding_batch_prompt_variables()` helper in
+`src/generators/validation/grounding.py`. In verified mode it sends
+`evidence_json="[]"` for each bounded batch while retaining the complete
+canonical verified facts, linked evidence, source qualifiers, and
+multi-fact relationships in the existing batch `report_json`. Normal mode
+serializes `evidence_texts` exactly as before. The same helper output is used
+for initial and post-reuse grounding, and recovery derives its source context
+from those variables. The verified relevant-input identity now includes the
+`linked_batch_v1` scope marker, so old verified materializations cannot be
+reused; the normal-mode identity is unchanged. Prompts, schemas, model policy,
+reasoning effort, and repair logic were not changed.
+
+The accepted Adjust baseline was read from the retained run at `9b6ce50c`
+and was not rerun. The one fresh optimized run used clean SHA
+`ee5ea1754f03014452fad0deb6eb90f1cb1bc217`, a new isolated run directory,
+the same retained PDF, and the same source identity plus PDF SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`.
+No publication target or WordPress write was enabled.
+
+| Measure | Accepted baseline | Optimized run | Change |
+| --- | ---: | ---: | ---: |
+| Provider calls | 81 | 74 | -7 (-8.64%) |
+| Input tokens | 1,017,364 | 831,132 | -186,232 (-18.31%) |
+| Output tokens | 148,466 | 142,426 | -6,040 (-4.07%) |
+| Reasoning tokens | 67,121 | 59,844 | -7,277 (-10.84%) |
+| Reported cached-input tokens | 13,745 | 10,830 | -2,915 (-21.21%); not treated as savings |
+| Estimated provider cost | $0.197232 | $0.168355 | -$0.028877 (-14.64%) |
+| Runner total duration | 1,144.0 s | 1,063.0 s | -81.0 s (-7.08%) |
+| Aggregate provider elapsed time | 1,290.432 s | 1,309.432 s | +19.000 s (+1.47%) |
+| File-search calls | 9 | 6 | -3; not attributed to this slice |
+
+The directly attributable grounding-family comparison was:
+
+| Grounding measure | Baseline | Optimized | Change |
+| --- | ---: | ---: | ---: |
+| Calls | 7 | 7 | 0 |
+| Input tokens | 138,905 | 76,560 | -62,345 (-44.88%) |
+| Output tokens | 40,564 | 45,617 | +5,053 (+12.46%) |
+| Reasoning tokens | 3,593 | 4,987 | +1,394 (+38.80%) |
+| Reported cached-input tokens | 12,635 | 10,830 | -1,805 (-14.28%) |
+| Estimated grounding cost | $0.033034 | $0.029490 | -$0.003544 (-10.73%) |
+| Aggregate grounding provider elapsed | 269.454 s | 328.936 s | +59.482 s (+22.07%) |
+
+The total-run call and cost deltas are not claimed as wholly caused by this
+change: the fresh model run selected a different non-grounding call mix and
+had stochastic output/reasoning variation. The grounding input reduction and
+grounding-family cost reduction are measured directly. Provider cache-write
+quantity was not exposed by the retained usage telemetry, so no cache-write
+savings are claimed.
+
+Recovery audit (the existing bounded mechanisms only) recorded three
+structured-output recovery calls versus zero in the accepted baseline; no
+automatic repair and no workflow retry occurred. All three succeeded:
+
+| Observed issue | Recovery | Input / output | Cost / provider time | Result |
+| --- | ---: | ---: | ---: | --- |
+| Taxonomy primary parse invalid at output limit | 1 | 13,957 / 526 | $0.001659 / 5.383 s | valid recovery |
+| Findings primary invalid JSON at output validation | 1 | 10,182 / 1,861 | $0.001949 / 16.293 s | valid recovery |
+| Grounding batch 06 structured recovery; primary parse was valid and the retained event did not record a more specific trigger | 1 | 8,912 / 2,869 | $0.002326 / 22.293 s | valid recovery |
+| **Total** | **3** | **33,051 / 5,256** | **$0.005934 / 43.969 s** | **3/3 successful** |
+
+The final optimized artifact retained five insights, five metric-spine rows,
+and three key figures; the baseline retained five insights, five metric-spine
+rows, and one key figure. Fresh model selection changed the stable insight
+roster, so the identity difference is reported as run variation rather than
+an optimization benefit:
+
+| Stable ID | Page | Source-grounded final wording and review |
+| --- | ---: | --- |
+| `casino-slots-install-session-counter-signal` | 19 | Casino installs +22% and slots +46%, while sessions fell 5% in both; full chart and text support the install/session distinction. |
+| `gaming-subvertical-growth` | 19 | Casual sessions +37% and hyper-casual +31% YoY; the page also supports the linked install values and the recommendation keeps the measures separate. |
+| `finance-regional-install-session-growth` | 35 | Finance installs +76% in LATAM and +42% in MENA; the page supports the linked session values and region/timeframe qualifiers. |
+| `ecommerce-cpi-subvertical-divergence` | 29 | Deal-discovery CPI rose from $1.44 to $2.26; the page supports the complete global and subvertical CPI tuple. |
+| `advanced-generative-ai-efficiency-gains` | 9 | A small advanced-deployment group reportedly achieved gains over 20%; the wording preserves the report’s qualifier and does not generalize the result. |
+
+Direct full-page review of Adjust pages 9, 19, 29, and 35 confirmed the five
+final claims and their material qualifiers. The generated summary, expert
+comment, metric spine, key figures, and linked claim ledger were checked
+against the same canonical facts. Retained-claim validation recorded 28
+semantic checks, all supported; unsupported and unresolved retained factual
+counts were both zero. Public editorial quality passed, publication readiness
+passed, and the only family warning was the pre-existing `quotes_missing`
+abstention. The final family remained generated, and no canonical or
+publication artifact was promoted.
+
+Focused verification passed **92** grounding/authority tests and **18**
+regeneration/finalization tests. Ruff, changed-source mypy, formatting, and
+the unchanged prompt-fixture gate passed. The prompt fixture gate remained at
+its current enforced baseline comparison of **108,909 vs 108,751 tokens** and
+**$0.024114 vs $0.024098**; no prompt, threshold, pricing, or fixture change
+was made by this slice. The optimized change is therefore **KEPT**: it shows a
+real measured 44.88% reduction in grounding input and $0.003544 grounding-cost
+saving with the same validation/readiness outcome and no reviewed factual or
+editorial regression. The aggregate provider-elapsed increase and the
+single-run/stochastic attribution limits remain documented. E17 remains
+Active, broader Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+unstarted/not ready.

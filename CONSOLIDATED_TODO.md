@@ -911,3 +911,21 @@ verified-mode Adjust integration **PASS**, while broader Step 2 effectiveness
 remains **PARTIAL/NO-GO** and Step 3 remains **unstarted/not ready**. Full
 evidence is recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**E17 P1.1 scoped verified-grounding input — 2026-10-25 (`ee5ea175`):** The
+minimal verified-mode batch projection now sends `evidence_json="[]"` while
+retaining complete canonical facts and linked source evidence in `report_json`;
+normal mode, recovery context, validation gates, and schemas remain unchanged,
+and the verified cache identity includes the `linked_batch_v1` scope marker.
+The accepted Adjust baseline at `9b6ce50c` was not rerun. One fresh isolated
+optimized run on the same PDF reduced grounding input **138,905 → 76,560
+tokens (-44.88%)** and grounding cost **$0.033034 → $0.029490 (-10.73%)**;
+the observed whole-run cost was **$0.197232 → $0.168355** and duration
+**1,144.0 → 1,063.0 seconds**, with attribution limited by stochastic
+non-grounding call mix. Five final insights, five metric-spine rows, grounding,
+publication readiness, and public editorial quality passed with zero unsupported
+or unresolved retained factual claims; three structured-output recoveries
+succeeded, with zero automatic repairs and no publication write. E17 remains
+Active, broader Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+unstarted/not ready. Detailed evidence:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
