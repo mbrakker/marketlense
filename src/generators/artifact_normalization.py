@@ -269,16 +269,12 @@ def remap_editorial_plan_to_verified_facts(
             section_id = normalize_text(finding.get("section_id"))
             if finding_id and section_id:
                 finding_key = _fallback_evidence_key(finding_id)
-                finding_sections.setdefault(finding_key, set()).add(
-                    section_id
-                )
+                finding_sections.setdefault(finding_key, set()).add(section_id)
 
     section_fact_targets: dict[str, list[str]] = {}
     for evidence_id in fact_evidence_ids:
         for discovery_id in fact_discovery_ids.get(evidence_id, set()):
-            sections = finding_sections.get(
-                _fallback_evidence_key(discovery_id), set()
-            )
+            sections = finding_sections.get(_fallback_evidence_key(discovery_id), set())
             if len(sections) != 1:
                 continue
             section_id = next(iter(sections))
@@ -2564,9 +2560,7 @@ def fallback_artifact_insights_from_findings(
                     theme["priority"],
                 )
     seen_evidence_ids: set[str] = set()
-    ranked_findings: list[
-        tuple[tuple[float, ...], int, str, str, Dict[str, Any]]
-    ] = []
+    ranked_findings: list[tuple[tuple[float, ...], int, str, str, Dict[str, Any]]] = []
     for source_order, finding in enumerate(raw_findings):
         if not isinstance(finding, dict):
             continue
@@ -2622,9 +2616,7 @@ def fallback_artifact_insights_from_findings(
         for evidence_id in covered_evidence_ids or []
         if _fallback_evidence_key(evidence_id)
     }
-    selected_ranked: list[
-        tuple[tuple[float, ...], int, str, str, Dict[str, Any]]
-    ] = []
+    selected_ranked: list[tuple[tuple[float, ...], int, str, str, Dict[str, Any]]] = []
     selected_ids: set[str] = set()
     selected_sections: dict[str, int] = {}
     for _, _, direct_ids, section_candidate_ids in sorted(theme_evidence_ids):
@@ -2654,9 +2646,7 @@ def fallback_artifact_insights_from_findings(
     # Give each still-unrepresented source section one strong eligible finding
     # before the ranked fill.  Section metadata is used only as an existing
     # coverage signal; fidelity and finding quality remain the eligibility gate.
-    for section_id in dict.fromkeys(
-        item[3] for item in ranked_findings if item[3]
-    ):
+    for section_id in dict.fromkeys(item[3] for item in ranked_findings if item[3]):
         if len(selected_ranked) >= limit or section_id in selected_sections:
             continue
         section_candidates = [
@@ -2697,9 +2687,7 @@ def fallback_artifact_insights_from_findings(
             selected_ranked.append(chosen)
             selected_ids.add(chosen[2])
             if chosen[3]:
-                selected_sections[chosen[3]] = (
-                    selected_sections.get(chosen[3], 0) + 1
-                )
+                selected_sections[chosen[3]] = selected_sections.get(chosen[3], 0) + 1
     raw_candidates = [item[4] for item in selected_ranked]
     return normalize_artifact_insights(raw_candidates, prefix="finding")
 

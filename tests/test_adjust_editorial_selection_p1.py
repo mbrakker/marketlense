@@ -54,8 +54,7 @@ def _fidelity(*finding_ids: str) -> dict[str, object]:
     }
 
 
-def test_finding_fallback_resolves_editorial_plan_section_refs_and_preserves_direct_ids(
-) -> None:
+def test_fallback_resolves_plan_section_refs_and_direct_ids() -> None:
     findings = {
         "findings": [
             _finding("ai-finding", "ai-infrastructure", score=0.8),
