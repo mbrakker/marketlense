@@ -23,7 +23,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:17"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:18"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -149,7 +149,106 @@ def artifact_base_variables(
         "canonical_evidence_ids_json": _dump_json(
             sorted(known_evidence_ids, key=str.casefold)
         ),
+        "candidate_allowed_evidence_ids_json": _dump_json(
+            artifact_candidate_allowed_evidence_ids(evidence_packs or {})
+        ),
     }
+
+
+def artifact_candidate_allowed_evidence_ids(
+    evidence_packs: Dict[str, Any],
+) -> List[str]:
+    """Return the direct, eligible evidence vocabulary for insight candidates.
+
+    The general artifact reference vocabulary intentionally includes DocMap
+    section IDs for legacy families. Candidate insights have a narrower
+    contract: every declared evidence identity must resolve to a retained
+    finding or a source-attributed quote that can substantiate the candidate.
+    Reuse the existing finding fallback eligibility so fidelity/quarantine
+    decisions remain authoritative, while keeping all eligible findings
+    available to the model rather than only the bounded fallback shortlist.
+    """
+
+    if not isinstance(evidence_packs, dict):
+        return []
+
+    allowed: List[str] = []
+    seen: set[str] = set()
+
+    findings_pack = evidence_packs.get("findings")
+    raw_findings = (
+        findings_pack.get("findings")
+        if isinstance(findings_pack, dict)
+        else None
+    )
+    if isinstance(raw_findings, list) and raw_findings:
+        eligible_findings = fallback_artifact_insights_from_findings(
+            findings_pack,
+            limit=len(raw_findings),
+            evidence_fidelity=evidence_packs.get("evidence_fidelity"),
+        )
+        for finding in eligible_findings:
+            evidence_id = _s(finding.get("evidence_id")).strip()
+            key = evidence_id.casefold()
+            if evidence_id and key not in seen:
+                seen.add(key)
+                allowed.append(evidence_id)
+
+    quote_pack = evidence_packs.get("quote_candidates")
+    raw_quotes = (
+        quote_pack.get("quote_candidates")
+        if isinstance(quote_pack, dict)
+        else quote_pack
+        if isinstance(quote_pack, list)
+        else None
+    )
+    if isinstance(raw_quotes, list):
+        quote_ids: dict[str, tuple[str, str, str]] = {}
+        conflicting_quote_ids: set[str] = set()
+        for quote in raw_quotes:
+            if not isinstance(quote, dict):
+                continue
+            evidence_id = _s(quote.get("id") or quote.get("evidence_id")).strip()
+            text = _s(quote.get("text")).strip()
+            source = _s(quote.get("source")).strip()
+            page = quote.get("page")
+            if (
+                not evidence_id
+                or not text
+                or not source
+                or source.casefold() in {"unknown", "unspecified"}
+                or (
+                    page is not None
+                    and (
+                        not isinstance(page, int)
+                        or isinstance(page, bool)
+                        or page < 1
+                    )
+                )
+                or re.fullmatch(
+                    r"source:page:\d+", evidence_id, flags=re.IGNORECASE
+                )
+            ):
+                continue
+            key = evidence_id.casefold()
+            representation = (text, source.casefold(), str(page))
+            previous = quote_ids.get(key)
+            if previous is not None and previous != representation:
+                conflicting_quote_ids.add(key)
+                continue
+            quote_ids[key] = representation
+        for quote in raw_quotes:
+            if not isinstance(quote, dict):
+                continue
+            evidence_id = _s(quote.get("id") or quote.get("evidence_id")).strip()
+            key = evidence_id.casefold()
+            if key in conflicting_quote_ids or key not in quote_ids:
+                continue
+            if key not in seen:
+                seen.add(key)
+                allowed.append(evidence_id)
+
+    return allowed
 
 
 def build_verified_fact_doc_map(doc_map: Dict[str, Any]) -> Dict[str, Any]:
@@ -2800,9 +2899,13 @@ def fallback_artifact_insights_from_findings(
             continue
         if not pages:
             continue
-        if fidelity_ids is not None and evidence_id.casefold() not in fidelity_ids:
+        normalized_evidence_id = _fallback_evidence_key(evidence_id)
+        if (
+            fidelity_ids is not None
+            and normalized_evidence_id.casefold() not in fidelity_ids
+            and evidence_id.casefold() not in fidelity_ids
+        ):
             continue
-        normalized_evidence_id = normalize_text(evidence_id)
         if normalized_evidence_id in seen_evidence_ids:
             continue
         seen_evidence_ids.add(normalized_evidence_id)
@@ -3090,6 +3193,49 @@ def discard_location_only_insights(items: Any) -> List[Dict[str, Any]]:
             ]
         sanitized.append(item)
     return sanitized
+
+
+def validate_artifact_candidate_evidence_ids(
+    items: Any,
+    allowed_evidence_ids: List[str],
+) -> None:
+    """Reject candidate references outside the direct evidence vocabulary."""
+
+    allowed = {
+        _s(evidence_id).strip().casefold()
+        for evidence_id in allowed_evidence_ids
+        if _s(evidence_id).strip()
+    }
+    invalid: list[dict[str, Any]] = []
+    if isinstance(items, list):
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            references: list[Any] = [item.get("evidence_id")]
+            evidence_ids = item.get("evidence_ids")
+            if isinstance(evidence_ids, list):
+                references.extend(evidence_ids)
+            spans = item.get("evidence_spans")
+            if isinstance(spans, list):
+                references.extend(
+                    span.get("evidence_id")
+                    for span in spans
+                    if isinstance(span, dict)
+                )
+            for reference in references:
+                value = _s(reference).strip()
+                if value and value.casefold() not in allowed:
+                    invalid.append({"index": index, "evidence_id": value})
+    if invalid:
+        raise AppError(
+            code="artifact_candidate_evidence_reference_invalid",
+            message=(
+                "Insight candidates contain an evidence identity outside the "
+                "eligible direct-source vocabulary"
+            ),
+            retryable=False,
+            context={"invalid_references": invalid},
+        )
 
 
 def strip_artifact_inline_reference_ids(text: str) -> str:

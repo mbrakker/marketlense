@@ -9,12 +9,15 @@ text: |
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
   - Editorial plan JSON: {{ editorial_plan_json }}
+  - Allowed factual evidence IDs (copy these IDs exactly; this is the only
+    candidate evidence vocabulary): {{ candidate_allowed_evidence_ids_json }}
 
   Evidence identity rules:
   - DocMap guides sections and qualitative coverage; it does not prove claims.
-    For numeric claims, `evidence_id` must be one supporting finding ID. A
-    quote ID is allowed only when its text states the exact value, subject, and
-    period/status. Never cite a DocMap ID as numeric evidence.
+    `evidence_id` must be one allowed factual evidence ID. For numeric claims,
+    use one supporting finding ID. A quote ID is allowed only when its text
+    states the exact value, subject, and period/status. Never cite a DocMap ID
+    as evidence.
   - Keep each value's role (level, change, forecast, or cumulative) and bind it
     to its metric, population, geography, period, and any stated denominator.
     Leave unclear bindings empty.
@@ -25,8 +28,18 @@ text: |
   Task: Return a JSON object with `insights_candidates` as an array of 6-8 grounded items. Each item must include:
   - id: stable identifier
   - text: concise sentence capturing the data-backed insight
-  - evidence_id: exactly one existing evidence ID from the provided context.
-    Do not output arrays or comma-separated IDs; if uncertain, use an empty string.
+  - evidence_id: exactly one allowed factual evidence ID from the provided
+    vocabulary. Do not output arrays or comma-separated IDs; if uncertain, use
+    an empty string.
+  - evidence_ids: optional primary-first array of allowed IDs when a single
+    finding cannot substantiate a genuinely linked multi-fact insight. Every
+    declared ID must directly support a material part of the candidate.
+  - Copy allowed IDs exactly; never construct an ID from a page, heading, or
+    source label. `pages` contains physical PDF page numbers, never evidence IDs.
+  - For a genuinely multi-source statement, keep the strongest primary ID and
+    declare additional allowed IDs only when each one supports a distinct
+    material clause. If the evidence is insufficient, abstain and let fallback
+    selection supply a supported candidate.
   - evidence: short supporting quote/number
   - metric: object with fields {label, value, unit, trend, timeframe, geography, segment, sample_size, confidence} (empty strings allowed but keep present)
   - pages: page numbers if available

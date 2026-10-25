@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable, Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, wait
@@ -70,6 +71,7 @@ from src.generators.artifact_normalization import (
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
     supported_fidelity_evidence_ids,
+    validate_artifact_candidate_evidence_ids,
     validate_final_insight_candidate_lineage,
     validate_final_insight_editorial_coverage,
 )
@@ -499,6 +501,7 @@ def generate_artifacts(
     # soft-copy prompt context itself exposes beside one retained evidence ID
     # each.  Populated once those inputs exist; consulted at render time.
     context_anchor_evidence_ids: Dict[str, str] = {}
+    candidate_allowed_evidence_ids: List[str] = []
 
     def validate_required_evidence_references(
         payload: Dict[str, Any], task_ctx: RunContext
@@ -658,6 +661,10 @@ def generate_artifacts(
                 if task.step_name == "insights_candidates":
                     payload["insights_candidates"] = discard_location_only_insights(
                         payload.get("insights_candidates")
+                    )
+                    validate_artifact_candidate_evidence_ids(
+                        payload.get("insights_candidates"),
+                        candidate_allowed_evidence_ids,
                     )
                 elif task.step_name == "insights_final":
                     payload["insights_final"] = discard_location_only_insights(
@@ -1145,6 +1152,17 @@ def generate_artifacts(
 
     base_vars = artifact_base_variables(safe_doc_map, safe_evidence)
     canonical_evidence_ids_json = base_vars.pop("canonical_evidence_ids_json", "[]")
+    candidate_allowed_evidence_ids_json = base_vars.pop(
+        "candidate_allowed_evidence_ids_json", "[]"
+    )
+    candidate_allowed_evidence_ids_value = json.loads(
+        candidate_allowed_evidence_ids_json
+    )
+    candidate_allowed_evidence_ids = (
+        candidate_allowed_evidence_ids_value
+        if isinstance(candidate_allowed_evidence_ids_value, list)
+        else []
+    )
     editorial_plan_ctx = child_context(ctx, task_id=f"{ctx.task_id}:editorial_plan")
     editorial_plan_result = resolve_or_render_family(
         namespace="report_vs/artifacts/editorial_plan",
@@ -1297,6 +1315,9 @@ def generate_artifacts(
                 **base_vars,
                 **editorial_plan_dependency_vars,
                 "editorial_plan_json": editorial_plan_json,
+                "candidate_allowed_evidence_ids_json": (
+                    candidate_allowed_evidence_ids_json
+                ),
                 "_candidate_evidence_sufficient": str(
                     candidate_evidence_sufficient
                 ).lower(),
@@ -1700,6 +1721,7 @@ def generate_artifacts(
         editorial_plan_json = _dump_json(editorial_plan)
         base_vars = artifact_base_variables(active_doc_map, active_evidence)
         base_vars.pop("canonical_evidence_ids_json", None)
+        base_vars.pop("candidate_allowed_evidence_ids_json", None)
         summary_evidence_json = _summary_prioritized_evidence_json(
             active_evidence, editorial_plan
         )
