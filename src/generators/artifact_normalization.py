@@ -23,7 +23,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:11"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:12"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -197,8 +197,15 @@ def build_verified_fact_doc_map(doc_map: Dict[str, Any]) -> Dict[str, Any]:
 def remap_editorial_plan_to_verified_facts(
     editorial_plan: Dict[str, Any],
     verified_facts: List[Dict[str, Any]],
+    *,
+    source_findings: Any = None,
 ) -> Dict[str, Any]:
-    """Keep planning themes while replacing discovery IDs with fact IDs."""
+    """Keep planning themes while replacing discovery IDs with fact IDs.
+
+    Section references are navigation hints from discovery.  They are resolved
+    only through the original finding-to-section links of admitted facts; a
+    section name alone is never treated as a factual binding.
+    """
 
     plan = normalize_artifact_editorial_plan(editorial_plan)
     facts = [
@@ -218,26 +225,83 @@ def remap_editorial_plan_to_verified_facts(
             retryable=False,
         )
     aliases: dict[str, set[str]] = {}
+    fact_discovery_ids: dict[str, set[str]] = {}
     for fact, evidence_id in zip(facts, fact_evidence_ids, strict=True):
         identifiers = {_s(fact.get("fact_id")).strip(), evidence_id}
+        discovery_identifiers: set[str] = set()
         provenance = fact.get("provenance")
         if isinstance(provenance, dict):
-            identifiers.add(_s(provenance.get("discovery_candidate_id")).strip())
+            discovery_candidate_id = _s(
+                provenance.get("discovery_candidate_id")
+            ).strip()
+            identifiers.add(discovery_candidate_id)
+            if discovery_candidate_id:
+                discovery_identifiers.add(discovery_candidate_id)
             raw_evidence_ids = provenance.get("discovery_evidence_ids")
             if isinstance(raw_evidence_ids, list):
-                identifiers.update(_s(value).strip() for value in raw_evidence_ids)
+                discovery_identifiers.update(
+                    _s(value).strip() for value in raw_evidence_ids if _s(value).strip()
+                )
+                identifiers.update(discovery_identifiers)
         for identifier in identifiers:
             if identifier:
-                aliases.setdefault(identifier.casefold(), set()).add(evidence_id)
+                for alias in {
+                    identifier.casefold(),
+                    _fallback_evidence_key(identifier),
+                }:
+                    if alias:
+                        aliases.setdefault(alias, set()).add(evidence_id)
+        fact_discovery_ids[evidence_id] = discovery_identifiers
+
+    finding_sections: dict[str, set[str]] = {}
+    raw_findings = (
+        source_findings.get("findings")
+        if isinstance(source_findings, dict)
+        else source_findings
+    )
+    if isinstance(raw_findings, dict):
+        raw_findings = raw_findings.get("findings")
+    if isinstance(raw_findings, list):
+        for finding in raw_findings:
+            if not isinstance(finding, dict):
+                continue
+            finding_id = _s(finding.get("id")).strip()
+            section_id = normalize_text(finding.get("section_id"))
+            if finding_id and section_id:
+                finding_key = _fallback_evidence_key(finding_id)
+                finding_sections.setdefault(finding_key, set()).add(
+                    section_id
+                )
+
+    section_fact_targets: dict[str, list[str]] = {}
+    for evidence_id in fact_evidence_ids:
+        for discovery_id in fact_discovery_ids.get(evidence_id, set()):
+            sections = finding_sections.get(
+                _fallback_evidence_key(discovery_id), set()
+            )
+            if len(sections) != 1:
+                continue
+            section_id = next(iter(sections))
+            targets = section_fact_targets.setdefault(section_id, [])
+            if evidence_id not in targets:
+                targets.append(evidence_id)
 
     themes: list[dict[str, Any]] = []
     unmapped_themes: list[str] = []
     for theme in plan["themes"]:
         mapped: list[str] = []
         for raw_evidence_id in theme["evidence_ids"]:
-            targets = aliases.get(raw_evidence_id.casefold(), set())
-            if len(targets) == 1:
-                target = next(iter(targets))
+            raw_key = raw_evidence_id.casefold()
+            direct_targets = aliases.get(raw_key) or aliases.get(
+                _fallback_evidence_key(raw_evidence_id), set()
+            )
+            if direct_targets:
+                if len(direct_targets) == 1:
+                    target = next(iter(direct_targets))
+                    if target not in mapped:
+                        mapped.append(target)
+                continue
+            for target in section_fact_targets.get(normalize_text(raw_evidence_id), []):
                 if target not in mapped:
                     mapped.append(target)
         if not mapped:
@@ -2451,30 +2515,58 @@ def fallback_artifact_insights_from_findings(
             for claim_id in [_s(candidate.get("claim_id")).strip()]
             if claim_id.startswith("evidence:findings:")
         }
+    finding_sections: dict[str, str] = {}
+    finding_ids: set[str] = set()
+    for finding in raw_findings:
+        if not isinstance(finding, dict):
+            continue
+        finding_id = _fallback_evidence_key(finding.get("id"))
+        if not finding_id:
+            continue
+        finding_ids.add(finding_id)
+        section_id = normalize_text(finding.get("section_id"))
+        if finding_id not in finding_sections:
+            finding_sections[finding_id] = section_id
+        elif finding_sections[finding_id] != section_id:
+            finding_sections[finding_id] = ""
+
     theme_priority: dict[str, int] = {}
-    theme_evidence_ids: list[tuple[int, set[str]]] = []
+    theme_evidence_ids: list[tuple[int, set[str], set[str], set[str]]] = []
     if isinstance(editorial_plan, dict):
         for theme in editorial_plan.get("themes") or []:
             if not isinstance(theme, dict) or not isinstance(
                 theme.get("priority"), int
             ):
                 continue
-            evidence_keys = {
+            reference_keys = {
                 _fallback_evidence_key(evidence_id)
                 for evidence_id in theme.get("evidence_ids") or []
                 if _fallback_evidence_key(evidence_id)
             }
-            if evidence_keys:
-                theme_evidence_ids.append((theme["priority"], evidence_keys))
-            for evidence_id in theme.get("evidence_ids") or []:
-                normalized_id = _fallback_evidence_key(evidence_id)
-                if normalized_id:
-                    theme_priority[normalized_id] = min(
-                        theme_priority.get(normalized_id, theme["priority"]),
+            direct_keys = reference_keys & finding_ids
+            section_candidate_ids = {
+                finding_id
+                for finding_id, section_id in finding_sections.items()
+                if section_id and section_id in reference_keys
+            }
+            if reference_keys:
+                theme_evidence_ids.append(
+                    (
                         theme["priority"],
+                        reference_keys,
+                        direct_keys,
+                        section_candidate_ids,
                     )
+                )
+            for finding_id in direct_keys | section_candidate_ids:
+                theme_priority[finding_id] = min(
+                    theme_priority.get(finding_id, theme["priority"]),
+                    theme["priority"],
+                )
     seen_evidence_ids: set[str] = set()
-    ranked_findings: list[tuple[tuple[float, ...], int, Dict[str, Any]]] = []
+    ranked_findings: list[
+        tuple[tuple[float, ...], int, str, str, Dict[str, Any]]
+    ] = []
     for source_order, finding in enumerate(raw_findings):
         if not isinstance(finding, dict):
             continue
@@ -2513,6 +2605,8 @@ def fallback_artifact_insights_from_findings(
                     float(source_order),
                 ),
                 source_order,
+                normalized_evidence_id,
+                finding_sections.get(normalized_evidence_id, ""),
                 {
                     "id": _s(finding.get("verified_fact_id")) or evidence_id,
                     "text": text,
@@ -2522,40 +2616,91 @@ def fallback_artifact_insights_from_findings(
                 },
             )
         )
-    ranked_findings.sort(key=lambda item: (item[0], item[1], item[2]["id"].casefold()))
+    ranked_findings.sort(key=lambda item: (item[0], item[1], item[4]["id"].casefold()))
     covered_keys = {
         _fallback_evidence_key(evidence_id)
         for evidence_id in covered_evidence_ids or []
         if _fallback_evidence_key(evidence_id)
     }
-    selected_ranked: list[tuple[tuple[float, ...], int, Dict[str, Any]]] = []
+    selected_ranked: list[
+        tuple[tuple[float, ...], int, str, str, Dict[str, Any]]
+    ] = []
     selected_ids: set[str] = set()
-    for _, theme_ids in sorted(theme_evidence_ids):
-        if theme_ids & covered_keys:
+    selected_sections: dict[str, int] = {}
+    for _, _, direct_ids, section_candidate_ids in sorted(theme_evidence_ids):
+        if direct_ids & covered_keys or section_candidate_ids & covered_keys:
             continue
         theme_candidates = [
             item
             for item in ranked_findings
-            if _fallback_evidence_key(item[2].get("id")) in theme_ids
-            and _fallback_evidence_key(item[2].get("id")) not in selected_ids
+            if (
+                item[2] in direct_ids
+                if direct_ids
+                else item[2] in section_candidate_ids
+            )
+            and item[2] not in selected_ids
+            and item[2] not in covered_keys
         ]
         if not theme_candidates:
             continue
         chosen = min(theme_candidates, key=lambda item: (item[0], item[1]))
         selected_ranked.append(chosen)
-        selected_ids.add(_fallback_evidence_key(chosen[2].get("id")))
+        selected_ids.add(chosen[2])
+        if chosen[3]:
+            selected_sections[chosen[3]] = selected_sections.get(chosen[3], 0) + 1
         if len(selected_ranked) >= limit:
             break
+
+    # Give each still-unrepresented source section one strong eligible finding
+    # before the ranked fill.  Section metadata is used only as an existing
+    # coverage signal; fidelity and finding quality remain the eligibility gate.
+    for section_id in dict.fromkeys(
+        item[3] for item in ranked_findings if item[3]
+    ):
+        if len(selected_ranked) >= limit or section_id in selected_sections:
+            continue
+        section_candidates = [
+            item
+            for item in ranked_findings
+            if item[3] == section_id
+            and item[2] not in selected_ids
+            and item[2] not in covered_keys
+        ]
+        if not section_candidates:
+            continue
+        chosen = min(section_candidates, key=lambda item: (item[0], item[1]))
+        selected_ranked.append(chosen)
+        selected_ids.add(chosen[2])
+        selected_sections[section_id] = 1
+
     if len(selected_ranked) < limit:
-        for item in ranked_findings:
-            evidence_key = _fallback_evidence_key(item[2].get("id"))
-            if evidence_key in selected_ids or evidence_key in covered_keys:
-                continue
-            selected_ranked.append(item)
-            selected_ids.add(evidence_key)
-            if len(selected_ranked) >= limit:
+        remaining = list(ranked_findings)
+        while len(selected_ranked) < limit:
+            available = [
+                item
+                for item in remaining
+                if item[2] not in selected_ids and item[2] not in covered_keys
+            ]
+            if not available:
                 break
-    raw_candidates = [item[2] for item in selected_ranked]
+            coverage_counts = {
+                item[3] or "__unsectioned__": selected_sections.get(item[3], 0)
+                for item in available
+            }
+            minimum_count = min(coverage_counts.values())
+            balanced = [
+                item
+                for item in available
+                if coverage_counts[item[3] or "__unsectioned__"] == minimum_count
+            ]
+            chosen = min(balanced, key=lambda item: (item[0], item[1]))
+            selected_ranked.append(chosen)
+            selected_ids.add(chosen[2])
+            if chosen[3]:
+                selected_sections[chosen[3]] = (
+                    selected_sections.get(chosen[3], 0) + 1
+                )
+    raw_candidates = [item[4] for item in selected_ranked]
     return normalize_artifact_insights(raw_candidates, prefix="finding")
 
 

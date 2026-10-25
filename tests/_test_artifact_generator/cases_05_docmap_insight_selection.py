@@ -413,6 +413,43 @@ def test_generate_artifacts_preserves_distinct_same_source_slots(tmp_path):
     assert payload["family_status"]["insights_bundle"]["status"] == "generated"
 
 
+def test_generate_artifacts_audits_empty_candidate_model_output_and_fallback_source(
+    tmp_path,
+):
+    fallback_candidates = [
+        _insight("f1", score=0.99),
+        _insight("f2", score=0.98),
+    ]
+    responses = _generation_responses(
+        fallback_candidates,
+        plan_evidence_ids=["f1", "f2"],
+    )
+    responses["insights_candidates"] = {"insights_candidates": []}
+    responses["insights_final"] = {
+        "insights_final": fallback_candidates,
+    }
+
+    payload = generate_artifacts(
+        report_id="empty-candidate-audit",
+        report_name="Empty candidate audit",
+        doc_map=_doc_map(2),
+        evidence_packs=_generation_evidence(2),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    audit = payload["_cache"]["candidate_generation"]
+    assert audit["model_output_count"] == 0
+    assert audit["model_output_status"] == "accepted_empty_after_normalization"
+    assert audit["fallback_candidate_count"] > 0
+    assert audit["selected_candidate_source"] == "fallback"
+    assert audit["selected_candidate_count"] >= 2
+    assert audit["raw_model_output_retained"] is False
+
+
 def test_generate_artifacts_completes_broad_theme_coverage_from_findings(tmp_path):
     candidates = [
         _insight(
@@ -458,5 +495,6 @@ __all__ = [
     "test_generate_artifacts_does_not_expand_a_narrow_editorial_plan",
     "test_generate_artifacts_retains_broad_doc_map_theme_coverage",
     "test_generate_artifacts_preserves_distinct_same_source_slots",
+    "test_generate_artifacts_audits_empty_candidate_model_output_and_fallback_source",
     "test_generate_artifacts_completes_broad_theme_coverage_from_findings",
 ]

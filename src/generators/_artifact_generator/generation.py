@@ -1263,17 +1263,31 @@ def generate_artifacts(
         if _s(candidate.get("text")).strip()
     ]
     initial_candidate_count = len(insights_candidates)
+    candidate_stage_output = stage_one_results.get("insights_candidates")
+    candidate_stage_output = (
+        candidate_stage_output if isinstance(candidate_stage_output, dict) else {}
+    )
+    candidate_generation_deferred = bool(
+        candidate_stage_output.get("_deferred_to_source_fallback")
+    )
+    candidate_generation_audit: Dict[str, Any] = {
+        "model_output_count": initial_candidate_count,
+        "model_output_status": (
+            "structured_output_failure_deferred"
+            if candidate_generation_deferred
+            else "accepted_non_empty"
+            if initial_candidate_count
+            else "accepted_empty_after_normalization"
+        ),
+        "fallback_invoked": True,
+        "raw_model_output_retained": False,
+    }
     final_insight_target_count = max(
         REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(editorial_plan["themes"])
     )
     fallback_limit = max(
         final_insight_target_count * 2,
         sum(len(theme["evidence_ids"]) for theme in editorial_plan["themes"]),
-    )
-    candidate_generation_deferred = bool(
-        stage_one_results.get("insights_candidates", {}).get(
-            "_deferred_to_source_fallback"
-        )
     )
     fallback_candidates = (
         fallback_artifact_insights_from_evidence(
@@ -1306,6 +1320,40 @@ def generate_artifacts(
         candidate_insights=fallback_candidates,
         editorial_plan=editorial_plan,
         preserve_all=visual_authority_admitter is not None,
+    )
+    candidate_generation_audit.update(
+        {
+            "fallback_candidate_count": len(fallback_candidates),
+            "selected_candidate_count": len(insights_candidates),
+            "selected_candidate_source": (
+                "model_and_fallback"
+                if initial_candidate_count and fallback_candidates
+                else "model"
+                if initial_candidate_count
+                else "fallback"
+                if fallback_candidates
+                else "none"
+            ),
+        }
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_insights_candidate_source",
+            module=logger.name,
+            fields={
+                "model_output_count": initial_candidate_count,
+                "fallback_candidate_count": len(fallback_candidates),
+                "selected_candidate_count": len(insights_candidates),
+                "selected_candidate_source": candidate_generation_audit[
+                    "selected_candidate_source"
+                ],
+                "model_output_status": candidate_generation_audit[
+                    "model_output_status"
+                ],
+            },
+        )
     )
     visual_authority_digest = ""
     visual_authority_audit: Dict[str, Any] = {}
@@ -1370,6 +1418,7 @@ def generate_artifacts(
         editorial_plan = remap_editorial_plan_to_verified_facts(
             editorial_plan,
             visual_authority_verified_facts,
+            source_findings=safe_evidence.get("findings"),
         )
         editorial_plan_json = _dump_json(editorial_plan)
         base_vars = artifact_base_variables(active_doc_map, active_evidence)
@@ -1429,7 +1478,16 @@ def generate_artifacts(
             final_insights=visual_authority_admitted_candidates,
             candidate_insights=[],
             editorial_plan=editorial_plan,
+            preserve_all=True,
             verified_mode=True,
+        )
+        candidate_generation_audit.update(
+            {
+                "admitted_verified_fact_candidate_count": len(
+                    visual_authority_admitted_candidates
+                ),
+                "post_admission_candidate_count": len(insights_candidates),
+            }
         )
         eligible_candidates = eligible_final_insight_candidates(insights_candidates)
         final_insight_allowed_candidate_ids = [
@@ -2023,6 +2081,7 @@ def generate_artifacts(
         cache_meta={
             **(cache_meta or {}),
             "key": cache_key,
+            "candidate_generation": deepcopy(candidate_generation_audit),
             "family_reuse": family_reuse,
             "producing_prompt_identities": producing_prompt_identities,
             "family_outputs": family_outputs,
