@@ -11,6 +11,7 @@ from PIL import Image
 
 from src.utils.coercion import stripped_string_value as _s
 from src.utils.public_metric_display import normalize_public_metric_display
+from src.utils.verified_facts import VERIFIED_FACT_EVIDENCE_PREFIX
 
 logger = logging.getLogger("market_lense.render_service")
 TEMPLATES_DIR = Path(__file__).resolve().parents[3] / "templates"
@@ -1047,6 +1048,8 @@ def _public_citation_label(value: str) -> str:
     # merely because the wrapper prevents a full-string token match.
     comparison_label = label.strip("'\"")
     lowered = comparison_label.casefold()
+    if lowered.startswith(VERIFIED_FACT_EVIDENCE_PREFIX):
+        return ""
     if lowered.startswith("local-"):
         return ""
     if "\\" in label or "/" in label:

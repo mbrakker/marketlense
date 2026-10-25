@@ -264,6 +264,10 @@ def test_public_citation_label_rejects_internal_provenance_identifiers() -> None
     assert _public_citation_label('"finding_4_deal_math_harder_2025"') == ""
     assert _public_citation_label('finding_4_deal_math_harder_"12_is_the_new_5"') == ""
     assert _public_citation_label("quote_candidates") == ""
+    assert (
+        _public_citation_label("verified-fact:global-finance-installs-sessions-2025")
+        == ""
+    )
     assert _public_citation_label('"Market report"') == '"Market report"'
 
 
