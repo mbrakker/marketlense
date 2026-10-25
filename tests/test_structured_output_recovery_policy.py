@@ -154,7 +154,7 @@ def test_recovery_policy_reaches_provider_request_without_call_site_override():
     ]
     assert [request.reasoning_effort for request in recorder.requests] == [
         "medium",
-        "medium",
+        "low",
         "medium",
     ]
     assert primary.effective_max_output_tokens == 16384

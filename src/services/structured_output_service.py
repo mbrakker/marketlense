@@ -316,11 +316,10 @@ def execute_structured_output(
         original_error_class=initial.error_class,
         model_pricing=model_pricing,
     )
-    failure_context = dict(
-        regenerated_evaluation.bounded_context
-        or repaired_evaluation.bounded_context
-        or initial.bounded_context
-        or {}
+    failure_context = _merge_bounded_app_error_contexts(
+        initial.bounded_context,
+        repaired_evaluation.bounded_context,
+        regenerated_evaluation.bounded_context,
     )
     if initial.error_class:
         failure_context["original_error_class"] = initial.error_class
@@ -687,16 +686,7 @@ def _bounded_app_error_context(error: AppError) -> dict[str, Any]:
     context = error.context if isinstance(error.context, dict) else {}
     retained: dict[str, Any] = {}
     for key in _ACTIONABLE_CONTEXT_LIST_KEYS:
-        value = context.get(key)
-        if not isinstance(value, list):
-            continue
-        tokens = [
-            token
-            for token in (str(item or "").strip() for item in value)
-            if token
-            and len(token) <= 128
-            and set(token) <= SAFE_ERROR_CONTEXT_TOKEN_CHARS
-        ][:3]
+        tokens = _bounded_context_tokens(context.get(key))
         if tokens:
             retained[key] = tokens
     count = context.get("missing_claim_count")
@@ -710,6 +700,62 @@ def _bounded_app_error_context(error: AppError) -> dict[str, Any]:
     ):
         retained["missing_or_ambiguous_public_item_count"] = min(public_item_count, 999)
     return retained
+
+
+def _bounded_context_tokens(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    tokens: list[str] = []
+    for item in value:
+        token = str(item or "").strip()
+        if (
+            not token
+            or len(token) > 128
+            or not set(token) <= SAFE_ERROR_CONTEXT_TOKEN_CHARS
+            or token in tokens
+        ):
+            continue
+        tokens.append(token)
+        if len(tokens) >= 3:
+            break
+    return tokens
+
+
+def _merge_bounded_app_error_contexts(
+    *contexts: dict[str, Any],
+) -> dict[str, Any]:
+    """Merge bounded phase diagnostics while preserving the original cause."""
+
+    merged: dict[str, Any] = {}
+    for context in contexts:
+        if not isinstance(context, dict):
+            continue
+        for key in _ACTIONABLE_CONTEXT_LIST_KEYS:
+            tokens = _bounded_context_tokens(context.get(key))
+            if not tokens:
+                continue
+            existing = merged.setdefault(key, [])
+            if not isinstance(existing, list):
+                continue
+            for token in tokens:
+                if token in existing or len(existing) >= 3:
+                    continue
+                existing.append(token)
+        for key in (
+            "missing_claim_count",
+            "missing_or_ambiguous_public_item_count",
+        ):
+            value = context.get(key)
+            if key in merged or not isinstance(value, int) or isinstance(value, bool):
+                continue
+            if (
+                key == "missing_claim_count"
+                and value > 0
+                or key == "missing_or_ambiguous_public_item_count"
+                and value >= 0
+            ):
+                merged[key] = min(value, 999)
+    return merged
 
 
 def _result(
