@@ -38,6 +38,8 @@ ingest:
   batch_limit: 20
   worker_limit: 5
   report_worker_limit: 5
+  # Opt-in only: 1 preserves sequential verified-facts visual evaluation.
+  verified_visual_claim_parallel_workers: 1
   source_quarantine:
     enabled: true
   admission:

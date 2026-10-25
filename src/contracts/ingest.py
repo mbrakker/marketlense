@@ -101,6 +101,15 @@ class IngestSettings:
             "doc": "Max concurrent per-file report subtasks; 1 disables within-file parallelism."
         },
     )
+    verified_visual_claim_parallel_workers: int = field(
+        default=1,
+        metadata={
+            "doc": (
+                "Max concurrent verified-facts visual claim evaluations per report; "
+                "1 preserves sequential evaluation."
+            )
+        },
+    )
     drive_supports_all_drives: bool = field(
         default=True,
         metadata={"doc": "Whether to set supportsAllDrives for Drive list calls."},
@@ -543,9 +552,7 @@ class IngestSettings:
     validation_grounding_global_min_interval_ms: int = field(
         default=250,
         metadata={
-            "doc": (
-                "Minimum milliseconds between validation grounding call starts."
-            )
+            "doc": ("Minimum milliseconds between validation grounding call starts.")
         },
     )
     strict_schema_validation: bool = field(

@@ -93,6 +93,9 @@ def build_ingest_settings(
                 "batch_limit": settings.batch_limit,
                 "ingest_worker_limit": settings.ingest_worker_limit,
                 "report_worker_limit": settings.report_worker_limit,
+                "verified_visual_claim_parallel_workers": (
+                    settings.verified_visual_claim_parallel_workers
+                ),
             },
         )
     )
@@ -129,6 +132,9 @@ def _config_load_complete_fields(
         "taxonomy_temperature": settings.taxonomy_temperature,
         "ingest_worker_limit": settings.ingest_worker_limit,
         "report_worker_limit": settings.report_worker_limit,
+        "verified_visual_claim_parallel_workers": (
+            settings.verified_visual_claim_parallel_workers
+        ),
         "openai_seed": settings.openai_seed,
         "rank_model": settings.rank_model,
         "rank_temperature": settings.rank_temperature,
@@ -354,6 +360,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         batch_limit=ingest_runtime["batch_limit"],
         ingest_worker_limit=ingest_runtime["ingest_worker_limit"],
         report_worker_limit=ingest_runtime["report_worker_limit"],
+        verified_visual_claim_parallel_workers=ingest_runtime[
+            "verified_visual_claim_parallel_workers"
+        ],
         output_dir=paths_settings["output_dir"],
         cache_dir=paths_settings["cache_dir"],
         state_db=paths_settings["state_db"],
