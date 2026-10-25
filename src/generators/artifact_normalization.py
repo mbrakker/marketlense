@@ -23,7 +23,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:15"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:17"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -2643,6 +2643,15 @@ def editorial_plan_theme_bindings(
         return []
     finding_sections = _finding_section_ids(source_findings)
     finding_ids = set(finding_sections)
+    eligible_keys = (
+        {
+            _fallback_evidence_key(evidence_id)
+            for evidence_id in eligible_finding_ids
+            if _fallback_evidence_key(evidence_id)
+        }
+        if eligible_finding_ids is not None
+        else None
+    )
     bindings: List[Dict[str, Any]] = []
     for theme in editorial_plan.get("themes") or []:
         if not isinstance(theme, dict):
@@ -2658,9 +2667,9 @@ def editorial_plan_theme_bindings(
             for finding_id, sections in finding_sections.items()
             if len(sections) == 1 and next(iter(sections)) in reference_keys
         }
-        if eligible_finding_ids is not None:
-            direct_finding_ids &= eligible_finding_ids
-            section_finding_ids &= eligible_finding_ids
+        if eligible_keys is not None:
+            direct_finding_ids &= eligible_keys
+            section_finding_ids &= eligible_keys
         coverage_keys = (
             (direct_finding_ids | section_finding_ids)
             if source_findings is not None

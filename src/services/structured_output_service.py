@@ -54,6 +54,7 @@ def execute_structured_output(
             context={"artifact_family": request.artifact_family},
         )
 
+    attempt_diagnostics: list[dict[str, Any]] = []
     primary = _call_model(
         request=request,
         ctx=ctx,
@@ -74,6 +75,14 @@ def execute_structured_output(
         allow_abstention=request.allow_abstention,
         is_formal_abstention=is_formal_abstention,
     )
+    attempt_diagnostics.append(
+        _attempt_diagnostic(
+            mode="primary",
+            attempt=0,
+            response=primary,
+            evaluation=initial,
+        )
+    )
     if initial.payload is not None:
         disposition = initial.disposition or "generated"
         _record_attempt(
@@ -84,6 +93,7 @@ def execute_structured_output(
             error_class="",
             disposition=disposition,
             model_pricing=model_pricing,
+            diagnostics=initial.bounded_context,
         )
         result = _result(initial.payload, disposition, 1, response=primary)
         _record_outcome(
@@ -105,6 +115,7 @@ def execute_structured_output(
         error_class=initial.error_class,
         disposition="recovery_started",
         model_pricing=model_pricing,
+        diagnostics=initial.bounded_context,
     )
     deterministic = _evaluate_deterministic_repair(
         response=primary,
@@ -123,6 +134,7 @@ def execute_structured_output(
             error_class=initial.error_class,
             disposition="deterministic_repair",
             model_pricing=model_pricing,
+            diagnostics=deterministic.bounded_context,
         )
         result = _result(
             deterministic.payload,
@@ -148,6 +160,7 @@ def execute_structured_output(
         error_class=deterministic.error_class,
         disposition="deterministic_repair_failed",
         model_pricing=model_pricing,
+        diagnostics=deterministic.bounded_context,
     )
 
     if not request.allow_model_recovery:
@@ -200,6 +213,14 @@ def execute_structured_output(
         allow_abstention=request.allow_abstention,
         is_formal_abstention=is_formal_abstention,
     )
+    attempt_diagnostics.append(
+        _attempt_diagnostic(
+            mode="model_repair",
+            attempt=1,
+            response=repaired,
+            evaluation=repaired_evaluation,
+        )
+    )
     if repaired_evaluation.payload is not None:
         disposition = repaired_evaluation.disposition or "model_repair"
         _record_attempt(
@@ -210,6 +231,7 @@ def execute_structured_output(
             error_class=initial.error_class,
             disposition=disposition,
             model_pricing=model_pricing,
+            diagnostics=repaired_evaluation.bounded_context,
         )
         result = _result(
             repaired_evaluation.payload,
@@ -235,6 +257,7 @@ def execute_structured_output(
         error_class=repaired_evaluation.error_class,
         disposition="model_repair_failed",
         model_pricing=model_pricing,
+        diagnostics=repaired_evaluation.bounded_context,
     )
 
     repair_text = str(repaired.text or "")
@@ -263,6 +286,14 @@ def execute_structured_output(
         allow_abstention=request.allow_abstention,
         is_formal_abstention=is_formal_abstention,
     )
+    attempt_diagnostics.append(
+        _attempt_diagnostic(
+            mode="regeneration",
+            attempt=2,
+            response=regenerated,
+            evaluation=regenerated_evaluation,
+        )
+    )
     if regenerated_evaluation.payload is not None:
         disposition = regenerated_evaluation.disposition or "regeneration"
         _record_attempt(
@@ -273,6 +304,7 @@ def execute_structured_output(
             error_class=repaired_evaluation.error_class,
             disposition=disposition,
             model_pricing=model_pricing,
+            diagnostics=regenerated_evaluation.bounded_context,
         )
         result = _result(
             regenerated_evaluation.payload,
@@ -299,6 +331,7 @@ def execute_structured_output(
         error_class=final_error,
         disposition="recovery_exhausted",
         model_pricing=model_pricing,
+        diagnostics=regenerated_evaluation.bounded_context,
     )
     _record_outcome(
         request,
@@ -323,6 +356,7 @@ def execute_structured_output(
     )
     if initial.error_class:
         failure_context["original_error_class"] = initial.error_class
+    failure_context["attempt_diagnostics"] = attempt_diagnostics[:3]
     raise StructuredOutputFailure(
         code=request.terminal_failure_code,
         failure_context=failure_context,
@@ -418,15 +452,20 @@ def _normalize_validate(
     allow_abstention: bool,
     is_formal_abstention: FormalAbstentionCheck | None,
 ) -> _Evaluation:
+    normalized: Any = payload
     try:
         normalized = normalize_payload(payload)
         validate_payload(normalized)
     except AppError as exc:
+        context = _bounded_app_error_context(exc)
+        structure = _bounded_payload_structure(normalized)
+        if structure:
+            context["artifact_response_structure"] = structure
         return _Evaluation(
             None,
             exc.code,
             _app_error_feedback(exc),
-            context=_bounded_app_error_context(exc),
+            context=context,
         )
     except (TypeError, ValueError, KeyError) as exc:
         return _Evaluation(
@@ -435,7 +474,11 @@ def _normalize_validate(
     if allow_abstention and is_formal_abstention is not None:
         try:
             if is_formal_abstention(normalized):
-                return _Evaluation(normalized, disposition="abstained")
+                return _Evaluation(
+                    normalized,
+                    disposition="abstained",
+                    context=_payload_context(normalized),
+                )
         except (TypeError, ValueError, KeyError) as exc:
             return _Evaluation(
                 None,
@@ -447,8 +490,9 @@ def _normalize_validate(
             None,
             "structured_output_empty",
             "structured_output_empty:normalized output is empty",
+            context=_payload_context(normalized),
         )
-    return _Evaluation(normalized)
+    return _Evaluation(normalized, context=_payload_context(normalized))
 
 
 def _call_model(
@@ -506,6 +550,7 @@ def _record_attempt(
     error_class: str,
     disposition: str,
     model_pricing: dict[str, dict],
+    diagnostics: dict[str, Any] | None = None,
 ) -> None:
     model = str(response.model or "")
     input_tokens = int(response.input_tokens or 0)
@@ -515,6 +560,12 @@ def _record_attempt(
     cost_usd = estimate_cost_usd(
         model, input_tokens, output_tokens, tool_calls, model_pricing
     )
+    structure = _bounded_structure_value(
+        diagnostics.get("artifact_response_structure")
+        if isinstance(diagnostics, dict)
+        else None
+    )
+    diagnostic_fields = structure or {}
     logger.info(
         log_event(
             ctx,
@@ -536,6 +587,7 @@ def _record_attempt(
                 "cost_usd": cost_usd,
                 "final_disposition": disposition,
                 "request_id": str(response.request_id or ""),
+                **diagnostic_fields,
             },
         )
     )
@@ -657,6 +709,67 @@ _ACTIONABLE_CONTEXT_LIST_KEYS = (
     "invalid_insight_ids",
     "duplicate_insight_ids",
 )
+_ARTIFACT_STRUCTURE_FIELDS = (
+    "expected_root_present",
+    "root_value_type",
+    "raw_candidate_count",
+    "normalized_candidate_count",
+    "location_only_candidates_removed",
+    "invalid_evidence_reference_candidates_rejected",
+)
+
+
+def _bounded_structure_value(value: object) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    bounded: dict[str, Any] = {}
+    expected_root_present = value.get("expected_root_present")
+    if isinstance(expected_root_present, bool) or expected_root_present is None:
+        bounded["expected_root_present"] = expected_root_present
+    root_value_type = value.get("root_value_type")
+    if isinstance(root_value_type, str) and len(root_value_type) <= 64:
+        bounded["root_value_type"] = root_value_type
+    for field_name in _ARTIFACT_STRUCTURE_FIELDS[2:]:
+        count = value.get(field_name)
+        if isinstance(count, int) and not isinstance(count, bool) and count >= 0:
+            bounded[field_name] = min(count, 999999)
+    return bounded
+
+
+def _bounded_payload_structure(payload: object) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    return _bounded_structure_value(payload.get("_artifact_response_structure"))
+
+
+def _payload_context(payload: object) -> dict[str, Any]:
+    structure = _bounded_payload_structure(payload)
+    return {"artifact_response_structure": structure} if structure else {}
+
+
+def _attempt_diagnostic(
+    *,
+    mode: str,
+    attempt: int,
+    response: OpenAIResponseResult,
+    evaluation: _Evaluation,
+) -> dict[str, Any]:
+    diagnostic: dict[str, Any] = {
+        "attempt": attempt,
+        "mode": mode,
+        "response_chars": min(len(str(response.text or "")), 999999),
+        "error_class": evaluation.error_class,
+        "disposition": evaluation.disposition or "invalid",
+    }
+    structure = _bounded_structure_value(
+        evaluation.bounded_context.get("artifact_response_structure")
+        if isinstance(evaluation.bounded_context, dict)
+        else None
+    )
+    diagnostic.update(structure)
+    if structure:
+        diagnostic["artifact_response_structure"] = structure
+    return diagnostic
 
 
 def _app_error_feedback(error: AppError) -> str:
@@ -699,6 +812,12 @@ def _bounded_app_error_context(error: AppError) -> dict[str, Any]:
         and public_item_count >= 0
     ):
         retained["missing_or_ambiguous_public_item_count"] = min(public_item_count, 999)
+    structure = context.get("artifact_response_structure")
+    if not isinstance(structure, dict) and "expected_root_present" in context:
+        structure = context
+    bounded_structure = _bounded_structure_value(structure)
+    if bounded_structure:
+        retained["artifact_response_structure"] = bounded_structure
     return retained
 
 
@@ -755,6 +874,11 @@ def _merge_bounded_app_error_contexts(
                 and value >= 0
             ):
                 merged[key] = min(value, 999)
+        structure = _bounded_structure_value(
+            context.get("artifact_response_structure")
+        )
+        if structure:
+            merged["artifact_response_structure"] = structure
     return merged
 
 

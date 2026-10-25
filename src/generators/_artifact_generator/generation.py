@@ -248,17 +248,34 @@ def _render_insights_candidates_or_defer_to_fallback(
                 },
             )
         )
-        return {
-            "insights_candidates": [],
-            "_deferred_to_source_fallback": True,
-            "_artifact_response_structure": {
+        attempt_diagnostics = exc.context.get("attempt_diagnostics")
+        attempt_diagnostics = (
+            deepcopy(attempt_diagnostics)
+            if isinstance(attempt_diagnostics, list)
+            else []
+        )
+        final_attempt = (
+            attempt_diagnostics[-1]
+            if attempt_diagnostics and isinstance(attempt_diagnostics[-1], dict)
+            else {}
+        )
+        final_structure = final_attempt.get("artifact_response_structure")
+        final_structure = (
+            deepcopy(final_structure)
+            if isinstance(final_structure, dict)
+            else {
                 "expected_root_present": None,
                 "root_value_type": "unavailable",
                 "raw_candidate_count": 0,
                 "normalized_candidate_count": 0,
                 "location_only_candidates_removed": 0,
                 "invalid_evidence_reference_candidates_rejected": 0,
-            },
+            }
+        )
+        deferred: Dict[str, Any] = {
+            "insights_candidates": [],
+            "_deferred_to_source_fallback": True,
+            "_artifact_response_structure": final_structure,
             "_structured_output_recovery": {
                 "attempts": min(
                     3, max(1, int(exc.context.get("repair_attempt", 0) or 0) + 1)
@@ -271,6 +288,9 @@ def _render_insights_candidates_or_defer_to_fallback(
                 ),
             },
         }
+        if attempt_diagnostics:
+            deferred["_structured_output_attempt_diagnostics"] = attempt_diagnostics
+        return deferred
 
 
 def _candidate_selection_covers_plan(
@@ -301,6 +321,12 @@ def _candidate_selection_covers_plan(
         ):
             return False
     return True
+
+
+def _canonical_finding_evidence_key(value: Any) -> str:
+    """Compare finding IDs across their public and namespaced forms."""
+
+    return normalize_text(value).removeprefix("evidence:findings:")
 
 
 def _execute_artifact_tasks_serial(
@@ -1356,6 +1382,14 @@ def generate_artifacts(
     response_structure = (
         response_structure if isinstance(response_structure, dict) else {}
     )
+    attempt_diagnostics = candidate_stage_output.get(
+        "_structured_output_attempt_diagnostics"
+    )
+    attempt_diagnostics = (
+        deepcopy(attempt_diagnostics)
+        if isinstance(attempt_diagnostics, list)
+        else []
+    )
     recovery_attempts = max(1, int(recovery_metadata.get("attempts") or 1))
     recovery_disposition = _s(recovery_metadata.get("disposition")).strip()
     recovery_error_class = _s(recovery_metadata.get("error_class")).strip()
@@ -1406,6 +1440,10 @@ def generate_artifacts(
         "fallback_invoked": False,
         "raw_model_output_retained": False,
     }
+    if attempt_diagnostics:
+        candidate_generation_audit["structured_output_attempt_diagnostics"] = (
+            attempt_diagnostics
+        )
     fallback_limit = candidate_pool_target
     primary_selected_candidates = select_artifact_insights(
         final_insights=insights_candidates,
@@ -1413,6 +1451,7 @@ def generate_artifacts(
         editorial_plan=editorial_plan,
         preserve_all=visual_authority_admitter is not None,
         source_findings=safe_evidence.get("findings"),
+        max_count=candidate_pool_target,
     )
     primary_selection_adequate = _candidate_selection_covers_plan(
         primary_selected_candidates,
@@ -1497,17 +1536,21 @@ def generate_artifacts(
             source_findings=safe_evidence.get("findings"),
             max_count=candidate_pool_target,
         )
-    retained_fallback_ids = {
-        normalize_text(candidate.get("evidence_id")).removeprefix("evidence:findings:")
+    fallback_evidence_keys = {
+        _canonical_finding_evidence_key(item.get("evidence_id"))
+        for item in fallback_candidates
+        if isinstance(item, dict)
+        and _canonical_finding_evidence_key(item.get("evidence_id"))
+    }
+    selected_evidence_keys = {
+        _canonical_finding_evidence_key(candidate.get("evidence_id"))
         for candidate in insights_candidates
         if isinstance(candidate, dict)
-        and normalize_text(candidate.get("evidence_id"))
-        in {
-            normalize_text(item.get("evidence_id")).removeprefix("evidence:findings:")
-            for item in fallback_candidates
-            if isinstance(item, dict) and normalize_text(item.get("evidence_id"))
-        }
+        and _canonical_finding_evidence_key(candidate.get("evidence_id"))
     }
+    retained_fallback_ids = selected_evidence_keys.intersection(
+        fallback_evidence_keys
+    )
     unresolved_theme_bindings = [
         binding["theme"]
         for binding in editorial_plan_theme_bindings(

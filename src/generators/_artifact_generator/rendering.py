@@ -298,6 +298,19 @@ def render_artifact_json_model(
         return response
 
     def validate_payload(payload: Dict[str, Any]) -> None:
+        if root_key == "insights_candidates" and isinstance(payload, dict):
+            response_structure = payload.get("_artifact_response_structure")
+            if (
+                isinstance(response_structure, dict)
+                and response_structure.get("expected_root_present") is False
+            ):
+                raise AppError(
+                    code="artifact_response_root_missing",
+                    message=(
+                        "The insights-candidate response omitted its required root"
+                    ),
+                    context=response_structure,
+                )
         if response_contract_name:
             validate_output_schema(
                 payload=payload,
@@ -406,6 +419,17 @@ def _normalize_artifact_response(
     root_key: str,
 ) -> Dict[str, Any]:
     if not isinstance(payload, dict):
+        if root_key == "insights_candidates":
+            return {
+                "_artifact_response_structure": {
+                    "expected_root_present": False,
+                    "root_value_type": type(payload).__name__,
+                    "raw_candidate_count": 0,
+                    "normalized_candidate_count": 0,
+                    "location_only_candidates_removed": 0,
+                    "invalid_evidence_reference_candidates_rejected": 0,
+                }
+            }
         return payload  # type: ignore[return-value]
     normalized = dict(payload)
     root_present = root_key in normalized
@@ -434,6 +458,11 @@ def _normalize_artifact_response(
             }
         elif root_key in {"expert_comment", "linkedin_post"}:
             normalized[root_key] = ""
+        elif root_key == "insights_candidates":
+            # A missing candidate root is a structural failure, not an
+            # evidence-insufficient empty selection.  The validator below
+            # routes it through the existing bounded recovery service.
+            pass
         else:
             normalized[root_key] = []
     value = normalized.get(root_key)
