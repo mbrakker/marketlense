@@ -1210,3 +1210,29 @@ and CPython 3.14 assertion. The accepted Adjust baseline was not rerun and no
 live provider or publication call was made, so no live recovery improvement or
 cost result is claimed. This is a reliability correction, not E17.2 output
 compaction; E17 remains Active and broader Step 2 remains **PARTIAL/NO-GO**.
+
+**P1/P2 recovery correction and fresh Adjust verification — 2026-10-25
+(`654a5cf1`):** The explicit structured-output repair policy was restored to
+low reasoning with the corrected 16,384-token cap. Terminal recovery now keeps
+bounded, sanitized primary and final diagnostic context, including safe
+actionable identifiers and separate error classes, without retaining raw model
+content. Focused checks passed 6/6 and the affected provider-free cohort
+passed 579 tests; hosted CI run 40199401059 passed tests, type, lint, schema,
+mutation and release-evidence gates.
+
+One fresh isolated Adjust Mobile App Trends 2026 verified-facts run from the
+producer SHA completed with 75 calls, 707,174 input tokens, 115,340 output
+tokens, 49,725 reasoning tokens, `$0.147414`, and 1,001.563 seconds. It
+admitted 17 verified facts, produced five final insights, and passed grounding,
+editorial quality and publication readiness without publication or canonical
+mutation. Compared with the accepted, not-rerun baseline (74 calls,
+831,132/142,426 input/output tokens, `$0.168355`, 1,063 seconds, 19 facts),
+cost fell 12.44% and duration 5.78%; the two-fact roster difference is
+recorded as stochastic and not attributed to the recovery correction. No
+structured-output recovery occurred, so live recovery effectiveness and the
+historical batch-04 trigger remain unproven. Direct PDF review found no
+unsupported material claim in the final artifact; three unsupported
+intermediate findings were correctly rejected. E17 remains Active, E18
+remains Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
+unstarted/not ready. Full measurements and artifact paths are in the Step 2
+evidence report.

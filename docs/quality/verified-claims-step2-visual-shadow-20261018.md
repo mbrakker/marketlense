@@ -5189,3 +5189,104 @@ would recover the historical batch-04 response or improve live quality.
 **Verdict: PASS for the deterministic recovery correction; PARTIAL for live
 recovery effectiveness.** Step 2 remains **PARTIAL/NO-GO**, Step 3 remains
 **unstarted/not ready**, and E17 remains Active.
+
+#### P1/P2 recovery correction and fresh verified-facts Adjust evaluation — 2026-10-25 (`654a5cf1`)
+
+The corrected producer SHA was `654a5cf1a7f12113b28c5d70f23fde61025e40d8`.
+The P1 change restores the existing structured-output repair policy to
+`reasoning_effort: low` while retaining the requested 16,384-token cap. The
+P2 change in `src/services/structured_output_service.py` merges bounded,
+sanitized diagnostic context from the primary, repair, and regeneration
+evaluations rather than selecting only the last context. It preserves the
+original and terminal error classes, keeps safe actionable identifiers in
+deterministic original-first order, deduplicates them, and retains no raw
+responses, prompts, or source text. No prompt, schema, validator, retry count,
+grounding rule, publication rule, or visual-parallelism setting changed.
+
+Provider-free verification passed the focused recovery/policy/diagnostic
+checks (**6 passed**) and the affected grounding, validation, report-generation
+and recovery cohort (**579 passed in 29.49s**). Ruff and formatting passed for
+the changed clean files. The local dirty worktree type invocation remains
+unusable because of the protected untracked duplicate
+`src/generators/artifact_normalization (2).py` and the CPython 3.14/mypy
+`dotenv.main.find_dotenv` assertion; the clean hosted type gate passed. Hosted
+CI run [40199401059](https://github.com/mbrakker/marketlense/actions/runs/40199401059)
+passed tests, Ruff, hosted type checks, schema/architecture gates, both
+mutation partitions, and `release_evidence`.
+
+One fresh provider-backed run was executed from the corrected SHA, with no
+publication target or WordPress write:
+
+```text
+python -u scripts/quality/run_frozen_reliability_cohort.py \
+  --sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json \
+  --sources-root "C:\\Programing\\Market lense-step2-final" \
+  --runs-root "C:\\Programing\\Market lense-step2-final\\tmp\\adjust-recovery-final-20261025" \
+  --max-duration 7200 \
+  --report-ids cohort-b638414df0b1fccea1cd \
+  --verified-facts-architecture
+```
+
+The input PDF was verified before processing: SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`.
+The isolated terminal result is `awaiting_review` with validation and
+publication readiness `pass`, `published=false`, one workflow attempt, and
+no terminal failure. The retained run directory is
+`tmp/adjust-recovery-final-20261025/frozen-reliability-9uhv62el7/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-47jbsxl/`;
+the final HTML and JSON artifacts are under its `output/` directory.
+
+| Measure | Accepted baseline (not rerun) | Fresh run | Change |
+| --- | ---: | ---: | ---: |
+| Provider calls | 74 | 75 | +1 (+1.35%) |
+| Input tokens | 831,132 | 707,174 | -123,958 (-14.92%) |
+| Output tokens | 142,426 | 115,340 | -27,086 (-19.02%) |
+| Estimated provider cost | $0.168355 | $0.147414 | -$0.020941 (-12.44%) |
+| Runner duration | 1,063.000s | 1,001.563s | -61.437s (-5.78%) |
+| Visual candidates | 20 (baseline record) | not exposed by result contract | not comparable |
+| Verified facts admitted | 19 | 17; complete for emitted roster | -2; stochastic roster difference |
+| Final insights | 5 | 5 | unchanged |
+| Structured-output recoveries | 3 | 0 | -3; path not exercised |
+| Automatic repairs | 0 | 0 | unchanged |
+| Grounding / editorial / readiness | PASS / PASS / PASS | PASS / PASS / PASS | no regression observed |
+
+The fresh usage profile records 49,725 reasoning tokens, 10,830 cached-input
+tokens, 8 file-search calls, zero provider errors, 4.206s of limiter waits,
+and provider elapsed time of 1,218.159s (active provider-time union
+848.088s; maximum concurrency 6). Grounding used 7 calls and cost $0.027096;
+visual correction used 17 calls and visual verification 17 calls, sequentially,
+with no visual retries. No repair or regeneration call occurred, so there is
+no live repair response, recovery cost, output-cap event, or repair latency to
+attribute. The deterministic tests exercise the existing primary -> check ->
+repair -> regeneration sequence and the 16,384-token request policy, but this
+run does not prove live recovery effectiveness or resolve the historical
+Adjust batch-04 trigger, whose original diagnostic was not retained.
+
+The final HTML was inspected against the original PDF and the retained
+full-page PNGs (no cropped page was used). The five selected insight/evidence
+pairs were:
+
+| Stable fact | Physical page | Review result |
+| --- | ---: | --- |
+| `ecommerce-finding-installs-sessions` | 27 | -10% installs and +5% sessions, 2025; distinct signals retained |
+| `gaming-hypercasual-sessions` | 19 | +31% sessions and +4% installs, 2025; no causal inference |
+| `finance-global-installs` | 34 | -4% installs and +21% sessions; comparison-basis caveat retained |
+| `gaming-casual-sessions` | 19 | +37% sessions, 2024–2025; not treated as absolute scale |
+| `gaming-casual-installs` | 19 | +19% installs, 2024–2025; not treated as forecast |
+
+The prose was commercially useful and specific: it separates acquisition from
+engagement, keeps the finance comparison caveat, and recommends separate
+install/session review without claiming unsupported causality. The final
+retained-claim validation found **0 unsupported and 0 unresolved material
+factual claims**; five descriptive/interpretive items were intentionally
+outside factual semantic validation. The intermediate evidence-fidelity pack
+correctly rejected three unsupported introduction/forecast findings (5.8B
+users, 10.6%/$167B spending, and $1.23T by 2035) and none reached the final
+artifact. The only validation warning was `quotes_missing`; the report did
+not fabricate quotations. Public editorial quality and readiness passed.
+
+This is a successful single-report integration result, not proof of stable
+selection quality: the fresh run admitted 17 rather than 19 facts and did not
+exercise recovery. **Verdict: PASS for the deterministic P1/P2 correction and
+this Adjust report; PARTIAL/NO-GO for broader Step 2.** Step 3 remains
+unstarted/not ready. No canonical artifact was promoted or mutated, and no
+WordPress publication occurred.

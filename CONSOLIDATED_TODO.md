@@ -980,3 +980,19 @@ Adjust baseline remains the reference and live recovery efficacy is unproven.
 E17 remains **Active**, E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**P1/P2 recovery correction and fresh Adjust verification — 2026-10-25
+(`654a5cf1`):** Repair reasoning is restored to low at the governed 16,384
+token cap, and terminal structured-output failures retain bounded sanitized
+primary and terminal diagnostics. Focused checks passed 6/6; the affected
+provider-free cohort passed 579 tests; hosted CI run 40199401059 passed all
+listed release gates. One fresh isolated Adjust verified-facts run completed
+with 75 calls, 707,174 input tokens, 115,340 output tokens, `$0.147414`, and
+1,001.563 seconds; it admitted 17 facts, produced five final insights, and
+passed grounding, editorial quality and readiness without publication. The
+accepted 19-fact baseline was not rerun; the roster difference is recorded as
+stochastic, not as a deterministic recovery gain. No recovery occurred in the
+fresh run, so live recovery efficacy and the historical batch-04 cause remain
+open. E17 remains Active, E18 remains Active/PARTIAL, Step 2 remains
+PARTIAL/NO-GO, and Step 3 remains unstarted/not ready. See the detailed Step 2
+evidence report for the source hash, full ledger and PDF review.
