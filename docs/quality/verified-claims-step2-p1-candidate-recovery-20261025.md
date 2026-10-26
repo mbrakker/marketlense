@@ -4,6 +4,44 @@ Date: 2026-10-25
 Producer commit: `5182502dc3e7efbea4c13cb5e7c4437a6f7f2769`
 Scope: one fresh provider-backed Adjust run, shadow-only, no publication writes.
 
+## P0–P2 verification — 2026-10-26
+
+Starting implementation: `a4b417bffbd5552633f0117096ab7580efe39852`.
+The retained empty-checkpoint ambiguity described below remains a limitation:
+without the discarded raw response, explicit model abstention cannot be
+distinguished from a missing root. Later location-only candidate rosters were
+nonempty but failed the factual-ID boundary; they are not evidence of empty
+model generation. The existing bounded fallback remains necessary.
+
+One eligibility defect was reproduced: a supported hyphenated finding with
+an `evidence:findings:` prefix could be dropped because the text-normalized
+lookup key changed punctuation while fidelity IDs used literal identity.
+The fallback now also compares the exact namespace-stripped ID, preserving
+the existing raw-ID comparison (including upstream fidelity's prefixed raw
+IDs). Output identities and factual fields are unchanged. Selection cache
+version 19 prevents reuse across this eligibility change. Supported and
+unsupported cases cover both ID forms and both fidelity representations.
+This defect was not the cause of the retained bare-ID Adjust failures.
+
+Missing regression cases now cover unknown primary/secondary/span IDs,
+ambiguous quote identities, quarantine, malformed summary repair paths,
+duplicate/missing repair identities, and missing/quarantined/wrong-page
+secondary verified facts. No new validator, prompt, retry or quota was added.
+
+Seven opt-in provider checks through production `run_grounding_check` used
+unchanged retained Adjust canonical facts. Different populations, incompatible
+periods, regional-as-global claims and installs/sessions conflation were
+`contradicted`; irrelevant secondary evidence and false causality were
+`not_established`; the compatible global finance/e-commerce comparison passed.
+Inspection of the returned reasons confirms the relevant metric relationships,
+not merely a generic failure. This is component-level semantic evidence, not
+end-to-end acceptance. It used seven calls, 35,765 input / 15,970 output tokens
+and estimated `$0.010586`. Retained evidence:
+`C:\ml-adjust-acceptance-20261026\tmp\p1-b-multifact-live-20261026a\multifact-live0`.
+
+The fresh Adjust end-to-end outcome and final source review are recorded below
+once execution completes; the component checks alone do not close P0.
+
 ## Retained failure reconstruction
 
 The older Adjust candidate checkpoint was not an unexplained empty artifact.

@@ -9,6 +9,7 @@ from src.generators.artifact_normalization import (
     artifact_candidate_allowed_evidence_ids,
     validate_artifact_candidate_evidence_ids,
 )
+from src.generators.report_regeneration_generator import _without_quarantined_evidence
 from src.utils.errors import AppError
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
@@ -151,6 +152,45 @@ def test_candidate_evidence_vocabulary_reuses_fidelity_and_source_eligibility():
     assert artifact_candidate_allowed_evidence_ids(evidence_packs) == ["f1", "q1"]
 
 
+@pytest.mark.parametrize("prefix", ["", "evidence:findings:"])
+@pytest.mark.parametrize("fidelity_uses_raw_id", [False, True])
+def test_fidelity_approved_hyphenated_finding_retains_its_evidence_identity(
+    prefix, fidelity_uses_raw_id
+):
+    finding_id = prefix + "finance-latam-growth"
+    evidence = {
+        "findings": {
+            "findings": [
+                {
+                    "id": finding_id,
+                    "text": "LATAM finance growth",
+                    "evidence": "Finance installs grew 76% in LATAM in 2025.",
+                    "pages": [35],
+                }
+            ]
+        },
+        "evidence_fidelity": {
+            "results": [
+                {
+                    "candidate": {
+                        "claim_id": "evidence:findings:"
+                        + (
+                            finding_id
+                            if fidelity_uses_raw_id
+                            else "finance-latam-growth"
+                        )
+                    },
+                    "status": "supported",
+                }
+            ]
+        },
+    }
+
+    assert artifact_candidate_allowed_evidence_ids(evidence) == [finding_id]
+    evidence["evidence_fidelity"]["results"][0]["status"] = "unsupported"
+    assert artifact_candidate_allowed_evidence_ids(evidence) == []
+
+
 def test_candidate_secondary_evidence_ids_must_use_the_same_allowed_vocabulary():
     with pytest.raises(AppError) as error:
         validate_artifact_candidate_evidence_ids(
@@ -167,3 +207,61 @@ def test_candidate_secondary_evidence_ids_must_use_the_same_allowed_vocabulary()
     assert error.value.context["invalid_references"] == [
         {"index": 0, "evidence_id": "section-1"}
     ]
+
+
+@pytest.mark.parametrize(
+    "candidate",
+    [
+        {"evidence_id": "unknown"},
+        {"evidence_id": "f1", "evidence_ids": ["f1", "unknown"]},
+        {"evidence_id": "f1", "evidence_spans": [{"evidence_id": "unknown"}]},
+    ],
+    ids=["primary", "secondary", "span"],
+)
+def test_candidate_unknown_reference_is_rejected(candidate):
+    with pytest.raises(AppError) as error:
+        validate_artifact_candidate_evidence_ids([candidate], ["f1"])
+
+    assert error.value.code == "artifact_candidate_evidence_reference_invalid"
+    assert error.value.retryable is False
+    assert error.value.context["invalid_references"] == [
+        {"index": 0, "evidence_id": "unknown"}
+    ]
+
+
+@pytest.mark.parametrize(
+    "conflict",
+    [{"text": "Different quotation."}, {"source": "Other team"}, {"page": 5}],
+    ids=["text", "source", "page"],
+)
+def test_candidate_ambiguous_quote_identity_is_not_eligible(conflict):
+    quote = {"id": "q1", "text": "Source quotation.", "source": "Team", "page": 4}
+    evidence = {
+        "quote_candidates": {
+            "quote_candidates": [
+                quote,
+                {**quote, "id": "Q1", **conflict},
+                {**quote, "id": "q2"},
+            ]
+        }
+    }
+
+    allowed = artifact_candidate_allowed_evidence_ids(evidence)
+
+    assert allowed == ["q2"]
+    with pytest.raises(AppError) as error:
+        validate_artifact_candidate_evidence_ids([{"evidence_id": "q1"}], allowed)
+    assert error.value.code == "artifact_candidate_evidence_reference_invalid"
+
+
+def test_candidate_quarantined_finding_cannot_reenter_allowed_vocabulary():
+    evidence = _generation_evidence(2)
+    retained = _without_quarantined_evidence(evidence, {"f2"})
+
+    allowed = artifact_candidate_allowed_evidence_ids(retained)
+
+    assert set(allowed) == {"f1", "q1"}
+    assert len(evidence["findings"]["findings"]) == 2
+    with pytest.raises(AppError) as error:
+        validate_artifact_candidate_evidence_ids([{"evidence_id": "f2"}], allowed)
+    assert error.value.code == "artifact_candidate_evidence_reference_invalid"
