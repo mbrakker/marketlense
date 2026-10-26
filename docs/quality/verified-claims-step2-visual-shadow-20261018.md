@@ -5823,3 +5823,189 @@ editorial roster, and the ten-report cohort was not started. Step 3 remains
 unstarted/not ready. No claim is made that this single run proves a universal
 selection improvement or that the intermediate evidence-fidelity diagnostic
 is equivalent to the final retained-claim gate.
+
+#### Final integrity verification and frozen ten-report E2E — 2026-10-26 (`db1bfe0c`)
+
+The exact frozen ten-report manifest was executed through the existing
+verified-facts architecture from a clean isolated worktree. The initial
+provider-backed cohort run used code `7f728c30476c5b9de3e4d7d21086af0508bf4e32`;
+the narrow diagnostic change was then committed as
+`db1bfe0c313fbe1cb2b95b47aaafc304926d024c`. The diagnostic change does not
+alter selection, grounding rules, schemas, retries, or publication policy. It
+preserves the inner structured-output/grounding contract failure class in the
+existing validation issue and structured log when a grounding batch fails.
+
+The source PDFs were read from the retained local source root, not reacquired,
+and their hashes were independently recomputed before review:
+
+| Publisher | SHA-256 |
+| --- | --- |
+| DoubleVerify | `99f0cc4f7787cac52b7f89eefa7659053b3703ea100b9e0522fa500c64463d7e` |
+| KPMG | `a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589` |
+| Reuters Institute | `f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52` |
+| Adjust | `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` |
+| Algolia | `d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50` |
+| Bain & Company | `07541f3433b72007010ff604a93d0c560b6c6709ffd7bb5a58fefa81908f86c7` |
+| Criteo | `17cf2e92c8804e35274faf3dd416db2fe6e4a81d7aa92418ada8ba90ee77c00c` |
+| Deloitte | `cb3a6420505366198c519929726ecc2749e310686541339d749361d239ba65` |
+| Emplifi | `54a6726033fce9474929dec62bc85fc4dd3ada574398d043d12ec48b0eaddeb5` |
+| StackAdapt | `909444f8721c9ec21d2f734bd5f0575bc147f2d5493f4960d3173003f6ceb305` |
+
+The run was isolated, used `--verified-facts-architecture`, made no WordPress
+or publication writes, and did not substitute cached final artifacts for the
+workflow. Its aggregate ledger is:
+
+| Measure | Result |
+| --- | ---: |
+| Reports / terminal outcomes | 10 / 10 |
+| Verified-facts architecture evidence passed | 9 / 10 |
+| Readiness passes / failures | 5 / 5 |
+| Provider calls | 491 |
+| Input / output tokens | 5,304,357 / 1,233,714 |
+| Cached input / reasoning tokens | 338,208 / 469,877 |
+| Estimated provider cost | `$1.264371` |
+| Cohort wall-clock | 8,328.688s |
+| File-search/tool calls | 59 |
+| Operator interventions / publication writes | 0 / 0 |
+
+The five readiness failures are not hidden in the aggregate: three were
+grounding validation failures, one was an editorial-plan coverage failure, and
+one was a publication-readiness failure. The per-report terminal ledger is:
+
+| Report | Visual facts evaluated/admitted/quarantined | Accepted final insights / HTML | Validation / readiness | Calls | Cost / seconds | Recovery |
+| --- | ---: | ---: | --- | ---: | ---: | --- |
+| DoubleVerify | 6 / 6 / 0 | 5 / yes | pass / pass | 42 | `$0.103989` / 791.387 | 0 / 0 |
+| KPMG | 6 / 6 / 0 | 5 / yes | pass / pass | 49 | `$0.108982` / 818.685 | 0 / 1 structured |
+| Reuters Institute | 7 / 7 / 0 | — / no | fail / fail | 50 | `$0.144265` / 1,097.571 | 3 targeted / 1 structured |
+| Adjust | 6 / 6 / 0 | 5 / yes | pass / pass | 52 | `$0.117394` / 811.978 | 0 / 0 |
+| Algolia | — / — / — | — / no | fail / fail | 34 | `$0.095197` / 691.481 | 0 / 0 |
+| Bain & Company | 6 / 6 / 0 | 5 / yes | pass / pass | 37 | `$0.125184` / 623.531 | 0 / 0 |
+| Criteo | 6 / 6 / 0 | — / no | fail / fail | 43 | `$0.107582` / 744.258 | 0 / 1 structured |
+| Deloitte | 6 / 6 / 0 | — / no | pass / fail | 57 | `$0.132973` / 787.422 | 3 targeted / 3 structured |
+| Emplifi | 6 / 6 / 0 | — / no | fail / fail | 70 | `$0.208152` / 1,173.199 | 3 targeted / 0 |
+| StackAdapt | 6 / 6 / 0 | 5 / yes | pass / pass | 57 | `$0.120653` / 789.176 | 3 targeted / 0 |
+
+Durations in this table come from the final cohort result, not the failed
+members' partial `core_processing_duration_seconds` fields. The isolated
+member records for Reuters, Criteo, Deloitte, and Emplifi persisted the early
+failure duration while the runner retained the complete elapsed time. This is
+a real ledger-persistence limitation and is not treated as a successful
+timing measurement for those member records.
+
+The failure causes and evidence are:
+
+* Reuters, Criteo, and Deloitte reached canonical verified facts and the
+  grounding stage. Their parse-valid provider responses failed the existing
+  exact retained-claim coverage contract (`grounding_claim_check_coverage_invalid`)
+  after bounded recovery. The validator requires one unambiguous check for
+  every retained claim and rejects incomplete, duplicated, or ambiguous
+  identities; sibling batch results are discarded on batch failure. The
+  original ten-run responses are not retained, so no narrower provider-output
+  defect can be asserted. The diagnostic patch now preserves this inner cause
+  in `validation.json` and structured logging. No batch-splitting or semantic
+  relaxation was added.
+* Emplifi reached grounding but one final qualitative sentence attributed an
+  unsupported “some users say” relationship to the source-supported
+  “generative AI can speed shopping” finding. Three bounded targeted repairs
+  did not produce a safe replacement, so the claim remained unresolved and
+  publication was correctly blocked.
+* Algolia failed before a canonical verified-facts artifact was materialized.
+  The generic source-fidelity pack contained a supported revenue finding on
+  physical page 4 (represented there by the non-authoritative `source:page:5`
+  alias), but the visual admission/verified-fact set did not retain that
+  binding. The
+  editorial remapper therefore reported the central planned theme
+  “Revenue is a stated incentive for ecommerce search investment: increasing
+  revenue was cited as a critical incentive by 58% of B2C organizations, up
+  9% since 2024” as unmapped and failed closed. This is an evidence-coverage
+  gap, not permission to promote a generic fidelity finding or a navigation
+  ID; no workaround was introduced.
+
+The three shared grounding failures were rechecked without changing the
+grounding validator or prompts. A fresh isolated Reuters+Criteo diagnostic
+rerun on `db1bfe0c313fbe1cb2b95b47aaafc304926d024c` passed both reports:
+45 and 41 calls, respectively; aggregate 86 calls, 865,361 input, 222,281
+output, 29,295 cached-input, 100,620 reasoning tokens, `$0.225040`, and
+1,744.678 seconds; zero repairs and zero publication writes. A separate
+Deloitte diagnostic rerun on the same commit reproduced the grounding failure:
+45 calls, 384,389 input, 114,605 output, `$0.101840`, 706.352 seconds, and
+30 unresolved retained claims. Its retained validation issue now records the
+inner class `grounding_claim_check_coverage_invalid`. This establishes that
+the Reuters/Criteo failures are provider-output variability under an
+unchanged contract, while the Deloitte failure is reproducible; the contract
+must remain fail-closed until the exact rejected response shape is retained
+and a minimal contract-preserving correction is demonstrated.
+
+#### Independent editorial and PDF review
+
+The five accepted HTML artifacts were inspected against the full original
+PDF pages named by each canonical verified fact. All five contain five final
+insights, pass the retained-claim and publication-readiness gates, and have no
+visible internal evidence or stable IDs. The public-identifier check passed;
+the only `finding-card` matches are CSS class names, not evidence identifiers.
+
+| Report | Reviewed source pages and material checks |
+| --- | --- |
+| DoubleVerify | pp. 3, 9, 10; APAC/North America suitability rates, regional fraud/SIVT rates, viewability, and APAC in-app Display/Video attention values retain the Q1 2026 period, region, placement, and tag-based/open-web qualifiers. |
+| KPMG | pp. 16, 24, 35; transaction-value shares retain Corporate/Private Equity categories, and qualitative AI, carve-out, and industrial-separation claims remain source-bound. |
+| Adjust | pp. 9, 11, 19, 27, 29; installs versus sessions, strategy-gaming relationships, the 31% platform-satisfaction result, qualified efficiency claim, and deal-discovery CPI preserve population, period, unit, and direction. |
+| Bain & Company | p. 1; 52% born-tech share, 20% tech-led share, 28% other, `$6.5T`/`$894B`, 2015–2020, and the asset-light recommendation agree with the page. |
+| StackAdapt | pp. 7, 11–13, 15; 2025 platform channel shares, 3+ engagements, privacy-safe data, Salesforce 68%, and Kearney 51% preserve source attribution and cohorts. |
+
+The accepted Adjust run in this cohort is also compared with the prior accepted
+`8fe13300` baseline without rerunning that baseline:
+
+| Measure | Prior accepted baseline | Ten-cohort Adjust member | Difference |
+| --- | ---: | ---: | ---: |
+| Visual facts evaluated/admitted/quarantined | 6 / 6 / 0 | 6 / 6 / 0 | unchanged |
+| Final insights | 5 | 5 | unchanged |
+| Provider calls | 52 | 52 | unchanged |
+| Input / output tokens | 512,814 / 116,754 | 498,026 / 102,655 | −2.88% / −12.08% |
+| Cached input / reasoning tokens | 10,830 / 52,648 | 13,745 / 39,672 | run variance |
+| Cost | `$0.123682` | `$0.117394` | −`$0.006288` (−5.08%) |
+| Wall-clock | 946.248s | 811.978s | −134.270s (−14.19%) |
+| Validation / readiness | pass / pass | pass / pass | unchanged |
+| Unsupported / unresolved material claims | 0 / 0 | 0 / 0 | unchanged |
+
+The Adjust delta is an observed fresh-run difference, not an attribution of
+selection or quality improvement: the model roster and provider/cache timing
+are stochastic. No canonical artifact or editorial authority was mutated.
+
+#### Artifact locations and acceptance decision
+
+Initial ten-report run:
+
+```text
+C:\ml-ten-20261026\frozen-reliability-l_xtlovj\cohort_result.json
+C:\ml-ten-20261026\frozen-reliability-l_xtlovj\members\
+```
+
+Reuters/Criteo diagnostic rerun:
+
+```text
+C:\ml-grounds-diagnostic-20261026\frozen-reliability-v2auv4ib\cohort_result.json
+C:\ml-grounds-diagnostic-20261026\frozen-reliability-v2auv4ib\members\
+```
+
+Deloitte diagnostic rerun:
+
+```text
+C:\ml-grounds-diagnostic-20261026-deloitte\frozen-reliability-erflcoor\cohort_result.json
+C:\ml-grounds-diagnostic-20261026-deloitte\frozen-reliability-erflcoor\members\
+```
+
+The new test covers preservation of the inner grounding contract cause. The
+focused diagnostics suite passed 6 tests before this report update; the prior
+full local suite passed 8,194 tests with 2 skips and 39 deselections, with two
+pre-existing CPython wheelhouse failures outside this slice. Ruff, formatting,
+and the repository mypy wrapper passed for the diagnostic code. No hosted CI
+run has been started from the final documentation commit yet.
+
+**Verdict:** **PARTIAL / NO-GO.** The verified-facts architecture is proven
+through HTML and independent PDF review for 5/10 reports, and the remaining
+reports fail closed with typed terminal outcomes. The diagnostic change makes
+the shared grounding failure actionable and Deloitte reproduces the remaining
+contract failure, but the ten-report acceptance gate requires all ten reports
+to produce validated HTML with zero unresolved material claims. The Algolia
+coverage failure, the grounding contract/recovery reliability gap, and the
+member-duration persistence defect remain open. Step 3 must not begin.

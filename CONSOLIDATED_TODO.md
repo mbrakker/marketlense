@@ -1152,3 +1152,19 @@ selection improvement is claimed. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO** for broad live effectiveness, and Step 3 remains
 **unstarted/not ready**. See the latest Step 2 evidence section for the
 producer/consumer audit, independent PDF review and artifact links.
+
+**Frozen ten-report integrity verification — 2026-10-26 (`db1bfe0c`):** The
+exact frozen ten-report provider run completed with 491 calls, 5,304,357 input
+tokens, 1,233,714 output tokens, 338,208 cached-input tokens, 469,877
+reasoning tokens, `$1.264371`, and 8,328.688 seconds. Five of ten reports
+passed validation and publication readiness with independently reviewed HTML;
+the other five failed closed (three reproducible/variable grounding contract
+failures, one unresolved qualitative grounding claim, and one unmapped central
+editorial theme before canonical verified-facts materialization). Reuters and
+Criteo passed a diagnostics-only rerun; Deloitte reproduced
+`grounding_claim_check_coverage_invalid`. The diagnostic patch preserves the
+inner contract cause without weakening validation or adding a model stage.
+No publication or WordPress writes occurred. E18 remains **Active/PARTIAL**,
+Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+The detailed ledger, source hashes, per-report outcomes and artifact paths are
+in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
