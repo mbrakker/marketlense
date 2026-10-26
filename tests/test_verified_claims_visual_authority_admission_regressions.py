@@ -187,7 +187,7 @@ def test_retained_binding_accepts_source_consistent_authoritative_metric_enrichm
         ("forecast_status", "conditional_forecast"),
     ],
 )
-def test_retained_binding_rejects_authoritative_material_metric_changes(
+def test_retained_binding_uses_verified_fact_for_authoritative_metric_changes(
     field: str, value: str
 ):
     candidate = _candidate(
@@ -228,13 +228,11 @@ def test_retained_binding_rejects_authoritative_material_metric_changes(
         evidence_packs=_evidence_packs(candidate),
     )
 
-    assert admission.verified_facts == []
-    assert admission.audit["quarantined"][0]["reason"] == (
-        "verified_fact_corrected_binding_conflict"
-    )
+    assert [fact["fact_id"] for fact in admission.verified_facts] == [candidate["id"]]
+    assert admission.verified_facts[0]["metric"][field] == value
 
 
-def test_retained_binding_rejects_authoritative_metric_conflict():
+def test_retained_binding_does_not_reinterpret_verified_metric_conflict():
     candidate = _candidate()
     result = _result(
         candidate,
@@ -254,10 +252,8 @@ def test_retained_binding_rejects_authoritative_metric_conflict():
         evidence_packs=_evidence_packs(candidate),
     )
 
-    assert admission.verified_facts == []
-    assert admission.audit["quarantined"][0]["reason"] == (
-        "verified_fact_corrected_binding_conflict"
-    )
+    assert [fact["fact_id"] for fact in admission.verified_facts] == [candidate["id"]]
+    assert admission.verified_facts[0]["metric"]["value"] == "51%"
 
 
 def test_retained_binding_rejects_authoritative_page_conflict():

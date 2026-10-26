@@ -417,6 +417,71 @@ def test_verified_result_carries_independent_fact_after_metric_replacement(tmp_p
     assert item.verified_fact["supporting_physical_pages"] == [5]
 
 
+def test_verified_fact_preserves_report_specific_metric_structure(tmp_path):
+    report_metric = {
+        "label": "Composite adoption",
+        "value": "42%",
+        "unit": "%",
+        "population_definition": "Respondents completing the full survey",
+        "methodology": {
+            "sample_frame": "Verified panel",
+            "weighting": "Report-defined weighting",
+        },
+        "observations": [
+            {
+                "label": "New buyers",
+                "value": "42%",
+                "unit": "%",
+                "timeframe": "Q1 2026",
+                "qualifier": "Full survey respondents",
+            }
+        ],
+    }
+    responses = iter(
+        [
+            {
+                "claim": "Composite adoption reached 42%.",
+                "status": "corrected",
+                "issues": [],
+            },
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "Physical page 5 reports the composite value for the defined "
+                    "survey population and period."
+                ),
+                "supporting_physical_pages": [5],
+                "source_truth_notes_by_page": {
+                    "5": (
+                        "Physical page 5 reports the composite value for the defined "
+                        "survey population and period."
+                    )
+                },
+                "verified_fact": {
+                    "statement": "Composite adoption reached 42%.",
+                    "metric": report_metric,
+                    "qualifiers": ["The report-defined population is retained."],
+                },
+            },
+        ]
+    )
+
+    result = evaluate_shortlisted_claims(
+        request=_request(
+            tmp_path, [_claim("composite-adoption", "Original direction")]
+        ),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], []),
+    )
+
+    item = result.claims[0]
+    assert item.outcome == "verified"
+    retained_metric = item.verified_fact["metric"]
+    assert all(retained_metric[key] == value for key, value in report_metric.items())
+
+
 def test_malformed_verification_response_can_use_one_bounded_retry(tmp_path):
     responses = iter(
         [

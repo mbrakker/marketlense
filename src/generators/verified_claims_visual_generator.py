@@ -582,11 +582,17 @@ def _normalise_verified_fact_payload(
     raw_metric = raw_fact.get("metric")
     if not statement or not isinstance(raw_metric, Mapping):
         return {}, ["verification_verified_fact_invalid"]
+    # The verifier's metric object is the source-authoritative structured
+    # result. Preserve report-specific fields and nested qualifiers instead of
+    # projecting the result through a fixed metric vocabulary.
     metric = {
-        field_name: copy.deepcopy(raw_metric.get(field_name, ""))
-        for field_name in _PROTECTED_METRIC_FIELDS
-        if field_name not in {"forecast_status", "observations"}
+        str(field_name): copy.deepcopy(value)
+        for field_name, value in raw_metric.items()
     }
+    for field_name in _PROTECTED_METRIC_FIELDS:
+        if field_name in {"forecast_status", "observations"}:
+            continue
+        metric.setdefault(field_name, "")
     if "forecast_status" in raw_metric:
         metric["forecast_status"] = copy.deepcopy(raw_metric["forecast_status"])
     if "observations" in raw_metric:

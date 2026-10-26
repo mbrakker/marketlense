@@ -564,12 +564,6 @@ def _corrected_binding_conflict_reason(
             candidate.get("metric")
         ):
             return "verified_fact_corrected_binding_conflict"
-        if not _retained_metric_is_source_consistent(
-            corrected_metric,
-            raw_fact.get("metric"),
-        ):
-            return "verified_fact_corrected_binding_conflict"
-
         candidate_pages = set(_pages(candidate.get("pages")))
         candidate_pages.update(
             page for span in candidate_spans for page in _pages([span.get("page")])
@@ -931,64 +925,6 @@ def _protected_metric(value: Any) -> dict[str, Any]:
         )
         for field_name in PROTECTED_METRIC_FIELDS
     }
-
-
-def _metric_value_is_empty(value: Any) -> bool:
-    return value is None or value == "" or value == [] or value == {}
-
-
-def _retained_metric_is_source_consistent(
-    candidate_metric: Any,
-    authoritative_metric: Any,
-) -> bool:
-    """Allow authoritative enrichment without allowing a fact to change.
-
-    Discovery candidates often carry a sparse metric binding.  The visual
-    verifier may fill in omitted qualifiers while retaining the same source
-    proposition.  Non-empty candidate dimensions remain constraints; an
-    authoritative value may only enrich an omitted dimension or provide the
-    existing, source-consistent representation of it.
-    """
-
-    candidate = _canonical_metric(candidate_metric)
-    authoritative = _canonical_metric(authoritative_metric)
-    for field_name in PROTECTED_METRIC_FIELDS:
-        candidate_value = candidate[field_name]
-        if _metric_value_is_empty(candidate_value):
-            continue
-        authoritative_value = authoritative[field_name]
-        if _metric_value_is_empty(authoritative_value):
-            return False
-        if field_name == "label":
-            # Labels are descriptive projections; the verified statement and
-            # material dimensions below remain the factual authority.
-            continue
-        if field_name == "observations":
-            if candidate_value != authoritative_value:
-                return False
-            continue
-        candidate_text = normalize_for_lookup(candidate_value)
-        authoritative_text = normalize_for_lookup(authoritative_value)
-        if candidate_text == authoritative_text:
-            continue
-        if field_name == "denominator" and authoritative_text.startswith(
-            f"{candidate_text} "
-        ):
-            # Permit a source-backed denominator to add explanatory detail to
-            # the same stated population (for example, "marketers" followed
-            # by a not-stated qualification).
-            continue
-        if (
-            field_name == "observation_status"
-            and candidate_text in {"observed", "reported"}
-            and not any(
-                marker in authoritative_text
-                for marker in ("forecast", "projected", "expected", "scenario")
-            )
-        ):
-            continue
-        return False
-    return True
 
 
 def _candidate_evidence_ids(candidate: Mapping[str, Any]) -> list[str]:
