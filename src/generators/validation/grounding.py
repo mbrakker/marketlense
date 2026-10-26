@@ -11,9 +11,9 @@ from typing import Any, Callable, List, Mapping, Sequence, cast
 
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
-    ClaimSemanticOutcome,
     ClaimSemanticGroundingResult,
     ClaimSemanticInput,
+    ClaimSemanticOutcome,
     ClaimSemanticValidationIdentity,
     ClaimValidationPackage,
 )
@@ -1240,19 +1240,33 @@ def run_grounding_check(
                 )
             )
             raise
+        error_context = exc.context if isinstance(exc.context, dict) else {}
+        inner_error_class = s(error_context.get("error_class"))
+        failure_message = f"Grounding check failed: {exc.message}"
+        if inner_error_class:
+            failure_message += f" (cause: {inner_error_class})"
         logger.info(
             log_event(
                 prompt_ctx,
                 role="generator",
                 event="grounding_failed",
                 module=LOGGER_NAME,
-                fields={"code": exc.code, "message": exc.message},
+                fields={
+                    "code": exc.code,
+                    "message": exc.message,
+                    "inner_error_class": inner_error_class,
+                    "repair_attempt": error_context.get("repair_attempt", 0),
+                    "missing_claim_count": error_context.get("missing_claim_count", 0),
+                    "missing_or_ambiguous_public_item_count": error_context.get(
+                        "missing_or_ambiguous_public_item_count", 0
+                    ),
+                },
             )
         )
         issues.append(
             issue(
                 rule_id=RULE_ID,
-                message=f"Grounding check failed: {exc.message}",
+                message=failure_message,
                 severity=(
                     "warning" if request.deterministic_grounding_passed else "error"
                 ),

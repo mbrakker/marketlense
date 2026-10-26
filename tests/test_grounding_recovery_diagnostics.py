@@ -144,6 +144,40 @@ def test_verified_grounding_recovery_passes_missing_public_item_id_to_model(
     assert len(openai_client.requests) == 2
 
 
+def test_verified_grounding_failure_preserves_inner_contract_cause(tmp_path):
+    fact = _fact()
+    artifacts = _verified_artifacts(fact=fact)
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-recovery-inner-cause",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=_packs(fact),
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(grounding_payload={"unsupported": []}),
+        ctx=_ctx(),
+        source_id=SOURCE_IDENTITY,
+        prompt_family_reuse_reader=lambda *_args: SimpleNamespace(
+            reusable=False,
+            output_payload=None,
+            reason="test_inner_cause",
+        ),
+    )
+
+    assert len(issues) == 1
+    assert "grounding_claim_check_coverage_invalid" in issues[0].message
+
+
 @pytest.mark.parametrize(
     ("payload", "expected_context_key", "expected_id"),
     [
