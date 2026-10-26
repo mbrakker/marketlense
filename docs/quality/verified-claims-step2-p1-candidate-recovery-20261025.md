@@ -608,3 +608,107 @@ and Step 3 remains unstarted/not ready.
 - Candidate generation audit (embedded in artifacts cache): same `artifacts.json`, `_cache.candidate_generation`
 - Fresh validation result: `C:\ml-step1-adjust-p1-candidate-ids-live\frozen-reliability-96wqh9bn\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-cc85hvbl\output\mobile-app-trends-2026-pdf\report_analysis\validation.json`
 - Fresh regeneration audit: `C:\ml-step1-adjust-p1-candidate-ids-live\frozen-reliability-96wqh9bn\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-cc85hvbl\output\mobile-app-trends-2026-pdf\report_analysis\regeneration_candidate_audit_1.json`
+
+## P0-P2 root-cause verification and c8 Adjust replay — 2026-10-26 (`c8a09eaf`)
+
+### Targeted P1 regeneration correction
+
+The preceding `1c7164f2` replay failed closed at
+`regeneration_evidence_rebind_unresolved` for
+`verified-fact:finance_latam_growth`. Inspection of
+`_build_grounding_package()` showed that an `alternative_evidence` repair
+excluded every evidence ID mentioned by a target issue, even when the issue
+was an `artifact_quality` wording warning rather than a quarantined factual
+binding. The package therefore had no usable current evidence for a safe
+wording repair. The minimal correction in `c8a09eaf` excludes only explicit
+quarantined evidence IDs and chooses replacement evidence only when such IDs
+exist; otherwise the existing current evidence remains available. Factual
+quarantine behavior is unchanged.
+
+The new regression
+`test_alternative_rebind_keeps_non_quarantined_current_evidence` exercises the
+production package builder with an `artifact_quality` warning and proves that
+the retained evidence ID remains in the grounding package. Existing
+quarantined-evidence replacement tests remain unchanged. This correction does
+not alter candidate ranking, fallback coverage, visual admission, prompts,
+schemas, or retry policy.
+
+### Fresh isolated Adjust replay
+
+The run was isolated from clean `c8a09eaf`, used the retained PDF whose SHA-256
+is `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`, and
+made no canonical-artifact, publication-readiness, HTML, WordPress, or other
+external write. The source identity and PDF hash matched before visual
+evaluation.
+
+| Measure | c8 replay |
+| --- | ---: |
+| Provider calls | 44 |
+| Input tokens | 348,173 |
+| Output tokens | 60,562 |
+| Estimated cost | `$0.090001` |
+| Wall-clock | 726.949 s |
+| File-search calls | 10 |
+| Structured-output recovery calls | 1 |
+| Automatic report repairs | 0 |
+| Workflow retries | 0 |
+| Visual candidates evaluated / admitted / quarantined | 6 / 4 / 2 |
+| Visual outcome counts | 5 verified / 1 unresolved |
+| Terminal state | `report_payload_incomplete` at `pre_validation` |
+
+The candidate audit was not empty: six candidates were evaluated, four facts
+were admitted, and the audit recorded five verified visual outcomes and one
+unresolved outcome. Four supported themes were retained from five planned
+themes. The lost cross-platform-satisfaction theme was not marked central;
+all four admitted themes were selected and no weak padding was introduced.
+
+### Quarantined-candidate ledger and source inspection
+
+| Candidate | Provider result | Binding/source review | Terminal disposition |
+| --- | --- | --- | --- |
+| `marketers-platform-data-satisfaction` | Correction preserved the 31% claim; verification returned `verified` with substantive page notes and page 11 | Full PDF page 11 says that only around 31% of marketers report complete satisfaction with unifying and reading data across platforms. The canary recorded `verified_fact_corrected_binding_conflict`; the corrected result was not promoted without a compatible authoritative binding. | Quarantined fail-closed; no unsupported fact admitted |
+| `gaming-cpi-2025` | Two bounded correction attempts returned `unresolved` | Full PDF page 20 contains gaming session-length and sessions-per-user charts, not CPI. The provider explicitly said the page cannot support the global gaming-CPI claim. | Quarantined fail-closed; no CPI fact admitted |
+
+The four admitted facts were source-hash bound and retained the following
+physical pages: `finance-latam-installs-growth-2025` p35,
+`ecommerce-deal-discovery-cpi` p29, `ai-dynamic-segmentation` p9, and
+`global-app-installs-2025` p6. Their protected metric structures and
+`verified-fact:*` evidence identities are present in the retained artifact.
+Because visual admission did not produce a complete report payload, no final
+HTML, grounding result, publication-readiness result, or final editorial
+quality claim exists for this run. The four provisional fact projections in
+`artifacts.json` are evidence of safe partial admission only.
+
+### Before/after and failure ledger
+
+| Stage / observation | Evidence and disposition |
+| --- | --- |
+| Retained empty candidate checkpoint | The original raw provider response was not retained, so explicit `[]` versus missing root cannot be distinguished. The checkpoint was accepted without recovery; the existing bounded recovery/fallback path remains the safe interpretation. |
+| Location-only candidate output | The later Adjust run had three present roots that normalized only to unsafe page/location IDs. Bounded recovery exhausted and fidelity-approved fallback supplied candidates; no location ID was promoted. |
+| Noncanonical editorial-plan IDs | The prior `927555cc` replay failed coverage because the plan used stale IDs absent from current findings. Boundary validation in `f47a38e0` rejects these IDs before selection. |
+| Grounding recovery exhaustion | A prior run made parse-valid but contract-invalid primary/repair/regeneration responses; bounded attempts ended in fail-closed grounding rather than accepting an incomplete result. |
+| Verified-fact regeneration rebind | `1c7164f2` exposed that physical-page verified-fact spans were excluded by the alternative rebind boundary. `c8a09eaf` fixes the earlier, narrower package-empty case for non-quarantined wording warnings and adds a focused regression. The c8 provider run quarantined candidates before this path was reached, so no live post-fix rebind claim is made. |
+| c8 visual admission | Page-11 binding conflict and page-20 wrong-metric evidence were both rejected; the workflow terminated at pre-validation with `report_payload_incomplete`. This is provider/result variance plus fail-closed admission, not evidence for weakening the boundary. |
+
+The affected focused suite passed **220 tests**. Hosted CI run
+`40310685397` for `c8a09eaf` passed all jobs, including tests, both mutation
+partitions, and `release_evidence`. Local Ruff still reports only the
+pre-existing findings in the long regeneration module/test split; no new-line
+Ruff finding was introduced. The branch retains the protected unrelated ZIP
+modification outside this clean verification worktree.
+
+**Verdict:** **PASS** for the demonstrated minimal regeneration root-cause
+fix, focused regression, source-hash check, bounded retry behavior, and
+fail-closed visual admission. **PARTIAL/NO-GO** for the requested successful
+post-fix Adjust E2E: the provider run ended before grounding/readiness and did
+not produce a final report. No live selection or editorial-quality
+improvement is claimed. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains unstarted/not ready.
+
+### c8 artifact references
+
+- Cohort result: `C:\ml-adjust-acceptance-final-runs-20261026d\frozen-reliability-j0em527l\cohort_result.json`
+- Partial artifacts and visual admission audit: `C:\ml-adjust-acceptance-final-runs-20261026d\frozen-reliability-j0em527l\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-00r0qiz5\output\mobile-app-trends-2026-pdf\report_analysis\artifacts.json`
+- Findings and fidelity ledger: `C:\ml-adjust-acceptance-final-runs-20261026d\frozen-reliability-j0em527l\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-00r0qiz5\output\mobile-app-trends-2026-pdf\report_analysis\evidence_fidelity.json`
+- Provider usage ledger: `C:\ml-adjust-acceptance-final-runs-20261026d\frozen-reliability-j0em527l\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-00r0qiz5\state\llm_cost_ledger.jsonl`
+- Full-page visual review images: `C:\ml-adjust-acceptance-final-runs-20261026d\frozen-reliability-j0em527l\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-00r0qiz5\verified_claims_visual_canary\a5407b768f97\crop_refine_pages\page-10.png` and `page-19.png`

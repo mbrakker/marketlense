@@ -1097,3 +1097,20 @@ quality. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and
 Step 3 remains **unstarted/not ready**. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md` and
 `docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.
+
+**P0-P2 root-cause verification and c8 replay — 2026-10-26 (`c8a09eaf`):**
+The demonstrated regeneration package defect is fixed: valid evidence is no
+longer removed merely because a non-quarantined wording issue names it, while
+quarantined alternative rebinding remains unchanged. The focused regression
+and hosted CI passed. The one fresh isolated Adjust replay verified the source
+hash and evaluated 6 candidates, admitting 4 and quarantining 2; the page-11
+platform-satisfaction result failed corrected-binding consistency and the
+page-20 gaming-CPI result correctly remained unresolved because the page shows
+session metrics, not CPI. The workflow therefore ended before grounding and
+readiness with `report_payload_incomplete` (44 calls, 348,173 input tokens,
+60,562 output tokens, `$0.090001`, 726.949 seconds), with no publication or
+WordPress write. This closes the demonstrated deterministic P1 slice but does
+not provide a successful post-fix editorial E2E or fresh live-selection
+effectiveness evidence. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
+`docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.

@@ -5548,3 +5548,36 @@ in the [candidate-recovery supplement](verified-claims-step2-p1-candidate-recove
 fail-closed behavior, multi-fact preservation, and verified-fact physical-page
 rebinding; **PARTIAL/NO-GO** for fresh post-fix live editorial acceptance.
 E18 remains Active/PARTIAL and Step 3 remains unstarted/not ready.
+
+#### P0-P2 root-cause verification and c8 Adjust replay — 2026-10-26 (`c8a09eaf`)
+
+The targeted regeneration fix corrected a demonstrated package-boundary defect:
+`alternative_evidence` repairs previously excluded all issue evidence IDs,
+including valid current evidence attached to non-quarantined `artifact_quality`
+warnings. The package now excludes only explicitly quarantined IDs and uses an
+alternative only when a quarantined binding exists. The focused regression and
+the affected suite passed 220 tests. No ranking, fallback, prompt, schema,
+visual-admission, or publication policy changed.
+
+One fresh isolated Adjust replay from c8 used the hash-matched retained PDF
+and made 44 calls, 348,173 input tokens, 60,562 output tokens, estimated cost
+`$0.090001`, and 726.949 seconds. It evaluated six visual candidates, admitted
+four, quarantined two, and ended at pre-validation with typed
+`report_payload_incomplete`; no HTML, readiness, canonical, publication, or
+WordPress write occurred. The page-11 31% platform-satisfaction statement was
+visually verified but failed the corrected-binding consistency boundary. The
+gaming-CPI candidate was unresolved after two bounded corrections because the
+inspected page contains session metrics rather than CPI. Four non-central
+theme opportunities remained supported and selected; the lost platform theme
+was not promoted without a safe binding.
+
+Hosted CI run [40310685397](https://github.com/mbrakker/marketlense/actions/runs/40310685397)
+passed all jobs. This run does not establish a successful post-fix editorial
+or readiness outcome, and no live selection improvement is claimed. The
+detailed ledger, full-page source review, artifact paths, and failure reasons
+are recorded in [the P1 supplement](verified-claims-step2-p1-candidate-recovery-20261025.md).
+
+**Verdict:** **PASS** for the targeted deterministic regeneration correction
+and fail-closed source admission; **PARTIAL/NO-GO** for the required complete
+Adjust E2E and Step 3 readiness. E18 remains Active/PARTIAL and Step 3 remains
+unstarted/not ready.
