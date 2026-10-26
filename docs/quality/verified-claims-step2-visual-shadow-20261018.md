@@ -5581,3 +5581,113 @@ are recorded in [the P1 supplement](verified-claims-step2-p1-candidate-recovery-
 and fail-closed source admission; **PARTIAL/NO-GO** for the required complete
 Adjust E2E and Step 3 readiness. E18 remains Active/PARTIAL and Step 3 remains
 unstarted/not ready.
+
+#### Root-cause remediation and independently reviewed Adjust acceptance — 2026-10-26 (`8fe13300`)
+
+This correction closes the three demonstrated upstream defects without lowering
+the report-payload or final-insight thresholds:
+
+1. The c8 `report_payload_incomplete` terminal state was downstream of two
+   admission losses, not an insufficient-threshold problem. The prior run had
+   four admitted visual candidates, so the existing payload producer could not
+   satisfy its required five insights. The visual-admission boundary now binds
+   candidates through the existing direct finding evidence before rendering;
+   stale model-supplied page metadata is discovery input, not source authority.
+   The final run produced five final insights and passed the unchanged payload,
+   grounding, editorial-quality and publication-readiness gates.
+2. The page-11 `marketers-platform-data-satisfaction` case was previously
+   rejected because a sparse corrected metric was compared as if it were a
+   complete authoritative metric. Retained non-empty candidate dimensions are
+   still constraints, but source-authoritative enrichment of omitted dimensions
+   is now accepted. Material cohort, forecast, observation, value and other
+   protected-field conflicts remain rejected. The fresh run admitted all six
+   eligible facts; no conflicting binding was promoted.
+3. The `gaming-cpi-2025`/page-20 diagnostic was a source-location defect. The
+   authoritative finding for the gaming strategy fact is physical page 21; the
+   candidate was previously rendered from page 20, whose content is not CPI.
+   Existing finding-span binding now runs before visual evaluation, so the
+   rendered request used the zero-based page index 20 for physical page 21.
+   The page-20 CPI candidate is no longer promoted by topic or nearby heading.
+4. Multi-fact artifact validation now requires a validated physical span for
+   every cited verified fact and checks the reported page set against those
+   per-fact spans. Valid multi-page comparisons remain accepted; a page union
+   cannot authorize a missing or swapped fact location.
+
+Focused regressions cover source-page rebinding, sparse source-consistent
+metrics, conflicting cohorts/forecast statuses, per-fact multi-page spans and
+the visual admission boundary. The focused set passed `86`; the expanded
+verified-claims/artifact-binding/normalization set passed `317`, with one skip
+and one deselection. Ruff was clean on changed production and test files, and
+targeted mypy passed for `verified_claims_canary.py` and `verified_facts.py`.
+
+One fresh isolated provider-backed Adjust run was then executed from clean code
+commit `8fe133005b62e27b6681d88c3d8dd2d61a9777a0`, using the frozen PDF with
+SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` and
+source identity
+`source:8cb648b6bbd9dbae4ec1d915c38cf235|pdf-sha256:ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`.
+
+The exact recorded run identity and metrics are:
+
+| Measure | Result |
+| --- | ---: |
+| Reports / terminal outcome | 1 / admitted, awaiting review |
+| Visual facts evaluated / admitted / quarantined | 6 / 6 / 0 |
+| Final insights | 5 |
+| Provider calls | 52 |
+| Input / output tokens | 512,814 / 116,754 |
+| Reasoning tokens | 52,648 |
+| Provider cached-input tokens | 10,830 |
+| Estimated cost | `$0.123682` |
+| Wall-clock / core processing | 946.248s / 939.0s |
+| File-search calls | 6 |
+| Structured-output recovery / automatic repairs | 1 / 0 |
+| Workflow attempts / retries | 1 / 0 |
+| Validation / publication readiness | pass / pass |
+| Publication or WordPress write | none |
+
+The provider usage database supplies the 52-call token, cache and reasoning
+totals; the cohort result supplies the report-scoped cost and duration. No
+additional baseline run was made. Against the failed c8 replay (44 calls,
+348,173 input, 60,562 output, `$0.090001`, 726.949s, four admitted and two
+quarantined), the successful run used +8 calls, +164,641 input tokens,
++56,192 output tokens, +$0.033681 and +219.299s. These are observed
+cross-run differences, not an attribution of all variance to the fix.
+
+Independent full-page PDF review found the following final claims factually
+supported and commercially usable:
+
+| Stable insight | Physical page | Review result |
+| --- | ---: | --- |
+| `advanced-genai-efficiency-gains` — small advanced-deployment group reportedly achieved efficiency gains over 20% | 9 | supported; the report qualifies the result as reported and deployment-specific |
+| `gaming-strategy-growth-gap` — installs -1%, sessions +57% YoY | 19 | supported; chart labels and population/timeframe agree |
+| `gaming-casino-slots-divergence` — Casino +22% / -5% sessions and Slots +46% / -5% sessions | 19 | supported; category/value bindings agree |
+| `ecommerce-installs-sessions-diverge` — installs -10%, sessions +5% in 2025 | 27 | supported; global population and YoY relationship agree |
+| `ecommerce-subvertical-cpi-divergence` — global CPI `$1.00` to `$0.98` | 29 | supported; the rendered page contains the global and subvertical CPI relationships |
+
+The sixth admitted fact, `finance-regional-paid-organic-ratios`, is also
+supported by the full page-38 chart and prose. It was not selected into the
+five-item final editorial set: the selection audit records four supported
+planned themes, three selected themes, zero omitted central themes and one
+non-central finance opportunity omitted. This is an editorial coverage
+limitation, not a factual admission error, and no weak duplicate was forced
+into the final set. The quotes family abstained with the existing
+`quotes_missing` reason; this did not fail readiness. The final HTML readiness
+check passed the public-identifier leak rule and no internal evidence IDs were
+found in public claim text.
+
+The retained-claim artifact contains 32 entries: 27 supported semantic
+factual entries and five unresolved descriptive soft-copy recommendations.
+The latter are intentionally not material factual claims; the authoritative
+readiness record reports `unsupported_factual_count=0` and
+`unresolved_factual_count=0`. The run also recorded no automatic repair and no
+operator intervention. No demonstrated canonical editorial-plan or summary
+repair-authority defect remained after this run, so no speculative P2 change
+was made.
+
+**Verdict:** **PASS** for the requested root-cause corrections, source-bound
+admission, and one independently reviewed Adjust E2E. **PARTIAL** for broader
+live selection effectiveness: only the required single report was run, the
+non-central finance opportunity was omitted, and the ten-report cohort was
+intentionally not rerun. E18 remains Active/PARTIAL; broader Step 2 stability
+and Step 3 promotion remain unproven and Step 3 was not started.

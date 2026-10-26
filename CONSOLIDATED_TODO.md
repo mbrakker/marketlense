@@ -1114,3 +1114,23 @@ not provide a successful post-fix editorial E2E or fresh live-selection
 effectiveness evidence. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
 `docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.
+
+**Root-cause remediation and independently reviewed Adjust acceptance —
+2026-10-26 (`8fe13300`):** The visual-admission boundary now binds candidates
+through authoritative direct finding spans before PDF rendering; the existing
+payload threshold was preserved. This corrected the c8 page-11 sparse-metric
+admission and page-20/page-21 gaming source-location defects while retaining
+fail-closed material conflicts. Multi-fact artifact validation now requires a
+validated span for every cited fact instead of trusting a page union. Focused
+tests passed 86; the expanded verified-claims/artifact-binding/normalization
+set passed 317, with Ruff and targeted mypy clean. One fresh isolated Adjust
+run admitted 6/6 verified facts, produced 5 final insights, passed validation
+and publication readiness, and made no publication or WordPress writes (52
+calls, 512,814 input tokens, 116,754 output tokens, `$0.123682`, 946.248s).
+Full-page review found zero unsupported material factual claims. A supported
+finance fact was omitted as a non-central final editorial opportunity; no
+central theme was lost. This closes the demonstrated deterministic P0/P1
+slice and provides one successful independently reviewed Adjust E2E, but does
+not establish ten-report live-selection stability. E18 remains **Active/PARTIAL**,
+Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+Details: `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
