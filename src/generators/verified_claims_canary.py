@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence
 
 from src.contracts.verified_claims import VisualClaimEvaluationResponse
+from src.generators.artifact_normalization import bind_artifact_evidence_spans
 from src.generators.verified_claims_recovery import (
     build_verified_claims_shadow_request,
     candidate_roster_digest,
@@ -75,7 +76,9 @@ class VisualAuthorityCanaryConfig:
 def default_visual_authority_output_dir(default_output_dir: str) -> str:
     """Keep rendered canary pages short enough for PDF fingerprint sidecars."""
 
-    return str(Path(str(default_output_dir or ".")).parent / "verified_claims_visual_canary")
+    return str(
+        Path(str(default_output_dir or ".")).parent / "verified_claims_visual_canary"
+    )
 
 
 def build_visual_authority_admitter(
@@ -111,7 +114,29 @@ def build_visual_authority_admitter(
     )
 
     def admit(candidates: Sequence[Mapping[str, Any]]) -> VisualAuthorityAdmission:
-        evaluation_candidates = _canonical_candidate_roster(candidates)
+        evaluation_candidates = [
+            deepcopy(dict(candidate))
+            for candidate in candidates
+            if isinstance(candidate, Mapping)
+        ]
+        # Candidate pages are discovery metadata until the retained finding
+        # binder resolves them.  Apply the existing direct-evidence binding
+        # before rendering visual pages so a model-supplied stale page cannot
+        # become the visual authority.  DocMap sections are deliberately not
+        # consulted here: navigation/context is not source evidence.
+        bind_artifact_evidence_spans(
+            summary={},
+            insights_candidates=evaluation_candidates,
+            insights_final=[],
+            quotes_final=[],
+            doc_map={},
+            evidence_packs=(
+                dict(evidence_packs)
+                if isinstance(evidence_packs, Mapping)
+                else {}
+            ),
+        )
+        evaluation_candidates = _canonical_candidate_roster(evaluation_candidates)
         request, _audit = build_verified_claims_shadow_request(
             source_identity=source_identity,
             pdf_path=resolved_pdf_path,
@@ -541,8 +566,9 @@ def _corrected_binding_conflict_reason(
             candidate.get("metric")
         ):
             return "verified_fact_corrected_binding_conflict"
-        if _protected_metric(corrected_metric) != _protected_metric(
-            raw_fact.get("metric")
+        if not _retained_metric_is_source_consistent(
+            corrected_metric,
+            raw_fact.get("metric"),
         ):
             return "verified_fact_corrected_binding_conflict"
 
@@ -907,6 +933,64 @@ def _protected_metric(value: Any) -> dict[str, Any]:
         )
         for field_name in PROTECTED_METRIC_FIELDS
     }
+
+
+def _metric_value_is_empty(value: Any) -> bool:
+    return value is None or value == "" or value == [] or value == {}
+
+
+def _retained_metric_is_source_consistent(
+    candidate_metric: Any,
+    authoritative_metric: Any,
+) -> bool:
+    """Allow authoritative enrichment without allowing a fact to change.
+
+    Discovery candidates often carry a sparse metric binding.  The visual
+    verifier may fill in omitted qualifiers while retaining the same source
+    proposition.  Non-empty candidate dimensions remain constraints; an
+    authoritative value may only enrich an omitted dimension or provide the
+    existing, source-consistent representation of it.
+    """
+
+    candidate = _canonical_metric(candidate_metric)
+    authoritative = _canonical_metric(authoritative_metric)
+    for field_name in PROTECTED_METRIC_FIELDS:
+        candidate_value = candidate[field_name]
+        if _metric_value_is_empty(candidate_value):
+            continue
+        authoritative_value = authoritative[field_name]
+        if _metric_value_is_empty(authoritative_value):
+            return False
+        if field_name == "label":
+            # Labels are descriptive projections; the verified statement and
+            # material dimensions below remain the factual authority.
+            continue
+        if field_name == "observations":
+            if candidate_value != authoritative_value:
+                return False
+            continue
+        candidate_text = normalize_for_lookup(candidate_value)
+        authoritative_text = normalize_for_lookup(authoritative_value)
+        if candidate_text == authoritative_text:
+            continue
+        if field_name == "denominator" and authoritative_text.startswith(
+            f"{candidate_text} "
+        ):
+            # Permit a source-backed denominator to add explanatory detail to
+            # the same stated population (for example, "marketers" followed
+            # by a not-stated qualification).
+            continue
+        if (
+            field_name == "observation_status"
+            and candidate_text in {"observed", "reported"}
+            and not any(
+                marker in authoritative_text
+                for marker in ("forecast", "projected", "expected", "scenario")
+            )
+        ):
+            continue
+        return False
+    return True
 
 
 def _candidate_evidence_ids(candidate: Mapping[str, Any]) -> list[str]:

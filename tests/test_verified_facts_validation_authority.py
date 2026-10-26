@@ -705,6 +705,89 @@ def test_verified_multi_fact_artifact_uses_union_of_authoritative_pages():
     )
 
 
+def test_verified_multi_fact_artifact_requires_a_span_for_each_fact():
+    first = _fact()
+    second = deepcopy(first)
+    second["fact_id"] = "fact-2"
+    second["supporting_physical_pages"] = [5]
+    second["provenance"] = {
+        "inspected_physical_pages": [5],
+        "source_truth_notes_by_page": {
+            "5": "The second verified fact is supported on page 5."
+        },
+    }
+    artifacts = _verified_artifacts(fact=first)
+    artifacts["verified_facts"] = [first, second]
+    artifacts["insights_final"][0].update(
+        {
+            "evidence_ids": ["verified-fact:fact-1", "verified-fact:fact-2"],
+            "pages": [4, 5],
+            "evidence_spans": [
+                {
+                    "evidence_id": "verified-fact:fact-1",
+                    "source_pack": "verified_facts",
+                    "page": 4,
+                    "text": "The first verified fact is supported on page 4.",
+                    "source_identity": SOURCE_IDENTITY,
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(AppError, match="every fact"):
+        validate_verified_artifact_bindings(
+            artifacts,
+            {"fact-1": first, "fact-2": second},
+        )
+
+
+def test_verified_multi_fact_artifact_rejects_swapped_per_fact_pages():
+    first = _fact()
+    second = deepcopy(first)
+    second["fact_id"] = "fact-2"
+    second["supporting_physical_pages"] = [5]
+    second["provenance"] = {
+        "inspected_physical_pages": [5],
+        "source_truth_notes_by_page": {
+            "5": "The second verified fact is supported on page 5."
+        },
+    }
+    artifacts = _verified_artifacts(fact=first)
+    artifacts["verified_facts"] = [first, second]
+    artifacts["insights_final"][0].update(
+        {
+            "evidence_ids": ["verified-fact:fact-1", "verified-fact:fact-2"],
+            "pages": [4, 5],
+            "evidence_spans": [
+                {
+                    "evidence_id": "verified-fact:fact-1",
+                    "source_pack": "verified_facts",
+                    "page": 5,
+                    "text": (
+                        "The first verified fact is incorrectly attached to page 5."
+                    ),
+                    "source_identity": SOURCE_IDENTITY,
+                },
+                {
+                    "evidence_id": "verified-fact:fact-2",
+                    "source_pack": "verified_facts",
+                    "page": 4,
+                    "text": (
+                        "The second verified fact is incorrectly attached to page 4."
+                    ),
+                    "source_identity": SOURCE_IDENTITY,
+                },
+            ],
+        }
+    )
+
+    with pytest.raises(AppError, match="span page conflicts"):
+        validate_verified_artifact_bindings(
+            artifacts,
+            {"fact-1": first, "fact-2": second},
+        )
+
+
 def test_verified_unknown_additional_binding_fails_closed():
     artifacts = _verified_artifacts()
     artifacts["insights_final"][0]["evidence_ids"] = [

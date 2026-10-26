@@ -513,3 +513,43 @@ def test_already_canonical_insight_binding_remains_source_bound() -> None:
     assert insight["pages"] == [7]
     assert insight["evidence"] == "Authoritative source excerpt."
     assert insight["evidence_spans"][0]["source_pack"] == "findings"
+
+
+def test_stale_candidate_page_is_replaced_by_its_direct_finding_page() -> None:
+    candidate = {
+        "id": "gaming-cpi-2025",
+        "text": "Global gaming CPI rose 30% to $0.56 in 2025.",
+        "evidence_id": "gaming-finding-keeping-users-retention-cpi",
+        "evidence": "The finding contains the CPI observation.",
+        "pages": [20],
+    }
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[candidate],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "gaming-finding-keeping-users-retention-cpi",
+                        "text": candidate["text"],
+                        "evidence": "The finding contains the CPI observation.",
+                        "pages": [21],
+                    }
+                ]
+            }
+        },
+    )
+
+    assert candidate["pages"] == [21]
+    assert candidate["evidence_spans"] == [
+        {
+            "evidence_id": "gaming-finding-keeping-users-retention-cpi",
+            "source_pack": "findings",
+            "page": 21,
+            "text": "The finding contains the CPI observation.",
+        }
+    ]

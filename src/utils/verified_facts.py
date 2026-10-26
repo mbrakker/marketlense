@@ -414,9 +414,17 @@ def _validate_artifact_binding(
         )
 
     if spans is None:
+        if len(set(verified_ids)) > 1:
+            raise _invalid(
+                f"{family}[{index}] multi-fact binding is missing per-fact spans",
+                ", ".join(verified_ids),
+            )
         return
     if not isinstance(spans, list):
         raise _invalid(f"{family}[{index}] evidence spans are malformed")
+    multi_fact_binding = len(set(verified_ids)) > 1
+    span_fact_ids: set[str] = set()
+    span_pages: set[int] = set()
     for span_index, span in enumerate(spans):
         if not isinstance(span, Mapping):
             raise _invalid(
@@ -436,6 +444,28 @@ def _validate_artifact_binding(
                 f"{family}[{index}] evidence span references an unknown fact", span_id
             )
         _validate_span(span, fact, family=family, index=index, span_index=span_index)
+        if multi_fact_binding:
+            span_fact_ids.add(span_id)
+            page = span.get("page")
+            if type(page) is int and page > 0:
+                span_pages.add(page)
+
+    if multi_fact_binding:
+        if span_fact_ids != set(verified_ids):
+            raise _invalid(
+                f"{family}[{index}] multi-fact binding does not cover every fact",
+                ", ".join(verified_ids),
+            )
+        # The union of fact pages is not sufficient provenance for a
+        # comparative claim.  Every reported location must be represented by
+        # one of the already validated per-fact spans.
+        _validate_pages(
+            item,
+            span_pages,
+            family=family,
+            index=index,
+            fact_id=", ".join(verified_ids),
+        )
 
 
 def _validate_pages(

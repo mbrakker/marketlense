@@ -4,6 +4,8 @@ import json
 from copy import deepcopy
 from dataclasses import replace
 
+import pytest
+
 from src.generators._artifact_generator.generation import generate_artifacts
 from src.generators.verified_claims_canary import admit_visual_authority_candidates
 from src.utils.verified_facts import validated_verified_facts
@@ -116,6 +118,121 @@ def test_empty_metric_fields_are_equivalent_across_candidate_snapshot_shapes():
     )
 
     assert [fact["fact_id"] for fact in admission.verified_facts] == [candidate["id"]]
+
+
+def test_retained_binding_accepts_source_consistent_authoritative_metric_enrichment():
+    candidate = _candidate(
+        text=(
+            "Only around 31% of marketers report complete satisfaction with "
+            "their ability to unify and read data across platforms."
+        ),
+        page=11,
+        metric={
+            "label": (
+                "Marketers reporting complete satisfaction with cross-platform data"
+            ),
+            "value": "around 31%",
+            "unit": "",
+            "trend": "",
+            "timeframe": "",
+            "geography": "",
+            "segment": "Marketers",
+            "sample_size": "",
+            "confidence": "",
+            "subject": "marketers",
+            "cohort": "",
+            "denominator": "Marketers",
+            "observation_status": "observed",
+        },
+    )
+    authoritative_metric = {
+        **deepcopy(candidate["metric"]),
+        "label": (
+            "Complete satisfaction with ability to unify and read data across "
+            "platforms"
+        ),
+        "unit": "percent of marketers",
+        "segment": "marketers",
+        "cohort": "marketers",
+        "denominator": "marketers; further denominator details are not stated",
+        "observation_status": "reported satisfaction; collection method is not stated",
+        "forecast_status": "not identified as a forecast",
+    }
+    result = _result(
+        candidate,
+        verified_fact={
+            "statement": candidate["text"],
+            "metric": authoritative_metric,
+            "qualifiers": ["The source does not state a timeframe or geography."],
+            "supporting_physical_pages": [11],
+        },
+        physical_page=11,
+    )
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(result),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert [fact["fact_id"] for fact in admission.verified_facts] == [candidate["id"]]
+    assert admission.verified_facts[0]["metric"] == authoritative_metric
+
+
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        ("cohort", "app users"),
+        ("forecast_status", "conditional_forecast"),
+    ],
+)
+def test_retained_binding_rejects_authoritative_material_metric_changes(
+    field: str, value: str
+):
+    candidate = _candidate(
+        text="Only around 31% of marketers report complete satisfaction.",
+        page=11,
+        metric={
+            "label": "Satisfaction",
+            "value": "around 31%",
+            "unit": "%",
+            "segment": "marketers",
+            "subject": "marketers",
+            "cohort": "marketers" if field != "cohort" else "marketers",
+            "denominator": "marketers",
+            "observation_status": "observed",
+            "forecast_status": "observed" if field == "forecast_status" else "",
+        },
+    )
+    authoritative_metric = {
+        **deepcopy(candidate["metric"]),
+        field: value,
+    }
+    result = _result(
+        candidate,
+        verified_fact={
+            "statement": candidate["text"],
+            "metric": authoritative_metric,
+            "qualifiers": [],
+            "supporting_physical_pages": [11],
+        },
+        physical_page=11,
+    )
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(result),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.verified_facts == []
+    assert admission.audit["quarantined"][0]["reason"] == (
+        "verified_fact_corrected_binding_conflict"
+    )
 
 
 def test_retained_binding_rejects_authoritative_metric_conflict():
