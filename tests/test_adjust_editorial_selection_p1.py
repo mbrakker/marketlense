@@ -6,6 +6,7 @@ from src.generators.artifact_normalization import (
     fallback_artifact_insights_from_findings,
     remap_editorial_plan_to_verified_facts,
     select_artifact_insights,
+    validate_editorial_plan_evidence_ids,
 )
 from src.utils.errors import AppError
 
@@ -74,6 +75,17 @@ def test_fallback_resolves_plan_section_refs_and_direct_ids() -> None:
         "cross-finding",
     ]
     assert "unsupported" not in {item["evidence_id"] for item in selected}
+
+
+def test_editorial_plan_rejects_noncanonical_evidence_ids() -> None:
+    validate_editorial_plan_evidence_ids(
+        _plan("finding-1", "finding-2"), {"finding-1", "finding-2"}
+    )
+
+    with pytest.raises(AppError, match="non-canonical evidence IDs"):
+        validate_editorial_plan_evidence_ids(
+            _plan("stale-finding-id", "finding-2"), {"finding-1", "finding-2"}
+        )
 
 
 def test_finding_fallback_does_not_let_one_section_monopolize_capacity():

@@ -507,6 +507,39 @@ def normalize_artifact_editorial_plan(value: Any) -> Dict[str, Any]:
     }
 
 
+def validate_editorial_plan_evidence_ids(
+    value: Any,
+    canonical_evidence_ids: set[str],
+) -> None:
+    """Reject editorial-plan references outside the supplied ID vocabulary."""
+
+    plan = normalize_artifact_editorial_plan(value)
+    allowed = {
+        normalize_for_lookup(evidence_id)
+        for evidence_id in canonical_evidence_ids
+        if normalize_for_lookup(evidence_id)
+    }
+    unknown = sorted(
+        {
+            evidence_id
+            for theme in plan["themes"]
+            for evidence_id in theme["evidence_ids"]
+            if normalize_for_lookup(evidence_id) not in allowed
+        },
+        key=str.casefold,
+    )
+    if unknown:
+        raise AppError(
+            code="editorial_plan_invalid",
+            message="Editorial plan references non-canonical evidence IDs",
+            retryable=False,
+            context={
+                "unknown_evidence_ids": unknown,
+                "canonical_evidence_id_count": len(allowed),
+            },
+        )
+
+
 def stabilize_broad_artifact_editorial_plan(
     editorial_plan: Dict[str, Any],
     *,

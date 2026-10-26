@@ -72,6 +72,7 @@ from src.generators.artifact_normalization import (
     strip_linkedin_inline_reference_ids,
     supported_fidelity_evidence_ids,
     validate_artifact_candidate_evidence_ids,
+    validate_editorial_plan_evidence_ids,
     validate_final_insight_candidate_lineage,
     validate_final_insight_editorial_coverage,
 )
@@ -606,6 +607,9 @@ def generate_artifacts(
     def validate_editorial_plan(payload: Dict[str, Any], task_ctx: RunContext) -> None:
         normalize_required_evidence_references(payload)
         normalize_artifact_editorial_plan(payload.get("editorial_plan"))
+        validate_editorial_plan_evidence_ids(
+            payload.get("editorial_plan"), canonical_evidence_ids
+        )
         validate_required_evidence_references(payload, task_ctx)
 
     has_density_input = isinstance(source_status, dict) and (
@@ -1163,6 +1167,11 @@ def generate_artifacts(
         if isinstance(candidate_allowed_evidence_ids_value, list)
         else []
     )
+    canonical_evidence_ids = {
+        normalize_text(value)
+        for value in json.loads(canonical_evidence_ids_json)
+        if isinstance(value, str) and normalize_text(value)
+    }
     editorial_plan_ctx = child_context(ctx, task_id=f"{ctx.task_id}:editorial_plan")
     editorial_plan_result = resolve_or_render_family(
         namespace="report_vs/artifacts/editorial_plan",
@@ -1407,9 +1416,7 @@ def generate_artifacts(
         "_structured_output_attempt_diagnostics"
     )
     attempt_diagnostics = (
-        deepcopy(attempt_diagnostics)
-        if isinstance(attempt_diagnostics, list)
-        else []
+        deepcopy(attempt_diagnostics) if isinstance(attempt_diagnostics, list) else []
     )
     recovery_attempts = max(1, int(recovery_metadata.get("attempts") or 1))
     recovery_disposition = _s(recovery_metadata.get("disposition")).strip()
@@ -1569,9 +1576,7 @@ def generate_artifacts(
         if isinstance(candidate, dict)
         and _canonical_finding_evidence_key(candidate.get("evidence_id"))
     }
-    retained_fallback_ids = selected_evidence_keys.intersection(
-        fallback_evidence_keys
-    )
+    retained_fallback_ids = selected_evidence_keys.intersection(fallback_evidence_keys)
     unresolved_theme_bindings = [
         binding["theme"]
         for binding in editorial_plan_theme_bindings(
