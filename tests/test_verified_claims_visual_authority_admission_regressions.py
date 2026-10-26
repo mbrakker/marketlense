@@ -148,8 +148,7 @@ def test_retained_binding_accepts_source_consistent_authoritative_metric_enrichm
     authoritative_metric = {
         **deepcopy(candidate["metric"]),
         "label": (
-            "Complete satisfaction with ability to unify and read data across "
-            "platforms"
+            "Complete satisfaction with ability to unify and read data across platforms"
         ),
         "unit": "percent of marketers",
         "segment": "marketers",

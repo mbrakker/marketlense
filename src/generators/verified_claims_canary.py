@@ -131,9 +131,7 @@ def build_visual_authority_admitter(
             quotes_final=[],
             doc_map={},
             evidence_packs=(
-                dict(evidence_packs)
-                if isinstance(evidence_packs, Mapping)
-                else {}
+                dict(evidence_packs) if isinstance(evidence_packs, Mapping) else {}
             ),
         )
         evaluation_candidates = _canonical_candidate_roster(evaluation_candidates)
