@@ -83,6 +83,45 @@ def test_grounding_package_quarantines_failed_evidence_and_uses_replacements() -
     assert "failed-evidence" not in json.dumps(package["relevant_evidence"])
 
 
+def test_alternative_rebind_keeps_non_quarantined_current_evidence() -> None:
+    target = RegenerationTarget(
+        target_section="insights_bundle",
+        issues=[
+            RegenerationIssue(
+                rule_id="artifact_quality",
+                affected_section="insights:insight-1.text",
+                message="The insight wording needs a narrower source-grounded rewrite.",
+                severity="warning",
+                evidence_ids=["current-evidence"],
+            )
+        ],
+        repair_action="REBIND_EVIDENCE",
+        repair_strategy="alternative_evidence",
+    )
+
+    package = _build_grounding_package(
+        target=target,
+        prepared=SimpleNamespace(evidence_windows=[]),
+        artifacts={"insights_final": []},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "current-evidence",
+                        "text": "The retained source finding supports the insight.",
+                        "evidence": "The retained source finding supports the insight.",
+                        "pages": [35],
+                    }
+                ]
+            }
+        },
+        doc_map={},
+    )
+
+    assert package["evidence_ids"] == ["current-evidence"]
+    assert package["quarantined_evidence_ids"] == []
+
+
 def test_insight_rebind_grounding_uses_only_page_bound_direct_evidence() -> None:
     target = RegenerationTarget(
         target_section="insights_bundle",

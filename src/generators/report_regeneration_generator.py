@@ -746,14 +746,7 @@ def _build_grounding_package(
     )
     failed_ids = {
         _normalized_evidence_id(evidence_id)
-        for evidence_id in (
-            quarantined_ids
-            + [
-                evidence_id
-                for issue in target.issues
-                for evidence_id in issue.evidence_ids
-            ]
-        )
+        for evidence_id in quarantined_ids
         if _normalized_evidence_id(evidence_id)
     }
     issue_pages = _unique_ints(page for issue in target.issues for page in issue.pages)
@@ -774,7 +767,7 @@ def _build_grounding_package(
         )
         doc_map = {}
     rebind_to_alternative = target.repair_strategy == "alternative_evidence"
-    if rebind_to_alternative:
+    if rebind_to_alternative and quarantined_ids:
         relevant_evidence = _replacement_evidence_entries(
             evidence_packs=evidence_packs,
             excluded_evidence_ids=failed_ids,
