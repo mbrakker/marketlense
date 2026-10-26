@@ -18,6 +18,7 @@ from src.generators.public_editorial_quality_generator import (
 from src.generators.validation.grounding import (
     _grounding_batch_prompt_variables,
     _grounding_batches,
+    _split_grounding_batch,
     grounding_payload,
 )
 from src.generators.validation.preparation import prepare_validation_inputs
@@ -512,6 +513,39 @@ def test_verified_grounding_batch_variables_scope_report_wide_evidence():
     assert (
         rendered_batch["canonical_verified_facts"]["fact-1"]["provenance"]
         == fact["provenance"]
+    )
+
+
+def test_failed_grounding_batch_subdivision_preserves_fact_scope_and_order():
+    fact = _fact()
+    batch_payload = {
+        "public_factual_items": [
+            {
+                "item_id": f"insight:fact-{index}:text",
+                "section": f"insights:fact-{index}.text",
+                "text": f"Finding {index}.",
+                "evidence_ids": ["verified-fact:fact-1"],
+            }
+            for index in range(1, 4)
+        ],
+        "retained_claims_to_ground": [],
+        "canonical_verified_facts": {"fact-1": fact},
+    }
+
+    split_batches = _split_grounding_batch((batch_payload, []))
+
+    assert [
+        item["item_id"]
+        for split_payload, _semantic_inputs in split_batches
+        for item in split_payload["public_factual_items"]
+    ] == [
+        "insight:fact-1:text",
+        "insight:fact-2:text",
+        "insight:fact-3:text",
+    ]
+    assert all(
+        split_payload["canonical_verified_facts"] == {"fact-1": fact}
+        for split_payload, _semantic_inputs in split_batches
     )
 
 

@@ -11,6 +11,7 @@ from src.contracts.validation import ValidationRequest
 from src.generators.artifact_normalization import bind_artifact_evidence_spans
 from src.generators.claim_validation_generator import (
     _has_printed_page_label,
+    _source_references,
     apply_retained_claim_semantic_results,
     attach_claim_validation_execution_identity,
     materialize_retained_claim_package,
@@ -57,6 +58,37 @@ def _page_grounded_claim_case():
     }
     package = validate_retained_claims(artifacts, evidence_packs)
     return package, evidence_packs, claim, artifacts
+
+
+def test_spaced_pdf_text_overrides_wrong_finding_page_with_exact_excerpt_match():
+    source_evidence = {
+        "finding": (
+            "findings",
+            "I n c r e a s i n g r e v e n u e was cited as a critical "
+            "incentive by 58% of B2C organizations, up 9% since 2024.",
+            4,
+        ),
+        "nearby-chart": (
+            "findings",
+            "Search investment was cited by 53% of organizations in 2025.",
+            5,
+        ),
+    }
+
+    references = _source_references(
+        {
+            "pages": [5],
+            "evidence": (
+                "Increasing revenue was cited as a critical incentive by 58% "
+                "of B2C organizations, up 9% since 2024."
+            ),
+        },
+        source_evidence,
+    )
+
+    assert [(reference.evidence_id, reference.page) for reference in references] == [
+        ("finding", 4)
+    ]
 
 
 def _page_grounded_semantic_result(semantic_input):

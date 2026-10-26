@@ -178,6 +178,77 @@ def test_verified_grounding_failure_preserves_inner_contract_cause(tmp_path):
     assert "grounding_claim_check_coverage_invalid" in issues[0].message
 
 
+def test_grounding_issue_retains_public_verified_evidence_for_repair(tmp_path):
+    fact = _fact()
+    insight = {
+        "id": "fact-1",
+        "text": "Adoption is rapidly growing among buyers in 2026.",
+        "evidence_id": "verified-fact:fact-1",
+        "evidence": fact["statement"],
+        "metric": fact["metric"],
+    }
+    artifacts = _verified_artifacts(insight=insight, fact=fact)
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-recovery-evidence-binding",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=_packs(fact),
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+    payload = grounding_payload(request, artifacts)
+    public_item = payload["public_factual_items"][0]
+    entries = payload["retained_claims_to_ground"] + payload["public_factual_items"]
+    checks = []
+    for entry in entries:
+        outcome = "not_established" if entry is public_item else "entailed"
+        checks.append(
+            _grounding_check(
+                entry["item_id"],
+                entry["text"],
+                outcome,
+                classification=entry.get("declared_classification", "factual_claim"),
+            )
+        )
+    response = {
+        "checks": checks,
+        "unsupported": [
+            {
+                "item_id": public_item["item_id"],
+                "section": public_item["section"],
+                "text": public_item["text"],
+                "classification": "factual_claim",
+                "entailment_outcome": "not_established",
+                "reason": "The retained fact does not establish this wording.",
+            }
+        ],
+    }
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(response),
+        ctx=_ctx(),
+        source_id=SOURCE_IDENTITY,
+        prompt_family_reuse_reader=lambda *_args: SimpleNamespace(
+            reusable=False,
+            output_payload=None,
+            reason="test_evidence_binding",
+        ),
+    )
+
+    item_issues = [
+        issue for issue in issues if issue.entity_id == public_item["item_id"]
+    ]
+    assert item_issues
+    assert item_issues[0].evidence_ids == public_item["evidence_ids"]
+
+
 @pytest.mark.parametrize(
     ("payload", "expected_context_key", "expected_id"),
     [
@@ -239,6 +310,8 @@ def test_verified_grounding_rejection_retains_actionable_public_item_id(
         )
 
     assert exc_info.value.context[expected_context_key] == [expected_id]
+    assert "returned_check_ids" in exc_info.value.context
+    assert "expected_public_item_ids" in exc_info.value.context
 
 
 def test_verified_grounding_rejection_retains_missing_retained_claim_id():

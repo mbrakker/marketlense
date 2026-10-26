@@ -2426,7 +2426,12 @@ def _exact_evidence_pages(
         {
             page
             for _source_id, (_pack, source_text, page) in source_evidence.items()
-            if page is not None and normalized in normalize_for_lookup(source_text)
+            if page is not None
+            and (
+                normalized in normalize_for_lookup(source_text)
+                or _compact_lookup_text(evidence_text)
+                in _compact_lookup_text(source_text)
+            )
         }
     )
 
@@ -2451,7 +2456,12 @@ def _matched_source_pages(
         {
             page
             for _source_id, (_pack, source_text, page) in source_evidence.items()
-            if page is not None and normalized in normalize_for_lookup(source_text)
+            if page is not None
+            and (
+                normalized in normalize_for_lookup(source_text)
+                or _compact_lookup_text(evidence_text)
+                in _compact_lookup_text(source_text)
+            )
         }
     )
     if exact:
@@ -2475,6 +2485,12 @@ def _matched_source_pages(
     if best_quantities == 0 and best_tokens < 5:
         return []
     return [best_page]
+
+
+def _compact_lookup_text(value: str) -> str:
+    """Remove OCR-inserted whitespace without changing lookup characters."""
+
+    return re.sub(r"\s+", "", normalize_for_lookup(value))
 
 
 def _recovery_tokens(value: str) -> set[str]:

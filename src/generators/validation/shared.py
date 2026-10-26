@@ -88,6 +88,7 @@ def issue(
     repair_target: str = "",
     entity_id: str = "",
     violation_type: str = "",
+    evidence_ids: Sequence[str] = (),
 ) -> ValidationIssue:
     return ValidationIssue(
         schema_version="1.0",
@@ -98,6 +99,7 @@ def issue(
         violation_type=violation_type,
         repair_target=repair_target,
         entity_id=entity_id,
+        evidence_ids=list(dict.fromkeys(str(value) for value in evidence_ids if value)),
     )
 
 
@@ -126,6 +128,7 @@ def downgrade_issues_for_data_gap(
             violation_type=issue.violation_type,
             repair_target=issue.repair_target,
             entity_id=issue.entity_id,
+            evidence_ids=list(issue.evidence_ids),
         )
         for issue in issues
     ]

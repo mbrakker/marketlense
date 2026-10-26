@@ -198,6 +198,75 @@ def _grounding_batches(
     return batches
 
 
+def _split_grounding_batch(
+    batch_spec: tuple[dict, list[ClaimSemanticInput]],
+) -> list[tuple[dict, list[ClaimSemanticInput]]]:
+    """Split one failed batch once, preserving its canonical fact scope."""
+
+    batch_payload, semantic_inputs = batch_spec
+    claim_entries = list(batch_payload.get("retained_claims_to_ground") or [])
+    public_items = list(batch_payload.get("public_factual_items") or [])
+    if len(claim_entries) != len(semantic_inputs):
+        return []
+    if len(claim_entries) <= 1 and len(public_items) <= 1:
+        return []
+
+    claim_pairs = list(zip(semantic_inputs, claim_entries, strict=True))
+    claim_midpoint = (len(claim_pairs) + 1) // 2
+    public_midpoint = (len(public_items) + 1) // 2
+    claim_groups = (
+        [claim_pairs[:claim_midpoint], claim_pairs[claim_midpoint:]]
+        if claim_pairs
+        else [[], []]
+    )
+    public_groups = (
+        [public_items[:public_midpoint], public_items[public_midpoint:]]
+        if public_items
+        else [[], []]
+    )
+    canonical_verified_facts = batch_payload.get("canonical_verified_facts")
+    split_batches: list[tuple[dict, list[ClaimSemanticInput]]] = []
+    for claim_group, public_group in zip(claim_groups, public_groups, strict=True):
+        if not claim_group and not public_group:
+            continue
+        scoped_payload: dict[str, Any] = {
+            "public_factual_items": public_group,
+            "retained_claims_to_ground": [
+                entry for _semantic_input, entry in claim_group
+            ],
+        }
+        if isinstance(canonical_verified_facts, dict):
+            evidence_ids = [
+                s(evidence_id)
+                for item in public_group
+                if isinstance(item, dict)
+                for evidence_id in item.get("evidence_ids", [])
+                if s(evidence_id).startswith(VERIFIED_FACT_EVIDENCE_PREFIX)
+            ]
+            evidence_ids.extend(
+                s(evidence_id)
+                for _semantic_input, entry in claim_group
+                for evidence_id in entry.get("evidence_ids", [])
+                if s(evidence_id).startswith(VERIFIED_FACT_EVIDENCE_PREFIX)
+            )
+            fact_ids = dict.fromkeys(
+                evidence_id.removeprefix(VERIFIED_FACT_EVIDENCE_PREFIX)
+                for evidence_id in evidence_ids
+            )
+            scoped_payload["canonical_verified_facts"] = {
+                fact_id: canonical_verified_facts[fact_id]
+                for fact_id in fact_ids
+                if fact_id in canonical_verified_facts
+            }
+        split_batches.append(
+            (
+                scoped_payload,
+                [semantic_input for semantic_input, _entry in claim_group],
+            )
+        )
+    return split_batches
+
+
 def _grounding_batch_prompt_variables(
     grounding_batches: Sequence[tuple[dict, list[ClaimSemanticInput]]],
     *,
@@ -437,6 +506,9 @@ def run_grounding_check(
         retained_claim_inputs=retained_claim_inputs,
     )
     public_item_ids = _public_item_ids(audit_payload.get("public_factual_items"))
+    public_item_evidence_ids = _public_item_evidence_ids(
+        audit_payload.get("public_factual_items")
+    )
     retained_item_ids = _retained_claim_grounding_item_ids(
         retained_claim_inputs,
         set(public_item_ids.values()),
@@ -533,6 +605,9 @@ def run_grounding_check(
             retained_claim_inputs=retained_claim_inputs,
         )
         public_item_ids = _public_item_ids(audit_payload.get("public_factual_items"))
+        public_item_evidence_ids = _public_item_evidence_ids(
+            audit_payload.get("public_factual_items")
+        )
         retained_item_ids = _retained_claim_grounding_item_ids(
             retained_claim_inputs,
             set(public_item_ids.values()),
@@ -809,10 +884,13 @@ def run_grounding_check(
                 batch_spec: tuple[dict, list[ClaimSemanticInput]],
                 batch_vars: dict[str, str],
                 batch_bundle,
+                *,
+                stage_suffix: str = "",
             ) -> tuple[int, Any, bool]:
                 _batch_payload, batch_semantic_inputs = batch_spec
+                stage_token = f"{batch_index:02d}{stage_suffix}"
                 batch_task_id = (
-                    f"{prompt_ctx.task_id}:batch:{batch_index:02d}:grounding"
+                    f"{prompt_ctx.task_id}:batch:{stage_token}:grounding"
                 )
                 batch_ctx = child_context(
                     prompt_ctx,
@@ -827,7 +905,7 @@ def run_grounding_check(
                     *,
                     variables=batch_vars,
                     base_bundle=batch_bundle,
-                    call_index=batch_index,
+                    call_index=stage_token,
                 ):
                     nonlocal batch_recovery_attempted
                     if mode != "primary":
@@ -866,7 +944,7 @@ def run_grounding_check(
                         ),
                         report_id=str(request.report_id),
                         artifact_family="validation_grounding",
-                        stage=(f"validation_grounding_batch_{call_index:02d}_{mode}"),
+                        stage=(f"validation_grounding_batch_{call_index}_{mode}"),
                         publisher_name=request.publisher_name,
                         report_name=request.report_name,
                         source_url=request.source_url,
@@ -925,10 +1003,108 @@ def run_grounding_check(
                         batch_vars,
                         batch_bundle,
                     )
+                except AppError as exc:
+                    error_context = exc.context if isinstance(exc.context, dict) else {}
+                    is_coverage_failure = bool(
+                        error_context.get("coverage_failure_category")
+                        or error_context.get("original_error_class")
+                        == "grounding_claim_check_coverage_invalid"
+                        or error_context.get("error_class")
+                        == "grounding_claim_check_coverage_invalid"
+                    )
+                    split_specs = (
+                        _split_grounding_batch(batch_spec)
+                        if is_coverage_failure
+                        else []
+                    )
+                    if split_specs:
+                        split_results: list[tuple[Any, bool]] = []
+                        for split_index, split_spec in enumerate(split_specs, start=1):
+                            split_vars = _grounding_batch_prompt_variables(
+                                [split_spec],
+                                evidence_texts=evidence_texts,
+                                authority_policy=authority_policy,
+                                verified_mode=verified_mode,
+                            )[0]
+                            split_bundle = prepare_batch_bundle(split_vars)
+                            try:
+                                _split_index, split_payload, split_recovered = (
+                                    _execute_batch(
+                                        batch_index,
+                                        split_spec,
+                                        split_vars,
+                                        split_bundle,
+                                        stage_suffix=f"_split{split_index}",
+                                    )
+                                )
+                            except AppError:
+                                with batch_failure_lock:
+                                    batch_failure_event.set()
+                                raise
+                            split_results.append((split_payload, split_recovered))
+                        merged_payload: dict[str, list[Any]] = {
+                            "unsupported": [],
+                            "checks": [],
+                        }
+                        for split_payload, _split_recovered in split_results:
+                            merged_payload["unsupported"].extend(
+                                split_payload.get("unsupported") or []
+                            )
+                            merged_payload["checks"].extend(
+                                split_payload.get("checks") or []
+                            )
+                        return (
+                            batch_index,
+                            merged_payload,
+                            True,
+                        )
+                    with batch_failure_lock:
+                        batch_failure_event.set()
+                    raise
                 except Exception:
                     with batch_failure_lock:
                         batch_failure_event.set()
                     raise
+
+            def annotate_batch_failure(
+                batch_index: int,
+                batch_spec: tuple[dict, list[ClaimSemanticInput]],
+                exc: Exception,
+            ) -> None:
+                if not isinstance(exc, AppError):
+                    return
+                batch_payload, semantic_inputs = batch_spec
+                context = exc.context if isinstance(exc.context, dict) else {}
+                context.setdefault("batch_index", batch_index)
+                context.setdefault(
+                    "batch_input_fingerprint",
+                    sha256_json(
+                        {
+                            "claim_ids": [
+                                semantic_input.candidate.claim_id
+                                for semantic_input in semantic_inputs
+                            ],
+                            "public_item_ids": [
+                                s(item.get("item_id"))
+                                for item in batch_payload.get(
+                                    "public_factual_items", []
+                                )
+                                if isinstance(item, dict)
+                            ],
+                            "canonical_fact_ids": sorted(
+                                batch_payload.get("canonical_verified_facts", {})
+                            )
+                            if isinstance(
+                                batch_payload.get("canonical_verified_facts"), dict
+                            )
+                            else [],
+                        }
+                    ),
+                )
+                context.setdefault("source_identity", source_id or request.source_id)
+                if source_md5:
+                    context.setdefault("source_md5", source_md5)
+                exc.context = context
 
             batch_results: dict[int, tuple[Any, bool]] = {}
             batch_failures: list[tuple[int, Exception]] = []
@@ -962,6 +1138,11 @@ def run_grounding_check(
                         try:
                             _index, payload, batch_recovery_attempted = future.result()
                         except Exception as exc:
+                            annotate_batch_failure(
+                                batch_index,
+                                batch_jobs[batch_index - 1][1],
+                                exc,
+                            )
                             batch_failures.append((batch_index, exc))
                         else:
                             batch_results[batch_index] = (
@@ -976,13 +1157,36 @@ def run_grounding_check(
                             if future.cancel():
                                 continue
                             try:
-                                future.result()
+                                _index, payload, batch_recovery_attempted = (
+                                    future.result()
+                                )
                             except Exception as exc:
+                                annotate_batch_failure(
+                                    batch_index,
+                                    batch_jobs[batch_index - 1][1],
+                                    exc,
+                                )
                                 batch_failures.append((batch_index, exc))
+                            else:
+                                batch_results[batch_index] = (
+                                    payload,
+                                    batch_recovery_attempted,
+                                )
                         pending.clear()
                         _failure_index, failure = min(
                             batch_failures, key=lambda item: item[0]
                         )
+                        if isinstance(failure, AppError):
+                            failure_context = (
+                                failure.context
+                                if isinstance(failure.context, dict)
+                                else {}
+                            )
+                            failure_context["successful_sibling_batch_count"] = len(
+                                batch_results
+                            )
+                            failure_context["failed_batch_count"] = len(batch_failures)
+                            failure.context = failure_context
                         raise failure
 
                     while next_batch < len(batch_jobs) and len(pending) < max_workers:
@@ -1131,6 +1335,9 @@ def run_grounding_check(
                     else ""
                 )
                 reason = s(entry.get("reason") or "Unsupported factual claim")
+                entity_id = _public_item_id_for_failure(
+                    section, text, public_item_ids
+                )
                 issues.append(
                     issue(
                         rule_id=RULE_ID,
@@ -1149,9 +1356,8 @@ def run_grounding_check(
                         ),
                         section=section,
                         violation_type=violation_type,
-                        entity_id=_public_item_id_for_failure(
-                            section, text, public_item_ids
-                        ),
+                        entity_id=entity_id,
+                        evidence_ids=public_item_evidence_ids.get(entity_id, ()),
                     )
                 )
                 failed_check_keys.add((section, text))
@@ -1213,6 +1419,9 @@ def run_grounding_check(
                 if severity == "pass":
                     continue
                 if text:
+                    entity_id = _public_item_id_for_failure(
+                        section, text, public_item_ids
+                    )
                     issues.append(
                         issue(
                             rule_id=RULE_ID,
@@ -1223,8 +1432,9 @@ def run_grounding_check(
                             severity=severity,
                             section=section,
                             violation_type=violation_type,
-                            entity_id=_public_item_id_for_failure(
-                                section, text, public_item_ids
+                            entity_id=entity_id,
+                            evidence_ids=public_item_evidence_ids.get(
+                                entity_id, ()
                             ),
                         )
                     )
@@ -1245,6 +1455,24 @@ def run_grounding_check(
         failure_message = f"Grounding check failed: {exc.message}"
         if inner_error_class:
             failure_message += f" (cause: {inner_error_class})"
+        failure_item_ids = {
+            s(item_id)
+            for key in (
+                "missing_or_ambiguous_public_item_ids",
+                "unknown_item_ids",
+                "item_ids",
+                "incomplete_verdict_ids",
+            )
+            for item_id in error_context.get(key, [])
+            if s(item_id) in public_item_evidence_ids
+        }
+        failure_evidence_ids = list(
+            dict.fromkeys(
+                evidence_id
+                for item_id in sorted(failure_item_ids)
+                for evidence_id in public_item_evidence_ids[item_id]
+            )
+        )
         logger.info(
             log_event(
                 prompt_ctx,
@@ -1256,6 +1484,23 @@ def run_grounding_check(
                     "message": exc.message,
                     "inner_error_class": inner_error_class,
                     "repair_attempt": error_context.get("repair_attempt", 0),
+                    "batch_index": error_context.get("batch_index", 0),
+                    "batch_input_fingerprint": error_context.get(
+                        "batch_input_fingerprint", ""
+                    ),
+                    "source_identity": error_context.get(
+                        "source_identity", source_id or request.source_id
+                    ),
+                    "source_md5_present": bool(error_context.get("source_md5")),
+                    "coverage_failure_category": error_context.get(
+                        "coverage_failure_category", ""
+                    ),
+                    "returned_check_count": len(
+                        error_context.get("returned_check_ids", [])
+                    ),
+                    "returned_unsupported_count": len(
+                        error_context.get("returned_unsupported_item_ids", [])
+                    ),
                     "missing_claim_count": error_context.get("missing_claim_count", 0),
                     "missing_or_ambiguous_public_item_count": error_context.get(
                         "missing_or_ambiguous_public_item_count", 0
@@ -1271,6 +1516,7 @@ def run_grounding_check(
                     "warning" if request.deterministic_grounding_passed else "error"
                 ),
                 section="grounding",
+                evidence_ids=failure_evidence_ids,
             )
         )
     return issues
@@ -1448,6 +1694,70 @@ def _validate_verified_semantic_inputs(
         )
 
 
+def _grounding_coverage_diagnostics(
+    payload: object,
+    *,
+    expected_claims: Mapping[str, str],
+    expected_public: Mapping[str, str],
+    checks_by_id: Mapping[str, Sequence[Mapping[str, Any]]],
+    unsupported_by_id: Mapping[str, Sequence[Mapping[str, Any]]],
+    category: str,
+    **details: object,
+) -> dict[str, Any]:
+    """Build bounded identifier-only diagnostics for a rejected batch."""
+
+    del payload
+    returned_check_ids = list(checks_by_id)
+    returned_unsupported_ids = list(unsupported_by_id)
+    duplicate_ids = sorted(
+        {
+            item_id
+            for item_id, entries in checks_by_id.items()
+            if len(entries) > 1
+        }
+        | {
+            item_id
+            for item_id, entries in unsupported_by_id.items()
+            if len(entries) > 1
+        }
+    )
+    text_mismatch_ids: list[str] = []
+    classification_mismatch_ids: list[str] = []
+    for item_id, expected_text in {**expected_claims, **expected_public}.items():
+        entries = checks_by_id.get(item_id, ())
+        if len(entries) != 1:
+            continue
+        entry = entries[0]
+        if not _grounding_text_matches(expected_text, s(entry.get("text"))):
+            text_mismatch_ids.append(item_id)
+        if (
+            item_id in expected_claims
+            and s(entry.get("classification")) != "factual_claim"
+        ):
+            classification_mismatch_ids.append(item_id)
+    context: dict[str, Any] = {
+        "coverage_failure_category": category,
+        "expected_claim_ids": list(expected_claims)[:32],
+        "expected_public_item_ids": list(expected_public)[:32],
+        "returned_check_ids": returned_check_ids[:32],
+        "returned_unsupported_item_ids": returned_unsupported_ids[:32],
+        "duplicate_item_ids": duplicate_ids[:32],
+        "text_mismatch_ids": list(dict.fromkeys(text_mismatch_ids))[:32],
+        "classification_mismatch_ids": list(
+            dict.fromkeys(classification_mismatch_ids)
+        )[:32],
+    }
+    for key, value in details.items():
+        if isinstance(value, list):
+            context[key] = list(dict.fromkeys(str(item) for item in value))[:32]
+        elif isinstance(value, int) and not isinstance(value, bool):
+            context[key] = value
+        else:
+            if isinstance(value, str) and value:
+                context[key] = value
+    return context
+
+
 def _validate_grounding_check_coverage(
     payload: object,
     semantic_inputs: Sequence[ClaimSemanticInput],
@@ -1490,6 +1800,30 @@ def _validate_grounding_check_coverage(
                 context={"item_id": item_id},
             )
         expected_public[item_id] = text
+    checks = payload.get("checks")
+    unsupported = payload.get("unsupported")
+    checks_by_id: dict[str, list[dict[str, Any]]] = {}
+    if isinstance(checks, list):
+        for check in checks:
+            if isinstance(check, dict) and s(check.get("item_id")):
+                checks_by_id.setdefault(s(check.get("item_id")), []).append(check)
+    unsupported_by_id: dict[str, list[dict[str, Any]]] = {}
+    if isinstance(unsupported, list):
+        for entry in unsupported:
+            if isinstance(entry, dict) and s(entry.get("item_id")):
+                unsupported_by_id.setdefault(s(entry["item_id"]), []).append(entry)
+
+    def diagnostics(category: str, **details: object) -> dict[str, Any]:
+        return _grounding_coverage_diagnostics(
+            payload,
+            expected_claims=expected,
+            expected_public=expected_public,
+            checks_by_id=checks_by_id,
+            unsupported_by_id=unsupported_by_id,
+            category=category,
+            **details,
+        )
+
     allowed_item_ids = set(expected)
     allowed_item_ids.update(expected_public)
     allowed_item_ids.update(
@@ -1516,6 +1850,10 @@ def _validate_grounding_check_coverage(
             code="grounding_claim_check_coverage_invalid",
             message="Verified grounding responses require stable item identifiers",
             retryable=False,
+            context=diagnostics(
+                "missing_item_identifier",
+                incomplete_verdict_ids=["<missing>"],
+            ),
         )
     unknown_item_ids = {
         s(entry.get("item_id"))
@@ -1527,14 +1865,11 @@ def _validate_grounding_check_coverage(
             code="grounding_claim_check_coverage_invalid",
             message="Grounding response contains an unknown item identifier",
             retryable=False,
-            context={"unknown_item_ids": sorted(unknown_item_ids)[:32]},
+            context=diagnostics(
+                "unknown_item_identifier",
+                unknown_item_ids=sorted(unknown_item_ids),
+            ),
         )
-    checks_by_id: dict[str, list[dict[str, Any]]] = {}
-    checks = payload.get("checks")
-    if isinstance(checks, list):
-        for check in checks:
-            if isinstance(check, dict) and s(check.get("item_id")):
-                checks_by_id.setdefault(s(check.get("item_id")), []).append(check)
     if expected:
         missing_claim_ids = [
             claim_id
@@ -1554,18 +1889,15 @@ def _validate_grounding_check_coverage(
                 ),
                 retryable=False,
                 context={
-                    "missing_claim_ids": missing_claim_ids[:32],
-                    "missing_claim_count": len(missing_claim_ids),
+                    **diagnostics(
+                        "retained_claim_coverage",
+                        missing_claim_ids=missing_claim_ids,
+                        missing_claim_count=len(missing_claim_ids),
+                    ),
                 },
             )
     if not require_public_coverage or not expected_public:
         return
-    unsupported_by_id: dict[str, list[dict[str, Any]]] = {}
-    unsupported = payload.get("unsupported")
-    if isinstance(unsupported, list):
-        for entry in unsupported:
-            if isinstance(entry, dict) and s(entry.get("item_id")):
-                unsupported_by_id.setdefault(s(entry["item_id"]), []).append(entry)
     if require_public_coverage:
         malformed_checks = (
             [
@@ -1581,7 +1913,11 @@ def _validate_grounding_check_coverage(
                 code="grounding_claim_check_coverage_invalid",
                 message="Verified grounding checks require a substantive reason",
                 retryable=False,
-                context={"item_ids": malformed_checks[:32]},
+                context=diagnostics(
+                    "incomplete_check_reason",
+                    item_ids=malformed_checks,
+                    incomplete_verdict_ids=malformed_checks,
+                ),
             )
         valid_classifications = {
             "factual_claim",
@@ -1608,7 +1944,11 @@ def _validate_grounding_check_coverage(
                 code="grounding_claim_check_coverage_invalid",
                 message="Verified unsupported grounding verdicts are incomplete",
                 retryable=False,
-                context={"item_ids": malformed_unsupported[:32]},
+                context=diagnostics(
+                    "incomplete_unsupported_verdict",
+                    item_ids=malformed_unsupported,
+                    incomplete_verdict_ids=malformed_unsupported,
+                ),
             )
     public_coverage_errors: list[str] = []
     for item_id, text in expected_public.items():
@@ -1658,8 +1998,11 @@ def _validate_grounding_check_coverage(
             ),
             retryable=False,
             context={
-                "missing_or_ambiguous_public_item_ids": public_coverage_errors[:32],
-                "missing_or_ambiguous_public_item_count": len(public_coverage_errors),
+                **diagnostics(
+                    "public_item_coverage",
+                    missing_or_ambiguous_public_item_ids=public_coverage_errors,
+                    missing_or_ambiguous_public_item_count=len(public_coverage_errors),
+                ),
             },
         )
 
@@ -2434,6 +2777,24 @@ def _public_item_ids(items: object) -> dict[tuple[str, str], str]:
         item_id = s(entry.get("item_id"))
         if section and text and item_id:
             indexed[(section, text)] = item_id
+    return indexed
+
+
+def _public_item_evidence_ids(items: object) -> dict[str, list[str]]:
+    """Index authoritative evidence IDs for retained public items."""
+
+    indexed: dict[str, list[str]] = {}
+    if not isinstance(items, list):
+        return indexed
+    for entry in items:
+        if not isinstance(entry, dict):
+            continue
+        item_id = s(entry.get("item_id"))
+        if not item_id:
+            continue
+        evidence_ids = _artifact_evidence_ids(entry)
+        if evidence_ids:
+            indexed[item_id] = evidence_ids
     return indexed
 
 

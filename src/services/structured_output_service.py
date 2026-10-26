@@ -704,10 +704,18 @@ _ACTIONABLE_CONTEXT_LIST_KEYS = (
     "missing_evidence_ids",
     "missing_claim_ids",
     "missing_or_ambiguous_public_item_ids",
-    "unknown_item_ids",
     "item_ids",
     "invalid_insight_ids",
     "duplicate_insight_ids",
+    "expected_claim_ids",
+    "expected_public_item_ids",
+    "returned_check_ids",
+    "returned_unsupported_item_ids",
+    "duplicate_item_ids",
+    "text_mismatch_ids",
+    "classification_mismatch_ids",
+    "incomplete_verdict_ids",
+    "unknown_item_ids",
 )
 _ARTIFACT_STRUCTURE_FIELDS = (
     "expected_root_present",
@@ -777,6 +785,14 @@ def _app_error_feedback(error: AppError) -> str:
 
     detail = f"{error.code}:{error.message}"
     context = error.context if isinstance(error.context, dict) else {}
+    category = context.get("coverage_failure_category")
+    if (
+        isinstance(category, str)
+        and category
+        and len(category) <= 128
+        and set(category) <= SAFE_ERROR_CONTEXT_TOKEN_CHARS
+    ):
+        detail = f"{detail}; coverage failure category: {category}"
     for key in _ACTIONABLE_CONTEXT_LIST_KEYS:
         value = context.get(key)
         if not isinstance(value, list):
@@ -802,6 +818,14 @@ def _bounded_app_error_context(error: AppError) -> dict[str, Any]:
         tokens = _bounded_context_tokens(context.get(key))
         if tokens:
             retained[key] = tokens
+    category = context.get("coverage_failure_category")
+    if (
+        isinstance(category, str)
+        and category
+        and len(category) <= 128
+        and set(category) <= SAFE_ERROR_CONTEXT_TOKEN_CHARS
+    ):
+        retained["coverage_failure_category"] = category
     count = context.get("missing_claim_count")
     if isinstance(count, int) and not isinstance(count, bool) and count > 0:
         retained["missing_claim_count"] = min(count, 999)
@@ -849,6 +873,15 @@ def _merge_bounded_app_error_contexts(
     for context in contexts:
         if not isinstance(context, dict):
             continue
+        category = context.get("coverage_failure_category")
+        if (
+            "coverage_failure_category" not in merged
+            and isinstance(category, str)
+            and category
+            and len(category) <= 128
+            and set(category) <= SAFE_ERROR_CONTEXT_TOKEN_CHARS
+        ):
+            merged["coverage_failure_category"] = category
         for key in _ACTIONABLE_CONTEXT_LIST_KEYS:
             tokens = _bounded_context_tokens(context.get(key))
             if not tokens:
