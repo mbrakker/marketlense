@@ -1338,3 +1338,24 @@ candidates in this one stochastic run, so live selection effectiveness remains
 unproven; E18 stays **Active/PARTIAL**, Step 2 **PARTIAL/NO-GO**, and Step 3
 **unstarted/not ready**. See
 `docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.
+
+**Candidate evidence-ID authority and multi-fact fidelity — 2026-10-26
+(`c45dbfed` / `1c7164f2`):** Insight candidates now receive the complete
+eligible factual evidence-ID vocabulary, including secondary `evidence_ids`,
+and candidate validation rejects DocMap, page-label, unsupported, unknown, or
+ambiguous references before shortlisting. Existing verified grounding tests
+confirm that linked multi-fact claims preserve complete metrics and
+provenance, while missing secondary facts fail closed. The one fresh isolated
+Adjust run used 53 calls, 619,294 input tokens, 138,957 output tokens,
+`$0.147772`, and 879.368 seconds; it produced seven model candidates plus one
+fallback supplement and selected six candidates, but failed later at
+`regeneration_evidence_rebind_unresolved` because authoritative
+`verified_facts` spans were not admitted by the targeted rebind boundary.
+`1c7164f2` fixes that boundary and adds integration regressions for verified
+fact pages while preserving DocMap rejection. The provider run was not
+repeated after the correction; no live post-fix quality claim is made. The
+focused affected suite passed 613 tests, with changed-file Ruff F/format and
+targeted mypy passing. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full evidence
+and artifact paths are in
+`docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.

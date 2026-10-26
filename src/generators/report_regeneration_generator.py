@@ -769,7 +769,9 @@ def _build_grounding_package(
         target.target_section == "insights_bundle"
         and target.repair_action == "REBIND_EVIDENCE"
     ):
-        evidence_packs = _page_bound_direct_evidence_packs(evidence_packs)
+        evidence_packs = _page_bound_direct_evidence_packs(
+            evidence_packs, include_verified_facts=True
+        )
         doc_map = {}
     rebind_to_alternative = target.repair_strategy == "alternative_evidence"
     if rebind_to_alternative:
@@ -5212,7 +5214,8 @@ def _regenerate_one_final_insight(
             if _s(value).strip()
         }
         direct_evidence_packs = _page_bound_direct_evidence_packs(
-            execution.runtime.safe_evidence
+            execution.runtime.safe_evidence,
+            include_verified_facts=True,
         )
         canonical_span_index = artifact_evidence_span_index(
             doc_map={},

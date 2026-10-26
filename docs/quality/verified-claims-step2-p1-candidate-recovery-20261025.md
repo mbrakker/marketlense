@@ -445,3 +445,128 @@ remains **PARTIAL/NO-GO**, and Step 3 remains unstarted/not ready.
 - Candidate checkpoint: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobil-a5407b768f97\report_analysis\prompt_family_report_vs_artifacts_insights_candidates.json`
 - Validation result: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobile-app-a5407b768f97\report_analysis\validation.json`
 - Publication-readiness result: `C:\ml-step1-adjust-p1-live\tmp\verified-claims-p1-recovery-20261025\frozen-reliability-9jjh7yog\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mzh1tlid\output\mobile-app-a5407b768f97\report_analysis\publish_readiness.json`
+
+## Candidate evidence-ID authority and multi-fact fidelity — 2026-10-26 (`c45dbfed`, `1c7164f2`)
+
+### Candidate evidence boundary
+
+The candidate-generation boundary now supplies an explicit
+`candidate_allowed_evidence_ids_json` vocabulary built from the existing
+fidelity-approved, page-addressable findings and eligible attributed quotes.
+The vocabulary is not limited to the fallback roster: all eligible findings
+are exposed. DocMap section IDs, `source:page:*` location labels, unknown or
+ambiguous quotes, and unsupported/quarantined findings are excluded. The
+primary candidate request and its existing bounded repair/regeneration path
+receive the same vocabulary. The candidate validator checks both
+`evidence_id` and optional `evidence_ids` before shortlisting, so a model
+cannot bypass the boundary through a secondary reference. The shortlisting
+cache identity is `evidence_backed_shortlisting:18`.
+
+This is a deterministic candidate-ID correction; it does not add an LLM call,
+change the candidate schema, alter model settings, or map page labels by
+proximity. The provider-free tests also retain the existing fail-closed
+fallback and cache behavior.
+
+### Multi-fact production-path review
+
+The existing verified grounding path was replayed by
+`test_verified_grounding_batches_preserve_referenced_multi_fact_qualifiers`.
+A final insight with primary `verified-fact:fact-1` and secondary
+`verified-fact:fact-2` retains both complete canonical facts, their distinct
+metrics, populations, timeframes, evidence IDs, pages, and source spans;
+unrelated `fact-3` is excluded. The same test confirms that a missing
+secondary fact fails with `verified_fact_snapshot_invalid`. A new candidate
+regression rejects a secondary `section-1` reference even when the primary
+finding is allowed. No second multi-fact validator or LLM stage was added.
+The replay did not demonstrate a new multi-fact synthesis in the live report;
+the two linked-fact contract is covered and the live final roster retained
+distinct single-fact claims.
+
+### Fresh isolated Adjust run
+
+The one provider-backed run was started from `c45dbfed` before the final
+verified-fact rebinding correction, using the exact frozen PDF SHA
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`. It made
+no WordPress or canonical publication writes.
+
+| Measure | Result |
+| --- | ---: |
+| Provider calls | 53 |
+| Input tokens | 619,294 |
+| Output tokens | 138,957 |
+| Estimated cost | `$0.147772` |
+| Wall-clock | 879.368 s |
+| File-search calls | 7 |
+| Structured-output recovery calls | 2 |
+| Automatic report repairs | 0 |
+| Visual facts evaluated / admitted / quarantined | 6 / 6 / 0 |
+| Candidate model output / fallback supplementation | 7 / 1 |
+| Selected candidate count | 6 |
+| Persisted final insights in failed terminal state | 5 |
+
+The candidate checkpoint was not empty. Its bounded audit recorded a present,
+schema-valid list with seven normalized model candidates, no invalid evidence
+reference rejection, no structured-output recovery, and
+`fallback_reason=primary_incomplete`; one fidelity-approved fallback candidate
+was used to complete the six-opportunity pool. Thus the model supplied most
+candidate content and the fallback supplemented coverage; no silent empty
+checkpoint or unbounded recovery occurred.
+
+The run then failed closed during targeted regeneration with
+`regeneration_evidence_rebind_unresolved` for
+`verified-fact:finance-regional-growth-contrast`. The retained verified-fact
+finding had a real physical page and excerpt, but the rebinding boundary only
+recognized `findings` and `quote_candidates` source-pack labels. The failure
+was not a candidate-ID rejection and did not promote an unsupported claim.
+The saved validation result therefore contains a grounding error and summary
+quality warnings; no publication-readiness artifact was produced. It recorded
+zero unsupported retained factual claims, but the run is not a passing
+end-to-end editorial result.
+
+### Root-cause correction after the run
+
+`1c7164f2` extends the existing page-bound rebind and canonical span checks to
+the authoritative `verified_facts` source-pack representation, while keeping
+the positive-page and non-empty-excerpt requirements. Canonical evidence text
+restoration now treats those verified-fact spans as authoritative as well.
+DocMap spans, missing pages, empty excerpts, quarantined IDs, and unrelated
+source packs remain rejected. Focused integration coverage proves both that a
+verified-fact rebind succeeds and that the existing DocMap rejection remains.
+The provider run was not repeated after this correction, so its live terminal
+failure is evidence of the pre-correction boundary and not a claim about the
+corrected live outcome.
+
+### Verification and status
+
+The affected focused suite passed **613 tests** after the correction. Ruff's
+enforced changed-file `F` check and formatting check passed; targeted mypy
+passed for both changed source modules. The earlier prompt/grounding suite
+remains green, including the existing verified multi-fact test and the
+candidate prompt-fixture gate. No output schema or publication contract was
+changed.
+
+Final repository verification also passed the static, architecture, policy,
+documentation, contract-schema, WordPress, and full-repository mypy gates.
+The full pytest run completed with **8,159 passed, 2 skipped, 32 deselected,
+and 1 environment-only failure**: the native wheelhouse audit requires CPython
+3.12 while this runner is CPython 3.14. The affected artifact-generation
+mutation partition killed **3/3 mutants (100%)**. The prompt-fixture gate
+remained green at 109,185 tokens / `$0.024141` versus the 108,751-token /
+`$0.024098` baseline; the only material delta is the already documented
+publishing-family +434 tokens / +`$0.000043` candidate-evidence prompt input.
+
+**Verdict:** **PASS** for the candidate evidence-ID boundary, secondary-ID
+fail-closed behavior, verified-fact physical-page rebinding, existing
+multi-fact preservation, and focused regression coverage. **PARTIAL/NO-GO**
+for live end-to-end editorial quality because the only fresh run failed before
+publication and was executed before `1c7164f2`; a post-fix provider result is
+not claimed. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**,
+and Step 3 remains unstarted/not ready.
+
+### New artifact references
+
+- Fresh candidate-ID run result: `C:\ml-step1-adjust-p1-candidate-ids-live\frozen-reliability-96wqh9bn\cohort_result.json`
+- Fresh candidate-ID artifacts: `C:\ml-step1-adjust-p1-candidate-ids-live\frozen-reliability-96wqh9bn\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-cc85hvbl\output\mobile-app-trends-2026-pdf\report_analysis\artifacts.json`
+- Candidate generation audit (embedded in artifacts cache): same `artifacts.json`, `_cache.candidate_generation`
+- Fresh validation result: `C:\ml-step1-adjust-p1-candidate-ids-live\frozen-reliability-96wqh9bn\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-cc85hvbl\output\mobile-app-trends-2026-pdf\report_analysis\validation.json`
+- Fresh regeneration audit: `C:\ml-step1-adjust-p1-candidate-ids-live\frozen-reliability-96wqh9bn\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-cc85hvbl\output\mobile-app-trends-2026-pdf\report_analysis\regeneration_candidate_audit_1.json`

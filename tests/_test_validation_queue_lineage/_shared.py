@@ -61,6 +61,32 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
     """Return the smallest grounded fixture for each external model contract."""
 
     schema_name = call["text"]["format"]["name"]
+    serialized_call = json.dumps(call, default=str)
+    requested_metrics = _json_prompt_value(call, "Metrics (JSON)")
+    requested_quotes = _json_prompt_value(call, "Quotes (JSON)")
+    semantic_metric_ids = (
+        [
+            str(metric.get("id") or "")
+            for metric in requested_metrics
+            if isinstance(metric, dict) and str(metric.get("id") or "").strip()
+        ]
+        if isinstance(requested_metrics, list)
+        else (
+            ["evidence:findings:finding-1", "evidence:quote_candidates:quote-1"]
+            if "evidence:findings:" in serialized_call
+            or "evidence:quote_candidates:" in serialized_call
+            else [f"insight-{index}" for index in range(1, 6)]
+        )
+    )
+    semantic_quote_ids = (
+        [
+            str(quote.get("id") or "")
+            for quote in requested_quotes
+            if isinstance(quote, dict) and str(quote.get("id") or "").strip()
+        ]
+        if isinstance(requested_quotes, list)
+        else []
+    )
     responses = {
         "doc_map_v1": {
             "schema_version": "1.0",
@@ -170,14 +196,22 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
         "semantic_validation_output_v2": {
             "metrics": [
                 {
-                    "id": f"insight-{index}",
+                    "id": metric_id,
                     "supported": True,
                     "confidence": 0.9,
                     "reason": "Supported by retained source evidence.",
                 }
-                for index in range(1, 6)
+                for metric_id in semantic_metric_ids
             ],
-            "quotes": [],
+            "quotes": [
+                {
+                    "id": quote_id,
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "Supported by retained source evidence.",
+                }
+                for quote_id in semantic_quote_ids
+            ],
         },
         "grounding_validation_output_v2": {"unsupported": [], "checks": []},
         "grounding_validation_output_v3": {"unsupported": [], "checks": []},
@@ -228,35 +262,35 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                 {
                     "id": "insight-1",
                     "text": "Customer demand is changing across segments.",
-                    "evidence_id": "market-demand",
+                    "evidence_id": "finding-1",
                     "evidence": "Customer demand is changing across segments.",
                     "pages": [1],
                 },
                 {
                     "id": "insight-2",
                     "text": "The report identifies changing demand patterns.",
-                    "evidence_id": "market-demand",
+                    "evidence_id": "finding-1",
                     "evidence": "Customer demand is changing across segments.",
                     "pages": [1],
                 },
                 {
                     "id": "insight-3",
                     "text": "Commercial planning can account for changing demand patterns.",
-                    "evidence_id": "market-demand",
+                    "evidence_id": "finding-1",
                     "evidence": "Customer demand is changing across segments.",
                     "pages": [1],
                 },
                 {
                     "id": "insight-4",
                     "text": "Demand patterns vary across customer segments.",
-                    "evidence_id": "market-demand",
+                    "evidence_id": "finding-1",
                     "evidence": "Customer demand is changing across segments.",
                     "pages": [1],
                 },
                 {
                     "id": "insight-5",
                     "text": "Customer demand remains a relevant planning consideration.",
-                    "evidence_id": "market-demand",
+                    "evidence_id": "finding-1",
                     "evidence": "Customer demand is changing across segments.",
                     "pages": [1],
                 },
@@ -267,35 +301,35 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                 {
                     "id": "insight-1",
                     "text": "Customer demand is changing across segments.",
-                    "evidence_id": "market-demand",
+                    "evidence_id": "finding-1",
                     "evidence": "Customer demand is changing across segments.",
                     "pages": [1],
                 },
                 {
                     "id": "insight-2",
                     "text": "Market demand patterns are changing across segments.",
-                    "evidence_id": "market-demand",
+                    "evidence_id": "finding-1",
                     "evidence": "Customer demand is changing across segments.",
                     "pages": [1],
                 },
                 {
                     "id": "insight-3",
                     "text": "Commercial planning can account for changing demand patterns.",
-                    "evidence_id": "market-demand",
+                    "evidence_id": "finding-1",
                     "evidence": "Customer demand is changing across segments.",
                     "pages": [1],
                 },
                 {
                     "id": "insight-4",
                     "text": "Demand patterns vary across customer segments.",
-                    "evidence_id": "market-demand",
+                    "evidence_id": "finding-1",
                     "evidence": "Customer demand is changing across segments.",
                     "pages": [1],
                 },
                 {
                     "id": "insight-5",
                     "text": "Customer demand remains a relevant planning consideration.",
-                    "evidence_id": "market-demand",
+                    "evidence_id": "finding-1",
                     "evidence": "Customer demand is changing across segments.",
                     "pages": [1],
                 },
@@ -648,9 +682,9 @@ def _full_chain_chat_response_factory(
                     id="fixture-regeneration-repair-decision",
                 )
             else:
-                response = _full_chain_model_response(
-                    {"text": {"format": {"name": schema_name}}}
-                )
+                model_call = dict(call)
+                model_call["text"] = {"format": {"name": schema_name}}
+                response = _full_chain_model_response(model_call)
                 payload = json.loads(response.output_text)
             family = schema_name.removeprefix("artifact_").removesuffix("_v1")
             if schema_name == "regeneration_repair_decision_v5":

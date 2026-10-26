@@ -360,6 +360,7 @@ def test_insight_candidates_bind_to_source_findings_not_docmap_sections() -> Non
                 "doc_map_json": "{}",
                 "evidence_json": "{}",
                 "editorial_plan_json": "{}",
+                "candidate_allowed_evidence_ids_json": "[]",
             },
         ),
         _ctx(),
@@ -370,8 +371,8 @@ def test_insight_candidates_bind_to_source_findings_not_docmap_sections() -> Non
         "docmap guides sections and qualitative coverage; it does not prove claims"
         in normalised
     )
-    assert "`evidence_id` must be one supporting finding id" in normalised
-    assert "never cite a docmap id as numeric evidence" in normalised
+    assert "`evidence_id` must be one allowed factual evidence id" in normalised
+    assert "never cite a docmap id as evidence" in normalised
     assert (
         "keep source-derived text and advice within the selected evidence id"
         in normalised
@@ -392,9 +393,7 @@ def test_final_insight_prompt_cannot_add_unbound_scope_or_period() -> None:
     )
     normalised = _normalise_whitespace(prompt_set.user.text).lower()
 
-    assert "do not add a timeframe, population, geography, or qualifier" in (
-        normalised
-    )
+    assert "do not add a timeframe, population, geography, or qualifier" in (normalised)
 
 
 def test_doc_map_prompt_keeps_multi_measure_values_with_explicit_labels() -> None:

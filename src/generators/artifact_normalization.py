@@ -3574,6 +3574,7 @@ def bind_artifact_evidence_spans(
                     if span.get("source_pack")
                     in {
                         "findings",
+                        "findings_statement",
                         "quote_candidates",
                         "verified_facts",
                     }
@@ -3812,9 +3813,14 @@ def artifact_evidence_span_index(
 
 def page_bound_direct_evidence_packs(
     evidence_packs: Dict[str, Any],
+    *,
+    include_verified_facts: bool = False,
 ) -> Dict[str, Any]:
     """Keep only findings and quotes with canonical direct source pages."""
 
+    page_bound_source_packs = {"findings", "quote_candidates"}
+    if include_verified_facts:
+        page_bound_source_packs.add("verified_facts")
     direct_packs = {
         name: evidence_packs[name]
         for name in ("findings", "quote_candidates")
@@ -3825,8 +3831,7 @@ def page_bound_direct_evidence_packs(
         evidence_id
         for evidence_id, spans in span_index.items()
         if any(
-            span.get("source_pack")
-            in {"findings", "quote_candidates", "verified_facts"}
+            span.get("source_pack") in page_bound_source_packs
             and isinstance(span.get("page"), int)
             and span["page"] > 0
             and _s(span.get("text")).strip()

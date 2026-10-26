@@ -1026,6 +1026,21 @@ is complete; E18 remains **Active/PARTIAL**, Step 2 remains
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md` and
 `docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.
 
+**Candidate evidence-ID and verified-fact rebind correction — 2026-10-26
+(`c45dbfed` / `1c7164f2`):** Candidate generation now receives and enforces
+the full eligible factual evidence-ID vocabulary for primary and secondary
+references; DocMap and location-only IDs cannot enter the shortlist. The
+existing verified multi-fact path preserves linked canonical facts and fails
+closed for missing secondary facts. The fresh Adjust run explained the
+candidate outcome (7 model candidates, 1 fallback supplement, 6 selected), but
+failed closed later because targeted regeneration excluded physical-page
+spans represented by the authoritative `verified_facts` source pack. The
+minimal rebind correction and focused regression passed; the provider run was
+not repeated, so live post-fix editorial quality remains unproven. E18 stays
+**Active/PARTIAL**, Step 2 **PARTIAL/NO-GO**, and Step 3 **unstarted/not
+ready**. Full evidence is in
+`docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.
+
 **Candidate recovery diagnostics and fallback coverage — 2026-10-25
 (`492b85a9` / `163ecfe2`):** The Adjust empty candidate checkpoint is
 explained: each of the primary, model-repair, and regeneration responses had

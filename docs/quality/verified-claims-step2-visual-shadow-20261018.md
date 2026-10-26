@@ -5516,3 +5516,35 @@ current compact result does not retain a separate cached-token breakdown.
 selection correction and source-faithful retained output; **PARTIAL/NO-GO**
 for live selection effectiveness and Step 2 promotion. Step 3 remains
 unstarted/not ready.
+
+**Candidate evidence-ID and multi-fact follow-up — 2026-10-26
+(`c45dbfed` / `1c7164f2`):** The candidate prompt now receives the complete
+eligible factual evidence-ID vocabulary, and the candidate boundary rejects
+DocMap, `source:page:*`, unsupported, unknown, and ambiguous primary or
+secondary IDs. The existing verified grounding path passed the linked
+multi-fact regression with complete metrics and provenance and failed closed
+for a missing secondary fact; no extra validator or LLM stage was added.
+
+The one fresh isolated Adjust run (exact frozen PDF SHA
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`) recorded
+53 provider calls, 619,294 input tokens, 138,957 output tokens, `$0.147772`,
+and 879.368 seconds. The model produced seven candidates and the existing
+fallback supplied one supplement, yielding six selected candidates and six
+visual facts admitted. The run failed later at
+`regeneration_evidence_rebind_unresolved` because the authoritative
+`verified_facts` source-pack spans had physical pages but the targeted rebind
+boundary only recognized `findings`/`quote_candidates`. That failure was
+fail-closed; no unsupported claim or publication was promoted.
+
+`1c7164f2` extends the existing page-bound and canonical span checks to
+physical-page `verified_facts` spans and adds full rebind coverage while
+preserving DocMap rejection. The provider run was not repeated after this
+correction, so it is not a post-fix live-quality claim. Focused affected tests
+passed 613, changed-file Ruff F/format checks passed, and targeted mypy
+passed. Full ledger, candidate audit, final wording, and artifact paths are
+in the [candidate-recovery supplement](verified-claims-step2-p1-candidate-recovery-20261025.md).
+
+**Status:** PASS for deterministic candidate evidence authority, secondary-ID
+fail-closed behavior, multi-fact preservation, and verified-fact physical-page
+rebinding; **PARTIAL/NO-GO** for fresh post-fix live editorial acceptance.
+E18 remains Active/PARTIAL and Step 3 remains unstarted/not ready.

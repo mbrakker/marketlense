@@ -487,7 +487,9 @@ def test_page_bound_rebind_keeps_authoritative_verified_fact_pages() -> None:
         }
     }
 
-    filtered = page_bound_direct_evidence_packs(evidence_packs)
+    filtered = page_bound_direct_evidence_packs(
+        evidence_packs, include_verified_facts=True
+    )
 
     assert filtered["findings"]["findings"] == evidence_packs["findings"]["findings"]
     spans = artifact_evidence_span_index(doc_map={}, evidence_packs=filtered)
