@@ -5801,16 +5801,19 @@ the retained-claim reconciliation; this is not the final readiness authority
 and is retained as a diagnostic rather than hidden. Its difference is a
 measurement caveat, not evidence that unsupported claims were published.
 
-Artifacts:
+Artifacts (recorded paths; the run output is intentionally outside the
+repository and is not linked as a repository Markdown target):
 
-- [run result](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/cohort_result.json>)
-- [member result](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/cohort_members.json>)
-- [artifacts](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobil-a5407b768f97/report_analysis/artifacts.json>)
-- [HTML report](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobile-app-trends-2026-pdf.html>)
-- [evidence fidelity](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobil-a5407b768f97/report_analysis/evidence_fidelity.json>)
-- [retained-claim validation](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobil-a5407b768f97/report_analysis/retained_claim_validation.json>)
-- [publication readiness](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobil-a5407b768f97/report_analysis/publish_readiness.json>)
-- [public editorial quality](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobil-a5407b768f97/report_analysis/public_editorial_quality_after.json>)
+```text
+C:\ml-adjust-acceptance-frozen-20261026\tmp\p1-adjust-data-flow-20261026\frozen-reliability-hh522zd9\cohort_result.json
+C:\ml-adjust-acceptance-frozen-20261026\tmp\p1-adjust-data-flow-20261026\frozen-reliability-hh522zd9\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-uduti_em\cohort_members.json
+C:\ml-adjust-acceptance-frozen-20261026\tmp\p1-adjust-data-flow-20261026\frozen-reliability-hh522zd9\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-uduti_em\output\mobil-a5407b768f97\report_analysis\artifacts.json
+C:\ml-adjust-acceptance-frozen-20261026\tmp\p1-adjust-data-flow-20261026\frozen-reliability-hh522zd9\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-uduti_em\output\mobile-app-trends-2026-pdf.html
+C:\ml-adjust-acceptance-frozen-20261026\tmp\p1-adjust-data-flow-20261026\frozen-reliability-hh522zd9\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-uduti_em\output\mobil-a5407b768f97\report_analysis\evidence_fidelity.json
+C:\ml-adjust-acceptance-frozen-20261026\tmp\p1-adjust-data-flow-20261026\frozen-reliability-hh522zd9\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-uduti_em\output\mobil-a5407b768f97\report_analysis\retained_claim_validation.json
+C:\ml-adjust-acceptance-frozen-20261026\tmp\p1-adjust-data-flow-20261026\frozen-reliability-hh522zd9\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-uduti_em\output\mobil-a5407b768f97\report_analysis\publish_readiness.json
+C:\ml-adjust-acceptance-frozen-20261026\tmp\p1-adjust-data-flow-20261026\frozen-reliability-hh522zd9\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-uduti_em\output\mobil-a5407b768f97\report_analysis\public_editorial_quality_after.json
+```
 
 **Verdict:** **PASS** for the bounded P1 semantic-authority and complete-metric
 data-flow correction, the focused regression suite, and one independently
