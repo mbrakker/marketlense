@@ -495,7 +495,9 @@ def _candidates(
                 )
                 if family == "insights_final" and isinstance(raw.get("metric"), dict):
                     metric_text = metric_claim_text(
-                        raw["metric"], include_observations=verified_facts_only
+                        raw["metric"],
+                        include_observations=verified_facts_only,
+                        label_fields=verified_facts_only,
                     )
                     if metric_text:
                         add(
@@ -518,7 +520,11 @@ def _candidates(
         stable_id = str(
             raw.get("id") or raw.get("figure_id") or raw.get("key_figure_id") or index
         ).strip()
-        figure_text = metric_claim_text(raw, include_observations=verified_facts_only)
+        figure_text = metric_claim_text(
+            raw,
+            include_observations=verified_facts_only,
+            label_fields=verified_facts_only,
+        )
         if figure_text:
             add(
                 "key_figures",
@@ -541,13 +547,22 @@ def _candidates(
     return output
 
 
-def metric_claim_text(metric: dict, *, include_observations: bool = False) -> str:
+def metric_claim_text(
+    metric: dict,
+    *,
+    include_observations: bool = False,
+    label_fields: bool = False,
+) -> str:
     """Create the canonical factual display from retained metric fields."""
+
+    def display(field_name: str, value: object) -> str:
+        text = str(value or "").strip()
+        return f"{field_name}={text}" if label_fields and text else text
 
     display_value = metric.get("value") or metric.get("figure")
     source_statement = str(metric.get("source_statement") or "").strip()
     values = [
-        str(metric.get(key) or "").strip()
+        display(key, metric.get(key))
         for key in (
             "label",
             "subject",
@@ -561,15 +576,15 @@ def metric_claim_text(metric: dict, *, include_observations: bool = False) -> st
         )
     ]
     if source_statement:
-        values.insert(0, source_statement)
-    values.insert(2, str(display_value or "").strip())
+        values.insert(0, display("source_statement", source_statement))
+    values.insert(2, display("value", display_value))
     observations = metric.get("observations")
     if include_observations and isinstance(observations, list):
         for observation in observations:
             if not isinstance(observation, dict):
                 continue
             values.extend(
-                str(observation.get(key) or "").strip()
+                display(key, observation.get(key))
                 for key in (
                     "label",
                     "value",

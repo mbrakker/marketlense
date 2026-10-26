@@ -2357,7 +2357,11 @@ def _public_factual_items(
         add(
             f"key_figure:{index}:figure",
             f"key_figures:{index}.figure",
-            metric_claim_text(figure, include_observations=bool(verified_facts)),
+            metric_claim_text(
+                figure,
+                include_observations=bool(verified_facts),
+                label_fields=bool(verified_facts),
+            ),
             evidence_ids,
             retained_evidence_text_for_ids(evidence_ids),
         )
@@ -2376,7 +2380,7 @@ def _public_factual_items(
             add(
                 f"metric_spine:{index}:metric",
                 f"metric_spine:{index}",
-                metric_claim_text(metric, include_observations=True),
+                metric_claim_text(metric, include_observations=True, label_fields=True),
                 evidence_ids,
                 retained_evidence_text_for_ids(evidence_ids),
             )

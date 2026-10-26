@@ -663,6 +663,38 @@ def test_verified_metric_spine_preserves_authoritative_statement_qualifier():
     assert fact["statement"] in metric_claim_text(spine[0], include_observations=True)
 
 
+def test_verified_metric_claim_text_labels_protected_dimensions():
+    metric = _metric(
+        observations=[
+            {
+                "label": "Display",
+                "value": "42%",
+                "unit": "%",
+                "timeframe": "2026",
+                "geography": "LATAM",
+                "segment": "buyers",
+                "cohort": "LATAM",
+                "denominator": "respondents",
+                "observation_status": "observed",
+            }
+        ]
+    )
+
+    normal_text = metric_claim_text(metric, include_observations=True)
+    verified_text = metric_claim_text(
+        metric, include_observations=True, label_fields=True
+    )
+
+    assert normal_text == (
+        "Adoption buyers 42%; 18% % global buyers survey respondents respondents "
+        "2026 observed Display 42% % 2026 LATAM buyers LATAM respondents observed"
+    )
+    assert "geography=LATAM" in verified_text
+    assert "cohort=LATAM" in verified_text
+    assert "denominator=respondents" in verified_text
+    assert "geography=LATAM segment=buyers cohort=LATAM" in verified_text
+
+
 def test_verified_multi_fact_artifact_uses_union_of_authoritative_pages():
     first = _fact()
     second = deepcopy(first)
