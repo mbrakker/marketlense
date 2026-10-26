@@ -5691,3 +5691,132 @@ live selection effectiveness: only the required single report was run, the
 non-central finance opportunity was omitted, and the ten-report cohort was
 intentionally not rerun. E18 remains Active/PARTIAL; broader Step 2 stability
 and Step 3 promotion remain unproven and Step 3 was not started.
+
+#### P1 data-flow integrity and semantic-authority correction — 2026-10-26 (`8da464f9`)
+
+This slice closes the demonstrated verified-facts data-flow loss without
+adding another factual validator, LLM stage, metric taxonomy, or prompt
+authority. The existing GPT-6 Luna visual-verification result remains the
+semantic authority for whether a claim is factually correct, whether a metric
+correction is source-supported, and whether a sparse enrichment is meaningful.
+Deterministic code continues to enforce PDF/source identity, physical-page
+lineage, evidence IDs and spans, schema completeness, and the retained-fact
+binding contract.
+
+The confirmed producer-to-consumer mismatch was:
+
+| Producer | Consumer / expected contract | Observed mismatch | Root cause and minimal fix | Evidence |
+| --- | --- | --- | --- | --- |
+| Visual verifier's `verified_fact.metric` | `verified_claims_visual_generator` should pass the authoritative metric, including report-specific qualifiers, nested observations, methodology and composite structure | The normalizer rebuilt a fixed protected-field dictionary, dropping unfamiliar fields before the fact was persisted and consumed downstream | Preserve the complete metric mapping by deep copy; retain only existing contract defaults/validation for required protected fields | `test_verified_fact_preserves_report_specific_metric_structure`; 370-test focused suite; fresh Adjust run |
+| Visual verifier's complete fact and source-backed correction | `verified_claims_canary` retained-fact admission should trust the existing LLM semantic result, then enforce immutable source/lineage and corrected-binding contracts | `_retained_metric_is_source_consistent` applied a second deterministic semantic comparison and rejected source-authoritative sparse enrichment or valid LLM-authorized metric changes | Remove the redundant semantic comparison; retain exact proposition/evidence/span/metric checks for `retained` bindings and strict independent-binding checks | Authority-admission regressions; sparse-metric, cohort/forecast and page-binding regressions; 370-test suite |
+| Verified-fact projections and editorial planning | Editorial remapping must use canonical `verified-fact:<id>` bindings; discovery/DocMap identifiers are aliases/navigation only | No new defect was reproduced in the current retained artifacts; ambiguous aliases continue to fail closed and one-to-many fact links remain explicit | No speculative production change; existing `remap_editorial_plan_to_verified_facts` and coverage diagnostics were retained | Editorial-plan, artifact-binding, normalization and live selection tests |
+| Canonical verified-fact spans | Rebinding, multi-fact validation and HTML must require per-fact authoritative spans and preserve valid multi-page unions | No new loss or artifact-authority promotion was reproduced after the earlier physical-page rebind correction | No additional change; existing `verified_facts` span validators and source-pack distinction remain authoritative | Multi-fact, page-binding, regeneration and artifact-evidence tests |
+| Artifact-derived fallback spans | `source_pack="artifact"` may support artifact diagnostics but must not become verified-facts source authority | No current verified-mode path promoted an artifact fallback over a canonical verified-fact binding | No change; the existing verified-facts source pack and fail-closed lineage checks remain in force | Artifact evidence-binding and source-fidelity regressions |
+
+The code change is intentionally narrow. `verified_claims_canary.py` no longer
+uses the removed `_retained_metric_is_source_consistent` semantic gate. It still
+rejects changed retained propositions, mismatched retained evidence IDs or
+spans, unsupported candidate pages, and incomplete or contradictory independent
+bindings. `verified_claims_visual_generator.py` now forwards every metric field
+returned in the canonical verified fact, including unknown nested fields; it
+does not fill missing values or infer fields. Existing observation, qualifier,
+page, source-identity and schema checks remain unchanged.
+
+Focused adversarial coverage includes numeric swaps, distinct valid
+populations, percentage versus percentage-point meaning, revenue versus
+profit, ROAS versus ROI, observed versus forecast status, period/geography and
+denominator changes, paraphrase/enrichment, supported correction, and
+post-verification mutation. The changed tests prove that a valid LLM-authorized
+metric correction is preserved, while a retained binding or independently
+bound correction with contradictory protected/source fields still fails closed.
+The new structure regression uses unfamiliar nested metric fields and confirms
+that they survive the real visual-generator path.
+
+##### Fresh isolated Adjust verification
+
+The exact frozen source was used without publication or WordPress writes:
+
+```text
+PDF SHA-256: ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3
+Source identity: source:8cb648b6bbd9dbae4ec1d915c38cf235|pdf-sha256:ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3
+Code: 8da464f95c32bb7052d821534a9bc924c496be3d
+Run root: C:\ml-adjust-acceptance-frozen-20261026\tmp\p1-adjust-data-flow-20261026\frozen-reliability-hh522zd9
+Member: C:\ml-adjust-acceptance-frozen-20261026\tmp\p1-adjust-data-flow-20261026\frozen-reliability-hh522zd9\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-uduti_em
+```
+
+| Measure | Accepted Adjust run (`8fe13300`) | Fresh P1 run (`8da464f9`) | Difference |
+| --- | ---: | ---: | ---: |
+| Visual facts evaluated / admitted / quarantined | 6 / 6 / 0 | 6 / 6 / 0 | unchanged |
+| Verified facts | 6 | 6 | unchanged |
+| Final insights | 5 | 6 | +1; stochastic selection, not an attributed quality gain |
+| Provider calls | 52 | 52 | 0 |
+| Input tokens | 512,814 | 537,915 | +25,101 (+4.89%) |
+| Output tokens | 116,754 | 113,884 | -2,870 (-2.46%) |
+| Estimated cost | $0.123682 | $0.127099 | +$0.003417 (+2.76%) |
+| Wall-clock / core processing | 946.248s / 939.0s | 894.838s / 887.0s | -51.410s / -52.0s |
+| File-search/tool calls | 6 | 7 | +1 |
+| Structured-output recovery / automatic repairs | 1 / 0 | 0 / 0 | -1 / 0 |
+| Workflow attempts / retries | 1 / 0 | 1 / 0 | unchanged |
+| Retained unsupported / unresolved material claims | 0 / 0 | 0 / 0 | unchanged |
+| Validation / publication readiness | pass / pass | pass / pass | unchanged |
+
+The first clean-worktree attempt was blocked before provider execution because
+the isolated worktree intentionally had no `.env` and therefore could not
+prepare runtime dependencies; it made zero provider calls and was not counted
+as an evaluation. The corrected run loaded the existing local credentials in
+process and completed the same workflow. No secrets were copied into the
+worktree or recorded in the ledger.
+
+The fresh run admitted all six visual candidates and selected all six planned
+themes. Its final stable IDs were
+`ecommerce-install-session-divergence`, `cross-platform-data-satisfaction`,
+`global-app-growth-accelerates`, `gaming-subvertical-metric-divergence`,
+`latam-finance-acquisition-and-sessions`, and
+`genai-maturity-efficiency-qualification`. It selected different useful
+opportunities from the prior five-item run (including global growth, platform
+data satisfaction and LATAM finance rather than the prior standalone CPI and
+casino/slots entries). This is a stochastic editorial-selection difference;
+the audit recorded six supported planned themes, zero lost central themes, and
+no weak duplicate padding. It does not establish universal live selection
+improvement.
+
+Independent full-page inspection of physical pages 6, 9, 11, 19, 27 and 35
+confirmed the final numerical, population, period and qualification bindings:
+
+| Final insight | Physical page | Independent result |
+| --- | ---: | --- |
+| Global installs +10% and sessions +7% in 2025 versus +8% and +2% in 2024 | 6 | Chart and prose support the separate metrics and periods |
+| Small advanced-deployment group reportedly achieved efficiency gains over 20% | 9 | Qualified cohort and reported status preserved; no generalization |
+| Around 31% of marketers report complete platform-data satisfaction | 11 | Visible source wording and population support the claim |
+| Strategy gaming sessions +57%, installs -1% YoY 2024–2025 | 19 | Chart supports category, metric and period; other subvertical values remain in the verified fact |
+| Global e-commerce installs -10%, sessions +5% in 2025 | 27 | Chart and prose support the global population and separate metrics |
+| LATAM finance installs +76%, sessions +57% YoY 2024–2025 | 35 | Chart legend supports region, category and separate metrics |
+
+The final HTML contains no internal evidence IDs or stable IDs. The public
+editorial-quality artifact reports `pass`, the retained-claim validator reports
+zero unsupported and zero unresolved material factual claims, and the
+publication-readiness artifact reports `pass`. The ordinary evidence-fidelity
+artifact independently records six unsupported intermediate entries before
+the retained-claim reconciliation; this is not the final readiness authority
+and is retained as a diagnostic rather than hidden. Its difference is a
+measurement caveat, not evidence that unsupported claims were published.
+
+Artifacts:
+
+- [run result](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/cohort_result.json>)
+- [member result](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/cohort_members.json>)
+- [artifacts](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobil-a5407b768f97/report_analysis/artifacts.json>)
+- [HTML report](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobile-app-trends-2026-pdf.html>)
+- [evidence fidelity](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobil-a5407b768f97/report_analysis/evidence_fidelity.json>)
+- [retained-claim validation](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobil-a5407b768f97/report_analysis/retained_claim_validation.json>)
+- [publication readiness](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobil-a5407b768f97/report_analysis/publish_readiness.json>)
+- [public editorial quality](<C:/ml-adjust-acceptance-frozen-20261026/tmp/p1-adjust-data-flow-20261026/frozen-reliability-hh522zd9/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-uduti_em/output/mobil-a5407b768f97/report_analysis/public_editorial_quality_after.json>)
+
+**Verdict:** **PASS** for the bounded P1 semantic-authority and complete-metric
+data-flow correction, the focused regression suite, and one independently
+reviewed Adjust E2E. **PARTIAL/NO-GO** for broad Step 2 live effectiveness:
+only one report was rerun, normal provider variability changed the final
+editorial roster, and the ten-report cohort was not started. Step 3 remains
+unstarted/not ready. No claim is made that this single run proves a universal
+selection improvement or that the intermediate evidence-fidelity diagnostic
+is equivalent to the final retained-claim gate.

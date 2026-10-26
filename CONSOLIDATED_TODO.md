@@ -1134,3 +1134,21 @@ slice and provides one successful independently reviewed Adjust E2E, but does
 not establish ten-report live-selection stability. E18 remains **Active/PARTIAL**,
 Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
 Details: `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Verified-facts data-flow integrity and semantic-authority correction —
+2026-10-26 (`8da464f9`):** The verified visual result now carries the complete
+canonical metric object, including report-specific nested fields, and the
+retained-fact path no longer applies a competing deterministic semantic metric
+comparison. Source identity, physical-page/evidence lineage, retained-binding
+and publication gates remain deterministic and fail closed. Focused/expanded
+verification passed (370 tests, Ruff, formatting and full-repository mypy).
+One fresh isolated Adjust run using the exact frozen PDF admitted 6/6 visual
+facts, selected six supported planned themes, passed retained validation and
+publication readiness with zero unsupported or unresolved material claims, and
+produced HTML without internal identifiers (52 calls, 537,915 input tokens,
+113,884 output tokens, `$0.127099`, 894.838s). The final roster differed from
+the prior run through normal editorial stochasticity; no universal live
+selection improvement is claimed. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO** for broad live effectiveness, and Step 3 remains
+**unstarted/not ready**. See the latest Step 2 evidence section for the
+producer/consumer audit, independent PDF review and artifact links.
