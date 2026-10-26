@@ -13,6 +13,7 @@ from src.generators.claim_validation_generator import (
     validate_retained_claims,
 )
 from src.generators.validation.grounding import (
+    _split_grounding_batch,
     _validate_grounding_check_coverage,
     grounding_payload,
     run_grounding_check,
@@ -247,6 +248,39 @@ def test_grounding_issue_retains_public_verified_evidence_for_repair(tmp_path):
     ]
     assert item_issues
     assert item_issues[0].evidence_ids == public_item["evidence_ids"]
+
+
+def test_failed_grounding_batch_subdivision_preserves_fact_scope_and_order():
+    fact = _fact()
+    batch_payload = {
+        "public_factual_items": [
+            {
+                "item_id": f"insight:fact-{index}:text",
+                "section": f"insights:fact-{index}.text",
+                "text": f"Finding {index}.",
+                "evidence_ids": ["verified-fact:fact-1"],
+            }
+            for index in range(1, 4)
+        ],
+        "retained_claims_to_ground": [],
+        "canonical_verified_facts": {"fact-1": fact},
+    }
+
+    split_batches = _split_grounding_batch((batch_payload, []))
+
+    assert [
+        item["item_id"]
+        for split_payload, _semantic_inputs in split_batches
+        for item in split_payload["public_factual_items"]
+    ] == [
+        "insight:fact-1:text",
+        "insight:fact-2:text",
+        "insight:fact-3:text",
+    ]
+    assert all(
+        split_payload["canonical_verified_facts"] == {"fact-1": fact}
+        for split_payload, _semantic_inputs in split_batches
+    )
 
 
 @pytest.mark.parametrize(
