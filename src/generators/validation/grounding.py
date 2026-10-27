@@ -995,6 +995,8 @@ def run_grounding_check(
                 batch_spec: tuple[dict, list[ClaimSemanticInput]],
                 batch_vars: dict[str, str],
                 batch_bundle,
+                *,
+                stage_suffix: str = "",
             ) -> tuple[int, Any, bool]:
                 try:
                     return _execute_batch(
@@ -1002,6 +1004,7 @@ def run_grounding_check(
                         batch_spec,
                         batch_vars,
                         batch_bundle,
+                        stage_suffix=stage_suffix,
                     )
                 except AppError as exc:
                     error_context = exc.context if isinstance(exc.context, dict) else {}
@@ -1027,20 +1030,17 @@ def run_grounding_check(
                                 verified_mode=verified_mode,
                             )[0]
                             split_bundle = prepare_batch_bundle(split_vars)
-                            try:
-                                _split_index, split_payload, split_recovered = (
-                                    _execute_batch(
-                                        batch_index,
-                                        split_spec,
-                                        split_vars,
-                                        split_bundle,
-                                        stage_suffix=f"_split{split_index}",
-                                    )
+                            _split_index, split_payload, split_recovered = (
+                                execute_batch(
+                                    batch_index,
+                                    split_spec,
+                                    split_vars,
+                                    split_bundle,
+                                    stage_suffix=(
+                                        f"{stage_suffix}_split{split_index}"
+                                    ),
                                 )
-                            except AppError:
-                                with batch_failure_lock:
-                                    batch_failure_event.set()
-                                raise
+                            )
                             split_results.append((split_payload, split_recovered))
                         merged_payload: dict[str, list[Any]] = {
                             "unsupported": [],

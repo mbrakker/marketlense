@@ -110,6 +110,39 @@ def test_summary_constraint_replaces_weakly_bound_summary_copy_with_direct_claim
     ]
 
 
+def test_summary_constraint_accepts_direct_verified_fact_claims() -> None:
+    claim = "91% of consumers expect brands to disclose AI use in marketing."
+    summary = {
+        "tldr": "Unsupported summary copy.",
+        "card_tldr_compact": claim,
+        "executive_summary": "Unsupported summary copy.",
+        "claim_evidence_map": [
+            {
+                "claim": claim,
+                "evidence_id": "verified-fact:ai-disclosure",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "verified-fact:ai-disclosure",
+                        "source_pack": "verified_facts",
+                        "page": 13,
+                        "text": claim,
+                    }
+                ],
+            }
+        ],
+    }
+
+    assert (
+        constrain_summary_to_source_backed_claims(
+            summary,
+            require_direct_fallback=True,
+        )
+        is True
+    )
+    assert summary["tldr"] == claim
+    assert summary["card_tldr_compact"] == claim
+
+
 def test_summary_fallback_keeps_descriptive_doc_map_claims() -> None:
     direct_claim = "The report identifies three retention measures."
     descriptive_claim = "The section distinguishes acquisition from retention."
@@ -372,6 +405,105 @@ def test_verified_selection_preserves_complete_candidate_metric_extensions():
         metric["report_specific_method"] == candidate_metric["report_specific_method"]
     )
     assert "final_only_context" not in metric
+
+
+def test_verified_selection_scopes_composite_metric_to_final_observation() -> None:
+    candidate_metric = {
+        "label": "Global e-commerce CPI",
+        "value": "Global: $1.00 in 2024; $0.98 in 2025",
+        "unit": "USD per install",
+        "trend": "Down overall; deal discovery up",
+        "timeframe": "2024-2025",
+        "geography": "Global",
+        "segment": "E-commerce apps and named subverticals",
+        "cohort": "Global e-commerce apps; deal discovery and shopping",
+        "observation_status": "Reported values; not identified as forecasts",
+        "forecast_status": "Not identified as a forecast",
+        "observations": [
+            {
+                "label": "Deal discovery CPI",
+                "value": "2024: $1.44; 2025: $2.26",
+                "unit": "USD per install",
+                "timeframe": "2024-2025",
+                "segment": "Deal discovery",
+                "geography": "Global",
+                "cohort": "E-commerce apps",
+                "observation_status": "Reported values; not identified as forecasts",
+            },
+            {
+                "label": "Shopping CPI",
+                "value": "2024: $0.93; 2025: $0.91",
+                "unit": "USD per install",
+                "timeframe": "2024-2025",
+                "segment": "Shopping",
+                "geography": "Global",
+                "cohort": "E-commerce apps",
+                "observation_status": "Reported values; not identified as forecasts",
+            },
+        ],
+    }
+    selected = select_artifact_insights(
+        final_insights=[
+            {
+                "id": "ecommerce-cpi",
+                "text": (
+                    "Global e-commerce deal discovery CPI rose from $1.44 in 2024 "
+                    "to $2.26 in 2025."
+                ),
+                "evidence_id": "final-only",
+                "metric": {
+                    "label": "Global deal discovery CPI",
+                    "value": "from $1.44 in 2024 to $2.26 in 2025",
+                    "unit": "USD per install",
+                    "trend": "Increased",
+                    "timeframe": "2024-2025",
+                    "geography": "Global",
+                    "segment": "Deal discovery",
+                    "cohort": "E-commerce apps",
+                    "observation_status": (
+                        "Reported values; not identified as forecasts"
+                    ),
+                    "forecast_status": "Not identified as a forecast",
+                },
+            }
+        ],
+        candidate_insights=[
+            {
+                "id": "ecommerce-cpi",
+                "text": "The retained composite CPI fact.",
+                "evidence_id": "verified-fact:ecommerce-cpi",
+                "evidence": "The source reports all e-commerce CPI observations.",
+                "pages": [29],
+                "metric": candidate_metric,
+            }
+        ],
+        editorial_plan={
+            "report_thesis": "Composite source facts remain authoritative.",
+            "themes": [
+                {
+                    "theme": "Acquisition economics",
+                    "priority": 1,
+                    "evidence_ids": ["verified-fact:ecommerce-cpi"],
+                },
+                {
+                    "theme": "Subvertical differences",
+                    "priority": 2,
+                    "evidence_ids": ["verified-fact:ecommerce-cpi"],
+                },
+            ],
+        },
+        verified_mode=True,
+    )
+
+    metric = selected[0]["metric"]
+    assert selected[0]["text"].startswith("Global e-commerce deal discovery CPI")
+    assert selected[0]["evidence_id"] == "verified-fact:ecommerce-cpi"
+    assert selected[0]["pages"] == [29]
+    assert metric["label"] == "Deal discovery CPI"
+    assert metric["value"] == "2024: $1.44; 2025: $2.26"
+    assert metric["segment"] == "Deal discovery"
+    assert metric["cohort"] == "E-commerce apps"
+    assert metric["observations"] == candidate_metric["observations"]
 
 
 def test_verified_multi_fact_binding_survives_insight_normalization_and_selection():

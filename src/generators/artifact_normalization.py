@@ -23,7 +23,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:19"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:20"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -1249,6 +1249,7 @@ def _span_is_direct(span: Dict[str, Any]) -> bool:
     return _s(span.get("source_pack")).strip() in {
         "findings",
         "quote_candidates",
+        "verified_facts",
     }
 
 
@@ -2090,6 +2091,136 @@ def _complete_protected_metric_binding(
     return binding
 
 
+def _metric_observation_matches_final_insight(
+    insight: Dict[str, Any],
+    final_metric: Dict[str, Any],
+    observation: Dict[str, Any],
+) -> bool:
+    """Return whether a final metric identifies one retained observation.
+
+    A verified fact may contain several source-supported observations under one
+    stable candidate ID.  The final editorial model can narrow its wording to
+    one of those observations, so the aggregate metric must not be restored
+    blindly.  This helper only establishes a binding when the final metric's
+    explicit values and dimensions identify one observation unambiguously; it
+    never treats editorial wording alone as a source fact.
+    """
+
+    final_value = _s(final_metric.get("value")).strip()
+    observation_value = _s(observation.get("value")).strip()
+    final_quantities = extract_quantities(final_value)
+    observation_quantities = extract_quantities(observation_value)
+    if not final_quantities or not observation_quantities:
+        return False
+    if not all(
+        any(
+            quantities_match(final_quantity, observation_quantity)
+            for observation_quantity in observation_quantities
+        )
+        for final_quantity in final_quantities
+    ):
+        return False
+
+    final_text = normalize_for_lookup(
+        " ".join(
+            [_s(insight.get("text"))]
+            + [
+                _s(value)
+                for value in final_metric.values()
+                if not isinstance(value, (dict, list))
+            ]
+        )
+    )
+    observation_label = normalize_for_lookup(
+        " ".join(
+            (
+                _s(observation.get("label")),
+                _s(observation.get("segment")),
+            )
+        )
+    )
+    label_tokens = [
+        token
+        for token in re.findall(r"[a-z0-9]+", observation_label)
+        if len(token) > 1
+    ]
+    if len(label_tokens) < 2 or not all(
+        token in final_text or token.rstrip("s") in final_text
+        for token in label_tokens
+    ):
+        return False
+
+    for field_name in (
+        "unit",
+        "timeframe",
+        "geography",
+        "segment",
+        "cohort",
+        "denominator",
+        "observation_status",
+        "forecast_status",
+    ):
+        final_value = normalize_for_lookup(final_metric.get(field_name))
+        observation_value = normalize_for_lookup(observation.get(field_name))
+        if final_value and observation_value and not (
+            final_value == observation_value
+            or final_value in observation_value
+            or observation_value in final_value
+        ):
+            observation_tokens = [
+                token
+                for token in re.findall(r"[a-z0-9]+", observation_value)
+                if len(token) > 1
+            ]
+            if not observation_tokens or not all(
+                token in final_text or token.rstrip("s") in final_text
+                for token in observation_tokens
+            ):
+                return False
+    return True
+
+
+def _metric_binding_for_final_observation(
+    candidate_metric: Dict[str, Any],
+    insight: Dict[str, Any],
+    *,
+    preserve_unknown_fields: bool = False,
+) -> Dict[str, Any]:
+    """Scope one authoritative composite metric to the final proposition."""
+
+    final_metric = insight.get("metric")
+    if not isinstance(final_metric, dict):
+        return _complete_protected_metric_binding(
+            candidate_metric, preserve_unknown_fields=preserve_unknown_fields
+        )
+    observations = candidate_metric.get("observations")
+    if not isinstance(observations, list):
+        return _complete_protected_metric_binding(
+            candidate_metric, preserve_unknown_fields=preserve_unknown_fields
+        )
+    matches = [
+        observation
+        for observation in observations
+        if isinstance(observation, dict)
+        and _metric_observation_matches_final_insight(
+            insight, final_metric, observation
+        )
+    ]
+    if len(matches) != 1:
+        return _complete_protected_metric_binding(
+            candidate_metric, preserve_unknown_fields=preserve_unknown_fields
+        )
+
+    scoped_metric = _complete_protected_metric_binding(
+        candidate_metric, preserve_unknown_fields=preserve_unknown_fields
+    )
+    observation = matches[0]
+    for field_name in PROTECTED_METRIC_FIELDS:
+        if field_name != "observations" and field_name in observation:
+            scoped_metric[field_name] = deepcopy(observation[field_name])
+    return scoped_metric
+
+
 def _restore_candidate_factual_fields(
     insight: Dict[str, Any],
     candidate_facts: Dict[str, Dict[str, Any]],
@@ -2106,10 +2237,15 @@ def _restore_candidate_factual_fields(
     restored = dict(insight)
     candidate_metric = candidate.get("metric")
     if isinstance(candidate_metric, dict):
-        restored["metric"] = _complete_protected_metric_binding(
+        restored["metric"] = _metric_binding_for_final_observation(
             candidate_metric,
+            insight,
             preserve_unknown_fields=preserve_unknown_metric_fields,
         )
+        if not preserve_unknown_metric_fields:
+            restored["metric"] = _complete_protected_metric_binding(
+                restored["metric"]
+            )
     elif "metric" in restored:
         restored["metric"] = _complete_protected_metric_binding(
             None,

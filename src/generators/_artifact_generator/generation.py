@@ -607,8 +607,17 @@ def generate_artifacts(
     def validate_editorial_plan(payload: Dict[str, Any], task_ctx: RunContext) -> None:
         normalize_required_evidence_references(payload)
         normalize_artifact_editorial_plan(payload.get("editorial_plan"))
+        plan_evidence_ids = (
+            {
+                normalize_text(value)
+                for value in candidate_allowed_evidence_ids
+                if isinstance(value, str) and normalize_text(value)
+            }
+            if visual_authority_admitter is not None
+            else canonical_evidence_ids
+        )
         validate_editorial_plan_evidence_ids(
-            payload.get("editorial_plan"), canonical_evidence_ids
+            payload.get("editorial_plan"), plan_evidence_ids
         )
         validate_required_evidence_references(payload, task_ctx)
 
@@ -1173,11 +1182,16 @@ def generate_artifacts(
         if isinstance(value, str) and normalize_text(value)
     }
     editorial_plan_ctx = child_context(ctx, task_id=f"{ctx.task_id}:editorial_plan")
+    editorial_plan_evidence_ids_json = (
+        candidate_allowed_evidence_ids_json
+        if visual_authority_admitter is not None
+        else canonical_evidence_ids_json
+    )
     editorial_plan_result = resolve_or_render_family(
         namespace="report_vs/artifacts/editorial_plan",
         variables={
             **base_vars,
-            "canonical_evidence_ids_json": canonical_evidence_ids_json,
+            "canonical_evidence_ids_json": editorial_plan_evidence_ids_json,
         },
         ctx=editorial_plan_ctx,
         payload_validator=lambda payload: validate_editorial_plan(

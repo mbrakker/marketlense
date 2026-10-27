@@ -120,7 +120,13 @@ class _SubdivisionProvider:
     def openai_chat_json(self, request, ctx):
         task_id = str(ctx.task_id)
         self.calls.append((task_id, str(request.stage)))
-        if ":batch:01_split1:" in task_id:
+        if ":batch:01_split1_split1:" in task_id:
+            selected = self.entries[:1]
+        elif ":batch:01_split1_split2:" in task_id:
+            # Deliberately return the first claim for the second leaf.  The
+            # leaf cannot be split further, so the parent must fail closed.
+            selected = self.entries[:1]
+        elif ":batch:01_split1:" in task_id:
             selected = self.entries[:2]
             if self.fail_split:
                 selected = selected[:1]
@@ -129,6 +135,39 @@ class _SubdivisionProvider:
         elif ":batch:01:" in task_id:
             # The full four-claim batch omits one claim for every bounded
             # provider attempt, forcing the existing subdivision path.
+            selected = self.entries[:3]
+        elif ":batch:02:" in task_id:
+            selected = self.entries[4:]
+        else:
+            raise AssertionError(f"unexpected grounding task: {task_id}")
+        response = {
+            "unsupported": [],
+            "checks": [_check(entry["item_id"], entry["text"]) for entry in selected],
+        }
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=json.dumps(response),
+            parsed_json=response,
+            input_tokens=0,
+            output_tokens=0,
+            tool_calls=0,
+            model=request.model,
+        )
+
+
+class _RecursiveSubdivisionProvider(_SubdivisionProvider):
+    def openai_chat_json(self, request, ctx):
+        task_id = str(ctx.task_id)
+        self.calls.append((task_id, str(request.stage)))
+        if ":batch:01_split1_split1:" in task_id:
+            selected = self.entries[:1]
+        elif ":batch:01_split1_split2:" in task_id:
+            selected = self.entries[1:2]
+        elif ":batch:01_split1:" in task_id:
+            selected = self.entries[:1]
+        elif ":batch:01_split2:" in task_id:
+            selected = self.entries[2:4]
+        elif ":batch:01:" in task_id:
             selected = self.entries[:3]
         elif ":batch:02:" in task_id:
             selected = self.entries[4:]
@@ -215,6 +254,23 @@ def test_grounding_subdivision_fails_closed_and_does_not_promote_siblings(tmp_pa
     assert "grounding_claim_check_coverage_invalid" in issues[0].message
     assert captured_packages == []
     assert not any(":batch:02:" in task_id for task_id, _stage in provider.calls)
+
+
+def test_grounding_subdivision_recurses_for_complex_coverage_failure(tmp_path):
+    provider = _RecursiveSubdivisionProvider([], fail_split=False)
+
+    issues, captured_packages = _run_with_provider(tmp_path, provider)
+
+    assert issues == []
+    assert captured_packages
+    assert any(
+        ":batch:01_split1_split1:" in task_id
+        for task_id, _stage in provider.calls
+    )
+    assert any(
+        ":batch:01_split1_split2:" in task_id
+        for task_id, _stage in provider.calls
+    )
 
 
 def test_grounding_coverage_reports_invalid_retained_classification():
