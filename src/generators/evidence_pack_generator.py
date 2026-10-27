@@ -616,6 +616,34 @@ def _findings_target_is_covered(
     return True
 
 
+def _findings_target_missing_key_point_count(
+    target: dict[str, object],
+    findings: list[dict[str, object]],
+    grounded_finding_ids: set[str],
+    targets: Optional[list[dict[str, object]]] = None,
+) -> int:
+    """Count uncovered key points using the same conservative coverage rules."""
+
+    key_points = _findings_target_key_points(target)
+    matched = [
+        finding
+        for finding in findings
+        if _findings_section_matches_target(finding, target, targets)
+        and str(finding.get("id") or "").strip() in grounded_finding_ids
+    ]
+    if not matched or not any(_findings_target_pages(finding) for finding in matched):
+        return max(1, len(key_points))
+    return sum(
+        not any(
+            _normalize_findings_text(key_point)
+            in _normalize_findings_text(str(finding.get("text") or ""))
+            for finding in matched
+        )
+        for key_point in key_points
+        if _normalize_findings_text(key_point)
+    )
+
+
 def _attach_verified_finding_pages(
     findings: list[dict[str, object]], fidelity
 ) -> set[str]:
@@ -696,12 +724,24 @@ def _missing_findings_retrieval_targets(
 ) -> list[dict[str, object]]:
     """Return at most two missed high-priority targets for one fallback."""
 
-    missing = []
-    for target in targets:
+    missing: list[tuple[int, int, dict[str, object]]] = []
+    for index, target in enumerate(targets):
         if _findings_target_is_covered(target, findings, grounded_finding_ids, targets):
             continue
-        missing.append(target)
-    return missing[:_MAX_FINDINGS_FALLBACK_TARGETS]
+        missing.append(
+            (
+                _findings_target_missing_key_point_count(
+                    target, findings, grounded_finding_ids, targets
+                ),
+                index,
+                target,
+            )
+        )
+    missing.sort(key=lambda item: (-item[0], item[1]))
+    return [
+        target
+        for _missing_count, _index, target in missing[:_MAX_FINDINGS_FALLBACK_TARGETS]
+    ]
 
 
 def _normalize_m_and_a_deal_quantities(text: str) -> str:

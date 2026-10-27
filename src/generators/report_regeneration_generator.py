@@ -136,6 +136,7 @@ class _RegenerationState:
     )
     payload_overrides: Dict[str, Any] = field(default_factory=dict)
     selected_evidence_ids: List[str] = field(default_factory=list)
+    removed_insight_ids: set[str] = field(default_factory=set)
     repair_decisions: List[RepairDecision] = field(default_factory=list)
     deterministic_repairs: List[str] = field(default_factory=list)
     deterministic_mutation_paths: List[str] = field(default_factory=list)
@@ -2215,6 +2216,8 @@ def _apply_visual_authority_pool(state: _RegenerationState) -> None:
             if not isinstance(item, dict):
                 continue
             insight_id = _s(item.get("id")).strip()
+            if insight_id in state.removed_insight_ids:
+                continue
             retained = authoritative.get(insight_id)
             if retained is None or insight_id in seen:
                 continue
@@ -2227,6 +2230,7 @@ def _apply_visual_authority_pool(state: _RegenerationState) -> None:
                 deepcopy(retained)
                 for insight_id, retained in authoritative.items()
                 if insight_id not in seen
+                and insight_id not in state.removed_insight_ids
             )
         return constrained
 
@@ -5525,6 +5529,7 @@ def _remove_failed_insight_with_retained_replacement(
         for item in retained_candidates
         if isinstance(item, dict)
     }
+    execution.state.removed_insight_ids.add(failed_id)
     execution.state.insights_candidates = retained_candidates
     if replacement is not None and _s(replacement.get("id")).strip() not in {
         _s(item.get("id")).strip() for item in retained_candidates

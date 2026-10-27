@@ -107,6 +107,47 @@ def test_safe_removal_of_idless_summary_claim_preserves_exact_siblings(
     assert Path(response.candidate_artifacts_path).is_file()
 
 
+def test_visual_authority_pool_does_not_restore_a_removed_insight() -> None:
+    from src.generators.report_regeneration_generator import (
+        _apply_visual_authority_pool,
+    )
+
+    state = _build_regeneration_state(
+        safe_artifacts=_current_artifacts(),
+        fallback_toc_bundle={},
+        source_status={},
+    )
+    state.visual_authority_digest = "d" * 64
+    state.visual_authority_candidates = [
+        {
+            "id": "failed-insight",
+            "text": "Unsupported retained insight.",
+            "evidence_id": "f1",
+            "evidence": "Evidence text",
+            "metric": dict(METRIC),
+            "pages": [1],
+        },
+        {
+            "id": "replacement-insight",
+            "text": "Supported replacement insight.",
+            "evidence_id": "f2",
+            "evidence": "Evidence text 2",
+            "metric": dict(METRIC),
+            "pages": [2],
+        },
+    ]
+    state.insights_candidates = [deepcopy(state.visual_authority_candidates[1])]
+    state.insights_final = [deepcopy(state.visual_authority_candidates[1])]
+    state.removed_insight_ids.add("failed-insight")
+
+    _apply_visual_authority_pool(state)
+
+    assert [item["id"] for item in state.insights_candidates] == [
+        "replacement-insight"
+    ]
+    assert [item["id"] for item in state.insights_final] == ["replacement-insight"]
+
+
 def test_summary_safe_removal_resolves_numeric_stable_claim_id() -> None:
     summary = {
         "claim_evidence_map": [

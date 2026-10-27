@@ -307,3 +307,76 @@ def test_missing_findings_targets_checks_all_bounded_targets_and_returns_two():
         )
         == targets[2:4]
     )
+
+
+def test_missing_findings_targets_prioritize_larger_uncovered_key_point_gaps():
+    from src.generators.evidence_pack_generator import (
+        _missing_findings_retrieval_targets,
+    )
+
+    targets = [
+        {
+            "id": "consumer-search",
+            "title": "AI and consumer search behavior",
+            "key_points": [
+                "Overall, 63% said shoppers were more likely to purchase using AI.",
+                "Search by image was rated valuable by 91%.",
+                "Image-based search was preferred by 51%.",
+            ],
+            "pages": [12, 18],
+        },
+        {
+            "id": "agentic-ai",
+            "title": "Innovation and agentic AI",
+            "key_points": [
+                "17% reported having implemented an agentic search system.",
+                "21% were interested but had no firm implementation plans.",
+                "The leading adoption consideration was smooth system integration.",
+            ],
+            "pages": [26, 27],
+        },
+        {
+            "id": "ai-outlook",
+            "title": "The AI outlook and ecommerce search",
+            "key_points": [
+                "Revenue was cited as a critical incentive by 58%.",
+                "49% reported working with a third party.",
+                "42% focused on AI to understand user intent.",
+            ],
+            "pages": [4, 10, 22],
+        },
+    ]
+    findings = [
+        {
+            "id": "consumer-image",
+            "section_id": "consumer-search",
+            "text": "Search by image was rated valuable by 91%.",
+            "pages": [18],
+        },
+        {
+            "id": "agentic-implementation",
+            "section_id": "agentic-ai",
+            "text": "17% reported having implemented an agentic search system.",
+            "pages": [26],
+        },
+        {
+            "id": "agentic-consideration",
+            "section_id": "agentic-ai",
+            "text": "The leading adoption consideration was smooth system integration.",
+            "pages": [27],
+        },
+        {
+            "id": "outlook-third-party",
+            "section_id": "ai-outlook",
+            "text": "49% reported working with a third party.",
+            "pages": [22],
+        },
+    ]
+
+    missing = _missing_findings_retrieval_targets(
+        targets,
+        findings,
+        {finding["id"] for finding in findings},
+    )
+
+    assert [target["id"] for target in missing] == ["consumer-search", "ai-outlook"]
