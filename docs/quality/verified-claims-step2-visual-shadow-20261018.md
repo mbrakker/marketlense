@@ -6247,3 +6247,190 @@ ten-report cohort was intentionally not run, and this evidence does not prove
 universal provider-output stability or live recovery behavior outside the
 three exercised reports. No canonical artifacts or publication state were
 mutated.
+
+#### Full frozen ten-report E2E acceptance — 2026-10-27 (`872cc67e` producer)
+
+The exact frozen ten-report manifest was run once from the clean isolated
+worktree at producer SHA `872cc67e1a2667aa48d1999933c0ddcb4f99759e`. The run
+used the existing production-equivalent verified-facts path, GPT-6 Luna High,
+fresh per-report application state, and the original local PDFs. It did not
+use `--enable-wordpress-staging`, `--shared-batch`, or any publication flag.
+The runner completed all ten report records; no report was selectively rerun
+or manually repaired after a terminal outcome.
+
+Run identity and preflight evidence:
+
+```text
+Manifest: C:\ml-step1-p1-hardening-20261027\scripts\quality\frozen_reliability_cohort_10.json
+Preflight: C:\ml-ten-acceptance-20261027\frozen-reliability-preflight-6z6bekfn\cohort_preflight.json
+Live root: C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\
+Cohort result: C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\cohort_result.json
+Members: C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\members\
+```
+
+All ten manifest entries were rehashed before the run and matched the frozen
+roster. The live architecture evidence repeated the same hash for the nine
+reports that reached verified-fact admission; Emplifi failed before that
+artifact was readable.
+
+| Publisher | Frozen PDF SHA-256 |
+| --- | --- |
+| DoubleVerify | `99f0cc4f7787cac52b7f89eefa7659053b3703ea100b9e0522fa500c64463d7e` |
+| KPMG | `a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589` |
+| Reuters Institute | `f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52` |
+| Adjust | `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` |
+| Algolia | `d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50` |
+| Bain & Company | `07541f3433b72007010ff604a93d0c560b6c6709ffd7bb5a58fefa81908f86c7` |
+| Criteo | `17cf2e92c8804e35274faf3dd416db2fe6e4a81d7aa92418ada8ba90ee77c00c` |
+| Deloitte | `cb3a6420505366198c519929726ecc2749e310686541339d749361d239ba65` |
+| Emplifi | `54a6726033fce9474929dec62bc85fc4dd3ada574398d043d12ec48b0eaddeb5` |
+| StackAdapt Inc. | `909444f8721c9ec21d2f734bd5f0575bc147f2d5493f4960d3173003f6ceb305` |
+
+The authoritative runner totals are:
+
+| Measure | Result |
+| --- | ---: |
+| Reports / terminal outcomes | 10 / 10 |
+| Workflow admission outcomes | 10 / 10 admitted |
+| Visual facts evaluated / admitted / quarantined | 56 / 56 / 0 across the nine readable verified-fact artifacts |
+| Verified-facts architecture evidence passed | 9 / 10 |
+| Rendered HTML files / readiness passes | 8 / 10 / 6 / 10 |
+| Validation passes / failures | 8 / 10 / 2 / 10 |
+| Provider calls | 478 |
+| Input / output tokens | 5,174,726 / 1,122,734 |
+| Cached input / reasoning tokens | 164,009 / 457,419 |
+| Estimated provider cost | `$1.209086` |
+| Cohort wall-clock | 8,320.406s |
+| File-search calls | 58 |
+| Structured-output recovery / automatic repairs | 10 / 3 |
+| Workflow retries / operator interventions / WordPress writes | 0 / 0 / 0 |
+
+Cached and reasoning totals were independently summed from each isolated
+member's `llm_usage_events` records. Provider-side cache usage is reflected in
+the ledger; no application-level final artifact was supplied to the run.
+All ten members recorded `isolated_fresh_state=true`. The aggregate runner
+field `verified_facts_architecture_outcome` is unset, so the 9/10 architecture
+figure above is the explicit per-member evidence result, not an inferred
+aggregate pass.
+
+Per-report terminal ledger:
+
+| Report | Visual facts eval/admit/quarantine | Artifact insights / HTML | Validation / readiness | Calls | Input / output / cached / reasoning | Cost / seconds | Structured / automatic | Terminal result |
+| --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | --- |
+| DoubleVerify | 6 / 6 / 0 | 5 / yes | pass / pass | 44 | 439,457 / 123,972 / 10,830 / 44,907 | `$0.114957` / 815.750 | 1 / 0 | awaiting review |
+| KPMG | 6 / 6 / 0 | 5 / no | fail / fail | 62 | 461,983 / 121,582 / 15,550 / 49,806 | `$0.138095` / 881.437 | 2 / 0 | `summary_safe_removal_no_supported_replacement` |
+| Reuters Institute | 7 / 7 / 0 | 6 / rendered, rejected | pass / fail | 44 | 534,215 / 131,623 / 10,135 / 67,895 | `$0.140823` / 1,033.969 | 1 / 0 | `card_tldr_compact_invalid` |
+| Adjust | 6 / 6 / 0 | 6 / yes | pass / pass | 50 | 519,934 / 111,362 / 13,745 / 43,110 | `$0.121433` / 914.812 | 0 / 0 | awaiting review |
+| Algolia | 6 / 6 / 0 | 5 / rendered, rejected | pass / fail | 56 | 723,173 / 145,589 / 13,745 / 66,268 | `$0.156371` / 1,255.953 | 3 / 0 | `card_tldr_compact_invalid` |
+| Bain & Company | 6 / 6 / 0 | 5 / yes | pass / pass | 48 | 747,140 / 130,486 / 52,244 / 40,886 | `$0.150257` / 719.266 | 0 / 3 | awaiting review |
+| Criteo | 6 / 6 / 0 | 5 / yes | pass / pass | 41 | 357,587 / 97,900 / 15,550 / 39,945 | `$0.090814` / 671.141 | 0 / 0 | awaiting review |
+| Deloitte | 6 / 6 / 0 | 5 / yes | pass / pass | 45 | 397,534 / 113,026 / 17,355 / 39,335 | `$0.102205` / 752.703 | 2 / 0 | awaiting review |
+| Emplifi | no artifact | 0 / no | fail / fail | 34 | 489,762 / 38,296 / 1,110 / 22,391 | `$0.080525` / 496.812 | 0 / 0 | `verified_fact_editorial_coverage_insufficient` |
+| StackAdapt Inc. | 7 / 7 / 0 | 7 / yes | pass / pass | 54 | 503,941 / 108,898 / 13,745 / 42,876 | `$0.113606` / 778.563 | 1 / 0 | awaiting review |
+
+Here “rendered, rejected” means an HTML file exists but the publication
+readiness contract failed; it is not an accepted HTML outcome. KPMG's
+artifact insight count is retained analysis state, not a public output.
+
+#### Failure and recovery review
+
+The runner's mutually exclusive terminal outcomes are six complete
+`awaiting_review` passes and four typed failures:
+
+* KPMG admitted six visual facts and produced retained artifacts, but the
+  final summary repair path ended with
+  `summary_safe_removal_no_supported_replacement`. Its `validation.json`
+  also records `grounding_claim_check_coverage_invalid`; the final package had
+  24 unresolved retained claims and no accepted HTML. This is a fail-closed
+  summary/grounding contract failure, not an evidence promotion.
+* Reuters and Algolia both rendered HTML and passed retained validation, but
+  both ended with `card_tldr_compact_invalid`. Their readiness ledgers fail
+  `publish_readiness.report_card_manifest` (`report card manifest missing`),
+  and their retained artifact summaries have empty `card_tldr_compact` values.
+  Their HTML is therefore rejected, even though the independent source review
+  below found the retained numerical claims source-supported.
+* Emplifi ended with `verified_fact_editorial_coverage_insufficient`. Its
+  selection checkpoint contains nine input candidates but blank insight
+  placeholders and an empty evidence-pack map; no canonical verified-fact
+  artifact was readable (`FileNotFoundError`), so neither model output nor a
+  fidelity-approved fallback supplied an authoritative final roster. No HTML
+  was emitted.
+
+The ten structured-output recovery calls and three automatic repairs were
+bounded by the existing workflow. There were no workflow retries, operator
+interventions, publication writes, or unsafe evidence promotions. No failure
+was repaired and rerun during this acceptance run.
+
+#### Independent PDF/HTML review
+
+Eight HTML files were inspected against the original full PDF pages; all eight
+had zero visible `verified-fact:`, source-identity, candidate, or claim IDs.
+The six readiness-passing outputs were independently checked as follows:
+
+| Report | Source-page review and editorial result |
+| --- | --- |
+| DoubleVerify | Pages 3, 9, and 10 support the four-region suitability/viewability ranges, the 100-point/28-day Attention Index definition, and the APAC Display/Video and EMEA engagement index values. Qualitative implications remain framed as recommendations. |
+| Adjust | Pages 6, 9, 11, 19, 29, and 34–35 support the install/session, maturity, gaming, cross-platform, finance, and CPI statements. A material internal binding defect remains: the `ecommerce-cpi-subvertical-divergence` public sentence correctly states deal-discovery CPI `$1.44` to `$2.26`, but its retained `metric.value` is the different aggregate e-commerce CPI `$1.00` to `$0.98`. The source page supports both figures, but they are not the same proposition. |
+| Bain & Company | Page 1 supports the 52% born-tech, 20% tech-led, 28% other mix, 2015–2020 period, and asset-light recommendation. |
+| Criteo | Pages 5, 7, and 8 support the country exploration percentages, 50% incrementality/retail-media statement, 2023 cost estimate, omnichannel priority, and recommendation percentages. |
+| Deloitte | Pages 3–6 support the 14% trust statistic, 693% traffic comparison, first-party assistant interpretation, LLM discovery use, and blanket-blocking implication. |
+| StackAdapt Inc. | Pages 5, 7, 10, 13–15, and 19 support channel shares, social discovery, data relevance, personalization/daily AI use, values alignment, and programmatic implications. |
+
+Reuters's rejected HTML was additionally checked on pages 9, 12, 17, 24,
+32, and 41; the 60%/38%, 33%/38%, +91/+82, 70%/39%, 64%, and 15%/60%/75%
+claims match the source. Algolia's rejected HTML was checked on pages 4, 16,
+22, 26, and 27; the 58%/49%, 63%, 49%/27%/23%, 17%/61%, and 47%/43%/90%
+claims match the source, including the current-versus-planned distinction.
+Those findings do not override their readiness failures. KPMG and Emplifi had
+no accepted public HTML to review.
+
+The Adjust metric/text disagreement is the only independently confirmed
+material factual-integrity defect in the rendered outputs reviewed here. It
+does not make the public deal-discovery sentence unsupported, but it violates
+the requirement that the authoritative protected metric binding and editorial
+proposition remain the same. It must remain open; no speculative correction
+was made during this run.
+
+#### Comparison with the previous frozen ten-report baseline
+
+The previous retained baseline is the `db1bfe0c` ledger above. The current
+observed deltas are:
+
+| Measure | Previous | Current | Difference |
+| --- | ---: | ---: | ---: |
+| Readiness passes | 5 / 10 | 6 / 10 | +1 report |
+| Architecture evidence passed | 9 / 10 | 9 / 10 | unchanged |
+| Provider calls | 491 | 478 | −13 (−2.65%) |
+| Input tokens | 5,304,357 | 5,174,726 | −129,631 (−2.44%) |
+| Output tokens | 1,233,714 | 1,122,734 | −110,980 (−8.99%) |
+| Cached input tokens | 338,208 | 164,009 | −174,199 (−51.51%) |
+| Reasoning tokens | 469,877 | 457,419 | −12,458 (−2.65%) |
+| Estimated cost | `$1.264371` | `$1.209086` | −`$0.055285` (−4.37%) |
+| Wall-clock | 8,328.688s | 8,320.406s | −8.282s (−0.10%) |
+| File-search calls | 59 | 58 | −1 |
+
+The readiness improvement and cost/timing deltas are observed run differences,
+not a causal quality claim: provider output, repair paths, and report failure
+composition changed. The current run still has only 6/10 accepted HTML, a
+9/10 architecture result, and the Adjust binding inconsistency, so it does
+not satisfy the ten-report acceptance gate.
+
+Artifacts for the complete run are retained here:
+
+```text
+C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\cohort_result.json
+C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\members\
+C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\members\cohort-e854b71d6fb10333b47f\ias-first-attempt-jc7rj8z5\output\dv-qualityandattentionbenchmark-q1-2026-pdf.html
+C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-1q79hhjj\output\mobile-app-trends-2026-pdf.html
+C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\members\cohort-77bc67b2bc98187d9d58\ias-first-attempt-hl4dth99\output\tech-tonic-shifts-pdf.html
+C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\members\cohort-979a63a1633a7f2ccc51\ias-first-attempt-zxscomr0\output\agency-guide-report-criteo-pdf.html
+C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\members\cohort-b10ed6c82b76739a806a\ias-first-attempt-h5ugzfm0\output\q1-2026-emerging-retail-and-consumer-trends-pdf.html
+C:\ml-ten-e2e-20261027\frozen-reliability-9xhis2bv\members\cohort-8ef1021c332aa85ba008\ias-first-attempt-vf5iqvo6\output\stackadapt-retail-marketing-trends-report-2026-pdf.html
+```
+
+**Verdict: PARTIAL / NO-GO.** The exact ten-report workflow is terminally
+complete and provider/audit evidence is retained, but the acceptance gate is
+not met: 6/10 readiness passes, 8/10 rendered HTML files, 9/10 verified-fact
+architecture evidence, four typed failures, and one independently confirmed
+Adjust protected-metric binding conflict. Step 3 must not begin. No code fix
+or selective rerun is authorized by this ledger entry.

@@ -1198,3 +1198,23 @@ was observed. The ten-report cohort was intentionally not run. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. See the Step 2 quality report for the per-report
 ledger and artifact paths.
+
+**Full frozen ten-report E2E acceptance — 2026-10-27 (`872cc67e` producer):**
+The exact frozen ten-report cohort completed once with 10/10 terminal records,
+478 provider calls, 5,174,726 input tokens, 1,122,734 output tokens, 164,009
+cached-input tokens, 457,419 reasoning tokens, `$1.209086`, and 8,320.406
+seconds. Nine reports produced passing verified-facts architecture evidence
+and 56/56 visual facts were admitted with zero quarantines; Emplifi failed
+before its verified-facts artifact was readable. Six reports passed validation
+and publication readiness, two rendered HTML but failed the report-card
+readiness contract, KPMG failed summary/grounding recovery, and Emplifi failed
+verified-fact editorial coverage. Independent PDF/HTML review found one
+remaining Adjust integrity defect: the public deal-discovery CPI sentence is
+supported by page 29, but its retained protected metric is the different
+aggregate e-commerce CPI. No unsupported claim was promoted, but the metric
+binding conflict blocks acceptance. No WordPress write, operator intervention,
+selective rerun, or canonical publication mutation occurred. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. The complete ledger, source hashes, failure causes,
+independent review, baseline comparison, and artifact paths are recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
