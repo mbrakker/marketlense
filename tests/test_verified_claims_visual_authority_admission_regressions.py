@@ -8,6 +8,7 @@ import pytest
 
 from src.generators._artifact_generator.generation import generate_artifacts
 from src.generators.verified_claims_canary import admit_visual_authority_candidates
+from src.utils.cache_utils import sha256_json
 from src.utils.verified_facts import validated_verified_facts
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
@@ -318,6 +319,47 @@ def test_multi_page_verified_fact_pack_matches_canonical_snapshot_order():
         admission.verified_evidence_packs,
     )
     assert validated[candidate["id"]]["supporting_physical_pages"] == [2, 4]
+
+
+def test_multi_page_admission_digest_matches_canonical_snapshot():
+    candidate = _candidate()
+    result = _result(
+        candidate,
+        verified_fact={
+            "statement": candidate["text"],
+            "metric": deepcopy(candidate["metric"]),
+            "qualifiers": [],
+            "supporting_physical_pages": [4, 2],
+        },
+    )
+    result = replace(
+        result,
+        physical_pages=[4, 2],
+        inspected_physical_pages=[4, 2],
+        supporting_physical_pages=[4, 2],
+        source_truth_notes_by_page={
+            "4": "The source supports the fact.",
+            "2": "The source supports the same fact.",
+        },
+    )
+
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate],
+        evaluation=_response(result),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+
+    assert admission.verified_facts[0]["supporting_physical_pages"] == [2, 4]
+    expected_digest = sha256_json(
+        {
+            "source_identity": SOURCE_IDENTITY,
+            "verified_facts": admission.verified_facts,
+        }
+    )
+    assert admission.digest == expected_digest
+    assert admission.audit["digest"] == expected_digest
 
 
 def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(

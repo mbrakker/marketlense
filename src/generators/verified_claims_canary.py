@@ -27,7 +27,10 @@ from src.utils.cache_utils import sha256_json
 from src.utils.coercion import stripped_string_value
 from src.utils.errors import AppError
 from src.utils.text_normalization import normalize_for_lookup
-from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
+from src.utils.verified_facts import (
+    PROTECTED_METRIC_FIELDS,
+    validated_verified_facts,
+)
 
 _TERMINAL_VERIFIED_OUTCOMES = frozenset({"verified", "verified_after_retry"})
 _TERMINAL_EVALUATION_OUTCOMES = frozenset(
@@ -343,6 +346,16 @@ def admit_visual_authority_candidates(
         facts_by_id[fact_id] = fact
         unique_projections.append(projection)
 
+    try:
+        canonical_facts = validated_verified_facts(
+            {"verified_facts": list(facts_by_id.values())}
+        )
+    except AppError:
+        return _empty_admission(audit, "verified_fact_snapshot_invalid")
+    facts_by_id = canonical_facts
+    unique_projections = [
+        _fact_projection(fact) for fact in facts_by_id.values()
+    ]
     verified_evidence_packs = _verified_evidence_packs(list(facts_by_id.values()))
     audit["admitted_count"] = len(unique_projections)
     audit["verified_fact_count"] = len(facts_by_id)
