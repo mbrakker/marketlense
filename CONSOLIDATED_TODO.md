@@ -1168,3 +1168,16 @@ No publication or WordPress writes occurred. E18 remains **Active/PARTIAL**,
 Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
 The detailed ledger, source hashes, per-report outcomes and artifact paths are
 in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**P0/P1 affected-five correction — 2026-10-27 (`51f45fcc`):** The bounded
+findings fallback now preserves missing key-point and qualitative coverage,
+regeneration no longer reintroduces a safely removed visual insight, and the
+public OCR check no longer rejects legitimate mixed-case metric names. A
+multi-page verified-fact admission now canonicalizes provenance before hashing
+the authority snapshot. The exact affected-five replay produced four complete
+passes; the corrected isolated Algolia rerun passed 6/6 admission, validation,
+and publication readiness with zero unsupported/unresolved retained material
+claims. This is evidence for the demonstrated root causes, not a new
+ten-report acceptance or universal live-selection result. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. Full evidence is recorded in the Step 2 quality report.

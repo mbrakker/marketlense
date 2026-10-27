@@ -6009,3 +6009,130 @@ contract failure, but the ten-report acceptance gate requires all ten reports
 to produce validated HTML with zero unresolved material claims. The Algolia
 coverage failure, the grounding contract/recovery reliability gap, and the
 member-duration persistence defect remain open. Step 3 must not begin.
+
+#### P0/P1 E2E correction and frozen affected-five replay — 2026-10-27 (`51f45fcc`)
+
+This slice addressed the five affected reports from the previous ten-report
+replay. The changes were kept at the earliest demonstrated boundaries:
+
+* The findings fallback previously selected only the first high-scoring
+  sections. For Algolia that excluded the supported revenue-incentive finding
+  on physical page 4 and left the central revenue theme unmapped. The fallback
+  now ranks missing key-point coverage, keeps a bounded qualitative coverage
+  slot, and retains late substantive sections. It still reuses the existing
+  fidelity-approved findings and does not promote DocMap navigation IDs.
+* A successfully removed visual insight could be re-added by a later
+  `fill_missing` visual-authority pool application. Regeneration now records
+  removed stable IDs for the current execution and does not reintroduce them.
+* Emplifi's qualitative strategy section was previously excluded by the
+  bounded findings retrieval target set. The coverage reservation retained the
+  page-19 strategy/operating-model fact. The public-quality OCR detector also
+  misclassified the source-backed mixed-case metric name `Top2Box`; its
+  lowercase-only OCR fragment pattern now preserves legitimate metric names
+  while the existing lowercase OCR regression remains covered.
+* The final Algolia replay exposed a separate integrity defect: admission
+  calculated the authority digest before the existing canonical verified-fact
+  validator normalized multi-page provenance. The page order in the retained
+  fact was valid, but the digest represented the pre-canonical list. Admission
+  now canonicalizes the fact snapshot before constructing projections, evidence
+  packs, audit data, and the digest. Invalid snapshots still fail closed.
+
+Focused regression coverage includes fallback theme reservation and late
+section eligibility, removed-insight non-reintroduction, the legitimate
+`Top2Box` metric name, and canonical multi-page admission digests. The focused
+verified-claims suites passed 90 tests; the current post-commit broader
+affected-slice suite passed 167 tests (the preceding full affected slice at
+`cb2d9bc4` passed 190), and Ruff passed on the changed files. No publication or
+WordPress write was performed.
+
+The exact affected-five replay at `cb2d9bc4071237ad7dd8b56a1990e499e33f19dc`
+used the frozen source PDFs, isolated member state, and no cached final
+artifacts. It produced four complete passes and one integrity failure before
+the final digest correction:
+
+| Report | Visual facts | Final HTML | Validation / readiness | Calls | Cost / seconds | Terminal result |
+| --- | ---: | --- | --- | ---: | ---: | --- |
+| Reuters Institute | 7 / 7 / 0 | yes | pass / pass | 53 | `$0.157279` / 1,252.191 | pass |
+| Criteo | 6 / 6 / 0 | yes | pass / pass | 51 | `$0.120932` / 871.648 | pass |
+| Deloitte | 6 / 6 / 0 | yes | pass / pass | 40 | `$0.094506` / 723.025 | pass |
+| Algolia | 6 / 6 / 0 | no | blocked before readiness | 43 | `$0.106842` / 1,009.800 | `verified_facts_snapshot_digest_mismatch` |
+| Emplifi | 6 / 6 / 0 | yes | pass / pass | 59 | `$0.166700` / 889.425 | pass |
+| **Aggregate** | **28 / 28 / 0** | **4 / 5** | **4 / 5** | **246** | **`$0.646259` / 4,746.089s** | **4 pass / 1 fail** |
+
+The initial affected-five run used 2,842,047 input tokens and 614,891 output
+tokens, with zero operator interventions and zero publication writes. Reuters,
+Criteo, Deloitte, and Emplifi each had zero unsupported and zero unresolved
+retained material claims. Emplifi required three bounded automatic repairs in
+this run but ended with validation/readiness pass; Criteo had two structured
+output recovery calls and Reuters one.
+
+The Algolia failure was not a factual promotion: its artifacts contained six
+source-hash-bound facts, but the external architecture check correctly rejected
+the stale pre-canonical digest before HTML was accepted. The targeted rerun
+after `51f45fcc02f16ecac169d65154dc28de6f98eb81` used the same frozen Algolia
+report in a new isolated run and passed:
+
+| Measure | Corrected Algolia result |
+| --- | ---: |
+| Visual facts evaluated / admitted / quarantined | 6 / 6 / 0 |
+| Final insights / validation / readiness | 5 / pass / pass |
+| Unsupported / unresolved retained material claims | 0 / 0 |
+| Provider calls / input tokens / output tokens | 50 / 641,181 / 112,192 |
+| Estimated cost / wall-clock | `$0.131476` / 976.093s |
+| Structured recovery / automatic repairs / intervention | 0 / 0 / 0 |
+| WordPress writes | 0 |
+
+Its verified-facts architecture evidence passed with six facts and the
+canonical digest
+`f43ff6cd1874e054a82ec976d27726cac577a09294a1ad965d997fcf60db55f3`.
+The corrected final IDs were `agentic-search-adoption-status`,
+`revenue-investment-incentive`, `ai-tool-purchase-likelihood`,
+`agentic-search-integration-factor`, and `third-party-search-development`.
+The revenue fact is bound to physical page 4 and states the 58% 2025 versus
+49% 2024 critical-incentive comparison; the page text independently supports
+both values and the nine-point change. No evidence alias or navigation ID was
+promoted.
+
+#### Independent HTML/PDF review of the affected five
+
+The four successful members of the affected-five run and the corrected Algolia
+member were inspected against their original full PDFs. Every final artifact
+had a matching source PDF SHA-256, and every retained final insight referenced
+an admitted `verified-fact:` ID with physical pages inside the source. The
+public HTML files contained no internal evidence IDs, candidate IDs, source
+identities, or fact IDs. The following material checks were observed:
+
+| Report | Independent factual/editorial checks |
+| --- | --- |
+| Reuters Institute | Pages 9, 12, 21, 24, 32, and 38 support the reported traffic expectation, AI-use priority, platform effort balances, creator concerns, commercial revenue selection, and 2022/2026 confidence comparison; survey bases and future-expectation qualifiers were retained. |
+| Criteo | Pages 4–8 support the US strategy factors, incrementality/retail-media finding, omnichannel focus, campaign waiting-list statement, and 2023 recommendations; the final wording preserves the next-year and expectation qualifiers. |
+| Deloitte | Pages 3, 5, and 6 support the 14% trust result, LLM discovery/data requirements, retailer partnerships, and 23% product-discovery observation; qualitative implications remain tied to the report rather than presented as new measured values. |
+| Emplifi | Pages 4, 12, 13, 16, 18, and 19 support the $/£500 research behavior, 27% UGC snapshot, 91% disclosure expectation, service checklist, hypothetical stop-buying responses, and operational authenticity theme. |
+| Algolia (corrected rerun) | Pages 4, 15, 16, 22, 26, and 27 support revenue incentives, task-effectiveness percentages, AI-tool purchase likelihood, search-solution shares, adoption plans, and integration ratings; 17% current adoption versus 61% planned adoption remains explicitly separated. |
+
+The review found no independently confirmed unsupported material claim in the
+accepted HTML. Numeric presence checks were supplemented by page-level reading;
+the checks are not treated as a substitute for the retained-claim and
+publication gates. The provider-backed replay demonstrates the specific
+fallback, removal, OCR, and digest corrections on the affected inputs. It does
+not prove universal provider-output stability or establish a new ten-report
+acceptance result after the final commit, because only the failing Algolia
+member was rerun at `51f45fcc`.
+
+Artifacts:
+
+```text
+C:\ml-five-20261027-final5\frozen-reliability-4geij3zr\cohort_result.json
+C:\ml-five-20261027-final5\frozen-reliability-4geij3zr\members\
+C:\ml-five-20261027-algolia-fix\frozen-reliability-25vmr3s6\cohort_result.json
+C:\ml-five-20261027-algolia-fix\frozen-reliability-25vmr3s6\members\cohort-86858bdcb370266f26c2\ias-first-attempt-nc4g6348\output\2026-20b2c-20ecommerce-20ai-20trends-ebook-en-2-pdf.html
+C:\ml-five-20261027-algolia-fix\frozen-reliability-25vmr3s6\members\cohort-86858bdcb370266f26c2\ias-first-attempt-nc4g6348\output\2026-20b2c-20ecommerce-20ai-20trends-ebook-en-2-pdf\report_analysis\artifacts.json
+```
+
+**Verdict:** **PASS** for the demonstrated P0/P1 root-cause corrections,
+focused regressions, and corrected Algolia E2E; **PARTIAL / NO-GO** for broad
+Step 2 live effectiveness and Step 3 readiness. The affected-five evidence is
+4/5 on the initial same-commit replay plus a corrected isolated Algolia pass;
+the ten-report cohort was not rerun, and no claim is made that stochastic
+provider-output or grounding-coverage behavior is universally resolved. Step 3
+must not begin.
