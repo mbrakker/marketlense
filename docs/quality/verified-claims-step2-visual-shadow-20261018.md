@@ -6136,3 +6136,114 @@ Step 2 live effectiveness and Step 3 readiness. The affected-five evidence is
 the ten-report cohort was not rerun, and no claim is made that stochastic
 provider-output or grounding-coverage behavior is universally resolved. Step 3
 must not begin.
+
+#### Targeted P1 reliability hardening and three-report live verification — 2026-10-27 (`c5439d19`)
+
+This slice was limited to the remaining grounding-recovery, repeated-work,
+split-safety, and findings-fallback risks before the ten-report E2E. Inspection
+of the current implementation found that the required production safeguards
+were already present at the relevant boundaries, so no new validator, model
+stage, raw batch cache, or nested executor was added. The commit adds focused
+provider-injected regressions for the previously under-covered subdivision
+outcomes.
+
+| Boundary | Evidence and result |
+| --- | --- |
+| Grounding recovery feedback | Existing structured-output recovery preserves a bounded coverage category and actionable missing/unknown/duplicate/text-mismatch IDs. The new success test drove three full-batch attempts followed by two scoped split calls and required exact final coverage; no validator relaxation was used. |
+| Subdivision failure | A persistent split failure raises `grounding_claim_check_coverage_invalid`, captures the inner failure, promotes no successful sibling package, and does not continue the unrelated batch. |
+| Classification safety | An invalid retained-claim classification is rejected with the affected public item ID. Malformed or incomplete responses remain fail-closed. |
+| Repeated grounding work | Existing retained semantic reuse requires compatible artifact/source/evidence/prompt/policy/retrieval identities. Existing matching, mismatch, ambiguity, and incomplete-package tests passed; no persistent raw batch response cache was introduced. |
+| Findings fallback | Retained artifacts show fidelity-approved findings for the target reports: Algolia 16 findings/7 conservative DocMap targets, Deloitte 17/8, and Emplifi 25/11. The conservative text-containment audit leaves broad DocMap target wording unmatched in these artifacts; that is a measured false-negative risk in the audit heuristic, not evidence that the fidelity-approved findings are absent. Existing bounded fallback and prior Algolia revenue/Emplifi strategy corrections were preserved; no fuzzy semantic-equivalence validator or quota increase was added. |
+| Split latency | A provider-free delayed benchmark measured the current sequential split at 0.314s with one active split versus a 0.101s two-way parallel reference. The reference would require moving split work into the existing bounded scheduler; nested executor use could oversubscribe or deadlock. No live recovery latency problem justified that risk, so concurrency was not implemented. |
+
+The focused affected suite passed **204 tests**. The new test module covers
+subdivision success, persistent subdivision failure without sibling promotion,
+and invalid retained classification. Ruff, architecture imports, forbidden
+patching, contract schemas, and the full-repository mypy baseline all passed:
+
+```text
+python -m pytest -q tests/test_grounding_recovery_effectiveness.py \
+  tests/test_grounding_recovery_diagnostics.py \
+  tests/test_structured_output_service.py \
+  tests/test_structured_output_recovery_effectiveness.py \
+  tests/test_structured_output_recovery_diagnostics.py \
+  tests/test_retained_claim_grounding.py \
+  tests/test_verified_grounding_batch_context.py \
+  tests/test_grounding_cohort_false_positive_regressions.py \
+  tests/test_grounding_semantic_outcomes.py \
+  tests/test_grounding_editorial_interpretation.py \
+  tests/test_grounding_protected_facts.py \
+  tests/test_grounding_public_identity.py \
+  tests/test_candidate_recovery_and_selection_regressions.py \
+  tests/test_report_analysis_validation_fallback.py \
+  tests/_test_claim_validation_generator tests/_test_evidence_pack_generator
+204 passed in 31.05s
+python scripts/ci/check_ruff_lint.py                         PASS
+python scripts/ci/check_contract_schemas.py --snapshot ...   PASS
+python scripts/ci/check_architecture_imports.py              PASS
+python scripts/ci/check_forbidden_patching.py                PASS
+python scripts/ci/run_type_check.py                          PASS (0 baseline errors)
+```
+
+The isolated provider-backed run used the original Deloitte, Algolia, and
+Emplifi PDFs, GPT-6 Luna High, verified-facts architecture, no WordPress
+publication, and fresh per-report application state. The source hashes were
+checked independently against the retained verified-fact identities.
+
+| Report | Verified visual facts | Final insights | Calls | Input / output / cached / reasoning tokens | File-search calls | Cost | Duration | Structured recovery / automatic repairs | Validation / readiness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Deloitte | 6 / 6 / 0 | 5 | 66 | 551,048 / 213,181 / 98,590 / 58,506 | 3 | `$0.160324` | 1,062.250s | 4 / 3 | pass / pass |
+| Algolia | 6 / 6 / 0 | 5 | 50 | 641,947 / 118,715 / 15,550 / 52,885 | 4 | `$0.132153` | 1,138.438s | 0 / 0 | pass / pass |
+| Emplifi | 6 / 6 / 0 | 5 | 58 | 712,569 / 157,113 / 67,021 / 52,424 | 5 | `$0.156283` | 990.000s | 1 / 3 | pass / pass |
+| **Total** | **18 / 18 / 0** | **15** | **174** | **1,905,564 / 489,009 / 181,161 / 163,815** | **12** | **`$0.448760`** | **3,190.688s** | **5 / 6** | **3 / 3** |
+
+Candidate-generation checkpoints explain the live fallback outcome for all
+three reports: each model response produced eight normalized candidates, the
+existing bounded fallback supplied one eligible supplement because the
+primary roster was incomplete, and six candidates were selected from the
+combined pool. No location-only or invalid evidence references were removed
+in these runs; all planned themes were covered (Deloitte 5/5, Algolia 5/5,
+Emplifi 4/4), and each report admitted six verified candidates. Thus fallback
+participated as a bounded supplement, not as an unexplained replacement of the
+model roster.
+
+The final HTML was independently inspected against the original PDF pages.
+The material checks were: Deloitte pages 3, 5, and 6 retained the 14% trust
+statistic, 693% traffic comparison, website infrastructure recommendation,
+blanket-blocking risk, and 9x study qualifier; Algolia pages 4, 12, 22, 26,
+and 27 retained the 58%/49% revenue comparison, 63% respondent belief,
+49% third-party approach, 17% current adoption, 61% planned adoption, and
+90% integration result; Emplifi pages 4, 10, 13, 14, and 17 retained the
+$/£500 research cohort, 79%/77% review benchmark, 91% disclosure expectation,
+35%/28% regional comparison, and 52%/59% service outcomes. The HTML visible
+text contained zero `verified-fact:`, source-identity, or stable candidate IDs.
+All three source PDFs matched the hashes recorded by the verified-facts
+artifacts, and all final insight evidence IDs/pages/spans matched their
+authoritative facts.
+
+Recovery audit review found no unsafe promotion. Deloitte had three bounded
+targeted repairs; its first regeneration candidate was rolled back because it
+introduced a new hard grounding failure, and the later rebinding candidate
+was promoted. Emplifi had three bounded repairs and promoted a source-bound
+replacement that resolved the LinkedIn grounding item without changing the
+final-insight evidence. Algolia required no recovery. The compact live
+result is terminally complete for all three reports: admission 3/3,
+publication readiness 3/3, unsupported retained material claims 0, unresolved
+retained material claims 0, operator interventions 0, and WordPress writes 0.
+
+Artifacts:
+
+```text
+C:\ml-p1-targeted-20261027\frozen-reliability-ne592nip\cohort_result.json
+C:\ml-p1-targeted-20261027\frozen-reliability-ne592nip\members\cohort-b10ed6c82b76739a806a\ias-first-attempt-t22ohz7j\output\q1-2026-emerging-retail-and-consumer-trends-pdf.html
+C:\ml-p1-targeted-20261027\frozen-reliability-ne592nip\members\cohort-86858bdcb370266f26c2\ias-first-attempt-b8ii5usa\output\2026-20b2c-20ecommerce-20ai-20trends-ebook-en-2-pdf.html
+C:\ml-p1-targeted-20261027\frozen-reliability-ne592nip\members\cohort-f62048b469dd784e6e7c\ias-first-attempt-fsbx9hv7\output\emplifi-digital-authenticity-ai-2026-pdf.html
+```
+
+**Verdict:** **PASS** for the targeted P1 reliability hardening, focused
+regressions, and the three-report Deloitte/Algolia/Emplifi verified-mode E2E.
+**PARTIAL / NO-GO** for ten-report acceptance and Step 3 readiness: the
+ten-report cohort was intentionally not run, and this evidence does not prove
+universal provider-output stability or live recovery behavior outside the
+three exercised reports. No canonical artifacts or publication state were
+mutated.

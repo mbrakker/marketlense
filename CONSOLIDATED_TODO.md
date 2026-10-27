@@ -1181,3 +1181,20 @@ claims. This is evidence for the demonstrated root causes, not a new
 ten-report acceptance or universal live-selection result. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. Full evidence is recorded in the Step 2 quality report.
+
+**Targeted P1 reliability hardening — 2026-10-27 (`c5439d19`):** Existing
+bounded grounding diagnostics, exact retained-claim reuse, fail-closed sibling
+handling, and theme-aware findings fallback were verified with new injected
+provider regressions; no new validator, raw batch cache, or nested executor
+was needed. The focused suite passed 204 tests, with Ruff, contract schemas,
+architecture imports, forbidden patching, and the full mypy baseline clean.
+The fresh isolated Deloitte/Algolia/Emplifi run admitted 18/18 visual facts,
+selected five final insights per report, passed validation/readiness for all
+three, and recorded 174 provider calls, 1,905,564 input tokens, 489,009
+output tokens, `$0.448760`, and 3,190.688 seconds. Deloitte and Emplifi
+exercised bounded repairs; no unsupported or unresolved retained material
+claim, operator intervention, WordPress write, or unsafe evidence promotion
+was observed. The ten-report cohort was intentionally not run. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. See the Step 2 quality report for the per-report
+ledger and artifact paths.

@@ -1359,3 +1359,21 @@ targeted mypy passing. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full evidence
 and artifact paths are in
 `docs/quality/verified-claims-step2-p1-candidate-recovery-20261025.md`.
+
+**Targeted P1 reliability hardening — 2026-10-27 (`c5439d19`):** Current
+grounding recovery already preserves bounded actionable coverage diagnostics,
+uses exact retained semantic reuse, discards sibling results on failed
+subdivision, and keeps findings fallback bounded and fidelity-approved. New
+injected-provider regressions cover successful subdivision, persistent split
+failure, and invalid retained classification; the affected suite passed 204
+tests and Ruff, contract schemas, architecture imports, forbidden patching,
+and full-repository mypy passed. A fresh isolated verified-mode run over
+Deloitte, Algolia, and Emplifi admitted 18/18 visual facts, produced five
+final insights per report, passed validation/readiness 3/3, used 174 provider
+calls and `$0.448760`, and recorded no unsupported/unresolved retained claims,
+publication writes, or operator intervention. Deloitte and Emplifi exercised
+bounded repairs; Algolia did not require recovery. The ten-report cohort was
+not run, so E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Detailed
+source-page review, recovery audits, and artifact paths are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
