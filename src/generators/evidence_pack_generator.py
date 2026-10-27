@@ -95,7 +95,11 @@ _OPTIONAL_EVIDENCE_PACKS = {
     "quote_candidates",
 }
 
-_MAX_FINDINGS_RETRIEVAL_TARGETS = 8
+# Keep all substantive sections in the bounded recovery candidate set for the
+# report shapes used by the frozen cohort.  The fallback still retrieves at
+# most two targets, so this only prevents late qualitative sections from being
+# made ineligible before coverage-aware fallback selection runs.
+_MAX_FINDINGS_RETRIEVAL_TARGETS = 16
 _MAX_FINDINGS_FALLBACK_TARGETS = 2
 _MAX_FINDINGS_TARGET_KEY_POINTS = 3
 _MAX_FINDINGS_TARGET_SOURCE_PAGES = 12
@@ -738,9 +742,41 @@ def _missing_findings_retrieval_targets(
             )
         )
     missing.sort(key=lambda item: (-item[0], item[1]))
+    selected = missing[:_MAX_FINDINGS_FALLBACK_TARGETS]
+
+    # A numeric-gap sort alone can exhaust both bounded recovery slots on
+    # quantitative sections. Keep one substantive qualitative section
+    # eligible when it is also missing; strategy and operating-model sections
+    # are source-backed editorial coverage, even when they contain no number.
+    qualitative = [
+        item
+        for item in missing
+        if not _findings_target_number_markers(
+            " ".join(
+                [
+                    str(item[2].get("title") or ""),
+                    *_findings_target_key_points(item[2]),
+                ]
+            )
+        )
+    ]
+    if qualitative and selected and not any(
+        item in qualitative for item in selected
+    ):
+        qualitative.sort(
+            key=lambda item: (
+                -item[0],
+                -_findings_target_score(
+                    str(item[2].get("key_point") or ""),
+                    str(item[2].get("title") or ""),
+                ),
+                item[1],
+            )
+        )
+        selected[-1] = qualitative[0]
     return [
         target
-        for _missing_count, _index, target in missing[:_MAX_FINDINGS_FALLBACK_TARGETS]
+        for _missing_count, _index, target in selected
     ]
 
 

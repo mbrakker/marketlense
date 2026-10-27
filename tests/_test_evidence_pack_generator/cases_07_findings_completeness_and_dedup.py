@@ -380,3 +380,72 @@ def test_missing_findings_targets_prioritize_larger_uncovered_key_point_gaps():
     )
 
     assert [target["id"] for target in missing] == ["consumer-search", "ai-outlook"]
+
+
+def test_missing_findings_targets_preserve_one_qualitative_coverage_slot():
+    from src.generators.evidence_pack_generator import (
+        _missing_findings_retrieval_targets,
+    )
+
+    targets = [
+        {
+            "id": "quantitative-a",
+            "title": "Measured customer outcomes",
+            "key_points": [
+                "Revenue increased 12% in 2026.",
+                "Conversion increased 8% in 2026.",
+            ],
+            "pages": [10],
+        },
+        {
+            "id": "quantitative-b",
+            "title": "Measured service outcomes",
+            "key_points": [
+                "Retention increased 9% in 2026.",
+                "Churn declined 4% in 2026.",
+            ],
+            "pages": [11],
+        },
+        {
+            "id": "strategy",
+            "title": "Strategic recommendations",
+            "key_points": [
+                "Make the operating model consistent across the customer journey."
+            ],
+            "pages": [19],
+        },
+    ]
+
+    missing = _missing_findings_retrieval_targets(targets, [], set())
+
+    assert [target["id"] for target in missing] == ["quantitative-a", "strategy"]
+
+
+def test_findings_retrieval_targets_keep_late_substantive_sections_eligible():
+    from src.generators.evidence_pack_generator import _findings_retrieval_targets
+
+    sections = [
+        {
+            "id": f"section-{index}",
+            "title": f"Measured section {index}",
+            "summary": "A source-backed commercial section.",
+            "key_points": [f"Revenue increased {index}% in 2026."],
+            "pages": [index],
+        }
+        for index in range(1, 10)
+    ]
+    sections.append(
+        {
+            "id": "strategy",
+            "title": "Strategic recommendations",
+            "summary": "An operating model recommendation.",
+            "key_points": [
+                "Make the operating model consistent across the customer journey."
+            ],
+            "pages": [19],
+        }
+    )
+
+    targets = _findings_retrieval_targets({"sections": sections})
+
+    assert "strategy" in {target["id"] for target in targets}
