@@ -2349,7 +2349,9 @@ def _looks_fragmentary(text: str) -> bool:
 def _looks_ocr_shaped(text: str) -> bool:
     if "\ufffd" in text or "¦" in text or "||" in text:
         return True
-    return bool(re.search(r"\b[A-Za-z]{2,}\d[A-Za-z]{2,}\b", text))
+    # OCR commonly substitutes a digit inside an otherwise lowercase word;
+    # preserve legitimate mixed-case metric names such as ``Top2Box``.
+    return bool(re.search(r"\b[a-z]{2,}\d[a-z]{2,}\b", text))
 
 
 def _is_nonspecific_action(text: str) -> bool:

@@ -85,6 +85,22 @@ def test_short_prose_and_legitimate_b2b_terminology_are_not_fragments() -> None:
     assert "public_editorial_quality.ocr_fragment" not in _rule_ids(report)
 
 
+def test_legitimate_mixed_case_metric_name_is_not_an_ocr_fragment() -> None:
+    artifacts = deepcopy(_retained_artifacts())
+    artifacts["insights_final"][0].update(
+        {
+            "text": "Authenticity Top2Box reached 66% for search results.",
+            "evidence": "Authenticity Top2Box reached 66% for search results.",
+        }
+    )
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report", artifacts=artifacts
+    )
+
+    assert "public_editorial_quality.ocr_fragment" not in _rule_ids(report)
+
+
 def test_numeric_key_figure_display_is_not_treated_as_sentence_prose() -> None:
     artifacts = deepcopy(_retained_artifacts())
     artifacts["key_figures"] = [
