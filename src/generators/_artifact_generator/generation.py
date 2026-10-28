@@ -667,6 +667,22 @@ def generate_artifacts(
         with family_state_lock:
             family_outputs[namespace] = payload
 
+    def final_insights_for_coverage(
+        final_insights: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        if visual_authority_admitter is None:
+            return final_insights
+        return select_artifact_insights(
+            final_insights=final_insights,
+            candidate_insights=insights_candidates,
+            editorial_plan=editorial_plan,
+            # The admitted candidate pool is already source-bound.  It is
+            # therefore safe to use it for deterministic supplementation when
+            # the final model omits an eligible planned theme.
+            require_final_candidate_lineage=False,
+            verified_mode=True,
+        )
+
     def render_task(task: ArtifactRenderTask) -> Dict[str, Any]:
         payload_validator = None
         if task.step_name in {"insights_candidates", "insights_final", "quotes"}:
@@ -697,7 +713,9 @@ def generate_artifacts(
                     )
                     if visual_authority_admitter is not None:
                         validate_final_insight_editorial_coverage(
-                            final_insights=payload.get("insights_final") or [],
+                            final_insights=final_insights_for_coverage(
+                                payload.get("insights_final") or []
+                            ),
                             candidate_insights=insights_candidates,
                             editorial_plan=editorial_plan,
                             coverage_diagnostics=final_selection_coverage,
@@ -1955,7 +1973,9 @@ def generate_artifacts(
         )
         if visual_authority_admitter is not None:
             validate_final_insight_editorial_coverage(
-                final_insights=payload.get("insights_final") or [],
+                final_insights=final_insights_for_coverage(
+                    payload.get("insights_final") or []
+                ),
                 candidate_insights=insights_candidates,
                 editorial_plan=editorial_plan,
                 coverage_diagnostics=final_selection_coverage,
@@ -1988,16 +2008,21 @@ def generate_artifacts(
             ctx=insights_final_ctx,
             payload_validator=validate_final_insight_references,
         )
-    insights_final = select_artifact_insights(
-        final_insights=normalize_artifact_insights(
-            insights_final_result.get("insights_final"),
-            prefix="insight",
-            verified_mode=visual_authority_admitter is not None,
-        ),
-        candidate_insights=insights_candidates,
-        editorial_plan=editorial_plan,
-        require_final_candidate_lineage=True,
+    normalized_final_insights = normalize_artifact_insights(
+        insights_final_result.get("insights_final"),
+        prefix="insight",
         verified_mode=visual_authority_admitter is not None,
+    )
+    insights_final = (
+        final_insights_for_coverage(normalized_final_insights)
+        if visual_authority_admitter is not None
+        else select_artifact_insights(
+            final_insights=normalized_final_insights,
+            candidate_insights=insights_candidates,
+            editorial_plan=editorial_plan,
+            require_final_candidate_lineage=True,
+            verified_mode=False,
+        )
     )
     semantic_theme_coverage: Dict[str, Any] = {}
     if (

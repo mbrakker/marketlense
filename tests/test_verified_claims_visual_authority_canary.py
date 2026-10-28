@@ -861,6 +861,44 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
     )
 
 
+def test_verified_generation_fills_omitted_theme_from_admitted_candidate(tmp_path):
+    candidates = [
+        _insight("f1", score=0.99, text="The first decision signal is material."),
+        _insight("f2", score=0.98, text="The second decision signal is material."),
+    ]
+    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+    responses["insights_final"] = {
+        "insights_final": [
+            {
+                **candidates[0],
+                "evidence_id": f"verified-fact:{candidates[0]['id']}",
+            }
+        ]
+    }
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        f"verified-fact:{candidates[0]['id']}"
+    )
+
+    payload = generate_artifacts(
+        report_id="verified-omitted-theme",
+        report_name="Verified omitted theme",
+        doc_map=_doc_map(2),
+        evidence_packs=_generation_evidence(2),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=lambda shortlisted: _verified_admission(
+            shortlisted, digest="f" * 64
+        ),
+    )
+
+    assert {item["evidence_id"] for item in payload["insights_final"]} == {
+        f"verified-fact:{candidate['id']}" for candidate in candidates
+    }
+
+
 def test_verified_generation_semantically_assesses_shared_theme_evidence(tmp_path):
     candidates = [
         _insight("f1", score=0.99, text="The first decision signal is material."),
