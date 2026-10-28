@@ -1267,3 +1267,18 @@ affected-five stage-alignment slice, but broad Step 2 effectiveness remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO** for promotion, and Step 3
 remains **unstarted/not ready**. Full lineage and artifact paths are recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Verified-facts theme-fallback correction — 2026-10-29 (`2654424d`):** The
+verified final-selection boundary now supplements a model roster that omits a
+supported planned theme from the already admitted source-bound candidate pool;
+stable-ID final wording and authoritative metric/evidence bindings remain
+unchanged, and normal mode is unchanged. The focused affected suite passed 102
+tests and local format, Ruff, mypy, architecture, forbidden-patching, and
+prompt-fixture gates passed. A fresh affected-five run reached terminal records
+for all five, but only Adjust completed verified editorial generation; the
+other four were blocked by a provider `RateLimitError` followed by the typed
+`llm_circuit_open`, and an isolated four-report retry reproduced that external
+condition. The deterministic correction is PASS; fresh five-report verified
+acceptance is PARTIAL/NO-GO. E18 remains Active/PARTIAL, Step 2 remains
+PARTIAL/NO-GO, and Step 3 remains unstarted/not ready. Full metrics and paths
+are in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

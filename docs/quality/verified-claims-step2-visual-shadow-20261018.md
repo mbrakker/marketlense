@@ -6784,3 +6784,106 @@ the unresolved broader ten-report acceptance evidence; Step 3 remains
 unstarted. The explicit KPMG and Algolia editorial omissions and non-blocking
 artifact-quality warnings remain documented rather than being treated as
 factual failures.
+
+#### Verified-facts theme-fallback correction and provider-limited replay — 2026-10-29 (`2654424d`)
+
+This entry records the final targeted correction after the `04a050a4` stage-
+alignment run. The demonstrated KPMG failure was not an evidence or source
+binding failure: the admitted visual fact supported the central proposition,
+but `render_task()` and the non-DAG final validator checked the model's raw
+`insights_final` roster before the existing post-render selector could fill an
+eligible admitted alternative. The model's omission therefore failed the
+central-theme gate instead of using the already source-bound candidate pool.
+
+The minimal correction adds no validator or LLM stage. In verified mode only,
+final coverage validation and final selection use the admitted, hash-bound
+candidate pool for deterministic supplementation after raw stable-ID lineage
+validation. Matching stable IDs retain the final editorial wording and the
+authoritative protected binding; normal mode and the existing fail-closed
+unknown-ID behavior are unchanged. The regression
+`test_verified_generation_fills_omitted_theme_from_admitted_candidate` proves
+that a model roster omitting a supported planned theme is completed from an
+admitted candidate, while the existing semantic-coverage and lineage tests
+continue to reject unsupported IDs and uncovered central themes.
+
+##### Focused verification
+
+The affected suite passed **102 tests**. The exact local gates also passed:
+
+```text
+python scripts/ci/check_formatting.py                         PASS
+python scripts/ci/check_ruff_lint.py                          PASS
+python scripts/ci/run_type_check.py                           PASS (786 source files, 0 tracked errors)
+python scripts/ci/check_architecture_imports.py                PASS
+python scripts/ci/check_forbidden_patching.py                  PASS
+python scripts/ci/check_prompt_fixture_regression.py ...        PASS (baseline unchanged)
+```
+
+The prompt fixture corpus was not changed by this correction; the accepted
+baseline remains 110,410 total tokens and `$0.024543`, with the intentional
+verified-grounding increase already recorded above. No new prompt family was
+called by the live Adjust run.
+
+##### Retained real-claim semantic replay
+
+The existing live GPT-6 Luna High retained-input replay evaluated **27/27**
+real shortlisted claims across the exact five frozen PDFs. All five source
+hashes matched. Outcomes were mutually exclusive: **25 verified first pass,
+2 verified after retry, 0 unresolved, 0 failed, and 0 skipped**. The ledger
+recorded **58 provider calls, 957,446 input tokens, 49,082 output tokens,
+1,006,528 total tokens, `$0.120286`, and 696.923 seconds**. Per-report
+results were Adjust 5/5, KPMG 5/5, Emplifi 6/6 (one after retry), Reuters
+Institute 6/6, and Algolia 5/5 (one after retry). This is a live visual-
+verification replay over retained artifacts produced at `04a050a4`, not fresh
+candidate selection evidence and not a claim that the new final-theme fallback
+was exercised by the provider response.
+
+##### Fresh affected-five E2E attempt at `2654424d`
+
+The fresh isolated run used the exact frozen PDFs, verified-facts architecture,
+GPT-6 Luna High, no publication target, and no final-artifact reuse:
+
+```text
+C:\ml-stage-alignment-live-20261029-p1-fresh\frozen-reliability-iwf1q6ne
+```
+
+The run reached terminal records for all five members and recorded **115
+provider calls, 631,725 input tokens, 142,617 output tokens, `$0.178410`, and
+1,867.918 seconds**. Adjust was the only report able to complete the verified
+editorial path: 6/6 visual facts admitted, 5 final insights, 5/5 planned
+themes represented, 49 calls, 391,304 input / 100,121 output tokens,
+`$0.108219`, 858.886 seconds, validation/readiness PASS, and zero unsupported
+or unresolved material claims. Its final source pages were 34, 40, 19, 27,
+and 9; metric-spine and key-figure coverage were 4 and 1; the HTML contained
+zero `verified-fact:`, `candidate_id`, or `discovery_candidate_id` markers.
+Independent review found the global finance install/session, strategy-game,
+e-commerce install/session, cross-channel, and advanced-GenAI claims
+source-consistent, with the advanced-group limitation retained.
+
+KPMG, Emplifi, Reuters Institute, and Algolia did not reach evidence admission
+or editorial generation. KPMG's remediation record retains the underlying
+provider `RateLimitError` (with model/provider/status context keys), followed
+by the configured `llm_circuit_open`; the other three members received the
+same circuit-open terminal outcome. A separate isolated retry of exactly those
+four reports confirms the limitation rather than masking it:
+
+```text
+C:\ml-stage-alignment-live-20261029-p1-retry\frozen-reliability-n_mhm8cz
+```
+
+The retry recorded **26 provider attempts, 0 tokens, `$0.000000`, and
+704.554 seconds**; all four terminated with typed `llm_circuit_open` and no
+verified-fact, HTML, readiness, canonical, or publication artifacts. This is
+an external provider/quota limitation, not a selection or factual-validation
+failure. No code change was made to weaken the circuit breaker or retries.
+
+##### Status
+
+The deterministic theme-omission correction is **PASS**, and the retained
+visual semantic replay is **PASS** for its stated post-selection scope. The
+fresh affected-five verified editorial acceptance is **PARTIAL / NO-GO**:
+only Adjust reached the corrected path, while four reports were blocked by the
+provider rate limit before the new behavior could be evaluated. Broad live
+selection effectiveness, repeated-run stability, and Step 3 readiness remain
+unproven. No ten-report cohort was started, no canonical claim was promoted,
+and no WordPress write occurred.

@@ -139,6 +139,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `src/schemas/claim_validation_package.schema.json`
 - `src/schemas/context_category_fit.schema.json`
 - `src/schemas/doc_map.schema.json`
+- `src/schemas/editorial_theme_coverage_output.schema.json`
 - `src/schemas/evidence_pack.schema.json`
 - `src/schemas/findings_pack.schema.json`
 - `src/schemas/grounding_validation_output.schema.json`
