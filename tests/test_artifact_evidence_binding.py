@@ -153,6 +153,72 @@ def test_numeric_summary_claim_rebinds_unique_exact_direct_finding() -> None:
     ]
 
 
+def test_summary_claim_evidence_is_replaced_by_canonical_finding_excerpt() -> None:
+    summary = {
+        "claim_evidence_map": [
+            {
+                "claim": (
+                    "Over the next three years, 75% of respondents expect AI browsers "
+                    "and agentic apps to have a large or very large impact."
+                ),
+                "evidence_id": "agentic-apps-impact-forecast",
+                "evidence": (
+                    "Over the next three years, respondents expect AI browsers and "
+                    "agentic apps to have a large or very large impact."
+                ),
+            }
+        ]
+    }
+
+    bind_artifact_evidence_spans(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "agentic-apps-impact-forecast",
+                        "text": (
+                            "Over the next three years, 75% of respondents expect AI "
+                            "browsers and agentic apps to have a large or very large "
+                            "impact."
+                        ),
+                        "evidence": (
+                            "Over the next three years, 15% of respondents expected "
+                            "AI browsers and agentic apps to have a very large impact, "
+                            "while 60% expected a large impact."
+                        ),
+                        "pages": [41],
+                    }
+                ]
+            }
+        },
+    )
+
+    claim = summary["claim_evidence_map"][0]
+    assert claim["evidence"] == (
+        "Over the next three years, 15% of respondents expected AI browsers and "
+        "agentic apps to have a very large impact, while 60% expected a large "
+        "impact."
+    )
+    assert claim["pages"] == [41]
+    assert claim["evidence_spans"] == [
+        {
+            "evidence_id": "agentic-apps-impact-forecast",
+            "source_pack": "findings",
+            "page": 41,
+            "text": (
+                "Over the next three years, 15% of respondents expected AI browsers "
+                "and agentic apps to have a very large impact, while 60% expected a "
+                "large impact."
+            ),
+        }
+    ]
+
+
 def test_numeric_summary_claim_does_not_choose_between_matching_findings() -> None:
     claim_text = "Global gaming-app CPI rose 30% to $0.56 in 2025."
     summary = {

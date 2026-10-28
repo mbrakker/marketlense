@@ -3705,6 +3705,26 @@ def bind_artifact_evidence_spans(
             )
         )
 
+    def _canonical_source_evidence(spans: List[Dict[str, Any]]) -> str:
+        source_bound = [
+            span
+            for span in spans
+            if span.get("source_pack")
+            in {
+                "findings",
+                "findings_statement",
+                "quote_candidates",
+                "verified_facts",
+            }
+        ]
+        return " ".join(
+            dict.fromkeys(
+                _s(span.get("text")).strip()
+                for span in source_bound
+                if _s(span.get("text")).strip()
+            )
+        )
+
     def _bind_item(
         item: Any,
         *,
@@ -3739,26 +3759,8 @@ def bind_artifact_evidence_spans(
             elif "page" in page_keys and pages:
                 item["page"] = pages[0]
             if bind_canonical_evidence:
-                source_bound = [
-                    span
-                    for span in derived
-                    if span.get("source_pack")
-                    in {
-                        "findings",
-                        "findings_statement",
-                        "quote_candidates",
-                        "verified_facts",
-                    }
-                ]
-                canonical_spans = source_bound or derived
-                canonical_evidence = " ".join(
-                    dict.fromkeys(
-                        _s(span.get("text")).strip()
-                        for span in canonical_spans
-                        if _s(span.get("text")).strip()
-                    )
-                )
-                if source_bound and canonical_evidence:
+                canonical_evidence = _canonical_source_evidence(derived)
+                if canonical_evidence:
                     item["evidence"] = canonical_evidence
         if not spans:
             fallback_pages: List[int] = []
@@ -3814,6 +3816,9 @@ def bind_artifact_evidence_spans(
             spans = derived or existing
             if derived:
                 claim["pages"] = _canonical_pages(derived)
+                canonical_evidence = _canonical_source_evidence(derived)
+                if canonical_evidence:
+                    claim["evidence"] = canonical_evidence
             if not spans:
                 claim_pages = [
                     int(page)
