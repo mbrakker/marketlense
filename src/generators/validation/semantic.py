@@ -32,6 +32,7 @@ from src.services.structured_output_service import execute_structured_output
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+from src.utils.structured_output import StructuredOutputFailure
 
 from .evidence import quote_label
 from .models import SemanticCheckOutcome, SemanticSupport, ValidationRuntime
@@ -354,6 +355,17 @@ def run_semantic_validation(
             )
 
         if reused_payload is None:
+            def validate_semantic_payload(payload: Any) -> None:
+                validate_schema(
+                    SchemaValidateRequest(
+                        schema_version="1.0",
+                        payload=payload,
+                        schema_name="semantic_validation_output",
+                    ),
+                    semantic_ctx,
+                )
+                _validate_semantic_verdicts(payload, expected_ids)
+
             recovery = execute_structured_output(
                 StructuredOutputExecutionRequest(
                     schema_version="1.0",
@@ -370,14 +382,7 @@ def run_semantic_validation(
                 normalize_payload=lambda payload: (
                     dict(payload) if isinstance(payload, dict) else payload
                 ),
-                validate_payload=lambda payload: validate_schema(
-                    SchemaValidateRequest(
-                        schema_version="1.0",
-                        payload=payload,
-                        schema_name="semantic_validation_output",
-                    ),
-                    semantic_ctx,
-                ),
+                validate_payload=validate_semantic_payload,
                 is_substantive=lambda payload: (
                     isinstance(payload, dict)
                     and "metrics" in payload
@@ -467,6 +472,21 @@ def run_semantic_validation(
             execution_identity=prompt_bundle.execution_identity.execution_identity,
         )
     except AppError as exc:
+        if (
+            isinstance(exc, StructuredOutputFailure)
+            and exc.context.get("error_class") == "semantic_verdicts_incomplete"
+        ):
+            return _semantic_error_outcome(
+                AppError(
+                    code="semantic_verdicts_incomplete",
+                    message=(
+                        "Semantic response does not contain exactly one verdict per "
+                        "requested item"
+                    ),
+                    retryable=False,
+                    severity="error",
+                )
+            )
         if exc.code in {"semantic_input_ids_invalid", "semantic_verdicts_incomplete"}:
             return _semantic_error_outcome(exc)
         raise

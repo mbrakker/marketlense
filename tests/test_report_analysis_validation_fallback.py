@@ -431,7 +431,14 @@ class _SemanticFailureOpenAI(FakeOpenAI):
                         "reason": "Supported by source evidence.",
                     }
                 ],
-                "quotes": [],
+                "quotes": [
+                    {
+                        "id": "e1",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "Supported by source evidence.",
+                    }
+                ],
             },
             grounding_payload={"unsupported": []},
         )
