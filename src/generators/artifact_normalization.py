@@ -1788,6 +1788,11 @@ def _candidate_factual_fields(
     facts: Dict[str, Dict[str, Any]] = {}
     for insight_id, insight in best_candidates.items():
         fact: Dict[str, Any] = {}
+        if isinstance(insight.get("verified_fact"), dict):
+            # Preserve the authoritative marker through the internal factual
+            # index so final editorial restoration can keep the complete
+            # verified composite metric instead of re-scoping it.
+            fact["verified_fact"] = deepcopy(dict(insight["verified_fact"]))
         if "metric" in insight:
             fact["metric"] = _complete_protected_metric_binding(
                 insight.get("metric"),

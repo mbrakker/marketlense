@@ -89,6 +89,82 @@ def test_verified_fact_composite_survives_final_editorial_restoration() -> None:
     assert selected[0]["pages"] == [19]
 
 
+def test_verified_fact_projection_keeps_composite_metric_at_final_boundary() -> None:
+    candidate_metric = {
+        "label": "Finance app session and install growth",
+        "value": "Sessions: +21%; installs: -4%",
+        "unit": "percent",
+        "timeframe": "2025",
+        "geography": "Global",
+        "segment": "Finance apps",
+        "cohort": "Finance apps",
+        "observation_status": "Observed",
+        "observations": [
+            {"label": "Finance app sessions", "value": "+21%", "unit": "percent"},
+            {
+                "label": "Finance app installs",
+                "value": "-4%",
+                "unit": "percent year over year",
+            },
+        ],
+    }
+    candidate = {
+        "id": "finance-session-growth",
+        "text": "The authoritative finance composite fact.",
+        "evidence_id": "verified-fact:finance-session-growth",
+        "evidence": "Finance app sessions rose while installs fell.",
+        "pages": [34],
+        "metric": candidate_metric,
+        "verified_fact": {
+            "fact_id": "finance-session-growth",
+            "statement": "Finance app sessions rose 21% while installs fell 4%.",
+            "metric": candidate_metric,
+            "source_identity": "source:adjust",
+        },
+    }
+    selected = select_artifact_insights(
+        final_insights=[
+            {
+                "id": "finance-session-growth",
+                "text": (
+                    "Finance app sessions rose 21% in 2025, while installs fell "
+                    "4% year over year."
+                ),
+                "evidence_id": "final-only",
+                "metric": {
+                    "label": "Finance app sessions",
+                    "value": "+21%",
+                    "unit": "percent",
+                },
+            }
+        ],
+        candidate_insights=[candidate],
+        editorial_plan={
+            "report_thesis": "Finance activity diverges across the two measures.",
+            "themes": [
+                {
+                    "theme": "Finance activity",
+                    "priority": 1,
+                    "evidence_ids": ["verified-fact:finance-session-growth"],
+                },
+                {
+                    "theme": "Acquisition versus engagement",
+                    "priority": 2,
+                    "evidence_ids": ["verified-fact:finance-session-growth"],
+                },
+            ],
+        },
+        verified_mode=True,
+    )
+
+    assert selected[0]["text"].startswith("Finance app sessions")
+    assert selected[0]["metric"]["label"] == candidate_metric["label"]
+    assert selected[0]["metric"]["value"] == candidate_metric["value"]
+    assert selected[0]["metric"]["observations"] == candidate_metric["observations"]
+    assert selected[0]["evidence_id"] == candidate["evidence_id"]
+    assert selected[0]["pages"] == [34]
+
+
 def _supported_findings_fidelity(evidence_id: str, statement: str, page: int) -> dict:
     return {
         "results": [
