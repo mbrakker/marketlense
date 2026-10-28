@@ -31,7 +31,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:21"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:22"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -2120,9 +2120,8 @@ def _metric_observation_matches_final_insight(
     """
 
     final_value = _s(final_metric.get("value")).strip()
-    observation_value = _s(observation.get("value")).strip()
     final_quantities = extract_quantities(final_value)
-    observation_quantities = extract_quantities(observation_value)
+    observation_quantities = _metric_observation_quantities(observation)
     if not final_quantities or not observation_quantities:
         return False
     if not all(
@@ -2184,6 +2183,33 @@ def _observation_quantities_are_equivalent(left: Quantity, right: Quantity) -> b
     )
 
 
+def _metric_observation_quantities(observation: Dict[str, Any]) -> List[Quantity]:
+    """Extract an observation's values without losing its authoritative unit.
+
+    Verified-fact extraction may keep a unit in the observation binding while
+    leaving the value itself bare (for example ``-4`` with ``% year over
+    year``).  The final editorial text necessarily renders the complete tuple,
+    so compare against the same tuple when the parser otherwise sees only an
+    untyped number.  If appending the authoritative unit changes the parsed
+    shape, retain the original parse and fail closed at the normal binding
+    boundary rather than guessing how the unit applies.
+    """
+
+    value = _s(observation.get("value")).strip()
+    quantities = extract_quantities(value)
+    unit = _s(observation.get("unit")).strip()
+    if (
+        not quantities
+        or not unit
+        or not any(quantity.unit_family == "unknown" for quantity in quantities)
+    ):
+        return quantities
+    unit_scoped_quantities = extract_quantities(f"{value} {unit}")
+    if len(unit_scoped_quantities) == len(quantities):
+        return unit_scoped_quantities
+    return quantities
+
+
 def _metric_final_text(insight: Dict[str, Any], final_metric: Dict[str, Any]) -> str:
     return normalize_for_lookup(
         " ".join(
@@ -2219,7 +2245,12 @@ def _metric_observation_is_explicitly_named(
     return all(
         token in final_text
         or token.rstrip("s") in final_text
-        or (token == "all" and "overall" in final_text)
+        or (
+            token == "all"
+            and any(
+                qualifier in final_text for qualifier in ("overall", "every", "each")
+            )
+        )
         for token in label_tokens
     )
 
@@ -2233,8 +2264,14 @@ def _metric_finally_describes_composite(
     if not final_quantities:
         return False
     for observation in observations:
-        observation_quantities = extract_quantities(_s(observation.get("value")))
-        if not observation_quantities or not all(
+        observation_quantities = _metric_observation_quantities(observation)
+        if not observation_quantities:
+            if _metric_observation_is_explicitly_named(
+                insight, final_metric, observation
+            ):
+                continue
+            return False
+        if not all(
             any(
                 _observation_quantities_are_equivalent(
                     final_quantity, observation_quantity

@@ -600,6 +600,189 @@ def test_verified_selection_keeps_full_composite_when_final_metric_is_sparse() -
     assert selected[0]["metric"]["observations"] == candidate_metric["observations"]
 
 
+def test_verified_selection_preserves_units_on_bare_composite_observations() -> None:
+    candidate_metric = {
+        "label": "Finance app install and session growth",
+        "value": "Installs: -4%; sessions: +21%",
+        "unit": "percent year-over-year change",
+        "timeframe": "2025 vs. 2024",
+        "geography": "Global",
+        "segment": "Finance apps",
+        "observations": [
+            {
+                "label": "Finance app installs",
+                "value": "-4",
+                "unit": "% year over year",
+                "timeframe": "2025 vs. 2024",
+                "geography": "Global",
+                "segment": "Finance apps",
+            },
+            {
+                "label": "Finance app sessions",
+                "value": "+21",
+                "unit": "% year over year",
+                "timeframe": "2025 vs. 2024",
+                "geography": "Global",
+                "segment": "Finance apps",
+            },
+        ],
+    }
+    selected = select_artifact_insights(
+        final_insights=[
+            {
+                "id": "finance-install-session-divergence",
+                "text": (
+                    "Globally, finance-app installs fell 4% year over year in 2025, "
+                    "while sessions rose 21%."
+                ),
+                "evidence_id": "editorial-only",
+                "metric": {
+                    "label": "Finance app install and session growth",
+                    "value": "Installs: -4%; sessions: +21%",
+                    "unit": "percent year-over-year change",
+                    "timeframe": "2025 vs. 2024",
+                    "geography": "Global",
+                    "segment": "Finance apps",
+                },
+            }
+        ],
+        candidate_insights=[
+            {
+                "id": "finance-install-session-divergence",
+                "text": "The retained finance-app composite fact.",
+                "evidence_id": "verified-fact:finance-install-session-divergence",
+                "evidence": "The source reports installs and sessions.",
+                "pages": [34],
+                "metric": candidate_metric,
+            }
+        ],
+        editorial_plan={
+            "report_thesis": "The composite fact remains authoritative.",
+            "themes": [
+                {
+                    "theme": "Acquisition",
+                    "priority": 1,
+                    "evidence_ids": [
+                        "verified-fact:finance-install-session-divergence"
+                    ],
+                },
+                {
+                    "theme": "Engagement",
+                    "priority": 2,
+                    "evidence_ids": [
+                        "verified-fact:finance-install-session-divergence"
+                    ],
+                },
+            ],
+        },
+        verified_mode=True,
+    )
+
+    assert selected[0]["metric"]["observations"] == candidate_metric["observations"]
+
+
+def test_verified_selection_preserves_composite_with_qualitative_aggregate_observation() -> (
+    None
+):
+    candidate_metric = {
+        "label": "Finance app CPI",
+        "value": (
+            "Global: $1.51 to $1.13; Europe: $7.37 to $4.75; "
+            "North America: $7.03 to $4.13"
+        ),
+        "unit": "USD",
+        "timeframe": "2024 to 2025",
+        "geography": "Global, Europe, and North America",
+        "segment": "Finance apps",
+        "observations": [
+            {
+                "label": "Global CPI, 2024 to 2025",
+                "value": "$1.51 to $1.13",
+                "unit": "USD",
+                "timeframe": "2024 to 2025",
+                "geography": "Global",
+                "segment": "Finance apps",
+            },
+            {
+                "label": "Europe CPI, 2024 to 2025",
+                "value": "$7.37 to $4.75",
+                "unit": "USD",
+                "timeframe": "2024 to 2025",
+                "geography": "Europe",
+                "segment": "Finance apps",
+            },
+            {
+                "label": "North America CPI, 2024 to 2025",
+                "value": "$7.03 to $4.13",
+                "unit": "USD",
+                "timeframe": "2024 to 2025",
+                "geography": "North America",
+                "segment": "Finance apps",
+            },
+            {
+                "label": "All regions shown",
+                "value": "2025 CPI is lower than 2024 CPI in each region category",
+                "unit": "Direction",
+                "timeframe": "2024 to 2025",
+                "geography": "Global, Europe, and North America",
+                "segment": "Finance apps",
+            },
+        ],
+    }
+    selected = select_artifact_insights(
+        final_insights=[
+            {
+                "id": "finance-cpi-regional-changes",
+                "text": (
+                    "Finance app CPI decreased from 2024 to 2025 in every region "
+                    "shown. It fell from $1.51 to $1.13 globally, from $7.37 to "
+                    "$4.75 in Europe, and from $7.03 to $4.13 in North America."
+                ),
+                "evidence_id": "editorial-only",
+                "metric": {
+                    "label": "Finance app CPI",
+                    "value": (
+                        "Global: $1.51 to $1.13; Europe: $7.37 to $4.75; "
+                        "North America: $7.03 to $4.13"
+                    ),
+                    "unit": "USD",
+                    "timeframe": "2024 to 2025",
+                    "geography": "Global, Europe, and North America",
+                    "segment": "Finance apps",
+                },
+            }
+        ],
+        candidate_insights=[
+            {
+                "id": "finance-cpi-regional-changes",
+                "text": "The retained regional CPI fact.",
+                "evidence_id": "verified-fact:finance-cpi-regional-changes",
+                "evidence": "The source reports regional CPI changes.",
+                "pages": [35],
+                "metric": candidate_metric,
+            }
+        ],
+        editorial_plan={
+            "report_thesis": "Regional CPI differences remain authoritative.",
+            "themes": [
+                {
+                    "theme": "Acquisition economics",
+                    "priority": 1,
+                    "evidence_ids": ["verified-fact:finance-cpi-regional-changes"],
+                },
+                {
+                    "theme": "Regional divergence",
+                    "priority": 2,
+                    "evidence_ids": ["verified-fact:finance-cpi-regional-changes"],
+                },
+            ],
+        },
+        verified_mode=True,
+    )
+
+    assert selected[0]["metric"]["observations"] == candidate_metric["observations"]
+
+
 def test_verified_fact_projection_remains_eligible_without_composite_rebinding() -> (
     None
 ):
