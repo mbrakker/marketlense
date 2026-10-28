@@ -506,6 +506,99 @@ def test_verified_selection_scopes_composite_metric_to_final_observation() -> No
     assert metric["observations"] == candidate_metric["observations"]
 
 
+def test_verified_selection_keeps_full_composite_when_final_metric_is_sparse() -> None:
+    candidate_metric = {
+        "label": "Global e-commerce CPI",
+        "value": (
+            "Overall: $1.00 to $0.98; deal discovery: $1.44 to $2.26; "
+            "shopping: $0.93 to $0.91"
+        ),
+        "unit": "USD per install",
+        "timeframe": "2024 to 2025",
+        "geography": "Global",
+        "segment": "E-commerce apps",
+        "observations": [
+            {
+                "label": "All e-commerce apps",
+                "value": "$1.00 in 2024; $0.98 in 2025",
+                "unit": "USD per install",
+                "timeframe": "2024 to 2025",
+                "segment": "All",
+                "geography": "Global",
+            },
+            {
+                "label": "Deal discovery",
+                "value": "$1.44 in 2024; $2.26 in 2025",
+                "unit": "USD per install",
+                "timeframe": "2024 to 2025",
+                "segment": "Deal discovery",
+                "geography": "Global",
+            },
+            {
+                "label": "Shopping",
+                "value": "$0.93 in 2024; $0.91 in 2025",
+                "unit": "USD per install",
+                "timeframe": "2024 to 2025",
+                "segment": "Shopping",
+                "geography": "Global",
+            },
+        ],
+    }
+    selected = select_artifact_insights(
+        final_insights=[
+            {
+                "id": "ecommerce-cpi",
+                "text": (
+                    "Overall global e-commerce CPI fell from $1.00 to $0.98; "
+                    "deal discovery rose from $1.44 to $2.26; shopping fell "
+                    "from $0.93 to $0.91."
+                ),
+                "evidence_id": "final-only",
+                "metric": {
+                    "label": "Global e-commerce CPI",
+                    "value": "$1.00 in 2024 to $0.98 in 2025",
+                    "unit": "USD per install",
+                    "timeframe": "2024 to 2025",
+                    "geography": "Global",
+                    "segment": "E-commerce apps",
+                },
+            }
+        ],
+        candidate_insights=[
+            {
+                "id": "ecommerce-cpi",
+                "text": "The retained composite CPI fact.",
+                "evidence_id": "verified-fact:ecommerce-cpi",
+                "evidence": "The source reports all e-commerce CPI observations.",
+                "pages": [29],
+                "metric": candidate_metric,
+            }
+        ],
+        editorial_plan={
+            "report_thesis": "Composite source facts remain authoritative.",
+            "themes": [
+                {
+                    "theme": "Acquisition economics",
+                    "priority": 1,
+                    "evidence_ids": ["verified-fact:ecommerce-cpi"],
+                },
+                {
+                    "theme": "Subvertical differences",
+                    "priority": 2,
+                    "evidence_ids": ["verified-fact:ecommerce-cpi"],
+                },
+            ],
+        },
+        verified_mode=True,
+    )
+
+    assert selected[0]["text"].startswith("Overall global e-commerce CPI")
+    assert selected[0]["evidence_id"] == "verified-fact:ecommerce-cpi"
+    assert selected[0]["metric"]["label"] == candidate_metric["label"]
+    assert selected[0]["metric"]["value"] == candidate_metric["value"]
+    assert selected[0]["metric"]["observations"] == candidate_metric["observations"]
+
+
 def test_verified_selection_rejects_named_observation_without_unique_binding() -> None:
     candidate_metric = {
         "label": "Global e-commerce CPI",

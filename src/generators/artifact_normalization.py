@@ -2211,14 +2211,19 @@ def _metric_observation_is_explicitly_named(
         return False
     final_text = _metric_final_text(insight, final_metric)
     return all(
-        token in final_text or token.rstrip("s") in final_text for token in label_tokens
+        token in final_text
+        or token.rstrip("s") in final_text
+        or (token == "all" and "overall" in final_text)
+        for token in label_tokens
     )
 
 
 def _metric_finally_describes_composite(
-    final_metric: Dict[str, Any], observations: List[Dict[str, Any]]
+    insight: Dict[str, Any],
+    final_metric: Dict[str, Any],
+    observations: List[Dict[str, Any]],
 ) -> bool:
-    final_quantities = extract_quantities(_s(final_metric.get("value")))
+    final_quantities = extract_quantities(_metric_final_text(insight, final_metric))
     if not final_quantities:
         return False
     for observation in observations:
@@ -2254,6 +2259,23 @@ def _metric_binding_for_final_observation(
         return _complete_protected_metric_binding(
             candidate_metric, preserve_unknown_fields=preserve_unknown_fields
         )
+    observation_dicts = [
+        observation for observation in observations if isinstance(observation, dict)
+    ]
+    explicitly_named_observations = [
+        observation
+        for observation in observation_dicts
+        if _metric_observation_is_explicitly_named(insight, final_metric, observation)
+    ]
+    if _metric_finally_describes_composite(
+        insight, final_metric, observation_dicts
+    ) and (
+        not explicitly_named_observations
+        or len(explicitly_named_observations) == len(observation_dicts)
+    ):
+        return _complete_protected_metric_binding(
+            candidate_metric, preserve_unknown_fields=preserve_unknown_fields
+        )
     matches = [
         observation
         for observation in observations
@@ -2263,23 +2285,6 @@ def _metric_binding_for_final_observation(
         )
     ]
     if len(matches) != 1:
-        observation_dicts = [
-            observation for observation in observations if isinstance(observation, dict)
-        ]
-        explicitly_named_observations = [
-            observation
-            for observation in observation_dicts
-            if _metric_observation_is_explicitly_named(
-                insight, final_metric, observation
-            )
-        ]
-        if _metric_finally_describes_composite(final_metric, observation_dicts) and (
-            not explicitly_named_observations
-            or len(explicitly_named_observations) == len(observation_dicts)
-        ):
-            return _complete_protected_metric_binding(
-                candidate_metric, preserve_unknown_fields=preserve_unknown_fields
-            )
         if explicitly_named_observations:
             raise AppError(
                 code="artifact_final_insight_observation_binding_ambiguous",
