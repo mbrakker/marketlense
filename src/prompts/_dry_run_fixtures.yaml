@@ -301,6 +301,17 @@ fixtures:
       doc_map_json: *doc_map_json
       evidence_json: *evidence_json
       canonical_evidence_ids_json: '["finding-1", "quote_001", "section-1"]'
+  - namespace: "report_vs/artifacts/editorial_theme_coverage"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
+    system_variables: {}
+    user_variables:
+      editorial_plan_json: *editorial_plan_json
+      insights_final_json: *insights_final_json
+      verified_facts_json: >-
+        [{"fact_id":"f1","statement":"Digital wallets continue to expand in B2B and consumer checkout flows.","metric":{}},{"fact_id":"f2","statement":"Merchants prioritize orchestration, fraud controls, and conversion.","metric":{}}]
   - namespace: "report_vs/artifacts/insights_candidates"
     family: "publishing"
     model: "openai/gpt-5-mini"

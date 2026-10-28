@@ -65,7 +65,12 @@ def _grounding_check(
             }
             for dimension in PROTECTED_FACT_DIMENSIONS
         },
-        "reason": f"semantic_{outcome}",
+        "reason": (
+            "The canonical source evidence matches the proposition and its "
+            "protected dimensions."
+            if outcome == "entailed"
+            else "The canonical source evidence does not establish the proposition."
+        ),
     }
 
 
@@ -250,6 +255,74 @@ def test_grounding_issue_retains_public_verified_evidence_for_repair(tmp_path):
     assert item_issues[0].evidence_ids == public_item["evidence_ids"]
 
 
+def test_verified_grounding_does_not_bypass_model_verdict_for_exact_fact_text(tmp_path):
+    fact = _fact()
+    artifacts = _verified_artifacts(fact=fact)
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-exact-fact-semantic-verdict",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=_packs(fact),
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+    payload = grounding_payload(request, artifacts)
+    entries = payload["retained_claims_to_ground"] + payload["public_factual_items"]
+    checks = [
+        _grounding_check(
+            entry["item_id"],
+            entry["text"],
+            "not_established" if entry["section"].endswith(".text") else "entailed",
+        )
+        for entry in entries
+    ]
+    unsupported_entries = [
+        entry for entry in entries if entry["section"].endswith(".text")
+    ]
+    response = {
+        "checks": checks,
+        "unsupported": [
+            {
+                "item_id": entry["item_id"],
+                "section": entry["section"],
+                "text": entry["text"],
+                "classification": "factual_claim",
+                "entailment_outcome": "not_established",
+                "reason": (
+                    "The exact text is not sufficient to establish the complete "
+                    "proposition."
+                ),
+            }
+            for entry in unsupported_entries
+        ],
+    }
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(response),
+        ctx=_ctx(),
+        source_id=SOURCE_IDENTITY,
+        prompt_family_reuse_reader=lambda *_args: SimpleNamespace(
+            reusable=False,
+            output_payload=None,
+            reason="test_exact_fact_semantics",
+        ),
+    )
+
+    assert issues
+    assert any(
+        issue.violation_type == "not_established"
+        and issue.entity_id == "insight:fact-1:text"
+        for issue in issues
+    )
+
+
 def test_failed_grounding_batch_subdivision_preserves_fact_scope_and_order():
     fact = _fact()
     batch_payload = {
@@ -346,6 +419,30 @@ def test_verified_grounding_rejection_retains_actionable_public_item_id(
     assert exc_info.value.context[expected_context_key] == [expected_id]
     assert "returned_check_ids" in exc_info.value.context
     assert "expected_public_item_ids" in exc_info.value.context
+
+
+def test_verified_grounding_rejects_non_substantive_verdict_reason() -> None:
+    check = _grounding_check("public-item", "A supported claim.", "entailed")
+    check["reason"] = "supported"
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_grounding_check_coverage(
+            {"checks": [check], "unsupported": []},
+            [],
+            {},
+            expected_public_items=[
+                {
+                    "item_id": "public-item",
+                    "section": "insights:fact-1.text",
+                    "text": "A supported claim.",
+                }
+            ],
+            require_public_coverage=True,
+        )
+
+    assert exc_info.value.context["coverage_failure_category"] == (
+        "incomplete_check_reason"
+    )
 
 
 def test_verified_grounding_rejection_retains_missing_retained_claim_id():

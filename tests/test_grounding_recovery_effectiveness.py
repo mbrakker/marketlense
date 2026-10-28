@@ -188,6 +188,26 @@ class _RecursiveSubdivisionProvider(_SubdivisionProvider):
         )
 
 
+class _PersistentCoverageFailureProvider:
+    """Return schema-valid but permanently incomplete grounding coverage."""
+
+    def __init__(self):
+        self.calls: list[tuple[str, str]] = []
+
+    def openai_chat_json(self, request, ctx):
+        self.calls.append((str(ctx.task_id), str(request.stage)))
+        response = {"unsupported": [], "checks": []}
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=json.dumps(response),
+            parsed_json=response,
+            input_tokens=0,
+            output_tokens=0,
+            tool_calls=0,
+            model=request.model,
+        )
+
+
 def _run_with_provider(tmp_path, provider: _SubdivisionProvider):
     request, package, semantic_inputs, payload = _claim_request()
     entries = payload["retained_claims_to_ground"]
@@ -234,12 +254,10 @@ def test_grounding_subdivision_recovers_a_missing_claim_without_relaxing_coverag
     assert captured_packages
     assert sum(":batch:01:" in task_id for task_id, _stage in provider.calls) == 3
     assert (
-        sum(":batch:01_split1:" in task_id for task_id, _stage in provider.calls)
-        == 1
+        sum(":batch:01_split1:" in task_id for task_id, _stage in provider.calls) == 1
     )
     assert (
-        sum(":batch:01_split2:" in task_id for task_id, _stage in provider.calls)
-        == 1
+        sum(":batch:01_split2:" in task_id for task_id, _stage in provider.calls) == 1
     )
     assert sum(":batch:02:" in task_id for task_id, _stage in provider.calls) == 1
 
@@ -264,13 +282,23 @@ def test_grounding_subdivision_recurses_for_complex_coverage_failure(tmp_path):
     assert issues == []
     assert captured_packages
     assert any(
-        ":batch:01_split1_split1:" in task_id
-        for task_id, _stage in provider.calls
+        ":batch:01_split1_split1:" in task_id for task_id, _stage in provider.calls
     )
     assert any(
-        ":batch:01_split1_split2:" in task_id
-        for task_id, _stage in provider.calls
+        ":batch:01_split1_split2:" in task_id for task_id, _stage in provider.calls
     )
+
+
+def test_grounding_recovery_bounds_persistent_coverage_failure(tmp_path):
+    provider = _PersistentCoverageFailureProvider()
+
+    issues, captured_packages = _run_with_provider(tmp_path, provider)
+
+    assert len(issues) == 1
+    assert issues[0].rule_id == "grounding"
+    assert captured_packages == []
+    assert 3 <= len(provider.calls) <= 9
+    assert not any(":batch:02:" in task_id for task_id, _stage in provider.calls)
 
 
 def test_grounding_coverage_reports_invalid_retained_classification():

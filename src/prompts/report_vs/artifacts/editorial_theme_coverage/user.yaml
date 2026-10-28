@@ -1,0 +1,27 @@
+text: |
+  Planned editorial themes and intended propositions:
+  {{ editorial_plan_json }}
+
+  Final insights to assess:
+  {{ insights_final_json }}
+
+  Relevant canonical visually verified facts:
+  {{ verified_facts_json }}
+
+  Return exactly this JSON object:
+  {
+    "theme_coverage": [
+      {
+        "theme": "<exact planned theme name>",
+        "status": "covered|partial|uncovered",
+        "supporting_insight_ids": ["<exact final insight id>"],
+        "explanation": "<concise explanation grounded in the intended proposition and actual final wording>"
+      }
+    ]
+  }
+
+  Include every planned theme exactly once. Use only exact final insight IDs.
+  `covered` means the final prose develops the theme's intended proposition;
+  `partial` means it is materially related but incomplete; `uncovered` means
+  the final roster does not substantively address it. A shared fact or source
+  page is not enough. Do not rewrite the insights or add evidence.

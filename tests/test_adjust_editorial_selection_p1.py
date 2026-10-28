@@ -7,6 +7,7 @@ from src.generators.artifact_normalization import (
     remap_editorial_plan_to_verified_facts,
     select_artifact_insights,
     validate_editorial_plan_evidence_ids,
+    validate_substantive_editorial_theme_coverage,
 )
 from src.utils.errors import AppError
 
@@ -104,6 +105,98 @@ def test_finding_fallback_does_not_let_one_section_monopolize_capacity():
     assert selected_ids[0] == "a-1"
     assert {"b-1", "c-1"}.issubset(selected_ids)
     assert len(selected_ids) == 4
+
+
+def test_semantic_theme_coverage_fails_closed_for_uncovered_central_theme() -> None:
+    plan = {
+        "report_thesis": "The report defines two distinct decisions.",
+        "themes": [
+            {"theme": "Primary adoption", "priority": 2, "evidence_ids": ["f1"]},
+            {
+                "theme": "Implementation readiness",
+                "priority": 1,
+                "evidence_ids": ["f1"],
+            },
+        ],
+    }
+
+    with pytest.raises(AppError, match="central"):
+        validate_substantive_editorial_theme_coverage(
+            payload={
+                "theme_coverage": [
+                    {
+                        "theme": "Primary adoption",
+                        "status": "covered",
+                        "supporting_insight_ids": ["insight-1"],
+                        "explanation": "The final insight states the adoption result.",
+                    },
+                    {
+                        "theme": "Implementation readiness",
+                        "status": "uncovered",
+                        "supporting_insight_ids": [],
+                        "explanation": "The final roster does not discuss readiness.",
+                    },
+                ]
+            },
+            editorial_plan=plan,
+            final_insights=[
+                {
+                    "id": "insight-1",
+                    "text": "Adoption increased.",
+                    "evidence_id": "f1",
+                }
+            ],
+        )
+
+
+def test_semantic_theme_coverage_accepts_valid_distinct_supporting_ids() -> None:
+    plan = {
+        "report_thesis": "The report defines two distinct decisions.",
+        "themes": [
+            {"theme": "Primary adoption", "priority": 1, "evidence_ids": ["f1"]},
+            {
+                "theme": "Implementation readiness",
+                "priority": 2,
+                "evidence_ids": ["f1"],
+            },
+        ],
+    }
+
+    result = validate_substantive_editorial_theme_coverage(
+        payload={
+            "theme_coverage": [
+                {
+                    "theme": "Primary adoption",
+                    "status": "covered",
+                    "supporting_insight_ids": ["insight-1"],
+                    "explanation": "The first insight develops the adoption decision.",
+                },
+                {
+                    "theme": "Implementation readiness",
+                    "status": "covered",
+                    "supporting_insight_ids": ["insight-2"],
+                    "explanation": (
+                        "The second insight develops the readiness decision."
+                    ),
+                },
+            ]
+        },
+        editorial_plan=plan,
+        final_insights=[
+            {"id": "insight-1", "text": "Adoption increased.", "evidence_id": "f1"},
+            {
+                "id": "insight-2",
+                "text": "Implementation readiness improved.",
+                "evidence_id": "f1",
+            },
+        ],
+    )
+
+    assert result["assessment_source"] == "independent_semantic_coverage"
+    assert [item["status"] for item in result["theme_assessments"]] == [
+        "covered",
+        "covered",
+    ]
 
 
 def test_verified_plan_maps_section_refs_only_through_original_findings():

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["theme_coverage"],
+  "properties": {
+    "theme_coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["theme", "status", "supporting_insight_ids", "explanation"],
+        "properties": {
+          "theme": {"type": "string", "minLength": 1},
+          "status": {"type": "string", "enum": ["covered", "partial", "uncovered"]},
+          "supporting_insight_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "explanation": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

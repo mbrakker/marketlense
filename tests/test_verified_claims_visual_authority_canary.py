@@ -861,6 +861,77 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
     )
 
 
+def test_verified_generation_semantically_assesses_shared_theme_evidence(tmp_path):
+    candidates = [
+        _insight("f1", score=0.99, text="The first decision signal is material."),
+        _insight("f2", score=0.98, text="The second decision signal is material."),
+    ]
+    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f1"])
+    responses["insights_final"] = {
+        "insights_final": [
+            {**candidate, "evidence_id": f"verified-fact:{candidate['id']}"}
+            for candidate in candidates
+        ]
+    }
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        f"verified-fact:{candidates[0]['id']}"
+    )
+    responses["editorial_theme_coverage"] = {
+        "theme_coverage": [
+            {
+                "theme": "Theme 1",
+                "status": "covered",
+                "supporting_insight_ids": [candidates[0]["id"]],
+                "explanation": (
+                    "The first final proposition develops the first decision theme."
+                ),
+            },
+            {
+                "theme": "Theme 2",
+                "status": "covered",
+                "supporting_insight_ids": [candidates[1]["id"]],
+                "explanation": (
+                    "The second final proposition develops the second decision theme."
+                ),
+            },
+        ]
+    }
+    prompt_client = CapturingPromptClient()
+
+    def admit(shortlisted):
+        return _verified_admission(shortlisted, digest="e" * 64)
+
+    openai_client = FakeOpenAI(responses)
+    payload = generate_artifacts(
+        report_id="verified-shared-theme-coverage",
+        report_name="Verified shared theme coverage",
+        doc_map=_doc_map(2),
+        evidence_packs=_generation_evidence(2),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=admit,
+    )
+
+    assert any(
+        step == "editorial_theme_coverage"
+        for _kind, _request, step in openai_client.requests
+    )
+    coverage = payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
+        "final_selected_theme_coverage"
+    ]["semantic_assessment"]
+    assert coverage["assessment_source"] == "independent_semantic_coverage"
+    assert [item["status"] for item in coverage["theme_assessments"]] == [
+        "covered",
+        "covered",
+    ]
+    assert prompt_client.variables_for_namespace(
+        "report_vs/artifacts/editorial_theme_coverage"
+    )
+
+
 def test_verified_fact_context_removes_discovery_facts_and_omits_unmapped_themes():
     source_doc_map = {
         "doc_id": "report-1",

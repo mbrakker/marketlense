@@ -96,6 +96,32 @@ GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v3"
 GROUNDING_VALIDATOR_VERSION = CLAIM_GROUNDING_VALIDATOR_VERSION
 GROUNDING_MAX_CLAIMS_PER_CALL = 4
 GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL = 8
+_NON_SUBSTANTIVE_GROUNDING_REASONS = frozenset(
+    {
+        "ok",
+        "yes",
+        "no",
+        "true",
+        "false",
+        "valid",
+        "invalid",
+        "supported",
+        "unsupported",
+        "entailed",
+        "contradicted",
+        "not established",
+        "supported by evidence",
+        "supported by source evidence",
+        "semantic entailed",
+        "semantic contradicted",
+        "semantic not established",
+    }
+)
+
+
+def _grounding_reason_is_substantive(value: object) -> bool:
+    normalized = normalize_for_lookup(value)
+    return bool(normalized) and normalized not in _NON_SUBSTANTIVE_GROUNDING_REASONS
 
 
 def _artifact_evidence_ids(item: object) -> list[str]:
@@ -415,14 +441,21 @@ def _deterministic_claim_validation_issues(
 
 def _exactly_evidenced_claims(
     semantic_inputs: Sequence[ClaimSemanticInput],
+    *,
+    verified_mode: bool = False,
 ) -> set[str]:
     """Return factual claims explicitly reproduced by their linked evidence.
 
     The grounding model is still required for paraphrases and attribution, but
     an exact retained sentence in an authoritative evidence span is already a
-    deterministic entailment. Treating it as unresolved lets OCR/layout noise
-    override the canonical statement and causes unnecessary regeneration.
+    deterministic entailment in legacy mode.  Verified facts have already
+    crossed a visual admission boundary, but the final editorial proposition
+    still requires an independent semantic verdict; do not let text identity
+    bypass that check.
     """
+
+    if verified_mode:
+        return set()
 
     supported: set[str] = set()
     for semantic_input in semantic_inputs:
@@ -889,9 +922,7 @@ def run_grounding_check(
             ) -> tuple[int, Any, bool]:
                 _batch_payload, batch_semantic_inputs = batch_spec
                 stage_token = f"{batch_index:02d}{stage_suffix}"
-                batch_task_id = (
-                    f"{prompt_ctx.task_id}:batch:{stage_token}:grounding"
-                )
+                batch_task_id = f"{prompt_ctx.task_id}:batch:{stage_token}:grounding"
                 batch_ctx = child_context(
                     prompt_ctx,
                     task_id=batch_task_id,
@@ -1036,9 +1067,7 @@ def run_grounding_check(
                                     split_spec,
                                     split_vars,
                                     split_bundle,
-                                    stage_suffix=(
-                                        f"{stage_suffix}_split{split_index}"
-                                    ),
+                                    stage_suffix=(f"{stage_suffix}_split{split_index}"),
                                 )
                             )
                             split_results.append((split_payload, split_recovered))
@@ -1294,7 +1323,10 @@ def run_grounding_check(
             )
         )
         failed_check_keys = set()
-        exactly_evidenced_claims = _exactly_evidenced_claims(retained_claim_inputs)
+        exactly_evidenced_claims = _exactly_evidenced_claims(
+            retained_claim_inputs,
+            verified_mode=verified_mode,
+        )
         if isinstance(checks, list):
             for entry in checks:
                 if not isinstance(entry, dict):
@@ -1335,9 +1367,7 @@ def run_grounding_check(
                     else ""
                 )
                 reason = s(entry.get("reason") or "Unsupported factual claim")
-                entity_id = _public_item_id_for_failure(
-                    section, text, public_item_ids
-                )
+                entity_id = _public_item_id_for_failure(section, text, public_item_ids)
                 issues.append(
                     issue(
                         rule_id=RULE_ID,
@@ -1433,9 +1463,7 @@ def run_grounding_check(
                             section=section,
                             violation_type=violation_type,
                             entity_id=entity_id,
-                            evidence_ids=public_item_evidence_ids.get(
-                                entity_id, ()
-                            ),
+                            evidence_ids=public_item_evidence_ids.get(entity_id, ()),
                         )
                     )
     except AppError as exc:
@@ -1710,11 +1738,7 @@ def _grounding_coverage_diagnostics(
     returned_check_ids = list(checks_by_id)
     returned_unsupported_ids = list(unsupported_by_id)
     duplicate_ids = sorted(
-        {
-            item_id
-            for item_id, entries in checks_by_id.items()
-            if len(entries) > 1
-        }
+        {item_id for item_id, entries in checks_by_id.items() if len(entries) > 1}
         | {
             item_id
             for item_id, entries in unsupported_by_id.items()
@@ -1743,9 +1767,9 @@ def _grounding_coverage_diagnostics(
         "returned_unsupported_item_ids": returned_unsupported_ids[:32],
         "duplicate_item_ids": duplicate_ids[:32],
         "text_mismatch_ids": list(dict.fromkeys(text_mismatch_ids))[:32],
-        "classification_mismatch_ids": list(
-            dict.fromkeys(classification_mismatch_ids)
-        )[:32],
+        "classification_mismatch_ids": list(dict.fromkeys(classification_mismatch_ids))[
+            :32
+        ],
     }
     for key, value in details.items():
         if isinstance(value, list):
@@ -1903,7 +1927,8 @@ def _validate_grounding_check_coverage(
             [
                 s(entry.get("item_id")) or "<missing>"
                 for entry in checks
-                if isinstance(entry, dict) and not s(entry.get("reason"))
+                if isinstance(entry, dict)
+                and not _grounding_reason_is_substantive(entry.get("reason"))
             ]
             if isinstance(checks, list)
             else []
@@ -1933,7 +1958,7 @@ def _validate_grounding_check_coverage(
                     s(entry.get("classification")) not in valid_classifications
                     or s(entry.get("entailment_outcome"))
                     not in {"contradicted", "not_established"}
-                    or not s(entry.get("reason"))
+                    or not _grounding_reason_is_substantive(entry.get("reason"))
                 )
             ]
             if isinstance(unsupported, list)

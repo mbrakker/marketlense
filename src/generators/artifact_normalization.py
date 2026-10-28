@@ -31,7 +31,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:23"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:24"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -1697,6 +1697,160 @@ def final_insight_editorial_coverage(
     }
 
 
+def editorial_plan_has_overlapping_theme_evidence(
+    editorial_plan: Dict[str, Any],
+) -> bool:
+    """Return whether one verified fact is assigned to multiple themes."""
+
+    evidence_theme_count: Dict[str, int] = {}
+    for binding in editorial_plan_theme_bindings(editorial_plan):
+        for evidence_key in binding["coverage_keys"]:
+            evidence_theme_count[evidence_key] = (
+                evidence_theme_count.get(evidence_key, 0) + 1
+            )
+    return any(count > 1 for count in evidence_theme_count.values())
+
+
+def validate_substantive_editorial_theme_coverage(
+    *,
+    payload: Any,
+    editorial_plan: Dict[str, Any],
+    final_insights: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Validate the independent semantic assessment of final theme coverage.
+
+    Evidence-ID lineage remains deterministic.  This boundary validates only
+    the model's bounded semantic judgment about whether the final prose
+    develops each planned theme; it never accepts model-created evidence or
+    insight identities.
+    """
+
+    raw_assessments = (
+        payload.get("theme_coverage") if isinstance(payload, dict) else None
+    )
+    bindings = editorial_plan_theme_bindings(editorial_plan)
+    expected_themes = [binding["theme"] for binding in bindings]
+    expected_by_key = {
+        normalize_for_lookup(theme): theme for theme in expected_themes if theme
+    }
+    final_ids = {
+        _s(insight.get("id")).strip()
+        for insight in final_insights
+        if isinstance(insight, dict) and _s(insight.get("id")).strip()
+    }
+    if not isinstance(raw_assessments, list):
+        raise AppError(
+            code="artifact_final_insight_coverage_invalid",
+            message="Semantic theme coverage response is missing its assessment list",
+            retryable=False,
+        )
+
+    assessments: Dict[str, Dict[str, Any]] = {}
+    for raw_assessment in raw_assessments:
+        if not isinstance(raw_assessment, dict):
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Semantic theme coverage contains a malformed assessment",
+                retryable=False,
+            )
+        theme = _s(raw_assessment.get("theme")).strip()
+        theme_key = normalize_for_lookup(theme)
+        status = _s(raw_assessment.get("status")).strip()
+        explanation = _s(raw_assessment.get("explanation")).strip()
+        raw_supporting_ids = raw_assessment.get("supporting_insight_ids")
+        if (
+            not theme_key
+            or theme_key not in expected_by_key
+            or theme_key in assessments
+            or status not in {"covered", "partial", "uncovered"}
+            or not explanation
+            or not isinstance(raw_supporting_ids, list)
+        ):
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Semantic theme coverage is incomplete or ambiguous",
+                retryable=False,
+                context={"theme": theme},
+            )
+        supporting_ids = [
+            _s(insight_id).strip()
+            for insight_id in raw_supporting_ids
+            if _s(insight_id).strip()
+        ]
+        if (
+            len(supporting_ids) != len(raw_supporting_ids)
+            or len(supporting_ids) != len(set(supporting_ids))
+            or not set(supporting_ids).issubset(final_ids)
+        ):
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Semantic theme coverage contains unauthorized insight IDs",
+                retryable=False,
+                context={"theme": theme},
+            )
+        if status in {"covered", "partial"} and not supporting_ids:
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Covered semantic themes require supporting final insights",
+                retryable=False,
+                context={"theme": theme},
+            )
+        if status == "uncovered" and supporting_ids:
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Uncovered semantic themes cannot name supporting insights",
+                retryable=False,
+                context={"theme": theme},
+            )
+        assessments[theme_key] = {
+            "theme": expected_by_key[theme_key],
+            "status": status,
+            "supporting_insight_ids": supporting_ids,
+            "explanation": explanation,
+        }
+
+    missing_themes = [
+        theme
+        for theme in expected_themes
+        if normalize_for_lookup(theme) not in assessments
+    ]
+    if missing_themes:
+        raise AppError(
+            code="artifact_final_insight_coverage_invalid",
+            message="Semantic theme coverage omits planned themes",
+            retryable=False,
+            context={"missing_themes": missing_themes},
+        )
+
+    priorities = [
+        binding["priority"]
+        for binding in bindings
+        if isinstance(binding.get("priority"), int)
+    ]
+    central_priority = min(priorities) if priorities else None
+    omitted_central_themes: list[str] = []
+    for binding in bindings:
+        if binding.get("priority") != central_priority:
+            continue
+        assessment = assessments[normalize_for_lookup(binding["theme"])]
+        if assessment["status"] != "covered":
+            omitted_central_themes.append(assessment["theme"])
+    if omitted_central_themes:
+        raise AppError(
+            code="artifact_final_insight_coverage_invalid",
+            message="Semantic theme coverage omitted a supported central theme",
+            retryable=False,
+            context={"omitted_central_themes": omitted_central_themes},
+        )
+    return {
+        "assessment_source": "independent_semantic_coverage",
+        "theme_assessments": [
+            assessments[normalize_for_lookup(theme)] for theme in expected_themes
+        ],
+        "omitted_central_themes": [],
+    }
+
+
 def validate_final_insight_editorial_coverage(
     *,
     final_insights: List[Dict[str, Any]],
@@ -2373,7 +2527,16 @@ def _restore_candidate_factual_fields(
     restored = dict(insight)
     candidate_metric = candidate.get("metric")
     if isinstance(candidate_metric, dict):
-        if isinstance(candidate.get("verified_fact"), dict):
+        if preserve_unknown_metric_fields:
+            # Verified-mode candidates have already crossed the visual-fact
+            # admission boundary.  Preserve the complete authoritative
+            # metric; the grounding model, not a final-prose heuristic, owns
+            # the semantic relationship between that fact and the rewrite.
+            restored["metric"] = _complete_protected_metric_binding(
+                candidate_metric,
+                preserve_unknown_fields=True,
+            )
+        elif isinstance(candidate.get("verified_fact"), dict):
             # A verified-fact projection already contains the complete
             # authoritative composite metric.  Re-scoping it against a final
             # editorial rewrite can mistake a valid subset of observations

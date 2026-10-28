@@ -85,7 +85,12 @@ def _grounding_check(
             }
             for dimension in PROTECTED_FACT_DIMENSIONS
         },
-        "reason": f"semantic_{outcome}",
+        "reason": (
+            "The canonical source evidence matches the proposition and its "
+            "protected dimensions."
+            if outcome == "entailed"
+            else "The canonical source evidence does not establish the proposition."
+        ),
     }
 
 
@@ -941,7 +946,9 @@ def test_verified_grounding_rejects_fabricated_number_through_llm_grounding(
                     "classification": classification,
                     "entailment_outcome": outcome,
                     "violation_type": "not_established",
-                    "reason": "The verified fact does not establish the rewritten number.",
+                    "reason": (
+                        "The verified fact does not establish the rewritten number."
+                    ),
                 }
             )
 

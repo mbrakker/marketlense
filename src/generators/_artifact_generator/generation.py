@@ -52,6 +52,7 @@ from src.generators.artifact_normalization import (
     build_verified_fact_doc_map,
     discard_location_only_insights,
     discard_location_only_quotes,
+    editorial_plan_has_overlapping_theme_evidence,
     editorial_plan_theme_bindings,
     eligible_final_insight_candidates,
     fallback_artifact_insights_from_evidence,
@@ -74,6 +75,7 @@ from src.generators.artifact_normalization import (
     validate_editorial_plan_evidence_ids,
     validate_final_insight_candidate_lineage,
     validate_final_insight_editorial_coverage,
+    validate_substantive_editorial_theme_coverage,
 )
 from src.generators.artifact_prompt_provenance import artifact_prompt_identity
 from src.generators.prompt_preparation import prepare_prompt_bundle
@@ -138,6 +140,7 @@ _ARTIFACT_FAMILY_ROOTS = {
     "report_vs/artifacts/insights_candidates": "insights_candidates",
     "report_vs/artifacts/quotes": "quotes_final",
     "report_vs/artifacts/insights_final": "insights_final",
+    "report_vs/artifacts/editorial_theme_coverage": "theme_coverage",
     "report_vs/artifacts/cover_semantics": "cover_semantics",
     "report_vs/artifacts/expert_comment": "expert_comment",
     "report_vs/artifacts/linkedin_post": "linkedin_post",
@@ -737,6 +740,8 @@ def generate_artifacts(
         ctx: RunContext,
         payload_validator=None,
         repair_namespace: str = "",
+        response_contract_name: str = "",
+        response_contract_identity_version: str = "v1",
     ) -> Dict[str, Any]:
         """Resolve one exact retained family before entering model recovery."""
         root_key = _ARTIFACT_FAMILY_ROOTS[namespace]
@@ -755,8 +760,16 @@ def generate_artifacts(
             temperature=settings.temperature,
             seed=settings.openai_seed,
             timeout_seconds=settings.openai_timeout_seconds,
-            output_contract_schema_version="artifact_json:1.0",
-            validator_version="artifacts_schema:3.0",
+            output_contract_schema_version=(
+                f"{response_contract_name}:1.0"
+                if response_contract_name
+                else "artifact_json:1.0"
+            ),
+            validator_version=(
+                f"{response_contract_name}:{response_contract_identity_version}"
+                if response_contract_name
+                else "artifacts_schema:3.0"
+            ),
         )
         vector_provenance_verified = not artifact_use_vector_store or bool(
             str(vector_store_content_hash or "").strip()
@@ -780,6 +793,11 @@ def generate_artifacts(
         identity = artifact_prompt_identity(
             prepared=prepared,
             relevant_input_hash=relevant_input_hash,
+            validator_version=(
+                f"{response_contract_name}:{response_contract_identity_version}"
+                if response_contract_name
+                else "artifacts_schema:3.0"
+            ),
         )
         model_provider = str(identity["model_provider"])
         model_policy_namespace = str(identity["model_policy_namespace"])
@@ -807,7 +825,7 @@ def generate_artifacts(
                     model_name=prepared.resolved_model,
                     model_policy_namespace=model_policy_namespace,
                     routing_policy_version=prepared.execution_policy.policy_hash,
-                    validator_version="artifacts_schema:3.0",
+                    validator_version=str(identity["validator_version"]),
                     relevant_input_hash=relevant_input_hash,
                     configuration_policy_hash=str(
                         identity["configuration_policy_hash"]
@@ -857,7 +875,13 @@ def generate_artifacts(
             public_output = (
                 retained_soft_copy.public_output
                 if retained_soft_copy is not None
-                else reuse.output_payload
+                else (
+                    reuse.output_payload.get(root_key)
+                    if response_contract_name
+                    and isinstance(reuse.output_payload, dict)
+                    and root_key in reuse.output_payload
+                    else reuse.output_payload
+                )
             )
             if payload_validator is not None:
                 cached_payload = {root_key: public_output}
@@ -1000,6 +1024,8 @@ def generate_artifacts(
             repair_namespace=repair_namespace,
             prepared_prompt_bundle=prepared,
             response_observer=observe_response,
+            response_contract_name=response_contract_name,
+            response_contract_identity_version=response_contract_identity_version,
         )
         rendered_family_output: object = rendered.get(root_key)
         if soft_copy_family:
@@ -1973,6 +1999,58 @@ def generate_artifacts(
         require_final_candidate_lineage=True,
         verified_mode=visual_authority_admitter is not None,
     )
+    semantic_theme_coverage: Dict[str, Any] = {}
+    if (
+        visual_authority_admitter is not None
+        and editorial_plan_has_overlapping_theme_evidence(editorial_plan)
+    ):
+        theme_evidence_keys = {
+            evidence_key
+            for binding in editorial_plan_theme_bindings(editorial_plan)
+            for evidence_key in binding["coverage_keys"]
+        }
+        relevant_verified_facts = [
+            fact
+            for fact in visual_authority_verified_facts
+            if isinstance(fact, dict)
+            and normalize_text(f"verified-fact:{_s(fact.get('fact_id')).strip()}")
+            in theme_evidence_keys
+        ]
+        semantic_theme_coverage_result = resolve_or_render_family(
+            namespace="report_vs/artifacts/editorial_theme_coverage",
+            variables={
+                "editorial_plan_json": editorial_plan_json,
+                "insights_final_json": _dump_json(
+                    [
+                        {
+                            key: insight[key]
+                            for key in (
+                                "id",
+                                "text",
+                                "so_what",
+                                "now_what",
+                                "evidence_id",
+                                "evidence_ids",
+                            )
+                            if key in insight
+                        }
+                        for insight in insights_final
+                    ]
+                ),
+                "verified_facts_json": _dump_json(relevant_verified_facts),
+            },
+            ctx=child_context(
+                ctx,
+                task_id=f"{ctx.task_id}:editorial_theme_coverage",
+            ),
+            response_contract_name="editorial_theme_coverage_output",
+            response_contract_identity_version="v1",
+        )
+        semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
+            payload=semantic_theme_coverage_result,
+            editorial_plan=editorial_plan,
+            final_insights=insights_final,
+        )
     if visual_authority_admitter is not None:
         final_selection_coverage.clear()
         validate_final_insight_editorial_coverage(
@@ -1981,6 +2059,8 @@ def generate_artifacts(
             editorial_plan=editorial_plan,
             coverage_diagnostics=final_selection_coverage,
         )
+        if semantic_theme_coverage:
+            final_selection_coverage["semantic_assessment"] = semantic_theme_coverage
         editorial_plan_coverage["final_selected_theme_coverage"] = deepcopy(
             final_selection_coverage
         )

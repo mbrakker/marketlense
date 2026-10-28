@@ -26,6 +26,7 @@ def artifact_prompt_identity(
     *,
     prepared: PreparedPromptBundle,
     relevant_input_hash: str,
+    validator_version: str = ARTIFACT_PROMPT_VALIDATOR_VERSION,
 ) -> dict[str, object]:
     """Return the single retained identity for the prompt that produced output."""
 
@@ -42,7 +43,7 @@ def artifact_prompt_identity(
         "model_name": prepared.resolved_model,
         "model_policy_namespace": prepared.namespace.split("/", 1)[0],
         "routing_policy_version": prepared.execution_policy.policy_hash,
-        "validator_version": ARTIFACT_PROMPT_VALIDATOR_VERSION,
+        "validator_version": validator_version,
         "relevant_input_hash": str(relevant_input_hash or ""),
         "configuration_policy_hash": sha256_json(
             {

@@ -921,16 +921,23 @@ def test_editorial_plan_family_reuse_and_dependency_invalidation(tmp_path, chang
 
     plan_family = "report_vs/artifacts/editorial_plan"
     quote_family = "report_vs/artifacts/quotes"
+    artifact_families = set(_ARTIFACT_FAMILY_ROOTS) - {
+        "report_vs/artifacts/editorial_theme_coverage"
+    }
     assert first["_cache"]["key"] != replay["_cache"]["key"]
     assert replay["_cache"]["family_reuse"][quote_family]["decision"] == "reused"
-    assert set(_ARTIFACT_FAMILY_ROOTS).issubset(first["_cache"]["family_reuse"])
+    assert (
+        set(_ARTIFACT_FAMILY_ROOTS) - {"report_vs/artifacts/editorial_theme_coverage"}
+    ).issubset(first["_cache"]["family_reuse"])
     called_steps = {request[2] for request in warm_client.requests}
     if change == "composite_only":
         assert all(
             replay["_cache"]["family_reuse"][family]["decision"] == "reused"
-            for family in _ARTIFACT_FAMILY_ROOTS
+            for family in artifact_families
         )
-        assert not called_steps.intersection(_ARTIFACT_FAMILY_ROOTS.values())
+        assert not called_steps.intersection(
+            {family.rsplit("/", 1)[-1] for family in artifact_families}
+        )
     else:
         dependent_families = {
             "report_vs/artifacts/editorial_plan",
@@ -947,7 +954,7 @@ def test_editorial_plan_family_reuse_and_dependency_invalidation(tmp_path, chang
             replay["_cache"]["family_reuse"][family]["decision"] == "regenerated"
             for family in dependent_families
         )
-        unrelated_families = set(_ARTIFACT_FAMILY_ROOTS) - dependent_families
+        unrelated_families = artifact_families - dependent_families
         if change == "plan_prompt":
             assert all(
                 replay["_cache"]["family_reuse"][family]["decision"] == "reused"

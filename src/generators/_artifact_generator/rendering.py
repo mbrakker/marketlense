@@ -41,6 +41,7 @@ _ARTIFACT_RESPONSE_ROOTS = {
     "report_vs/artifacts/expert_comment": "expert_comment",
     "report_vs/artifacts/linkedin_post": "linkedin_post",
     "report_vs/artifacts/cover_semantics": "cover_semantics",
+    "report_vs/artifacts/editorial_theme_coverage": "theme_coverage",
     "report_vs/artifacts/regenerate/summary": "summary",
     "report_vs/artifacts/regenerate/insights_candidates": "insights_candidates",
     "report_vs/artifacts/regenerate/insights_final": "insights_final",
@@ -362,7 +363,13 @@ def render_artifact_json_model(
             (
                 lambda payload: (
                     isinstance(payload, dict)
-                    and isinstance(payload.get("repair_decision"), dict)
+                    and (
+                        root_key in payload
+                        or (
+                            response_contract_name == "regeneration_repair_decision"
+                            and isinstance(payload.get("repair_decision"), dict)
+                        )
+                    )
                 )
             )
             if response_contract_name

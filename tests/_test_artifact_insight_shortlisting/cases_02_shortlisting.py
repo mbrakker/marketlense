@@ -218,6 +218,76 @@ def test_selector_fails_closed_for_duplicate_wording_with_conflicting_metrics() 
     assert selected == []
 
 
+def test_verified_selection_preserves_complete_metric_without_rescoping() -> None:
+    authoritative_metric = {
+        "label": "Overall adoption",
+        "value": "42%; 18%",
+        "unit": "%",
+        "timeframe": "2026",
+        "segment": "all buyers",
+        "observations": [
+            {
+                "label": "Overall adoption",
+                "value": "42%",
+                "unit": "%",
+                "timeframe": "2026",
+                "segment": "all buyers",
+            },
+            {
+                "label": "Deal discovery adoption",
+                "value": "18%",
+                "unit": "%",
+                "timeframe": "2026",
+                "segment": "deal discovery",
+            },
+        ],
+        "source_relationship": {
+            "chart": "adoption by discovery context",
+            "qualifier": "respondents could select one context",
+        },
+    }
+    candidate = _insight(
+        "composite-fact",
+        "f1",
+        "Adoption differs across discovery contexts.",
+        score=0.8,
+        metric=authoritative_metric,  # type: ignore[arg-type]
+    )
+    final = _insight(
+        "composite-fact",
+        "f1",
+        "Deal discovery adoption reached 18% in 2026.",
+        score=0.99,
+        metric={
+            "label": "Deal discovery adoption",
+            "value": "18%",
+            "unit": "%",
+            "timeframe": "2026",
+            "segment": "deal discovery",
+        },
+    )
+
+    selected = select_artifact_insights(
+        final_insights=[final],
+        candidate_insights=[candidate],
+        editorial_plan=_plan("f1", "f2"),
+        preserve_all=True,
+        verified_mode=True,
+    )
+
+    assert len(selected) == 1
+    assert selected[0]["text"] == final["text"]
+    selected_metric = selected[0]["metric"]
+    assert selected_metric["label"] == authoritative_metric["label"]
+    assert selected_metric["value"] == authoritative_metric["value"]
+    assert selected_metric["segment"] == authoritative_metric["segment"]
+    assert selected_metric["observations"] == authoritative_metric["observations"]
+    assert (
+        selected_metric["source_relationship"]
+        == authoritative_metric["source_relationship"]
+    )
+
+
 def test_selector_does_not_use_differently_bound_candidate_wording() -> None:
     claim = "The strategy segment recorded a 57% increase."
     selected = select_artifact_insights(
@@ -588,7 +658,7 @@ def test_verified_finding_fallback_preserves_stable_fact_identity() -> None:
 
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION == (
-        "evidence_backed_shortlisting:23"
+        "evidence_backed_shortlisting:24"
     )
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
         "stable_id_unique_selection:2"
