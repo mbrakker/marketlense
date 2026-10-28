@@ -701,24 +701,33 @@ def _coerce_public_topics_covered(
         )
         if not title:
             continue
+        toc_only = _s(item.get("status")).casefold() == "toc_only"
         pages = [
             str(page).strip() for page in _coerce_list(item.get("pages")) if _s(page)
         ]
         topics.append(
             {
                 "topic": title,
-                "summary": _sanitize_public_prose(
-                    _pick_first_text(
-                        item.get("why_it_matters"),
-                        item.get("summary"),
-                        "Covered by the source report.",
+                "summary": (
+                    "Covered by the source report."
+                    if toc_only
+                    else _sanitize_public_prose(
+                        _pick_first_text(
+                            item.get("why_it_matters"),
+                            item.get("summary"),
+                            "Covered by the source report.",
+                        )
                     )
                 ),
-                "subtopics": [
-                    _sanitize_public_prose(point)
-                    for point in _coerce_list(item.get("subtopics"))
-                    if _sanitize_public_prose(point)
-                ][:4],
+                "subtopics": (
+                    []
+                    if toc_only
+                    else [
+                        _sanitize_public_prose(point)
+                        for point in _coerce_list(item.get("subtopics"))
+                        if _sanitize_public_prose(point)
+                    ][:4]
+                ),
                 "source_label": f"Pages {', '.join(pages)}" if pages else "",
             }
         )
@@ -1081,6 +1090,16 @@ def _public_citation_label(value: str) -> str:
 
 def _coerce_topic_briefs(artifacts: dict[str, Any]) -> list[dict[str, Any]]:
     expanded = _coerce_list(artifacts.get("toc_topics_expanded"))
+    coverage_by_title: dict[str, dict[str, Any]] = {}
+    for raw_coverage in _coerce_list(artifacts.get("topics_covered")):
+        coverage_item = _coerce_dict(raw_coverage)
+        coverage_title = _pick_first_text(
+            coverage_item.get("topic"), coverage_item.get("title")
+        )
+        if coverage_title:
+            coverage_by_title[
+                unicodedata.normalize("NFC", coverage_title).casefold()
+            ] = coverage_item
     briefs: list[dict[str, Any]] = []
     source_items = expanded or _coerce_list(artifacts.get("toc_entries"))
     for raw_item in source_items:
@@ -1093,14 +1112,27 @@ def _coerce_topic_briefs(artifacts: dict[str, Any]) -> list[dict[str, Any]]:
         )
         if not title:
             continue
+        coverage = coverage_by_title.get(
+            unicodedata.normalize("NFC", title).casefold(), {}
+        )
+        coverage_status = _s(coverage.get("status")).casefold()
+        toc_only = coverage_status == "toc_only"
+        if coverage_status:
+            summary = "" if toc_only else _s(coverage.get("why_it_matters"))
+            key_points_source = [] if toc_only else _coerce_list(
+                coverage.get("subtopics")
+            )
+        else:
+            summary = _s(item.get("summary"))
+            key_points_source = _coerce_list(item.get("key_points"))
         briefs.append(
             {
                 "section_id": _s(item.get("section_id") or item.get("id")),
                 "title": title,
-                "summary": _s(item.get("summary")),
+                "summary": summary,
                 "key_points": [
                     _s(point)
-                    for point in _coerce_list(item.get("key_points"))
+                    for point in key_points_source
                     if _s(point)
                 ],
             }

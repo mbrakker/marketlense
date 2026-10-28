@@ -1218,3 +1218,22 @@ selective rerun, or canonical publication mutation occurred. E18 remains
 **unstarted/not ready**. The complete ledger, source hashes, failure causes,
 independent review, baseline comparison, and artifact paths are recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Affected-five P0/P1 remediation — 2026-10-28 (`651609e8` producer):** The
+semantic-verdict coverage defect now enters the existing bounded recovery path,
+and the public renderer no longer exposes factual prose from `toc_only` DocMap
+navigation sections. Focused regressions and the full affected grounding/
+selection suite passed (205 tests); Ruff and full-repository mypy remained
+green. The fresh affected-five live replay completed 5/5 terminal records and
+171 provider calls at `$0.449937`, but only 3/5 reached readiness: KPMG failed
+the existing five-insight payload contract and Reuters failed source fidelity.
+Isolated reruns of both reports passed at the same producer SHA; a retained
+artifact re-render then removed the independently confirmed Reuters
+“previous three years” public sentence while preserving the correct
+two-and-a-half-year source text. No unsupported or unresolved retained claim
+was promoted in passing runs, and no publication or WordPress write occurred.
+This closes the demonstrated deterministic defects but does not prove a single
+5/5 live cohort or universal provider stability. E18 remains **Active/PARTIAL**,
+Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+Full per-report evidence and artifact paths are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

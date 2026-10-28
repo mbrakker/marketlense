@@ -6434,3 +6434,159 @@ not met: 6/10 readiness passes, 8/10 rendered HTML files, 9/10 verified-fact
 architecture evidence, four typed failures, and one independently confirmed
 Adjust protected-metric binding conflict. Step 3 must not begin. No code fix
 or selective rerun is authorized by this ledger entry.
+
+#### Affected-five P0/P1 remediation and replay — 2026-10-28 (`651609e8` producer)
+
+This entry records the next affected-five verification requested after the
+ten-report run. It uses the exact frozen KPMG, Reuters Institute, Adjust,
+Algolia, and Emplifi PDFs, GPT-6 Luna High, fresh per-report application state,
+and no publication flags. The source PDFs were independently SHA-256 checked:
+
+| Report | SHA-256 | Material source pages reviewed |
+| --- | --- | --- |
+| KPMG | `a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589` | 7, 13, 15, 24 |
+| Reuters Institute | `f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52` | 12, 14, 17, 20, 24, 32 |
+| Adjust | `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` | 9, 11, 19, 21, 29, 35 |
+| Algolia | `d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50` | 12, 16, 18, 22, 24, 27 |
+| Emplifi | `54a6726033fce9474929dec62bc85fc4dd3ada574398d043d12ec48b0eaddeb5` | 4, 10, 13, 15, 17, 19 |
+
+The single affected-five live replay was terminally complete, but not all five
+reports passed readiness. Its authoritative aggregate is:
+
+| Reports | Calls | Input / output tokens | Cost | Wall-clock | Validation / readiness |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 / 5 terminal, 5 / 5 admitted | 171 | 1,965,697 / 352,346 | `$0.449937` | 3,157.908s | 4 / 5 validation, 3 / 5 readiness |
+
+There were three bounded automatic repairs, no operator intervention, no
+WordPress writes, and no canonical publication mutation. The two focused
+reruns below were separate terminal runs and are not added to the cohort
+aggregate or counted as a second success for the same report.
+
+| Report | Affected-five terminal result | Focused same-SHA result |
+| --- | --- | --- |
+| KPMG | `report_payload_incomplete`; 3 final insights could not satisfy the existing five-slot report-payload contract; 35 calls, `$0.057924`, 340.606s | **Pass** after an isolated rerun: 5 final insights, 40 calls, 317,333 input / 70,491 output, `$0.110980`, 537.425s, validation/readiness pass, zero unsupported or unresolved retained claims |
+| Reuters Institute | Validation passed but readiness failed on source fidelity; 31 calls, `$0.106274`, 735.290s | Workflow **pass** before the render-only correction: 6 final insights, 40 calls, 632,345 input / 118,018 output, `$0.134759`, 957.391s, three bounded repairs, validation/readiness pass, zero unsupported or unresolved retained claims |
+| Adjust | 6 final insights, 34 calls, `$0.101130`, 755.726s, validation/readiness pass, zero unsupported or unresolved retained claims | Not selectively rerun |
+| Algolia | 5 final insights, 38 calls, `$0.090062`, 804.045s, validation/readiness pass, zero unsupported or unresolved retained claims | Not selectively rerun |
+| Emplifi | 6 final insights, 33 calls, `$0.094547`, 522.241s, validation/readiness pass, zero unsupported or unresolved retained claims | Not selectively rerun |
+
+The two live failures were traced to different causes:
+
+1. The KPMG model response generated only three final insights. The existing
+   `report_payload_incomplete` gate correctly rejected padded blanks; the
+   existing artifact-family minimum remains two, but the legacy report payload
+   contract requires five non-empty insights. The focused rerun produced five
+   valid qualitative insights without changing the gate. This is provider
+   variability, not evidence promotion, and the KPMG rerun had no metric spine
+   entries; its five retained insights are therefore useful but numerically
+   sparse.
+2. Reuters produced a DocMap Executive Summary key point that said referral
+   declines occurred over the “previous three years.” The original PDF states
+   the Facebook and X declines occurred over the last two and a half years on
+   the printed page 18 / retained physical source page 20. The source-backed
+   Section 4 copy was correct, but the public renderer also exposed the
+   `toc_only` Executive Summary navigation prose in the Coverage and Signals
+   surfaces. The existing readiness result did not reject that navigation
+   surface in the focused pass.
+
+The minimal correction is at the existing render boundary in
+`src/services/_render_service/normalization.py`: a topic explicitly marked
+`status: toc_only` keeps its title and page label but cannot contribute factual
+summary or key-point prose to public HTML. `source_backed` topic copy is
+unchanged. This is not a new validator or LLM stage. A focused regression
+reproduces the Reuters wording and proves it is absent from HTML while the
+source-backed path remains present.
+
+The semantic reliability correction in producer `651609e8` is also covered by
+the live reruns and focused tests: an incomplete semantic verdict roster now
+enters the existing bounded structured-output recovery path instead of being
+treated as an unrelated provider failure. No verdict is materialized until
+the expected IDs are complete.
+
+#### Independent PDF and HTML review
+
+The retained final insight texts were checked against the listed PDF pages.
+Adjust retained the gaming session/installation relationship on page 19, day
+30 retention on page 21, the aggregate and subvertical CPI distinction on
+page 29, and the LATAM/APAC finance comparison on page 35. Algolia retained
+the 68% US versus 57% Australia/New Zealand purchase-likelihood distinction,
+91% image-search preference, 49%/27%/23% search-development split, and
+47%/39%/37% agentic-adoption factors. Emplifi retained the $/£500 research
+cohort, 85% willingness-to-pay result, 91% AI-disclosure expectation, 84%
+response-time result, and 59% repeat-purchase result. KPMG's rerun retained
+source-grounded qualitative claims from pages 7, 13, 15, and 24. Reuters'
+rerun retained the 43% search-traffic expectation, +91 original-reporting
+priority, +74 YouTube / +61 AI-platform effort differences, 70%/39% creator
+concerns, 64% back-end-automation importance, and 69% licensing-income
+expectation.
+
+The original live HTML from the Reuters focused rerun exposed the incorrect
+DocMap sentence, so it is not accepted as independently clean despite its
+readiness PASS. A provider-free re-render of the exact retained artifacts
+after the render correction produced five HTML files with **5/5 final insight
+texts present, zero internal-identifier leaks, zero deterministic editorial
+blockers, and no “previous three years” phrase**. The correct
+“preceding two and a half years” Section 4 wording remained present. This is
+the appropriate post-fix verification for a deterministic render-only change;
+the provider-backed generation was not silently re-run or presented as a
+post-fix model-quality result.
+
+#### Regression and artifact evidence
+
+The current deterministic checks are:
+
+```text
+python -m pytest -q \
+  tests/test_grounding_recovery_effectiveness.py \
+  tests/test_grounding_recovery_diagnostics.py \
+  tests/test_structured_output_service.py \
+  tests/test_structured_output_recovery_effectiveness.py \
+  tests/test_structured_output_recovery_diagnostics.py \
+  tests/test_retained_claim_grounding.py \
+  tests/test_verified_grounding_batch_context.py \
+  tests/test_grounding_cohort_false_positive_regressions.py \
+  tests/test_grounding_semantic_outcomes.py \
+  tests/test_grounding_editorial_interpretation.py \
+  tests/test_grounding_protected_facts.py \
+  tests/test_grounding_public_identity.py \
+  tests/test_candidate_recovery_and_selection_regressions.py \
+  tests/test_report_analysis_validation_fallback.py \
+  tests/_test_claim_validation_generator tests/_test_evidence_pack_generator
+205 passed in 17.93s
+
+python -m pytest -q tests/test_render_service_public_prose.py \
+  tests/_test_render_service_artifacts/cases_01_metadata_and_artifact_sections.py \
+  tests/_test_render_service_artifacts/cases_02_render_identity_and_publication.py \
+  tests/_test_validation_generator/cases_03_grounding_cache_and_reuse.py \
+  tests/test_report_analysis_validation_fallback.py
+103 passed in 14.96s
+
+ruff check src/services/_render_service/normalization.py \
+  tests/test_render_service_public_prose.py
+PASS
+python scripts/ci/run_type_check.py
+PASS (786 source files, 0 tracked errors)
+```
+
+Retained artifacts:
+
+```text
+C:\ml-affected-five-e2e-live-20261028-final3\frozen-reliability-btn45j7_\cohort_result.json
+C:\ml-affected-five-e2e-live-20261028-kpmg-rerun\frozen-reliability-wf9cihj0\cohort_result.json
+C:\ml-affected-five-e2e-live-20261028-reuters-rerun\frozen-reliability-s36vnpi5\cohort_result.json
+C:\ml-affected-five-render-recheck-20261028\
+```
+
+No ten-report cohort was started after the prior run. The affected-five live
+evidence therefore demonstrates the semantic recovery correction and isolated
+KPMG/Reuters behavior, while the render correction is demonstrated by exact
+retained-artifact re-rendering and focused regressions. It does not establish
+universal provider-output stability or fresh Step 1 candidate recall.
+
+**Verdict: PARTIAL / NO-GO.** Deterministic P0/P1 safeguards and the
+render-boundary provenance correction pass. All five reports have isolated
+same-SHA pass evidence across the affected-five run plus focused reruns, but
+the single five-report cohort itself reached only 3/5 readiness and one
+focused output exposed a source-fidelity defect before the deterministic
+render fix. KPMG's numeric coverage also remains sparse. Step 3 must not
+begin; E18 remains **Active/PARTIAL**.

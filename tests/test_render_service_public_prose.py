@@ -72,6 +72,95 @@ def test_report_renders_insight_once_and_uses_distinct_topic_copy_for_signals(
     )
 
 
+def test_render_suppresses_factual_copy_from_toc_only_topics(tmp_path: Path) -> None:
+    unsupported_navigation_copy = (
+        "Referral declines over the previous three years were 43% from Facebook "
+        "and 46% from X."
+    )
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Trends and Predictions 2026",
+                "_figure_section_enabled": False,
+                "artifacts": {
+                    "toc_topics": ["Executive Summary"],
+                    "toc_topics_expanded": [
+                        {
+                            "section_id": "executive-summary",
+                            "title": "Executive Summary",
+                            "summary": "Navigation context from the contents.",
+                            "key_points": [unsupported_navigation_copy],
+                        }
+                    ],
+                    "topics_covered": [
+                        {
+                            "topic": "Executive Summary",
+                            "status": "toc_only",
+                            "why_it_matters": "Navigation context from the contents.",
+                            "subtopics": [unsupported_navigation_copy],
+                            "pages": [3, 4],
+                        }
+                    ],
+                },
+            },
+            doc_name="trends.pdf",
+            file_id="trends-toc-only",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        new_runtime_context(task_id="render-toc-only-fidelity-test"),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert "Executive Summary" in html
+    assert unsupported_navigation_copy not in html
+    assert "Covered by the source report." in html
+
+
+def test_render_preserves_source_backed_topic_copy(tmp_path: Path) -> None:
+    supported_copy = "The source-backed topic reports a 43% decrease."
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Source-backed topics",
+                "_figure_section_enabled": False,
+                "artifacts": {
+                    "toc_topics": ["Traffic"],
+                    "toc_topics_expanded": [
+                        {
+                            "section_id": "traffic",
+                            "title": "Traffic",
+                            "summary": "Source-backed traffic context.",
+                            "key_points": [supported_copy],
+                        }
+                    ],
+                    "topics_covered": [
+                        {
+                            "topic": "Traffic",
+                            "status": "source_backed",
+                            "why_it_matters": "Source-backed traffic context.",
+                            "subtopics": [supported_copy],
+                            "pages": [10],
+                        }
+                    ],
+                },
+            },
+            doc_name="traffic.pdf",
+            file_id="traffic-source-backed",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        new_runtime_context(task_id="render-source-backed-topic-test"),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert supported_copy in html
+
+
 def test_report_omits_advisory_items_repeated_by_retained_insights(
     tmp_path: Path,
 ) -> None:
