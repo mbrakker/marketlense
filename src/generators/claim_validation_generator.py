@@ -254,26 +254,32 @@ def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | Non
             ) or str(candidate.get("text") or "").strip() != statement:
                 continue
             references = candidate.get("evidence_references")
-            pages = {
-                reference.get("page")
-                for reference in references if isinstance(reference, dict)
-                and reference.get("source_pack") == "source_pdf"
-                and isinstance(reference.get("page"), int)
-                and reference.get("page") > 0
-            } if isinstance(references, list) else set()
+            pages: set[int] = set()
+            if isinstance(references, list):
+                for reference in references:
+                    if not isinstance(reference, dict):
+                        continue
+                    if reference.get("source_pack") != "source_pdf":
+                        continue
+                    page = reference.get("page")
+                    if (
+                        isinstance(page, int)
+                        and not isinstance(page, bool)
+                        and page > 0
+                    ):
+                        pages.add(page)
             if not pages:
                 continue
             item_pages_raw = item.get("pages", item.get("page"))
-            item_pages = (
+            item_page_values = (
                 item_pages_raw
                 if isinstance(item_pages_raw, list)
                 else [item_pages_raw]
             )
-            item_pages = {
-                page
-                for page in item_pages
-                if isinstance(page, int) and not isinstance(page, bool) and page > 0
-            }
+            item_pages: set[int] = set()
+            for page in item_page_values:
+                if isinstance(page, int) and not isinstance(page, bool) and page > 0:
+                    item_pages.add(page)
             if not item_pages or not item_pages.issubset(pages):
                 continue
             if matching_statement and (
