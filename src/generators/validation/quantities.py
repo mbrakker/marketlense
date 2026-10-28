@@ -12,6 +12,7 @@ from src.utils.quantity import (
     quantities_match,
     quantity_has_metric_cues,
 )
+
 from .shared import ensure_dict, s
 
 
@@ -144,8 +145,41 @@ def quantities_match_numeric_only(candidate: Quantity, evidence: Quantity) -> bo
     # A standalone key-figure display intentionally omits the date retained
     # by its linked label and explanatory prose. An explicit conflicting
     # timeframe still fails; only absence may inherit the source context.
-    if canonical_candidate.timeframe and canonical_evidence.timeframe:
+    if (
+        canonical_candidate.timeframe
+        and canonical_evidence.timeframe
+        and canonical_candidate.timeframe != canonical_evidence.timeframe
+    ):
         return False
+    primitives_match = (
+        canonical_candidate.value,
+        canonical_candidate.sign,
+        canonical_candidate.scale,
+        canonical_candidate.comparator,
+        canonical_candidate.currency,
+        canonical_candidate.low,
+        canonical_candidate.high,
+    ) == (
+        canonical_evidence.value,
+        canonical_evidence.sign,
+        canonical_evidence.scale,
+        canonical_evidence.comparator,
+        canonical_evidence.currency,
+        canonical_evidence.low,
+        canonical_evidence.high,
+    )
+    if not primitives_match:
+        return False
+    if (
+        {canonical_candidate.unit_family, canonical_evidence.unit_family}
+        == {"count", "unknown"}
+        and (
+            canonical_candidate.unit,
+            canonical_evidence.unit,
+        )
+        in {("count", ""), ("", "count")}
+    ):
+        return True
     return (
         canonical_candidate.value,
         canonical_candidate.sign,

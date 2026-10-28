@@ -108,6 +108,27 @@ def test_number_validation_matches_values_under_the_same_explicit_yoy_range() ->
     assert not any(issue.rule_id == "numbers" for issue in issues)
 
 
+def test_number_validation_accepts_source_bound_bare_net_difference_values() -> None:
+    claim = (
+        "For 2026, publishers planned more versus less effort at +74 for YouTube "
+        "and +61 for AI platforms."
+    )
+    evidence = (
+        "Net difference between the proportion planning more/less effort: "
+        "YouTube +74; AI platforms +61."
+    )
+
+    issues = validate_new_numbers(
+        artifacts={"expert_comment": claim},
+        insights=[],
+        report=_report(),
+        evidence_texts=[evidence],
+        evidence_windows=build_evidence_windows([evidence]),
+    )
+
+    assert not any(issue.rule_id == "numbers" for issue in issues)
+
+
 def test_number_validation_rejects_same_value_under_a_different_yoy_range() -> None:
     claim = "Casual-game session growth was +37% YoY 2024–2025."
     evidence = (
@@ -248,7 +269,10 @@ def test_number_validation_grounds_rank_labels_in_linked_insight_evidence() -> N
         "text": evidence,
         "evidence": evidence,
         "evidence_id": "concentration",
-        "so_what": "Revenue is concentrated among the top 10 companies and companies ranked 11–25.",
+        "so_what": (
+            "Revenue is concentrated among the top 10 companies and companies "
+            "ranked 11–25."
+        ),
     }
     supported = validate_new_numbers(
         artifacts={"insights_final": [insight]},
@@ -259,7 +283,10 @@ def test_number_validation_grounds_rank_labels_in_linked_insight_evidence() -> N
     )
     incorrect = {
         **insight,
-        "so_what": "Revenue is concentrated among the top 12 companies and companies ranked 11–26.",
+        "so_what": (
+            "Revenue is concentrated among the top 12 companies and companies "
+            "ranked 11–26."
+        ),
     }
     rejected = validate_new_numbers(
         artifacts={"insights_final": [incorrect]},

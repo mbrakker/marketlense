@@ -417,6 +417,21 @@ def test_hyphenated_prose_compound_is_not_a_signed_quantity() -> None:
     assert quantities_match_numeric_only(candidate, bare_ninety) is True
 
 
+def test_numeric_grounding_accepts_parser_count_for_bare_net_difference() -> None:
+    assert _numeric_grounding_match(
+        "The net difference was +74 for YouTube.", "+74"
+    ) is True
+    assert _numeric_grounding_match(
+        "For 2026, the net difference was +74 for YouTube.",
+        "For 2026, the net difference was +74 for YouTube.",
+    ) is True
+    assert _numeric_grounding_match(
+        "For 2026, the net difference was +74 for YouTube.",
+        "For 2025, the net difference was +74 for YouTube.",
+    ) is False
+    assert _numeric_grounding_match("The net difference was 74%.", "74") is False
+
+
 def test_signed_and_spaced_negative_quantities_stay_negative() -> None:
     attached = extract_quantities("Revenue fell -90 percent.")
     spaced = extract_quantities("Revenue fell - 9 percent.")
