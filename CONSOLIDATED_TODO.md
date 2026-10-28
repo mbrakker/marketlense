@@ -1248,3 +1248,22 @@ test-file limit; the production contract is unchanged. The focused correction
 set passed 132 tests locally, and a follow-up hosted run was pushed for the
 corrected tree. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+**End-to-end stage alignment and evidence-lineage correction — 2026-10-28
+(`04a050a4`):** The final-selection factual index now preserves the
+authoritative `verified_fact` marker, allowing complete protected composite
+metrics to survive final editorial restoration without changing final wording.
+Focused artifact tests (59), the affected grounding/selection/evidence/render
+suite (293), formatting, Ruff, full-repository mypy, architecture, contract,
+role-boundary and service-boundary checks passed. The fresh exact original-PDF
+Adjust/KPMG/Emplifi/Reuters/Algolia Luna High cohort completed 5/5 terminal
+readiness passes, 264 calls, 2,858,614 input tokens, 660,626 output tokens,
+`$0.702302`, and 4,738.245 seconds; no unsupported or unresolved retained
+material claim, operator intervention, publication or WordPress write occurred.
+KPMG and Algolia each have an explicitly documented lower-priority editorial
+omission, and Emplifi quarantined one failed candidate; these are not silently
+promoted facts. Hosted CI `40716016044` passed. This closes the demonstrated
+affected-five stage-alignment slice, but broad Step 2 effectiveness remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO** for promotion, and Step 3
+remains **unstarted/not ready**. Full lineage and artifact paths are recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

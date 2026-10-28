@@ -6609,3 +6609,178 @@ not change production behavior, thresholds, or the recovery contract. The
 focused correction set passed 132 tests locally. A new hosted run was pushed
 for the corrected tree; its final status is reported with this entry's
 delivery record rather than inferred from the local run.
+
+#### End-to-end stage alignment and evidence lineage — 2026-10-28 (`04a050a4` producer)
+
+This entry records the completed affected-five replay for the stage-alignment
+slice. It uses the exact retained original PDFs, GPT-6 Luna High, isolated
+per-report state, the existing bounded recovery paths, and no publication or
+WordPress write. The previous corrected-selection baseline is `96db6736`; the
+intermediate diagnostic replay at `3f833c9e` is retained as evidence of the
+remaining root cause and is not counted as an acceptance run.
+
+##### Root cause and minimal correction
+
+The previous composite-metric correction was present in
+`_restore_candidate_factual_fields()`, but `_candidate_factual_fields()` dropped
+the internal `verified_fact` marker while building the factual index used by
+final selection. Consequently, an authoritative verified composite was treated
+as an ordinary candidate and was re-scoped against a narrower final rewrite.
+The Adjust diagnostic replay reproduced the resulting finance failure: the
+public sentence described sessions `+21%` and installs `-4%`, while the retained
+metric was reduced to the sessions observation and failed the authoritative
+fact comparison. The same path affected composite gaming facts.
+
+The minimal fix preserves the verified-fact marker through the internal factual
+index and, when that marker is present, restores the complete protected metric
+binding rather than re-selecting an observation. Final editorial wording is
+still retained; protected metric fields, evidence IDs, pages, spans and source
+identity remain authoritative. The existing selection cache identity was
+advanced to `evidence_backed_shortlisting:23`. No validator, service, LLM stage,
+schema, threshold, retry policy or publication path was added or weakened.
+
+##### Stage-contract matrix
+
+| Boundary | Producer → consumer | Required handoff | Existing enforcement | Demonstrated defect / correction | Regression |
+| --- | --- | --- | --- | --- | --- |
+| PDF → findings | extraction/DocMap → evidence packs | source identity, physical page, span, finding/evidence ID | evidence fidelity and source binding | navigation and source evidence remain distinct; retained source spans were preserved | source-fidelity and evidence-pack suites |
+| findings → candidates | evidence packs → shortlisting | finding ID, evidence IDs, pages/spans, protected metric | candidate normalization and fail-closed selection | no arbitrary title/section authority; all five runs retained source-backed candidate rosters | artifact-normalization suite |
+| candidates → verified facts | visual admission → verified-fact roster | stable fact ID, discovery provenance, canonical evidence, PDF hash | visual authority admission and verified-fact contracts | all final runs had six source-bound facts; Emplifi quarantined one failed candidate | live admission audit; provenance tests |
+| verified facts → editorial plan | fact roster → plan remapping | `verified-fact:{fact_id}` aliases and central-theme evidence IDs | `remap_editorial_plan_to_verified_facts()` fail-closed mapping | themes remained mapped to facts; omissions are recorded as editorial selection, not lost lineage | remapping/coverage regressions |
+| plan/candidates → final insights | final rewrite → artifact selection | final wording plus complete authoritative metric/evidence binding | `_candidate_factual_fields()` and `_restore_candidate_factual_fields()` | verified composite marker was lost and then preserved; complete composite metrics now survive final selection | two Adjust composite regressions |
+| final insights → grounding | artifacts → retained grounding/validation | exact evidence IDs, source identity, pages/spans, protected metric tuple | semantic/grounding and retained-claim validators | all five terminal artifacts passed validation; no unsupported/unresolved retained material claim | 293-test affected suite |
+| artifacts → HTML | normalized artifacts → renderer | source-backed public copy; `toc_only` navigation non-authoritative | render normalization and public-prose tests | navigation-only text cannot become factual HTML; no internal IDs appeared in visible text | render/public-prose suite |
+| HTML → readiness | renderer/report-card → readiness | valid HTML, compact TLDR, source identity, manifest | readiness and report-card gates | all five manifests were schema `1.0`, source identity resolved, compact TLDR valid | live manifests and readiness pass |
+
+##### Frozen affected-five result
+
+The fresh run root is:
+
+```text
+C:\ml-stage-alignment-live-20261028-fix5\frozen-reliability-zho2zji2
+```
+
+All source hashes matched the frozen manifest:
+
+| Report | PDF SHA-256 | Candidates evaluated/admitted | Verified facts | Final insights | Plan themes mapped / represented in final roster | Validation / readiness |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| Adjust | `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` | 6 / 6 | 6 | 5 | 5 / 5 | pass / pass |
+| KPMG | `a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589` | 6 / 6 | 6 | 5 | 5 / 4 | pass / pass |
+| Emplifi | `54a6726033fce9474929dec62bc85fc4dd3ada574398d043d12ec48b0eaddeb5` | 7 / 6 | 6 | 6 | 6 / 6 | pass / pass |
+| Reuters Institute | `f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52` | 6 / 6 | 6 | 6 | 6 / 6 | pass / pass |
+| Algolia | `d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50` | 6 / 6 | 6 | 5 | 5 / 4 | pass / pass |
+
+KPMG's `us-reported-confidence-and-readiness` candidate and Algolia's
+`future-ai-search-features` candidate were source-bound and available but were
+explicitly omitted by the five-slot final editorial selection; neither was
+silently lost during remapping or promoted with substituted evidence. Adjust's
+`finance-global-annual-and-monthly-pattern` was also available but the final
+roster retained the distinct finance install finding instead. Emplifi's
+`facebook-generational-use` was quarantined with
+`outcome_failed_verification`; the six remaining mapped themes were retained.
+These are editorial disposition records, not factual errors.
+
+| Report | Provider calls | Input / output tokens | Cost | Complete duration | File-search calls | Structured repairs | Targeted automatic repairs |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Adjust | 47 | 528,541 / 119,127 | `$0.131607` | 1,043.839s | 8 | 1 | 0 |
+| KPMG | 50 | 356,499 / 91,632 | `$0.110395` | 654.274s | 12 | 0 | 3 |
+| Emplifi | 55 | 730,405 / 117,356 | `$0.145318` | 897.818s | 6 | 0 | 0 |
+| Reuters Institute | 63 | 609,074 / 214,609 | `$0.181357` | 1,258.942s | 8 | 2 | 3 |
+| Algolia | 49 | 634,095 / 117,902 | `$0.133625` | 883.372s | 5 | 0 | 0 |
+| **Total** | **264** | **2,858,614 / 660,626** | **`$0.702302`** | **4,738.245s** | **39** | **3** | **6** |
+
+All five reports were isolated, admitted, validated, readiness-pass and
+awaiting review; operator intervention was zero, WordPress writes were zero,
+and publication was false. The cohort baseline at `96db6736` was 205 calls,
+2,368,040 input tokens, 346,408 output tokens, `$0.553748`, 3,913.302 seconds,
+and 1/5 readiness. The corrected run therefore adds 59 calls (+28.78%),
+490,574 input tokens (+20.72%), 314,218 output tokens (+90.71%), `$0.148554`
+(+26.83%), and 824.943 seconds (+21.08%). This is provider/recovery
+variability plus the successful completion of the previously failing reports;
+the replay does not establish a general cost or speed improvement.
+
+##### Evidence-lineage and independent PDF/HTML review
+
+The retained chain was reconstructed for every final insight as:
+
+```text
+original PDF/hash → source finding/evidence span → candidate ID
+→ verified-fact:{fact_id} → final insight ID/evidence ID
+→ retained grounded claim → HTML/public report-card manifest
+```
+
+Representative source checks on the original PDFs found no material mismatch:
+
+| Report | Reviewed source-backed claims and physical pages | Result |
+| --- | --- | --- |
+| Adjust | CPI aggregate/deal-discovery distinction p.29; installs/sessions p.27; finance installs p.34; casino/slots p.19; cross-platform satisfaction p.11 | Composite metric retained in full; final wording matches the cited observation(s) |
+| KPMG | 52% operational disentanglement p.31; recovery/pipeline p.5; AI analysis p.26; talent and execution capability p.33 | Five qualitative/quantitative claims remain source-grounded; one lower-priority plan theme explicitly omitted |
+| Emplifi | inauthentic-service response p.17; research cohort p.4; reviews p.10; AI disclosure p.13; Carhartt p.12; infrastructure p.20 | Six supported themes retained; one failed candidate quarantined |
+| Reuters Institute | confidence p.6/p.9; search expectation p.12; reporting priority p.17; creator concerns p.24; newsroom AI p.33; subscriptions p.38 | Population, timeframe and survey bases remain attached; no navigation-only factual prose leaked |
+| Algolia | agentic adoption p.26; image-search value p.18; third-party development p.22; backend integration p.14; purchase likelihood p.12 | Four quantitative and one qualitative final claims are source-consistent; future-feature candidate explicitly omitted |
+
+Every final insight uses a `verified-fact:{fact_id}` evidence ID and each
+verified fact retains its discovery candidate/evidence IDs, source identity,
+PDF hash and physical pages. The final HTML files are retained under the run
+root's five member directories. Visible HTML text contained zero
+`verified-fact:`, `candidate_id` or `discovery_candidate_id` markers in all five
+files. The two raw `source:` occurrences per file are the existing source trace
+metadata, not public prose. Reuters visible HTML contains no unsupported
+“previous three years” sentence; the source-backed two-and-a-half-year wording
+remains available in the original PDF lineage. All five report-card manifests
+are schema `1.0`, have resolved source identity, and contain a nonempty compact
+TLDR within the existing word contract.
+
+##### Verification and acceptance
+
+The final deterministic checks were:
+
+```text
+python -m pytest -q tests/test_artifact_normalization.py tests/test_artifact_normalization_source_fidelity.py --tb=short
+59 passed in 2.20s
+
+python -m pytest -q tests/test_grounding_recovery_effectiveness.py \
+  tests/test_grounding_recovery_diagnostics.py \
+  tests/test_structured_output_service.py \
+  tests/test_structured_output_recovery_effectiveness.py \
+  tests/test_structured_output_recovery_diagnostics.py \
+  tests/test_retained_claim_grounding.py \
+  tests/test_verified_grounding_batch_context.py \
+  tests/test_grounding_cohort_false_positive_regressions.py \
+  tests/test_grounding_semantic_outcomes.py \
+  tests/test_grounding_editorial_interpretation.py \
+  tests/test_grounding_protected_facts.py \
+  tests/test_grounding_public_identity.py \
+  tests/test_candidate_recovery_and_selection_regressions.py \
+  tests/test_report_analysis_validation_fallback.py \
+  tests/_test_claim_validation_generator \
+  tests/_test_evidence_pack_generator \
+  tests/test_render_service_public_prose.py \
+  tests/_test_render_service_artifacts/cases_01_metadata_and_artifact_sections.py \
+  tests/_test_render_service_artifacts/cases_02_render_identity_and_publication.py \
+  tests/_test_validation_generator/cases_03_grounding_cache_and_reuse.py --tb=short
+293 passed in 21.50s
+
+python scripts/ci/check_formatting.py                 PASS
+python scripts/ci/check_ruff_lint.py                  PASS
+python scripts/ci/run_type_check.py                   PASS (786 source files)
+python scripts/ci/check_architecture_imports.py       PASS
+python scripts/ci/check_contract_schemas.py            PASS
+python scripts/ci/check_role_io_boundaries.py         PASS
+python scripts/ci/check_service_boundary_map.py       PASS
+```
+
+Hosted CI for producer `04a050a4` passed all jobs, including tests, mutation
+partitions, static/architecture/type checks, release prerequisites and hygiene:
+<https://github.com/mbrakker/marketlense/actions/runs/40716016044>.
+
+**Affected-five verdict: PASS.** The one unattended original-PDF cohort reached
+5/5 readiness with zero independently confirmed unsupported or unresolved
+retained material claims, and the previously demonstrated composite-binding,
+coverage and provenance failures were either corrected or fail-closed. **Overall
+Step 2 promotion verdict: PARTIAL / NO-GO.** This run does not prove broad
+provider-output stability, universal editorial selection quality, or replace
+the unresolved broader ten-report acceptance evidence; Step 3 remains
+unstarted. The explicit KPMG and Algolia editorial omissions and non-blocking
+artifact-quality warnings remain documented rather than being treated as
+factual failures.
