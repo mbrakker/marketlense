@@ -1237,3 +1237,14 @@ This closes the demonstrated deterministic defects but does not prove a single
 Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
 Full per-report evidence and artifact paths are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Hosted-CI gate remediation — 2026-10-28:** Run `40648283236` passed the
+policy, formatting, lint, typing, architecture, contract, mutation, and
+repository-hygiene gates but exposed two test-maintenance failures: a stale
+shortlisting cache-version assertion and a newly enlarged split validation
+module. The assertion now matches the intentional `:20` selection version and
+the semantic-recovery regression is in a separate module below the enforced
+test-file limit; the production contract is unchanged. The focused correction
+set passed 132 tests locally, and a follow-up hosted run was pushed for the
+corrected tree. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

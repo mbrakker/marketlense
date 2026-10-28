@@ -6590,3 +6590,22 @@ the single five-report cohort itself reached only 3/5 readiness and one
 focused output exposed a source-fidelity defect before the deterministic
 render fix. KPMG's numeric coverage also remains sparse. Step 3 must not
 begin; E18 remains **Active/PARTIAL**.
+
+#### Hosted-CI gate remediation — 2026-10-28
+
+Hosted run `40648283236` at `29e18c28` passed the policy, formatting, lint,
+typing, architecture, contract, mutation, and repository-hygiene gates but
+failed two default-pytest assertions. The selection-cache regression still
+expected the intentionally superseded `evidence_backed_shortlisting:19`
+constant after the producer had moved to `:20`. The semantic-verdict recovery
+regression added in the preceding fix also left its split validation module at
+1,049 lines, two above the repository's 1,047-line test-module limit. No
+production assertion failed and no release evidence or publication write was
+performed by that run.
+
+The follow-up correction synchronizes the cache-version expectation and moves
+the recovery regression into `cases_06_semantic_verdict_recovery.py`; it does
+not change production behavior, thresholds, or the recovery contract. The
+focused correction set passed 132 tests locally. A new hosted run was pushed
+for the corrected tree; its final status is reported with this entry's
+delivery record rather than inferred from the local run.
