@@ -15,6 +15,7 @@ from src.contracts.prompt_family_materialization import (
     PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
     PromptFamilyReuseRequest,
 )
+from src.contracts.report_models import REQUIRED_REPORT_PAYLOAD_INSIGHTS
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -42,7 +43,6 @@ from src.generators._artifact_generator.toc import build_toc_artifacts
 from src.generators.artifact_normalization import (
     EDITORIAL_PLAN_TRANSFORM_VERSION,
     MIN_FINAL_ARTIFACT_INSIGHTS,
-    REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     artifact_base_variables,
     artifact_quote_candidates,
     artifact_retrieval_mode,
@@ -55,7 +55,6 @@ from src.generators.artifact_normalization import (
     editorial_plan_theme_bindings,
     eligible_final_insight_candidates,
     fallback_artifact_insights_from_evidence,
-    fallback_artifact_insights_from_findings,
     fallback_artifact_quotes_from_candidates,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
@@ -1241,8 +1240,18 @@ def generate_artifacts(
         REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(editorial_plan["themes"])
     )
     candidate_pool_target = min(8, max(6, final_insight_target_count))
-    eligible_candidate_findings = fallback_artifact_insights_from_findings(
-        safe_evidence.get("findings"),
+    raw_findings = safe_evidence.get("findings")
+    raw_finding_entries = (
+        raw_findings.get("findings") if isinstance(raw_findings, dict) else raw_findings
+    )
+    quote_fallback_pack = (
+        safe_evidence.get("quote_candidates")
+        if not isinstance(raw_finding_entries, list) or not raw_finding_entries
+        else None
+    )
+    eligible_candidate_findings = fallback_artifact_insights_from_evidence(
+        raw_findings,
+        quote_fallback_pack,
         limit=candidate_pool_target,
         editorial_plan=editorial_plan,
         evidence_fidelity=safe_evidence.get("evidence_fidelity"),
@@ -1541,23 +1550,13 @@ def generate_artifacts(
             for candidate in insights_candidates
             if isinstance(candidate, dict)
         ]
-        fallback_candidates = (
-            fallback_artifact_insights_from_evidence(
-                safe_evidence.get("findings"),
-                safe_evidence.get("quote_candidates"),
-                limit=min(fallback_limit, candidate_supplement_limit),
-                editorial_plan=editorial_plan,
-                evidence_fidelity=safe_evidence.get("evidence_fidelity"),
-                covered_evidence_ids=covered_candidate_evidence_ids,
-            )
-            if candidate_generation_deferred
-            else fallback_artifact_insights_from_findings(
-                safe_evidence.get("findings"),
-                limit=min(fallback_limit, candidate_supplement_limit),
-                editorial_plan=editorial_plan,
-                evidence_fidelity=safe_evidence.get("evidence_fidelity"),
-                covered_evidence_ids=covered_candidate_evidence_ids,
-            )
+        fallback_candidates = fallback_artifact_insights_from_evidence(
+            raw_findings,
+            quote_fallback_pack,
+            limit=min(fallback_limit, candidate_supplement_limit),
+            editorial_plan=editorial_plan,
+            evidence_fidelity=safe_evidence.get("evidence_fidelity"),
+            covered_evidence_ids=covered_candidate_evidence_ids,
         )
     if primary_selection_adequate and not fallback_candidates:
         insights_candidates = primary_selected_candidates

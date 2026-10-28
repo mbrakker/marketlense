@@ -9,6 +9,7 @@ import pytest
 
 from src.contracts._report_store.metadata import SourceProvenanceRoles
 from src.contracts.artifact_generation import ArtifactRenderTask
+from src.contracts.report_models import REQUIRED_REPORT_PAYLOAD_INSIGHTS
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.generators.report_analysis_generator import VectorStoreIndexingState
@@ -93,6 +94,29 @@ def test_two_generated_insights_do_not_pass_report_payload_completeness() -> Non
         tldr="tldr",
         commentary="commentary",
         insights=["first", "second"],
+        quote=SimpleNamespace(text="quote"),
+        figure=SimpleNamespace(title="figure", evidence="evidence"),
+    )
+
+    with pytest.raises(AppError) as error:
+        _ensure_report_payload_complete(
+            payload,
+            artifacts={"family_status": {"insights_bundle": {"status": "generated"}}},
+            ctx=RunContext("1.0", "run", "analysis", "span"),
+            file_id="file-1",
+            stage="initial",
+        )
+
+    assert error.value.code == "report_payload_incomplete"
+    assert "insights" in error.value.context["missing_fields"]
+
+
+def test_report_payload_completeness_uses_shared_insight_requirement() -> None:
+    payload = SimpleNamespace(
+        title="Report",
+        tldr="tldr",
+        commentary="commentary",
+        insights=["insight"] * (REQUIRED_REPORT_PAYLOAD_INSIGHTS - 1),
         quote=SimpleNamespace(text="quote"),
         figure=SimpleNamespace(title="figure", evidence="evidence"),
     )

@@ -12,7 +12,12 @@ from src.contracts.files import (
 )
 from src.contracts.ingest import IngestSettings
 from src.contracts.report_analysis import AnalysisPackPathRequest
-from src.contracts.report_models import Figure, Quote, ReportPayload
+from src.contracts.report_models import (
+    REQUIRED_REPORT_PAYLOAD_INSIGHTS,
+    Figure,
+    Quote,
+    ReportPayload,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.contracts.state import StateRecordRequest
@@ -297,15 +302,15 @@ def merge_artifacts_into_payload(
         else []
     )
     if insights_abstained:
-        payload.insights = ["", "", "", "", ""]
+        payload.insights = [""] * REQUIRED_REPORT_PAYLOAD_INSIGHTS
     elif insights_final:
         normalized = []
-        for item in insights_final[:5]:
+        for item in insights_final[:REQUIRED_REPORT_PAYLOAD_INSIGHTS]:
             if isinstance(item, dict):
                 normalized.append(str(item.get("text") or ""))
             else:
                 normalized.append(str(item))
-        while len(normalized) < 5:
+        while len(normalized) < REQUIRED_REPORT_PAYLOAD_INSIGHTS:
             normalized.append("")
         payload.insights = normalized
     quotes_final = (

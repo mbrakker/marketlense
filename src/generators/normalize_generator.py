@@ -3,7 +3,13 @@ from __future__ import annotations
 import logging
 from typing import Any, List
 
-from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
+from src.contracts.report_models import (
+    REQUIRED_REPORT_PAYLOAD_INSIGHTS,
+    Figure,
+    Quote,
+    ReportFigureAsset,
+    ReportPayload,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.utils.logging import log_event
@@ -167,9 +173,9 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         categories.append(item_s)
 
     insights: List[str] = data.insights or []
-    if len(insights) < 5:
-        insights = insights + [""] * (5 - len(insights))
-    insights = insights[:5]
+    if len(insights) < REQUIRED_REPORT_PAYLOAD_INSIGHTS:
+        insights = insights + [""] * (REQUIRED_REPORT_PAYLOAD_INSIGHTS - len(insights))
+    insights = insights[:REQUIRED_REPORT_PAYLOAD_INSIGHTS]
     insights = [_s(insight) for insight in insights]
 
     quote = Quote(

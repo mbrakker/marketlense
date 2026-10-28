@@ -17,6 +17,7 @@ from src.contracts.regeneration import (
     RepairDecision,
     RepairPatchOperation,
 )
+from src.contracts.report_models import REQUIRED_REPORT_PAYLOAD_INSIGHTS
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
@@ -37,7 +38,6 @@ from src.generators.artifact_generator import (
     store_artifacts_payload,
 )
 from src.generators.artifact_normalization import (
-    REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     artifact_base_variables,
     artifact_evidence_span_index,
     artifact_quote_candidates,
@@ -717,10 +717,12 @@ def _regeneration_report_stub(artifacts: Dict[str, Any]):
     if not insights_abstained:
         payload.insights = [
             _s(entry.get("text"))
-            for entry in _copy_list(artifacts.get("insights_final"))[:5]
+            for entry in _copy_list(artifacts.get("insights_final"))[
+                :REQUIRED_REPORT_PAYLOAD_INSIGHTS
+            ]
             if isinstance(entry, dict)
         ]
-    while len(payload.insights) < 5:
+    while len(payload.insights) < REQUIRED_REPORT_PAYLOAD_INSIGHTS:
         payload.insights.append("")
     quotes = _copy_list(artifacts.get("quotes_final"))
     if not quotes_abstained and quotes and isinstance(quotes[0], dict):

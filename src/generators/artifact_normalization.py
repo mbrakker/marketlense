@@ -3,10 +3,12 @@ from __future__ import annotations
 import re
 import unicodedata
 from copy import deepcopy
+from dataclasses import replace
 from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
+from src.contracts.report_models import REQUIRED_REPORT_PAYLOAD_INSIGHTS
 from src.contracts.soft_copy_claim_provenance import (
     align_soft_copy_claim_bindings_to_sentences,
     soft_copy_material_sentences,
@@ -18,12 +20,18 @@ from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_object as _dump_json
 from src.utils.numeric_display import preserve_unique_source_displays
 from src.utils.public_metric_display import normalize_public_metric_display
-from src.utils.quantity import Quantity, extract_quantities, quantities_match
+from src.utils.quantity import (
+    Quantity,
+    canonicalize_quantity,
+    extract_quantities,
+    quantities_canonically_equivalent,
+    quantities_match,
+)
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:20"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:21"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -56,7 +64,6 @@ INSIGHT_SCORE_FIELDS = (
     "novelty_score",
 )
 MIN_FINAL_ARTIFACT_INSIGHTS = 2
-REQUIRED_REPORT_PAYLOAD_INSIGHTS = 5
 COVERAGE_ROLE_VALUES = {
     "market_context",
     "behavior_shift",
@@ -2114,42 +2121,17 @@ def _metric_observation_matches_final_insight(
         return False
     if not all(
         any(
-            quantities_match(final_quantity, observation_quantity)
+            _observation_quantities_are_equivalent(final_quantity, observation_quantity)
             for observation_quantity in observation_quantities
         )
         for final_quantity in final_quantities
     ):
         return False
 
-    final_text = normalize_for_lookup(
-        " ".join(
-            [_s(insight.get("text"))]
-            + [
-                _s(value)
-                for value in final_metric.values()
-                if not isinstance(value, (dict, list))
-            ]
-        )
-    )
-    observation_label = normalize_for_lookup(
-        " ".join(
-            (
-                _s(observation.get("label")),
-                _s(observation.get("segment")),
-            )
-        )
-    )
-    label_tokens = [
-        token
-        for token in re.findall(r"[a-z0-9]+", observation_label)
-        if len(token) > 1
-    ]
-    if len(label_tokens) < 2 or not all(
-        token in final_text or token.rstrip("s") in final_text
-        for token in label_tokens
-    ):
+    if not _metric_observation_is_explicitly_named(insight, final_metric, observation):
         return False
 
+    final_text = _metric_final_text(insight, final_metric)
     for field_name in (
         "unit",
         "timeframe",
@@ -2162,10 +2144,14 @@ def _metric_observation_matches_final_insight(
     ):
         final_value = normalize_for_lookup(final_metric.get(field_name))
         observation_value = normalize_for_lookup(observation.get(field_name))
-        if final_value and observation_value and not (
-            final_value == observation_value
-            or final_value in observation_value
-            or observation_value in final_value
+        if (
+            final_value
+            and observation_value
+            and not (
+                final_value == observation_value
+                or final_value in observation_value
+                or observation_value in final_value
+            )
         ):
             observation_tokens = [
                 token
@@ -2177,6 +2163,76 @@ def _metric_observation_matches_final_insight(
                 for token in observation_tokens
             ):
                 return False
+    return True
+
+
+def _observation_quantities_are_equivalent(left: Quantity, right: Quantity) -> bool:
+    """Compare explicit value/unit identity without borrowing display period."""
+
+    left_canonical = canonicalize_quantity(left)
+    right_canonical = canonicalize_quantity(right)
+    if quantities_canonically_equivalent(left, right):
+        return True
+    return replace(left_canonical, timeframe="") == replace(
+        right_canonical, timeframe=""
+    )
+
+
+def _metric_final_text(insight: Dict[str, Any], final_metric: Dict[str, Any]) -> str:
+    return normalize_for_lookup(
+        " ".join(
+            [_s(insight.get("text"))]
+            + [
+                _s(value)
+                for value in final_metric.values()
+                if not isinstance(value, (dict, list))
+            ]
+        )
+    )
+
+
+def _metric_observation_is_explicitly_named(
+    insight: Dict[str, Any],
+    final_metric: Dict[str, Any],
+    observation: Dict[str, Any],
+) -> bool:
+    observation_label = normalize_for_lookup(
+        " ".join(
+            (
+                _s(observation.get("label")),
+                _s(observation.get("segment")),
+            )
+        )
+    )
+    label_tokens = [
+        token for token in re.findall(r"[a-z0-9]+", observation_label) if len(token) > 1
+    ]
+    if len(label_tokens) < 2:
+        return False
+    final_text = _metric_final_text(insight, final_metric)
+    return all(
+        token in final_text or token.rstrip("s") in final_text for token in label_tokens
+    )
+
+
+def _metric_finally_describes_composite(
+    final_metric: Dict[str, Any], observations: List[Dict[str, Any]]
+) -> bool:
+    final_quantities = extract_quantities(_s(final_metric.get("value")))
+    if not final_quantities:
+        return False
+    for observation in observations:
+        observation_quantities = extract_quantities(_s(observation.get("value")))
+        if not observation_quantities or not all(
+            any(
+                _observation_quantities_are_equivalent(
+                    final_quantity, observation_quantity
+                )
+                for final_quantity in final_quantities
+            )
+            for observation_quantity in observation_quantities
+        ):
+            return False
     return True
 
 
@@ -2207,6 +2263,33 @@ def _metric_binding_for_final_observation(
         )
     ]
     if len(matches) != 1:
+        observation_dicts = [
+            observation for observation in observations if isinstance(observation, dict)
+        ]
+        explicitly_named_observations = [
+            observation
+            for observation in observation_dicts
+            if _metric_observation_is_explicitly_named(
+                insight, final_metric, observation
+            )
+        ]
+        if _metric_finally_describes_composite(final_metric, observation_dicts) and (
+            not explicitly_named_observations
+            or len(explicitly_named_observations) == len(observation_dicts)
+        ):
+            return _complete_protected_metric_binding(
+                candidate_metric, preserve_unknown_fields=preserve_unknown_fields
+            )
+        if explicitly_named_observations:
+            raise AppError(
+                code="artifact_final_insight_observation_binding_ambiguous",
+                message=(
+                    "Final insight has an ambiguous observation binding; "
+                    "the authoritative composite metric cannot be selected"
+                ),
+                retryable=False,
+                context={"insight_id": _s(insight.get("id")).strip()},
+            )
         return _complete_protected_metric_binding(
             candidate_metric, preserve_unknown_fields=preserve_unknown_fields
         )
@@ -2243,9 +2326,7 @@ def _restore_candidate_factual_fields(
             preserve_unknown_fields=preserve_unknown_metric_fields,
         )
         if not preserve_unknown_metric_fields:
-            restored["metric"] = _complete_protected_metric_binding(
-                restored["metric"]
-            )
+            restored["metric"] = _complete_protected_metric_binding(restored["metric"])
     elif "metric" in restored:
         restored["metric"] = _complete_protected_metric_binding(
             None,
@@ -3205,10 +3286,15 @@ def fallback_artifact_insights_from_evidence(
         covered_evidence_ids=covered_evidence_ids,
     )
     seen_evidence_ids = {
-        normalize_text(_s(item.get("evidence_id")))
+        _fallback_evidence_key(item.get("evidence_id"))
         for item in candidates
         if isinstance(item, dict)
     }
+    seen_evidence_ids.update(
+        _fallback_evidence_key(evidence_id)
+        for evidence_id in covered_evidence_ids or []
+        if _fallback_evidence_key(evidence_id)
+    )
     raw_quotes = (
         quote_candidates_pack.get("quote_candidates")
         if isinstance(quote_candidates_pack, dict)
@@ -3223,7 +3309,7 @@ def fallback_artifact_insights_from_evidence(
             continue
         evidence_id = _s(quote.get("id") or quote.get("evidence_id")).strip()
         text = _s(quote.get("text")).strip()
-        normalized_id = normalize_text(evidence_id)
+        normalized_id = _fallback_evidence_key(evidence_id)
         if not evidence_id or not text or normalized_id in seen_evidence_ids:
             continue
         page = quote.get("page")

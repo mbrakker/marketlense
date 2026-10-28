@@ -4,6 +4,9 @@ from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Tuple
 
 
+REQUIRED_REPORT_PAYLOAD_INSIGHTS = 5
+
+
 @dataclass
 class Quote:
     text: str = field(metadata={"doc": "Quoted text."})
@@ -112,7 +115,9 @@ class ReportPayload:
     title: str = field(
         metadata={"doc": "Human-friendly report title extracted from the content."}
     )
-    insights: List[str] = field(metadata={"doc": "List of five insights."})
+    insights: List[str] = field(
+        metadata={"doc": f"List of {REQUIRED_REPORT_PAYLOAD_INSIGHTS} insights."}
+    )
     quote: Quote = field(metadata={"doc": "Key quote extracted from the report."})
     figure: Figure = field(metadata={"doc": "Figure metadata."})
     commentary: str = field(metadata={"doc": "Commentary paragraph."})

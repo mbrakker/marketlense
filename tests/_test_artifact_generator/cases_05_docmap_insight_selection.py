@@ -423,6 +423,47 @@ def test_generate_artifacts_supplements_short_model_roster_from_strong_findings(
     )
 
 
+def test_generate_artifacts_uses_page_backed_quotes_when_findings_are_empty(tmp_path):
+    evidence = _generation_evidence(5)
+    evidence["findings"]["findings"] = []
+    evidence["quote_candidates"] = {
+        "quote_candidates": [
+            {
+                "id": f"f{index}",
+                "text": f"The report confirms source-backed signal {index}.",
+                "source": "Research team",
+                "page": index + 1,
+            }
+            for index in range(1, 6)
+        ]
+    }
+    model_candidates = [_insight("f1", score=0.99), _insight("f2", score=0.98)]
+    responses = _generation_responses(
+        model_candidates,
+        plan_evidence_ids=[f"f{index}" for index in range(1, 6)],
+    )
+    responses["insights_final"] = {"insights_final": model_candidates}
+
+    payload = generate_artifacts(
+        report_id="quote-fallback-when-findings-empty",
+        report_name="Quote fallback when findings are empty",
+        doc_map=_doc_map(5),
+        evidence_packs=evidence,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    audit = payload["_cache"]["candidate_generation"]
+    selected_ids = {item["evidence_id"] for item in payload["insights_candidates"]}
+    assert audit["fallback_invoked"] is True
+    assert audit["fallback_candidate_count"] >= 3
+    assert {"f3", "f4", "f5"}.issubset(selected_ids)
+    assert len(payload["insights_final"]) >= 5
+
+
 def test_generate_artifacts_keeps_eight_model_candidates_without_fallback(tmp_path):
     candidates = [_insight(f"f{index}", score=1 - index / 100) for index in range(1, 9)]
     responses = _generation_responses(

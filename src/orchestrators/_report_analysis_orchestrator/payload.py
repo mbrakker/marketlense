@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from src.contracts.report_models import REQUIRED_REPORT_PAYLOAD_INSIGHTS
 from src.orchestrators._report_analysis_orchestrator.shared import logger
 from src.utils.analysis_family import family_is_abstained
 from src.utils.errors import AppError
@@ -101,10 +102,10 @@ def _ensure_report_payload_complete(
     if not summary_abstained and _missing_text(payload.commentary):
         missing_fields.append("commentary")
     insights = list(payload.insights or [])
-    if not insights_abstained and len(insights) < 5:
+    if not insights_abstained and len(insights) < REQUIRED_REPORT_PAYLOAD_INSIGHTS:
         missing_fields.append("insights")
     if not insights_abstained:
-        for index in range(5):
+        for index in range(REQUIRED_REPORT_PAYLOAD_INSIGHTS):
             insight = insights[index] if index < len(insights) else ""
             if _missing_text(insight):
                 missing_fields.append(f"insights[{index}]")

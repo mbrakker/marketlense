@@ -506,6 +506,73 @@ def test_verified_selection_scopes_composite_metric_to_final_observation() -> No
     assert metric["observations"] == candidate_metric["observations"]
 
 
+def test_verified_selection_rejects_named_observation_without_unique_binding() -> None:
+    candidate_metric = {
+        "label": "Global e-commerce CPI",
+        "value": "Global: $1.00 in 2024; $0.98 in 2025",
+        "unit": "USD per install",
+        "observations": [
+            {
+                "label": "Deal discovery CPI",
+                "value": "2024: $1.44; 2025: $2.26",
+                "unit": "USD per install",
+                "segment": "Deal discovery",
+            },
+            {
+                "label": "Shopping CPI",
+                "value": "2024: $0.93; 2025: $0.91",
+                "unit": "USD per install",
+                "segment": "Shopping",
+            },
+        ],
+    }
+
+    with pytest.raises(AppError, match="observation binding"):
+        select_artifact_insights(
+            final_insights=[
+                {
+                    "id": "ecommerce-cpi",
+                    "text": (
+                        "Deal discovery CPI rose from $1.00 in 2024 to $0.98 in 2025."
+                    ),
+                    "evidence_id": "final-only",
+                    "metric": {
+                        "label": "Deal discovery CPI",
+                        "value": "2024: $1.00; 2025: $0.98",
+                        "unit": "USD per install",
+                        "segment": "Deal discovery",
+                    },
+                }
+            ],
+            candidate_insights=[
+                {
+                    "id": "ecommerce-cpi",
+                    "text": "The retained composite CPI fact.",
+                    "evidence_id": "verified-fact:ecommerce-cpi",
+                    "evidence": "The source reports all e-commerce CPI observations.",
+                    "pages": [29],
+                    "metric": candidate_metric,
+                }
+            ],
+            editorial_plan={
+                "report_thesis": "Composite source facts remain authoritative.",
+                "themes": [
+                    {
+                        "theme": "Acquisition economics",
+                        "priority": 1,
+                        "evidence_ids": ["verified-fact:ecommerce-cpi"],
+                    },
+                    {
+                        "theme": "Subvertical differences",
+                        "priority": 2,
+                        "evidence_ids": ["verified-fact:ecommerce-cpi"],
+                    },
+                ],
+            },
+            verified_mode=True,
+        )
+
+
 def test_verified_multi_fact_binding_survives_insight_normalization_and_selection():
     primary_id = "verified-fact:north-america"
     comparison_id = "verified-fact:apac"
