@@ -211,6 +211,79 @@ def _factual(kind: ClaimKind) -> bool:
 
 def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | None]]:
     indexed: dict[str, tuple[str, str, int | None]] = {}
+
+    def _supported_finding_statement(evidence_id: str, item: dict) -> str:
+        """Return a generated finding only when its source binding is retained.
+
+        Finding ``text`` is normally editorial copy and must not establish
+        numeric support by itself.  Evidence-fidelity validation is the one
+        existing contract that can promote that statement: it requires an
+        exact candidate identity/text match and a concrete source-PDF page.
+        Mirror that contract here so retained-claim validation sees the same
+        source-backed finding statement as downstream evidence-span binding.
+        """
+
+        findings_pack = evidence_packs.get("findings")
+        family_status = (
+            findings_pack.get("family_status")
+            if isinstance(findings_pack, dict)
+            else None
+        )
+        if not (
+            isinstance(family_status, dict)
+            and family_status.get("status") == "generated"
+            and family_status.get("policy_action") == "keep"
+        ):
+            return ""
+        statement = str(item.get("text") or item.get("statement") or "").strip()
+        if not statement:
+            return ""
+
+        fidelity = evidence_packs.get("evidence_fidelity")
+        results = fidelity.get("results") if isinstance(fidelity, dict) else None
+        matching_statement = ""
+        matching_pages: set[int] = set()
+        for result in results if isinstance(results, list) else []:
+            if not isinstance(result, dict) or result.get("status") != "supported":
+                continue
+            candidate = result.get("candidate")
+            if not isinstance(candidate, dict):
+                continue
+            if str(candidate.get("claim_id") or "").strip() != (
+                f"evidence:findings:{evidence_id}"
+            ) or str(candidate.get("text") or "").strip() != statement:
+                continue
+            references = candidate.get("evidence_references")
+            pages = {
+                reference.get("page")
+                for reference in references if isinstance(reference, dict)
+                and reference.get("source_pack") == "source_pdf"
+                and isinstance(reference.get("page"), int)
+                and reference.get("page") > 0
+            } if isinstance(references, list) else set()
+            if not pages:
+                continue
+            item_pages_raw = item.get("pages", item.get("page"))
+            item_pages = (
+                item_pages_raw
+                if isinstance(item_pages_raw, list)
+                else [item_pages_raw]
+            )
+            item_pages = {
+                page
+                for page in item_pages
+                if isinstance(page, int) and not isinstance(page, bool) and page > 0
+            }
+            if not item_pages or not item_pages.issubset(pages):
+                continue
+            if matching_statement and (
+                matching_statement != statement or matching_pages != pages
+            ):
+                return ""
+            matching_statement = statement
+            matching_pages = pages
+        return matching_statement
+
     for pack_name, payload in sorted(evidence_packs.items()):
         if not isinstance(payload, dict):
             continue
@@ -230,6 +303,12 @@ def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | Non
                     text = _item_direct_evidence_text(
                         item, include_text=pack_name == "quote_candidates"
                     )
+                    if pack_name == "findings":
+                        statement = _supported_finding_statement(evidence_id, item)
+                        if statement and statement not in text:
+                            text = " ".join(
+                                value for value in (text, statement) if value
+                            )
                 else:
                     text = " ".join(
                         str(item.get(key) or "").strip()

@@ -41,6 +41,95 @@ def test_generated_finding_text_cannot_prove_a_number_absent_from_source_excerpt
     )
 
 
+def test_source_fidelity_approved_finding_statement_can_support_retained_claim():
+    claim = "75% of respondents expected large or very large impact."
+    evidence_id = "agentic-apps-impact"
+    artifacts = {
+        "insights_final": [
+            {"id": "impact", "text": claim, "evidence_id": evidence_id}
+        ]
+    }
+    packs = {
+        "findings": {
+            "family_status": {"status": "generated", "policy_action": "keep"},
+            "findings": [
+                {
+                    "id": evidence_id,
+                    "text": claim,
+                    "evidence": "Very large impact 15%; large impact 60%; Base=265.",
+                    "pages": [41],
+                }
+            ],
+        },
+        "evidence_fidelity": {
+            "results": [
+                {
+                    "status": "supported",
+                    "candidate": {
+                        "claim_id": f"evidence:findings:{evidence_id}",
+                        "text": claim,
+                        "evidence_references": [
+                            {"source_pack": "source_pdf", "page": 41}
+                        ],
+                    },
+                }
+            ]
+        },
+    }
+
+    result = validate_retained_claims(artifacts, packs).results[0]
+
+    assert result.status == "supported"
+    assert all(
+        check.status != "failed"
+        for check in result.checks
+        if check.name == "number_value_unit_match"
+    )
+
+
+def test_unbound_finding_statement_cannot_support_retained_claim():
+    claim = "75% of respondents expected large or very large impact."
+    evidence_id = "agentic-apps-impact"
+    artifacts = {
+        "insights_final": [{"id": "impact", "text": claim, "evidence_id": evidence_id}]
+    }
+    packs = {
+        "findings": {
+            "family_status": {"status": "generated", "policy_action": "keep"},
+            "findings": [
+                {
+                    "id": evidence_id,
+                    "text": claim,
+                    "evidence": "Very large impact 15%; large impact 60%; Base=265.",
+                    "pages": [41],
+                }
+            ],
+        },
+        "evidence_fidelity": {
+            "results": [
+                {
+                    "status": "supported",
+                    "candidate": {
+                        "claim_id": f"evidence:findings:{evidence_id}",
+                        "text": claim,
+                        "evidence_references": [
+                            {"source_pack": "source_pdf"}
+                        ],
+                    },
+                }
+            ]
+        },
+    }
+
+    result = validate_retained_claims(artifacts, packs).results[0]
+
+    assert result.status == "unsupported"
+    assert any(
+        check.name == "number_value_unit_match" and check.status == "failed"
+        for check in result.checks
+    )
+
+
 def test_direct_source_excerpt_is_not_concatenated_with_generated_copy():
     artifacts, packs = _case()
     # A descriptive claim requests semantic grounding instead of a numeric pass.
