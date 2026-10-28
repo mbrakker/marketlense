@@ -2,6 +2,7 @@ import pytest
 
 from src.generators.artifact_normalization import (
     constrain_summary_to_source_backed_claims,
+    eligible_final_insight_candidates,
     normalize_artifact_insights,
     preserve_public_source_displays,
     select_artifact_insights,
@@ -597,6 +598,61 @@ def test_verified_selection_keeps_full_composite_when_final_metric_is_sparse() -
     assert selected[0]["metric"]["label"] == candidate_metric["label"]
     assert selected[0]["metric"]["value"] == candidate_metric["value"]
     assert selected[0]["metric"]["observations"] == candidate_metric["observations"]
+
+
+def test_verified_fact_projection_remains_eligible_without_composite_rebinding() -> (
+    None
+):
+    metric = {
+        "label": "Global e-commerce CPI",
+        "value": "Overall: $1.00 to $0.98; deal discovery: $1.44 to $2.26",
+        "unit": "USD per install",
+        "observations": [
+            {
+                "label": "All e-commerce apps",
+                "value": "$1.00 in 2024; $0.98 in 2025",
+                "unit": "USD per install",
+                "segment": "All",
+            },
+            {
+                "label": "Deal discovery",
+                "value": "$1.44 in 2024; $2.26 in 2025",
+                "unit": "USD per install",
+                "segment": "Deal discovery",
+            },
+        ],
+    }
+    candidate = {
+        "id": "ecommerce-cpi",
+        "verified_fact_id": "ecommerce-cpi",
+        "text": "The authoritative composite CPI fact.",
+        "evidence_id": "verified-fact:ecommerce-cpi",
+        "evidence": "The source reports the composite CPI fact.",
+        "pages": [29],
+        "evidence_spans": [
+            {
+                "evidence_id": "verified-fact:ecommerce-cpi",
+                "source_pack": "verified_facts",
+                "page": 29,
+                "text": "The source reports the composite CPI fact.",
+            }
+        ],
+        "metric": metric,
+        "verified_fact": {
+            "fact_id": "ecommerce-cpi",
+            "statement": "The authoritative composite CPI fact.",
+            "metric": metric,
+            "source_identity": "source:adjust",
+        },
+    }
+
+    eligible = eligible_final_insight_candidates([candidate])
+
+    assert len(eligible) == 1
+    assert eligible[0]["text"] == candidate["text"]
+    assert eligible[0]["metric"] == metric
+    assert eligible[0]["evidence_id"] == candidate["evidence_id"]
+    assert eligible[0]["pages"] == [29]
 
 
 def test_verified_selection_rejects_named_observation_without_unique_binding() -> None:

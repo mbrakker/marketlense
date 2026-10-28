@@ -1738,10 +1738,16 @@ def eligible_final_insight_candidates(
             insight for insight in group if _s(insight.get("evidence_id")).strip()
         ]
         if reliable:
+            authoritative = min(reliable, key=_insight_quality_key)
+            # A verified-fact projection already carries the authoritative
+            # composite metric and source binding.  Re-scoping it through the
+            # final-editorial observation matcher can manufacture an
+            # ambiguity even though no editorial rewrite has occurred.
+            if isinstance(authoritative.get("verified_fact"), dict):
+                eligible.append(deepcopy(authoritative))
+                continue
             eligible.append(
-                _restore_candidate_factual_fields(
-                    min(reliable, key=_insight_quality_key), candidate_facts
-                )
+                _restore_candidate_factual_fields(authoritative, candidate_facts)
             )
     return eligible
 
