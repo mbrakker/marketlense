@@ -838,6 +838,91 @@ def test_verified_fact_projection_remains_eligible_without_composite_rebinding()
     assert eligible[0]["pages"] == [29]
 
 
+def test_verified_fact_composite_survives_final_editorial_restoration() -> None:
+    candidate_metric = {
+        "label": "Year-over-year install and session growth by gaming app subvertical",
+        "value": "",
+        "unit": "percent",
+        "timeframe": "2024–2025 year-over-year",
+        "geography": "Global",
+        "segment": "Gaming app subverticals",
+        "cohort": "Casual games, hyper casual, strategy, casino, and slots",
+        "observations": [
+            {
+                "label": "Installs",
+                "value": "-1",
+                "unit": "%",
+                "segment": "Gaming apps",
+                "cohort": "Strategy",
+            },
+            {
+                "label": "Sessions",
+                "value": "57",
+                "unit": "%",
+                "segment": "Gaming apps",
+                "cohort": "Strategy",
+            },
+        ],
+    }
+    candidate = {
+        "id": "gaming-subvertical-growth",
+        "text": "The authoritative gaming composite fact.",
+        "evidence_id": "verified-fact:gaming-subvertical-growth",
+        "evidence": "The source reports the gaming subvertical chart.",
+        "pages": [19],
+        "metric": candidate_metric,
+        "verified_fact": {
+            "fact_id": "gaming-subvertical-growth",
+            "statement": "Strategy sessions rose while installs were flat.",
+            "metric": candidate_metric,
+            "source_identity": "source:adjust",
+        },
+    }
+    selected = select_artifact_insights(
+        final_insights=[
+            {
+                "id": "gaming-subvertical-growth",
+                "text": (
+                    "Strategy app sessions grew 57% year over year despite flat "
+                    "install growth."
+                ),
+                "evidence_id": "final-only",
+                "metric": {
+                    "label": "Strategy app sessions",
+                    "value": "57%",
+                    "unit": "percent",
+                    "cohort": "Strategy",
+                },
+            }
+        ],
+        candidate_insights=[candidate],
+        editorial_plan={
+            "report_thesis": "The source-supported composite remains authoritative.",
+            "themes": [
+                {
+                    "theme": "Gaming subvertical growth",
+                    "priority": 1,
+                    "evidence_ids": ["verified-fact:gaming-subvertical-growth"],
+                },
+                {
+                    "theme": "Strategy engagement divergence",
+                    "priority": 2,
+                    "evidence_ids": ["verified-fact:gaming-subvertical-growth"],
+                },
+            ],
+        },
+        verified_mode=True,
+    )
+
+    assert len(selected) == 1
+    assert selected[0]["text"].startswith("Strategy app sessions")
+    assert selected[0]["metric"]["label"] == candidate_metric["label"]
+    assert selected[0]["metric"]["value"] == candidate_metric["value"]
+    assert selected[0]["metric"]["observations"] == candidate_metric["observations"]
+    assert selected[0]["evidence_id"] == candidate["evidence_id"]
+    assert selected[0]["pages"] == [19]
+
+
 def test_verified_selection_rejects_named_observation_without_unique_binding() -> None:
     candidate_metric = {
         "label": "Global e-commerce CPI",

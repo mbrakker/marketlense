@@ -31,7 +31,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:22"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:23"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -2368,11 +2368,21 @@ def _restore_candidate_factual_fields(
     restored = dict(insight)
     candidate_metric = candidate.get("metric")
     if isinstance(candidate_metric, dict):
-        restored["metric"] = _metric_binding_for_final_observation(
-            candidate_metric,
-            insight,
-            preserve_unknown_fields=preserve_unknown_metric_fields,
-        )
+        if isinstance(candidate.get("verified_fact"), dict):
+            # A verified-fact projection already contains the complete
+            # authoritative composite metric.  Re-scoping it against a final
+            # editorial rewrite can mistake a valid subset of observations
+            # for an ambiguous aggregate binding.
+            restored["metric"] = _complete_protected_metric_binding(
+                candidate_metric,
+                preserve_unknown_fields=preserve_unknown_metric_fields,
+            )
+        else:
+            restored["metric"] = _metric_binding_for_final_observation(
+                candidate_metric,
+                insight,
+                preserve_unknown_fields=preserve_unknown_metric_fields,
+            )
         if not preserve_unknown_metric_fields:
             restored["metric"] = _complete_protected_metric_binding(restored["metric"])
     elif "metric" in restored:
