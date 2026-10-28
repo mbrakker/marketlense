@@ -1119,8 +1119,8 @@ def _coerce_topic_briefs(artifacts: dict[str, Any]) -> list[dict[str, Any]]:
         toc_only = coverage_status == "toc_only"
         if coverage_status:
             summary = "" if toc_only else _s(coverage.get("why_it_matters"))
-            key_points_source = [] if toc_only else _coerce_list(
-                coverage.get("subtopics")
+            key_points_source = (
+                [] if toc_only else _coerce_list(coverage.get("subtopics"))
             )
         else:
             summary = _s(item.get("summary"))
@@ -1130,11 +1130,7 @@ def _coerce_topic_briefs(artifacts: dict[str, Any]) -> list[dict[str, Any]]:
                 "section_id": _s(item.get("section_id") or item.get("id")),
                 "title": title,
                 "summary": summary,
-                "key_points": [
-                    _s(point)
-                    for point in key_points_source
-                    if _s(point)
-                ],
+                "key_points": [_s(point) for point in key_points_source if _s(point)],
             }
         )
     return briefs
