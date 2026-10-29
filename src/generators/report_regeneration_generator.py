@@ -4946,6 +4946,7 @@ def _handle_insights_bundle_regeneration(
             )
         ),
         editorial_plan=execution.state.editorial_plan,
+        verified_mode=bool(execution.state.visual_authority_digest),
     )
     _apply_visual_authority_pool(execution.state)
     eligible_candidate_insights = eligible_final_insight_candidates(
@@ -4995,6 +4996,7 @@ def _handle_insights_bundle_regeneration(
             candidate_insights=eligible_candidate_insights,
             editorial_plan=execution.state.editorial_plan,
             require_final_candidate_lineage=True,
+            verified_mode=bool(execution.state.visual_authority_digest),
         ),
         prior_final_insights=prior_final_insights,
         eligible_candidate_insights=eligible_candidate_insights,
