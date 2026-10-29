@@ -447,11 +447,12 @@ def assemble_artifacts_payload(
         soft_copy_claim_bindings["summary"] = source_backed_summary_claim_bindings(
             summary
         )
-    preserve_soft_copy_binding_source_displays(
-        summary=summary,
-        insights_final=insights_final,
-        soft_copy_claim_bindings=soft_copy_claim_bindings,
-    )
+    if not visual_authority_canary:
+        preserve_soft_copy_binding_source_displays(
+            summary=summary,
+            insights_final=insights_final,
+            soft_copy_claim_bindings=soft_copy_claim_bindings,
+        )
     summary_already_bound = (
         summary_has_required_copy_fields
         and not (soft_copy_claim_bindings.get("summary"))

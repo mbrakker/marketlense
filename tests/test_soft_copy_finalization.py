@@ -701,6 +701,142 @@ def test_repaired_summary_with_invalid_compact_tldr_abstains_without_direct_clai
     assert_retained_soft_copy_claims_match_public_copy(payload)
 
 
+def test_verified_summary_does_not_mutate_bindings_without_public_display_rewrite() -> (
+    None
+):
+    """Verified copy keeps the model's exact public sentence/provenance grid."""
+
+    sentence = "Revenue reached $7.3B in 2025."
+    # This flag is supplied by the verified-facts assembly path; the source
+    # display normalizer is intentionally not applied to bindings alone.
+    # The helper defaults to legacy mode, so exercise the public boundary
+    # directly with the verified-mode argument through the canonical assembler.
+    from src.contracts.run_context import RunContext
+    from src.generators._artifact_generator.family_policy import (
+        build_artifact_family_status,
+    )
+    from src.generators._artifact_generator.storage import assemble_artifacts_payload
+
+    summary = {
+        "tldr": sentence,
+        "card_tldr_compact": sentence,
+        "executive_summary": sentence,
+        "claim_evidence_map": [
+            {
+                "claim": sentence,
+                "evidence_id": "verified-fact:revenue",
+                "evidence": sentence,
+            }
+        ],
+    }
+    family_status = build_artifact_family_status(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+    payload = assemble_artifacts_payload(
+        report_id="verified-summary",
+        report_name="Verified summary",
+        doc_map={"sections": []},
+        evidence_packs={
+            "findings": {
+                "family_status": {
+                    "family": "findings",
+                    "source": "verified_facts",
+                    "status": "generated",
+                    "policy_action": "keep",
+                },
+                "findings": [
+                    {
+                        "id": "verified-fact:revenue",
+                        "evidence": "Revenue reached $7.30B in 2025.",
+                        "pages": [1],
+                    }
+                ],
+            }
+        },
+        toc_bundle={"toc_entries": []},
+        editorial_plan={
+            "report_thesis": "Evidence",
+            "themes": [
+                {
+                    "theme": "Revenue",
+                    "priority": 1,
+                    "evidence_ids": ["verified-fact:revenue"],
+                },
+                {
+                    "theme": "Context",
+                    "priority": 2,
+                    "evidence_ids": ["verified-fact:revenue"],
+                },
+            ],
+        },
+        summary=summary,
+        cover_semantics={
+            "evidence_shape": "trend",
+            "direction": "rising",
+            "geography_scope": "global",
+            "evidence_density": "metric_rich",
+            "domain_layer": "grid",
+            "selection_reason": "Evidence supports the retained output.",
+        },
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="",
+        source_status={"not_available": False, "reason": ""},
+        family_status=family_status,
+        ctx=RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": sentence,
+                    "classification": "factual",
+                    "evidence_ids": ["verified-fact:revenue"],
+                }
+            ]
+        },
+        visual_authority_canary=True,
+    )
+
+    assert payload["summary"]["card_tldr_compact"] == sentence
+    assert payload["family_status"]["summary"]["status"] == "generated"
+    assert_retained_soft_copy_claims_match_public_copy(payload)
+
+
+def test_evidence_backed_optional_copy_survives_summary_abstention() -> None:
+    from src.generators._artifact_generator.family_policy import (
+        build_artifact_family_status,
+    )
+
+    status = build_artifact_family_status(
+        summary={},
+        insights_candidates=[
+            {
+                "id": "insight-1",
+                "text": "Evidence-backed insight.",
+                "evidence_id": "verified-fact:insight-1",
+            }
+        ],
+        insights_final=[
+            {
+                "id": "insight-1",
+                "text": "Evidence-backed insight.",
+                "evidence_id": "verified-fact:insight-1",
+            }
+        ],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="A source-grounded optional post.",
+    )
+
+    assert status["linkedin_post"]["status"] == "generated"
+
+
 def test_finalization_abstains_when_unbound_summary_has_no_direct_claims() -> None:
     """Unsupported Summary copy is removed when no direct claim can replace it."""
     payload = _assemble_soft_copy(

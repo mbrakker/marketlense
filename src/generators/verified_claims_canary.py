@@ -29,6 +29,7 @@ from src.utils.errors import AppError
 from src.utils.text_normalization import normalize_for_lookup
 from src.utils.verified_facts import (
     PROTECTED_METRIC_FIELDS,
+    canonical_fact_text,
     validated_verified_facts,
 )
 
@@ -353,9 +354,7 @@ def admit_visual_authority_candidates(
     except AppError:
         return _empty_admission(audit, "verified_fact_snapshot_invalid")
     facts_by_id = canonical_facts
-    unique_projections = [
-        _fact_projection(fact) for fact in facts_by_id.values()
-    ]
+    unique_projections = [_fact_projection(fact) for fact in facts_by_id.values()]
     verified_evidence_packs = _verified_evidence_packs(list(facts_by_id.values()))
     audit["admitted_count"] = len(unique_projections)
     audit["verified_fact_count"] = len(facts_by_id)
@@ -635,7 +634,7 @@ def _fact_projection(fact: Mapping[str, Any]) -> dict[str, Any]:
         "verified_fact_id": fact_id,
         "text": _field_text(fact, "statement"),
         "evidence_id": evidence_id,
-        "evidence": _field_text(fact, "statement"),
+        "evidence": canonical_fact_text(fact),
         "evidence_spans": spans,
         "pages": pages,
         "metric": deepcopy(fact.get("metric") or {}),

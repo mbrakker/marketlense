@@ -532,47 +532,19 @@ def _validate_span(
 
 
 def canonical_fact_text(fact: Mapping[str, Any]) -> str:
-    """Serialize structured fact fields for retrieval without PDF inference."""
+    """Serialize the complete verified fact with labels and nested structure."""
 
-    parts = [str(fact.get("statement") or "").strip()]
-    for qualifier in fact.get("qualifiers") or []:
-        if str(qualifier).strip():
-            parts.append(str(qualifier).strip())
-    metric = fact.get("metric")
-    if isinstance(metric, Mapping):
-        for field_name in PROTECTED_METRIC_FIELDS:
-            value = metric.get(field_name)
-            if field_name == "observations" and isinstance(value, list):
-                for observation in value:
-                    if isinstance(observation, Mapping):
-                        parts.append(
-                            " ".join(
-                                str(observation.get(key) or "").strip()
-                                for key in PROTECTED_METRIC_FIELDS
-                                if key != "observations"
-                                and str(observation.get(key) or "").strip()
-                            )
-                        )
-            elif isinstance(value, (str, int, float)) and str(value).strip():
-                parts.append(str(value).strip())
-    provenance = fact.get("provenance")
-    notes = (
-        provenance.get("source_truth_notes_by_page")
-        if isinstance(provenance, Mapping)
-        else None
+    # Keep the evidence identity-bound to the admitted fact itself.  The prior
+    # projection concatenated selected metric values without their field names,
+    # which made a multi-observation chart ambiguous to semantic grounding and
+    # silently omitted report-specific metric fields.  Compact canonical JSON
+    # preserves every authoritative field while remaining deterministic.
+    return json.dumps(
+        copy.deepcopy(dict(fact)),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
     )
-    supporting_pages = fact.get("supporting_physical_pages")
-    if isinstance(notes, Mapping):
-        pages = (
-            supporting_pages
-            if isinstance(supporting_pages, list)
-            else sorted(notes, key=str)
-        )
-        for page in pages:
-            note = notes.get(str(page))
-            if str(note).strip():
-                parts.append(str(note).strip())
-    return " ".join(part for part in parts if part)
 
 
 def canonical_evidence_map(facts: Mapping[str, Mapping[str, Any]]) -> dict[str, str]:
@@ -605,7 +577,7 @@ def canonical_verified_evidence_packs(
                 "verified_fact_id": fact_id,
                 "text": fact["statement"],
                 "statement": fact["statement"],
-                "evidence": fact["statement"],
+                "evidence": canonical_fact_text(fact),
                 "metric": copy.deepcopy(dict(fact["metric"])),
                 "pages": list(fact["supporting_physical_pages"]),
                 "source_identity": fact["source_identity"],

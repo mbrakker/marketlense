@@ -388,6 +388,8 @@ def test_verified_grounding_retains_page_bound_source_truth_notes():
     canonical_text = canonical_fact_text(fact)
     assert note in canonical_text
     assert note in canonical_evidence_map({"fact-1": fact})["verified-fact:fact-1"]
+    assert '"source_truth_notes_by_page"' in canonical_text
+    assert '"metric"' in canonical_text
 
     payload = grounding_payload(
         ValidationRequest(
@@ -513,6 +515,36 @@ def test_verified_grounding_batch_variables_scope_report_wide_evidence():
         rendered_batch["canonical_verified_facts"]["fact-1"]["provenance"]
         == fact["provenance"]
     )
+
+
+def test_canonical_evidence_text_preserves_unfamiliar_nested_metric_fields():
+    from src.utils.verified_facts import canonical_verified_evidence_packs
+
+    metric = _metric(
+        observations=[
+            {
+                "label": "Composite observation",
+                "value": "42",
+                "unit": "%",
+                "timeframe": "2026 H1",
+                "population": "verified buyers",
+                "methodology": {"weighting": "post-stratified"},
+            }
+        ]
+    )
+    metric["report_specific_qualifier"] = {
+        "denominator_rule": "eligible accounts",
+        "conditions": ["if spend holds"],
+    }
+    fact = _fact(metric=metric)
+    canonical_text = canonical_fact_text(fact)
+    packed = canonical_verified_evidence_packs({"fact-1": fact})
+    finding = packed["findings"]["findings"][0]
+
+    assert '"report_specific_qualifier"' in canonical_text
+    assert '"denominator_rule":"eligible accounts"' in canonical_text
+    assert '"methodology":{"weighting":"post-stratified"}' in canonical_text
+    assert finding["evidence"] == canonical_text
 
 
 def test_grounding_batch_variables_keep_legacy_evidence_serialization_unchanged():

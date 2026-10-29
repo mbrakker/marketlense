@@ -363,6 +363,16 @@ def _soft_text_confidence_score(
         score += 0.2
     if insights_final:
         score += 0.2
+        if any(
+            isinstance(item, dict)
+            and (
+                _s(item.get("evidence_id")).strip() or _s(item.get("evidence")).strip()
+            )
+            for item in insights_final
+        ):
+            # Optional editorial copy can be grounded directly in retained
+            # insights when the summary family has legitimately abstained.
+            score += 0.1
     if quotes_final:
         score += 0.15
     return score

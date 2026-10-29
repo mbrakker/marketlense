@@ -1614,10 +1614,7 @@ def _validate_verified_semantic_inputs(
             result.candidate
         )
 
-    canonical_evidence_texts = {
-        f"verified-fact:{fact_id}": str(fact.get("statement") or "").strip()
-        for fact_id, fact in facts.items()
-    }
+    canonical_evidence_texts = canonical_evidence_map(facts)
 
     expected_inputs: list[tuple[Any, tuple[str, ...], str, str]] = []
     for result in package.results:
