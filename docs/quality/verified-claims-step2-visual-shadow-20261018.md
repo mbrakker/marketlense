@@ -6930,3 +6930,119 @@ replay **PASS for its stated scope**; fresh affected-five acceptance
 **PARTIAL/NO-GO** for promotion and Step 3 remains **unstarted/not ready**.
 No ten-report cohort was started, no canonical claim was promoted, and no
 publication write occurred.
+
+#### Final central-theme coverage correction and exact frozen-five audit — 2026-10-29 (`a8a7787c75a55a505de6dd3e229ca84dc2c66983`)
+
+This entry records the remaining P1/P2 implementation slice and the first
+clean exact-cohort run from the corrected tree. The implementation is split
+across the following surgical commits:
+
+| Commit | Evidence-backed change |
+| --- | --- |
+| `6fcedaef` | Assesses every supported editorial-plan theme against the admitted verified facts, not only themes whose IDs happen to overlap the final roster; adds bounded existing-mechanism repair. |
+| `5c8ae244` | Gives the persisted semantic theme-coverage checkpoint its correct prompt contract identity. |
+| `c1ffc9db` | Makes the existing final-insight repair explicitly substantive for every omitted central theme while preserving IDs, bindings and no-new-facts rules. |
+| `1e7bd7f9` | Adds a final bounded source-bound candidate fallback after model repair, then reruns the same semantic assessment; exhaustion remains fail-closed. |
+| `a8a7787c` | Reverts an unproven prompt-clarification experiment; no unsupported prompt relaxation is retained. |
+
+No new validator, service, database, LLM stage, publication path or canonical
+claim mutation was introduced. Normal-mode behavior is unchanged. The
+existing stable-ID, evidence-binding, protected-field and publication gates
+remain authoritative.
+
+##### Exact frozen-five run
+
+The run was isolated, provider-backed, GPT-6 Luna High, verified-facts mode,
+and used the original local PDFs without publication writes or final-artifact
+reuse:
+
+```text
+C:\ml-stage-alignment-live-20261029-frozen-five-clean\frozen-reliability-wqoag3t1
+```
+
+The source lineage rows matched the required PDFs:
+
+| Report | Required source SHA-256 | Run terminal outcome |
+| --- | --- | --- |
+| Adjust | `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` | `artifact_final_insight_coverage_invalid` |
+| KPMG | `a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589` | `verified_fact_editorial_coverage_insufficient` |
+| Emplifi | `54a6726033fce9474929dec62bc85fc4dd3ada574398d043d12ec48b0eaddeb5` | `verified_fact_editorial_coverage_insufficient` |
+| Reuters Institute | `f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52` | `artifact_final_insight_coverage_invalid` |
+| Algolia | `d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50b` | `artifact_final_insight_coverage_invalid` |
+
+All five inputs were admitted and all five received typed terminal records.
+No report reached verified-facts artifact materialization, final HTML,
+readiness pass, or publication. Aggregate measurements were **200 provider
+calls**, **2,274,603 input tokens**, **341,448 output tokens**, **$0.495184**,
+and **3,736.475 seconds**; automatic repairs and operator intervention were
+zero. The complete machine-readable result is
+`C:\ml-stage-alignment-live-20261029-frozen-five-clean\frozen-reliability-wqoag3t1\cohort_result.json`.
+
+| Report | Calls | Input / output | Cost | Duration | File search | Structured repairs | Earliest terminal stage and reason |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Adjust | 45 | 456,650 / 94,431 | `$0.110279` | 924.138s | 7 | 1 | Final artifact semantic central-theme coverage remained invalid after bounded repair and source-bound fallback. |
+| KPMG | 36 | 215,025 / 31,552 | `$0.064681` | 375.795s | 11 | 0 | Verified-fact remapping lost an unambiguous central editorial-plan binding; the workflow failed closed before final insights. |
+| Emplifi | 36 | 518,614 / 43,123 | `$0.088324` | 500.502s | 6 | 0 | Verified-fact remapping lost the central “Make authenticity consistent across customer interactions” binding; the workflow failed closed before final insights. |
+| Reuters Institute | 40 | 455,033 / 95,475 | `$0.113138` | 991.640s | 8 | 1 | Final artifact semantic central-theme coverage remained invalid after bounded repair and source-bound fallback. |
+| Algolia | 43 | 629,281 / 76,867 | `$0.118762` | 944.400s | 7 | 0 | Final artifact semantic central-theme coverage remained invalid after bounded repair and source-bound fallback. |
+
+The exact failure split is therefore **3 semantic final-coverage failures and
+2 upstream verified-fact editorial-remap failures**. The KPMG workflow error
+persisted only the bounded count-key diagnostic, so its specific lost theme is
+not recoverable from the exported summary; the remap message and terminal
+code are retained. This is an auditability limitation, not evidence to infer
+or silently repair the missing binding.
+
+For the three final-coverage failures, the live ledger shows the original
+theme-coverage call, one existing final-insight repair call, and a third
+theme-coverage call after source-bound candidate fallback. The responses were
+structured and the gate still reported an omitted supported central theme.
+That is the intended fail-closed result when the model does not produce a
+substantive supported development, not proof that the source lacked evidence.
+For KPMG and Emplifi, the failure occurred earlier at
+`remap_editorial_plan_to_verified_facts()`, where a plan reference had no
+single admitted-fact identity; no topic, heading or nearby page was promoted
+as a substitute.
+
+##### Baseline comparison and review limits
+
+Against the accepted successful producer `04a050a4` baseline (5/5 readiness,
+30 facts, 264 calls, 2,858,614 input tokens, 660,626 output tokens, `$0.702302`,
+4,738.245 seconds), the clean `a8a7787c` attempt used 64 fewer calls, 584,011
+fewer input tokens, 319,178 fewer output tokens, `$0.207118` less cost and
+1,001.770 fewer seconds. These are **not improvements**: the current run
+terminated before final facts and HTML, so the lower resource use is caused by
+incomplete processing and cannot be compared for editorial quality.
+
+The source PDFs and pre-materialization evidence-fidelity artifacts were
+available for inspection, but there was no final PDF-to-HTML output to review.
+Consequently this run cannot establish final insight identities, wording,
+metric-spine coverage, HTML completeness, or independent editorial quality.
+The prior successful retained-artifact semantic replay remains post-selection
+evidence and is not substituted for fresh selection evidence here.
+
+##### Verification
+
+The focused regression suite passed **102 tests**:
+
+```text
+python -m pytest -q tests/test_verified_claims_visual_authority_snapshot_integrity.py \
+  tests/test_adjust_editorial_selection_p1.py \
+  tests/test_candidate_recovery_and_selection_regressions.py \
+  tests/test_report_checkpoint_lineage_validation.py \
+  tests/test_artifact_normalization.py --tb=short
+102 passed in 12.71s
+```
+
+The current-tree checks also passed: full-repository mypy (**786 source files,
+0 tracked errors**). Formatting and Ruff reported no changed Python files in
+the clean worktree. No WordPress, canonical-claim, publication, or ten-report
+cohort operation occurred.
+
+**Verdict: PARTIAL / NO-GO.** The deterministic P1/P2 implementation and
+regressions pass, and all five exact source inputs were admitted with
+fail-closed terminal outcomes. The fresh provider-backed cohort did not reach
+final artifacts, so Step 2 is not promotion-ready and Step 3 remains
+unstarted/not ready. The remaining material blocker is reliable live mapping
+and substantive central-theme completion under provider-generated plans; it
+must not be addressed by weakening provenance or coverage gates.

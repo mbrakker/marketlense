@@ -1297,3 +1297,25 @@ external rate-limit/circuit-open condition, so fresh current-HEAD selection
 quality is unproven for them. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. No ten-report
 cohort or publication write occurred.
+
+**Verified-facts final central-theme correction and clean frozen-five audit —
+2026-10-29 (`a8a7787c`):** The implementation now assesses every supported
+editorial-plan theme, performs one bounded final-insight repair through the
+existing mechanism, and may perform one source-bound candidate fallback before
+failing closed. Prompt identity/checkpoint lineage is covered and an
+unproven prompt experiment was reverted. The focused implementation suite
+passed 102 tests and full-repository mypy passed with 0 tracked errors.
+
+The exact clean provider-backed Adjust/KPMG/Emplifi/Reuters/Algolia cohort
+matched all five required PDF SHA-256 values and produced complete terminal
+records, but failed closed before final verified-facts/HTML materialization:
+three reports failed semantic central-theme coverage after bounded repair and
+two lost an unambiguous central binding during verified-fact editorial-plan
+remapping. Measurements were 200 calls, 2,274,603 input tokens, 341,448
+output tokens, `$0.495184`, and 3,736.475 seconds; no publication, canonical
+claim, or WordPress write occurred. The lower cost and duration versus the
+successful `04a050a4` baseline are not improvements because the current run
+was incomplete. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. No ten-report
+cohort was started. Full per-report metrics, source hashes and limitations are
+in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
