@@ -52,6 +52,7 @@ from src.generators.artifact_normalization import (
     build_verified_fact_doc_map,
     discard_location_only_insights,
     discard_location_only_quotes,
+    final_insight_editorial_coverage,
     editorial_plan_has_overlapping_theme_evidence,
     editorial_plan_theme_bindings,
     eligible_final_insight_candidates,
@@ -672,16 +673,74 @@ def generate_artifacts(
     ) -> List[Dict[str, Any]]:
         if visual_authority_admitter is None:
             return final_insights
-        return select_artifact_insights(
+        restored_finals = select_artifact_insights(
             final_insights=final_insights,
             candidate_insights=insights_candidates,
             editorial_plan=editorial_plan,
-            # The admitted candidate pool is already source-bound.  It is
-            # therefore safe to use it for deterministic supplementation when
-            # the final model omits an eligible planned theme.
-            require_final_candidate_lineage=False,
+            require_final_candidate_lineage=True,
             verified_mode=True,
         )
+        coverage = final_insight_editorial_coverage(
+            final_insights=restored_finals,
+            candidate_insights=insights_candidates,
+            editorial_plan=editorial_plan,
+        )
+        omitted_central_themes = {
+            normalize_text(theme)
+            for theme in coverage["omitted_central_themes"]
+            if normalize_text(theme)
+        }
+        if not omitted_central_themes:
+            return restored_finals
+
+        central_evidence_keys = {
+            normalize_text(evidence_id)
+            for binding in editorial_plan_theme_bindings(editorial_plan)
+            if normalize_text(binding["theme"]) in omitted_central_themes
+            for evidence_id in binding["coverage_keys"]
+            if normalize_text(evidence_id)
+        }
+        central_candidates = []
+        for candidate in insights_candidates:
+            if not isinstance(candidate, dict):
+                continue
+            evidence_ids = [candidate.get("evidence_id")]
+            raw_evidence_ids = candidate.get("evidence_ids")
+            if isinstance(raw_evidence_ids, list):
+                evidence_ids.extend(raw_evidence_ids)
+            if any(
+                normalize_text(evidence_id) in central_evidence_keys
+                for evidence_id in evidence_ids
+                if normalize_text(evidence_id)
+            ):
+                central_candidates.append(candidate)
+        if not central_candidates:
+            return restored_finals
+
+        # Only supplement omitted central themes.  Lower-priority omissions
+        # remain valid editorial choices when the final roster already passes
+        # the central-theme gate.
+        additions = select_artifact_insights(
+            final_insights=[],
+            candidate_insights=central_candidates,
+            editorial_plan=editorial_plan,
+            require_final_candidate_lineage=False,
+            verified_mode=True,
+            max_count=len(omitted_central_themes),
+        )
+        final_ids = {
+            _s(insight.get("id")).strip()
+            for insight in restored_finals
+            if isinstance(insight, dict) and _s(insight.get("id")).strip()
+        }
+        return [
+            *restored_finals,
+            *[
+                insight
+                for insight in additions
+                if _s(insight.get("id")).strip() not in final_ids
+            ],
+        ]
 
     def render_task(task: ArtifactRenderTask) -> Dict[str, Any]:
         payload_validator = None

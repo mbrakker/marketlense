@@ -981,6 +981,19 @@ def _record_prompt_family_materializations(
         ),
     )
     persist(
+        "report_vs/artifacts/editorial_theme_coverage",
+        family_outputs.get(
+            "report_vs/artifacts/editorial_theme_coverage",
+            artifacts.get("theme_coverage", {"theme_coverage": []}),
+        ),
+        (
+            "report_vs/artifacts/insights_final",
+            "report_vs/artifacts/insights_candidates",
+            editorial_plan_family,
+            *evidence_family_ids,
+        ),
+    )
+    persist(
         "report_vs/artifacts/cover_semantics",
         family_outputs.get(
             "report_vs/artifacts/cover_semantics", artifacts.get("cover_semantics", {})
