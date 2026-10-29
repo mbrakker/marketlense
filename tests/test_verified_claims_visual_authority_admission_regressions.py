@@ -396,6 +396,19 @@ def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         f"verified-fact:{candidates[0]['id']}"
     )
+    responses["editorial_theme_coverage"] = {
+        "theme_coverage": [
+            {
+                "theme": f"Theme {index}",
+                "status": "covered",
+                "supporting_insight_ids": [str(candidates[0]["id"])],
+                "explanation": (
+                    f"The retained final proposition develops Theme {index}."
+                ),
+            }
+            for index in range(1, 8)
+        ]
+    }
     payload = generate_artifacts(
         report_id="visual-authority-full-roster",
         report_name="Visual Authority Full Roster",
