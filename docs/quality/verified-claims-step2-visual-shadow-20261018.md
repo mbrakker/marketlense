@@ -7046,3 +7046,22 @@ final artifacts, so Step 2 is not promotion-ready and Step 3 remains
 unstarted/not ready. The remaining material blocker is reliable live mapping
 and substantive central-theme completion under provider-generated plans; it
 must not be addressed by weakening provenance or coverage gates.
+
+#### Final hosted-CI fixture correction — 2026-10-29 (`52b853b961281337450e4669796c4e620939b1ae`)
+
+The first hosted run for the evidence update (`40866392374`) exposed one
+regression-fixture defect: the verified full-roster test exercised the newly
+required `editorial_theme_coverage` call but did not provide that family in its
+fake provider response. The failure was therefore a stale test fixture, not a
+production coverage failure or a missing recovery path. The fixture now
+contains a complete seven-theme semantic response; no production code,
+prompt, schema, gate, retry limit, source binding, or provider call was
+changed.
+
+The affected local suite passed **113 tests**. Hosted run `40867896202` for
+the final pushed SHA passed `ci_start`, `tests` (**8,243 passed, 1 skipped**),
+both mutation partitions, and `release_evidence`; the WordPress staging REST
+check remained the expected skipped check. This confirms the deterministic
+implementation and its regression coverage are green. It does not change the
+exact frozen-five provider result above: that run remains **PARTIAL / NO-GO**
+because it failed closed before final verified-facts and HTML artifacts.

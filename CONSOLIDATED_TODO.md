@@ -878,6 +878,19 @@ HTML/readiness artifact or publication was produced. Step 2 remains
 **unstarted/not ready**. Exact failure reasons and the source-page review are
 in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
+**Final hosted-CI fixture correction — 2026-10-29 (`52b853b9`):** The first
+hosted run for the central-theme evidence update exposed one stale test
+fixture: a verified full-roster regression did not provide the newly required
+`editorial_theme_coverage` response. The fixture was corrected without changing
+production logic or weakening any gate. The affected local suite passed 113
+tests, and hosted CI `40867896202` passed `tests` (8,243 passed, 1 skipped),
+both mutation partitions and `release_evidence`. The exact frozen-five
+provider audit remains PARTIAL/NO-GO because it failed closed before final
+verified-facts and HTML artifacts; no ten-report cohort or publication write
+occurred. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**,
+and Step 3 remains **unstarted/not ready**. Full evidence is in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
 **CI ownership and Adjust editorial repair correction — 2026-10-25
 (`b926137d`):** The oversized frozen-cohort test module was split without
 changing the ownership gate; all original test names remain collected and the
