@@ -564,6 +564,22 @@ def _verified_generation_responses(
     responses["insights_final"] = {
         "insights_final": _verified_final_candidates(candidates)
     }
+    responses["editorial_theme_coverage"] = {
+        "theme_coverage": [
+            {
+                "theme": "Theme 1",
+                "status": "covered",
+                "supporting_insight_ids": [str(candidates[0]["id"])],
+                "explanation": "The first final proposition develops Theme 1.",
+            },
+            {
+                "theme": "Theme 2",
+                "status": "covered",
+                "supporting_insight_ids": [str(candidates[1]["id"])],
+                "explanation": "The second final proposition develops Theme 2.",
+            },
+        ]
+    }
     return responses
 
 

@@ -52,12 +52,11 @@ from src.generators.artifact_normalization import (
     build_verified_fact_doc_map,
     discard_location_only_insights,
     discard_location_only_quotes,
-    final_insight_editorial_coverage,
-    editorial_plan_has_overlapping_theme_evidence,
     editorial_plan_theme_bindings,
     eligible_final_insight_candidates,
     fallback_artifact_insights_from_evidence,
     fallback_artifact_quotes_from_candidates,
+    final_insight_editorial_coverage,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
@@ -2084,45 +2083,49 @@ def generate_artifacts(
         )
     )
     semantic_theme_coverage: Dict[str, Any] = {}
+    semantic_theme_repair: Dict[str, Any] = {}
+    theme_bindings = editorial_plan_theme_bindings(editorial_plan)
+    theme_evidence_keys = {
+        evidence_key
+        for binding in theme_bindings
+        for evidence_key in binding["coverage_keys"]
+    }
+    relevant_verified_facts = [
+        fact
+        for fact in visual_authority_verified_facts
+        if isinstance(fact, dict)
+        and normalize_text(f"verified-fact:{_s(fact.get('fact_id')).strip()}")
+        in theme_evidence_keys
+    ]
     if (
         visual_authority_admitter is not None
-        and editorial_plan_has_overlapping_theme_evidence(editorial_plan)
+        and theme_bindings
+        and relevant_verified_facts
     ):
-        theme_evidence_keys = {
-            evidence_key
-            for binding in editorial_plan_theme_bindings(editorial_plan)
-            for evidence_key in binding["coverage_keys"]
+        theme_coverage_variables = {
+            "editorial_plan_json": editorial_plan_json,
+            "insights_final_json": _dump_json(
+                [
+                    {
+                        key: insight[key]
+                        for key in (
+                            "id",
+                            "text",
+                            "so_what",
+                            "now_what",
+                            "evidence_id",
+                            "evidence_ids",
+                        )
+                        if key in insight
+                    }
+                    for insight in insights_final
+                ]
+            ),
+            "verified_facts_json": _dump_json(relevant_verified_facts),
         }
-        relevant_verified_facts = [
-            fact
-            for fact in visual_authority_verified_facts
-            if isinstance(fact, dict)
-            and normalize_text(f"verified-fact:{_s(fact.get('fact_id')).strip()}")
-            in theme_evidence_keys
-        ]
         semantic_theme_coverage_result = resolve_or_render_family(
             namespace="report_vs/artifacts/editorial_theme_coverage",
-            variables={
-                "editorial_plan_json": editorial_plan_json,
-                "insights_final_json": _dump_json(
-                    [
-                        {
-                            key: insight[key]
-                            for key in (
-                                "id",
-                                "text",
-                                "so_what",
-                                "now_what",
-                                "evidence_id",
-                                "evidence_ids",
-                            )
-                            if key in insight
-                        }
-                        for insight in insights_final
-                    ]
-                ),
-                "verified_facts_json": _dump_json(relevant_verified_facts),
-            },
+            variables=theme_coverage_variables,
             ctx=child_context(
                 ctx,
                 task_id=f"{ctx.task_id}:editorial_theme_coverage",
@@ -2130,11 +2133,105 @@ def generate_artifacts(
             response_contract_name="editorial_theme_coverage_output",
             response_contract_identity_version="v1",
         )
-        semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
-            payload=semantic_theme_coverage_result,
-            editorial_plan=editorial_plan,
-            final_insights=insights_final,
-        )
+        try:
+            semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
+                payload=semantic_theme_coverage_result,
+                editorial_plan=editorial_plan,
+                final_insights=insights_final,
+            )
+        except AppError as error:
+            omitted_central_themes = error.context.get("omitted_central_themes")
+            if (
+                error.code != "artifact_final_insight_coverage_invalid"
+                or not isinstance(omitted_central_themes, list)
+                or not omitted_central_themes
+            ):
+                raise
+            semantic_theme_repair = {
+                "attempted": True,
+                "status": "in_progress",
+                "reason_code": error.code,
+                "omitted_central_themes": [
+                    _s(theme).strip()
+                    for theme in omitted_central_themes
+                    if _s(theme).strip()
+                ],
+            }
+            repair_feedback = {
+                "failure": {
+                    "code": error.code,
+                    "message": error.message,
+                    "omitted_central_themes": semantic_theme_repair[
+                        "omitted_central_themes"
+                    ],
+                },
+                "assessment": semantic_theme_coverage_result,
+                "supported_verified_facts": relevant_verified_facts,
+            }
+            repaired_result = resolve_or_render_family(
+                namespace="report_vs/artifacts/insights_final",
+                variables={
+                    **insights_final_vars,
+                    "current_insights_final_json": _dump_json(insights_final),
+                    "semantic_theme_coverage_feedback_json": _dump_json(
+                        repair_feedback
+                    ),
+                },
+                ctx=child_context(
+                    ctx,
+                    task_id=f"{ctx.task_id}:semantic_repair:insights_final",
+                ),
+                payload_validator=validate_final_insight_references,
+            )
+            repaired_insights = normalize_artifact_insights(
+                repaired_result.get("insights_final"),
+                prefix="insight",
+                verified_mode=True,
+            )
+            if len(repaired_insights) != len(insights_final):
+                raise AppError(
+                    code="artifact_final_insight_coverage_repair_invalid",
+                    message="Semantic theme repair changed the final insight count",
+                    retryable=False,
+                    context={
+                        "before_count": len(insights_final),
+                        "after_count": len(repaired_insights),
+                    },
+                ) from error
+            insights_final = final_insights_for_coverage(repaired_insights)
+            theme_coverage_variables["insights_final_json"] = _dump_json(
+                [
+                    {
+                        key: insight[key]
+                        for key in (
+                            "id",
+                            "text",
+                            "so_what",
+                            "now_what",
+                            "evidence_id",
+                            "evidence_ids",
+                        )
+                        if key in insight
+                    }
+                    for insight in insights_final
+                ]
+            )
+            semantic_theme_coverage_result = resolve_or_render_family(
+                namespace="report_vs/artifacts/editorial_theme_coverage",
+                variables=theme_coverage_variables,
+                ctx=child_context(
+                    ctx,
+                    task_id=f"{ctx.task_id}:semantic_repair:editorial_theme_coverage",
+                ),
+                response_contract_name="editorial_theme_coverage_output",
+                response_contract_identity_version="v1",
+            )
+            semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
+                payload=semantic_theme_coverage_result,
+                editorial_plan=editorial_plan,
+                final_insights=insights_final,
+            )
+            semantic_theme_repair["status"] = "succeeded"
     if visual_authority_admitter is not None:
         final_selection_coverage.clear()
         validate_final_insight_editorial_coverage(
@@ -2145,6 +2242,10 @@ def generate_artifacts(
         )
         if semantic_theme_coverage:
             final_selection_coverage["semantic_assessment"] = semantic_theme_coverage
+        if semantic_theme_repair:
+            final_selection_coverage["semantic_repair"] = deepcopy(
+                semantic_theme_repair
+            )
         editorial_plan_coverage["final_selected_theme_coverage"] = deepcopy(
             final_selection_coverage
         )

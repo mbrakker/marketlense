@@ -38,7 +38,6 @@ from tests._test_artifact_generator._shared import (
 from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _doc_map,
     _generation_evidence,
-    _generation_responses,
     _insight,
     _verified_generation_responses,
 )
@@ -783,7 +782,7 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
         assert [item["evidence_id"] for item in shortlisted] == ["f1", "f2"]
         return _verified_admission(shortlisted, digest="d" * 64)
 
-    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+    responses = _verified_generation_responses(candidates)
     responses["insights_final"]["insights_final"] = [
         dict(candidate, evidence_id=f"verified-fact:{candidate['id']}")
         for candidate in candidates
