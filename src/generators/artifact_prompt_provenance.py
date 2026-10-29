@@ -22,6 +22,18 @@ ARTIFACT_PROMPT_IDENTITY_SCHEMA_VERSION = "1.0"
 ARTIFACT_PROMPT_VALIDATOR_VERSION = "artifacts_schema:3.0"
 
 
+def _prompt_contract_for_namespace(namespace: str) -> tuple[str, str]:
+    """Return the output and validator identities for a producing family."""
+
+    normalized_namespace = str(namespace or "").replace("/regenerate/", "/", 1)
+    if normalized_namespace == "report_vs/artifacts/editorial_theme_coverage":
+        return (
+            "editorial_theme_coverage_output:1.0",
+            "editorial_theme_coverage_output:v1",
+        )
+    return "artifact_json:1.0", ARTIFACT_PROMPT_VALIDATOR_VERSION
+
+
 def artifact_prompt_identity(
     *,
     prepared: PreparedPromptBundle,
@@ -78,6 +90,9 @@ def current_artifact_prompt_identity(
             message="Artifact prompt identity requires its dependency manifest",
             retryable=False,
         )
+    output_contract_schema_version, validator_version = (
+        _prompt_contract_for_namespace(namespace)
+    )
     default_model = str(getattr(settings, "openai_model", "") or "")
     default_temperature = float(getattr(settings, "temperature", 1.0))
     routing_decision = resolve_routing_policy(
@@ -142,8 +157,8 @@ def current_artifact_prompt_identity(
             "max_input_tokens": routing_decision.max_input_tokens or None,
             "strategy": "anchor_preserving_head_tail",
         },
-        output_contract_schema_version="artifact_json:1.0",
-        validator_version=ARTIFACT_PROMPT_VALIDATOR_VERSION,
+        output_contract_schema_version=output_contract_schema_version,
+        validator_version=validator_version,
     )
     return {
         "schema_version": ARTIFACT_PROMPT_IDENTITY_SCHEMA_VERSION,
@@ -158,7 +173,7 @@ def current_artifact_prompt_identity(
         "model_name": policy.model,
         "model_policy_namespace": namespace.split("/", 1)[0],
         "routing_policy_version": execution_policy.policy_hash,
-        "validator_version": ARTIFACT_PROMPT_VALIDATOR_VERSION,
+        "validator_version": validator_version,
         "relevant_input_hash": str(relevant_input_hash or ""),
         "configuration_policy_hash": sha256_json(
             {

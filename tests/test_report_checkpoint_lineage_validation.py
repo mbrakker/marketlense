@@ -592,6 +592,7 @@ def _checkpoint_artifacts_with_prompt_provenance(
     runtime: ReportRuntimeState,
     *,
     identity: dict[str, object],
+    family: str = "report_vs/artifacts/summary",
     requirements: dict[str, str] | None = None,
     repaired_claim_identity: dict[str, object] | None = None,
 ) -> PipelineStageCheckpoint:
@@ -616,7 +617,7 @@ def _checkpoint_artifacts_with_prompt_provenance(
                 },
                 "_cache": {
                     "producing_prompt_identities": {
-                        "report_vs/artifacts/summary": identity
+                        family: identity
                     },
                     "regeneration_prompt_requirements": requirements or {},
                 },
@@ -721,6 +722,21 @@ def test_checkpoint_accepts_untouched_family_with_its_primary_prompt_identity(
         identity=_current_artifact_prompt_identity(
             runtime, "report_vs/artifacts/summary"
         ),
+    )
+
+    _validate_checkpoint_artifacts(runtime, checkpoint, "checkpoint.json")
+
+
+def test_checkpoint_accepts_editorial_theme_coverage_prompt_identity(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    family = "report_vs/artifacts/editorial_theme_coverage"
+    checkpoint = _checkpoint_artifacts_with_prompt_provenance(
+        tmp_path,
+        runtime,
+        identity=_current_artifact_prompt_identity(runtime, family),
+        family=family,
     )
 
     _validate_checkpoint_artifacts(runtime, checkpoint, "checkpoint.json")
