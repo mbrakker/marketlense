@@ -390,7 +390,7 @@ def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
                 "evidence_id": f"verified-fact:{candidate['id']}",
                 "evidence_spans": [],
             }
-            for candidate in candidates[:2]
+            for candidate in candidates[:5]
         ]
     }
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (

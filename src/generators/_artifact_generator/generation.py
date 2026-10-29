@@ -65,7 +65,6 @@ from src.generators.artifact_normalization import (
     normalize_artifact_summary,
     normalize_expert_domain,
     preserve_public_source_displays,
-    remap_editorial_plan_to_verified_facts,
     select_artifact_insights,
     soft_copy_context_evidence_anchors,
     stabilize_broad_artifact_editorial_plan,
@@ -77,7 +76,10 @@ from src.generators.artifact_normalization import (
     validate_final_insight_editorial_coverage,
     validate_substantive_editorial_theme_coverage,
 )
-from src.generators.artifact_prompt_provenance import artifact_prompt_identity
+from src.generators.artifact_prompt_provenance import (
+    ARTIFACT_PROMPT_VALIDATOR_VERSION,
+    artifact_prompt_identity,
+)
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.verified_claims_canary import project_verified_facts_as_insights
 from src.services import prompt_service, report_analysis_store_service
@@ -736,15 +738,42 @@ def generate_artifacts(
             max_count=len(omitted_central_themes),
         )
         if replace_central_themes:
+            final_ids = {
+                _s(insight.get("id")).strip()
+                for insight in restored_finals
+                if isinstance(insight, dict) and _s(insight.get("id")).strip()
+            }
+            replacements = [
+                insight
+                for insight in additions
+                if isinstance(insight, dict)
+                and _s(insight.get("id")).strip()
+                and _s(insight.get("id")).strip() not in final_ids
+            ]
+            if replacements:
+                # Keep the roster size stable while allowing a source-bound
+                # admitted alternative to replace a selected but less useful
+                # insight. Prefer the tail so earlier plan-ordered themes are
+                # preserved; never append an extra unassessed item here.
+                replaced = list(restored_finals)
+                if len(replacements) <= len(replaced):
+                    replace_start = len(replaced) - len(replacements)
+                    replaced[replace_start:] = replacements
+                if len(replaced) == len(
+                    {
+                        _s(insight.get("id")).strip()
+                        for insight in replaced
+                        if isinstance(insight, dict) and _s(insight.get("id")).strip()
+                    }
+                ) and len(replacements) <= len(restored_finals):
+                    return replaced
             replacement_by_id = {
                 _s(insight.get("id")).strip(): insight
                 for insight in additions
                 if isinstance(insight, dict) and _s(insight.get("id")).strip()
             }
             replaced = [
-                replacement_by_id.get(
-                    _s(insight.get("id")).strip(), insight
-                )
+                replacement_by_id.get(_s(insight.get("id")).strip(), insight)
                 if isinstance(insight, dict)
                 and _s(insight.get("id")).strip() in replacement_by_id
                 else insight
@@ -869,7 +898,7 @@ def generate_artifacts(
             validator_version=(
                 f"{response_contract_name}:{response_contract_identity_version}"
                 if response_contract_name
-                else "artifacts_schema:3.0"
+                else ARTIFACT_PROMPT_VALIDATOR_VERSION
             ),
         )
         vector_provenance_verified = not artifact_use_vector_store or bool(
@@ -897,7 +926,7 @@ def generate_artifacts(
             validator_version=(
                 f"{response_contract_name}:{response_contract_identity_version}"
                 if response_contract_name
-                else "artifacts_schema:3.0"
+                else ARTIFACT_PROMPT_VALIDATOR_VERSION
             ),
         )
         model_provider = str(identity["model_provider"])
@@ -1330,6 +1359,9 @@ def generate_artifacts(
         doc_map=safe_doc_map,
         evidence_packs=safe_evidence,
     )
+    # In verified mode this remains a discovery-only guide.  The authoritative
+    # plan is generated again from the admitted verified-fact snapshot below.
+    discovery_editorial_plan = deepcopy(editorial_plan)
     editorial_plan_transform_identity = {
         "transform": "normalize_and_stabilize_editorial_plan",
         "version": EDITORIAL_PLAN_TRANSFORM_VERSION,
@@ -1793,6 +1825,38 @@ def generate_artifacts(
     visual_authority_verified_facts: List[Dict[str, Any]] = []
     visual_authority_evidence_packs: Dict[str, Any] = {}
     final_insight_allowed_candidate_ids: List[str] = []
+
+    def validate_verified_final_insight_count(
+        final_insights: List[Dict[str, Any]], *, stage: str
+    ) -> None:
+        """Keep verified output aligned with the existing five-insight contract."""
+
+        selected_ids = {
+            _s(insight.get("id")).strip()
+            for insight in final_insights
+            if isinstance(insight, dict)
+            and _s(insight.get("id")).strip()
+            and _s(insight.get("text")).strip()
+        }
+        if len(selected_ids) >= REQUIRED_REPORT_PAYLOAD_INSIGHTS:
+            return
+        raise AppError(
+            code="visual_authority_coverage_insufficient",
+            message=(
+                "Verified final insight generation did not produce the existing "
+                "minimum meaningful insight count"
+            ),
+            retryable=False,
+            context={
+                "report_id": report_id,
+                "required_count": REQUIRED_REPORT_PAYLOAD_INSIGHTS,
+                "selected_count": len(selected_ids),
+                "admitted_count": len(final_insight_allowed_candidate_ids),
+                "coverage_reason": "verified_final_insights_below_minimum",
+                "stage": stage,
+            },
+        )
+
     if visual_authority_admitter is not None:
         admission = visual_authority_admitter(deepcopy(insights_candidates))
         visual_authority_admitted_candidates = getattr(
@@ -1847,13 +1911,79 @@ def generate_artifacts(
         active_doc_map = build_verified_fact_doc_map(safe_doc_map)
         active_evidence = deepcopy(visual_authority_evidence_packs)
         reference_evidence_packs = {**active_evidence, "doc_map": active_doc_map}
-        editorial_plan_coverage: Dict[str, Any] = {}
-        editorial_plan = remap_editorial_plan_to_verified_facts(
-            editorial_plan,
-            visual_authority_verified_facts,
-            source_findings=safe_evidence.get("findings"),
-            coverage_diagnostics=editorial_plan_coverage,
+        editorial_plan_coverage: Dict[str, Any] = {
+            "planning_mode": "verified_facts",
+            "authoritative": True,
+            "verified_fact_count": len(visual_authority_verified_facts),
+            "verified_fact_ids": [
+                _s(fact.get("fact_id")).strip()
+                for fact in visual_authority_verified_facts
+                if _s(fact.get("fact_id")).strip()
+            ],
+            "discovery_guide_retained": True,
+        }
+        verified_fact_evidence_ids = [
+            f"verified-fact:{_s(fact.get('fact_id')).strip()}"
+            for fact in visual_authority_verified_facts
+            if _s(fact.get("fact_id")).strip()
+        ]
+        # The post-admission plan uses the same family and schema, but its
+        # phase marker, verified-fact snapshot, and canonical ID vocabulary are
+        # part of the prompt inputs. This prevents a discovery-stage family
+        # materialization from being reused as the authoritative plan.
+        candidate_allowed_evidence_ids = list(verified_fact_evidence_ids)
+        canonical_evidence_ids = set(verified_fact_evidence_ids)
+        verified_plan_ctx = child_context(
+            ctx, task_id=f"{ctx.task_id}:verified:editorial_plan"
         )
+        try:
+            verified_plan_result = resolve_or_render_family(
+                namespace="report_vs/artifacts/editorial_plan",
+                variables={
+                    **base_vars,
+                    "doc_map_json": _dump_json(active_doc_map),
+                    "evidence_json": _dump_json(active_evidence),
+                    "canonical_evidence_ids_json": _dump_json(
+                        verified_fact_evidence_ids
+                    ),
+                    "verified_facts_json": _dump_json(visual_authority_verified_facts),
+                    "discovery_editorial_plan_json": _dump_json(
+                        discovery_editorial_plan
+                    ),
+                    "editorial_plan_phase": "verified_facts",
+                },
+                ctx=verified_plan_ctx,
+                payload_validator=lambda payload: validate_editorial_plan(
+                    payload, verified_plan_ctx
+                ),
+            )
+        except AppError as error:
+            error.context.update(
+                {
+                    "planning_mode": "verified_facts",
+                    "verified_fact_count": len(verified_fact_evidence_ids),
+                    "verified_fact_ids": verified_fact_evidence_ids,
+                    "planning_failure_reason": error.code,
+                }
+            )
+            raise
+        raw_editorial_plan = verified_plan_result.get("editorial_plan")
+        editorial_plan = stabilize_broad_artifact_editorial_plan(
+            normalize_artifact_editorial_plan(raw_editorial_plan),
+            doc_map=active_doc_map,
+            evidence_packs=active_evidence,
+        )
+        editorial_plan_coverage.update(
+            {
+                "planned_themes": [
+                    theme["theme"] for theme in editorial_plan["themes"]
+                ],
+                "planned_theme_bindings": deepcopy(editorial_plan["themes"]),
+                "supported_theme_count": len(editorial_plan["themes"]),
+                "unsupported_theme_count": 0,
+            }
+        )
+        editorial_plan_identity = family_reuse["report_vs/artifacts/editorial_plan"]
         editorial_plan_coverage["admitted_candidate_count"] = len(
             visual_authority_admitted_candidates
         )
@@ -1948,7 +2078,7 @@ def generate_artifacts(
             for candidate in eligible_candidates
             if _s(candidate.get("id")).strip()
         ]
-        if len(final_insight_allowed_candidate_ids) < MIN_FINAL_ARTIFACT_INSIGHTS:
+        if len(final_insight_allowed_candidate_ids) < REQUIRED_REPORT_PAYLOAD_INSIGHTS:
             raise AppError(
                 code="visual_authority_coverage_insufficient",
                 message=(
@@ -1958,7 +2088,7 @@ def generate_artifacts(
                 retryable=False,
                 context={
                     "report_id": report_id,
-                    "required_count": MIN_FINAL_ARTIFACT_INSIGHTS,
+                    "required_count": REQUIRED_REPORT_PAYLOAD_INSIGHTS,
                     "admitted_count": len(final_insight_allowed_candidate_ids),
                     "coverage_reason": "verified_facts_below_minimum_insight_count",
                 },
@@ -2107,6 +2237,8 @@ def generate_artifacts(
             verified_mode=False,
         )
     )
+    if visual_authority_admitter is not None:
+        validate_verified_final_insight_count(insights_final, stage="initial_selection")
     semantic_theme_coverage: Dict[str, Any] = {}
     semantic_theme_repair: Dict[str, Any] = {}
     theme_bindings = editorial_plan_theme_bindings(editorial_plan)
@@ -2192,6 +2324,24 @@ def generate_artifacts(
                 },
                 "assessment": semantic_theme_coverage_result,
                 "supported_verified_facts": relevant_verified_facts,
+                "eligible_admitted_candidate_alternatives": [
+                    {
+                        key: candidate[key]
+                        for key in (
+                            "id",
+                            "text",
+                            "evidence_id",
+                            "evidence_ids",
+                            "metric",
+                            "coverage_role",
+                            "report_type_lens",
+                        )
+                        if key in candidate
+                    }
+                    for candidate in eligible_final_insight_candidates(
+                        insights_candidates
+                    )
+                ],
             }
             repaired_result = resolve_or_render_family(
                 namespace="report_vs/artifacts/insights_final",
@@ -2224,6 +2374,9 @@ def generate_artifacts(
                     },
                 ) from error
             insights_final = final_insights_for_coverage(repaired_insights)
+            validate_verified_final_insight_count(
+                insights_final, stage="semantic_repair"
+            )
             theme_coverage_variables["insights_final_json"] = _dump_json(
                 [
                     {
@@ -2252,17 +2405,13 @@ def generate_artifacts(
                 response_contract_identity_version="v1",
             )
             try:
-                semantic_theme_coverage = (
-                    validate_substantive_editorial_theme_coverage(
-                        payload=semantic_theme_coverage_result,
-                        editorial_plan=editorial_plan,
-                        final_insights=insights_final,
-                    )
+                semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
+                    payload=semantic_theme_coverage_result,
+                    editorial_plan=editorial_plan,
+                    final_insights=insights_final,
                 )
             except AppError as coverage_error:
-                fallback_themes = coverage_error.context.get(
-                    "omitted_central_themes"
-                )
+                fallback_themes = coverage_error.context.get("omitted_central_themes")
                 if (
                     coverage_error.code != "artifact_final_insight_coverage_invalid"
                     or not isinstance(fallback_themes, list)
@@ -2280,6 +2429,9 @@ def generate_artifacts(
                 if fallback_insights == insights_final:
                     raise
                 insights_final = fallback_insights
+                validate_verified_final_insight_count(
+                    insights_final, stage="central_candidate_fallback"
+                )
                 theme_coverage_variables["insights_final_json"] = _dump_json(
                     [
                         {
@@ -2310,12 +2462,10 @@ def generate_artifacts(
                     response_contract_name="editorial_theme_coverage_output",
                     response_contract_identity_version="v1",
                 )
-                semantic_theme_coverage = (
-                    validate_substantive_editorial_theme_coverage(
-                        payload=semantic_theme_coverage_result,
-                        editorial_plan=editorial_plan,
-                        final_insights=insights_final,
-                    )
+                semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
+                    payload=semantic_theme_coverage_result,
+                    editorial_plan=editorial_plan,
+                    final_insights=insights_final,
                 )
                 semantic_theme_repair["fallback"] = {
                     "status": "source_bound_candidate",

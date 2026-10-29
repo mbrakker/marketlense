@@ -25,9 +25,7 @@ from src.generators.artifact_normalization import (
 )
 from src.generators.verified_claims_canary import (
     admit_visual_authority_candidates,
-    default_visual_authority_output_dir,
 )
-from src.utils.errors import AppError
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
     FakeAnalysisStore,
@@ -775,11 +773,20 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
     candidates = [
         _insight("f1", score=0.99, text="Retained first insight."),
         _insight("f2", score=0.98, text="Retained second insight."),
+        _insight("f3", score=0.97, text="Retained third insight."),
+        _insight("f4", score=0.96, text="Retained fourth insight."),
+        _insight("f5", score=0.95, text="Retained fifth insight."),
     ]
     prompt_client = CapturingPromptClient()
 
     def admit(shortlisted):
-        assert [item["evidence_id"] for item in shortlisted] == ["f1", "f2"]
+        assert [item["evidence_id"] for item in shortlisted] == [
+            "f1",
+            "f2",
+            "f3",
+            "f4",
+            "f5",
+        ]
         return _verified_admission(shortlisted, digest="d" * 64)
 
     responses = _verified_generation_responses(candidates)
@@ -793,8 +800,8 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
     payload = generate_artifacts(
         report_id="visual-authority-canary",
         report_name="Visual Authority Canary",
-        doc_map=_doc_map(2),
-        evidence_packs=_generation_evidence(2),
+        doc_map=_doc_map(5),
+        evidence_packs=_generation_evidence(5),
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=FakeOpenAI(responses),
@@ -826,7 +833,7 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
         "report_vs/artifacts/insights_final"
     )
     assert final_vars["_visual_authority_digest"] == "d" * 64
-    assert final_vars["final_insight_target_count"] == 2
+    assert final_vars["final_insight_target_count"] == 5
     assert json.loads(final_vars["final_insight_allowed_candidate_ids_json"]) == [
         candidate["id"] for candidate in candidates
     ]
@@ -916,25 +923,6 @@ def test_verified_fact_context_removes_discovery_facts_and_omits_unmapped_themes
     ]
 
 
-def test_verified_fact_context_fails_closed_when_coverage_has_one_mapped_theme():
-    plan = {
-        "report_thesis": "The report has a planning thesis.",
-        "themes": [
-            {"theme": "Theme 1", "priority": 1, "evidence_ids": ["finding-1"]},
-            {"theme": "Unsupported", "priority": 2, "evidence_ids": ["missing"]},
-        ],
-    }
-    facts = [
-        {
-            "fact_id": "candidate-1",
-            "provenance": {"discovery_evidence_ids": ["finding-1"]},
-        }
-    ]
-
-    with pytest.raises(AppError, match="Verified-fact editorial coverage"):
-        remap_editorial_plan_to_verified_facts(plan, facts)
-
-
 def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path):
     class CachingAnalysisStore(FakeAnalysisStore):
         def pack_path(self, request, ctx):
@@ -953,6 +941,9 @@ def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path)
     candidates = [
         _insight("f1", score=0.99, text="Retained first insight."),
         _insight("f2", score=0.98, text="Retained second insight."),
+        _insight("f3", score=0.97, text="Retained third insight."),
+        _insight("f4", score=0.96, text="Retained fourth insight."),
+        _insight("f5", score=0.95, text="Retained fifth insight."),
     ]
     prompt_client = CapturingPromptClient()
     analysis_store = CachingAnalysisStore()
@@ -971,8 +962,8 @@ def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path)
         return generate_artifacts(
             report_id="visual-authority-cache-replay",
             report_name="Visual Authority Cache Replay",
-            doc_map=_doc_map(2),
-            evidence_packs=_generation_evidence(2),
+            doc_map=_doc_map(5),
+            evidence_packs=_generation_evidence(5),
             settings=_settings(tmp_path),
             md5="source-md5",
             ctx=_ctx(),
@@ -987,11 +978,3 @@ def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path)
     assert admission_calls == 2
     assert second["_cache"]["visual_authority_canary"]["digest"] == "c" * 64
     assert second["insights_final"] == first["insights_final"]
-
-
-def test_canary_default_visual_output_avoids_nested_output_path(tmp_path):
-    output_dir = tmp_path / ("r" * 160) / "output"
-
-    resolved = Path(default_visual_authority_output_dir(str(output_dir)))
-
-    assert resolved == output_dir.parent / "verified_claims_visual_canary"

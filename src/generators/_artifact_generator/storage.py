@@ -70,6 +70,9 @@ from src.generators.artifact_normalization import (
     source_backed_summary_claim_bindings,
     summary_has_unbound_material_sentences,
 )
+from src.generators.artifact_prompt_provenance import (
+    ARTIFACT_PROMPT_VALIDATOR_VERSION,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
@@ -2357,17 +2360,13 @@ def finalize_regeneration_candidate_artifacts(
             and isinstance(candidate_artifacts.get("summary"), dict)
         ):
             if summary_claim_map_indices is None:
-                verified_summary = cast(
-                    Dict[str, Any], candidate_artifacts["summary"]
-                )
+                verified_summary = cast(Dict[str, Any], candidate_artifacts["summary"])
             else:
                 verified_summary = {
                     "claim_evidence_map": [
                         item
                         for index, item in enumerate(
-                            candidate_artifacts["summary"].get(
-                                "claim_evidence_map"
-                            )
+                            candidate_artifacts["summary"].get("claim_evidence_map")
                             or []
                         )
                         if index in summary_claim_map_indices
@@ -3281,7 +3280,7 @@ def _artifact_cache_meta(
                 "strategy": "anchor_preserving_head_tail",
             },
             output_contract_schema_version="artifact_json:1.0",
-            validator_version="artifacts_schema:3.0",
+            validator_version=ARTIFACT_PROMPT_VALIDATOR_VERSION,
         )
         prompt_meta[namespace] = {
             "prompt_system_sha256": prompt_set.system.sha256,

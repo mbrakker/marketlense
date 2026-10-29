@@ -156,7 +156,7 @@ def test_verified_visual_evaluation_sees_full_candidate_roster_before_editorial_
                 "evidence_id": f"verified-fact:{candidate['id']}",
                 "evidence_spans": [],
             }
-            for candidate in candidates[:2]
+            for candidate in candidates
         ]
     }
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
@@ -182,15 +182,21 @@ def test_verified_visual_evaluation_sees_full_candidate_roster_before_editorial_
     assert evaluated_roster == [f"f{i}" for i in range(1, 7)]
     assert len(payload["verified_facts"]) == 6
     assert [item["id"] for item in payload["insights_final"]] == [
-        "insight-f1-0.99",
-        "insight-f2-0.98",
+        candidate["id"] for candidate in candidates[:5]
     ]
 
 
 def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
     tmp_path,
 ):
-    candidates = [_insight("f1", score=0.99), _insight("f2", score=0.98)]
+    candidates = [
+        _insight("f1", score=0.99),
+        _insight("f2", score=0.98),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
+        _insight("f6", score=0.94),
+    ]
 
     def admit(shortlisted):
         return _verified_admission(shortlisted, digest="c" * 64)
@@ -200,10 +206,11 @@ def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
         {
             "insights_final": [
                 {
-                    **deepcopy(candidates[1]),
-                    "evidence_id": "verified-fact:insight-f2-0.98",
+                    **deepcopy(candidate),
+                    "evidence_id": f"verified-fact:{candidate['id']}",
                     "evidence_spans": [],
                 }
+                for candidate in candidates[1:]
             ]
         },
         {
@@ -230,8 +237,8 @@ def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
     payload = generate_artifacts(
         report_id="verified-central-theme-recovery",
         report_name="Verified central theme recovery",
-        doc_map=_doc_map(2),
-        evidence_packs=_generation_evidence(2),
+        doc_map=_doc_map(6),
+        evidence_packs=_generation_evidence(6),
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=openai_client,
@@ -245,8 +252,7 @@ def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
     ]
     assert len(final_requests) == 1
     assert {item["id"] for item in payload["insights_final"]} == {
-        "insight-f1-0.99",
-        "insight-f2-0.98",
+        candidate["id"] for candidate in candidates
     }
     assert (
         payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
@@ -260,14 +266,19 @@ def test_verified_generation_fills_omitted_theme_from_admitted_candidate(tmp_pat
     candidates = [
         _insight("f1", score=0.99, text="The first decision signal is material."),
         _insight("f2", score=0.98, text="The second decision signal is material."),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
+        _insight("f6", score=0.94),
     ]
     responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
     responses["insights_final"] = {
         "insights_final": [
             {
-                **candidates[1],
-                "evidence_id": f"verified-fact:{candidates[1]['id']}",
+                **candidate,
+                "evidence_id": f"verified-fact:{candidate['id']}",
             }
+            for candidate in candidates[1:]
         ]
     }
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
@@ -282,8 +293,8 @@ def test_verified_generation_fills_omitted_theme_from_admitted_candidate(tmp_pat
     payload = generate_artifacts(
         report_id="verified-omitted-theme",
         report_name="Verified omitted theme",
-        doc_map=_doc_map(2),
-        evidence_packs=_generation_evidence(2),
+        doc_map=_doc_map(6),
+        evidence_packs=_generation_evidence(6),
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=FakeOpenAI(responses),
@@ -304,6 +315,9 @@ def test_verified_final_selection_may_omit_an_optional_theme(tmp_path):
         _insight("f1", score=0.99),
         _insight("f2", score=0.98),
         _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
+        _insight("f6", score=0.94),
     ]
 
     def admit(shortlisted):
@@ -332,6 +346,21 @@ def test_verified_final_selection_may_omit_an_optional_theme(tmp_path):
                 "evidence_id": "verified-fact:insight-f3-0.97",
                 "evidence_spans": [],
             },
+            {
+                **deepcopy(candidates[3]),
+                "evidence_id": "verified-fact:insight-f4-0.96",
+                "evidence_spans": [],
+            },
+            {
+                **deepcopy(candidates[4]),
+                "evidence_id": "verified-fact:insight-f5-0.95",
+                "evidence_spans": [],
+            },
+            {
+                **deepcopy(candidates[5]),
+                "evidence_id": "verified-fact:insight-f6-0.94",
+                "evidence_spans": [],
+            },
         ]
     }
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
@@ -347,8 +376,8 @@ def test_verified_final_selection_may_omit_an_optional_theme(tmp_path):
     payload = generate_artifacts(
         report_id="verified-optional-theme-omission",
         report_name="Verified optional theme omission",
-        doc_map=_doc_map(3),
-        evidence_packs=_generation_evidence(3),
+        doc_map=_doc_map(6),
+        evidence_packs=_generation_evidence(6),
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=FakeOpenAI(responses),
@@ -360,6 +389,9 @@ def test_verified_final_selection_may_omit_an_optional_theme(tmp_path):
     assert [item["id"] for item in payload["insights_final"]] == [
         "insight-f1-0.99",
         "insight-f3-0.97",
+        "insight-f4-0.96",
+        "insight-f5-0.95",
+        "insight-f6-0.94",
     ]
     assert payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
         "final_selected_theme_coverage"
@@ -370,6 +402,9 @@ def test_verified_generation_semantically_assesses_shared_theme_evidence(tmp_pat
     candidates = [
         _insight("f1", score=0.99, text="The first decision signal is material."),
         _insight("f2", score=0.98, text="The second decision signal is material."),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
     ]
     responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f1"])
     responses["insights_final"] = {
@@ -410,8 +445,8 @@ def test_verified_generation_semantically_assesses_shared_theme_evidence(tmp_pat
     payload = generate_artifacts(
         report_id="verified-shared-theme-coverage",
         report_name="Verified shared theme coverage",
-        doc_map=_doc_map(2),
-        evidence_packs=_generation_evidence(2),
+        doc_map=_doc_map(6),
+        evidence_packs=_generation_evidence(6),
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=openai_client,
@@ -441,6 +476,9 @@ def test_verified_generation_semantically_assesses_unique_theme_evidence(tmp_pat
     candidates = [
         _insight("f1", score=0.99, text="The first decision signal is material."),
         _insight("f2", score=0.98, text="The second decision signal is material."),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
     ]
     responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
     responses["insights_final"] = {
@@ -473,8 +511,8 @@ def test_verified_generation_semantically_assesses_unique_theme_evidence(tmp_pat
     payload = generate_artifacts(
         report_id="verified-unique-theme-coverage",
         report_name="Verified unique theme coverage",
-        doc_map=_doc_map(2),
-        evidence_packs=_generation_evidence(2),
+        doc_map=_doc_map(5),
+        evidence_packs=_generation_evidence(5),
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=openai_client,
@@ -504,6 +542,9 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
     candidates = [
         _insight("f1", score=0.99, text="The first decision signal is material."),
         _insight("f2", score=0.98, text="The second decision signal is material."),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
     ]
     bad_final = [
         {
@@ -515,6 +556,13 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
             "evidence_id": f"verified-fact:{candidates[1]['id']}",
             "text": "The first decision signal also governs the response.",
         },
+        *[
+            {
+                **deepcopy(candidate),
+                "evidence_id": f"verified-fact:{candidate['id']}",
+            }
+            for candidate in candidates[2:]
+        ],
     ]
     repaired_final = [
         {
@@ -526,6 +574,13 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
             "evidence_id": f"verified-fact:{candidates[1]['id']}",
             "text": "The second decision signal governs the response.",
         },
+        *[
+            {
+                **deepcopy(candidate),
+                "evidence_id": f"verified-fact:{candidate['id']}",
+            }
+            for candidate in candidates[2:]
+        ],
     ]
     responses = _generation_responses(candidates, plan_evidence_ids=["f2", "f1"])
     responses["insights_final"] = [
@@ -576,8 +631,8 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
     payload = generate_artifacts(
         report_id="verified-semantic-theme-repair",
         report_name="Verified semantic theme repair",
-        doc_map=_doc_map(2),
-        evidence_packs=_generation_evidence(2),
+        doc_map=_doc_map(5),
+        evidence_packs=_generation_evidence(5),
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=openai_client,
@@ -608,6 +663,9 @@ def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion
     candidates = [
         _insight("f1", score=0.99, text="The first decision signal is material."),
         _insight("f2", score=0.98, text="The second decision signal is material."),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
     ]
     final_insights = [
         {
@@ -651,8 +709,8 @@ def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion
         generate_artifacts(
             report_id="verified-semantic-theme-repair-exhausted",
             report_name="Verified semantic theme repair exhausted",
-            doc_map=_doc_map(2),
-            evidence_packs=_generation_evidence(2),
+            doc_map=_doc_map(5),
+            evidence_packs=_generation_evidence(5),
             settings=_settings(tmp_path),
             ctx=_ctx(),
             openai_client=openai_client,
@@ -681,6 +739,9 @@ def test_verified_generation_falls_back_to_source_bound_candidate_after_semantic
     candidates = [
         _insight("f1", score=0.99, text="The first decision signal is material."),
         _insight("f2", score=0.98, text="The second decision signal is material."),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
     ]
     narrow_final = [
         {
@@ -692,6 +753,13 @@ def test_verified_generation_falls_back_to_source_bound_candidate_after_semantic
             "evidence_id": f"verified-fact:{candidates[1]['id']}",
             "text": "A narrow detail from the second signal.",
         },
+        *[
+            {
+                **deepcopy(candidate),
+                "evidence_id": f"verified-fact:{candidate['id']}",
+            }
+            for candidate in candidates[2:]
+        ],
     ]
     responses = _generation_responses(candidates, plan_evidence_ids=["f2", "f1"])
     responses["insights_final"] = [
@@ -743,8 +811,8 @@ def test_verified_generation_falls_back_to_source_bound_candidate_after_semantic
     payload = generate_artifacts(
         report_id="verified-semantic-theme-source-fallback",
         report_name="Verified semantic theme source fallback",
-        doc_map=_doc_map(2),
-        evidence_packs=_generation_evidence(2),
+        doc_map=_doc_map(5),
+        evidence_packs=_generation_evidence(5),
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=openai_client,
@@ -756,9 +824,7 @@ def test_verified_generation_falls_back_to_source_bound_candidate_after_semantic
     )
 
     final_f2 = next(
-        item
-        for item in payload["insights_final"]
-        if item["id"] == candidates[1]["id"]
+        item for item in payload["insights_final"] if item["id"] == candidates[1]["id"]
     )
     assert final_f2["text"] == "The second decision signal is material."
     repair = payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
@@ -770,7 +836,13 @@ def test_verified_generation_falls_back_to_source_bound_candidate_after_semantic
 def test_verified_generation_materializes_downstream_insights_from_snapshot(
     tmp_path,
 ):
-    candidates = [_insight("f1", score=0.99), _insight("f2", score=0.98)]
+    candidates = [
+        _insight("f1", score=0.99),
+        _insight("f2", score=0.98),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
+    ]
 
     def admit(shortlisted):
         admission = _verified_admission(shortlisted, digest="s" * 64)
@@ -803,8 +875,8 @@ def test_verified_generation_materializes_downstream_insights_from_snapshot(
     payload = generate_artifacts(
         report_id="visual-authority-snapshot-materialization",
         report_name="Visual Authority Snapshot Materialization",
-        doc_map=_doc_map(2),
-        evidence_packs=_generation_evidence(2),
+        doc_map=_doc_map(5),
+        evidence_packs=_generation_evidence(5),
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=FakeOpenAI(responses),

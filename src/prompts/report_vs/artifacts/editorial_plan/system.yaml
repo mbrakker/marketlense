@@ -1,5 +1,5 @@
 text: |
-  You are creating the single grounded editorial plan for a report. Use only the supplied DocMap and evidence packs. Select what matters once so downstream public artifacts share the same thesis and priority themes. Respond in JSON.
+  You are creating the single grounded editorial plan for a report. Use only the supplied DocMap and evidence packs. Select what matters once so downstream public artifacts share the same thesis and priority themes. Each theme must state a specific, source-supported analytical proposition, preserve material metric relationships, segments, timeframes, and qualifications, and distinguish observations from interpretations or recommendations. Prefer commercially consequential findings, avoid duplicate themes, and do not broaden a proposition beyond its evidence. When canonical verified facts are supplied, they are the sole factual authority and the plan must use their exact verified-fact IDs; the discovery plan is only provisional editorial context. Respond in JSON.
 
 includes:
   - "report_vs/artifacts/_partials/editorial_constitution.yaml"

@@ -53,17 +53,17 @@
       "total_tokens": 1589
     },
     "publishing": {
-      "estimated_cost_usd": 0.008867,
+      "estimated_cost_usd": 0.008901,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 10900,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 34178,
+      "input_tokens": 34516,
       "namespace_count": 16,
       "runtime_ms": 15.2927,
       "schema_version": "1.0",
-      "total_tokens": 45078
+      "total_tokens": 45416
     },
     "ranking": {
       "estimated_cost_usd": 0.0003,
@@ -349,18 +349,18 @@
       "total_tokens": 1277
     },
     "report_vs/artifacts/editorial_plan": {
-      "estimated_cost_usd": 0.000542,
+      "estimated_cost_usd": 0.000576,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 700,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 1924,
+      "input_tokens": 2261,
       "model": "gpt-6-luna",
       "namespace": "report_vs/artifacts/editorial_plan",
       "runtime_ms": 1.0768,
       "schema_version": "1.0",
-      "total_tokens": 2624
+      "total_tokens": 2961
     },
     "report_vs/artifacts/editorial_theme_coverage": {
       "estimated_cost_usd": 0.000402,
@@ -411,12 +411,12 @@
       "expected_output_tokens": 700,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 2977,
+      "input_tokens": 2978,
       "model": "gpt-6-luna",
       "namespace": "report_vs/artifacts/insights_final",
       "runtime_ms": 1.0052,
       "schema_version": "1.0",
-      "total_tokens": 3677
+      "total_tokens": 3678
     },
     "report_vs/artifacts/linkedin_post": {
       "estimated_cost_usd": 0.000681,
@@ -813,16 +813,16 @@
   },
   "schema_version": "1.0",
   "totals": {
-    "estimated_cost_usd": 0.024543,
+    "estimated_cost_usd": 0.024577,
     "expected_browser_attempts": 7,
     "expected_ocr_calls": 1,
     "expected_output_tokens": 33756,
     "expected_tool_calls": 0,
     "family": "totals",
-    "input_tokens": 76654,
+    "input_tokens": 76992,
     "namespace_count": 50,
     "runtime_ms": 50.5913,
     "schema_version": "1.0",
-    "total_tokens": 110410
+    "total_tokens": 110748
   }
 }

@@ -69,6 +69,7 @@ from src.generators.artifact_normalization import (
     page_bound_direct_evidence_packs as _page_bound_direct_evidence_packs,
 )
 from src.generators.artifact_prompt_provenance import (
+    ARTIFACT_PROMPT_VALIDATOR_VERSION,
     artifact_family_for_producing_namespace,
     artifact_prompt_identity,
 )
@@ -2342,7 +2343,7 @@ def _render_regeneration_model(
         seed=request.settings.openai_seed,
         timeout_seconds=request.settings.openai_timeout_seconds,
         output_contract_schema_version="artifact_json:1.0",
-        validator_version="artifacts_schema:3.0",
+        validator_version=ARTIFACT_PROMPT_VALIDATOR_VERSION,
     )
     identity = artifact_prompt_identity(
         prepared=prepared,

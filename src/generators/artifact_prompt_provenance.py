@@ -19,7 +19,7 @@ from src.utils.model_resolver import (
 )
 
 ARTIFACT_PROMPT_IDENTITY_SCHEMA_VERSION = "1.0"
-ARTIFACT_PROMPT_VALIDATOR_VERSION = "artifacts_schema:3.0"
+ARTIFACT_PROMPT_VALIDATOR_VERSION = "artifacts_schema:3.1"
 
 
 def _prompt_contract_for_namespace(namespace: str) -> tuple[str, str]:
@@ -90,8 +90,8 @@ def current_artifact_prompt_identity(
             message="Artifact prompt identity requires its dependency manifest",
             retryable=False,
         )
-    output_contract_schema_version, validator_version = (
-        _prompt_contract_for_namespace(namespace)
+    output_contract_schema_version, validator_version = _prompt_contract_for_namespace(
+        namespace
     )
     default_model = str(getattr(settings, "openai_model", "") or "")
     default_temperature = float(getattr(settings, "temperature", 1.0))

@@ -13,6 +13,9 @@ from src.generators.prompt_preparation import (
     PreparedPromptBundle,
     prepare_prompt_bundle,
 )
+from src.generators.artifact_prompt_provenance import (
+    ARTIFACT_PROMPT_VALIDATOR_VERSION,
+)
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
@@ -119,7 +122,7 @@ def render_artifact_json_model(
         seed=settings.openai_seed,
         timeout_seconds=settings.openai_timeout_seconds,
         output_contract_schema_version="artifact_json:1.0",
-        validator_version="artifacts_schema:3.0",
+        validator_version=ARTIFACT_PROMPT_VALIDATOR_VERSION,
     )
     expected_input_tokens = estimate_text_tokens(
         f"{prompt_bundle.system_prompt}\n{prompt_bundle.user_prompt}"

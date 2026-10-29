@@ -12,6 +12,7 @@ import logging
 import re
 import threading
 import time
+from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -192,7 +193,7 @@ class FakeOpenAI:
         task_id = getattr(ctx, "task_id", "")
         return task_id.rsplit(":", 1)[-1] if ":" in task_id else task_id
 
-    def _next(self, step):
+    def _next(self, step, ctx=None):
         if isinstance(self.responses, dict):
             if step == "cover_semantics" and step not in self.responses:
                 return _cover_semantics_response()
@@ -200,13 +201,62 @@ class FakeOpenAI:
                 return {"editorial_plan": _default_editorial_plan()}
             response = self.responses.get(step, {})
             if isinstance(response, list):
-                return response.pop(0) if response else {}
+                response = response.pop(0) if response else {}
+            if (
+                step == "editorial_plan"
+                and ctx is not None
+                and ":verified:" in str(getattr(ctx, "task_id", ""))
+            ):
+                response = self._verified_plan_response(response)
             return response
         if step == "editorial_plan":
             return {"editorial_plan": _default_editorial_plan()}
         if not self.responses:
             return {}
         return self.responses.pop(0)
+
+    def _verified_plan_response(self, response):
+        """Adapt legacy plan fixtures to the verified planner's ID contract."""
+        payload = deepcopy(response)
+        plan = payload.get("editorial_plan") if isinstance(payload, dict) else None
+        themes = plan.get("themes") if isinstance(plan, dict) else None
+        if not isinstance(themes, list):
+            return payload
+        candidates_payload = self.responses.get("insights_candidates", [])
+        if isinstance(candidates_payload, list):
+            candidates_payload = next(
+                (
+                    item.get("insights_candidates")
+                    for item in candidates_payload
+                    if isinstance(item, dict)
+                ),
+                [],
+            )
+        candidates = (
+            candidates_payload.get("insights_candidates")
+            if isinstance(candidates_payload, dict)
+            else candidates_payload
+        )
+        by_evidence = {
+            str(candidate.get("evidence_id")): str(candidate.get("id"))
+            for candidate in candidates or []
+            if isinstance(candidate, dict)
+            and candidate.get("evidence_id")
+            and candidate.get("id")
+        }
+        for theme in themes:
+            if not isinstance(theme, dict):
+                continue
+            evidence_ids = theme.get("evidence_ids")
+            if not isinstance(evidence_ids, list):
+                continue
+            theme["evidence_ids"] = [
+                evidence_id
+                if str(evidence_id).startswith("verified-fact:")
+                else (f"verified-fact:{by_evidence.get(str(evidence_id), evidence_id)}")
+                for evidence_id in evidence_ids
+            ]
+        return payload
 
     def _mark_started(self):
         with self._lock:
@@ -232,13 +282,13 @@ class FakeOpenAI:
             if not event.is_set():
                 raise AssertionError(f"{step} called before dependency {dep}")
 
-    def _payload_for_step(self, step):
+    def _payload_for_step(self, step, ctx=None):
         self._check_dependencies(step)
         self._mark_started()
         try:
             if self.sleep_seconds > 0:
                 time.sleep(self.sleep_seconds)
-            return self._complete_soft_copy_contract(step, self._next(step))
+            return self._complete_soft_copy_contract(step, self._next(step, ctx))
         finally:
             self._mark_completed(step)
 
@@ -279,7 +329,7 @@ class FakeOpenAI:
     def openai_chat_json(self, req, ctx):
         step = self._step(ctx)
         self.requests.append(("chat", req, step))
-        payload = self._payload_for_step(step)
+        payload = self._payload_for_step(step, ctx)
         return OpenAIResponseResult(
             schema_version="1.0",
             text="{}",
@@ -293,7 +343,7 @@ class FakeOpenAI:
     def openai_respond_with_vector_store(self, req, ctx):
         step = self._step(ctx)
         self.requests.append(("vector", req.vector_store_id, step))
-        payload = self._payload_for_step(step)
+        payload = self._payload_for_step(step, ctx)
         return OpenAIResponseResult(
             schema_version="1.0",
             text="{}",
