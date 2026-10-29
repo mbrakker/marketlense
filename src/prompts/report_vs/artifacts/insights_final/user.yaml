@@ -15,7 +15,7 @@ text: |
   - Editorial plan JSON: {{ editorial_plan_json }}
   {% if semantic_theme_coverage_feedback_json|default("") %}
   - Independent semantic theme-coverage feedback JSON: {{ semantic_theme_coverage_feedback_json }}
-  Revise the current final insights to address the supported central-theme failure in that feedback. Keep the exact stable IDs and authoritative evidence bindings; change only the editorial wording or select another admitted candidate when it better develops the intended theme. Do not add facts, metrics, evidence IDs, or insights outside the supplied candidate set.
+  Revise the current final insights to address the supported central-theme failure in that feedback. For every omitted central theme, make at least one final insight substantively develop the full intended proposition, including its material sub-clauses, using only the supplied canonical fact(s); a generic mention or narrow restatement is insufficient. Keep the exact stable IDs and authoritative evidence bindings; change only the editorial wording or select another admitted candidate when it better develops the intended theme. If the theme is supported by multiple supplied facts, an exact primary-first `evidence_ids` array may combine those facts. Do not add facts, metrics, evidence IDs, or insights outside the supplied candidate set.
   {% endif %}
 
   Source-of-truth final insight schema:
