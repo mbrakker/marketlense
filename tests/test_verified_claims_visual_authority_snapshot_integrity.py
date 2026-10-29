@@ -657,6 +657,93 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
     )
 
 
+def test_verified_theme_repair_reconciles_count_from_admitted_candidates(tmp_path):
+    candidates = [
+        _insight("f1", score=0.99, text="The first decision signal is material."),
+        _insight("f2", score=0.98, text="The second decision signal is material."),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
+    ]
+    bad_final = [
+        {**deepcopy(candidate), "evidence_id": f"verified-fact:{candidate['id']}"}
+        for candidate in candidates
+    ]
+    bad_final[1]["text"] = "The first decision signal also governs the response."
+    repaired_final = deepcopy(bad_final[:4])
+    repaired_final[1]["text"] = "The second decision signal governs the response."
+
+    responses = _generation_responses(candidates, plan_evidence_ids=["f2", "f1"])
+    responses["insights_final"] = [
+        {"insights_final": bad_final},
+        {"insights_final": repaired_final},
+    ]
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        f"verified-fact:{candidates[1]['id']}"
+    )
+    responses["editorial_theme_coverage"] = [
+        {
+            "theme_coverage": [
+                {
+                    "theme": "Theme 1",
+                    "status": "uncovered",
+                    "supporting_insight_ids": [],
+                    "explanation": (
+                        "The central theme is not developed by the final prose."
+                    ),
+                },
+                {
+                    "theme": "Theme 2",
+                    "status": "covered",
+                    "supporting_insight_ids": [candidates[0]["id"]],
+                    "explanation": "The first final proposition develops Theme 2.",
+                },
+            ]
+        },
+        {
+            "theme_coverage": [
+                {
+                    "theme": "Theme 1",
+                    "status": "covered",
+                    "supporting_insight_ids": [candidates[1]["id"]],
+                    "explanation": "The repaired second proposition develops Theme 1.",
+                },
+                {
+                    "theme": "Theme 2",
+                    "status": "covered",
+                    "supporting_insight_ids": [candidates[0]["id"]],
+                    "explanation": "The first proposition develops Theme 2.",
+                },
+            ]
+        },
+    ]
+
+    payload = generate_artifacts(
+        report_id="verified-semantic-theme-repair-count-reconciliation",
+        report_name="Verified semantic theme repair count reconciliation",
+        doc_map=_doc_map(5),
+        evidence_packs=_generation_evidence(5),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=lambda shortlisted: _verified_admission(
+            shortlisted, digest="c" * 64
+        ),
+    )
+
+    assert len(payload["insights_final"]) == 5
+    assert {item["id"] for item in payload["insights_final"]} == {
+        candidate["id"] for candidate in candidates
+    }
+    assert next(
+        item["text"]
+        for item in payload["insights_final"]
+        if item["id"] == candidates[1]["id"]
+    ) == "The second decision signal governs the response."
+
+
 def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion(
     tmp_path,
 ):

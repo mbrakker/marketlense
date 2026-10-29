@@ -2364,15 +2364,26 @@ def generate_artifacts(
                 verified_mode=True,
             )
             if len(repaired_insights) != len(insights_final):
-                raise AppError(
-                    code="artifact_final_insight_coverage_repair_invalid",
-                    message="Semantic theme repair changed the final insight count",
-                    retryable=False,
-                    context={
-                        "before_count": len(insights_final),
-                        "after_count": len(repaired_insights),
-                    },
-                ) from error
+                reconciled_insights = select_artifact_insights(
+                    final_insights=repaired_insights,
+                    candidate_insights=insights_candidates,
+                    editorial_plan=editorial_plan,
+                    require_final_candidate_lineage=False,
+                    verified_mode=True,
+                    max_count=len(insights_final),
+                )
+                if len(reconciled_insights) != len(insights_final):
+                    raise AppError(
+                        code="artifact_final_insight_coverage_repair_invalid",
+                        message="Semantic theme repair changed the final insight count",
+                        retryable=False,
+                        context={
+                            "before_count": len(insights_final),
+                            "after_count": len(repaired_insights),
+                            "reconciled_count": len(reconciled_insights),
+                        },
+                    ) from error
+                repaired_insights = reconciled_insights
             insights_final = final_insights_for_coverage(repaired_insights)
             validate_verified_final_insight_count(
                 insights_final, stage="semantic_repair"

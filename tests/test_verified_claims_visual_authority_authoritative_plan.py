@@ -6,8 +6,10 @@ from copy import deepcopy
 import pytest
 
 from src.generators._artifact_generator.generation import generate_artifacts
+from src.generators._artifact_generator.storage import derive_metric_spine_from_insights
 from src.generators.artifact_normalization import select_artifact_insights
 from src.utils.errors import AppError
+from src.utils.verified_facts import validate_verified_artifact_bindings
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
     FakeAnalysisStore,
@@ -93,6 +95,57 @@ def test_verified_selection_keeps_authoritative_composite_for_named_subset() -> 
     assert selected[0]["metric"]["label"] == candidate_metric["label"]
     assert selected[0]["metric"]["value"] == candidate_metric["value"]
     assert selected[0]["metric"]["observations"] == candidate_metric["observations"]
+
+
+def test_verified_metric_spine_preserves_per_fact_spans_for_multi_fact_binding():
+    spans = [
+        {
+            "evidence_id": "verified-fact:fact-1",
+            "source_pack": "verified_facts",
+            "source_identity": "source:report",
+            "page": 4,
+            "text": "42% of buyers",
+        },
+        {
+            "evidence_id": "verified-fact:fact-2",
+            "source_pack": "verified_facts",
+            "source_identity": "source:report",
+            "page": 5,
+            "text": "18% of sellers",
+        },
+    ]
+    insight = {
+        "id": "multi-fact-signal",
+        "text": "Buyer and seller adoption diverge.",
+        "evidence_id": spans[0]["evidence_id"],
+        "evidence_ids": [span["evidence_id"] for span in spans],
+        "evidence_spans": spans,
+        "metric": {
+            "label": "Adoption",
+            "value": "42%; 18%",
+            "unit": "%",
+            "timeframe": "2026",
+        },
+    }
+
+    spine = derive_metric_spine_from_insights([insight], verified_mode=True)
+
+    assert spine[0]["evidence_spans"] == spans
+    validate_verified_artifact_bindings(
+        {"metric_spine": spine},
+        {
+            "fact-1": {
+                "fact_id": "fact-1",
+                "source_identity": "source:report",
+                "supporting_physical_pages": [4],
+            },
+            "fact-2": {
+                "fact_id": "fact-2",
+                "source_identity": "source:report",
+                "supporting_physical_pages": [5],
+            },
+        },
+    )
 
 
 def test_verified_authoritative_plan_is_generated_from_admitted_facts(tmp_path):

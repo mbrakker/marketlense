@@ -1238,6 +1238,11 @@ def _derive_metric_spine_from_insights(
             item["evidence_ids"] = evidence_ids
         if verified_mode and isinstance(metric.get("observations"), list):
             item["observations"] = deepcopy(metric["observations"])
+        if verified_mode and isinstance(insight.get("evidence_spans"), list):
+            # The insight binding has already been normalized against the
+            # authoritative verified-fact pack. Preserve its per-fact spans
+            # so multi-fact metric-spine entries remain validator-complete.
+            item["evidence_spans"] = deepcopy(insight["evidence_spans"])
         if verified_mode and evidence_id in verified_fact_statements:
             item["source_statement"] = verified_fact_statements[evidence_id]
         numeric_metadata = numeric_metadata_for_complete_display(value)
