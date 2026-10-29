@@ -429,19 +429,23 @@ def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
         return False
     if rule_id == "grounding" and violation_type == "contradicted":
         # A contradicted statement needs correction against the same source;
-        # quarantine is appropriate for unsupported claims, not contradictions.
+        # quarantine is appropriate for unsupported bindings, not a wording
+        # contradiction that the retained source can correct.
         return False
-    if (
-        rule_id == "grounding"
-        and violation_type == "not_established"
-        and _insight_issue_field(issue.entity_id, issue.affected_section)
-        in {"so_what", "now_what"}
-    ):
-        # A failed implication/recommendation is a wording defect. Keep the
-        # retained fact available so the existing targeted repair can rewrite
-        # the interpretation or remove only that leaf. Metric, population,
-        # timeframe and other factual failures remain quarantined.
-        return False
+    if rule_id == "grounding" and violation_type in {
+        "not_established",
+        "unsupported_factual_claim",
+        "contradicted",
+    }:
+        issue_field = _insight_issue_field(issue.entity_id, issue.affected_section)
+        entity_id = str(issue.entity_id or "").strip()
+        if issue_field in {"so_what", "now_what"} or entity_id.startswith("soft_copy:"):
+            # A semantic grounding failure on retained public wording is a
+            # repairable claim defect. Keep the authoritative source available
+            # so the existing targeted repair can correct or remove only the
+            # unsupported wording. Source-identity and protected-fact failures
+            # still quarantine through their dedicated validation rules.
+            return False
     if rule_id.startswith("retained_claim."):
         return rule_id == "retained_claim.evidence_reference_completeness"
     return str(issue.severity or "").strip().lower() == "error" and (

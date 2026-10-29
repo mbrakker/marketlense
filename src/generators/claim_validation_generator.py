@@ -249,9 +249,11 @@ def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | Non
             candidate = result.get("candidate")
             if not isinstance(candidate, dict):
                 continue
-            if str(candidate.get("claim_id") or "").strip() != (
-                f"evidence:findings:{evidence_id}"
-            ) or str(candidate.get("text") or "").strip() != statement:
+            if (
+                str(candidate.get("claim_id") or "").strip()
+                != (f"evidence:findings:{evidence_id}")
+                or str(candidate.get("text") or "").strip() != statement
+            ):
                 continue
             references = candidate.get("evidence_references")
             pages: set[int] = set()
@@ -272,9 +274,7 @@ def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | Non
                 continue
             item_pages_raw = item.get("pages", item.get("page"))
             item_page_values = (
-                item_pages_raw
-                if isinstance(item_pages_raw, list)
-                else [item_pages_raw]
+                item_pages_raw if isinstance(item_pages_raw, list) else [item_pages_raw]
             )
             item_pages: set[int] = set()
             for page in item_page_values:
@@ -2074,12 +2074,11 @@ def reuse_retained_claim_semantic_results(
     ):
         reject("prior_artifact_identity_mismatch")
         old_results = []
-    elif (
-        prior.get("readiness_status") != "awaiting_review"
-        or prior.get("unsupported_factual_count") != 0
-        or prior.get("unresolved_factual_count") != 0
-    ):
-        reject("prior_validation_not_pass")
+    elif prior.get("readiness_status") not in {
+        "awaiting_review",
+        "not_publishable",
+    }:
+        reject("prior_package_invalid")
         old_results = []
     else:
         identity = prior.get("validation_identity")

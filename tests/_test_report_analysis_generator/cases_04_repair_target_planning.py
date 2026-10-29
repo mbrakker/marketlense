@@ -368,6 +368,81 @@ def test_grounding_interpretation_failure_keeps_authoritative_evidence_available
     assert target.quarantined_evidence_ids == []
 
 
+def test_grounding_unsupported_factual_claim_keeps_authoritative_evidence_available():
+    insight = {
+        "id": "social-referral-decline",
+        "text": "Publisher referrals from Facebook and X declined.",
+        "so_what": "The measured decline indicates lower referral volume.",
+        "evidence_id": "verified-fact:social-referral-decline",
+        "pages": [12],
+    }
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message=(
+            "[grounding] [factual_claim|unsupported_factual_claim] The source "
+            "does not establish that these are major platforms."
+        ),
+        severity="error",
+        affected_section="insights:social-referral-decline.so_what",
+        rule_id="grounding",
+        violation_type="unsupported_factual_claim",
+        entity_id="insight:social-referral-decline:so_what",
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts={
+            "insights_final": [insight],
+            "insights_candidates": [dict(insight)],
+        },
+        broad_retry_available=False,
+    )
+
+    assert plan.mode == "targeted"
+    target = plan.targets[0]
+    assert target.selected_evidence_ids == ["verified-fact:social-referral-decline"]
+    assert target.quarantined_evidence_ids == []
+
+
+def test_summary_grounding_failure_keeps_authoritative_evidence_available():
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message=(
+            "[grounding] [factual_claim|not_established] The retained summary "
+            "claim lacks the source limitation."
+        ),
+        severity="error",
+        affected_section="summary.claim_evidence_map[item=deal-readiness].claim",
+        rule_id="grounding",
+        violation_type="not_established",
+        entity_id="soft_copy:summary:deal-readiness",
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts={
+            "summary": {
+                "claim_evidence_map": [
+                    {
+                        "id": "deal-readiness",
+                        "claim": "Dealmakers emphasize readiness before close.",
+                        "evidence_id": "verified-fact:pre-close-integration-readiness",
+                        "pages": [73],
+                    }
+                ]
+            }
+        },
+        broad_retry_available=False,
+    )
+
+    assert plan.mode == "targeted"
+    target = plan.targets[0]
+    assert target.selected_evidence_ids == [
+        "verified-fact:pre-close-integration-readiness"
+    ]
+    assert target.quarantined_evidence_ids == []
+
+
 def test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy():
     metric = {
         "label": "Regional Ad Attention Index",

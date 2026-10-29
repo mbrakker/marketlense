@@ -285,7 +285,46 @@ def test_prior_unresolved_package_is_never_reused_as_a_pass() -> None:
 
     assert len(remaining) == 1
     assert telemetry["reused_validation_results"] == 0
-    assert telemetry["reuse_fallback_reason_counts"]["prior_validation_not_pass"] == 1
+    assert telemetry["reuse_fallback_reason_counts"]["prior_package_invalid"] == 1
+
+
+def test_partial_prior_reuses_supported_claim_without_unresolved_sibling() -> None:
+    _artifacts, _evidence, prior_package, prior_inputs = _inputs(
+        claims=(
+            "Wallet use is becoming a common checkout method across retailers.",
+            "Wallet use is becoming a more common checkout method for shoppers.",
+        )
+    )
+    grounded = apply_retained_claim_semantic_results(
+        prior_package,
+        prior_inputs,
+        [
+            _semantic_result(prior_inputs[0]),
+            _semantic_result(prior_inputs[1], outcome="not_established"),
+        ],
+    )
+    prior = attach_claim_validation_execution_identity(
+        grounded,
+        report_id=_CONTEXT["report_id"],
+        source_id=_CONTEXT["source_id"],
+        source_md5=_CONTEXT["source_md5"],
+        configuration_hash=_CONTEXT["configuration_hash"],
+        policy_hash=_CONTEXT["policy_hash"],
+    )
+    _candidate_artifacts, _evidence, current_package, current_inputs = _inputs(
+        claims=(
+            "Wallet use is becoming a common checkout method across retailers.",
+            "Wallet use is becoming a more common checkout method for shoppers.",
+        )
+    )
+
+    merged, remaining, telemetry = _reuse(current_package, current_inputs, prior)
+
+    assert [item.candidate.claim_id for item in remaining] == ["summary_claim:claim-2"]
+    assert telemetry["reused_validation_results"] == 1
+    assert telemetry["newly_validated_claims"] == 1
+    assert telemetry["reuse_fallback_reason_counts"]["prior_result_not_supported"] == 1
+    assert merged.results[0].status == "supported"
 
 
 def test_mixed_candidate_reuses_only_the_unchanged_claim() -> None:
