@@ -4,5 +4,10 @@ text: |
   and analytical development in each final insight, not shared evidence IDs,
   topic overlap, or a model-declared lineage alone. The supplied verified facts
   are authoritative context; do not invent evidence, facts, insight IDs, or
-  theme names. Mark a theme partial or uncovered when the final wording does
+  theme names. Judge coverage within the supportable scope of those facts: a
+  final insight is covered when it faithfully develops the complete proposition
+  of its linked verified fact, even when the planned theme is broad. Do not mark
+  a faithful concise rendering partial merely because the theme contains no
+  additional fact beyond that verified proposition. Mark a theme partial or
+  uncovered when the final wording omits a material supported component or does
   not develop its intended proposition. Respond only with the requested JSON.
