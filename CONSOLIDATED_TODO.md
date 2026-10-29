@@ -878,6 +878,22 @@ HTML/readiness artifact or publication was produced. Step 2 remains
 **unstarted/not ready**. Exact failure reasons and the source-page review are
 in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
+**Exact frozen-five verified-facts editorial audit after admitted-alternative
+recovery — 2026-10-29 (`287d6904`):** The current deterministic correction preserves
+final editorial wording and authoritative spans for matching stable IDs and permits
+the existing bounded semantic-recovery path to use an admitted source-bound
+alternative when the selected fact cannot satisfy a supported central theme. The
+affected suite passed 234 tests, and the exact Adjust/KPMG/Emplifi/Reuters/Algolia
+provider run matched all five source SHA-256 values, with 295 calls, 3,341,130 input
+tokens, 828,380 output tokens, `$0.830416`, and 5,153.028 seconds. Adjust, Emplifi,
+and Algolia passed validation/readiness; KPMG and Reuters failed closed on grounded
+editorial issues rather than promoting unsupported interpretations. No publication,
+WordPress, canonical-claim, or ten-report operation occurred. This is a genuine
+partial result, not a promotion signal: E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full per-report
+outcomes, independent PDF review, artifact paths, limitations, and the baseline
+comparison are in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
 **Final hosted-CI fixture correction — 2026-10-29 (`52b853b9`):** The first
 hosted run for the central-theme evidence update exposed one stale test
 fixture: a verified full-roster regression did not provide the newly required

@@ -7065,3 +7065,126 @@ check remained the expected skipped check. This confirms the deterministic
 implementation and its regression coverage are green. It does not change the
 exact frozen-five provider result above: that run remains **PARTIAL / NO-GO**
 because it failed closed before final verified-facts and HTML artifacts.
+
+#### Exact frozen-five verified-facts editorial audit after admitted-alternative recovery — 2026-10-29 (`287d690488354916601ee0a0a1b21da71562a7b5`)
+
+This is the current provider-backed verification of the surgical admitted-alternative
+recovery correction. The implementation preserves final editorial wording for a
+matching stable ID, keeps authoritative verified spans in the metric spine, and lets
+the existing bounded semantic-recovery path replace a selected source-bound fact with
+an admitted alternative when the selected fact does not satisfy the supported central
+theme. It adds no validator, service, LLM stage, prompt relaxation, publication path,
+or canonical-claim mutation. The semantic-recovery regression was moved to a separate
+test module so the repository's 1,000-line test-file ownership gate remains active.
+
+##### Run identity and source integrity
+
+The exact frozen-five manifest was run in verified-facts mode with GPT-6 Luna High,
+the original retained PDFs, no publication writes, and no final-artifact substitution:
+
+```text
+C:\Users\Михаил\ml-stage-alignment-live-20261029-final-five-287d6904b\frozen-reliability-5e5mfdja
+```
+
+All five source lineage records matched the required SHA-256 values:
+
+| Report | Required source SHA-256 | Match |
+| --- | --- | --- |
+| Adjust | `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` | yes |
+| KPMG | `a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589` | yes |
+| Emplifi | `54a6726033fce9474929dec62bc85fc4dd3ada574398d043d12ec48b0eaddeb5` | yes |
+| Reuters Institute | `f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52` | yes |
+| Algolia | `d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50b` | yes |
+
+The machine-readable result is
+`C:\Users\Михаил\ml-stage-alignment-live-20261029-final-five-287d6904b\frozen-reliability-5e5mfdja\cohort_result.json`.
+All five reports were admitted and reached typed terminal outcomes. The aggregate
+was **295 provider calls**, **3,341,130 input tokens**, **828,380 output tokens**,
+estimated cost **$0.830416**, and **5,153.028 seconds**. Operator intervention was
+zero. There were no WordPress writes, canonical claim promotions, or publication
+side effects.
+
+##### Terminal outcomes and resources
+
+| Report | Outcome | Visual facts | Calls | Input / output | Cost | Duration | Structured recovery | Automatic repairs | Readiness |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Adjust | admitted / validation pass | 7/7 | 55 | 622,849 / 146,484 | `$0.151352` | 898.658s | 2 | 0 | pass |
+| KPMG | admitted / validation failed | 6/6 | 69 | 488,863 / 189,432 | `$0.170570` | 889.428s | 1 | 6 | fail closed |
+| Emplifi | admitted / validation pass | 7/7 | 54 | 621,856 / 125,796 | `$0.136232` | 917.192s | 0 | 0 | pass |
+| Reuters Institute | admitted / validation failed | 7/7 | 64 | 856,395 / 235,376 | `$0.220677` | 1,320.227s | 5 | 0 | fail closed |
+| Algolia | 5/6 admitted, 1 quarantined | 6 evaluated | 53 | 751,167 / 131,292 | `$0.151585` | 1,127.523s | 1 | 0 | pass |
+
+The passing/readiness split was **3/5**. Algolia's admission audit retains aggregate
+evidence-fidelity failures for five pre-admission source candidates, but the exported
+artifact does not retain an individual candidate-level reason for the one quarantined
+visual candidate. This is reported as an auditability limitation rather than an
+inferred assignment. No unsupported material claim was promoted in a passing report.
+
+##### Root-cause outcomes
+
+KPMG failed closed in the existing grounding gate. The retained executive-summary
+and expert-comment wording stated that dealmakers emphasize integration readiness
+before close rather than post-close fixes, while the authoritative evidence supported
+that contrast specifically in the context of post-deal value realization. Six bounded
+targeted repairs attempted supported replacements or safe removal, but the resulting
+rosters introduced new grounding problems or failed to preserve the required
+authoritative context and were rolled back. An isolated KPMG replay at the same SHA
+selected a different admitted fact set and passed, but it is not combined with this
+exact-five result and demonstrates provider/model selection variability, not a reason
+to weaken the gate.
+
+Reuters failed closed on a semantic interpretation error: the evidence established
+declines in publisher-site referrals from Facebook and X in the global dataset, but
+did not establish the final `so_what` description that these were “two major social
+platforms”. The issue is a qualitative overstatement, not an unsupported numerical
+promotion. The final artifact was withheld because the existing validation contract
+correctly treats this as material.
+
+Adjust retained seven final insights and Emplifi six. Independent inspection of their
+original PDF pages confirmed the selected numerical relationships, populations,
+periods, units and qualifiers. Adjust's final pages were 19, 21, 29, 30, 34, 35 and
+36; examples include finance installs `-4%` YoY with sessions `+21%`, the paid/organic
+ratio `0.48` to `0.54`, LATAM installs `+76%` with sessions `+57%`, and the 7.18-minute
+session length. Emplifi's pages 4, 10, 13, 15, 18 and 19 supported the selected
+survey/research percentages and the stated hypothetical or recommendation qualifiers.
+Algolia's five final insights were independently supported on pages 12/16, 22, 25
+and 26, including the market-specific 63/68/57 likelihoods with their sample sizes,
+17% implemented versus 61% planned, and the 49/27/23 implementation approaches.
+
+The final Adjust, Emplifi and Algolia HTML files contained zero occurrences of
+`candidate_id`, `evidence_id`, `verified-fact:`, `source_pack`, `fact_id`, or
+`metric_binding`. KPMG and Reuters had no HTML because the fail-closed validation
+outcome correctly prevented materialization.
+
+##### Comparison with the accepted producer
+
+The accepted `04a050a4` run produced 5/5 readiness passes, 30 visual facts, 264
+provider calls, 2,858,614 input tokens, 660,626 output tokens, `$0.702302`, and
+4,738.245 seconds. The current run produced 3/5 readiness passes, 295 calls,
+3,341,130 input tokens, 828,380 output tokens, `$0.830416`, and 5,153.028 seconds.
+That is **+$0.128114 (+18.24%) cost**, **+31 calls (+11.74%)**, **+482,516 input
+tokens (+16.88%)**, **+167,754 output tokens (+25.39%)**, and **+414.783 seconds
+(+8.75%)**. The differences include the current bounded recovery/coverage work and
+provider variability; they are not a quality improvement because the current exact
+cohort has two fail-closed reports and only three readiness passes. The run does,
+however, demonstrate that the new recovery path preserves source-bound alternatives
+without promoting the two materially unsupported interpretations.
+
+##### Verification
+
+The affected focused suite passed **17 tests** after the new regression was split out
+of the long snapshot module. The expanded affected suite passed **234 tests** in
+**52.82s**, including artifact normalization, semantic recovery, regeneration,
+lineage, generation, and shortlisting tests. The long-test-file ownership check passed.
+The new regression proves that a selected source-bound fact can be replaced by an
+admitted source-bound alternative during semantic recovery while preserving the
+alternative's authoritative wording and bindings. Existing tests continue to cover
+stable IDs, protected fields, source spans, cache behavior, fallback coverage, and
+fail-closed validation.
+
+**Verdict: PARTIAL / NO-GO.** The deterministic correction and focused regressions
+pass, and the exact frozen-five run preserved source identity and fail-closed factual
+gates. Three reports passed independent PDF/HTML review; KPMG and Reuters remain
+material editorial-grounding blockers. Step 2 is not promotion-ready and Step 3
+remains unstarted/not ready. No additional corrective work is justified solely for
+hypothetical edge cases, and no ten-report cohort was started.
