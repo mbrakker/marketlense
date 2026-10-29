@@ -23,8 +23,5 @@ text: |
   Include every planned theme exactly once. Use only exact final insight IDs.
   `covered` means the final prose develops the theme's intended proposition;
   `partial` means it is materially related but incomplete; `uncovered` means
-  the final roster does not substantively address it. Judge completeness against
-  the linked verified fact's supported proposition: a faithful concise rendering
-  of that complete proposition is covered even when the theme wording is broad.
-  A shared fact or source page is not enough. Do not rewrite the insights or add
-  evidence.
+  the final roster does not substantively address it. A shared fact or source
+  page is not enough. Do not rewrite the insights or add evidence.
