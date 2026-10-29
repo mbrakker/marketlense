@@ -6,6 +6,7 @@ from copy import deepcopy
 import pytest
 
 from src.generators._artifact_generator.generation import generate_artifacts
+from src.generators.artifact_normalization import select_artifact_insights
 from src.utils.errors import AppError
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
@@ -21,6 +22,77 @@ from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _insight,
 )
 from tests.test_verified_claims_visual_authority_canary import _verified_admission
+
+
+def test_verified_selection_keeps_authoritative_composite_for_named_subset() -> None:
+    candidate_metric = {
+        "label": "AI initiative impact",
+        "value": "44% promising; 42% limited; 13% transformational; 2% disappointing",
+        "unit": "percent",
+        "timeframe": "Impact so far",
+        "segment": "Q11 respondents",
+        "observations": [
+            {"label": "Promising", "value": "44%", "unit": "percent"},
+            {"label": "Limited", "value": "42%", "unit": "percent"},
+            {"label": "Transformational", "value": "13%", "unit": "percent"},
+            {"label": "Disappointing", "value": "2%", "unit": "percent"},
+        ],
+    }
+    candidate = {
+        "id": "ai-initiative-impact",
+        "text": "The complete retained AI-initiative impact fact.",
+        "evidence_id": "verified-fact:ai-initiative-impact",
+        "evidence": "The source reports the complete adjective distribution.",
+        "pages": [33],
+        "metric": candidate_metric,
+        "verified_fact": {
+            "fact_id": "ai-initiative-impact",
+            "statement": "The complete retained AI-initiative impact fact.",
+            "metric": candidate_metric,
+        },
+    }
+    selected = select_artifact_insights(
+        final_insights=[
+            {
+                "id": "ai-initiative-impact",
+                "text": (
+                    "Promising (44%) and limited (42%) were the leading assessments."
+                ),
+                "evidence_id": "editorial-only",
+                "metric": {
+                    "label": "AI initiative impact",
+                    "value": "44% promising; 42% limited",
+                    "unit": "percent",
+                    "timeframe": "Impact so far",
+                    "segment": "Q11 respondents",
+                },
+            }
+        ],
+        candidate_insights=[candidate],
+        editorial_plan={
+            "report_thesis": "The admitted survey fact remains authoritative.",
+            "themes": [
+                {
+                    "theme": "AI initiative outcomes",
+                    "priority": 1,
+                    "evidence_ids": ["verified-fact:ai-initiative-impact"],
+                },
+                {
+                    "theme": "Reported distribution",
+                    "priority": 2,
+                    "evidence_ids": ["verified-fact:ai-initiative-impact"],
+                },
+            ],
+        },
+        require_final_candidate_lineage=True,
+        verified_mode=True,
+    )
+
+    assert selected[0]["text"].startswith("Promising")
+    assert selected[0]["evidence_id"] == candidate["evidence_id"]
+    assert selected[0]["metric"]["label"] == candidate_metric["label"]
+    assert selected[0]["metric"]["value"] == candidate_metric["value"]
+    assert selected[0]["metric"]["observations"] == candidate_metric["observations"]
 
 
 def test_verified_authoritative_plan_is_generated_from_admitted_facts(tmp_path):
