@@ -6887,3 +6887,46 @@ provider rate limit before the new behavior could be evaluated. Broad live
 selection effectiveness, repeated-run stability, and Step 3 readiness remain
 unproven. No ten-report cohort was started, no canonical claim was promoted,
 and no WordPress write occurred.
+
+#### Verified-facts central-theme fallback and CI correction — 2026-10-29 (`01d2d61e`)
+
+The follow-up correction closed the remaining implementation and test-contract
+issues exposed by the first hosted run. The verified final-selection helper now
+first restores final editorial wording together with the complete authoritative
+candidate binding. It supplements only a genuinely omitted **central** planned
+theme, and only from an admitted candidate whose evidence identity covers that
+theme. Optional or lower-priority theme omissions remain valid; unsupported or
+unbound candidates still fail closed. This keeps the existing selection order,
+stable IDs, source pages/spans, protected factual fields, and normal-mode
+behavior unchanged. The new `editorial_theme_coverage` family is also persisted
+in prompt-family checkpoints so downstream replay has complete lineage.
+
+The first follow-up hosted run, `40790458154`, failed for stale expectations:
+three snapshot assertions still expected the pre-fallback roster/call count,
+the canary exceeded the enforced test-file ownership limit, and the new prompt
+family was not included in the checkpoint-materialization expectation. Those
+were test/lineage maintenance defects, not a relaxation of a production gate.
+After the surgical correction, the affected local suite passed **123 tests**.
+Formatting, Ruff, mypy, architecture imports, forbidden-patching,
+documentation, quality-ledger, and prompt-fixture gates all passed. Hosted run
+`40792156557` then passed all jobs: `ci_start`, both mutation partitions,
+`tests`, and `release_evidence` (including the quality non-regression, PDF
+benchmark, prompt-fixture, LLM-accounting, and release-manifest gates). The
+WordPress staging REST check remained the repository's expected skipped check;
+no WordPress write occurred.
+
+The provider-backed evidence remains the same as the preceding entry: the
+fresh affected-five run at `2654424d` completed only Adjust, while KPMG,
+Emplifi, Reuters Institute, and Algolia were blocked by the retained provider
+rate-limit/circuit-open condition before the corrected selection path could be
+exercised. The deterministic correction and its focused regressions therefore
+pass, but this does not establish fresh current-HEAD selection quality for
+those four reports. The retained semantic replay remains a post-selection
+replay, not new selection evidence.
+
+**Final status:** deterministic implementation **PASS**; retained semantic
+replay **PASS for its stated scope**; fresh affected-five acceptance
+**PARTIAL / NO-GO** because of the external provider limitation. Step 2 remains
+**PARTIAL/NO-GO** for promotion and Step 3 remains **unstarted/not ready**.
+No ten-report cohort was started, no canonical claim was promoted, and no
+publication write occurred.

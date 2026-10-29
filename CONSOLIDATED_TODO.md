@@ -1282,3 +1282,18 @@ condition. The deterministic correction is PASS; fresh five-report verified
 acceptance is PARTIAL/NO-GO. E18 remains Active/PARTIAL, Step 2 remains
 PARTIAL/NO-GO, and Step 3 remains unstarted/not ready. Full metrics and paths
 are in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Verified-facts central-theme fallback and CI correction — 2026-10-29
+(`01d2d61e`):** The final-selection boundary now preserves final editorial
+wording and authoritative bindings, and supplements only omitted central
+planned themes from admitted source-bound candidates; optional omissions remain
+allowed. The new editorial-theme-coverage checkpoint is persisted for replay.
+The affected suite passed 123 tests and hosted CI `40792156557` passed tests,
+both mutation partitions, and `release_evidence`; the preceding
+`40790458154` failure was stale snapshot/ownership/checkpoint expectations and
+was corrected without weakening production gates. The fresh affected-five
+provider run still completed only Adjust; four reports remained blocked by the
+external rate-limit/circuit-open condition, so fresh current-HEAD selection
+quality is unproven for them. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. No ten-report
+cohort or publication write occurred.
