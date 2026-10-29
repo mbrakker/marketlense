@@ -640,7 +640,11 @@ def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion
             },
         ]
     }
-    responses["editorial_theme_coverage"] = [failed_coverage, failed_coverage]
+    responses["editorial_theme_coverage"] = [
+        failed_coverage,
+        failed_coverage,
+        failed_coverage,
+    ]
     openai_client = FakeOpenAI(responses)
 
     with pytest.raises(AppError, match="omitted a supported central theme"):
@@ -669,6 +673,98 @@ def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion
         )
         == 2
     )
+
+
+def test_verified_generation_falls_back_to_source_bound_candidate_after_semantic_repair(
+    tmp_path,
+):
+    candidates = [
+        _insight("f1", score=0.99, text="The first decision signal is material."),
+        _insight("f2", score=0.98, text="The second decision signal is material."),
+    ]
+    narrow_final = [
+        {
+            **deepcopy(candidates[0]),
+            "evidence_id": f"verified-fact:{candidates[0]['id']}",
+        },
+        {
+            **deepcopy(candidates[1]),
+            "evidence_id": f"verified-fact:{candidates[1]['id']}",
+            "text": "A narrow detail from the second signal.",
+        },
+    ]
+    responses = _generation_responses(candidates, plan_evidence_ids=["f2", "f1"])
+    responses["insights_final"] = [
+        {"insights_final": narrow_final},
+        {"insights_final": narrow_final},
+    ]
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        f"verified-fact:{candidates[1]['id']}"
+    )
+    failed_coverage = {
+        "theme_coverage": [
+            {
+                "theme": "Theme 1",
+                "status": "uncovered",
+                "supporting_insight_ids": [],
+                "explanation": "The central theme is not developed.",
+            },
+            {
+                "theme": "Theme 2",
+                "status": "covered",
+                "supporting_insight_ids": [candidates[0]["id"]],
+                "explanation": "The second theme is developed.",
+            },
+        ]
+    }
+    successful_fallback = {
+        "theme_coverage": [
+            {
+                "theme": "Theme 1",
+                "status": "covered",
+                "supporting_insight_ids": [candidates[1]["id"]],
+                "explanation": "The source-bound candidate develops the central theme.",
+            },
+            {
+                "theme": "Theme 2",
+                "status": "covered",
+                "supporting_insight_ids": [candidates[0]["id"]],
+                "explanation": "The second theme is developed.",
+            },
+        ]
+    }
+    responses["editorial_theme_coverage"] = [
+        failed_coverage,
+        failed_coverage,
+        successful_fallback,
+    ]
+    openai_client = FakeOpenAI(responses)
+
+    payload = generate_artifacts(
+        report_id="verified-semantic-theme-source-fallback",
+        report_name="Verified semantic theme source fallback",
+        doc_map=_doc_map(2),
+        evidence_packs=_generation_evidence(2),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=openai_client,
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=lambda shortlisted: _verified_admission(
+            shortlisted, digest="y" * 64
+        ),
+    )
+
+    final_f2 = next(
+        item
+        for item in payload["insights_final"]
+        if item["id"] == candidates[1]["id"]
+    )
+    assert final_f2["text"] == "The second decision signal is material."
+    repair = payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
+        "final_selected_theme_coverage"
+    ]["semantic_repair"]
+    assert repair["fallback"]["status"] == "source_bound_candidate"
 
 
 def test_verified_generation_materializes_downstream_insights_from_snapshot(

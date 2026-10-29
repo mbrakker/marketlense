@@ -669,6 +669,8 @@ def generate_artifacts(
 
     def final_insights_for_coverage(
         final_insights: List[Dict[str, Any]],
+        *,
+        replace_central_themes: set[str] | None = None,
     ) -> List[Dict[str, Any]]:
         if visual_authority_admitter is None:
             return final_insights
@@ -689,6 +691,12 @@ def generate_artifacts(
             for theme in coverage["omitted_central_themes"]
             if normalize_text(theme)
         }
+        requested_replacements = {
+            normalize_text(theme)
+            for theme in replace_central_themes or set()
+            if normalize_text(theme)
+        }
+        omitted_central_themes.update(requested_replacements)
         if not omitted_central_themes:
             return restored_finals
 
@@ -727,6 +735,23 @@ def generate_artifacts(
             verified_mode=True,
             max_count=len(omitted_central_themes),
         )
+        if replace_central_themes:
+            replacement_by_id = {
+                _s(insight.get("id")).strip(): insight
+                for insight in additions
+                if isinstance(insight, dict) and _s(insight.get("id")).strip()
+            }
+            replaced = [
+                replacement_by_id.get(
+                    _s(insight.get("id")).strip(), insight
+                )
+                if isinstance(insight, dict)
+                and _s(insight.get("id")).strip() in replacement_by_id
+                else insight
+                for insight in restored_finals
+            ]
+            if replaced != restored_finals:
+                return replaced
         final_ids = {
             _s(insight.get("id")).strip()
             for insight in restored_finals
@@ -2226,11 +2251,80 @@ def generate_artifacts(
                 response_contract_name="editorial_theme_coverage_output",
                 response_contract_identity_version="v1",
             )
-            semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
-                payload=semantic_theme_coverage_result,
-                editorial_plan=editorial_plan,
-                final_insights=insights_final,
-            )
+            try:
+                semantic_theme_coverage = (
+                    validate_substantive_editorial_theme_coverage(
+                        payload=semantic_theme_coverage_result,
+                        editorial_plan=editorial_plan,
+                        final_insights=insights_final,
+                    )
+                )
+            except AppError as coverage_error:
+                fallback_themes = coverage_error.context.get(
+                    "omitted_central_themes"
+                )
+                if (
+                    coverage_error.code != "artifact_final_insight_coverage_invalid"
+                    or not isinstance(fallback_themes, list)
+                    or not fallback_themes
+                ):
+                    raise
+                fallback_insights = final_insights_for_coverage(
+                    insights_final,
+                    replace_central_themes={
+                        _s(theme).strip()
+                        for theme in fallback_themes
+                        if _s(theme).strip()
+                    },
+                )
+                if fallback_insights == insights_final:
+                    raise
+                insights_final = fallback_insights
+                theme_coverage_variables["insights_final_json"] = _dump_json(
+                    [
+                        {
+                            key: insight[key]
+                            for key in (
+                                "id",
+                                "text",
+                                "so_what",
+                                "now_what",
+                                "evidence_id",
+                                "evidence_ids",
+                            )
+                            if key in insight
+                        }
+                        for insight in insights_final
+                    ]
+                )
+                semantic_theme_coverage_result = resolve_or_render_family(
+                    namespace="report_vs/artifacts/editorial_theme_coverage",
+                    variables=theme_coverage_variables,
+                    ctx=child_context(
+                        ctx,
+                        task_id=(
+                            f"{ctx.task_id}:semantic_repair:"
+                            "central_candidate_fallback:editorial_theme_coverage"
+                        ),
+                    ),
+                    response_contract_name="editorial_theme_coverage_output",
+                    response_contract_identity_version="v1",
+                )
+                semantic_theme_coverage = (
+                    validate_substantive_editorial_theme_coverage(
+                        payload=semantic_theme_coverage_result,
+                        editorial_plan=editorial_plan,
+                        final_insights=insights_final,
+                    )
+                )
+                semantic_theme_repair["fallback"] = {
+                    "status": "source_bound_candidate",
+                    "omitted_central_themes": [
+                        _s(theme).strip()
+                        for theme in fallback_themes
+                        if _s(theme).strip()
+                    ],
+                }
             semantic_theme_repair["status"] = "succeeded"
     if visual_authority_admitter is not None:
         final_selection_coverage.clear()
