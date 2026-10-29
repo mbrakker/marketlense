@@ -726,47 +726,38 @@ def generate_artifacts(
         if not central_candidates:
             return restored_finals
 
+        final_ids = {
+            _s(insight.get("id")).strip()
+            for insight in restored_finals
+            if isinstance(insight, dict) and _s(insight.get("id")).strip()
+        }
         # Only supplement omitted central themes.  Lower-priority omissions
         # remain valid editorial choices when the final roster already passes
-        # the central-theme gate.
+        # the central-theme gate.  During an explicit replacement, prefer an
+        # admitted alternative that is not already selected; otherwise the
+        # selector can spend the bounded replacement slot on the existing
+        # stable ID and leave the semantically incomplete roster unchanged.
+        candidate_pool = central_candidates
+        if replace_central_themes:
+            unselected_central_candidates = [
+                candidate
+                for candidate in central_candidates
+                if _s(candidate.get("id")).strip() not in final_ids
+            ]
+            if unselected_central_candidates:
+                candidate_pool = unselected_central_candidates
         additions = select_artifact_insights(
             final_insights=[],
-            candidate_insights=central_candidates,
+            candidate_insights=candidate_pool,
             editorial_plan=editorial_plan,
             require_final_candidate_lineage=False,
             verified_mode=True,
             max_count=len(omitted_central_themes),
         )
         if replace_central_themes:
-            final_ids = {
-                _s(insight.get("id")).strip()
-                for insight in restored_finals
-                if isinstance(insight, dict) and _s(insight.get("id")).strip()
-            }
-            replacements = [
-                insight
-                for insight in additions
-                if isinstance(insight, dict)
-                and _s(insight.get("id")).strip()
-                and _s(insight.get("id")).strip() not in final_ids
-            ]
-            if replacements:
-                # Keep the roster size stable while allowing a source-bound
-                # admitted alternative to replace a selected but less useful
-                # insight. Prefer the tail so earlier plan-ordered themes are
-                # preserved; never append an extra unassessed item here.
-                replaced = list(restored_finals)
-                if len(replacements) <= len(replaced):
-                    replace_start = len(replaced) - len(replacements)
-                    replaced[replace_start:] = replacements
-                if len(replaced) == len(
-                    {
-                        _s(insight.get("id")).strip()
-                        for insight in replaced
-                        if isinstance(insight, dict) and _s(insight.get("id")).strip()
-                    }
-                ) and len(replacements) <= len(restored_finals):
-                    return replaced
+            # Apply same-ID source-bound wording repairs as well as genuine
+            # alternative-ID replacements.  Do not return early after the
+            # latter or a same-ID authoritative correction can be discarded.
             replacement_by_id = {
                 _s(insight.get("id")).strip(): insight
                 for insight in additions
@@ -779,6 +770,29 @@ def generate_artifacts(
                 else insight
                 for insight in restored_finals
             ]
+            replacements = [
+                insight
+                for insight in additions
+                if isinstance(insight, dict)
+                and _s(insight.get("id")).strip()
+                and _s(insight.get("id")).strip() not in final_ids
+            ]
+            if replacements:
+                # Keep the roster size stable while allowing a source-bound
+                # admitted alternative to replace a selected but less useful
+                # insight. Prefer the tail so earlier plan-ordered themes are
+                # preserved; never append an extra unassessed item here.
+                if len(replacements) <= len(replaced):
+                    replace_start = len(replaced) - len(replacements)
+                    replaced[replace_start:] = replacements
+                if len(replaced) == len(
+                    {
+                        _s(insight.get("id")).strip()
+                        for insight in replaced
+                        if isinstance(insight, dict) and _s(insight.get("id")).strip()
+                    }
+                ) and len(replacements) <= len(restored_finals):
+                    return replaced
             if replaced != restored_finals:
                 return replaced
         final_ids = {
