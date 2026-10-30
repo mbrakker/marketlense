@@ -706,6 +706,18 @@ def test_render_sanitizer_preserves_quarterly_and_half_year_periods() -> None:
     assert _sanitize_public_prose(text) == text
 
 
+def test_render_sanitizer_preserves_numbered_survey_items() -> None:
+    text = (
+        "Among Q5 respondents, Q10 showed the strongest shift and Q19 captured "
+        "the remaining concern (finding_12)."
+    )
+
+    assert _sanitize_public_prose(text) == (
+        "Among Q5 respondents, Q10 showed the strongest shift and Q19 captured "
+        "the remaining concern."
+    )
+
+
 def test_render_sanitizer_preserves_day_number_metric_terms() -> None:
     text = "Day-1 retention improved, while day-7 retention stayed stable."
 
@@ -732,3 +744,21 @@ def test_core_signal_preserves_distinct_quarterly_periods() -> None:
 
     assert "Q1 2025" in signal["body"]
     assert "Q2 2025" in signal["body"]
+
+
+def test_core_signal_preserves_numbered_survey_item_subject() -> None:
+    signal = _build_core_signal(
+        tldr_text="",
+        executive_summary="",
+        insights=[
+            {
+                "text": (
+                    "Q5's average expected search-engine traffic-change score "
+                    "is negative."
+                )
+            }
+        ],
+    )
+
+    assert signal["body"].startswith("Q5's")
+    assert signal["heading"].startswith("Q5's")
