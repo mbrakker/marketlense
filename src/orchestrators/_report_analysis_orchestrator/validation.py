@@ -1498,6 +1498,16 @@ def _candidate_audit(
         if regeneration_response is not None
         else []
     )
+    execution_decisions = (
+        list(getattr(regeneration_response, "repair_decisions", []) or [])
+        if regeneration_response is not None
+        else []
+    )
+    executed_evidence_ids = [
+        evidence_id
+        for decision in execution_decisions
+        for evidence_id in decision.evidence_ids_used
+    ]
     return RegenerationCandidateAudit(
         attempt_index=attempt_index,
         transformation_scope=list(transformation_scope),
@@ -1556,18 +1566,22 @@ def _candidate_audit(
             else []
         ),
         selected_evidence_ids=(
-            sorted(set(actual_evidence_ids))
-            if actual_evidence_ids
+            sorted(set(executed_evidence_ids))
+            if execution_decisions
             else (
-                sorted(
-                    {
-                        value
-                        for target in plan.targets
-                        for value in target.selected_evidence_ids
-                    }
+                sorted(set(actual_evidence_ids))
+                if actual_evidence_ids
+                else (
+                    sorted(
+                        {
+                            value
+                            for target in plan.targets
+                            for value in target.selected_evidence_ids
+                        }
+                    )
+                    if plan
+                    else []
                 )
-                if plan
-                else []
             )
         ),
         quarantined_evidence_ids=(

@@ -490,3 +490,32 @@ def test_retained_claim_validation_rejects_ambiguous_soft_copy_provenance() -> N
     assert package.readiness_status == "not_publishable"
     assert package.unsupported_factual_count == 1
     assert package.results[0].reasons == ["soft_copy_provenance_ambiguous"]
+
+
+def test_recommendation_with_material_qualitative_premise_requires_evidence() -> None:
+    claim = (
+        "Retailers should reconsider marketplace investment because consumers are "
+        "shifting toward direct purchasing."
+    )
+    package = validate_retained_claims(
+        {
+            "expert_comment": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="expert_comment",
+                        text=claim,
+                        classification="recommendation",
+                        evidence_ids=[],
+                    )
+                ],
+            },
+        },
+        _evidence(),
+    )
+
+    assert package.readiness_status == "not_publishable"
+    assert package.unsupported_factual_count == 1
+    assert package.results[0].candidate.factual is True
+    assert "missing_evidence_reference" in package.results[0].reasons

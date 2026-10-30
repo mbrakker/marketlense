@@ -48,7 +48,9 @@ from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup
 
 _CAUSAL_RE = re.compile(
-    r"\b(cause[sd]?|driv(?:e|es|en)|lead(?:s|ing)? to|result(?:s|ed)? in)\b", re.I
+    r"\b(cause[sd]?|driv(?:e|es|en)|lead(?:s|ing)? to|result(?:s|ed)? in|"
+    r"because|since|due to|given that)\b",
+    re.I,
 )
 _INTERPRETIVE_RE = re.compile(
     r"\b(recommend|suggest|should|could|may|likely|interpret)\b", re.I
@@ -215,21 +217,28 @@ def _factual(kind: ClaimKind) -> bool:
 
 
 def _claim_requires_factual_validation(
-    *, text: str, kind: ClaimKind, classification: str
+    *,
+    text: str,
+    kind: ClaimKind,
+    classification: str,
+    evidence_bound: bool = False,
 ) -> bool:
     """Keep material source-derived propositions in the factual gate.
 
     Editorial classification describes the intended voice, not the contents of
     a repaired sentence.  The existing claim-kind detector is deliberately
-    reused here: analytical language remains non-factual, while numbers,
-    quotations, causal assertions, and explicit comparisons still require the
-    canonical evidence/semantic checks.
+    reused here: analytical language remains non-factual when it has no
+    source-derived premise, while numbers, quotations, causal assertions,
+    explicit comparisons, and evidence-bound recommendations require the
+    canonical evidence/semantic checks.  A recommendation remains an
+    editorial recommendation in semantic grounding; this flag only determines
+    whether its empirical premises need factual validation.
     """
 
     if classification == "factual":
         return True
     if classification in {"interpretive", "recommendation"}:
-        return kind in {"numeric", "quotation", "causal"} or bool(
+        return evidence_bound or kind in {"numeric", "quotation", "causal"} or bool(
             _COMPARATIVE_RE.search(text)
         )
     return _factual(kind)
@@ -529,7 +538,12 @@ def _candidates(
             claim_id=provenance.claim_id,
             affected_section=affected_section or family,
             entity_id=provenance.claim_id,
-            require_all_evidence_references=provenance.classification == "factual",
+            require_all_evidence_references=_claim_requires_factual_validation(
+                text=claim,
+                kind=_claim_kind(claim),
+                classification=provenance.classification,
+                evidence_bound=bool(provenance.evidence_ids),
+            ),
         )
 
     summary = artifacts.get("summary")

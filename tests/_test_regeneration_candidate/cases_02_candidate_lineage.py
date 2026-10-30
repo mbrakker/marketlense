@@ -233,6 +233,66 @@ def test_interpretive_numeric_repair_cannot_bypass_candidate_factual_gate() -> N
     assert any(issue.rule_id == "regeneration_claim_support" for issue in result.issues)
 
 
+@pytest.mark.parametrize("binding_failure", ["missing", "outside_selection", "quarantined"])
+def test_interpretive_material_premise_requires_repair_lineage(
+    binding_failure: str,
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    original = _claim_for_family(current, "expert_comment")
+    candidate["expert_comment"] = (
+        "Retailers should reconsider marketplace investment because consumers are "
+        "shifting toward direct purchasing."
+    )
+    repaired = _soft_copy_claim(
+        family="expert_comment",
+        text=candidate["expert_comment"],
+    )
+    repaired["classification"] = "recommendation"
+    repaired["producing_prompt_identity"]["namespace"] = (
+        "report_vs/artifacts/regenerate/expert_comment"
+    )
+    repaired["regeneration_attempt"] = 1
+    repaired["repaired_from_claim_id"] = original["claim_id"]
+    candidate["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in candidate["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + [repaired]
+
+    if binding_failure != "missing":
+        selection = _complete_repair_selection(
+            original_claim_id=str(original["claim_id"]),
+            repaired_claim_id=str(repaired["claim_id"]),
+        )
+        if binding_failure == "outside_selection":
+            selection["selected_evidence_ids"] = ["qc_002"]
+            selection["selected_evidence_entries"] = [
+                {"id": "qc_002", "page": 7, "text": "Alternative evidence."}
+            ]
+        else:
+            selection["quarantined_evidence_ids"] = ["qc_001"]
+        _refresh_repair_selection_hash(selection)
+        candidate["_repair_evidence_selection"] = {
+            f"expert_comment:{original['claim_id']}": selection
+        }
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not result.passed
+    messages = [issue.message for issue in result.issues]
+    if binding_failure == "missing":
+        assert any("missing repair-selection lineage" in message for message in messages)
+    elif binding_failure == "outside_selection":
+        assert any("outside its retained repair selection" in message for message in messages)
+    else:
+        assert any("references quarantined evidence" in message for message in messages)
+
+
 @pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
 @pytest.mark.parametrize(
     "strategy", ["claim_evidence_ids", "typed_compatibility_fallback"]

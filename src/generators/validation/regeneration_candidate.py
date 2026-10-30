@@ -13,6 +13,7 @@ from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_from_payload,
+    soft_copy_material_sentences,
     soft_copy_public_text,
     valid_soft_copy_evidence_selection,
 )
@@ -22,7 +23,12 @@ from src.generators._artifact_generator.storage import (
     build_canonical_regeneration_derived_artifacts,
 )
 from src.generators.artifact_normalization import artifact_evidence_span_index
-from src.generators.claim_validation_generator import validate_retained_claims
+from src.generators.claim_validation_generator import (
+    _claim_kind,
+    _claim_requires_factual_validation,
+    _soft_copy_text_hash,
+    validate_retained_claims,
+)
 from src.generators.soft_copy_claim_provenance import (
     retained_soft_copy_claims_cover_text,
 )
@@ -649,10 +655,17 @@ def _validate_soft_copy_claim_provenance(
             )
             continue
 
+        current_text_by_hash = _soft_copy_text_by_hash(
+            soft_copy_public_text(family, current_artifacts.get(family))
+        )
+        candidate_text_by_hash = _soft_copy_text_by_hash(text)
         original_by_hash = {
             claim.text_hash: claim
             for claim in originals
-            if claim.classification == "factual"
+            if _soft_copy_claim_requires_factual_validation(
+                claim,
+                current_text_by_hash.get(claim.text_hash, ""),
+            )
         }
         candidate_hashes = {claim.text_hash for claim in candidates}
         for original_hash, original in original_by_hash.items():
@@ -663,7 +676,10 @@ def _validate_soft_copy_claim_provenance(
                     claim
                     for claim in candidates
                     if claim.text_hash == original_hash
-                    and claim.classification == "factual"
+                    and _soft_copy_claim_requires_factual_validation(
+                        claim,
+                        candidate_text_by_hash.get(claim.text_hash, ""),
+                    )
                 ),
                 None,
             )
@@ -680,7 +696,10 @@ def _validate_soft_copy_claim_provenance(
                 )
 
         for claim in candidates:
-            if claim.classification != "factual":
+            if not _soft_copy_claim_requires_factual_validation(
+                claim,
+                candidate_text_by_hash.get(claim.text_hash, ""),
+            ):
                 continue
             original_claim = original_by_hash.get(claim.text_hash)
             selection, lineage_error = _repair_selection_for_claim(
@@ -712,6 +731,26 @@ def _validate_soft_copy_claim_provenance(
                 ),
                 issues=issues,
             )
+
+
+def _soft_copy_text_by_hash(text: str) -> dict[str, str]:
+    return {
+        _soft_copy_text_hash(sentence): sentence
+        for sentence in soft_copy_material_sentences(text)
+    }
+
+
+def _soft_copy_claim_requires_factual_validation(
+    claim: SoftCopyClaimProvenance, text: str
+) -> bool:
+    if not text:
+        return claim.classification == "factual"
+    return _claim_requires_factual_validation(
+        text=text,
+        kind=_claim_kind(text),
+        classification=claim.classification,
+        evidence_bound=bool(claim.evidence_ids),
+    )
 
 
 def _soft_copy_claims(
