@@ -1423,3 +1423,31 @@ end-to-end: `ci_start`, tests, both mutation partitions, and `release_evidence`
 were green. This closes the prior hosted-CI failures; no fresh provider-backed
 real-report replay was available, so E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+**Current-SHA Reuters transactional-repair replay — 2026-10-30
+(`b579f8e0`):** The final targeted correction is committed in
+`34643c4f`/`b579f8e0`. It closes the inherited editorial-classification factual
+gate bypass, applies the same material source-derived premise checks during
+candidate lineage validation, and makes executed repair decisions authoritative
+for audit evidence attribution. Focused regressions cover material qualitative
+premises, invalid repair lineage, explicit abstain/remove audit semantics,
+multi-decision evidence attribution, and exact-hash restart re-entry. The
+affected suite passed 239 tests; changed-file Ruff and formatting passed, and
+full-repository mypy remained at zero tracked errors across 786 source files.
+
+One isolated provider-backed Reuters run used the frozen PDF SHA-256
+`f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52` at
+producer SHA `b579f8e0`. It evaluated/admitted 7/7 visual facts, produced 7
+source-bound final insights, passed validation/readiness, and recorded 51
+provider calls, 8 file-search calls, 699,972 input tokens, 147,182 output
+tokens, `$0.162183`, and 913.574 seconds. It had one structured-output repair,
+zero automatic transactional repairs, zero workflow retries, zero unsupported
+or unresolved retained factual claims, and zero publication/WordPress writes.
+The seven insight rows and physical pages 12, 20, 17, 24, 33, 32, and 38 were
+checked against the original PDF; the final HTML contained no internal
+evidence identifiers. The exact terminal interpretation is **LIVE WORKFLOW
+PASS — TRANSACTIONAL REPAIR NOT EXERCISED**. This is current-SHA workflow and
+source-fidelity evidence, not live repair-success evidence. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. Full metrics, insight ledger, paths, and limitations
+are recorded in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

@@ -7638,3 +7638,112 @@ identified by run `41111279717`; it does not constitute a fresh provider-backed
 real-report replay. The retained Reuters repair trace remains pre-correction,
 so the Step 3 verdict stays **PARTIAL / NO-GO** pending current-SHA live repair
 evidence.
+
+#### Current-SHA Reuters transactional-repair replay — 2026-10-30 (`b579f8e0`)
+
+The targeted implementation is now recorded at commits
+`34643c4fafb82dc7bf11b37d19469651c57ddcec` and
+`b579f8e01a1cf14c68ca732cc52e25805bc54d00`. The production changes remain
+inside the existing claim-validation, regeneration, and candidate-audit
+boundaries: material numeric, quoted, causal, comparative, or evidence-bound
+recommendations can no longer bypass factual validation merely because their
+editorial voice is `interpretive` or `recommendation`; the same source-derived
+soft-copy obligations apply during candidate lineage validation; and, when
+execution decisions exist, the audit reports their actual evidence IDs rather
+than planner-intended evidence for explicit `ABSTAIN`/`REMOVE` outcomes. No new
+validator, provider stage, database, service, or publication behavior was
+added.
+
+The focused regressions cover inherited classification with a material
+qualitative premise, invalid repair lineage, explicit abstain/remove audit
+semantics, multi-decision evidence attribution, and exact-hash restart
+re-entry. The restart test confirms that replacing an artifact while retaining
+a stale candidate package makes that package non-reusable. The affected suite
+passed 239 tests; changed-file Ruff and formatting passed; full-repository
+mypy remained at zero tracked errors across 786 source files.
+
+##### Live run and source identity
+
+One isolated provider-backed Reuters replay was executed at producer SHA
+`b579f8e01a1cf14c68ca732cc52e25805bc54d00`. It used the frozen
+`Trends_and_Predictions_2026.pdf`, MD5 `4b763ae2286ca69fe8acb63b17508dfb`,
+and SHA-256
+`f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52`.
+The run directory is
+`C:\\ml-transactional-repair-final-20261030\\frozen-reliability-y8yeqf5t\\members\\cohort-4b763ae2286ca69fe8ac\\ias-first-attempt-7fh1j02r`.
+The verified-facts source identity is
+`source:79cb8c886c55b49bfdec2128d5b25e0b|pdf-sha256:f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52`.
+
+The runner loaded credentials from the existing parent `.env` in-process;
+secrets were not copied into the worktree or logs. The unrelated dirty
+`Wordpress/dist/marketlense.zip` was temporarily stashed only to satisfy the
+runner's clean-SHA precondition and then restored unchanged; it was not staged.
+
+| Measure | Result |
+| --- | --- |
+| Workflow terminal | **PASS**; `final_state=awaiting_review` |
+| Visual facts | 7 evaluated, 7 admitted, 0 quarantined; coverage complete |
+| Final insights | 7; stable IDs match the admitted verified facts |
+| Validation / readiness | `pass` / `pass` |
+| Unsupported / unresolved retained factual claims | 0 / 0 |
+| Provider / file-search calls | 51 / 8 |
+| Input / output tokens | 699,972 / 147,182 |
+| Estimated cost / wall-clock | `$0.162183` / `913.574s` |
+| Structured-output / automatic transactional repairs | 1 / 0 |
+| Workflow retries / operator intervention | 0 / 0 |
+| Publication / WordPress writes | 0 / 0 |
+
+The validation-reuse ledger recorded one event with `prior_package_missing`,
+39 newly validated claims, and zero reused validation results or avoided
+grounding calls. The structured-output repair was not a transactional claim
+repair.
+
+##### Editorial and PDF review
+
+All seven final insight identities, protected metrics, evidence IDs, and
+physical pages were inspected against the original PDF and rendered HTML:
+
+| Stable ID | Physical page | Source-supported final claim |
+| --- | ---: | --- |
+| `search-traffic-outlook` | 12 | Q5 average expected search-traffic change −43% over the next three years, base 268; expectation, not observed traffic. |
+| `social-referral-declines` | 20 | Chartbeat referrals to news websites declined 43% from Facebook and 46% from X over the last two and a half years. |
+| `content-effort-divergence` | 17 | Q13 net difference +91 for original investigations/on-the-ground reporting and −42 for service journalism, base 264. |
+| `creator-concern-comparison` | 24 | Q19 concern was 70% for creators taking time/attention and 39% for losing talent, base 263. |
+| `newsroom-ai-assessments` | 33 | Q11 impact adjectives were 44% promising, 42% limited, 13% transformational, and 2% disappointing, base 265. |
+| `ai-newsroom-backend` | 32 | 64% rated back-end automation very important for 2026, base 266; expected importance, not realized use. |
+| `paid-content-revenue-priority` | 38 | 76% of commercial-publisher respondents expected subscription/membership to be important or very important in 2026, base 259, excluding publicly funded broadcasters. |
+
+Rendered source-page inspection confirmed the Q5 slider/base, Q11 chart/base,
+and Q16 revenue-stream chart/base; text extraction and retained evidence
+spans covered the other five rows. Final `so_what` wording retained bounded
+interpretation without changing protected facts. The final HTML was non-empty,
+contained all seven material insight values, and had zero matches for
+`verified-fact:`, `evidence_id`, `claim_id`, `physical_page`, `source:page`, or
+`provenance_hash`. Public-editorial-quality and publication-readiness artifacts
+passed with zero issues/hard fails.
+
+The retained claim-validation artifact contains 39 records and 35 semantic
+validation records, with zero unsupported and zero unresolved material factual
+counts. Four non-factual soft-copy records remain deterministically
+`unresolved` under the existing policy; this did not block the existing gate
+and is recorded rather than reclassified.
+
+##### Repair disposition and limitations
+
+No failed claim, unique repair target, provider replacement, promotion, or
+rollback was needed in this run. The required terminal interpretation is:
+
+**LIVE WORKFLOW PASS — TRANSACTIONAL REPAIR NOT EXERCISED**
+
+This demonstrates current-SHA workflow integrity, source binding, final
+editorial preservation, and no-publication behavior, but not live repair
+success or rollback under provider failure. The initial attempt was blocked
+before provider dispatch by the dirty ZIP and the runner's clean-SHA
+precondition; the isolated retry after preserving that file completed
+normally. No live provider failure was hidden or converted into a success.
+
+**Verdict: PASS for the targeted implementation and Reuters workflow replay;
+PARTIAL / NO-GO for overall Step 3 readiness.** Transactional repair remains
+unexercised live, broader repair effectiveness and independent human editorial
+acceptance remain open, and no canonical claim promotion or WordPress
+publication occurred.
