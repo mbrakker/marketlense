@@ -657,15 +657,14 @@ def _full_chain_chat_response_factory(
                     )
                 )
                 if schema_name == "regeneration_claim_repair_proposal_v1":
-                    # The narrow proposal must still cite one admitted ID for
-                    # a replacement; the application validates it against the
-                    # scoped grounding package.
-                    used_ids = list(repair_context.get("allowed_evidence_ids") or [])
+                    # This fixture exercises the existing safe-removal fallback:
+                    # the isolated proposal deliberately abstains because its
+                    # generic replacement is not a retained source-backed fact.
                     proposal = {
                         "schema_version": "1.0",
-                        "action": "replace" if replacement else "abstain",
-                        "replacement_text": replacement,
-                        "evidence_ids_used": used_ids[:1] if replacement else [],
+                        "action": "abstain",
+                        "replacement_text": "",
+                        "evidence_ids_used": [],
                     }
                     payload = {"claim_repair_proposal": proposal}
                 else:
