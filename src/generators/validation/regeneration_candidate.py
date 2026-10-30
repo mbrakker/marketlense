@@ -163,9 +163,7 @@ def validate_regeneration_candidate(
         current_artifacts, removed_summary_claim_paths
     )
     authorized_summary_claim_ids = set(authorized_summary_claim_removals.values())
-    candidate_summary_claim_identities = _summary_claim_identities(
-        candidate_artifacts
-    )
+    candidate_summary_claim_identities = _summary_claim_identities(candidate_artifacts)
 
     for insight_id in sorted(authorized_removals):
         for section in ("insights_candidates", "insights_final"):
@@ -445,8 +443,7 @@ def retained_claim_repair_issues(
         changed_soft_copy_claims = {
             (claim.artifact_family, claim.claim_id): claim
             for claim in _soft_copy_claims(artifacts)[0]
-            if claim.classification == "factual"
-            and (claim.artifact_family, claim.claim_id) not in retained_keys
+            if (claim.artifact_family, claim.claim_id) not in retained_keys
         }
     for result in package.results:
         candidate = result.candidate

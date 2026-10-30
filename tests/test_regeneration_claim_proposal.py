@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import pytest
 
 from src.contracts.regeneration import RegenerationIssue, RegenerationTarget
 from src.generators.report_regeneration_generator import (
+    _active_repair_target,
     _validated_claim_repair_proposal,
 )
 from src.utils.errors import AppError
@@ -78,6 +80,25 @@ def test_claim_repair_proposal_rejects_model_authored_target_metadata():
         )
 
     assert captured.value.code == "regeneration_repair_decision_invalid"
+
+
+def test_claim_repair_proposal_rejects_unsupported_schema_version():
+    with pytest.raises(AppError) as captured:
+        _validated_claim_repair_proposal(
+            _proposal(
+                "replace",
+                replacement_text="A supported replacement.",
+                evidence_ids=["verified-fact:f1"],
+            )
+            | {"schema_version": "1.1"},
+            execution=_execution(),
+            grounding_package={
+                "evidence_ids": ["verified-fact:f1"],
+                "quarantined_evidence_ids": [],
+            },
+        )
+
+    assert captured.value.context["reason"] == "claim_proposal_contract_invalid"
 
 
 def test_claim_repair_proposal_rejects_quarantined_evidence():
@@ -158,3 +179,44 @@ def test_claim_repair_proposal_treats_exact_replacement_as_a_no_op():
     assert proposal.action == "abstain"
     assert proposal.no_op is True
     assert proposal.evidence_ids_used == []
+
+
+def test_atomic_target_resolution_fails_closed_for_duplicate_summary_text():
+    target = RegenerationTarget(
+        target_section="summary",
+        allowed_paths=[
+            "summary.executive_summary[claim_index=0]",
+            "summary.executive_summary[claim_index=1]",
+        ],
+    )
+    execution = SimpleNamespace(
+        target=target,
+        runtime=SimpleNamespace(request=SimpleNamespace(report_id="report-1")),
+        state=SimpleNamespace(
+            summary={"executive_summary": "The same sentence. The same sentence."},
+            insights_candidates=[],
+            insights_final=[],
+            quotes_final=[],
+            expert_comment="",
+            linkedin_post="",
+        ),
+    )
+
+    with pytest.raises(AppError) as captured:
+        _active_repair_target(
+            execution,
+            {
+                "claim_repair_scope_json": json.dumps(
+                    {
+                        "mode": "claim",
+                        "field": "executive_summary",
+                        "failed_claim": "The same sentence.",
+                    }
+                )
+            },
+        )
+
+    assert captured.value.code == "regeneration_repair_decision_invalid"
+    assert captured.value.context["reason"] == (
+        "atomic_repair_target_unresolved_or_ambiguous"
+    )

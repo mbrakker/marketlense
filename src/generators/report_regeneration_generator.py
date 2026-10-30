@@ -2409,6 +2409,23 @@ def _render_regeneration_model(
         claim_action = proposal.action
         claim_replacement_text = proposal.replacement_text
         if proposal.action in {"abstain", "remove"}:
+            _record_claim_execution(
+                execution,
+                target=active_target,
+                action=("REMOVE_CLAIM" if proposal.action == "remove" else "ABSTAIN"),
+                strategy=(
+                    "claim_proposal_remove"
+                    if proposal.action == "remove"
+                    else "claim_proposal_no_op"
+                    if proposal.no_op
+                    else "claim_proposal_abstain"
+                ),
+                changed_paths=(
+                    list(active_target.allowed_paths)
+                    if proposal.action == "remove"
+                    else []
+                ),
+            )
             return {
                 "_claim_repair_action": proposal.action,
                 "_claim_repair_replacement_text": proposal.replacement_text,
@@ -2585,16 +2602,8 @@ def _active_repair_target(
         if len(matches) == 1:
             active_path = matches[0]
         elif len(matches) > 1 and family == "summary":
-
-            def claim_index(path: str) -> int:
-                match = re.search(r"\[claim_index=(\d+)\]$", path)
-                if match is None:
-                    raise ValueError("Summary claim path has no claim index")
-                return int(match.group(1))
-
-            active_path = min(
-                matches,
-                key=claim_index,
+            raise _repair_decision_error(
+                execution, "atomic_repair_target_unresolved_or_ambiguous"
             )
         elif not matches and failed_claim:
             if family == "summary" and field in {
@@ -2792,6 +2801,64 @@ def _repair_decision_error(
     )
 
 
+def _record_claim_execution(
+    execution: _RegenerationHandlerExecution,
+    *,
+    target: RegenerationTarget,
+    action: str,
+    strategy: str,
+    evidence_ids: Sequence[str] = (),
+    changed_paths: Sequence[str] = (),
+) -> RepairDecision:
+    """Record the deterministic result of one claim proposal.
+
+    Claim proposals do not own target paths or provenance.  This record keeps
+    the planner's target separate from the action that actually occurred so
+    retries and candidate audits cannot report a planned regeneration when the
+    result was a removal, abstention, or no-op.
+    """
+
+    failure_class = next(
+        (issue.rule_id for issue in target.issues if issue.rule_id),
+        "claim_repair",
+    )
+    protected_fields = _required_repair_protected_fields(
+        _current_repair_artifacts(execution.state), target
+    )
+    decision = RepairDecision(
+        diagnosed_failure_class=failure_class,
+        repair_action=action,
+        repair_strategy=strategy,
+        evidence_ids_used=list(dict.fromkeys(str(value) for value in evidence_ids)),
+        protected_fields=list(protected_fields or []),
+        changed_paths=list(dict.fromkeys(str(value) for value in changed_paths)),
+        minimal_patch=[],
+    )
+    execution.state.repair_decisions.append(decision)
+    return decision
+
+
+def _replace_rejected_claim_decision(
+    execution: _RegenerationHandlerExecution,
+    *,
+    proposed_decision: object,
+    strategy: str,
+) -> None:
+    """Replace a validated patch record when the proposal is rejected later."""
+
+    if (
+        execution.state.repair_decisions
+        and execution.state.repair_decisions[-1] == proposed_decision
+    ):
+        execution.state.repair_decisions.pop()
+    _record_claim_execution(
+        execution,
+        target=execution.target,
+        action="ABSTAIN",
+        strategy=strategy,
+    )
+
+
 def _validated_claim_repair_proposal(
     payload: object,
     *,
@@ -2822,7 +2889,7 @@ def _validated_claim_repair_proposal(
     evidence_ids = payload.get("evidence_ids_used")
     if (
         not isinstance(schema_version, str)
-        or not schema_version.strip()
+        or schema_version.strip() != "1.0"
         or action not in {"replace", "remove", "abstain"}
         or not isinstance(replacement_text, str)
         or not isinstance(evidence_ids, list)
@@ -2846,9 +2913,7 @@ def _validated_claim_repair_proposal(
             scoped_soft_copy_removal = (
                 target.target_section in {"summary", "expert_comment", "linkedin_post"}
                 and len(target.allowed_paths) == 1
-                and re.fullmatch(
-                    r".+\[claim_index=\d+\]", target.allowed_paths[0]
-                )
+                and re.fullmatch(r".+\[claim_index=\d+\]", target.allowed_paths[0])
                 is not None
             )
             if not scoped_soft_copy_removal:
@@ -4269,22 +4334,24 @@ def _regenerate_summary_claim_map_items(
         _remove_summary_claim_map_targets(execution.state.summary, targets)
         execution.state.regenerated_sections.append("summary")
         return
-    for index, claim, issues in targets:
+    # Work from the highest original index down so an explicit removal cannot
+    # shift the identity of a later target.  Stable IDs remain authoritative;
+    # descending order is the minimal protection for legacy index-only map
+    # entries that are otherwise uniquely resolved by the planner.
+    for index, claim, issues in sorted(targets, key=lambda item: item[0], reverse=True):
         grounding_package = _summary_claim_map_grounding_package(
             claim=claim,
             issues=issues,
             grounding_package=execution.grounding_package,
         )
         if not grounding_package.get("evidence_ids"):
-            raise AppError(
-                code="regeneration_target_item_no_retained_evidence",
-                message=(
-                    "Targeted summary claim repair has no retained evidence "
-                    "available for grounding."
-                ),
-                retryable=False,
-                context={"report_id": execution.runtime.request.report_id},
+            _record_claim_execution(
+                execution,
+                target=execution.target,
+                action="ABSTAIN",
+                strategy="claim_support_unavailable",
             )
+            continue
         result = _render_regeneration_model(
             execution=execution,
             namespace=namespace,
@@ -4363,6 +4430,18 @@ def _regenerate_summary_claim_map_items(
                 retryable=False,
                 context={"report_id": execution.runtime.request.report_id},
             )
+        decision = result.get("_repair_decision")
+        if not isinstance(decision, RepairDecision) or not _valid_claim_replacement(
+            classification=_s(claim.get("classification") or "factual"),
+            text=repaired_text,
+            evidence_ids=decision.evidence_ids_used,
+        ):
+            _replace_rejected_claim_decision(
+                execution,
+                proposed_decision=decision,
+                strategy="claim_proposal_rejected",
+            )
+            continue
         if repaired_text == _s(claim.get("claim")).strip():
             # Preserve the no-op candidate so the validation orchestrator can
             # reject this strategy and advance its bounded ladder to rebinding
@@ -4510,9 +4589,14 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     continue
                 claim_grounding = _claim_scoped_grounding_package(execution, repair)
                 if not _claim_has_repair_support(claim_grounding):
-                    replacements[repair.claim.claim_id] = None
-                    shared_claim_replacements[repair.claim.claim_id] = None
-                    _mark_soft_copy_claim_removed(execution, repair)
+                    _record_claim_execution(
+                        execution,
+                        target=execution.target,
+                        action="ABSTAIN",
+                        strategy="claim_support_unavailable",
+                    )
+                    replacements[repair.claim.claim_id] = repair.text
+                    shared_claim_replacements[repair.claim.claim_id] = repair.text
                     continue
                 selected_evidence_ids = set(claim_grounding["evidence_ids"])
                 result = _render_regeneration_model(
@@ -4554,13 +4638,9 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     )
                 )
                 if claim_action == "abstain":
-                    replacement = (
-                        repair.text if result.get("_claim_repair_no_op") else None
-                    )
+                    replacement = repair.text
                     replacements[repair.claim.claim_id] = replacement
                     shared_claim_replacements[repair.claim.claim_id] = replacement
-                    if replacement is None:
-                        _mark_soft_copy_claim_removed(execution, repair)
                     continue
                 if claim_action == "remove":
                     replacements[repair.claim.claim_id] = None
@@ -4575,9 +4655,13 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     text=repaired_text,
                     evidence_ids=decision.evidence_ids_used,
                 ):
-                    replacements[repair.claim.claim_id] = None
-                    shared_claim_replacements[repair.claim.claim_id] = None
-                    _mark_soft_copy_claim_removed(execution, repair)
+                    _replace_rejected_claim_decision(
+                        execution,
+                        proposed_decision=decision,
+                        strategy="claim_proposal_rejected",
+                    )
+                    replacements[repair.claim.claim_id] = repair.text
+                    shared_claim_replacements[repair.claim.claim_id] = repair.text
                     continue
                 _record_soft_copy_claim_bindings(
                     execution,
@@ -6243,8 +6327,13 @@ def _handle_expert_comment_regeneration(
             for repair in claim_repairs:
                 claim_grounding = _claim_scoped_grounding_package(execution, repair)
                 if not _claim_has_repair_support(claim_grounding):
-                    replacements[repair.claim.claim_id] = None
-                    _mark_soft_copy_claim_removed(execution, repair)
+                    _record_claim_execution(
+                        execution,
+                        target=execution.target,
+                        action="ABSTAIN",
+                        strategy="claim_support_unavailable",
+                    )
+                    replacements[repair.claim.claim_id] = repair.text
                     continue
                 selected_evidence_ids = set(claim_grounding["evidence_ids"])
                 result = _render_regeneration_model(
@@ -6280,12 +6369,8 @@ def _handle_expert_comment_regeneration(
                 )
                 claim_action = _s(result.get("_claim_repair_action")).strip()
                 if claim_action == "abstain":
-                    replacement = (
-                        repair.text if result.get("_claim_repair_no_op") else None
-                    )
+                    replacement = repair.text
                     replacements[repair.claim.claim_id] = replacement
-                    if replacement is None:
-                        _mark_soft_copy_claim_removed(execution, repair)
                     continue
                 if claim_action == "remove":
                     replacements[repair.claim.claim_id] = None
@@ -6304,8 +6389,12 @@ def _handle_expert_comment_regeneration(
                     text=repaired_text,
                     evidence_ids=decision.evidence_ids_used,
                 ):
-                    replacements[repair.claim.claim_id] = None
-                    _mark_soft_copy_claim_removed(execution, repair)
+                    _replace_rejected_claim_decision(
+                        execution,
+                        proposed_decision=decision,
+                        strategy="claim_proposal_rejected",
+                    )
+                    replacements[repair.claim.claim_id] = repair.text
                     continue
                 _record_soft_copy_claim_bindings(
                     execution,
@@ -6493,8 +6582,13 @@ def _handle_linkedin_post_regeneration(
                 continue
             claim_grounding = _claim_scoped_grounding_package(execution, repair)
             if not _claim_has_repair_support(claim_grounding):
-                replacements[repair.claim.claim_id] = None
-                _mark_soft_copy_claim_removed(execution, repair)
+                _record_claim_execution(
+                    execution,
+                    target=execution.target,
+                    action="ABSTAIN",
+                    strategy="claim_support_unavailable",
+                )
+                replacements[repair.claim.claim_id] = repair.text
                 continue
             selected_evidence_ids = set(claim_grounding["evidence_ids"])
             result = _render_regeneration_model(
@@ -6527,10 +6621,8 @@ def _handle_linkedin_post_regeneration(
             )
             claim_action = _s(result.get("_claim_repair_action")).strip()
             if claim_action == "abstain":
-                replacement = repair.text if result.get("_claim_repair_no_op") else None
+                replacement = repair.text
                 replacements[repair.claim.claim_id] = replacement
-                if replacement is None:
-                    _mark_soft_copy_claim_removed(execution, repair)
                 continue
             if claim_action == "remove":
                 replacements[repair.claim.claim_id] = None
@@ -6549,8 +6641,12 @@ def _handle_linkedin_post_regeneration(
                 text=repaired_text,
                 evidence_ids=decision.evidence_ids_used,
             ):
-                replacements[repair.claim.claim_id] = None
-                _mark_soft_copy_claim_removed(execution, repair)
+                _replace_rejected_claim_decision(
+                    execution,
+                    proposed_decision=decision,
+                    strategy="claim_proposal_rejected",
+                )
+                replacements[repair.claim.claim_id] = repair.text
                 continue
             _record_soft_copy_claim_bindings(
                 execution,

@@ -53,6 +53,11 @@ _CAUSAL_RE = re.compile(
 _INTERPRETIVE_RE = re.compile(
     r"\b(recommend|suggest|should|could|may|likely|interpret)\b", re.I
 )
+_COMPARATIVE_RE = re.compile(
+    r"\b(?:compared\s+(?:with|to)|versus|vs\.?|outperform(?:ed|s)?|"
+    r"underperform(?:ed|s)?|higher|lower|more|less)\b",
+    re.I,
+)
 _QUOTED_RE = re.compile(
     r"""(?:"[^"]+"|“[^”]+”"""
     r"|(?<!\w)‘(?:[^’\r\n]|(?<=\w)’(?=\w|\s+\w))+’(?!\w)"
@@ -207,6 +212,27 @@ def _claim_kind(text: str) -> ClaimKind:
 
 def _factual(kind: ClaimKind) -> bool:
     return kind != "interpretive"
+
+
+def _claim_requires_factual_validation(
+    *, text: str, kind: ClaimKind, classification: str
+) -> bool:
+    """Keep material source-derived propositions in the factual gate.
+
+    Editorial classification describes the intended voice, not the contents of
+    a repaired sentence.  The existing claim-kind detector is deliberately
+    reused here: analytical language remains non-factual, while numbers,
+    quotations, causal assertions, and explicit comparisons still require the
+    canonical evidence/semantic checks.
+    """
+
+    if classification == "factual":
+        return True
+    if classification in {"interpretive", "recommendation"}:
+        return kind in {"numeric", "quotation", "causal"} or bool(
+            _COMPARATIVE_RE.search(text)
+        )
+    return _factual(kind)
 
 
 def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | None]]:
@@ -447,12 +473,10 @@ def _candidates(
             text=claim,
             text_hash=_hash(claim),
             kind=kind,
-            factual=(
-                True
-                if classification == "factual"
-                else False
-                if classification in {"interpretive", "recommendation"}
-                else _factual(kind)
+            factual=_claim_requires_factual_validation(
+                text=claim,
+                kind=kind,
+                classification=classification,
             ),
             evidence_references=_references(raw, evidence),
             affected_section=affected_section,

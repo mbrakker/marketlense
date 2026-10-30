@@ -504,7 +504,7 @@ def test_public_validator_to_plan_to_claim_repair_preserves_sibling_provenance(
         for issue in plan.targets[0].issues
     )
     assert response.updated_artifacts["expert_comment"] == (
-        "First supported sibling.  Last supported sibling."
+        "First supported sibling.  {{TODO}} failed middle claim.  Last supported sibling."
     )
     by_id = {
         claim["claim_id"]: claim
@@ -515,7 +515,10 @@ def test_public_validator_to_plan_to_claim_repair_preserves_sibling_provenance(
             by_id[claim.claim_id]
             == soft_copy_claim_provenance_to_payload([claim])["claims"][0]
         )
-    assert original_claims[1].claim_id not in by_id
+    assert (
+        by_id[original_claims[1].claim_id]
+        == (soft_copy_claim_provenance_to_payload([original_claims[1]])["claims"][0])
+    )
 
 
 def test_summary_claim_repair_skips_warning_outside_planned_paths(tmp_path) -> None:
@@ -619,7 +622,7 @@ def test_summary_claim_repair_skips_warning_outside_planned_paths(tmp_path) -> N
 
     assert openai_client.calls == []
     assert response.updated_artifacts["summary"]["executive_summary"] == (
-        "Retained supported context. Nonblocking summary warning."
+        "Unsupported publisher detail. Retained supported context. Nonblocking summary warning."
     )
     assert original_claims[2].claim_id in {
         claim["claim_id"]
@@ -898,7 +901,7 @@ def test_regeneration_abstains_only_an_unsupported_expert_claim_without_model_ca
     )
 
     assert response.updated_artifacts["expert_comment"] == (
-        "First supported sentence. Last supported sentence."
+        "First supported sentence. Unsupported sentence. Last supported sentence."
     )
     assert openai_client.calls == []
     claim_ids = {
@@ -906,7 +909,7 @@ def test_regeneration_abstains_only_an_unsupported_expert_claim_without_model_ca
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     }
     assert original_claims[0].claim_id in claim_ids
-    assert original_claims[1].claim_id not in claim_ids
+    assert original_claims[1].claim_id in claim_ids
     assert original_claims[2].claim_id in claim_ids
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
 
@@ -974,6 +977,9 @@ def test_warning_only_soft_copy_target_runs_with_a_sibling_blocking_repair(
     ]
     assert [issue.severity for issue in plan.targets[0].issues] == ["warning"]
     assert response.updated_artifacts["expert_comment"] == "Repaired middle claim."
-    assert response.updated_artifacts["linkedin_post"] == ""
+    assert (
+        response.updated_artifacts["linkedin_post"]
+        == current_artifacts["linkedin_post"]
+    )
     assert len(openai_client.calls) == 1
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)

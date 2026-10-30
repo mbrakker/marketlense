@@ -554,8 +554,9 @@ def test_summary_claim_map_repair_resolves_idless_claim_by_stable_index(tmp_path
 
 
 @pytest.mark.parametrize("shared_evidence_binding", [False, True])
-def test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row(
-    tmp_path, shared_evidence_binding: bool
+@pytest.mark.parametrize("claim_action", ["abstain", "remove"])
+def test_summary_copy_claim_action_preserves_or_removes_claim_map_row(
+    tmp_path, shared_evidence_binding: bool, claim_action: str
 ):
     artifacts = _current_artifacts()
     summary_sentences = [
@@ -627,7 +628,7 @@ def test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row(
             payload = {
                 "claim_repair_proposal": {
                     "schema_version": "1.0",
-                    "action": "abstain",
+                    "action": claim_action,
                     "replacement_text": "",
                     "evidence_ids_used": [],
                 }
@@ -688,22 +689,37 @@ def test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row(
     )
 
     repaired_summary = response.updated_artifacts["summary"]
-    assert repaired_summary["executive_summary"] == "A retained executive claim."
-    assert failed_claim.claim_id not in {
+    expected_map = (
+        summary_sentences
+        if claim_action == "abstain" or shared_evidence_binding
+        else summary_sentences[:3]
+    )
+    expected_summary = (
+        "A retained executive claim. An unsupported forecast claim."
+        if claim_action == "abstain"
+        else "A retained executive claim."
+    )
+    assert repaired_summary["executive_summary"] == expected_summary
+    claim_ids = {
         claim["claim_id"]
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     }
-    expected_map = (
-        summary_sentences if shared_evidence_binding else summary_sentences[:-1]
-    )
+    assert (failed_claim.claim_id in claim_ids) is (claim_action == "abstain")
     assert [item["claim"] for item in repaired_summary["claim_evidence_map"]] == [
         sentence for _family, sentence, _evidence_id in expected_map
     ]
     map_row_path = "summary.claim_evidence_map[3]"
     assert (map_row_path in response.deterministic_mutation_paths) is (
-        not shared_evidence_binding
+        claim_action == "remove" and not shared_evidence_binding
     )
-    assert "summary.claim_evidence_map" not in response.deterministic_mutation_paths
+    assert response.repair_action == (
+        "ABSTAIN" if claim_action == "abstain" else "REMOVE_CLAIM"
+    )
+    assert response.repair_strategy == (
+        "claim_proposal_abstain"
+        if claim_action == "abstain"
+        else "claim_proposal_remove"
+    )
 
 
 def test_summary_claim_map_issue_uses_map_path_before_soft_copy_provenance_path():

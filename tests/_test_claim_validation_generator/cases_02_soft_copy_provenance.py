@@ -243,6 +243,81 @@ def test_retained_claim_validation_keeps_soft_copy_interpretation_nonfactual() -
     assert package.results[0].candidate.factual is False
 
 
+def test_retained_claim_validation_does_not_trust_interpretive_numeric_repair() -> None:
+    claim = "Wallet adoption reached 43% in 2026."
+    package = validate_retained_claims(
+        {
+            "expert_comment": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="expert_comment",
+                        text=claim,
+                        classification="interpretive",
+                        evidence_ids=["f1"],
+                    )
+                ],
+            },
+        },
+        _evidence(),
+    )
+
+    assert package.readiness_status == "not_publishable"
+    assert package.unsupported_factual_count == 1
+    assert package.results[0].candidate.factual is True
+
+
+def test_supported_interpretive_numeric_repair_remains_groundable() -> None:
+    claim = "Wallet adoption reached 42% in 2026."
+    package = validate_retained_claims(
+        {
+            "expert_comment": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="expert_comment",
+                        text=claim,
+                        classification="interpretive",
+                        evidence_ids=["f1"],
+                    )
+                ],
+            },
+        },
+        _evidence(),
+    )
+
+    assert package.readiness_status == "awaiting_review"
+    assert package.unsupported_factual_count == 0
+    assert package.results[0].candidate.factual is True
+
+
+def test_recommendation_with_unsupported_causal_assertion_is_not_exempt() -> None:
+    claim = "Leaders should expand wallets because wallets caused the lift."
+    package = validate_retained_claims(
+        {
+            "linkedin_post": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="linkedin_post",
+                        text=claim,
+                        classification="recommendation",
+                        evidence_ids=["f1"],
+                    )
+                ],
+            },
+        },
+        _evidence(),
+    )
+
+    assert package.readiness_status == "not_publishable"
+    assert package.unresolved_factual_count == 1
+    assert package.results[0].candidate.factual is True
+
+
 def test_retained_claim_validation_does_not_downgrade_declared_factual_copy() -> None:
     claim = "Leaders should treat wallets as core checkout infrastructure."
     from .cases_03_hybrid_grounding import _semantic_result

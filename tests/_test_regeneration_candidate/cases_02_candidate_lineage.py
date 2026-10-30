@@ -204,7 +204,7 @@ def test_candidate_preflight_leaves_ambiguous_claim_for_shared_grounding() -> No
     assert not candidate_preflight
 
 
-def test_interpretive_numeric_repair_does_not_gain_factual_candidate_gate() -> None:
+def test_interpretive_numeric_repair_cannot_bypass_candidate_factual_gate() -> None:
     current, candidate, evidence_packs = _soft_copy_artifacts()
     candidate["expert_comment"] = "Adjust could reach 1016.8 million."
     claim = _soft_copy_claim(
@@ -218,6 +218,9 @@ def test_interpretive_numeric_repair_does_not_gain_factual_candidate_gate() -> N
         for retained in candidate["soft_copy_claim_provenance"]["claims"]
         if retained["artifact_family"] != "expert_comment"
     ] + [claim]
+    for quote in evidence_packs["quote_candidates"]["quote_candidates"]:
+        if quote["id"] == "qc_001":
+            quote["quote_text"] = "Adjust could reach 900 million."
 
     result = validate_regeneration_candidate(
         current_artifacts=current,
@@ -226,10 +229,8 @@ def test_interpretive_numeric_repair_does_not_gain_factual_candidate_gate() -> N
         ctx=_ctx(),
     )
 
-    assert result.passed
-    assert not any(
-        issue.rule_id == "regeneration_claim_support" for issue in result.issues
-    )
+    assert not result.passed
+    assert any(issue.rule_id == "regeneration_claim_support" for issue in result.issues)
 
 
 @pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])

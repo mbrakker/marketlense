@@ -7450,3 +7450,113 @@ replay covered Algolia only. A fresh five-report replay at `e486a84a`, retained 
 KPMG/Reuters traces, and independent broader Step 2 effectiveness evidence remain
 open. Step 3 remains unstarted; no canonical claim promotion or WordPress
 publication occurred.
+
+#### Transactional claim-repair root-cause correction — 2026-10-30 (post-`c32e66de`)
+
+This correction closes the remaining implementation defects identified in the
+transactional claim-repair review. The change stays inside the existing claim
+validation, regeneration, and promotion boundaries; it adds no model stage,
+service, store, publication gate, or normal-mode route.
+
+##### Confirmed root causes and fixes
+
+* **Inherited editorial classification bypass:** adversarial tests confirmed
+  that a repaired numeric or causal sentence could retain `interpretive` or
+  `recommendation` classification and therefore avoid the factual candidate
+  gate. `_claim_requires_factual_validation()` now reuses the existing
+  claim-kind detection and also gates numeric, quoted, causal, and explicit
+  comparative propositions regardless of editorial voice. Pure analytical
+  recommendations remain non-factual when they make no source-derived
+  proposition. Changed soft-copy claims are included in candidate support
+  checks rather than being silently omitted.
+* **Action semantics:** explicit `abstain` and exact no-op proposals preserve
+  the target text and provenance. Missing support and rejected replacements
+  record an auditable abstention and leave the claim unchanged. Only an
+  explicit, authorized `remove` mutates the target, and invalid replacements
+  are not converted into deletion. Summary claim-map repairs process original
+  indexes in descending order.
+* **Execution/audit mismatch:** claim-level remove, abstain, no-op, and rejected
+  replacement paths now append an existing `RepairDecision` describing the
+  executed action and strategy. The response and candidate audit therefore do
+  not fall back to the planner's intended `REGENERATE_ITEM` label.
+* **Ambiguous targeting:** the old lowest-index summary fallback was removed.
+  Duplicate wording without a unique authoritative path now fails closed with
+  `atomic_repair_target_unresolved_or_ambiguous`.
+* **Partial promotion state:** promotion is now marked as attempted before the
+  atomic artifact replacement. If a later related write raises, the existing
+  artifact, promoted claim-validation package, and canonical validation report
+  are restored where present. Reuse additionally requires an exact artifact
+  hash, so a stale or partially written package cannot authorize a different
+  artifact. The final-insight path was reviewed and left unchanged: its stable
+  ID, allowed leaf paths, deterministic evidence restoration, and downstream
+  lineage checks already provide the appropriate constraint for text,
+  `so_what`, and `now_what`; structured metric, quote, and source operations do
+  not use the claim-only contract. The proposal schema now accepts only version
+  `1.0`.
+
+##### Focused and repository verification
+
+The new fault-injection module covers candidate persistence, canonical artifact
+replacement, promoted claim-validation persistence, and canonical validation
+persistence. The affected suites passed:
+
+| Check | Result |
+| --- | --- |
+| Claim validation, candidate integrity, proposal contract | **174 passed** |
+| Report regeneration generator | **97 passed** |
+| Report analysis, identity, and regeneration failures | **94 passed** |
+| Combined affected regeneration/validation suites | **365 passed** |
+| Contract schema roundtrip and schema gate | **2,364 tests passed; schema gate passed** |
+| Role I/O boundary and forbidden-patching gates | **passed** |
+| Ruff changed-file gate and formatting gate | **passed** |
+| Full-repository mypy baseline | **0 tracked errors across 786 source files** |
+
+##### Genuine retained real-report repair
+
+The available genuine repair trace is the Reuters Institute run at producer
+SHA `3342d6764835f9b9a05eccc96cca11c45608f8bc`, retained at
+`C:\\ml-p1-transactional-repair-20261030\\frozen-reliability-xri__hqr\\members\\cohort-4b763ae2286ca69fe8ac\\ias-first-attempt-n56hynjz\\output\\trends-and-predictions-2026-pdf\\report_analysis`.
+It predates the current uncommitted correction, so it is integration evidence,
+not a causal live result for this final tree.
+
+The failed claim was the Reuters Q11 newsroom-AI assessment in
+`summary.executive_summary[claim_index=3]`. The retained audit records:
+
+* `before_sha256=03d02224dae7e1b1c9242a182756d5bc53557ba157daa8258cbd53eaf313a4f9`;
+  `after_sha256=19518b0bac86105764638a295d5d41ef680f6f043bfa2a1e2a14b533645ebc3c`;
+* executed action/strategy `REGENERATE_ITEM` / `current_evidence`, with the
+  exact claim-only replacement recorded in the audit and evidence ID
+  `verified-fact:newsroom-ai-initiative-assessments`;
+* semantic grounding **evaluated**, mutation scope **pass**, evidence lineage
+  **pass**, zero introduced hard failures, candidate promotion **promoted**,
+  validation **pass**, and publish-readiness **pass**;
+* the authoritative claim-map row remained bound to the same canonical fact,
+  source identity, and physical page 33. The final HTML contains the repaired
+  Q11 sentence and no visible internal evidence identifiers.
+
+The original PDF was independently rehashed as
+`f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52`. Text
+extraction from physical page 33 states Q11's base is 265 and reports 44%
+promising, 42% limited, 13% transformational, and 2% disappointing. This
+matches the canonical fact's observed (not forecast) status and the promoted
+editorial wording. The exact pre-repair sentence is not retained in the
+available candidate artifact; the audit's differing input/output hashes and
+minimal patch are the available proof of change.
+
+##### Current-SHA live limitation and verdict
+
+No provider-backed report was rerun from the current uncommitted tree in this
+turn, and no publication or WordPress write occurred. The focused regressions
+demonstrate the new failure paths; the retained Reuters run demonstrates one
+real repair/promotion, but does not establish that the new rollback and action
+semantics were exercised live. The exact-five run at `3342d676` remains 3/5
+ready (KPMG visual-authority coverage failure and the original Algolia proposal
+compatibility failure); the corrected Algolia replay remains the only later
+single-report live replay. A fresh current-SHA Reuters/KPMG repair replay and a
+fresh corrected five-report cohort remain open.
+
+**Verdict: PARTIAL / NO-GO for Step 3.** The requested transactional root causes
+are corrected and regression-tested, and one genuine retained repair is
+source-grounded, fully validated, promoted, and independently checked. Current-
+SHA live causal acceptance and broader repair effectiveness remain unverified;
+Step 3 remains unstarted.

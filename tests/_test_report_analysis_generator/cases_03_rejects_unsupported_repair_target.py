@@ -169,3 +169,25 @@ def test_promote_retained_claim_candidate_rejects_artifact_mismatch(tmp_path):
 
     assert excinfo.value.code == "retained_claim_candidate_artifact_mismatch"
     assert stored_requests == []
+
+
+def test_promoted_claim_reuse_rejects_stale_artifact_hash(tmp_path):
+    runtime = _runtime(tmp_path)
+    dependencies = _deps(
+        analysis_pack_path=lambda request, _ctx: SimpleNamespace(
+            output_path=f"promoted/{request.pack_name}.json"
+        ),
+        read_json=lambda _request, _ctx: SimpleNamespace(
+            payload={"schema_version": "1.4", "artifact_hash": "stale"}
+        ),
+    )
+
+    assert (
+        _load_promoted_claim_validation_for_reuse(
+            runtime=runtime,
+            dependencies=dependencies,
+            expected_artifact_hash="current",
+            ctx=runtime.ctx,
+        )
+        is None
+    )

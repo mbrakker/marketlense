@@ -1721,6 +1721,7 @@ def _load_promoted_claim_validation_for_reuse(
     *,
     runtime: ReportRuntimeState,
     dependencies: ReportAnalysisDependencies,
+    expected_artifact_hash: str = "",
     ctx,
 ) -> Dict[str, Any] | None:
     """Load the package belonging to the currently promoted artifact set."""
@@ -1759,6 +1760,20 @@ def _load_promoted_claim_validation_for_reuse(
                 event="validation_claim_reuse_prior_unavailable",
                 module=logger.name,
                 fields={"cause_code": "retained_claim_package_invalid"},
+            )
+        )
+        return None
+    if (
+        expected_artifact_hash
+        and payload.get("artifact_hash") != expected_artifact_hash
+    ):
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="validation_claim_reuse_prior_unavailable",
+                module=logger.name,
+                fields={"cause_code": "retained_claim_package_artifact_mismatch"},
             )
         )
         return None
@@ -2068,6 +2083,7 @@ def _run_validation_regeneration_loop(
     promoted_claim_validation_package = _load_promoted_claim_validation_for_reuse(
         runtime=runtime,
         dependencies=dependencies,
+        expected_artifact_hash=sha256_json(current_artifacts),
         ctx=mode_ctx,
     )
     logger.info(
@@ -2617,6 +2633,11 @@ def _run_validation_regeneration_loop(
         artifacts_path = regeneration_response.artifacts_path
         if candidate_enforced:
             if candidate_validation_report.status == "pass":
+                canonical_promotion_attempted = False
+                canonical_validation_attempted = False
+                retained_claim_candidate = None
+                retained_claim_candidate_path = ""
+                canonical_validation_path = ""
                 try:
                     retained_claim_candidate = (
                         _load_candidate_claim_validation_for_promotion(
@@ -2627,55 +2648,118 @@ def _run_validation_regeneration_loop(
                             ctx=attempt_ctx,
                         )
                     )
+                    # The canonical store is atomic, but a dependency may
+                    # raise after its replace has completed. Mark the
+                    # operation before calling it so rollback is attempted in
+                    # both cases.
+                    canonical_promotion_attempted = True
                     artifacts_path = _promote_regeneration_candidate(
                         runtime=runtime,
                         dependencies=dependencies,
                         candidate_artifacts=candidate_artifacts,
                         ctx=attempt_ctx,
                     )
-                except Exception:
-                    _store_regeneration_candidate_audit(
-                        runtime=runtime,
-                        dependencies=dependencies,
-                        audit=_candidate_audit(
+                    retained_claim_candidate_path = (
+                        _store_promoted_candidate_claim_validation(
                             runtime=runtime,
-                            attempt_index=attempt_index,
-                            transformation_scope=(
-                                regeneration_response.regenerated_sections
-                            ),
-                            current_artifacts=working_artifacts,
-                            candidate_artifacts=candidate_artifacts,
-                            current_artifacts_path=candidate_parent_path,
-                            candidate_artifacts_path=candidate_artifacts_path,
-                            candidate_result=candidate_result,
-                            validation_report=candidate_validation_report,
-                            promotion_outcome="rolled_back",
-                            plan=plan,
-                            repair_delta=repair_delta,
-                            strategy_fingerprint=strategy_fingerprint,
-                            regeneration_response=regeneration_response,
-                            latency_ms=max(
-                                0, int((perf_counter() - attempt_started) * 1000)
-                            ),
-                        ),
-                        ctx=attempt_ctx,
+                            dependencies=dependencies,
+                            candidate_package=retained_claim_candidate,
+                            ctx=attempt_ctx,
+                        )
                     )
-                    raise
-                retained_claim_candidate_path = (
-                    _store_promoted_candidate_claim_validation(
+                    canonical_validation_attempted = True
+                    canonical_validation_path = _store_validation_snapshot(
                         runtime=runtime,
                         dependencies=dependencies,
-                        candidate_package=retained_claim_candidate,
+                        report=candidate_validation_report,
+                        pack_name="validation",
                         ctx=attempt_ctx,
                     )
-                )
-                canonical_validation_path = _store_validation_snapshot(
-                    runtime=runtime,
-                    dependencies=dependencies,
-                    report=candidate_validation_report,
-                    pack_name="validation",
-                    ctx=attempt_ctx,
-                )
+                except Exception as promotion_error:
+                    rollback_error = None
+                    if canonical_promotion_attempted:
+                        try:
+                            _promote_regeneration_candidate(
+                                runtime=runtime,
+                                dependencies=dependencies,
+                                candidate_artifacts=promoted_artifacts,
+                                ctx=attempt_ctx,
+                            )
+                            artifacts_path = current_artifacts_path
+                            if promoted_claim_validation_package is not None:
+                                _store_promoted_candidate_claim_validation(
+                                    runtime=runtime,
+                                    dependencies=dependencies,
+                                    candidate_package=(
+                                        promoted_claim_validation_package
+                                    ),
+                                    ctx=attempt_ctx,
+                                )
+                            if canonical_validation_attempted:
+                                _store_validation_snapshot(
+                                    runtime=runtime,
+                                    dependencies=dependencies,
+                                    report=promoted_validation_report,
+                                    pack_name="validation",
+                                    ctx=attempt_ctx,
+                                )
+                        except Exception as restore_error:
+                            rollback_error = restore_error
+                    try:
+                        _store_regeneration_candidate_audit(
+                            runtime=runtime,
+                            dependencies=dependencies,
+                            audit=_candidate_audit(
+                                runtime=runtime,
+                                attempt_index=attempt_index,
+                                transformation_scope=(
+                                    regeneration_response.regenerated_sections
+                                ),
+                                current_artifacts=working_artifacts,
+                                candidate_artifacts=candidate_artifacts,
+                                current_artifacts_path=candidate_parent_path,
+                                candidate_artifacts_path=candidate_artifacts_path,
+                                candidate_result=candidate_result,
+                                validation_report=candidate_validation_report,
+                                promotion_outcome="rolled_back",
+                                plan=plan,
+                                repair_delta=repair_delta,
+                                strategy_fingerprint=strategy_fingerprint,
+                                regeneration_response=regeneration_response,
+                                latency_ms=max(
+                                    0,
+                                    int((perf_counter() - attempt_started) * 1000),
+                                ),
+                            ),
+                            ctx=attempt_ctx,
+                        )
+                    except Exception as audit_error:
+                        logger.warning(
+                            log_event(
+                                attempt_ctx,
+                                role="orchestrator",
+                                event="validation_regen_promotion_audit_failed",
+                                module=logger.name,
+                                fields={"cause_code": type(audit_error).__name__},
+                            )
+                        )
+                    if rollback_error is not None:
+                        raise AppError(
+                            code="regeneration_promotion_inconsistent",
+                            message=(
+                                "A promoted regeneration could not be rolled back "
+                                "after a related artifact persistence failure."
+                            ),
+                            retryable=False,
+                            context={
+                                "report_id": runtime.file.file_id,
+                                "attempt_index": attempt_index,
+                                "promotion_error": type(promotion_error).__name__,
+                                "rollback_error": type(rollback_error).__name__,
+                            },
+                            cause=rollback_error,
+                        ) from rollback_error
+                    raise
                 promotion_state = (
                     candidate_artifacts,
                     replace(

@@ -1383,3 +1383,20 @@ Algolia failed before repair. E18 remains **Active/PARTIAL**, Step 2 remains
 artifact paths, exact metrics, and limitations are recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`. No publication,
 WordPress write, or ten-report cohort was performed.
+
+**Evidence update — 2026-10-30 (transactional claim-repair root causes):** The
+post-`c32e66de` correction closes the confirmed inherited-classification factual
+gate bypass, explicit `replace`/`remove`/`abstain` and no-op semantics, actual
+execution audit labels, ambiguous summary targeting, and partial-promotion
+reuse hazards. Exact artifact-hash reuse and rollback fault injection cover
+candidate persistence, canonical artifacts, promoted claim validation, and
+canonical validation. Focused affected suites passed 365 tests, the contract
+suite passed 2,364 tests, Ruff/formatting/role-boundary/forbidden-patching and
+schema gates passed, and the full mypy baseline remained at zero tracked
+errors. A retained Reuters Q11 repair at producer `3342d676` is a genuine
+source-bound, grounded, validated and promoted correction, but predates this
+final correction; it therefore does not prove current-SHA live behavior. No
+fresh provider run or publication write occurred. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. Full root-cause evidence and limitations are recorded
+in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

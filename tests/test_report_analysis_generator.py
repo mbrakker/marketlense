@@ -16,3 +16,4 @@ from ._test_report_analysis_generator.cases_06_candidate_hash_repeat import *  #
 from ._test_report_analysis_generator.cases_04_repair_target_planning import *  # noqa: F401,F403
 from ._test_report_analysis_generator.cases_05_scoped_repair_validation import *  # noqa: F401,F403
 from ._test_report_analysis_generator.cases_06_repair_snapshot import *  # noqa: F401,F403
+from ._test_report_analysis_generator.cases_07_transactional_promotion import *  # noqa: F401,F403

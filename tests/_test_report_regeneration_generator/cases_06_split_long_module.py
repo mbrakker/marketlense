@@ -218,7 +218,7 @@ def test_multi_claim_regeneration_repairs_supported_claim_and_abstains_unsupport
     )
 
     assert response.updated_artifacts["expert_comment"] == (
-        "First sibling. Repaired second claim. Last sibling."
+        "First sibling. Repaired second claim. Bad third claim. Last sibling."
     )
     assert len(openai_client.calls) == 1
     provenance_ids = {
@@ -227,7 +227,7 @@ def test_multi_claim_regeneration_repairs_supported_claim_and_abstains_unsupport
     }
     assert claims[0].claim_id in provenance_ids
     assert claims[3].claim_id in provenance_ids
-    assert claims[2].claim_id not in provenance_ids
+    assert claims[2].claim_id in provenance_ids
 
 
 def test_multi_claim_repair_keeps_quarantine_scoped_to_its_failed_claim(
@@ -326,7 +326,9 @@ def test_multi_claim_repair_keeps_quarantine_scoped_to_its_failed_claim(
         ]
         == []
     )
-    assert response.updated_artifacts["expert_comment"] == "Repaired second claim."
+    assert response.updated_artifacts["expert_comment"] == (
+        "Bad first claim. Repaired second claim."
+    )
 
 
 def test_sequential_claim_repairs_preserve_prior_selection_provenance(tmp_path) -> None:

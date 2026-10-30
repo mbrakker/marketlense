@@ -28,6 +28,7 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
 
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _load_candidate_claim_validation_for_promotion,
+    _load_promoted_claim_validation_for_reuse,
     _run_validation_regeneration_loop,
     _store_promoted_candidate_claim_validation,
 )
@@ -43,6 +44,7 @@ __all__ = [
     "test_store_promoted_retained_claim_candidate_to_report_scoped_pack",
     "test_long_validation_candidate_pack_stores_and_loads_after_path_compaction",
     "test_promote_retained_claim_candidate_rejects_artifact_mismatch",
+    "test_promoted_claim_reuse_rejects_stale_artifact_hash",
     "test_build_regeneration_plan_skips_info_and_orders_errors_first",
     "test_build_regeneration_plan_maps_public_artifact_copy_to_its_family",
     "test_build_regeneration_plan_keeps_hard_repair_claim_scoped",

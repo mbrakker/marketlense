@@ -528,13 +528,18 @@ def test_claim_repair_rejects_multisentence_model_output_and_preserves_sibling(
         prompt_client=_FakePromptClient(),
     )
 
-    assert response.updated_artifacts["expert_comment"] == supported
+    assert response.updated_artifacts["expert_comment"] == (
+        f"{supported} {unsupported}"
+    )
     retained = [
         claim
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
         if claim["artifact_family"] == "expert_comment"
     ]
-    assert [claim["claim_id"] for claim in retained] == [claims[0].claim_id]
+    assert [claim["claim_id"] for claim in retained] == [
+        claims[0].claim_id,
+        claims[1].claim_id,
+    ]
 
 
 def test_claim_scoped_repair_bridges_quarantine_to_rewritten_factual_claim(
