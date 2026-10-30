@@ -24,6 +24,7 @@ from src.contracts.regeneration import (
     RegenerationCandidateAudit,
     RegenerationLoopState,
     RegenerationPlan,
+    RegenerationTarget,
     RepairDecision,
     RepairDelta,
     RepairSeverityChange,
@@ -67,6 +68,7 @@ from src.generators.report_generation_dependencies import ReportAnalysisDependen
 from src.generators.report_generation_shared import merge_artifacts_into_payload
 from src.generators.report_regeneration_generator import (
     retained_grounding_evidence_ids_for_target,
+    retained_soft_copy_claim_grounding_for_target,
 )
 from src.generators.validation.regeneration_candidate import (
     CandidateIntegrityResult,
@@ -1904,6 +1906,99 @@ def _preflight_empty_grounding_strategies(
     skipped: list[tuple[str, str]] = []
     current_plan = plan
     while current_plan.mode == "targeted":
+        split_targets: list[RegenerationTarget] = []
+        split_applied = False
+        for target in current_plan.targets:
+            is_soft_copy_claim_target = (
+                target.target_section in {"expert_comment", "linkedin_post"}
+                and target.repair_strategy
+                in {"current_evidence", "alternative_evidence"}
+                and bool(target.quarantined_evidence_ids)
+                and any(
+                    re.fullmatch(r".+\[claim_index=\d+\]", path)
+                    for path in target.allowed_paths
+                )
+            )
+            if not is_soft_copy_claim_target:
+                split_targets.append(target)
+                continue
+            claim_grounding = retained_soft_copy_claim_grounding_for_target(
+                target=target,
+                artifacts=artifacts,
+                evidence_packs=evidence_packs,
+                doc_map=doc_map or evidence_packs.get("doc_map", {}),
+            )
+            issue_claim_ids = {
+                str(issue.entity_id or "").strip()
+                for issue in target.issues
+                if str(issue.entity_id or "").strip()
+            }
+            if not issue_claim_ids or issue_claim_ids != set(claim_grounding):
+                split_targets.append(target)
+                continue
+            unsupported_claim_ids = {
+                claim_id
+                for claim_id, values in claim_grounding.items()
+                if not values.get("evidence_ids")
+            }
+            if not unsupported_claim_ids:
+                split_targets.append(target)
+                continue
+            supported_claim_ids = issue_claim_ids - unsupported_claim_ids
+            unsupported_issues = [
+                issue
+                for issue in target.issues
+                if str(issue.entity_id or "").strip() in unsupported_claim_ids
+            ]
+            unsupported_paths = sorted(
+                path
+                for claim_id in unsupported_claim_ids
+                for path in claim_grounding[claim_id].get("allowed_paths", [])
+            )
+            if not unsupported_paths:
+                split_targets.append(target)
+                continue
+            if supported_claim_ids:
+                supported_issues = [
+                    issue
+                    for issue in target.issues
+                    if str(issue.entity_id or "").strip() in supported_claim_ids
+                ]
+                supported_paths = sorted(
+                    path
+                    for claim_id in supported_claim_ids
+                    for path in claim_grounding[claim_id].get("allowed_paths", [])
+                )
+                split_targets.append(
+                    replace(
+                        target,
+                        issues=supported_issues,
+                        allowed_paths=supported_paths,
+                        selected_evidence_ids=sorted(
+                            {
+                                evidence_id
+                                for claim_id in supported_claim_ids
+                                for evidence_id in claim_grounding[claim_id].get(
+                                    "evidence_ids", []
+                                )
+                            }
+                        ),
+                    )
+                )
+            split_targets.append(
+                replace(
+                    target,
+                    issues=unsupported_issues,
+                    repair_action="REMOVE_CLAIM",
+                    repair_strategy="safe_removal",
+                    allowed_paths=unsupported_paths,
+                    selected_evidence_ids=[],
+                )
+            )
+            split_applied = True
+        if split_applied:
+            current_plan = replace(current_plan, targets=split_targets)
+            continue
         newly_rejected = False
         for target in current_plan.targets:
             is_summary_claim_map_target = (
@@ -1918,11 +2013,25 @@ def _preflight_empty_grounding_strategies(
                 target.target_section == "insights_bundle"
                 and bool(target.quarantined_evidence_ids)
             )
-            if not is_insight_evidence_requiring and (
-                not is_summary_claim_map_target
-                or target.repair_strategy
-                not in {"current_evidence", "alternative_evidence"}
-                or not target.quarantined_evidence_ids
+            is_soft_copy_claim_evidence_requiring = (
+                target.target_section in {"expert_comment", "linkedin_post"}
+                and target.repair_strategy
+                in {"current_evidence", "alternative_evidence"}
+                and bool(target.quarantined_evidence_ids)
+                and any(
+                    re.fullmatch(r".+\[claim_index=\d+\]", path)
+                    for path in target.allowed_paths
+                )
+            )
+            if (
+                not is_insight_evidence_requiring
+                and (
+                    not is_summary_claim_map_target
+                    or target.repair_strategy
+                    not in {"current_evidence", "alternative_evidence"}
+                    or not target.quarantined_evidence_ids
+                )
+                and not is_soft_copy_claim_evidence_requiring
             ):
                 continue
             evidence_ids = retained_grounding_evidence_ids_for_target(

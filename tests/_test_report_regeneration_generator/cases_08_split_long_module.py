@@ -246,3 +246,78 @@ def test_atomic_metric_source_repair_rebuilds_key_figures_without_model_calls(
     assert prompt_client.render_calls == []
     assert openai_client.calls == []
     assert prompt_client.render_calls == []
+
+
+def test_quote_leaf_repair_preserves_metadata_and_candidate_rejects_unsupported_text(
+    tmp_path,
+):
+    prompt_client = _FakePromptClient()
+    openai_client = _FakeOpenAIClient()
+    evidence_packs = _evidence_packs()
+    evidence_packs["quote_candidates"] = {"quote_candidates": []}
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="quotes",
+                        regenerate_steps=["quotes"],
+                        prompt_namespaces=["report_vs/artifacts/regenerate/quotes"],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="quotes",
+                                affected_section="quotes:1",
+                                message="[quotes] Quote not verbatim",
+                                severity="error",
+                                evidence_ids=["sec-1"],
+                                pages=[1],
+                            )
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=True,
+            ),
+            current_artifacts=_current_artifacts(),
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=_current_artifacts()["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
+
+    assert response.regenerated_sections == ["quotes"]
+    original_quote = _current_artifacts()["quotes_final"][0]
+    repaired_quote = response.updated_artifacts["quotes_final"][0]
+    assert repaired_quote["text"] == "A paraphrased section summary"
+    assert {key: value for key, value in repaired_quote.items() if key != "text"} == {
+        key: value for key, value in original_quote.items() if key != "text"
+    }
+    assert response.repair_decisions[0].changed_paths == ["quotes_final[0].text"]
+
+    candidate_result = validate_regeneration_candidate(
+        current_artifacts=_current_artifacts(),
+        candidate_artifacts=response.updated_artifacts,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+        planned_prompt_namespaces=("report_vs/artifacts/regenerate/quotes",),
+        actual_prompt_namespaces=tuple(response.prompt_namespaces),
+    )
+    issue = next(
+        issue
+        for issue in candidate_result.issues
+        if issue.rule_id == "retained_claim.evidence_reference_completeness"
+        and issue.affected_section.startswith("quotes:")
+    )
+    expected_quote_id = normalize_artifact_quotes([repaired_quote])[0]["id"]
+    assert issue.affected_section == f"quotes:{expected_quote_id}.text"

@@ -596,7 +596,7 @@ def regenerate_artifacts(
     )
     response = ArtifactRegenerationResponse(
         updated_artifacts=updated_artifacts,
-        regenerated_sections=state.regenerated_sections,
+        regenerated_sections=list(dict.fromkeys(state.regenerated_sections)),
         prompt_namespaces=state.prompt_namespaces,
         artifacts_path="",
         artifacts_snapshot_path=candidate_artifacts_path,
@@ -862,6 +862,19 @@ def retained_grounding_evidence_ids_for_target(
 
     if not target.quarantined_evidence_ids:
         return []
+    if target.target_section in {"expert_comment", "linkedin_post"} and any(
+        re.fullmatch(r".+\[claim_index=\d+\]", path) for path in target.allowed_paths
+    ):
+        return _unique_strings(
+            evidence_id
+            for values in retained_soft_copy_claim_grounding_for_target(
+                target=target,
+                artifacts=artifacts,
+                evidence_packs=evidence_packs,
+                doc_map=doc_map,
+            ).values()
+            for evidence_id in values.get("evidence_ids", [])
+        )
     package = _build_grounding_package(
         target=target,
         prepared=None,
@@ -887,6 +900,75 @@ def retained_grounding_evidence_ids_for_target(
     return _unique_strings(package.get("evidence_ids") or [])
 
 
+def retained_soft_copy_claim_grounding_for_target(
+    *,
+    target: RegenerationTarget,
+    artifacts: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    doc_map: Dict[str, Any],
+) -> Dict[str, Dict[str, List[str]]]:
+    """Return claim-scoped retained support and exact sentence paths.
+
+    Soft-copy regeneration resolves each failed sentence independently.  The
+    orchestrator uses this same canonical builder to partition mixed targets:
+    claims with no retained support may take the already-authorized removal
+    strategy, while supported sibling claims keep their normal repair path.
+    """
+
+    if target.target_section not in {"expert_comment", "linkedin_post"}:
+        return {}
+    try:
+        claims = soft_copy_claim_provenance_from_payload(
+            artifacts.get("soft_copy_claim_provenance")
+        )
+    except AppError:
+        return {}
+    claims_by_id: Dict[str, List[SoftCopyClaimProvenance]] = {}
+    for claim in claims:
+        if claim.artifact_family == target.target_section:
+            claims_by_id.setdefault(claim.claim_id, []).append(claim)
+    current_text = _s(artifacts.get(target.target_section))
+    claim_data: Dict[str, Dict[str, List[str]]] = {}
+    sentence_data: Dict[str, List[tuple[int, str]]] = {}
+    for index, (_start, _end, sentence) in enumerate(
+        _soft_copy_sentence_spans(current_text)
+    ):
+        sentence_data.setdefault(
+            hashlib.sha256(
+                _normalized_soft_copy_text(sentence).encode("utf-8")
+            ).hexdigest(),
+            [],
+        ).append((index, sentence))
+    for issue in target.issues:
+        claim_id = _s(issue.entity_id).strip()
+        matching_claims = claims_by_id.get(claim_id, [])
+        if len(matching_claims) != 1 or claim_id in claim_data:
+            continue
+        claim = matching_claims[0]
+        sentence_matches = sentence_data.get(claim.text_hash, [])
+        sentence_info = sentence_matches[0] if len(sentence_matches) == 1 else None
+        claim_text = sentence_info[1] if sentence_info is not None else ""
+        package = _build_soft_copy_claim_evidence_package(
+            claim=claim,
+            issue=issue,
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            quarantined_evidence_ids=tuple(target.quarantined_evidence_ids),
+            doc_map=doc_map,
+            claim_text=claim_text,
+        )
+        paths = (
+            [f"{target.target_section}[claim_index={sentence_info[0]}]"]
+            if sentence_info is not None
+            else []
+        )
+        claim_data[claim_id] = {
+            "evidence_ids": _unique_strings(package.get("evidence_ids") or []),
+            "allowed_paths": paths,
+        }
+    return claim_data
+
+
 MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES = 4
 
 
@@ -908,7 +990,7 @@ def _build_soft_copy_claim_evidence_package(
         if _normalized_evidence_id(evidence_id)
     }
     evidence_by_id = _retained_evidence_entries_by_id(evidence_packs, doc_map)
-    direct_ids = _unique_strings(claim.evidence_ids)
+    direct_ids = _unique_strings([*claim.evidence_ids, *issue.evidence_ids])
     parent_ids = _soft_copy_parent_evidence_ids(
         claim=claim, artifacts=artifacts, claim_text=claim_text
     )
@@ -3378,6 +3460,54 @@ def _preserve_soft_copy_claim_boundary(text: str, index: int, replacement: str) 
     return normalized + (original_terminal if original_terminal in ".!?" else ".")
 
 
+def _verified_authority_evidence_aliases(
+    state: _RegenerationState,
+) -> Dict[str, str]:
+    """Resolve discovery-era evidence aliases to one admitted fact binding."""
+
+    canonical_by_fact: Dict[str, set[str]] = {}
+    for pack in state.visual_authority_evidence_packs.values():
+        if not isinstance(pack, dict):
+            continue
+        entries = pack.get("findings")
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            fact_id = _s(entry.get("verified_fact_id")).strip()
+            evidence_id = _s(entry.get("id")).strip()
+            if fact_id and evidence_id:
+                canonical_by_fact.setdefault(fact_id, set()).add(evidence_id)
+
+    aliases: Dict[str, set[str]] = {}
+    for fact in state.visual_authority_facts:
+        if not isinstance(fact, dict):
+            continue
+        fact_id = _s(fact.get("fact_id")).strip()
+        canonical_ids = canonical_by_fact.get(fact_id, set())
+        if not fact_id or len(canonical_ids) != 1:
+            continue
+        canonical_id = next(iter(canonical_ids))
+        provenance = fact.get("provenance")
+        discovery_ids = (
+            provenance.get("discovery_evidence_ids")
+            if isinstance(provenance, dict)
+            else []
+        )
+        aliases.setdefault(fact_id.casefold(), set()).add(canonical_id)
+        if isinstance(discovery_ids, list):
+            for discovery_id in discovery_ids:
+                alias = _s(discovery_id).strip()
+                if alias:
+                    aliases.setdefault(alias.casefold(), set()).add(canonical_id)
+    return {
+        alias: next(iter(canonical_ids))
+        for alias, canonical_ids in aliases.items()
+        if len(canonical_ids) == 1
+    }
+
+
 def _normalize_state_evidence_ids(execution: _RegenerationHandlerExecution) -> None:
     normalize_artifact_evidence_ids(
         summary=execution.state.summary,
@@ -3388,6 +3518,11 @@ def _normalize_state_evidence_ids(execution: _RegenerationHandlerExecution) -> N
         evidence_packs=execution.runtime.safe_evidence,
         editorial_plan=execution.state.editorial_plan,
         soft_copy_claim_provenance=execution.state.existing_soft_copy_claim_provenance,
+        context_anchors=(
+            _verified_authority_evidence_aliases(execution.state)
+            if execution.state.visual_authority_digest
+            else None
+        ),
     )
 
 

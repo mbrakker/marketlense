@@ -122,10 +122,9 @@
           "repair_strategy": { "type": "string", "minLength": 1 },
           "evidence_ids_used": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
           "protected_fields": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-          "changed_paths": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
+          "changed_paths": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
           "minimal_patch": {
             "type": "array",
-            "minItems": 1,
             "items": {
               "type": "object",
               "required": ["op", "path", "value"],
@@ -151,6 +150,45 @@
             }
           }
         },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "repair_action": { "const": "ABSTAIN" } }
+            },
+            "then": {
+              "properties": {
+                "changed_paths": { "maxItems": 0 },
+                "minimal_patch": { "maxItems": 0 }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": { "repair_action": { "const": "REMOVE_CLAIM" } }
+            },
+            "then": {
+              "properties": {
+                "changed_paths": { "minItems": 1 },
+                "minimal_patch": { "maxItems": 0 }
+              }
+            }
+          },
+          {
+            "if": {
+              "not": {
+                "properties": {
+                  "repair_action": { "enum": ["ABSTAIN", "REMOVE_CLAIM"] }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "changed_paths": { "minItems": 1 },
+                "minimal_patch": { "minItems": 1 }
+              }
+            }
+          }
+        ],
         "additionalProperties": false
       }
     },

@@ -657,12 +657,12 @@ def _full_chain_chat_response_factory(
                     )
                 )
                 if schema_name == "regeneration_claim_repair_proposal_v1":
-                    # This fixture exercises the existing safe-removal fallback:
-                    # the isolated proposal deliberately abstains because its
+                    # This fixture exercises the explicit safe-removal path:
+                    # the isolated proposal authorizes removal because its
                     # generic replacement is not a retained source-backed fact.
                     proposal = {
                         "schema_version": "1.0",
-                        "action": "abstain",
+                        "action": "remove",
                         "replacement_text": "",
                         "evidence_ids_used": [],
                     }

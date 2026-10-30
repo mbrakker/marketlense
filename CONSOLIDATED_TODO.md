@@ -1400,3 +1400,19 @@ fresh provider run or publication write occurred. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. Full root-cause evidence and limitations are recorded
 in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Evidence update — 2026-10-30 (post-hosted-CI transactional corrections):**
+Hosted run `41111279717` identified an audit-schema action-contract mismatch,
+an incorrectly abstaining removal fixture, missing retained visual expert
+bindings, and a test-file ownership overflow; mutation partitions passed and
+the release-evidence failure was a test prerequisite failure. The corrective
+tree now validates empty abstentions and explicit removals according to their
+actual action, resolves uniquely mapped verified-fact aliases, and partitions
+mixed claim-scoped repairs using the canonical evidence builder so supported
+siblings are repaired before explicit safe removal. Local targeted and
+affected suites passed 222 tests, the schema/Ruff/format/architecture gates
+passed, and mypy remained at zero tracked errors across 786 source files. The
+retained Reuters repair remains pre-correction evidence; no current-SHA
+provider replay or publication write occurred. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready** pending the new hosted run and live repair evidence.

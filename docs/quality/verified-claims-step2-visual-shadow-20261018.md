@@ -7560,3 +7560,70 @@ are corrected and regression-tested, and one genuine retained repair is
 source-grounded, fully validated, promoted, and independently checked. Current-
 SHA live causal acceptance and broader repair effectiveness remain unverified;
 Step 3 remains unstarted.
+
+#### Transactional claim-repair hosted-CI follow-up — 2026-10-30 (post-`92647785`)
+
+The first hosted run for the implementation commit was `41111279717`. Both
+mutation partitions and the CI start job passed. The test job exposed four
+concrete issues: the audit schema rejected valid empty `ABSTAIN` records, the
+IAS multi-claim lineage fixture still described safe removal as abstention, the
+existing expert-comment visual repair lacked a usable source binding, and one
+split test module exceeded the repository ownership limit. `release_evidence`
+failed only because the test job was its prerequisite. No production or
+publication side effect occurred.
+
+The corrective changes are deliberately bounded:
+
+* `regeneration_candidate_audit.schema.json` now expresses the existing action
+  contract: `ABSTAIN` has no changed paths or patch, `REMOVE_CLAIM` has an
+  executed changed path and no patch, and replacement actions require both.
+  This does not make an abstention a successful repair or authorize deletion.
+* The lineage fixture now returns an explicit `remove` proposal for the
+  isolated safe-removal case. The production handler continues to preserve a
+  claim for an explicit abstain, invalid replacement, or unavailable support
+  unless the deterministic planner has selected its existing authorized
+  safe-removal strategy.
+* Verified-mode soft-copy normalization now maps a discovery-era evidence ID
+  to a canonical verified-fact evidence ID only when the mapping is uniquely
+  established by the retained fact snapshot. Issue evidence IDs are included
+  in claim-scoped repair packages, so valid planner bindings are not lost.
+* Empty-support preflight now uses the same claim-scoped evidence builder as
+  the handler. Mixed soft-copy targets are partitioned by stable claim ID:
+  supported siblings keep the existing repair route, while unsupported claims
+  take an explicit safe-removal target. Supported repairs execute before the
+  removal target so sentence indexes cannot shift underneath an active repair.
+  Ambiguous claim IDs or duplicate sentence identities are left unresolved
+  rather than guessed. No additional model call or validation stage is added.
+* The response now de-duplicates repeated family names when one family has
+  multiple claim-scoped targets. The moved test case keeps the ownership gate
+  green without changing its assertions.
+
+Current local verification after these corrections:
+
+| Check | Result |
+| --- | --- |
+| Frozen-lineage disposition regression | **3 passed** |
+| Visual-authority regeneration regression | **4 passed** |
+| Report-regeneration generator suite | **97 passed** |
+| Combined affected repair/validation/evidence suites | **222 passed** |
+| Contract-schema snapshot, Ruff, formatting, forbidden-patching, role-I/O and diff gates | **passed** |
+| Full-repository mypy | **0 tracked errors across 786 source files** |
+
+The IAS multi-claim fixture now proves the corrected action split: the two
+source-independent analytical recommendations remain, unsupported factual
+claims are not silently deleted, and the explicit safe-removal decision is
+recorded. The visual expert regression also confirms that canonical evidence
+and issue-level bindings reach the existing claim repair path. These are
+provider-free regression results; they are not a live-quality claim.
+
+The retained Reuters Q11 repair remains the only available genuine real-report
+repair/promotion trace. Its producer SHA is
+`3342d6764835f9b9a05eccc96cca11c45608f8bc`; it predates both this correction
+and the current final commit, so it proves integration compatibility but not
+causal current-SHA behavior. No fresh provider-backed Reuters/KPMG replay was
+available in this correction, and no publication or WordPress write occurred.
+
+**Verdict: PARTIAL / NO-GO for Step 3.** The hosted failures have targeted local
+corrections and the affected regression suites are green, but a new hosted run
+for the corrective commit and current-SHA live repair evidence remain required.
+Step 3 remains unstarted.
