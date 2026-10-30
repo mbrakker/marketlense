@@ -1368,3 +1368,18 @@ renderer-fix SHA, repeated selection effectiveness, or independent human sign-of
 E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready**. Full evidence and artifact paths are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+### Transactional claim repair verification — 2026-10-30 (`e486a84a`)
+
+The atomic regeneration boundary now accepts only deterministic, evidence-admitted
+claim proposals; target paths, protected fields, provenance and promotion remain
+code-owned. A fresh exact-five run at the preceding implementation SHA exposed a
+valid Algolia soft-copy leaf-removal compatibility defect; the targeted correction
+was replayed successfully for Algolia with validation/readiness pass and no
+unsupported or unresolved retained claim. The initial five-report run was only
+3/5 ready because KPMG failed the existing visual-authority coverage gate and
+Algolia failed before repair. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. The full evidence,
+artifact paths, exact metrics, and limitations are recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`. No publication,
+WordPress write, or ten-report cohort was performed.

@@ -7316,3 +7316,137 @@ errors, and the renderer defect is corrected deterministically. A fresh provider
 run at `62c848b6`, repeated selection evidence, independent human editorial sign-off,
 and broader Step 2 effectiveness remain open. Step 3 remains unstarted; no
 canonical claim promotion or WordPress publication occurred.
+
+#### Transactional claim repair contract and corrected Algolia replay — 2026-10-30 (`e486a84a`)
+
+This section records the transactional claim-repair implementation and the live
+replay that exposed and corrected its first production-path compatibility defect.
+The change is deliberately limited to the existing regeneration boundary. For an
+atomic single-claim scope, the model now returns the strict
+`regeneration_claim_repair_proposal` v1 contract: `action`, replacement text, and
+already-admitted evidence IDs. Deterministic code owns the target path, patch,
+provenance, protected fields, and promotion decision. Family/structural repairs
+continue to use the existing `regeneration_repair_decision` contract. Every
+proposal is checked for an exact envelope, an atomic allowed target, admitted and
+non-quarantined evidence IDs, and complete downstream validation before promotion.
+The outer orchestrator keeps the existing copy, integrity, grounding, editorial
+quality, and rollback gates.
+
+The first implementation also rejected a valid narrow safe-removal outcome. In the
+fresh exact-five run at `3342d676`, Algolia failed with
+`regeneration_repair_decision_invalid` / `claim_proposal_removal_not_permitted`.
+The model had returned removal for one existing soft-copy claim leaf while the
+planner's first strategy was `REGENERATE_ITEM`; the proposal boundary treated that
+combination as invalid even though the existing soft-copy safe-removal path could
+handle the exact leaf. The targeted correction in `e486a84a` permits removal only
+for an exact single claim leaf in `summary`, `expert_comment`, or `linkedin_post`.
+Non-atomic and root-level removal remains rejected, and the existing final
+validation and promotion gates remain authoritative. The focused regression suite
+now covers valid replacement, model-authored path/protected-field rejection,
+quarantined evidence, non-atomic removal rejection, valid soft-copy leaf removal,
+and exact-replacement no-op handling.
+
+##### Initial exact-five run at the transactional implementation SHA
+
+The run used the retained original PDFs and GPT-6 Luna High with isolated state,
+no publication or WordPress writes, and no operator intervention:
+
+```text
+C:\ml-p1-transactional-repair-20261030\frozen-reliability-xri__hqr\cohort_result.json
+producer SHA: 3342d6764835f9b9a05eccc96cca11c45608f8bc
+```
+
+The source hashes matched the frozen manifest. Results were terminal and mutually
+exclusive, but this run was not an acceptance pass:
+
+| Report | Terminal result | Calls | Input tokens | Output tokens | Cost | Seconds | Admission / repair detail |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| KPMG | failed: `visual_authority_coverage_insufficient` | 44 | 300,938 | 38,321 | $0.079150 | 518.811 | 3 targeted repairs; failed before final verified-facts materialization |
+| Reuters Institute | awaiting review; validation/readiness pass | 60 | 906,028 | 196,279 | $0.206087 | 1,255.135 | 7/7 admitted; 3 targeted repairs, 1 structured recovery |
+| Adjust | awaiting review; validation/readiness pass | 50 | 736,700 | 143,058 | $0.158849 | 1,012.325 | 6/6 admitted; 3 targeted repairs, 1 structured recovery |
+| Algolia | failed: `regeneration_repair_decision_invalid` | 54 | 804,139 | 119,985 | $0.148891 | 894.767 | 6/6 admitted; proposal removal rejected before repair |
+| Emplifi | awaiting review; validation/readiness pass | 56 | 776,334 | 135,089 | $0.158826 | 1,228.576 | 5/6 admitted; 1 candidate quarantined, 1 structured recovery |
+
+Aggregate: **264 calls**, **3,524,139 input tokens**, **632,732 output
+tokens**, **$0.751803**, and **4,909.614 seconds**. The run had two workflow
+failures and therefore does not establish five-report acceptance. The KPMG failure
+was the existing pre-artifact visual-authority coverage gate and was not caused by
+the atomic proposal contract. The Algolia failure was the reproducible contract
+compatibility defect fixed by `e486a84a`.
+
+Against the preceding accepted exact-five baseline at `750979af` (259 calls,
+3,319,653 input, 593,660 output, $0.714479, 4,399.016 seconds), the initial
+transactional run used **5 more calls**, **204,486 more input tokens**, **39,072
+more output tokens**, **$0.037324 (+5.23%)**, and **510.598 more seconds
+(+11.61%)**. This is provider/model and bounded-repair variability, not a claimed
+optimization or quality improvement; the current run also had two failures.
+
+##### Corrected Algolia replay
+
+The exact affected report was rerun in a fresh isolated worktree at `e486a84a`:
+
+```text
+C:\ml-p1-transactional-repair-20261030-algolia-rerun\frozen-reliability-px117eau\cohort_result.json
+```
+
+Algolia completed with `awaiting_review`, validation/readiness **pass**, no
+publication, no operator intervention, and no retained unsupported or unresolved
+claim. It made **54 provider calls**, used **942,868 input tokens** and **137,274
+output tokens**, cost **$0.176413**, and took **1,206.173 seconds**. It admitted
+**7/7** verified-facts candidates, quarantined none, and required no structured
+recovery or automatic repair. The changed behavior demonstrated by this replay is
+specifically that the valid exact soft-copy removal no longer aborts the report;
+the replay is not a corrected five-report cohort rerun.
+
+The corrected Algolia artifacts contain six final insights with source bindings:
+
+| Stable finding | PDF page | Independently checked support |
+| --- | ---: | --- |
+| `insight-agentic-search-deployment-and-plans` | 26 | 17% implemented; 61% planned within 12 months; total n=1,100 |
+| `insight-revenue-incentive` | 4 | 58% versus 49% critical revenue incentive comparison |
+| `insight-perceived-purchase-likelihood` | 12 | 63% respondent belief; population n=1,100 |
+| `insight-accelerated-search-investment` | 23 | Total 2025 adequate 53% versus Total 2024 51% |
+| `insight-agentic-adoption-considerations` | 27 | retailer control 86% top-two and 37% very influential |
+| `insight-search-development-approaches` | 22 | 49% third-party collaboration in Total 2025 |
+
+The original Algolia PDF SHA-256 is
+`d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50b`.
+Independent HTML inspection found no visible `verified-fact`, `evidence_id`,
+`claim_index`, `source_identity`, `pdf-sha256`, or `validation_run_id` tokens and
+confirmed the material numerical, population, period, and qualification fields.
+The existing non-rendered `marketbearing-build` HTML comment still contains build
+metadata including source and validation identifiers; it is not visible editorial
+content and was not changed in this task.
+
+##### CI and regression evidence
+
+The hosted run `41024885107` passed tests (8,264 passed, 1 skipped), both mutation
+partitions, and `release_evidence` at `b90a117d`. Its only prerequisite failure
+was a test fixture that returned a generic replacement for an atomic target; the
+fixture was corrected to return an explicit abstain so the existing safe-removal
+path was exercised. The latest `e486a84a` production/test correction still requires
+its own final hosted run after this evidence update.
+
+The latest local focused suite passed **366 tests in 57.06s** across transactional
+proposal, regeneration, candidate identity, report analysis, validation lineage,
+semantic residual, soft-copy, grounding-authority, and normal-mode regression
+modules. Type checking reported **0 tracked errors across 786 source files**;
+contract-schema, architecture-import, role-boundary, forbidden-patching, and
+formatting checks passed. The changed-file Ruff/format gates were already clean;
+the raw full-file Ruff command still reports unrelated pre-existing violations in
+the large regeneration module. No new LLM stage, service, database, publication
+write, or WordPress write was introduced.
+
+The retained raw traces for the older `287d6904` KPMG/Reuters failures were not
+present in the available local run roots, so those historical repairs are covered
+by deterministic regressions and the new transactional replay rather than claimed
+as a fresh raw-trace replay. This is a real evidence limitation.
+
+**Verdict: PARTIAL / NO-GO for Step 3.** The transactional claim-repair boundary,
+evidence admission, safe removal, promotion, and rollback protections are covered;
+the Algolia defect is corrected and live-replayed. The exact five at the initial
+implementation SHA was 3/5 ready with KPMG and Algolia failures, and the corrected
+replay covered Algolia only. A fresh five-report replay at `e486a84a`, retained raw
+KPMG/Reuters traces, and independent broader Step 2 effectiveness evidence remain
+open. Step 3 remains unstarted; no canonical claim promotion or WordPress
+publication occurred.
