@@ -16,8 +16,10 @@ text: |
   - Prior repair memory JSON: {{ prior_repair_memory_json }}
 
   Task:
-  Repair the named summary claim/field and return only the structured private
-  `repair_decision` envelope defined in the included contract.
+  Repair the named summary claim/field and return only the private response
+  required by the active schema. In claim or claim_map_item scope, return a
+  `claim_repair_proposal`; in family or structural scope, return the legacy
+  `repair_decision` envelope.
 
   Requirements:
   - Treat the current summary as failed copy, not source evidence. Use only

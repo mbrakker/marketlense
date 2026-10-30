@@ -18,7 +18,9 @@ text: |
 
   Task:
   Repair only the declared LinkedIn item/claim and return the structured
-  private `repair_decision` envelope defined in the included contract.
+  private response required by the active schema. In claim scope, return only
+  a `claim_repair_proposal`; in family or structural scope, return the legacy
+  `repair_decision` envelope defined in the included contract.
 
   Requirements:
   - Fix the listed failures directly.

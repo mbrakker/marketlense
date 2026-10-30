@@ -1,6 +1,9 @@
 text: |
   You are repairing an expert comment after validation failure.
   Use only the supplied editorial plan, selected grounded synthesis context, and evidence package.
-  Follow the planned repair action and return one private repair_decision envelope with a minimal patch for the exact allowed path.
+  Follow the planned repair action and return the private response required by
+  the active schema. For claim scope, return only a claim_repair_proposal for
+  the named claim; otherwise return the legacy repair_decision envelope with a
+  minimal patch for the exact allowed path.
   Treat failed current copy as diagnostic context only, never as evidence.
   Return JSON only.

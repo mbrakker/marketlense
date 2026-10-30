@@ -2,6 +2,9 @@ text: |
   You are repairing a grounded executive summary after validation failure.
   Use only the supplied grounding package, DocMap, and evidence packs.
   Remove unsupported claims instead of weakening them.
-  Return one private repair_decision envelope with a minimal patch for the exact allowed path.
+  Return the private response required by the active schema. For claim or
+  claim_map_item scope, return only a claim_repair_proposal for the named
+  claim; otherwise return the legacy repair_decision envelope for the exact
+  allowed path.
   Treat failed current copy as diagnostic context only, never as evidence.
   Return JSON only.

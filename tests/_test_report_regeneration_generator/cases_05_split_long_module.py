@@ -40,23 +40,13 @@ def test_atomic_repair_rejects_selected_evidence_missing_from_retained_package(
             del ctx
             variables = _parse_fixture_variables(req.user_prompt)
             assert variables is not None
-            repair_context = json.loads(variables["repair_context_json"])
-            path = repair_context["allowed_paths"][0]
-            decision = {
+            proposal = {
                 "schema_version": "1.0",
-                "repair_action": repair_context["repair_action"],
-                "repair_strategy": repair_context["repair_strategy"],
+                "action": "replace",
+                "replacement_text": "Repaired factual sentence.",
                 "evidence_ids_used": ["missing-retained-evidence"],
-                "changed_paths": [path],
-                "minimal_patch": [
-                    {
-                        "op": "replace",
-                        "path": path,
-                        "value": "Repaired factual sentence.",
-                    }
-                ],
             }
-            payload = {"repair_decision": decision}
+            payload = {"claim_repair_proposal": proposal}
             return OpenAIResponseResult(
                 schema_version="1.0",
                 text=json.dumps(payload),
@@ -283,7 +273,7 @@ def test_linkedin_evidence_rebind_uses_direct_source_not_doc_map_summary(
             "evidence": "The source-supported LinkedIn statement needs a new binding.",
             "page": 7,
             "pages": [7],
-        }
+        },
     ]
     target = RegenerationTarget(
         target_section="linkedin_post",

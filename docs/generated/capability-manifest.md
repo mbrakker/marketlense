@@ -149,6 +149,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `src/schemas/publish_readiness.schema.json`
 - `src/schemas/quote_candidates_pack.schema.json`
 - `src/schemas/regeneration_candidate_audit.schema.json`
+- `src/schemas/regeneration_claim_repair_proposal.schema.json`
 - `src/schemas/regeneration_repair_decision.schema.json`
 - `src/schemas/scope_pack.schema.json`
 - `src/schemas/semantic_validation_output.schema.json`

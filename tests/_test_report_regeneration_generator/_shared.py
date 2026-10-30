@@ -91,6 +91,38 @@ def _legacy_repair_decision_response(req, result):
     )
 
 
+def _legacy_claim_repair_proposal_response(req, result):
+    """Adapt family fixtures to the narrow atomic claim proposal contract."""
+
+    legacy = _legacy_repair_decision_response(req, result)
+    decision = legacy.parsed_json["repair_decision"]
+    path = decision["minimal_patch"][0]["path"]
+    replacement = _legacy_claim_replacement_value(result.parsed_json, path)
+    if replacement is _MISSING_REPAIR_FIXTURE_PATH:
+        replacement = decision["minimal_patch"][0]["value"]
+    replacement = str(replacement or "").strip()
+    proposal = {
+        "schema_version": "1.0",
+        "action": "replace" if replacement else "abstain",
+        "replacement_text": replacement,
+        "evidence_ids_used": list(decision["evidence_ids_used"]) if replacement else [],
+    }
+    payload = {"claim_repair_proposal": proposal}
+    return OpenAIResponseResult(
+        schema_version=result.schema_version,
+        text=json.dumps(payload, ensure_ascii=False),
+        parsed_json=payload,
+        request_id=result.request_id,
+    )
+
+
+def _legacy_claim_replacement_value(payload, path):
+    # Keep deliberately overlong fixture output intact so the production
+    # single-claim validator exercises its rejection path.
+    match = re.fullmatch(r"(.+)\[claim_index=\d+\]", path)
+    return _legacy_repair_path_value(payload, match.group(1) if match else path)
+
+
 def _legacy_repair_path_value(payload, path):
     tokens = re.findall(r"([^.[\]]+)(?:\[([^\]]+)\])?", path)
     if not tokens:

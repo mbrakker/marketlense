@@ -1,8 +1,14 @@
 text: |
-  Return one JSON object matching the `repair_decision` response schema. In this
-  call diagnose one supplied validator rule and return its smallest valid
-  patch. Do not make another critique call or rewrite a family when an atomic
-  path exists.
+  Return the private response required by the active response schema. When
+  `claim_repair_scope_json.mode` is `claim` or `claim_map_item`, return only
+  the `claim_repair_proposal` object: action (`replace`, `remove`, or
+  `abstain`), replacement text, and retained evidence IDs. Do not return a
+  path, patch, artifact family, provenance, or protected-field metadata. For
+  family or structural scopes, return one JSON object matching the legacy
+  `repair_decision` response schema. In either mode, diagnose one supplied
+  validator rule and make the smallest valid change. Do not make another
+  critique call or rewrite a family when an atomic path exists.
+  For the legacy family or structural schema only:
   - Echo the planned action and strategy. Change only `allowed_paths`; the
     generator derives and checks the protected leaves.
   - `allowed_paths` is the exact writable leaf set. `changed_paths` must equal
@@ -12,11 +18,12 @@ text: |
     Never replace a whole insight, metric, quote, or other object.
   - Return each replacement directly in `value` as a string scalar. Do not
     encode JSON inside the string or return an object or array.
+  For both response schemas:
   - Cite only supporting IDs from `repair_context_json.allowed_evidence_ids`.
     Failed/current/rejected copy and retry memory are diagnostic, never evidence.
-  - Return replacement public text and retained evidence IDs only. Do not
-    provide provenance, claim classifications, spans, or pages; the generator
-    carries forward claim classification and builds canonical provenance.
+  - Do not provide provenance, claim classifications, spans, or pages; the
+    generator carries forward claim classification and builds canonical
+    provenance.
   - Use prior deltas and fingerprints to avoid repeating rejected
     strategy/evidence combinations or candidates on unchanged inputs, and
     account for introduced failures.

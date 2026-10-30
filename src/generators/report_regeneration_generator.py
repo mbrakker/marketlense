@@ -180,6 +180,17 @@ class _SoftCopyClaimRepair:
 
 
 @dataclass(frozen=True)
+class _ClaimRepairProposal:
+    """The only provider-authored content allowed for an atomic claim repair."""
+
+    action: str
+    replacement_text: str
+    evidence_ids_used: List[str]
+    schema_version: str = "1.0"
+    no_op: bool = False
+
+
+@dataclass(frozen=True)
 class _RegenerationHandler:
     target_section: str
     prompt_namespaces: tuple[str, ...]
@@ -2327,6 +2338,9 @@ def _render_regeneration_model(
                 _repair_memory_prompt_payload(request.repair_memory)
             ),
         }
+    atomic_claim_repair = repair_call and _is_atomic_claim_repair_scope(
+        variables, active_target
+    )
     prepared = prepare_prompt_bundle(
         namespace=namespace,
         settings=request.settings,
@@ -2374,18 +2388,56 @@ def _render_regeneration_model(
         report_name=request.report_name,
         source_url=request.source_url,
         prepared_prompt_bundle=prepared,
-        response_contract_name=("regeneration_repair_decision" if repair_call else ""),
-        response_contract_identity_version="v5",
+        response_contract_name=(
+            "regeneration_claim_repair_proposal"
+            if atomic_claim_repair
+            else ("regeneration_repair_decision" if repair_call else "")
+        ),
+        response_contract_identity_version=("v1" if atomic_claim_repair else "v5"),
     )
     if not repair_call:
         return result
-    decision = _validated_repair_decision(
-        result.get("repair_decision"),
-        execution=execution,
-        current_artifacts=_current_repair_artifacts(execution.state),
-        grounding_package=decision_grounding,
-        target=active_target,
-    )
+    claim_action = ""
+    claim_replacement_text = ""
+    if atomic_claim_repair:
+        proposal = _validated_claim_repair_proposal(
+            result.get("claim_repair_proposal"),
+            execution=execution,
+            grounding_package=decision_grounding,
+            target=active_target,
+        )
+        claim_action = proposal.action
+        claim_replacement_text = proposal.replacement_text
+        if proposal.action in {"abstain", "remove"}:
+            return {
+                "_claim_repair_action": proposal.action,
+                "_claim_repair_replacement_text": proposal.replacement_text,
+                "_claim_repair_no_op": proposal.no_op,
+            }
+        path = active_target.allowed_paths[0]
+        decision_payload = {
+            "schema_version": proposal.schema_version,
+            "evidence_ids_used": proposal.evidence_ids_used,
+            "changed_paths": [path],
+            "minimal_patch": [
+                {"op": "replace", "path": path, "value": proposal.replacement_text}
+            ],
+        }
+        decision = _validated_repair_decision(
+            decision_payload,
+            execution=execution,
+            current_artifacts=_current_repair_artifacts(execution.state),
+            grounding_package=decision_grounding,
+            target=active_target,
+        )
+    else:
+        decision = _validated_repair_decision(
+            result.get("repair_decision"),
+            execution=execution,
+            current_artifacts=_current_repair_artifacts(execution.state),
+            grounding_package=decision_grounding,
+            target=active_target,
+        )
     patched_artifacts = _apply_repair_decision_patch(
         current_artifacts=_current_repair_artifacts(execution.state),
         decision=decision,
@@ -2434,9 +2486,24 @@ def _render_regeneration_model(
             root_value = replacement
     else:
         root_value = patched_artifacts[root_key]
+    if atomic_claim_repair and claim_action == "replace":
+        if (
+            root_key == "summary"
+            and isinstance(root_value, dict)
+            and re.search(r"\[claim_index=\d+\]$", active_target.allowed_paths[0])
+        ):
+            field_match = re.match(
+                r"^summary\.([^.\[]+)", active_target.allowed_paths[0]
+            )
+            if field_match:
+                claim_replacement_text = _s(root_value.get(field_match.group(1)))
+        elif isinstance(root_value, str):
+            claim_replacement_text = root_value
     return {
         root_key: root_value,
         "_repair_decision": decision,
+        "_claim_repair_action": claim_action,
+        "_claim_repair_replacement_text": claim_replacement_text,
     }
 
 
@@ -2634,6 +2701,23 @@ def _active_repair_target(
     )
 
 
+def _is_atomic_claim_repair_scope(
+    variables: Dict[str, Any], target: RegenerationTarget
+) -> bool:
+    """Return whether this provider call is limited to one retained claim leaf."""
+
+    raw_scope = variables.get("claim_repair_scope_json")
+    try:
+        scope = json.loads(raw_scope) if raw_scope else {}
+    except (TypeError, ValueError):
+        scope = {}
+    return bool(
+        isinstance(scope, dict)
+        and scope.get("mode") in {"claim", "claim_map_item"}
+        and len(target.allowed_paths) == 1
+    )
+
+
 def _current_repair_artifacts(state: _RegenerationState) -> Dict[str, Any]:
     return {
         "summary": deepcopy(state.summary),
@@ -2705,6 +2789,112 @@ def _repair_decision_error(
         message="Model repair decision or minimal patch failed deterministic validation.",
         retryable=False,
         context=context,
+    )
+
+
+def _validated_claim_repair_proposal(
+    payload: object,
+    *,
+    execution: _RegenerationHandlerExecution,
+    grounding_package: Dict[str, Any],
+    target: RegenerationTarget | None = None,
+) -> _ClaimRepairProposal:
+    """Validate the narrow provider contract for one claim-level repair.
+
+    The provider supplies wording and selected retained evidence only. Target
+    identity, patch paths, provenance shape, and protected fields remain owned
+    by deterministic regeneration code.
+    """
+
+    if not isinstance(payload, dict):
+        raise _repair_decision_error(execution, "claim_proposal_missing")
+    expected_keys = {
+        "schema_version",
+        "action",
+        "replacement_text",
+        "evidence_ids_used",
+    }
+    if set(payload) != expected_keys:
+        raise _repair_decision_error(execution, "claim_proposal_contract_invalid")
+    schema_version = payload.get("schema_version")
+    action = payload.get("action")
+    replacement_text = payload.get("replacement_text")
+    evidence_ids = payload.get("evidence_ids_used")
+    if (
+        not isinstance(schema_version, str)
+        or not schema_version.strip()
+        or action not in {"replace", "remove", "abstain"}
+        or not isinstance(replacement_text, str)
+        or not isinstance(evidence_ids, list)
+        or any(
+            not isinstance(value, str) or not value.strip() for value in evidence_ids
+        )
+        or len(evidence_ids) != len(set(evidence_ids))
+    ):
+        raise _repair_decision_error(execution, "claim_proposal_contract_invalid")
+    normalized_evidence_ids = [value.strip() for value in evidence_ids]
+    target = target or execution.target
+    if action in {"remove", "abstain"}:
+        if replacement_text.strip() or normalized_evidence_ids:
+            raise _repair_decision_error(
+                execution, "claim_proposal_action_payload_invalid"
+            )
+        if action == "remove" and target.repair_action not in {
+            "REMOVE_CLAIM",
+            "ABSTAIN",
+        }:
+            raise _repair_decision_error(
+                execution, "claim_proposal_removal_not_permitted"
+            )
+        return _ClaimRepairProposal(
+            action=action,
+            replacement_text="",
+            evidence_ids_used=[],
+            schema_version=schema_version.strip(),
+        )
+    if not replacement_text.strip() or not normalized_evidence_ids:
+        raise _repair_decision_error(execution, "claim_proposal_replacement_missing")
+    package_ids = {
+        value.strip()
+        for value in grounding_package.get("evidence_ids", [])
+        if isinstance(value, str) and value.strip()
+    }
+    quarantined_ids = {
+        value.strip()
+        for value in [
+            *target.quarantined_evidence_ids,
+            *grounding_package.get("quarantined_evidence_ids", []),
+        ]
+        if isinstance(value, str) and value.strip()
+    }
+    if not set(normalized_evidence_ids) <= package_ids or set(
+        normalized_evidence_ids
+    ).intersection(quarantined_ids):
+        raise _repair_decision_error(execution, "evidence_not_retained_or_quarantined")
+    if len(target.allowed_paths) != 1:
+        raise _repair_decision_error(execution, "claim_proposal_target_not_atomic")
+    state = getattr(execution, "state", None)
+    if state is not None:
+        found, current = _read_repair_path(
+            _current_repair_artifacts(state), target.allowed_paths[0]
+        )
+        if (
+            found
+            and isinstance(current, str)
+            and current.strip() == replacement_text.strip()
+        ):
+            return _ClaimRepairProposal(
+                action="abstain",
+                replacement_text="",
+                evidence_ids_used=[],
+                schema_version=schema_version.strip(),
+                no_op=True,
+            )
+    return _ClaimRepairProposal(
+        action="replace",
+        replacement_text=replacement_text.strip(),
+        evidence_ids_used=normalized_evidence_ids,
+        schema_version=schema_version.strip(),
     )
 
 
@@ -4111,43 +4301,52 @@ def _regenerate_summary_claim_map_items(
                 "editorial_plan_json": _dump_json(execution.state.editorial_plan),
             },
         )
-        repaired_summary = result.get("summary")
-        repaired_items = (
-            repaired_summary.get("claim_evidence_map")
-            if isinstance(repaired_summary, dict)
-            else None
-        )
-        if not isinstance(repaired_items, list) or not repaired_items:
-            raise AppError(
-                code="regeneration_target_item_unresolved",
-                message="Targeted summary claim repair returned no claim item.",
-                retryable=False,
-                context={"report_id": execution.runtime.request.report_id},
-            )
-        stable_id = _s(claim.get("id") or claim.get("claim_id")).strip()
-        if stable_id:
-            matching = [
-                item
-                for item in repaired_items
-                if isinstance(item, dict)
-                and _s(item.get("id") or item.get("claim_id")).strip() == stable_id
-            ]
-        elif (
-            len(repaired_items) == len(claims)
-            and 0 <= index < len(repaired_items)
-            and isinstance(repaired_items[index], dict)
-        ):
-            matching = [repaired_items[index]]
+        claim_action = _s(result.get("_claim_repair_action")).strip()
+        if claim_action == "abstain":
+            continue
+        if claim_action == "remove":
+            claims.pop(index)
+            continue
+        if claim_action == "replace":
+            repaired_text = _s(result.get("_claim_repair_replacement_text")).strip()
         else:
-            matching = []
-        if len(matching) != 1:
-            raise AppError(
-                code="regeneration_target_item_unresolved",
-                message="Targeted summary claim repair returned an ambiguous item.",
-                retryable=False,
-                context={"report_id": execution.runtime.request.report_id},
+            repaired_summary = result.get("summary")
+            repaired_items = (
+                repaired_summary.get("claim_evidence_map")
+                if isinstance(repaired_summary, dict)
+                else None
             )
-        repaired_text = _s(matching[0].get("claim")).strip()
+            if not isinstance(repaired_items, list) or not repaired_items:
+                raise AppError(
+                    code="regeneration_target_item_unresolved",
+                    message="Targeted summary claim repair returned no claim item.",
+                    retryable=False,
+                    context={"report_id": execution.runtime.request.report_id},
+                )
+            stable_id = _s(claim.get("id") or claim.get("claim_id")).strip()
+            if stable_id:
+                matching = [
+                    item
+                    for item in repaired_items
+                    if isinstance(item, dict)
+                    and _s(item.get("id") or item.get("claim_id")).strip() == stable_id
+                ]
+            elif (
+                len(repaired_items) == len(claims)
+                and 0 <= index < len(repaired_items)
+                and isinstance(repaired_items[index], dict)
+            ):
+                matching = [repaired_items[index]]
+            else:
+                matching = []
+            if len(matching) != 1:
+                raise AppError(
+                    code="regeneration_target_item_unresolved",
+                    message="Targeted summary claim repair returned an ambiguous item.",
+                    retryable=False,
+                    context={"report_id": execution.runtime.request.report_id},
+                )
+            repaired_text = _s(matching[0].get("claim")).strip()
         if not repaired_text:
             raise AppError(
                 code="regeneration_target_item_unresolved",
@@ -4335,11 +4534,30 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     },
                 )
                 repaired_summary = result.get("summary")
+                claim_action = _s(result.get("_claim_repair_action")).strip()
                 repaired_text = (
-                    _s(repaired_summary.get(field))
-                    if isinstance(repaired_summary, dict)
-                    else ""
+                    _s(result.get("_claim_repair_replacement_text"))
+                    if claim_action == "replace"
+                    else (
+                        _s(repaired_summary.get(field))
+                        if isinstance(repaired_summary, dict)
+                        else ""
+                    )
                 )
+                if claim_action == "abstain":
+                    replacement = (
+                        repair.text if result.get("_claim_repair_no_op") else None
+                    )
+                    replacements[repair.claim.claim_id] = replacement
+                    shared_claim_replacements[repair.claim.claim_id] = replacement
+                    if replacement is None:
+                        _mark_soft_copy_claim_removed(execution, repair)
+                    continue
+                if claim_action == "remove":
+                    replacements[repair.claim.claim_id] = None
+                    shared_claim_replacements[repair.claim.claim_id] = None
+                    _mark_soft_copy_claim_removed(execution, repair)
+                    continue
                 decision = result.get("_repair_decision")
                 if not isinstance(
                     decision, RepairDecision
@@ -6051,7 +6269,24 @@ def _handle_expert_comment_regeneration(
                         "grounding_package_json": _dump_json(claim_grounding),
                     },
                 )
-                repaired_text = _s(result.get("expert_comment"))
+                claim_action = _s(result.get("_claim_repair_action")).strip()
+                if claim_action == "abstain":
+                    replacement = (
+                        repair.text if result.get("_claim_repair_no_op") else None
+                    )
+                    replacements[repair.claim.claim_id] = replacement
+                    if replacement is None:
+                        _mark_soft_copy_claim_removed(execution, repair)
+                    continue
+                if claim_action == "remove":
+                    replacements[repair.claim.claim_id] = None
+                    _mark_soft_copy_claim_removed(execution, repair)
+                    continue
+                repaired_text = _s(
+                    result.get("_claim_repair_replacement_text")
+                    if claim_action == "replace"
+                    else result.get("expert_comment")
+                )
                 decision = result.get("_repair_decision")
                 if not isinstance(
                     decision, RepairDecision
@@ -6281,8 +6516,23 @@ def _handle_linkedin_post_regeneration(
                     "grounding_package_json": _dump_json(claim_grounding),
                 },
             )
+            claim_action = _s(result.get("_claim_repair_action")).strip()
+            if claim_action == "abstain":
+                replacement = repair.text if result.get("_claim_repair_no_op") else None
+                replacements[repair.claim.claim_id] = replacement
+                if replacement is None:
+                    _mark_soft_copy_claim_removed(execution, repair)
+                continue
+            if claim_action == "remove":
+                replacements[repair.claim.claim_id] = None
+                _mark_soft_copy_claim_removed(execution, repair)
+                continue
             repaired_text = strip_linkedin_inline_reference_ids(
-                _s(result.get("linkedin_post"))
+                _s(
+                    result.get("_claim_repair_replacement_text")
+                    if claim_action == "replace"
+                    else result.get("linkedin_post")
+                )
             )
             decision = result.get("_repair_decision")
             if not isinstance(decision, RepairDecision) or not _valid_claim_replacement(

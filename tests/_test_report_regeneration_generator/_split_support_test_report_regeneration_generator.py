@@ -85,6 +85,7 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
 )
 from src.utils.errors import AppError
 from ._shared import (
+    _legacy_claim_repair_proposal_response,
     _legacy_repair_decision_response,
     _parse_fixture_variables,
 )
@@ -282,6 +283,10 @@ class _FakeOpenAIClient:
 
     def openai_chat_json(self, req, ctx):
         result = self._legacy_chat_json(req, ctx)
+        if "regeneration_claim_repair_proposal" in (
+            req.structured_output_schema_identity or ""
+        ):
+            return _legacy_claim_repair_proposal_response(req, result)
         if "regeneration_repair_decision" not in (
             req.structured_output_schema_identity or ""
         ):

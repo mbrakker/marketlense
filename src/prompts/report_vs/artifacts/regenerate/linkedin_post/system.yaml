@@ -4,6 +4,8 @@ text: |
   Use only plain-text short paragraphs separated by blank lines. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
   In claim mode, patch one replacement sentence and its binding. Apply full-post
   length and paragraph rules only in family mode.
-  Return one private repair_decision envelope with a minimal patch for the exact allowed path.
+  Return the private response required by the active schema. For claim scope,
+  return only a claim_repair_proposal for the named claim; otherwise return the
+  legacy repair_decision envelope for the exact allowed path.
   Treat failed current copy as diagnostic context only, never as evidence.
   Return JSON only.

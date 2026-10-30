@@ -631,7 +631,10 @@ def _full_chain_chat_response_factory(
                 id="fixture-chat-rank-candidates",
             )
         else:
-            if schema_name == "regeneration_repair_decision_v5":
+            if schema_name in {
+                "regeneration_repair_decision_v5",
+                "regeneration_claim_repair_proposal_v1",
+            }:
                 repair_context = _json_prompt_value(call, "Repair context JSON")
                 if not isinstance(repair_context, dict):
                     raise AssertionError("repair fixture is missing its typed context")
@@ -653,25 +656,38 @@ def _full_chain_chat_response_factory(
                         else ""
                     )
                 )
-                # These fixture repairs are recommendations, not claims that
-                # rely on a cited source span. Do not invent lineage IDs from
-                # the wider prompt package.
-                used_ids: list[str] = []
-                decision = {
-                    "schema_version": "1.0",
-                    "repair_action": repair_context["repair_action"],
-                    "repair_strategy": repair_context["repair_strategy"],
-                    "evidence_ids_used": used_ids if replacement else [],
-                    "changed_paths": [path],
-                    "minimal_patch": [
-                        {
-                            "op": "replace",
-                            "path": path,
-                            "value": replacement,
-                        }
-                    ],
-                }
-                payload = {"repair_decision": decision}
+                if schema_name == "regeneration_claim_repair_proposal_v1":
+                    # The narrow proposal must still cite one admitted ID for
+                    # a replacement; the application validates it against the
+                    # scoped grounding package.
+                    used_ids = list(repair_context.get("allowed_evidence_ids") or [])
+                    proposal = {
+                        "schema_version": "1.0",
+                        "action": "replace" if replacement else "abstain",
+                        "replacement_text": replacement,
+                        "evidence_ids_used": used_ids[:1] if replacement else [],
+                    }
+                    payload = {"claim_repair_proposal": proposal}
+                else:
+                    # These fixture repairs are recommendations, not claims
+                    # that rely on a cited source span. Do not invent lineage
+                    # IDs from the wider prompt package.
+                    used_ids = []
+                    decision = {
+                        "schema_version": "1.0",
+                        "repair_action": repair_context["repair_action"],
+                        "repair_strategy": repair_context["repair_strategy"],
+                        "evidence_ids_used": used_ids if replacement else [],
+                        "changed_paths": [path],
+                        "minimal_patch": [
+                            {
+                                "op": "replace",
+                                "path": path,
+                                "value": replacement,
+                            }
+                        ],
+                    }
+                    payload = {"repair_decision": decision}
                 response = FakeOpenAIResult(
                     output_text=json.dumps(payload),
                     usage={
@@ -679,7 +695,11 @@ def _full_chain_chat_response_factory(
                         "output_tokens": 10,
                         "total_tool_calls": 0,
                     },
-                    id="fixture-regeneration-repair-decision",
+                    id=(
+                        "fixture-regeneration-claim-proposal"
+                        if schema_name == "regeneration_claim_repair_proposal_v1"
+                        else "fixture-regeneration-repair-decision"
+                    ),
                 )
             else:
                 model_call = dict(call)
@@ -687,7 +707,10 @@ def _full_chain_chat_response_factory(
                 response = _full_chain_model_response(model_call)
                 payload = json.loads(response.output_text)
             family = schema_name.removeprefix("artifact_").removesuffix("_v1")
-            if schema_name == "regeneration_repair_decision_v5":
+            if schema_name in {
+                "regeneration_repair_decision_v5",
+                "regeneration_claim_repair_proposal_v1",
+            }:
                 pass
             elif reproduce_ias_soft_copy and family in soft_copy_calls:
                 soft_copy_calls[family] += 1

@@ -625,13 +625,11 @@ def test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row(
             path = "summary.executive_summary[claim_index=1]"
             assert repair_context["allowed_paths"] == [path]
             payload = {
-                "repair_decision": {
+                "claim_repair_proposal": {
                     "schema_version": "1.0",
-                    "repair_action": repair_context["repair_action"],
-                    "repair_strategy": repair_context["repair_strategy"],
+                    "action": "abstain",
+                    "replacement_text": "",
                     "evidence_ids_used": [],
-                    "changed_paths": [path],
-                    "minimal_patch": [{"op": "replace", "path": path, "value": ""}],
                 }
             }
             return OpenAIResponseResult(
@@ -851,7 +849,7 @@ def test_summary_claim_map_repair_rejects_model_patches_to_public_copy_siblings(
             prompt_client=_FakePromptClient(),
         )
 
-    assert error.value.context["reason"] == "changed_path_outside_allowed_paths"
+    assert error.value.code == "artifact_structured_output_invalid"
     assert len(openai_client.calls) == 1
 
 

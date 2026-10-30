@@ -372,6 +372,11 @@ def render_artifact_json_model(
                             response_contract_name == "regeneration_repair_decision"
                             and isinstance(payload.get("repair_decision"), dict)
                         )
+                        or (
+                            response_contract_name
+                            == "regeneration_claim_repair_proposal"
+                            and isinstance(payload.get("claim_repair_proposal"), dict)
+                        )
                     )
                 )
             )
