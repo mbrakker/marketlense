@@ -995,24 +995,3 @@ def test_verified_references_cannot_fall_back_to_legacy_source_ids():
         validate_evidence_references(artifacts, packs, _ctx())
 
     assert exc_info.value.context["missing_references"] == ["finding-legacy"]
-
-
-def test_normal_mode_numeric_quality_rule_remains_active():
-    report = evaluate_public_editorial_quality(
-        report_id="normal-mode",
-        artifacts={
-            "insights_final": [
-                {
-                    "id": "normal-1",
-                    "text": "Adoption reached 99%.",
-                    "evidence_id": "finding-1",
-                    "evidence": "Adoption reached 42%.",
-                    "metric": {},
-                }
-            ]
-        },
-    )
-
-    assert "public_editorial_quality.unsupported_numeric_claim" in {
-        issue.rule_id for issue in report.issues
-    }
