@@ -7747,3 +7747,40 @@ PARTIAL / NO-GO for overall Step 3 readiness.** Transactional repair remains
 unexercised live, broader repair effectiveness and independent human editorial
 acceptance remain open, and no canonical claim promotion or WordPress
 publication occurred.
+
+#### Hosted regression correction — 2026-10-30 (`0d97c913`)
+
+The first hosted run after the documentation/live-replay commit exposed four
+existing-suite regressions at the new effective-factual boundary: an unchanged
+interpretive sibling carried an evidence ID but no persisted source-span
+metadata, and the added identity regressions pushed one split test module over
+the repository's 1,000-line ownership threshold. Mutation partitions and all
+static gates were already green. The production correction is narrow:
+semantic/evidence validation still applies to material evidence-bound content,
+but missing source-span metadata is tolerated only for an unchanged
+interpretive/recommendation representation; source spans supplied for it are
+still checked. Factual claims, new claims, and any claim with repair lineage
+remain strict and fail closed when canonical spans are absent. The three
+identity tests were moved to a new existing-facade split module; no assertion
+or production identity behavior changed.
+
+The exact focused repair/validation command then passed **379 tests in
+54.14s**. Changed-file Ruff and formatting, architecture-import, role-I/O,
+forbidden-patching, contract-schema, and full-repository mypy gates passed.
+The follow-up hosted run was `41126623405` at `0d97c913`:
+
+* `tests`: **8,286 passed, 1 skipped**;
+* `mutation (0)`, `mutation (1)`, and `release_evidence`: **passed**;
+* no provider calls, canonical artifact mutation, publication, or WordPress
+  write were introduced by the correction.
+
+This closes the demonstrated CI compatibility defect without weakening the
+material repaired-claim guard. The live Reuters producer remains
+`b579f8e0`; this hosted result does not change the live disposition:
+
+**LIVE WORKFLOW PASS — TRANSACTIONAL REPAIR NOT EXERCISED**
+
+The overall status remains **PARTIAL / NO-GO for Step 3** because a current-SHA
+provider-backed failed-claim replacement and broader repair-effectiveness
+evidence were not available. No additional live replay was run merely to seek
+a repair failure.

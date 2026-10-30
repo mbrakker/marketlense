@@ -1451,3 +1451,18 @@ source-fidelity evidence, not live repair-success evidence. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. Full metrics, insight ledger, paths, and limitations
 are recorded in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Hosted regression correction — 2026-10-30 (`0d97c913`):** The first hosted
+run after the replay documentation exposed four existing-suite compatibility
+failures: unchanged interpretive siblings with legacy evidence IDs but no
+persisted spans, plus the long-test-file ownership threshold. The narrow fix
+keeps semantic/evidence validation for material content, requires source spans
+for factual/new/repaired claims, and preserves the prior valid unchanged
+interpretive representation; the three identity regressions moved to a new
+split facade module. The exact focused suite passed 379 tests. Hosted run
+`41126623405` then passed **8,286 tests with 1 skip**, both mutation partitions,
+and `release_evidence`. No provider or publication work was performed by this
+correction. The live Reuters result remains **LIVE WORKFLOW PASS —
+TRANSACTIONAL REPAIR NOT EXERCISED**; E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. See the
+Step 2 quality report for the exact failure, fix, and limits.
