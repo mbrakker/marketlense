@@ -1416,3 +1416,10 @@ retained Reuters repair remains pre-correction evidence; no current-SHA
 provider replay or publication write occurred. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready** pending the new hosted run and live repair evidence.
+
+**Evidence update — 2026-10-30 (corrective hosted CI):** Commit
+`5bf15d69471eb6a6592a4f046b9381b0a8001a8d` passed hosted run `41115544716`
+end-to-end: `ci_start`, tests, both mutation partitions, and `release_evidence`
+were green. This closes the prior hosted-CI failures; no fresh provider-backed
+real-report replay was available, so E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

@@ -7627,3 +7627,14 @@ available in this correction, and no publication or WordPress write occurred.
 corrections and the affected regression suites are green, but a new hosted run
 for the corrective commit and current-SHA live repair evidence remain required.
 Step 3 remains unstarted.
+
+##### Corrective hosted run — 2026-10-30
+
+Commit `5bf15d69471eb6a6592a4f046b9381b0a8001a8d` was pushed to
+`codex/fix-retained-insight-evidence-validation`. Hosted CI run
+`41115544716` completed successfully: `ci_start`, `tests`, both mutation
+partitions, and `release_evidence` all passed. This closes the CI defects
+identified by run `41111279717`; it does not constitute a fresh provider-backed
+real-report replay. The retained Reuters repair trace remains pre-correction,
+so the Step 3 verdict stays **PARTIAL / NO-GO** pending current-SHA live repair
+evidence.
