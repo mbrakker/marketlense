@@ -233,7 +233,9 @@ def test_interpretive_numeric_repair_cannot_bypass_candidate_factual_gate() -> N
     assert any(issue.rule_id == "regeneration_claim_support" for issue in result.issues)
 
 
-@pytest.mark.parametrize("binding_failure", ["missing", "outside_selection", "quarantined"])
+@pytest.mark.parametrize(
+    "binding_failure", ["missing", "outside_selection", "quarantined"]
+)
 def test_interpretive_material_premise_requires_repair_lineage(
     binding_failure: str,
 ) -> None:
@@ -286,9 +288,13 @@ def test_interpretive_material_premise_requires_repair_lineage(
     assert not result.passed
     messages = [issue.message for issue in result.issues]
     if binding_failure == "missing":
-        assert any("missing repair-selection lineage" in message for message in messages)
+        assert any(
+            "missing repair-selection lineage" in message for message in messages
+        )
     elif binding_failure == "outside_selection":
-        assert any("outside its retained repair selection" in message for message in messages)
+        assert any(
+            "outside its retained repair selection" in message for message in messages
+        )
     else:
         assert any("references quarantined evidence" in message for message in messages)
 

@@ -238,8 +238,10 @@ def _claim_requires_factual_validation(
     if classification == "factual":
         return True
     if classification in {"interpretive", "recommendation"}:
-        return evidence_bound or kind in {"numeric", "quotation", "causal"} or bool(
-            _COMPARATIVE_RE.search(text)
+        return (
+            evidence_bound
+            or kind in {"numeric", "quotation", "causal"}
+            or bool(_COMPARATIVE_RE.search(text))
         )
     return _factual(kind)
 

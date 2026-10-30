@@ -255,9 +255,7 @@ def test_promoted_claim_reuse_is_restart_safe_for_partial_promotion(tmp_path) ->
         "validation_identity": None,
         "lineage": None,
     }
-    candidate_package["package_hash"] = claim_validation_package_hash(
-        candidate_package
-    )
+    candidate_package["package_hash"] = claim_validation_package_hash(candidate_package)
 
     def _store(pack_name: str, payload: dict) -> str:
         return report_analysis_store_service.store_pack(
@@ -300,23 +298,29 @@ def test_promoted_claim_reuse_is_restart_safe_for_partial_promotion(tmp_path) ->
     assert not (
         tmp_path / "out" / runtime.report_name / "report_analysis" / "validation.json"
     ).exists()
-    assert _load_promoted_claim_validation_for_reuse(
-        runtime=runtime,
-        dependencies=fresh_dependencies,
-        expected_artifact_hash=sha256_json(persisted_artifacts),
-        ctx=runtime.ctx,
-    ) == candidate_package
+    assert (
+        _load_promoted_claim_validation_for_reuse(
+            runtime=runtime,
+            dependencies=fresh_dependencies,
+            expected_artifact_hash=sha256_json(persisted_artifacts),
+            ctx=runtime.ctx,
+        )
+        == candidate_package
+    )
 
     # Simulate interruption after a later artifact replacement while the old
     # promoted package remains on disk.  A new process must not bind the stale
     # package to the replacement artifact set.
     _store("artifacts", original)
-    assert _load_promoted_claim_validation_for_reuse(
-        runtime=runtime,
-        dependencies=fresh_dependencies,
-        expected_artifact_hash=sha256_json(original),
-        ctx=runtime.ctx,
-    ) is None
+    assert (
+        _load_promoted_claim_validation_for_reuse(
+            runtime=runtime,
+            dependencies=fresh_dependencies,
+            expected_artifact_hash=sha256_json(original),
+            ctx=runtime.ctx,
+        )
+        is None
+    )
 
 
 @pytest.mark.parametrize(
