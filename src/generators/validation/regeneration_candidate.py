@@ -831,6 +831,11 @@ def _validate_factual_soft_copy_claim(
                 ),
             )
         )
+    require_source_span_provenance = (
+        claim.classification == "factual"
+        or original is None
+        or bool(claim.repaired_from_claim_id)
+    )
     for evidence_id in claim.evidence_ids:
         canonical = canonical_spans.get(evidence_id.casefold(), [])
         claimed_spans = [
@@ -839,7 +844,7 @@ def _validate_factual_soft_copy_claim(
             if str(span.get("evidence_id") or "").strip().casefold()
             == evidence_id.casefold()
         ]
-        if canonical and not claimed_spans:
+        if canonical and not claimed_spans and require_source_span_provenance:
             issues.append(
                 _source_page_issue(
                     _EvidenceRecord(
