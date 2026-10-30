@@ -2843,9 +2843,18 @@ def _validated_claim_repair_proposal(
             "REMOVE_CLAIM",
             "ABSTAIN",
         }:
-            raise _repair_decision_error(
-                execution, "claim_proposal_removal_not_permitted"
+            scoped_soft_copy_removal = (
+                target.target_section in {"summary", "expert_comment", "linkedin_post"}
+                and len(target.allowed_paths) == 1
+                and re.fullmatch(
+                    r".+\[claim_index=\d+\]", target.allowed_paths[0]
+                )
+                is not None
             )
+            if not scoped_soft_copy_removal:
+                raise _repair_decision_error(
+                    execution, "claim_proposal_removal_not_permitted"
+                )
         return _ClaimRepairProposal(
             action=action,
             replacement_text="",

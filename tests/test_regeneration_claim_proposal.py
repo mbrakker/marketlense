@@ -98,15 +98,32 @@ def test_claim_repair_proposal_rejects_quarantined_evidence():
     assert captured.value.context["reason"] == "evidence_not_retained_or_quarantined"
 
 
-def test_claim_repair_proposal_rejects_removal_when_planner_did_not_allow_it():
+def test_claim_repair_proposal_rejects_removal_for_non_atomic_target():
+    execution = _execution()
+    execution.target = RegenerationTarget(
+        target_section="expert_comment",
+        issues=execution.target.issues,
+        allowed_paths=["expert_comment"],
+    )
     with pytest.raises(AppError) as captured:
         _validated_claim_repair_proposal(
             _proposal("remove"),
-            execution=_execution(),
+            execution=execution,
             grounding_package={"evidence_ids": [], "quarantined_evidence_ids": []},
         )
 
     assert captured.value.context["reason"] == "claim_proposal_removal_not_permitted"
+
+
+def test_claim_repair_proposal_allows_existing_soft_copy_leaf_removal():
+    proposal = _validated_claim_repair_proposal(
+        _proposal("remove"),
+        execution=_execution(),
+        grounding_package={"evidence_ids": [], "quarantined_evidence_ids": []},
+    )
+
+    assert proposal.action == "remove"
+    assert proposal.evidence_ids_used == []
 
 
 def test_claim_repair_proposal_treats_exact_replacement_as_a_no_op():
