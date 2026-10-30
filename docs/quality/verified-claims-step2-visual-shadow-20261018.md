@@ -7188,3 +7188,131 @@ gates. Three reports passed independent PDF/HTML review; KPMG and Reuters remain
 material editorial-grounding blockers. Step 2 is not promotion-ready and Step 3
 remains unstarted/not ready. No additional corrective work is justified solely for
 hypothetical edge cases, and no ten-report cohort was started.
+
+#### P1 root-cause remediation and transactional regeneration — 2026-10-30 (`750979af`; renderer follow-up `62c848b6`)
+
+This section records the exact requested five-report provider-backed run after the
+transactional evidence-preservation and verified-fact projection corrections. The
+run used GPT-6 Luna High, the retained original PDFs, isolated fresh report state,
+and no publication or WordPress writes. The requested five is an explicit slice of
+the committed ten-report manifest; there is no separate committed five-report
+manifest. The source-manifest SHA-256 is
+`190CFF0D3EC7B80190BB7B8791BA4255081278AEDF0433BED542C1216694FDA6`.
+
+```text
+scripts/quality/run_frozen_reliability_cohort.py \
+  --sources-manifest scripts/quality/frozen_reliability_cohort_10.json \
+  --sources-root C:\Programing\Market lense-step2-final \
+  --runs-root C:\ml-p1-root-cause-runs-20261030 \
+  --max-duration 7200 \
+  --report-ids cohort-2acb4a56e14add5d7717 \
+    cohort-4b763ae2286ca69fe8ac \
+    cohort-b638414df0b1fccea1cd \
+    cohort-86858bdcb370266f26c2 \
+    cohort-f62048b469dd784e6e7c \
+  --verified-facts-architecture
+```
+
+The immutable machine-readable result is
+`C:\ml-p1-root-cause-runs-20261030\frozen-reliability-cixcvcy4\cohort_result.json`.
+All five source hashes matched the selected manifest:
+
+| Report | Source identity | PDF SHA-256 | Evaluated / admitted | Final insights | Readiness |
+| --- | --- | --- | ---: | ---: | --- |
+| KPMG | `source:1ffb71d718276f8a1761fc706a2a3cb3` | `a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589` | 6 / 6 | 5 | pass |
+| Reuters Institute | `source:79cb8c886c55b49bfdec2128d5b25e0b` | `f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52` | 7 / 7 | 7 | pass |
+| Adjust | `source:8cb648b6bbd9dbae4ec1d915c38cf235` | `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` | 6 / 6 | 6 | pass |
+| Algolia | `source:4ea9ae5709898e763efb0945d8d4fa1e` | `d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50b` | 6 / 5 | 5 | pass |
+| Emplifi | `source:dda03b3a0d65814672444674bb59908f` | `54a6726033fce9474929dec62bc85fc4dd3ada574398d043d12ec48b0eaddeb5` | 6 / 6 | 6 | pass |
+
+The 29 selected stable IDs were:
+
+| Report | Final stable IDs |
+| --- | --- |
+| KPMG | `insight-carveout-outlook`, `insight-ma-momentum-2025`, `insight-talent-retention-execution`, `insight-ai-knowledge-codification`, `insight-us-confidence-readiness` |
+| Reuters Institute | `search-traffic-expectation`, `agentic-apps-impact-expectation`, `ai-era-distinctive-content-priorities`, `publisher-platform-effort-plans`, `section_7_q10_ai_importance`, `commercial-publisher-revenue-priorities`, `section_5_q19_creator_concerns` |
+| Adjust | `casino-slots-install-session-divergence`, `global-app-installs-2025`, `ecommerce-cpi-subvertical-divergence`, `finance-retention-by-checkpoint`, `cross-platform-data-satisfaction`, `advanced-generative-ai-efficiency` |
+| Algolia | `agentic-search-plans-and-implementation`, `ai-tools-purchase-likelihood`, `genai-effectiveness-varies-by-task`, `search-provider-sourcing-choices`, `agentic-adoption-factors` |
+| Emplifi | `high-value-research-validation`, `ai-disclosure-expectation`, `service-interactions-authentic`, `inauthentic-service-stated-churn`, `review-reading-change`, `carhartt-ugc-conversion` |
+
+The aggregate run produced **259 provider calls**, **3,319,653 input tokens**,
+**593,660 output tokens**, estimated cost **$0.714479**, and **4,399.016 seconds**.
+File-search calls were 11/8/6/6/6 for KPMG/Reuters/Adjust/Algolia/Emplifi.
+Adjust and Emplifi each used one structured-output recovery call; there were no
+automatic repairs, operator interventions, publication writes, or workflow retries.
+Every report has a typed terminal record, validation pass, zero retained unsupported
+claims, and zero retained unresolved factual claims. Algolia's admission audit
+quarantined one candidate, `revenue-search-investment-incentive`, with
+`outcome_unresolved`; its retained record had no evidence spans and only an
+unapproved page-5 locator. The other five admitted facts covered all five planned
+editorial themes, so this was an explicit fail-closed omission rather than silent
+coverage loss.
+
+##### Root causes and demonstrated corrections
+
+The earlier exact-five run at `287d6904` had KPMG and Reuters fail closed after
+grounding/repair attempts: KPMG's soft-copy contrast overreached the context of
+post-deal value realization, while Reuters described publisher-site referral
+declines as “two major social platforms” without source support. The targeted
+regeneration correction in `e3b7c3f7` preserves authoritative evidence for explicit
+editorial/soft-copy issues, revalidates unresolved siblings, and still quarantines
+real binding failures. The current five-report run had no automatic repair, so this
+live run confirms no regression but does not claim to exercise those repair paths.
+
+The current `750979af` correction removes the demonstrated lossy verified-fact
+projection: grounding and canary inputs now carry deterministic JSON for the complete
+authoritative fact, including nested observations and qualifiers. Verified mode also
+skips the source-display normalization that previously made evidence text diverge
+from public copy, and evidence-backed optional copy survives summary abstention.
+These changes are covered by focused regeneration, grounding, verified-fact, and
+soft-copy tests; the exact five run showed no protected-field or evidence-lineage
+regression. No unsupported fact was promoted from the quarantined Algolia candidate.
+
+Independent PDF review matched the final physical support: KPMG pages 7, 19, 27,
+and 33; Reuters pages 12, 17, 20, 24, 32, 38, and 41; Adjust pages 6, 9, 11,
+19, 29, and 37; Algolia pages 12, 15, 22, 26, and 27; and Emplifi pages 4, 10,
+12, 13, 15, and 17. The review checked numerical values, units, populations,
+periods, forecast/plan status, and qualitative qualifiers against the original
+PDFs. The resulting metric-spine/key-figure counts were KPMG 1/1, Reuters 6/5,
+Adjust 6/3, Algolia 5/4, and Emplifi 6/4.
+
+The review also found a separate deterministic public-rendering defect in the
+provider-backed HTML generated at `750979af`: `_sanitize_public_prose()` preserved
+only `Q1`–`Q4`, so it stripped `Q5`, `Q10`, and `Q19` from Reuters hero/core/overview
+copy even though the claim strip and evidence metadata retained them. Commit
+`62c848b6` changes only that existing allow-list to numbered survey items and adds
+regressions for `Q5`, `Q10`, `Q19`, and internal `finding_12` removal. A provider-free
+rerender from each immutable completed checkpoint produced corrected HTML under
+`C:\ml-p1-root-cause-runs-20261030\post-run-render-all-qid-fix\`; Reuters now retains
+all three survey IDs and all five rerendered HTML files contain zero internal
+candidate/evidence/source tokens. This deterministic rerender made no provider or
+publication calls and does not replace a fresh provider-backed run at `62c848b6`.
+
+##### Resource comparison and limitations
+
+Compared with the prior exact-five run at `287d6904` (295 calls, 3,341,130 input,
+828,380 output, `$0.830416`, 5,153.028 seconds, 3/5 readiness), the current run
+used **36 fewer calls (-12.20%)**, **21,477 fewer input tokens (-0.64%)**,
+**234,720 fewer output tokens (-28.33%)**, **$0.115937 less cost (-13.96%)**,
+and **754.012 fewer seconds (-14.63%)**, while reaching 5/5 readiness. This is
+useful evidence of the corrected run's observed outcome, not a causal performance
+claim: provider/model variability and changed retained facts contribute, and the
+renderer correction was committed after this provider run. Relative to the accepted
+`04a050a4` producer, the current run used 5 fewer calls but more input tokens and
+slightly more cost; it is not an optimization result.
+
+##### Verification and verdict
+
+The focused render regression passed **36 tests**; the expanded affected suite
+passed **522 tests in 47.62s**. Ruff passed for the changed renderer/test files,
+`git diff --check` passed, and the full-repository type gate reported **0 tracked
+errors across 786 source files**. The transactional regeneration and evidence
+projection regressions remain in the earlier focused suites and are included in
+the affected run. No hosted CI result is claimed from this local verification.
+
+**Verdict: PARTIAL / NO-GO for Step 3.** The demonstrated P1 root causes are fixed,
+the exact provider-backed five reached 5/5 readiness with no retained factual
+errors, and the renderer defect is corrected deterministically. A fresh provider
+run at `62c848b6`, repeated selection evidence, independent human editorial sign-off,
+and broader Step 2 effectiveness remain open. Step 3 remains unstarted; no
+canonical claim promotion or WordPress publication occurred.

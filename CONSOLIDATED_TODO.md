@@ -1348,3 +1348,23 @@ was incomplete. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. No ten-report
 cohort was started. Full per-report metrics, source hashes and limitations are
 in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+### P1 root-cause remediation and exact-five audit — 2026-10-30 (`750979af`, renderer follow-up `62c848b6`)
+
+The exact requested Adjust/KPMG/Emplifi/Reuters Institute/Algolia slice of the
+committed ten-report manifest completed with matching source hashes, 5/5 typed
+terminal records, 5/5 validation/readiness passes, 29 final insights, 259
+provider calls, 3,319,653 input tokens, 593,660 output tokens, `$0.714479`, and
+4,399.016 seconds. One Algolia candidate with no fidelity-approved evidence span
+was quarantined as `outcome_unresolved`; it did not enter the five-theme final
+roster. The targeted regeneration/evidence-projection corrections preserved
+source-bound facts and final editorial wording, but the live run did not exercise
+automatic repair. A provider-free rerender then confirmed the deterministic
+renderer correction for Reuters `Q5/Q10/Q19` and zero internal evidence tokens
+across all five corrected HTML artifacts. The local affected suite passed 522,
+Ruff and mypy passed, and no publication write occurred. This closes the
+demonstrated root causes but does not establish a fresh provider run at the
+renderer-fix SHA, repeated selection effectiveness, or independent human sign-off.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**. Full evidence and artifact paths are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
