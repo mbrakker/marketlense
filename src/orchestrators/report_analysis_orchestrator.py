@@ -1339,16 +1339,33 @@ def run_report_analysis(
             repair_disposition="not_required",
         )
 
-    _, editorial_after_path = _evaluate_and_store_public_editorial_quality(
+    editorial_after_validation, editorial_after_path = (
+        _evaluate_and_store_public_editorial_quality(
+            runtime=runtime,
+            dependencies=dependencies,
+            artifacts=artifacts_payload or {},
+            pack_name="public_editorial_quality_after",
+            ctx=mode_ctx,
+            openai_client=validation_openai_client,
+        )
+    )
+    validation_report = _merge_public_editorial_quality(
+        validation_report,
+        editorial_after_validation,
+        replace_existing=True,
+    )
+    final_validation_path = _store_validation_snapshot(
         runtime=runtime,
         dependencies=dependencies,
-        artifacts=artifacts_payload or {},
-        pack_name="public_editorial_quality_after",
+        report=validation_report,
+        pack_name="validation",
         ctx=mode_ctx,
-        openai_client=validation_openai_client,
     )
+    validation_report = replace(validation_report, source_path=final_validation_path)
     if editorial_after_path:
         mode_evidence_paths["public_editorial_quality_after"] = editorial_after_path
+    if validation_report.source_path:
+        mode_evidence_paths["validation"] = validation_report.source_path
 
     normalized_payload = _attach_payload_analysis_metadata(
         merge_artifacts_into_payload(deepcopy(base_payload), artifacts_payload or {}),

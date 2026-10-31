@@ -318,9 +318,7 @@ def test_conflicting_claim_inputs_with_same_id_remain_blocked() -> None:
     }
 
 
-def test_retained_claim_deterministic_support_and_contradiction_bypass_semantics() -> (
-    None
-):
+def test_retained_claim_semantic_verdict_controls_support_and_contradiction() -> None:
     supported_artifacts = {
         "summary": {
             "claim_evidence_map": [
@@ -356,22 +354,26 @@ def test_retained_claim_deterministic_support_and_contradiction_bypass_semantics
     }
     calls = []
 
-    def ground_batch(claims):
+    def ground_supported(claims):
         calls.append(claims)
-        raise AssertionError("mechanically decided claims must bypass grounding")
+        return [_semantic_result(claims[0], "entailed")]
+
+    def ground_contradicted(claims):
+        calls.append(claims)
+        return [_semantic_result(claims[0], "contradicted")]
 
     supported = validate_retained_claims(
-        supported_artifacts, evidence, semantic_batch_validator=ground_batch
+        supported_artifacts, evidence, semantic_batch_validator=ground_supported
     )
     contradicted = validate_retained_claims(
-        contradictory_artifacts, evidence, semantic_batch_validator=ground_batch
+        contradictory_artifacts, evidence, semantic_batch_validator=ground_contradicted
     )
 
     assert supported.results[0].status == "supported"
-    assert supported.results[0].deterministic_status == "supported"
+    assert supported.results[0].deterministic_status == "unresolved"
     assert contradicted.results[0].status == "unsupported"
-    assert contradicted.results[0].deterministic_status == "unsupported"
-    assert calls == []
+    assert contradicted.results[0].deterministic_status == "unresolved"
+    assert len(calls) == 2
 
 
 def test_retained_claim_provenance_failure_bypasses_semantic_grounding() -> None:

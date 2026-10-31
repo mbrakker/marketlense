@@ -17,7 +17,7 @@ from tests._test_public_editorial_quality_generator._shared import (
 )
 
 
-def test_public_html_blocks_operational_source_and_editorial_scaffolding() -> None:
+def test_public_html_blocks_operational_source_and_literal_truncation() -> None:
     report = evaluate_public_editorial_quality(
         report_id="retained-report",
         artifacts=_retained_artifacts(),
@@ -30,9 +30,11 @@ def test_public_html_blocks_operational_source_and_editorial_scaffolding() -> No
     assert report.status == "fail"
     assert {
         "public_editorial_quality.private_operational_reference",
-        "public_editorial_quality.mechanical_editorial_scaffold",
         "public_editorial_quality.literal_truncation",
     } <= _rule_ids(report)
+    assert "public_editorial_quality.mechanical_editorial_scaffold" not in _rule_ids(
+        report
+    )
 
 
 def test_public_html_ignores_non_visible_text_in_spaced_script_tags() -> None:
@@ -120,7 +122,7 @@ def test_mintel_source_heading_ellipsis_is_complete_public_prose() -> None:
     assert fixture["before_quality_rule_id"] not in _rule_ids(report)
 
 
-def test_public_html_still_blocks_terminal_ellipsis_and_mechanical_scaffold() -> None:
+def test_public_html_leaves_mechanical_scaffold_to_semantic_review() -> None:
     report = evaluate_public_editorial_quality(
         report_id="retained-report",
         artifacts=_retained_artifacts(),
@@ -128,10 +130,10 @@ def test_public_html_still_blocks_terminal_ellipsis_and_mechanical_scaffold() ->
     )
 
     assert report.status == "fail"
-    assert {
-        "public_editorial_quality.literal_truncation",
-        "public_editorial_quality.mechanical_editorial_scaffold",
-    } <= _rule_ids(report)
+    assert "public_editorial_quality.literal_truncation" in _rule_ids(report)
+    assert "public_editorial_quality.mechanical_editorial_scaffold" not in _rule_ids(
+        report
+    )
 
 
 def test_public_html_source_section_requires_a_public_original_source_link() -> None:
@@ -229,6 +231,9 @@ def test_public_html_source_section_requires_a_public_original_source_link() -> 
                             "title": "Figure 1",
                             "caption": "Retail demand moves across channels.",
                             "evidence_id": "retained-figure",
+                            "candidate_id": "candidate-figure",
+                            "source_page": "5",
+                            "insight_id": "insight-figure",
                         }
                     ]
                 }
@@ -264,11 +269,24 @@ def test_public_editorial_blockers_detect_mutations_of_retained_artifact(
         report_id="retained-report", artifacts=artifacts
     )
 
-    assert report.status == "fail"
-    assert rule_id in _rule_ids(report)
+    semantic_only = {
+        "public_editorial_quality.unsupported_numeric_claim",
+        "public_editorial_quality.duplicate_insight",
+        "public_editorial_quality.sentence_fragment",
+        "public_editorial_quality.ocr_fragment",
+        "public_editorial_quality.generic_figure_label",
+        "public_editorial_quality.fallback_boilerplate",
+        "public_editorial_quality.unsupported_certainty",
+    }
+    if rule_id in semantic_only:
+        assert report.status == "pass"
+        assert rule_id not in _rule_ids(report)
+    else:
+        assert report.status == "fail"
+        assert rule_id in _rule_ids(report)
 
 
-def test_nonspecific_editorial_action_is_advisory_not_a_release_blocker() -> None:
+def test_nonspecific_editorial_action_is_deferred_to_semantic_review() -> None:
     artifacts = deepcopy(_retained_artifacts())
     artifacts["insights_final"][0]["now_what"] = "Review the finding."
 
@@ -276,14 +294,10 @@ def test_nonspecific_editorial_action_is_advisory_not_a_release_blocker() -> Non
         report_id="retained-report", artifacts=artifacts
     )
 
-    issue = next(
-        item
-        for item in report.issues
-        if item.rule_id == "public_editorial_quality.nonspecific_decision_implication"
-    )
-    assert issue.severity == "warning"
-    assert not issue.hard_fail_class
     assert report.status == "pass"
+    assert "public_editorial_quality.nonspecific_decision_implication" not in _rule_ids(
+        report
+    )
 
 
 def test_public_editorial_html_missing_asset_is_a_blocker(tmp_path: Path) -> None:

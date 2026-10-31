@@ -111,7 +111,9 @@ def _semantic_result(semantic_input, *, outcome: str = "entailed"):
         outcome=outcome,
         reason="test_result",
         identity=identity,
-        protected_facts=ProtectedFactComparison.from_payload(None),
+        protected_facts=ProtectedFactComparison.from_payload(
+            {}, proposition_status="compatible"
+        ),
     )
 
 
@@ -649,7 +651,9 @@ def test_grounding_revalidates_only_changed_claims_and_avoids_a_batch(tmp_path) 
     prior_by_id = {
         result["candidate"]["claim_id"]: result for result in prior["results"]
     }
-    assert by_id[changed_item_id].semantic_reason == "semantic_entailed"
+    assert by_id[changed_item_id].semantic_reason == (
+        "The linked source evidence was assessed as entailed for this item."
+    )
     for index in (1, 2, 4, 5):
         assert (
             asdict(by_id[f"summary_claim:claim-{index}"].semantic_identity)

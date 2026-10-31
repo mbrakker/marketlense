@@ -9,6 +9,7 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_to_payload,
 )
 from src.contracts.validation import ValidationRequest
+from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.generators.validation.grounding import (
     grounding_issue_severity,
     grounding_payload,
@@ -62,24 +63,91 @@ def _issues(tmp_path, *, section: str, entry: dict | None = None):
     text = (
         entry["text"]
         if entry is not None
-        else "Brands should reconsider treating wallet coverage as experimental."
+        else ("Brands should reconsider treating wallet coverage as experimental.")
     )
+    artifacts = _artifacts_for(section, text)
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="editorial-grounding",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs={},
+        vector_store_id=None,
+    )
+    payload = grounding_payload(request, artifacts)
+    section_aliases = {
+        "insights_final[0].so_what": "insights:insight-1.so_what",
+        "insights_final[0].now_what": "insights:insight-1.now_what",
+    }
+    target_section = section_aliases.get(section, section)
+    checks = []
+    unsupported = []
+    for item in payload["public_factual_items"]:
+        item_id = str(item["item_id"])
+        item_section = str(item["section"])
+        is_target = item_section == target_section
+        item_entry = entry if is_target else None
+        outcome = (
+            str(item_entry.get("entailment_outcome") or "")
+            if item_entry is not None
+            else "entailed"
+        )
+        classification = (
+            str(item_entry.get("classification") or "")
+            if item_entry is not None
+            else str(item.get("declared_classification") or "factual_claim")
+        )
+        reason = str(
+            item_entry.get("reason")
+            if item_entry is not None
+            else "The linked source evidence supports this item."
+        )
+        check = {
+            "item_id": item_id,
+            "section": item_section,
+            "text": str(item["text"]),
+            "classification": classification,
+            "entailment_outcome": outcome,
+            "proposition_status": "compatible",
+            "protected_facts": {
+                dimension: {
+                    "claim_value": None,
+                    "evidence_value": None,
+                    "status": "unknown",
+                }
+                for dimension in PROTECTED_FACT_DIMENSIONS
+            },
+            "reason": reason,
+        }
+        checks.append(check)
+        if is_target and entry is not None and outcome != "entailed":
+            unsupported_entry = dict(entry)
+            unsupported_entry.update(
+                {
+                    "item_id": item_id,
+                    "section": item_section,
+                    "text": str(item["text"]),
+                    "classification": classification,
+                    "entailment_outcome": outcome,
+                    "reason": reason,
+                }
+            )
+            if "violation_type" not in unsupported_entry and classification:
+                unsupported_entry["violation_type"] = (
+                    "not_established"
+                    if classification == "factual_claim"
+                    else "not_established"
+                )
+            unsupported.append(unsupported_entry)
     return run_grounding_check(
-        request=ValidationRequest(
-            schema_version="1.0",
-            report_id="editorial-grounding",
-            report=_report(),
-            artifacts=_artifacts_for(section, text),
-            evidence_packs={},
-            vector_store_id=None,
-        ),
+        request=request,
         settings=_settings(tmp_path),
         grounding_use_vector_store=False,
         evidence_texts=["Wallet adoption rose among surveyed consumers."],
         evidence_windows=[],
         prompt_client=FakePromptClient(),
         openai_client=FakeOpenAI(
-            grounding_payload={"unsupported": [entry] if entry else [], "checks": []}
+            grounding_payload={"unsupported": unsupported, "checks": checks}
         ),
         ctx=_ctx(),
     )
@@ -432,6 +500,7 @@ def test_grounding_failure_retains_atomic_public_item_id(tmp_path) -> None:
             "section": "insights_final[0].so_what",
             "text": text,
             "classification": "analyst_interpretation",
+            "entailment_outcome": "not_established",
             "violation_type": "unsupported_certainty",
             "reason": "The sentence adds unsupported certainty.",
         },
@@ -504,6 +573,7 @@ def test_grounding_advises_on_noncontradictory_editorial_outcomes(
             "section": section,
             "text": text,
             "classification": classification,
+            "entailment_outcome": "not_established",
             "violation_type": violation_type,
             "reason": "The sentence adds an unsupported material outcome.",
         },
@@ -557,7 +627,7 @@ def test_grounding_fails_closed_for_underspecified_editorial_rejections(
 
     assert len(issues) == 1
     assert issues[0].severity == "error"
-    assert "unsupported_factual_claim" in issues[0].message
+    assert "schema_" in issues[0].message
 
 
 def _identity_grounding_payload(title: str, publisher: str = "", doc_map=None):

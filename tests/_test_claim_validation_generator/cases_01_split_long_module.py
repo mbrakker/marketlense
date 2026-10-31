@@ -99,10 +99,10 @@ def test_promoted_repair_candidate_materializes_against_promoted_artifact() -> N
     assert retained["results"][1]["candidate"]["text"] == (
         "Wallet adoption reached 42% in 2026."
     )
-    assert retained["results"][1]["status"] == "supported"
+    assert retained["results"][1]["status"] == "unresolved"
     assert retained["results"][1]["semantic_validator_used"] is False
     assert retained["semantic_validation_count"] == 1
-    assert retained["readiness_status"] == "awaiting_review"
+    assert retained["readiness_status"] == "not_publishable"
 
 
 def test_rolled_back_candidate_cannot_become_the_final_package() -> None:
@@ -156,7 +156,9 @@ def test_rolled_back_candidate_cannot_become_the_final_package() -> None:
     assert retained["results"][0]["candidate"]["text"] == (
         "Wallet adoption reached 42% in 2026."
     )
-    assert retained["results"][0]["status"] == "supported"
+    assert retained["results"][0]["status"] == "unresolved"
+    assert retained["results"][0]["semantic_validator_used"] is False
+    assert retained["readiness_status"] == "not_publishable"
 
 
 def test_merchant_risk_council_final_figures_survive_candidate_projection_drift():
@@ -221,7 +223,9 @@ def test_merchant_risk_council_final_figures_survive_candidate_projection_drift(
     assert retained["results"][0]["candidate"]["text"] == (
         "Merchant acceptance of real-time payments 43%"
     )
-    assert retained["results"][0]["status"] == "supported"
+    assert retained["results"][0]["status"] == "unresolved"
+    assert retained["results"][0]["semantic_validator_used"] is False
+    assert retained["readiness_status"] == "not_publishable"
 
 
 def test_final_package_materialization_is_idempotent() -> None:

@@ -14,6 +14,7 @@ def test_retained_claim_validation_indexes_legacy_finding_excerpt() -> None:
             }
         },
         {"findings": {"findings": [{"id": "f1", "excerpt": "Revenue grew by 12%."}]}},
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"
@@ -58,11 +59,16 @@ def test_actual_activate_video_insight_matches_validated_finding_relationship() 
         }
     }
 
-    package = validate_retained_claims({"insights_final": [insight]}, evidence)
+    package = validate_retained_claims(
+        {"insights_final": [insight]},
+        evidence,
+        semantic_batch_validator=_semantic_batch_supported,
+    )
 
     result = package.results[0]
     assert result.status == "supported"
-    assert result.deterministic_status == "supported"
+    assert result.deterministic_status == "unresolved"
+    assert result.semantic_validator_used is True
     assert {reference.page for reference in result.candidate.evidence_references} == {
         15
     }
@@ -103,15 +109,13 @@ def test_activate_video_insight_rejects_numeric_values_absent_from_finding() -> 
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_contradicted,
     )
 
     result = package.results[0]
     assert result.status == "unsupported"
-    assert any(
-        check.name == "number_value_unit_match"
-        and check.reason == "quantity_not_entailed"
-        for check in result.checks
-    )
+    assert result.semantic_validator_used is True
+    assert result.reasons == ["test_semantic_contradicted"]
 
 
 def test_retained_claim_validation_indexes_doc_map_section_key_points() -> None:
@@ -143,10 +147,11 @@ def test_retained_claim_validation_indexes_doc_map_section_key_points() -> None:
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"
-    assert package.semantic_validation_count == 0
+    assert package.semantic_validation_count == 1
 
 
 def test_key_figure_claim_includes_its_canonical_display_value() -> None:
@@ -173,6 +178,7 @@ def test_key_figure_claim_includes_its_canonical_display_value() -> None:
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     result = package.results[0]
@@ -181,7 +187,7 @@ def test_key_figure_claim_includes_its_canonical_display_value() -> None:
     assert result.status == "supported"
 
 
-def test_numeric_and_quote_claims_pass_without_semantic_call() -> None:
+def test_numeric_and_quote_claims_require_semantic_verdict() -> None:
     package = validate_retained_claims(
         {
             "summary": {
@@ -200,13 +206,11 @@ def test_numeric_and_quote_claims_pass_without_semantic_call() -> None:
             ],
         },
         _evidence(),
-        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
-            AssertionError("unused")
-        ),
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.readiness_status == "awaiting_review"
-    assert package.semantic_validation_count == 0
+    assert package.semantic_validation_count == 2
     assert package.unsupported_factual_count == 0
 
 
@@ -230,15 +234,13 @@ def test_evidence_fidelity_rejects_a_generated_finding_with_the_wrong_number() -
                 "text": "Digital advertising grew 18% in 2025.",
             }
         ],
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_validator=_semantic_reject,
     )
 
     assert package.readiness_status == "not_publishable"
     assert package.unsupported_factual_count == 1
     assert package.results[0].status == "unsupported"
-    assert any(
-        check.reason == "quantity_not_entailed" for check in package.results[0].checks
-    )
+    assert package.results[0].reasons == ["test_semantic_contradicted"]
 
 
 def test_evidence_fidelity_treats_year_over_year_endpoint_as_timeframe() -> None:
@@ -264,7 +266,7 @@ def test_evidence_fidelity_treats_year_over_year_endpoint_as_timeframe() -> None
                 ),
             }
         ],
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_validator=_semantic_support,
     )
 
     assert package.results[0].status == "supported"
@@ -293,14 +295,11 @@ def test_evidence_fidelity_rejects_wrong_year_over_year_endpoint() -> None:
                 ),
             }
         ],
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_validator=_semantic_reject,
     )
 
     assert package.results[0].status == "unsupported"
-    assert any(
-        check.reason == "protected_fact_timeframe_incompatible"
-        for check in package.results[0].checks
-    )
+    assert package.results[0].reasons == ["test_semantic_contradicted"]
 
 
 def test_evidence_fidelity_excludes_an_unsupported_finding_from_editorial_input() -> (
@@ -337,14 +336,11 @@ def test_evidence_fidelity_rejects_a_matching_value_with_the_wrong_period() -> N
                 "text": "Digital advertising grew 18% in 2025.",
             }
         ],
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_validator=_semantic_reject,
     )
 
     assert package.results[0].status == "unsupported"
-    assert any(
-        check.reason == "protected_fact_timeframe_incompatible"
-        for check in package.results[0].checks
-    )
+    assert package.results[0].reasons == ["test_semantic_contradicted"]
 
 
 def test_evidence_fidelity_rejects_a_matching_value_with_the_wrong_geography() -> None:
@@ -367,14 +363,11 @@ def test_evidence_fidelity_rejects_a_matching_value_with_the_wrong_geography() -
                 "text": "Advertising grew 18% in Europe in 2025.",
             }
         ],
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_validator=_semantic_reject,
     )
 
     assert package.results[0].status == "unsupported"
-    assert any(
-        check.reason == "protected_fact_geography_incompatible"
-        for check in package.results[0].checks
-    )
+    assert package.results[0].reasons == ["test_semantic_contradicted"]
 
 
 def test_evidence_fidelity_rejects_wrong_unit_and_recovers_exact_page_provenance() -> (
@@ -389,20 +382,18 @@ def test_evidence_fidelity_rejects_wrong_unit_and_recovers_exact_page_provenance
         source_spans=[
             {"id": "source:page:4", "page": 4, "text": "Revenue reached 18%."}
         ],
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_validator=_semantic_reject,
     )
     recovered_page = validate_evidence_fidelity(
         {"findings": {"findings": [{"id": "f2", "text": "Revenue reached 18%."}]}},
         source_spans=[
             {"id": "source:page:4", "page": 4, "text": "Revenue reached 18%."}
         ],
+        semantic_validator=_semantic_support,
     )
 
     assert wrong_unit.results[0].status == "unsupported"
-    assert any(
-        check.reason == "protected_fact_unit_currency_incompatible"
-        for check in wrong_unit.results[0].checks
-    )
+    assert wrong_unit.results[0].reasons == ["test_semantic_contradicted"]
     assert recovered_page.results[0].status == "supported"
     assert recovered_page.results[0].candidate.evidence_references[0].page == 4
 
@@ -428,6 +419,7 @@ def test_evidence_fidelity_recovers_page_provenance_from_exact_source_text() -> 
                 "text": "Advertising grew 18% in 2025.",
             },
         ],
+        semantic_validator=_semantic_support,
     )
 
     assert package.results[0].status == "supported"
@@ -461,13 +453,18 @@ def test_evidence_fidelity_uses_exact_excerpt_when_reported_page_is_printed_page
             },
             {"id": "source:page:5", "page": 5, "text": excerpt},
         ],
+        semantic_validator=_semantic_support,
     )
 
     assert package.results[0].candidate.evidence_references[0].page == 5
     assert package.results[0].status == "supported"
 
 
-def _activate_revenue_fidelity_case(alternate_page_text: str):
+def _activate_revenue_fidelity_case(
+    alternate_page_text: str,
+    *,
+    semantic_validator=None,
+):
     claim = (
         "Global consumer Internet and media revenue is forecast to rise from "
         "$1.7 trillion in 2017E to $2.0 trillion in 2021E, adding $302 billion "
@@ -506,6 +503,7 @@ def _activate_revenue_fidelity_case(alternate_page_text: str):
                 "text": alternate_page_text,
             },
         ],
+        semantic_validator=semantic_validator,
     )
 
 
@@ -513,7 +511,8 @@ def test_evidence_fidelity_recovers_unique_numeric_source_page_from_excerpt() ->
     package = _activate_revenue_fidelity_case(
         "CONSUMER INTERNET AND MEDIA REVENUES, GLOBAL, 2017E-2021E, USD\n"
         "2017E\n2021E\n$1.7T\n$2.0T\n$302B\nCAGR 4.1%\n"
-        "Global GDP CAGR: ~3%\nFORECAST"
+        "Global GDP CAGR: ~3%\nFORECAST",
+        semantic_validator=_semantic_support,
     )
 
     result = package.results[0]
@@ -524,7 +523,8 @@ def test_evidence_fidelity_recovers_unique_numeric_source_page_from_excerpt() ->
 def test_evidence_fidelity_does_not_rebind_to_same_values_for_another_subject() -> None:
     package = _activate_revenue_fidelity_case(
         "GLOBAL SPORTS REVENUE OUTLOOK, 2017E-2021E, USD\n"
-        "$1.7T\n$2.0T\n$302B\nCAGR 4.1%\nGlobal GDP CAGR: ~3%"
+        "$1.7T\n$2.0T\n$302B\nCAGR 4.1%\nGlobal GDP CAGR: ~3%",
+        semantic_validator=_semantic_reject,
     )
 
     result = package.results[0]
@@ -535,7 +535,8 @@ def test_evidence_fidelity_does_not_rebind_to_same_values_for_another_subject() 
 def test_evidence_fidelity_does_not_rebind_when_alternate_page_is_incomplete() -> None:
     package = _activate_revenue_fidelity_case(
         "CONSUMER INTERNET AND MEDIA REVENUES, GLOBAL, 2017E-2021E, USD\n"
-        "2017E\n2021E\n$1.7T\n$2.0T\n$302B"
+        "2017E\n2021E\n$1.7T\n$2.0T\n$302B",
+        semantic_validator=_semantic_reject,
     )
 
     result = package.results[0]
@@ -566,6 +567,7 @@ def test_evidence_fidelity_does_not_treat_explanatory_evidence_as_the_claim() ->
                 "text": "Digital advertising grew 18% in 2025.",
             }
         ],
+        semantic_validator=_semantic_support,
     )
 
     assert package.results[0].status == "supported"
@@ -597,6 +599,7 @@ def test_evidence_fidelity_accepts_an_implicit_count_on_the_matched_page() -> No
                 ),
             }
         ],
+        semantic_validator=_semantic_support,
     )
 
     assert package.results[0].status == "supported"
@@ -625,6 +628,7 @@ def test_evidence_fidelity_ignores_a_rhetorical_growth_subject_prefix() -> None:
                 "text": "Total video advertising grew 19.6%.",
             }
         ],
+        semantic_validator=_semantic_support,
     )
 
     assert package.results[0].status == "supported"
@@ -653,6 +657,7 @@ def test_evidence_fidelity_accepts_a_subject_stated_after_another_growth_fact() 
                 ),
             }
         ],
+        semantic_validator=_semantic_support,
     )
 
     assert package.results[0].status == "supported"
@@ -680,6 +685,7 @@ def test_evidence_fidelity_accepts_equivalent_counted_market_subjects() -> None:
                 ),
             }
         ],
+        semantic_validator=_semantic_support,
     )
 
     assert package.results[0].status == "supported"
@@ -723,13 +729,12 @@ def test_evidence_fidelity_rejects_subject_rank_and_comparison_inversions() -> N
                 ),
             }
         ],
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_validator=_semantic_reject,
     )
 
-    reasons = {reason for result in package.results for reason in result.reasons}
-    assert "protected_fact_population_incompatible" in reasons
-    assert "protected_fact_comparison_incompatible" in reasons
-    assert "protected_fact_observation_status_incompatible" in reasons
+    assert all(
+        result.reasons == ["test_semantic_contradicted"] for result in package.results
+    )
 
 
 def test_evidence_fidelity_rejects_direction_and_attribution_inversions() -> None:
@@ -754,16 +759,16 @@ def test_evidence_fidelity_rejects_direction_and_attribution_inversions() -> Non
                 "text": "IAB reported advertising grew 18% in 2025.",
             }
         ],
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_validator=_semantic_reject,
     )
 
     assert {result.status for result in package.results} == {"unsupported"}
-    reasons = {reason for result in package.results for reason in result.reasons}
-    assert "protected_fact_direction_incompatible" in reasons
-    assert "protected_fact_attribution_incompatible" in reasons
+    assert all(
+        result.reasons == ["test_semantic_contradicted"] for result in package.results
+    )
 
 
-def test_evidence_fidelity_accepts_a_numeric_paraphrase_without_semantic_call() -> None:
+def test_evidence_fidelity_accepts_a_numeric_paraphrase_with_semantic_verdict() -> None:
     package = validate_evidence_fidelity(
         {
             "findings": {
@@ -773,21 +778,22 @@ def test_evidence_fidelity_accepts_a_numeric_paraphrase_without_semantic_call() 
             }
         },
         source_spans=[{"id": "source:1", "text": "Advertising grew 18% in 2025."}],
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_validator=_semantic_support,
     )
 
     assert package.results[0].status == "supported"
-    assert package.semantic_validation_count == 0
+    assert package.semantic_validation_count == 1
 
 
 def test_evidence_fidelity_rejects_an_exact_value_provided_only_as_a_bound() -> None:
     package = validate_evidence_fidelity(
         {"findings": {"findings": [{"id": "f1", "text": "Advertising grew 52%."}]}},
         source_spans=[{"id": "source:1", "text": "Advertising grew more than 20%."}],
+        semantic_validator=_semantic_reject,
     )
 
     assert package.results[0].status == "unsupported"
-    assert "quantity_not_entailed" in package.results[0].reasons
+    assert package.results[0].reasons == ["test_semantic_contradicted"]
 
 
 def test_evidence_fidelity_semantics_for_unresolved_descriptions() -> None:
@@ -964,32 +970,5 @@ def test_evidence_fidelity_rejects_fabricated_quote_and_missing_provenance() -> 
         source_spans=[],
     )
 
-    assert fabricated.results[0].status == "unsupported"
+    assert fabricated.results[0].status != "supported"
     assert missing.results[0].status != "supported"
-
-
-def test_evidence_fidelity_accepts_a_normalized_quote_and_keeps_unknown_unknown() -> (
-    None
-):
-    quote = validate_evidence_fidelity(
-        {
-            "quote_candidates": {
-                "quote_candidates": [
-                    {"id": "q1", "text": '"Payments are now core infrastructure."'}
-                ]
-            }
-        },
-        source_spans=[
-            {"id": "source:1", "text": "Payments are now core infrastructure."}
-        ],
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
-    )
-    unknown = validate_evidence_fidelity(
-        {"findings": {"findings": [{"id": "f1", "text": "Advertising grew 18%."}]}},
-        source_spans=[{"id": "source:1", "text": "Advertising grew 18%."}],
-    )
-
-    assert quote.results[0].status == "supported"
-    assert quote.semantic_validation_count == 0
-    assert unknown.results[0].protected_facts is not None
-    assert unknown.results[0].protected_facts.dimension("timeframe").status == "unknown"

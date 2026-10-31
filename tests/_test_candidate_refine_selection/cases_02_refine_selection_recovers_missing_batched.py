@@ -340,11 +340,27 @@ def test_refine_selection_early_stops_at_selected_max(tmp_path):
         crop_refine_mode="adaptive",
         rank_selected_max=5,
     )
-    deps = _deps(
-        refine_candidate_crops=lambda req, ctx: (_ for _ in ()).throw(
-            AssertionError("LLM should not be called for obvious-pass tables")
+
+    def _refine(req, ctx):
+        return CropRefineResponse(
+            schema_version="1.0",
+            results=[
+                CropRefineResult(
+                    schema_version="1.0",
+                    id=candidate.id,
+                    is_valid_candidate=True,
+                    refined_bbox=candidate.bbox,
+                    include_title=True,
+                    include_note_if_present=True,
+                    confidence=0.95,
+                    reason="valid",
+                )
+                for candidate in req.candidates
+            ],
+            raw_content='{"results":[]}',
         )
-    )
+
+    deps = _deps(refine_candidate_crops=_refine)
 
     candidates = []
     ranked_rows = []
@@ -481,7 +497,7 @@ def test_refine_selection_enforces_per_kind_limit(tmp_path):
     assert {item.type for item in items} == {"table", "chart"}
 
 
-def test_select_fallback_candidate_crop_paths_prefers_ranked_order(tmp_path):
+def test_select_fallback_candidate_crop_paths_respects_model_rejections(tmp_path):
     candidates = [
         _candidate(
             cid="table_a",
@@ -538,15 +554,13 @@ def test_select_fallback_candidate_crop_paths_prefers_ranked_order(tmp_path):
         selected_kind_max=1,
     )
 
-    assert paths == [
-        "report/candidates/chart_b.png",
-        "report/candidates/table_a.png",
-    ]
-    assert [candidate.id for candidate in selected] == ["chart_b", "table_a"]
-    assert stats["selected_by_source"] == {"ranked": 2}
+    assert paths == ["report/candidates/chart_a.png"]
+    assert [candidate.id for candidate in selected] == ["chart_a"]
+    assert stats["selected_by_source"] == {"prefilter": 1}
+    assert stats["rejected_reasons"] == {"model_reject": 2}
 
 
-def test_select_fallback_candidate_crop_paths_skips_obvious_rejects():
+def test_select_fallback_candidate_crop_paths_preserves_model_rejects():
     candidates = [
         _candidate(
             cid="bad_chart",
@@ -587,10 +601,10 @@ def test_select_fallback_candidate_crop_paths_skips_obvious_rejects():
 
     assert paths == ["report/candidates/good_chart.png"]
     assert [candidate.id for candidate in selected] == ["good_chart"]
-    assert stats["rejected_reasons"] == {"chart_text_fragment": 1}
+    assert stats["rejected_reasons"] == {"model_reject": 1}
 
 
-def test_select_fallback_candidate_crop_paths_blocks_threshold_rejects_with_settings(
+def test_select_fallback_candidate_crop_paths_does_not_use_score_thresholds(
     tmp_path,
 ):
     settings = _settings(tmp_path, rank_min_overall_score=90)
@@ -651,14 +665,14 @@ def test_select_fallback_candidate_crop_paths_blocks_threshold_rejects_with_sett
 
     assert paths == [
         "report/candidates/table_ok.png",
-        "report/candidates/chart_ok.png",
+        "report/candidates/chart_low.png",
     ]
-    assert [candidate.id for candidate in selected] == ["table_ok", "chart_ok"]
-    assert stats["selected_by_source"] == {"ranked": 1, "prefilter": 1}
-    assert stats["rejected_reasons"] == {"overall_below_threshold": 1}
+    assert [candidate.id for candidate in selected] == ["table_ok", "chart_low"]
+    assert stats["selected_by_source"] == {"ranked": 2}
+    assert stats["rejected_reasons"] == {}
 
 
-def test_candidate_prefilter_rejects_obvious_table_text_blocks():
+def test_candidate_prefilter_keeps_valid_geometry_for_model_assessment():
     figure_text_table = _candidate(
         cid="table_figure",
         kind="table",
@@ -696,18 +710,9 @@ def test_candidate_prefilter_rejects_obvious_table_text_blocks():
         },
     )
 
-    assert (
-        rsg._candidate_prefilter_reject_reason(figure_text_table)
-        == "table_figure_text_block"
-    )
-    assert (
-        rsg._candidate_prefilter_reject_reason(reference_block)
-        == "table_reference_text_block"
-    )
-    assert (
-        rsg._candidate_prefilter_reject_reason(large_text_block)
-        == "table_large_text_block"
-    )
+    assert rsg._candidate_prefilter_reject_reason(figure_text_table) == ""
+    assert rsg._candidate_prefilter_reject_reason(reference_block) == ""
+    assert rsg._candidate_prefilter_reject_reason(large_text_block) == ""
 
 
 def test_candidate_prefilter_does_not_reject_arbitrary_doi_substrings():
@@ -730,7 +735,7 @@ def test_candidate_prefilter_does_not_reject_arbitrary_doi_substrings():
     )
 
 
-def test_truncate_prefiltered_candidates_keeps_kind_balance():
+def test_prefiltered_candidates_keep_valid_overflow_for_model_assessment():
     candidates = []
     for idx in range(60):
         candidates.append(
@@ -761,10 +766,10 @@ def test_truncate_prefiltered_candidates_keeps_kind_balance():
 
     selected, kind_counts = rsg._truncate_prefiltered_candidates(candidates, 40)
 
-    assert len(selected) == 40
-    assert kind_counts == {"table": 20, "chart": 20}
-    assert sum(1 for candidate in selected if candidate.kind == "chart") == 20
-    assert sum(1 for candidate in selected if candidate.kind == "table") == 20
+    assert len(selected) == 85
+    assert kind_counts == {"table": 60, "chart": 25}
+    assert sum(1 for candidate in selected if candidate.kind == "chart") == 25
+    assert sum(1 for candidate in selected if candidate.kind == "table") == 60
 
 
 def test_resolve_figure_section_assets_enables_primary_image_without_gallery():
@@ -792,12 +797,12 @@ __all__ = [
     "test_refine_selection_recovers_multiple_missing_decisions_without_rescanning",
     "test_refine_selection_early_stops_at_selected_max",
     "test_refine_selection_enforces_per_kind_limit",
-    "test_select_fallback_candidate_crop_paths_prefers_ranked_order",
-    "test_select_fallback_candidate_crop_paths_skips_obvious_rejects",
-    "test_select_fallback_candidate_crop_paths_blocks_threshold_rejects_with_settings",
-    "test_candidate_prefilter_rejects_obvious_table_text_blocks",
+    "test_select_fallback_candidate_crop_paths_respects_model_rejections",
+    "test_select_fallback_candidate_crop_paths_preserves_model_rejects",
+    "test_select_fallback_candidate_crop_paths_does_not_use_score_thresholds",
+    "test_candidate_prefilter_keeps_valid_geometry_for_model_assessment",
     "test_candidate_prefilter_does_not_reject_arbitrary_doi_substrings",
-    "test_truncate_prefiltered_candidates_keeps_kind_balance",
+    "test_prefiltered_candidates_keep_valid_overflow_for_model_assessment",
     "test_resolve_figure_section_assets_enables_primary_image_without_gallery",
     "test_resolve_figure_section_assets_disables_without_any_asset",
 ]

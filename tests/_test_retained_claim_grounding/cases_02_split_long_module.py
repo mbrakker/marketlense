@@ -97,15 +97,24 @@ def test_large_grounding_inventory_is_split_without_losing_claim_coverage(
 
         def openai_chat_json(self, req, ctx):
             task_id = str(getattr(ctx, "task_id", ""))
-            batch_index = int(task_id.rsplit(":batch:", 1)[1].split(":", 1)[0])
+            batch_token = task_id.rsplit(":batch:", 1)[1].split(":", 1)[0]
+            batch_index = int(batch_token.split("_", 1)[0])
             expected_claims = groups[batch_index - 1]
             response_payload = {
                 "unsupported": [],
-                "checks": [
-                    _grounding_check(item["item_id"], item["text"], "entailed")
-                    for item in expected_claims
-                ],
+                "checks": _grounding_checks_for_payload(
+                    {"retained_claims_to_ground": expected_claims}
+                ),
             }
+            if batch_index == 1:
+                response_payload["checks"] = (
+                    _grounding_checks_for_payload(
+                        {
+                            "public_factual_items": payload["public_factual_items"],
+                        }
+                    )
+                    + response_payload["checks"]
+                )
             self.requests.append(("chat", req.model, task_id))
             return OpenAIResponseResult(
                 schema_version="1.0",
@@ -235,7 +244,8 @@ def test_grounding_batches_overlap_refill_and_merge_in_batch_order(tmp_path) -> 
         def openai_chat_json(self, req, ctx):
             nonlocal active, max_active
             task_id = str(ctx.task_id)
-            batch_index = int(task_id.rsplit(":batch:", 1)[1].split(":", 1)[0])
+            batch_token = task_id.rsplit(":batch:", 1)[1].split(":", 1)[0]
+            batch_index = int(batch_token.split("_", 1)[0])
             with lock:
                 active += 1
                 max_active = max(max_active, active)
@@ -245,13 +255,9 @@ def test_grounding_batches_overlap_refill_and_merge_in_batch_order(tmp_path) -> 
                 elif batch_index == 3:
                     batch_three_started.set()
                 batch_payload = json.loads(req.user_prompt[len("user ") :])
-                group = batch_payload["retained_claims_to_ground"]
                 payload = {
                     "unsupported": [],
-                    "checks": [
-                        _grounding_check(entry["item_id"], entry["text"], "entailed")
-                        for entry in group
-                    ],
+                    "checks": _grounding_checks_for_payload(batch_payload),
                 }
                 return OpenAIResponseResult(
                     schema_version="1.0",
@@ -317,7 +323,7 @@ def test_grounding_batches_overlap_refill_and_merge_in_batch_order(tmp_path) -> 
                 evidence["evidence_id"] for evidence in claim["retained_evidence"]
             } == set(claim["evidence_ids"])
     assert [check["item_id"] for check in materialized[0].output_payload["checks"]] == (
-        expected_ids
+        ["metadata:title", *expected_ids]
     )
     captured_claim_ids = {
         result.candidate.claim_id for result in captured_packages[0].results
@@ -393,7 +399,8 @@ def test_grounding_batch_failure_discards_sibling_results_and_stops_refill(
 
     class FailingBatchProvider:
         def openai_chat_json(self, req, ctx):
-            batch_index = int(str(ctx.task_id).rsplit(":batch:", 1)[1].split(":", 1)[0])
+            batch_token = str(ctx.task_id).rsplit(":batch:", 1)[1].split(":", 1)[0]
+            batch_index = int(batch_token.split("_", 1)[0])
             called.append(batch_index)
             started.wait(timeout=2)
             if batch_index == 2:
@@ -404,10 +411,12 @@ def test_grounding_batch_failure_discards_sibling_results_and_stops_refill(
                 )
             payload = {
                 "unsupported": [],
-                "checks": [
-                    _grounding_check(entry["item_id"], entry["text"], "entailed")
-                    for entry in groups[0]
-                ],
+                "checks": _grounding_checks_for_payload(
+                    {
+                        "public_factual_items": audit_payload["public_factual_items"],
+                        "retained_claims_to_ground": groups[0],
+                    }
+                ),
             }
             return OpenAIResponseResult(
                 schema_version="1.0",
@@ -510,7 +519,8 @@ def test_grounding_shared_cap_bounds_two_simultaneous_reports(tmp_path) -> None:
         def openai_chat_json(self, req, ctx):
             nonlocal active, calls, max_active
             task_id = str(ctx.task_id)
-            batch_index = int(task_id.rsplit(":batch:", 1)[1].split(":", 1)[0])
+            batch_token = task_id.rsplit(":batch:", 1)[1].split(":", 1)[0]
+            batch_index = int(batch_token.split("_", 1)[0])
             with lock:
                 calls += 1
                 active += 1
@@ -520,12 +530,19 @@ def test_grounding_shared_cap_bounds_two_simultaneous_reports(tmp_path) -> None:
             try:
                 assert release_calls.wait(timeout=2)
                 claim_entries = entries[batch_index - 1]
+                checks = _grounding_checks_for_payload(
+                    {"retained_claims_to_ground": claim_entries}
+                )
+                if batch_index == 1:
+                    checks = (
+                        _grounding_checks_for_payload(
+                            {"public_factual_items": public_items}
+                        )
+                        + checks
+                    )
                 payload = {
                     "unsupported": [],
-                    "checks": [
-                        _grounding_check(entry["item_id"], entry["text"], "entailed")
-                        for entry in claim_entries
-                    ],
+                    "checks": checks,
                 }
                 return OpenAIResponseResult(
                     schema_version="1.0",
@@ -560,6 +577,7 @@ def test_grounding_shared_cap_bounds_two_simultaneous_reports(tmp_path) -> None:
         )
         requests.append(request)
         semantic_inputs_by_report[request.report_id] = semantic_inputs
+        public_items = payload["public_factual_items"]
         entries = [
             payload["retained_claims_to_ground"][index : index + 4]
             for index in range(0, len(claim_texts), 4)
@@ -635,18 +653,28 @@ def test_grounding_shared_cap_bounds_two_simultaneous_reports(tmp_path) -> None:
         )["retained_claims_to_ground"]
     ]
     for output_payload in materialized.values():
-        assert [check["item_id"] for check in output_payload["checks"]] == expected_ids
+        assert [check["item_id"] for check in output_payload["checks"]] == [
+            "metadata:title",
+            *expected_ids,
+        ]
 
 
 def test_stale_report_grounding_is_not_reused_for_current_retained_claim(
     tmp_path,
 ) -> None:
     request = _retained_request()
-    item_id = "summary_claim:claim-1"
-    text = request.artifacts["summary"]["claim_evidence_map"][0]["claim"]
+    payload = grounding_payload(request, request.artifacts)
     new_output = {
-        "unsupported": [],
-        "checks": [_grounding_check(item_id, text, "not_established")],
+        "unsupported": [
+            _grounding_unsupported(payload["retained_claims_to_ground"][0])
+        ],
+        "checks": _grounding_checks_for_payload(
+            {"public_factual_items": payload["public_factual_items"]}
+        )
+        + _grounding_checks_for_payload(
+            {"retained_claims_to_ground": payload["retained_claims_to_ground"]},
+            "not_established",
+        ),
     }
     reuse_requests = []
     model_client = FakeOpenAI(grounding_payload=new_output)
@@ -659,7 +687,7 @@ def test_stale_report_grounding_is_not_reused_for_current_retained_claim(
             reason="input_identity_mismatch",
             output_payload={
                 "unsupported": [],
-                "checks": [_grounding_check(item_id, text, "entailed")],
+                "checks": _grounding_checks_for_payload(payload),
             },
         )
 
@@ -727,18 +755,19 @@ def test_unresolved_retained_soft_copy_claim_blocks_report_validation(tmp_path) 
             }
         },
     )
-    provider_item_id = grounding_payload(request, artifacts)[
-        "retained_claims_to_ground"
-    ][0]["item_id"]
+    payload = grounding_payload(request, artifacts)
     model_client = FakeOpenAI(
         grounding_payload={
-            "unsupported": [],
-            "checks": [
-                {
-                    **_grounding_check(provider_item_id, sentence, "not_established"),
-                    "section": "expert_comment",
-                }
+            "unsupported": [
+                _grounding_unsupported(payload["retained_claims_to_ground"][0])
             ],
+            "checks": _grounding_checks_for_payload(
+                {"public_factual_items": payload["public_factual_items"]}
+            )
+            + _grounding_checks_for_payload(
+                {"retained_claims_to_ground": payload["retained_claims_to_ground"]},
+                "not_established",
+            ),
         }
     )
 
@@ -774,11 +803,10 @@ def test_initial_and_regenerated_candidate_share_grounding_identity_and_cache(
     tmp_path,
 ) -> None:
     request = _retained_request()
-    item_id = "summary_claim:claim-1"
-    claim_text = request.artifacts["summary"]["claim_evidence_map"][0]["claim"]
+    payload = grounding_payload(request, request.artifacts)
     output = {
         "unsupported": [],
-        "checks": [_grounding_check(item_id, claim_text, "entailed")],
+        "checks": _grounding_checks_for_payload(payload),
     }
     settings = _settings(tmp_path)
     initial_store = FakeAnalysisStore()
@@ -848,7 +876,7 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
         validation_mode="deferred_grounding",
     )
     analysis_store = FakeAnalysisStore()
-    claim_text = request.artifacts["summary"]["claim_evidence_map"][0]["claim"]
+    payload = grounding_payload(request, request.artifacts)
     report = validate_report(
         request,
         _settings(tmp_path),
@@ -857,22 +885,15 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
         openai_client=FakeOpenAI(
             grounding_payload={
                 "unsupported": [
-                    {
-                        "item_id": "summary_claim:claim-1",
-                        "section": "summary.claim_evidence_map:claim-1.claim",
-                        "text": claim_text,
-                        "classification": "factual_claim",
-                        "entailment_outcome": "not_established",
-                        "reason": "Evidence does not establish the claim.",
-                    }
+                    _grounding_unsupported(payload["retained_claims_to_ground"][0])
                 ],
-                "checks": [
-                    _grounding_check(
-                        "summary_claim:claim-1",
-                        claim_text,
-                        "not_established",
-                    )
-                ],
+                "checks": _grounding_checks_for_payload(
+                    {"public_factual_items": payload["public_factual_items"]}
+                )
+                + _grounding_checks_for_payload(
+                    {"retained_claims_to_ground": payload["retained_claims_to_ground"]},
+                    "not_established",
+                ),
             }
         ),
         analysis_store=analysis_store,

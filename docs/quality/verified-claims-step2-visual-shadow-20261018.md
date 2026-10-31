@@ -7904,3 +7904,53 @@ or WordPress write was performed.
 contract/static gates; PARTIAL for real-report effectiveness. Step 3 remains
 unstarted/not ready until a current-SHA provider-backed retained-report replay
 with available source PDFs and artifacts is completed.**
+
+#### Final semantic-authority five-fix reconciliation — 2026-10-31 (`4120f981`)
+
+This follow-up closes the five root causes identified in the preceding
+semantic-authority review. The earlier migration-debt paragraph above describes
+the `e7f4fd1a` implementation state; the affected local regression suites are
+reconciled here rather than restored to deterministic semantic acceptance.
+
+| Issue | Root cause | Targeted correction | Evidence |
+| --- | --- | --- | --- |
+| Contradictory grounding verdict | An `entailed` result could still carry incompatible protected dimensions or a non-compatible proposition status. | `_apply_semantic_results()` now accepts an entailed result only when the model's protected-fact comparison is complete and internally compatible; otherwise it is unresolved/fail-closed. The grounding validator identity advanced to `grounding_validation_output:2.1`. | `tests/test_semantic_authority_contract.py` covers compatible, incompatible value/population/timeframe, contradicted, not-established, and incomplete verdicts. |
+| Final editorial authority | The final independent review was persisted but its disposition was not merged into the validation report consumed by readiness. | Final review is merged with replacement of stale `public_editorial_quality.*` issues, and the authoritative `validation` snapshot is rewritten for the final artifact. Reusable unchanged reviews remain eligible through the existing identity path. | Semantic-authority and public-editorial/readiness regressions pass; structural blockers remain preserved. |
+| Source-backed key figures | Numeric-text matching could discard a canonical metric before grounding/editorial review. | `_select_key_figure_metrics()` now performs only structured binding, metric-ID, display-field, and stable-cap checks; semantic numeric/category interpretation remains downstream. | `tests/test_key_figure_selection.py` covers alternate display formatting, qualifiers, missing prose matches, unresolved metrics, and invalid bindings. |
+| Visual pre-review cap | Feature-ranked overflow candidates were omitted before multimodal assessment. | Technical candidates are retained and sent through existing bounded ranking batches; rank coverage is logged as complete or `incomplete_unassessed`. Model-rejected rows are not resurrected by fallback. | Candidate prefilter, batching, overflow, fallback-rejection, and coverage regressions pass. |
+| Cross-report evidence cap | Source/order truncation could make one report consume the semantic-synthesis budget and hide other reports. | The existing total budget now uses stable round-robin report diversity and records `unassessed_overflow` plus `coverage_status`; retrieval remains ordering telemetry only. | Cross-report assembly/signal regressions cover overflow, diversity, provenance, and incomplete coverage. |
+
+The affected focused command completed with **426 passed, 7 deselected in
+12.00s**. Changed-file Ruff and formatting passed; full-repository mypy passed
+with **0 tracked errors across 786 source files**; and the prompt-fixture gate
+passed. The prompt corpus was not changed by this slice: current and baseline
+totals remain **113,206 tokens / `$0.024974`**, including validation
+**10,921 tokens / `$0.002005`**, with zero token or cost delta. No prompt
+compression, threshold, pricing, schema-output, or retry weakening was used.
+
+Provider-free replay remains limited to the retained reference artifact
+`out/verified-claims-step2-semantic-authority-replay-20261031.json` (15 cases,
+39 variants). The worktree has no retained frozen-five source PDFs/artifacts
+at the required live input paths; therefore no current-SHA Capgemini, Activate,
+KPMG, Reuters Institute, Adjust, DoubleVerify, Criteo, or Algolia real-report
+run was performed, and there are no live calls, tokens, cost, latency,
+candidate-recall, or editorial-quality measurements to report for this slice.
+No canonical artifact, publication state, or WordPress write changed.
+
+**Verdict: PASS for the five deterministic semantic-authority boundaries,
+focused regressions, static gates, and cache/contract invalidation; PARTIAL for
+real-report effectiveness and editorial-quality acceptance. Step 3 remains
+unstarted/not ready until source-backed current-SHA replay is available.**
+
+The canonical full local gate was also attempted. Its unit stage reached the
+entire 8,311-test selection and stopped with **7,838 passed, 2 skipped, 471
+failures, and 39 deselected**; later coverage/mutation/quality-regression
+stages were therefore not run by the gate. A clean `4120f981` worktree
+reproduced the representative quotation, validation, public-editorial,
+category-fit, and legacy artifact assertions that still encode the earlier
+deterministic semantic contract, so those failures predate this five-fix diff
+and are not claimed as resolved here. The current-only long-test-file failure
+caused by the migrated test additions was split and its ownership gate now
+passes. The remaining isolated wheelhouse failure is the existing CPython
+3.14-versus-3.12 environment guard. This is a release limitation, not a
+quality pass: hosted CI must still confirm the branch's complete test state.

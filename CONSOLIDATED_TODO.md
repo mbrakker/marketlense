@@ -1502,3 +1502,26 @@ prior Reuters run remains **LIVE WORKFLOW PASS — TRANSACTIONAL REPAIR NOT
 EXERCISED**. E13/E18 remain **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**; no canonical,
 publication, or WordPress write occurred.
+
+**Semantic-authority five-root-cause reconciliation — 2026-10-31
+(`4120f981`):** The active semantic boundary now fails closed on internally
+contradictory entailed grounding results, applies the final independent
+editorial verdict to the authoritative readiness validation, preserves
+source-bound metrics without numeric-text vetoes, sends technically valid
+visual overflow through existing bounded LLM batches with explicit unassessed
+coverage, and preserves cross-report source diversity under the existing
+evidence budget. The grounding validator identity is `2.1`; the existing
+semantic, readiness, key-figure, candidate-selection, fallback, and
+cross-report suites passed **426 tests with 7 deselected**. Changed-file Ruff,
+formatting, full mypy (0 tracked errors), and prompt-fixture regression passed.
+The prompt corpus remains unchanged at 113,206 tokens / `$0.024974`.
+The retained 15-case/39-variant replay is provider-free because current-SHA
+frozen-five PDFs/artifacts are unavailable; it is not live quality acceptance.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**. No publication or WordPress write occurred.
+See the Step 2 quality report for the five-row root-cause matrix and exact
+limitation. The canonical full local gate reached its unit stage but stopped at
+the pre-existing semantic-migration regression set (7,838 passed, 2 skipped,
+471 failed, 39 deselected); the focused slice and all changed-file/static
+gates pass. This remains a release limitation and is not treated as a green
+full-suite result.

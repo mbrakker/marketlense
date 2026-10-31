@@ -1467,17 +1467,38 @@ def _apply_semantic_results(
             )
             continue
 
-        # Protected-fact comparisons are retained as audit context only.  They
-        # cannot override the independent grounding model's semantic outcome;
-        # that would recreate the deterministic entailment veto this package
-        # is intended to eliminate.
+        # Protected-fact comparisons are model-owned semantic output, not a
+        # second deterministic entailment decision.  They are nevertheless
+        # part of the model verdict's internal contract: an ``entailed``
+        # outcome cannot be accepted when the same verdict says that its
+        # proposition or a protected dimension is incompatible (or unknown).
+        # Keep that inconsistency fail-closed rather than allowing a malformed
+        # or contradictory structured response to become publishable.
         disagreement = semantic.disagreement
         outcome = semantic.outcome
-        status = {
-            "entailed": "supported",
-            "contradicted": "unsupported",
-            "not_established": "unresolved",
-        }[outcome]
+        comparison = semantic.protected_facts
+        if outcome == "entailed":
+            if comparison is None:
+                status = "unresolved"
+                disagreement = (
+                    disagreement or "entailed_with_incomplete_protected_facts"
+                )
+            elif comparison.incompatible_dimensions:
+                status = "unresolved"
+                disagreement = (
+                    disagreement or "entailed_with_incompatible_protected_facts"
+                )
+            elif comparison.proposition_status != "compatible":
+                status = "unresolved"
+                disagreement = (
+                    disagreement or "entailed_with_incomplete_protected_facts"
+                )
+            else:
+                status = "supported"
+        elif outcome == "contradicted":
+            status = "unsupported"
+        else:
+            status = "unresolved"
         reasons = [semantic.reason] if semantic.reason and status != "supported" else []
         updated.append(
             replace(
@@ -1862,7 +1883,12 @@ def _claim_validation_semantic_results_for_final_inputs(
             }.get(result.get("semantic_outcome"))
             != result.get("status")
         ):
-            return {}
+            # A package may contain a valid result for a claim that was
+            # replaced during repair. That result is stale for the final
+            # artifact, but it must not invalidate independently reusable
+            # results for unchanged claims. Exact candidate/evidence checks
+            # below still prevent the stale result from being reused.
+            continue
         semantic_execution_ids.add(execution_identity)
         current_matches = current_by_candidate.get(candidate_hash, [])
         if not current_matches:

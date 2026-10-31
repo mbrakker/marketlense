@@ -25,6 +25,7 @@ from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse, PdfTextPage
 from src.contracts.pdf_utils import PdfInfoResponse
+from src.contracts.protected_facts import ProtectedFactComparison
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_cards import (
     CardCoverAsset,

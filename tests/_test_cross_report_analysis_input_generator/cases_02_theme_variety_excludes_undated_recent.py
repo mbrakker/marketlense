@@ -580,8 +580,8 @@ def test_evidence_input_assembly_filters_selected_reports_and_preserves_metric_p
 
     assert [item.evidence_id for item in result.evidence] == [
         "report-a-claim-1",
-        "report-a-finding-1",
         "report-b-quote-1",
+        "report-a-finding-1",
     ]
     assert result.evidence_by_report_id == {
         "report-a": ["report-a-claim-1", "report-a-finding-1"],
@@ -650,8 +650,62 @@ def test_evidence_input_assembly_enforces_cap_before_prompt_rendering(
         "report-a-claim-1",
         "report-a-finding-1",
     ]
-    assert result.dropped_evidence_counts == {"max_evidence_items_reached": 1}
+    assert result.dropped_evidence_counts == {"unassessed_overflow": 1}
     assert result.prompt_input_chars < 60000
+
+
+def test_evidence_overflow_is_unassessed_and_preserves_source_diversity(
+    run_context,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=3,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence("report-a-claim-1", report_id="report-a", content_class="claim"),
+            _evidence("report-a-claim-2", report_id="report-a", content_class="claim"),
+            _evidence("report-a-claim-3", report_id="report-a", content_class="claim"),
+            _evidence("report-b-claim-1", report_id="report-b", content_class="claim"),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+
+    result = assemble_cross_report_analysis_inputs(
+        _request(),
+        source_selection,
+        projected_data,
+        run_context,
+        max_evidence_items=2,
+    )
+
+    assert [item.evidence_id for item in result.evidence] == [
+        "report-a-claim-1",
+        "report-b-claim-1",
+    ]
+    assert result.dropped_evidence_counts == {"unassessed_overflow": 2}
 
 
 def test_evidence_input_assembly_preserves_cross_report_scoped_evidence_ids(
@@ -713,5 +767,6 @@ __all__ = [
     "test_publishability_gate_checks_publication_validation_prerequisite",
     "test_evidence_input_assembly_filters_selected_reports_and_preserves_metric_provenance",
     "test_evidence_input_assembly_enforces_cap_before_prompt_rendering",
+    "test_evidence_overflow_is_unassessed_and_preserves_source_diversity",
     "test_evidence_input_assembly_preserves_cross_report_scoped_evidence_ids",
 ]

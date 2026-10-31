@@ -202,7 +202,9 @@ def _candidate_is_obvious_pass(candidate: Candidate) -> bool:
     return False
 
 
-def _rank_threshold_pass(row: Any, settings: IngestSettings) -> tuple[bool, str]:
+def _rank_threshold_pass(
+    row: Any, settings: Optional[IngestSettings]
+) -> tuple[bool, str]:
     """Honor the model's keep decision; scores are ranking telemetry only."""
 
     del settings
@@ -223,60 +225,14 @@ def _truncate_prefiltered_candidates(
     candidates: list[Candidate],
     max_candidates: int,
 ) -> tuple[list[Candidate], dict[str, int]]:
-    if max_candidates <= 0 or len(candidates) <= max_candidates:
-        return list(candidates), {
-            "table": sum(1 for candidate in candidates if candidate.kind == "table"),
-            "chart": sum(1 for candidate in candidates if candidate.kind == "chart"),
-        }
-    table_candidates, chart_candidates = _split_candidates_by_kind(candidates)
-    by_kind = {
-        "table": sorted(
-            table_candidates,
-            key=_candidate_prefilter_priority,
-            reverse=True,
-        ),
-        "chart": sorted(
-            chart_candidates,
-            key=_candidate_prefilter_priority,
-            reverse=True,
-        ),
-    }
-    selected_by_kind: dict[str, list[Candidate]] = {"table": [], "chart": []}
-    next_index_by_kind = {"table": 0, "chart": 0}
-    active_kinds = [kind for kind, rows in by_kind.items() if rows]
-    if not active_kinds:
-        return [], {"table": 0, "chart": 0}
-    base_slots = max_candidates // len(active_kinds)
-    for kind in active_kinds:
-        take = min(len(by_kind[kind]), base_slots)
-        selected_by_kind[kind] = by_kind[kind][:take]
-        next_index_by_kind[kind] = take
-    remaining_slots = max_candidates - sum(
-        len(selected_rows) for selected_rows in selected_by_kind.values()
-    )
-    while remaining_slots > 0:
-        best_kind = ""
-        best_priority = float("-inf")
-        for kind in active_kinds:
-            next_index = next_index_by_kind[kind]
-            rows = by_kind[kind]
-            if next_index >= len(rows):
-                continue
-            priority = _candidate_prefilter_priority(rows[next_index])
-            if priority > best_priority:
-                best_priority = priority
-                best_kind = kind
-        if not best_kind:
-            break
-        next_index = next_index_by_kind[best_kind]
-        selected_by_kind[best_kind].append(by_kind[best_kind][next_index])
-        next_index_by_kind[best_kind] = next_index + 1
-        remaining_slots -= 1
-    selected = selected_by_kind["table"] + selected_by_kind["chart"]
-    selected.sort(key=_candidate_prefilter_priority, reverse=True)
-    return selected, {
-        "table": len(selected_by_kind["table"]),
-        "chart": len(selected_by_kind["chart"]),
+    # ``max_candidates`` is a downstream batching/budget hint, not a semantic
+    # prefilter.  Returning only the feature-ranked prefix would make the
+    # omitted candidates invisible to the multimodal ranker.  The caller
+    # already sends the complete technically valid set in bounded chunks.
+    del max_candidates
+    return list(candidates), {
+        "table": sum(1 for candidate in candidates if candidate.kind == "table"),
+        "chart": sum(1 for candidate in candidates if candidate.kind == "chart"),
     }
 
 

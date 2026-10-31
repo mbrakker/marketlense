@@ -6,3 +6,4 @@ from ._test_claim_validation_generator.cases_02_soft_copy_provenance import *  #
 from ._test_claim_validation_generator.cases_03_hybrid_grounding import *  # noqa: F401,F403
 from ._test_claim_validation_generator.cases_04_incremental_validation import *  # noqa: F401,F403
 from ._test_claim_validation_generator.cases_05_readiness_edges import *  # noqa: F401,F403
+from ._test_claim_validation_generator.cases_06_evidence_fidelity_edges import *  # noqa: F401,F403

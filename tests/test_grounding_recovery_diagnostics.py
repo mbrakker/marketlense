@@ -226,6 +226,7 @@ def test_grounding_issue_retains_public_verified_evidence_for_repair(tmp_path):
                 "text": public_item["text"],
                 "classification": "factual_claim",
                 "entailment_outcome": "not_established",
+                "violation_type": "not_established",
                 "reason": "The retained fact does not establish this wording.",
             }
         ],
@@ -289,6 +290,7 @@ def test_verified_grounding_does_not_bypass_model_verdict_for_exact_fact_text(tm
                 "text": entry["text"],
                 "classification": "factual_claim",
                 "entailment_outcome": "not_established",
+                "violation_type": "not_established",
                 "reason": (
                     "The exact text is not sufficient to establish the complete "
                     "proposition."
@@ -389,6 +391,7 @@ def test_failed_grounding_batch_subdivision_preserves_fact_scope_and_order():
                         "text": "A supported claim.",
                         "classification": "factual_claim",
                         "entailment_outcome": "not_established",
+                        "violation_type": "not_established",
                         "reason": "",
                     }
                 ],

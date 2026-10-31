@@ -694,24 +694,53 @@ def _evaluate_and_store_public_editorial_quality(
 def _merge_public_editorial_quality(
     validation: ValidationReport,
     editorial_validation: ValidationReport | None,
+    *,
+    replace_existing: bool = False,
 ) -> ValidationReport:
     if editorial_validation is None:
         return validation
+    existing_issues = (
+        [
+            issue
+            for issue in validation.issues
+            if not str(issue.rule_id or "").startswith("public_editorial_quality.")
+        ]
+        if replace_existing
+        else list(validation.issues)
+    )
+    base_status = validation.status
+    base_severity = validation.severity
+    if replace_existing:
+        base_status = (
+            "fail"
+            if any(
+                str(issue.severity or "").casefold() == "error"
+                for issue in existing_issues
+            )
+            else "pass"
+        )
+        base_severity = (
+            "error"
+            if base_status == "fail"
+            else "warning"
+            if any(
+                str(issue.severity or "").casefold() == "warning"
+                for issue in existing_issues
+            )
+            else "pass"
+        )
     return ValidationReport(
         schema_version=validation.schema_version,
         status=(
             "fail"
-            if validation.status == "fail" or editorial_validation.status == "fail"
+            if base_status == "fail" or editorial_validation.status == "fail"
             else "pass"
         ),
-        issues=list(validation.issues) + list(editorial_validation.issues),
+        issues=existing_issues + list(editorial_validation.issues),
         severity=(
             "error"
-            if (
-                validation.severity == "error"
-                or editorial_validation.severity == "error"
-            )
-            else validation.severity
+            if (base_severity == "error" or editorial_validation.severity == "error")
+            else base_severity
         ),
         source_path=validation.source_path,
     )

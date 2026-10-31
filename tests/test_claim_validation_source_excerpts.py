@@ -4,6 +4,11 @@ from src.generators.claim_validation_generator import (
     validate_evidence_fidelity,
     validate_retained_claims,
 )
+from tests._test_claim_validation_generator._shared import (
+    _semantic_batch_contradicted,
+    _semantic_batch_supported,
+    _semantic_support,
+)
 
 
 def _case(*, excerpt_value="68", include_excerpt=True):
@@ -31,23 +36,21 @@ def _case(*, excerpt_value="68", include_excerpt=True):
 def test_generated_finding_text_cannot_prove_a_number_absent_from_source_excerpt():
     artifacts, packs = _case(excerpt_value="67")
 
-    package = validate_retained_claims(artifacts, packs)
+    package = validate_retained_claims(
+        artifacts, packs, semantic_batch_validator=_semantic_batch_contradicted
+    )
 
     result = package.results[0]
     assert result.status == "unsupported"
-    assert any(
-        check.name == "number_value_unit_match" and check.status == "failed"
-        for check in result.checks
-    )
+    assert result.semantic_outcome == "contradicted"
+    assert result.semantic_validator_used is True
 
 
 def test_source_fidelity_approved_finding_statement_can_support_retained_claim():
     claim = "75% of respondents expected large or very large impact."
     evidence_id = "agentic-apps-impact"
     artifacts = {
-        "insights_final": [
-            {"id": "impact", "text": claim, "evidence_id": evidence_id}
-        ]
+        "insights_final": [{"id": "impact", "text": claim, "evidence_id": evidence_id}]
     }
     packs = {
         "findings": {
@@ -77,7 +80,9 @@ def test_source_fidelity_approved_finding_statement_can_support_retained_claim()
         },
     }
 
-    result = validate_retained_claims(artifacts, packs).results[0]
+    result = validate_retained_claims(
+        artifacts, packs, semantic_batch_validator=_semantic_batch_supported
+    ).results[0]
 
     assert result.status == "supported"
     assert all(
@@ -112,22 +117,20 @@ def test_unbound_finding_statement_cannot_support_retained_claim():
                     "candidate": {
                         "claim_id": f"evidence:findings:{evidence_id}",
                         "text": claim,
-                        "evidence_references": [
-                            {"source_pack": "source_pdf"}
-                        ],
+                        "evidence_references": [{"source_pack": "source_pdf"}],
                     },
                 }
             ]
         },
     }
 
-    result = validate_retained_claims(artifacts, packs).results[0]
+    result = validate_retained_claims(
+        artifacts, packs, semantic_batch_validator=_semantic_batch_contradicted
+    ).results[0]
 
     assert result.status == "unsupported"
-    assert any(
-        check.name == "number_value_unit_match" and check.status == "failed"
-        for check in result.checks
-    )
+    assert result.semantic_outcome == "contradicted"
+    assert result.semantic_validator_used is True
 
 
 def test_direct_source_excerpt_is_not_concatenated_with_generated_copy():
@@ -184,6 +187,10 @@ def test_generated_finding_can_use_independently_bound_source_page_text():
                 ),
             }
         ],
+        semantic_batch_validator=lambda candidates, _texts: {
+            candidate.claim_id: _semantic_support(candidate, [])
+            for candidate in candidates
+        },
     )
 
     assert package.results[0].status == "supported"
@@ -205,6 +212,7 @@ def test_retained_quote_text_alias_remains_usable_as_direct_evidence():
                 "quotes": [{"id": "privacy-source", "quote_text": "Privacy matters."}]
             }
         },
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"
@@ -226,6 +234,7 @@ def test_retained_quote_candidate_text_remains_source_evidence():
                 "quotes": [{"id": "privacy-source", "text": "Privacy matters."}]
             }
         },
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"

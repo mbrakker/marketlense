@@ -126,6 +126,38 @@ def _prompt_input_chars(
     return evidence_chars + metric_chars
 
 
+def _bounded_evidence_with_source_diversity(
+    evidence: list[CrossReportEvidenceReference],
+    selected_order: dict[str, int],
+    max_evidence_items: int,
+) -> tuple[list[CrossReportEvidenceReference], int]:
+    """Apply the technical evidence budget without choosing one source's claims."""
+    by_report: dict[str, list[CrossReportEvidenceReference]] = {}
+    for item in evidence:
+        by_report.setdefault(item.report_id, []).append(item)
+    report_ids = sorted(
+        by_report,
+        key=lambda report_id: (selected_order.get(report_id, 9999), report_id),
+    )
+    cursors = {report_id: 0 for report_id in report_ids}
+    bounded: list[CrossReportEvidenceReference] = []
+    while len(bounded) < max_evidence_items:
+        added = False
+        for report_id in report_ids:
+            cursor = cursors[report_id]
+            items = by_report[report_id]
+            if cursor >= len(items):
+                continue
+            bounded.append(items[cursor])
+            cursors[report_id] = cursor + 1
+            added = True
+            if len(bounded) >= max_evidence_items:
+                break
+        if not added:
+            break
+    return bounded, len(evidence) - len(bounded)
+
+
 def _fresh_content_hash(
     evidence: CrossReportEvidenceReference,
     content_hashes: dict[str, dict[str, str]],
@@ -817,12 +849,13 @@ def assemble_cross_report_analysis_inputs(
     )
     dropped.update(semantic_dropped)
 
-    bounded_evidence: list[CrossReportEvidenceReference] = []
-    for item in candidate_evidence:
-        if len(bounded_evidence) >= max_evidence_items:
-            dropped["max_evidence_items_reached"] += 1
-            continue
-        bounded_evidence.append(item)
+    bounded_evidence, unassessed_overflow = _bounded_evidence_with_source_diversity(
+        candidate_evidence,
+        selected_order,
+        max_evidence_items,
+    )
+    if unassessed_overflow:
+        dropped["unassessed_overflow"] = unassessed_overflow
 
     raw_metrics: list[CrossReportRawMetricReference] = []
     for metric in sorted(
@@ -875,6 +908,12 @@ def assemble_cross_report_analysis_inputs(
                 "raw_metric_count": len(result.raw_metrics),
                 "prompt_input_chars": result.prompt_input_chars,
                 "dropped_evidence_counts": result.dropped_evidence_counts,
+                "coverage_status": (
+                    "incomplete_unassessed_overflow"
+                    if unassessed_overflow
+                    else "complete"
+                ),
+                "unassessed_evidence_count": unassessed_overflow,
                 "semantic_preselection_present": result.semantic_preselection
                 is not None,
                 "semantic_preselection_selected_count": (

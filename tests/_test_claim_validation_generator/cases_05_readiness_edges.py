@@ -17,14 +17,12 @@ def test_changed_numeric_claim_blocks_readiness_without_model_call() -> None:
             }
         },
         _evidence(),
-        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
-            AssertionError("unused")
-        ),
+        semantic_batch_validator=_semantic_batch_contradicted,
     )
 
     assert package.readiness_status == "not_publishable"
     assert package.unsupported_factual_count == 1
-    assert package.semantic_validation_count == 0
+    assert package.semantic_validation_count == 1
 
 
 def test_claim_reference_order_tolerates_root_and_page_specific_duplicates() -> None:

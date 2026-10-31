@@ -6,7 +6,7 @@ from src.generators._report_selection_generator import figure_selection
 from ._shared import *  # noqa: F401,F403
 
 
-def test_prefilter_uses_typed_candidate_features_without_meta():
+def test_prefilter_uses_typed_candidate_features_without_semantic_preapproval():
     table = Candidate(
         schema_version="1.0",
         id="typed_table",
@@ -43,8 +43,8 @@ def test_prefilter_uses_typed_candidate_features_without_meta():
 
     assert rsg._candidate_prefilter_reject_reason(table) == ""
     assert rsg._candidate_prefilter_reject_reason(chart) == ""
-    assert rsg._candidate_is_obvious_pass(table) is True
-    assert rsg._candidate_is_obvious_pass(chart) is True
+    assert rsg._candidate_is_obvious_pass(table) is False
+    assert rsg._candidate_is_obvious_pass(chart) is False
 
 
 def test_rank_candidate_batches_bound_each_model_response_to_four_candidates(
@@ -106,6 +106,34 @@ def test_rank_candidate_batches_bound_each_model_response_to_four_candidates(
     assert [len(call) for call in calls] == [4, 4, 1]
     assert [row.id for row in ranked] == [candidate.id for candidate in candidates]
     assert usage == {"prompt_tokens": 3, "completion_tokens": 3, "total_tokens": 6}
+
+
+def test_rank_assessment_coverage_marks_missing_model_rows_unassessed():
+    candidates = [
+        _candidate(cid="chart_1", kind="chart"),
+        _candidate(cid="chart_2", kind="chart"),
+        _candidate(cid="chart_3", kind="chart"),
+    ]
+    ranked = [
+        RankedCandidate(
+            id="chart_1",
+            type="chart",
+            score=90,
+            quality_score=90,
+            insight_score=90,
+            data_score=90,
+            keep=True,
+        )
+    ]
+
+    coverage = figure_selection._rank_assessment_coverage(candidates, ranked)
+
+    assert coverage == {
+        "status": "incomplete_unassessed",
+        "candidate_count": 3,
+        "assessed_count": 1,
+        "unassessed_count": 2,
+    }
 
 
 def test_rank_candidates_payload_includes_quality_signals(tmp_path, caplog):
@@ -315,7 +343,7 @@ def test_rank_candidates_payload_compacts_table_fields_and_text(tmp_path):
     }
 
 
-def test_prefilter_rejects_low_signal_chart_fragment():
+def test_prefilter_allows_low_signal_chart_fragment_for_model_assessment():
     candidate = Candidate(
         schema_version="1.0",
         id="chart_fragment",
@@ -335,22 +363,40 @@ def test_prefilter_rejects_low_signal_chart_fragment():
         ),
     )
 
-    assert rsg._candidate_prefilter_reject_reason(candidate) == "chart_low_confidence"
+    assert rsg._candidate_prefilter_reject_reason(candidate) == ""
 
 
-def test_refine_selection_adaptive_obvious_pass_skips_llm(tmp_path):
+def test_refine_selection_adaptive_keeps_valid_candidate_after_llm_review(tmp_path):
     settings = _settings(
         tmp_path, crop_refine_enabled=True, crop_refine_mode="adaptive"
     )
     llm_calls: list[int] = []
-    deps = _deps(
-        refine_candidate_crops=lambda req, ctx: (
-            llm_calls.append(1)
-            or (_ for _ in ()).throw(
-                AssertionError("LLM refine should not be called for obvious pass")
-            )
+
+    def _refine(req, ctx):
+        llm_calls.append(1)
+        candidate = req.candidates[0]
+        return CropRefineResponse(
+            schema_version="1.0",
+            results=[
+                CropRefineResult(
+                    schema_version="1.0",
+                    id=candidate.id,
+                    is_valid_candidate=True,
+                    refined_bbox=candidate.bbox,
+                    include_title=True,
+                    include_note_if_present=True,
+                    confidence=0.95,
+                    reason="valid",
+                )
+            ],
+            raw_content='{"results":[]}',
+            prompt_tokens=10,
+            completion_tokens=5,
+            total_tokens=15,
+            request_id="req-adaptive-review",
         )
-    )
+
+    deps = _deps(refine_candidate_crops=_refine)
 
     cand = _candidate(
         cid="table_1",
@@ -383,7 +429,7 @@ def test_refine_selection_adaptive_obvious_pass_skips_llm(tmp_path):
         dependencies=deps,
     )
 
-    assert llm_calls == []
+    assert llm_calls
     assert len(items) == 1
     assert len(accepted) == 1
     assert items[0].id == "table_1"
@@ -786,12 +832,12 @@ def test_refine_selection_batched_page_maps_mixed_valid_invalid_decisions(tmp_pa
 
 
 __all__ = [
-    "test_prefilter_uses_typed_candidate_features_without_meta",
+    "test_prefilter_uses_typed_candidate_features_without_semantic_preapproval",
     "test_rank_candidate_batches_bound_each_model_response_to_four_candidates",
     "test_rank_candidates_payload_includes_quality_signals",
     "test_rank_candidates_payload_compacts_table_fields_and_text",
-    "test_prefilter_rejects_low_signal_chart_fragment",
-    "test_refine_selection_adaptive_obvious_pass_skips_llm",
+    "test_prefilter_allows_low_signal_chart_fragment_for_model_assessment",
+    "test_refine_selection_adaptive_keeps_valid_candidate_after_llm_review",
     "test_refine_selection_adaptive_ambiguous_calls_llm",
     "test_refine_selection_transforms_candidate_boxes_for_rotated_page_prompt",
     "test_refine_selection_batches_same_page_candidates_by_phase",

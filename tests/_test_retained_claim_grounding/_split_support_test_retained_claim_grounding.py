@@ -74,10 +74,16 @@ def _retained_request() -> ValidationRequest:
     )
 
 
-def _grounding_check(item_id: str, text: str, outcome: str) -> dict:
+def _grounding_check(
+    item_id: str,
+    text: str,
+    outcome: str,
+    *,
+    section: str = "summary.claim_evidence_map:claim-1.claim",
+) -> dict:
     return {
         "item_id": item_id,
-        "section": "summary.claim_evidence_map:claim-1.claim",
+        "section": section,
         "text": text,
         "classification": "factual_claim",
         "entailment_outcome": outcome,
@@ -90,7 +96,40 @@ def _grounding_check(item_id: str, text: str, outcome: str) -> dict:
             }
             for dimension in PROTECTED_FACT_DIMENSIONS
         },
-        "reason": f"semantic_{outcome}",
+        "reason": f"The linked source evidence was assessed as {outcome} for this item.",
+    }
+
+
+def _grounding_checks_for_payload(
+    payload: dict,
+    outcome: str = "entailed",
+) -> list[dict]:
+    items = [
+        item
+        for key in ("public_factual_items", "retained_claims_to_ground")
+        for item in payload.get(key, [])
+        if isinstance(item, dict)
+    ]
+    return [
+        _grounding_check(
+            str(item["item_id"]),
+            str(item.get("text") or ""),
+            outcome,
+            section=str(item.get("section") or ""),
+        )
+        for item in items
+    ]
+
+
+def _grounding_unsupported(item: dict, outcome: str = "not_established") -> dict:
+    return {
+        "item_id": str(item["item_id"]),
+        "section": str(item.get("section") or ""),
+        "text": str(item.get("text") or ""),
+        "classification": "factual_claim",
+        "entailment_outcome": outcome,
+        "violation_type": outcome,
+        "reason": f"The linked source evidence was assessed as {outcome} for this item.",
     }
 
 

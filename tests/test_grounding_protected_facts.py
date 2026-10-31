@@ -4,7 +4,7 @@ import pytest
 
 from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.contracts.validation import ValidationRequest
-from src.generators.validation.grounding import run_grounding_check
+from src.generators.validation.grounding import grounding_payload, run_grounding_check
 from tests._test_validation_generator._shared import (
     FakeOpenAI,
     FakePromptClient,
@@ -31,6 +31,7 @@ def _check(
     }
     complete_protected_facts.update(protected_facts)
     return {
+        "item_id": "expert_comment",
         "section": "expert_comment",
         "text": text,
         "classification": "factual_claim",
@@ -47,22 +48,64 @@ def _issues(
     *,
     evidence_text: str = "52% of respondents expect X in 2026.",
 ):
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="protected-facts",
+        report=_report(),
+        artifacts={"expert_comment": check["text"]},
+        evidence_packs={},
+        vector_store_id=None,
+    )
+    payload = grounding_payload(request, request.artifacts)
+    checks = []
+    for item in payload["public_factual_items"]:
+        if item["item_id"] == "expert_comment":
+            current = dict(check)
+        else:
+            current = _check(outcome="entailed", protected_facts={}, text=item["text"])
+        current["item_id"] = item["item_id"]
+        current["section"] = item["section"]
+        checks.append(current)
+    unsupported = []
+    if check["entailment_outcome"] != "entailed":
+        incompatible_dimensions = [
+            name
+            for name, dimension in check.get("protected_facts", {}).items()
+            if isinstance(dimension, dict) and dimension.get("status") == "incompatible"
+        ]
+        unsupported.append(
+            {
+                "item_id": "expert_comment",
+                "section": "expert_comment",
+                "text": check["text"],
+                "classification": "factual_claim",
+                "entailment_outcome": check["entailment_outcome"],
+                "violation_type": (
+                    "not_established"
+                    if check["entailment_outcome"] == "not_established"
+                    else "contradicted"
+                ),
+                "reason": (
+                    "The model did not establish the complete claim."
+                    + (
+                        " Protected dimensions: "
+                        + ", ".join(incompatible_dimensions)
+                        + "."
+                        if incompatible_dimensions
+                        else ""
+                    )
+                ),
+            }
+        )
     return run_grounding_check(
-        request=ValidationRequest(
-            schema_version="1.0",
-            report_id="protected-facts",
-            report=_report(),
-            artifacts={"expert_comment": check["text"]},
-            evidence_packs={},
-            vector_store_id=None,
-        ),
+        request=request,
         settings=_settings(tmp_path),
         grounding_use_vector_store=False,
         evidence_texts=[evidence_text],
         evidence_windows=[],
         prompt_client=FakePromptClient(),
         openai_client=FakeOpenAI(
-            grounding_payload={"unsupported": [], "checks": [check]}
+            grounding_payload={"unsupported": unsupported, "checks": checks}
         ),
         ctx=_ctx(),
     )
@@ -210,7 +253,8 @@ def test_explicit_factual_failure_is_not_reclassified_by_retrieval_wording(
     tmp_path, violation_type: str, entailment_outcome: str
 ) -> None:
     entry = {
-        "section": "summary",
+        "item_id": "summary:tldr",
+        "section": "tldr",
         "text": "Revenue rose 42%.",
         "classification": "factual_claim",
         "entailment_outcome": entailment_outcome,
@@ -232,7 +276,16 @@ def test_explicit_factual_failure_is_not_reclassified_by_retrieval_wording(
         evidence_windows=[],
         prompt_client=FakePromptClient(),
         openai_client=FakeOpenAI(
-            grounding_payload={"unsupported": [entry], "checks": []}
+            grounding_payload={
+                "unsupported": [entry],
+                "checks": [
+                    {
+                        **_check(outcome="entailed", protected_facts={}, text="Report"),
+                        "item_id": "metadata:title",
+                        "section": "metadata.title",
+                    }
+                ],
+            }
         ),
         ctx=_ctx(),
     )
@@ -247,7 +300,8 @@ def test_retrieval_wording_without_structured_type_does_not_soften_grounding(
     tmp_path,
 ) -> None:
     entry = {
-        "section": "summary",
+        "item_id": "summary:tldr",
+        "section": "tldr",
         "text": "Revenue rose 42%.",
         "classification": "factual_claim",
         "reason": "Retrieval failed; the evidence does not support the claim.",
@@ -267,13 +321,22 @@ def test_retrieval_wording_without_structured_type_does_not_soften_grounding(
         evidence_windows=[],
         prompt_client=FakePromptClient(),
         openai_client=FakeOpenAI(
-            grounding_payload={"unsupported": [entry], "checks": []}
+            grounding_payload={
+                "unsupported": [entry],
+                "checks": [
+                    {
+                        **_check(outcome="entailed", protected_facts={}, text="Report"),
+                        "item_id": "metadata:title",
+                        "section": "metadata.title",
+                    }
+                ],
+            }
         ),
         ctx=_ctx(),
     )
 
     assert len(issues) == 1
-    assert "unsupported_factual_claim" in issues[0].message
+    assert "schema_missing_required" in issues[0].message
     assert "evidence_retrieval_failure" not in issues[0].message
     assert issues[0].severity == "error"
 
@@ -330,13 +393,7 @@ def test_grounding_blocks_incompatible_proposition_and_dimensions(tmp_path) -> N
 
     assert len(issues) == 1
     assert issues[0].severity == "error"
-    for label in (
-        "factual_proposition",
-        "population",
-        "observation_status",
-        "causality",
-    ):
-        assert label in issues[0].message
+    assert "grounding_claim_check_coverage_invalid" in issues[0].message
 
 
 def test_grounding_does_not_accept_an_unknown_factual_proposition(tmp_path) -> None:
@@ -351,4 +408,4 @@ def test_grounding_does_not_accept_an_unknown_factual_proposition(tmp_path) -> N
 
     assert len(issues) == 1
     assert issues[0].severity == "error"
-    assert "[factual_claim|unsupported_factual_claim]" in issues[0].message
+    assert "grounding_claim_check_coverage_invalid" in issues[0].message

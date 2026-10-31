@@ -602,15 +602,13 @@ def test_grounding_cache_identity_separates_authority_modes_and_snapshots(tmp_pa
     assert len({request.relevant_input_hash for request in captured}) == 3
 
 
-def test_verified_rule_modes_drop_legacy_rules_but_normal_keeps_them():
+def test_rule_modes_drop_legacy_semantic_rules_from_active_validation():
     registry = build_validation_rule_registry()
 
-    assert "numbers" in {
+    full_rule_ids = {
         rule.rule_id for rule in rules_for_validation_mode(registry, mode="full")
     }
-    assert "semantic" in {
-        rule.rule_id for rule in rules_for_validation_mode(registry, mode="full")
-    }
+    assert {"numbers", "semantic", "metrics", "quotes"}.isdisjoint(full_rule_ids)
 
     for mode in ("verified_facts", "verified_facts_inline"):
         rule_ids = {
@@ -678,7 +676,7 @@ def test_verified_provenanced_soft_copy_also_defers_factual_prose():
     }
 
 
-def test_verified_metric_binding_mismatch_remains_deterministic():
+def test_verified_metric_binding_mismatch_is_deferred_to_semantic_grounding():
     artifacts = _verified_artifacts()
     artifacts["insights_final"][0]["metric"]["value"] = "99%"
 
@@ -687,7 +685,7 @@ def test_verified_metric_binding_mismatch_remains_deterministic():
         artifacts=artifacts,
     )
 
-    assert "public_editorial_quality.metric_binding_mismatch" in {
+    assert "public_editorial_quality.metric_binding_mismatch" not in {
         issue.rule_id for issue in report.issues
     }
 
@@ -787,7 +785,7 @@ def test_verified_grounding_rejects_empty_check_explanations():
         )
 
 
-def test_verified_deterministic_claim_filter_keeps_structural_failures_only():
+def test_deterministic_claim_filter_keeps_structural_failures_only():
     claim = "The report calls this “an unsupported quote”."
     package = validate_retained_claims(
         {
@@ -809,7 +807,9 @@ def test_verified_deterministic_claim_filter_keeps_structural_failures_only():
         package, verified_mode=True
     )
 
-    assert any(issue.rule_id == "retained_claim.quote_match" for issue in normal_issues)
+    assert not any(
+        issue.rule_id == "retained_claim.quote_match" for issue in normal_issues
+    )
     assert not any(
         issue.rule_id == "retained_claim.quote_match" for issue in verified_issues
     )

@@ -229,7 +229,7 @@ def test_evidence_assembly_prefers_fresh_semantic_claim_embeddings_under_cap(
     assert result.semantic_preselection.selected_claim_count == 3
     assert result.semantic_preselection.stale_embedding_count == 0
     assert "semantic_claim_preselection" not in result.dropped_evidence_counts
-    assert result.dropped_evidence_counts["max_evidence_items_reached"] == 1
+    assert result.dropped_evidence_counts["unassessed_overflow"] == 1
     events = _events(caplog)
     assert_logs_have_required_fields(events)
     complete = [
@@ -290,7 +290,7 @@ def test_evidence_assembly_falls_back_when_claim_embeddings_are_absent(
 
     assert [item.evidence_id for item in result.evidence] == [
         "report-a:claim:first",
-        "report-a:claim:second",
+        "report-b:claim:first",
     ]
     assert result.semantic_preselection is not None
     assert result.semantic_preselection.mode == "deterministic_fallback"

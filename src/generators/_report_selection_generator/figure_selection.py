@@ -153,6 +153,27 @@ def _rank_candidate_batches(
     )
 
 
+def _rank_assessment_coverage(
+    candidates: list[Candidate], ranked_rows: list[Any]
+) -> dict[str, int | str]:
+    candidate_ids = {
+        str(candidate.id or "").strip() for candidate in candidates if candidate.id
+    }
+    assessed_ids = {
+        str(getattr(row, "id", "") or "").strip()
+        for row in ranked_rows
+        if getattr(row, "id", None)
+    }
+    assessed_count = len(candidate_ids.intersection(assessed_ids))
+    unassessed_count = len(candidate_ids) - assessed_count
+    return {
+        "status": "complete" if unassessed_count == 0 else "incomplete_unassessed",
+        "candidate_count": len(candidate_ids),
+        "assessed_count": assessed_count,
+        "unassessed_count": unassessed_count,
+    }
+
+
 def _candidate_crop_path_map(
     candidates: list[Candidate],
     candidate_paths: list[str],
@@ -435,12 +456,11 @@ def _select_fallback_candidates(
         candidate = prefiltered_by_id.get(candidate_id)
         if candidate is None or candidate_id in seen_ids:
             continue
-        if settings is not None:
-            passed, reason = _rank_threshold_pass(row, settings)
-            if not passed:
-                blocked_ids.add(candidate_id)
-                rejected_reasons[reason] = int(rejected_reasons.get(reason, 0)) + 1
-                continue
+        passed, reason = _rank_threshold_pass(row, settings)
+        if not passed:
+            blocked_ids.add(candidate_id)
+            rejected_reasons[reason] = int(rejected_reasons.get(reason, 0)) + 1
+            continue
         seen_ids.add(candidate_id)
         ordered_candidates.append(("ranked", candidate))
     for candidate in prefiltered_candidates:
@@ -719,6 +739,12 @@ def select_report_figures(
         "completion_tokens": None,
         "total_tokens": None,
     }
+    rank_assessment: dict[str, int | str] = {
+        "status": "not_run",
+        "candidate_count": 0,
+        "assessed_count": 0,
+        "unassessed_count": 0,
+    }
     sliced_paths: list[str] = []
     figure_candidates: list[Candidate] = []
     figure_crop_metadata_by_id: dict[str, dict[str, Any]] = {}
@@ -809,11 +835,23 @@ def select_report_figures(
                         role="generator",
                         event="rank_failed",
                         module=logger.name,
-                        fields={"file_id": runtime.file.file_id, "error": str(exc)},
+                        fields={
+                            "file_id": runtime.file.file_id,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                            "unassessed_candidate_count": len(prefiltered_candidates),
+                        },
                     )
                 )
                 ranked = []
+            rank_assessment = _rank_assessment_coverage(prefiltered_candidates, ranked)
         else:
+            rank_assessment = {
+                "status": "complete",
+                "candidate_count": 0,
+                "assessed_count": 0,
+                "unassessed_count": 0,
+            }
             logger.info(
                 log_event(
                     runtime.ctx,
@@ -823,6 +861,19 @@ def select_report_figures(
                     fields={"file_id": runtime.file.file_id},
                 )
             )
+
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="generator",
+                event="candidate_rank_assessment_complete",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    **rank_assessment,
+                },
+            )
+        )
 
         selected_items, selected_candidates = select_refined_candidate_items(
             ranked_rows=ranked,

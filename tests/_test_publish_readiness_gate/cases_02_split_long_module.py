@@ -323,7 +323,7 @@ def test_publish_readiness_rejects_malformed_plural_evidence_references() -> Non
         assert "invalid evidence reference shape" in rule.detail
 
 
-def test_publish_readiness_hard_blocks_unresolved_public_source_fidelity() -> None:
+def test_publish_readiness_defers_public_source_fidelity_to_semantic_review() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     artifacts["insights_final"][0].update(
         {
@@ -334,11 +334,30 @@ def test_publish_readiness_hard_blocks_unresolved_public_source_fidelity() -> No
         }
     )
 
+    semantic_review = ValidationReport(
+        schema_version="1.1",
+        status="fail",
+        severity="error",
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                rule_id="public_editorial_quality.semantic_review",
+                violation_type="not_established",
+                severity="error",
+                affected_section="insights:activate-2021-spend.text",
+                entity_id="activate-2021-spend",
+                message=(
+                    "The final public claim changes the source-bound 22% metric "
+                    "to 23%; the independent review did not establish the rewrite."
+                ),
+            )
+        ],
+    )
     readiness = _evaluate_readiness_for_test(
         report_id="activate-2021",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
-        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        validation_report=semantic_review,
         final_html=html,
         final_html_path="",
         category_ids=["markets"],
@@ -350,9 +369,14 @@ def test_publish_readiness_hard_blocks_unresolved_public_source_fidelity() -> No
         for result in readiness.rule_results
         if result.rule_id == "publish_readiness.source_fidelity"
     )
+    semantic = next(
+        result
+        for result in readiness.rule_results
+        if result.rule_id == "publish_readiness.semantic_grounding"
+    )
     assert readiness.status == "fail"
-    assert fidelity.status == "fail"
-    assert "insight:activate-2021-spend:text" in fidelity.surfaces
+    assert semantic.status == "fail"
+    assert fidelity.status == "pass"
 
 
 def test_publish_readiness_blocks_generic_title_and_wrong_publisher_identity() -> None:
@@ -428,7 +452,7 @@ def test_mintel_rendered_heading_passes_all_three_original_readiness_rules() -> 
     )
 
 
-def test_rendered_scaffolding_projects_canonical_html_issues() -> None:
+def test_rendered_scaffolding_is_left_to_public_editorial_semantic_review() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     for bad_html in ("<p>Demand rose...</p>", "<p>Observation: demand rose.</p>"):
         readiness = _evaluate_readiness_for_test(
@@ -446,8 +470,10 @@ def test_rendered_scaffolding_projects_canonical_html_issues() -> None:
             for result in readiness.rule_results
             if result.status == "fail"
         }
-        assert "publish_readiness.rendered_scaffolding" in failed
-        assert "publish_readiness.editorial_quality" in failed
+        assert ("publish_readiness.rendered_scaffolding" in failed) == (
+            "..." in bad_html
+        )
+        assert ("publish_readiness.editorial_quality" in failed) == ("..." in bad_html)
         assert ("publish_readiness.source_fidelity" in failed) == ("..." in bad_html)
 
 

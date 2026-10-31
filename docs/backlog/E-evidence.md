@@ -1404,3 +1404,25 @@ not run, so E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Detailed
 source-page review, recovery audits, and artifact paths are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+### Semantic-authority five-root-cause reconciliation — 2026-10-31
+
+The current slice closes the five demonstrated semantic-authority defects at
+their existing boundaries: contradictory entailed/protected-fact grounding
+responses fail closed (`grounding_validation_output:2.1`); final independent
+editorial review is merged into the validation snapshot consumed by readiness;
+source-bound metrics are no longer rejected by numeric-text matching; valid
+visual overflow is assessed through existing bounded batches or recorded as
+unassessed; and cross-report evidence uses stable round-robin source diversity
+with explicit incomplete coverage. The focused affected command passed
+**426 tests, 7 deselected**; changed-file Ruff/formatting, full mypy with zero
+tracked errors, and the prompt-fixture gate passed. The prompt corpus remains
+at 113,206 tokens and `$0.024974`.
+
+The retained 15-case/39-variant replay remains provider-free and has no
+current-SHA frozen-five PDFs or artifacts available for independent inspection,
+so no live editorial-quality or real-report improvement is claimed. E18 stays
+**Active/PARTIAL**, Step 2 stays **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. No publication or WordPress write occurred. Full
+root-cause evidence and the exact limitation are recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

@@ -188,7 +188,34 @@ def test_key_figure_selection_retains_values_supported_by_bound_evidence(
     assert [figure["figure_id"] for figure in figures] == [metric_id]
 
 
-def test_unrelated_evidence_number_does_not_support_key_figure() -> None:
+def test_key_figure_selection_keeps_authoritative_metric_when_display_differs() -> None:
+    figures = build_key_figures(
+        metric_spine=[
+            {
+                "metric_id": "formatted-users",
+                "evidence_id": "formatted-users",
+                "label": "Users reached",
+                "value": "1.2M",
+                "unit": "users",
+                "confidence": "high",
+            }
+        ],
+        evidence_packs={},
+        insights_final=[
+            {
+                "id": "formatted-users",
+                "evidence_id": "formatted-users",
+                "evidence": "The source reports 1,200,000 users reached.",
+            }
+        ],
+    )
+
+    assert [figure["figure_id"] for figure in figures] == ["formatted-users"]
+
+
+def test_source_bound_metric_without_matching_prose_reaches_downstream_validation() -> (
+    None
+):
     figures = build_key_figures(
         metric_spine=[
             {
@@ -218,10 +245,12 @@ def test_unrelated_evidence_number_does_not_support_key_figure() -> None:
         ],
     )
 
-    assert figures == []
+    assert [figure["figure_id"] for figure in figures] == ["unsupported-bound-value"]
 
 
-def test_unsupported_top_ranked_metric_does_not_block_next_valid_metric() -> None:
+def test_unresolved_top_ranked_metric_remains_available_for_downstream_validation() -> (
+    None
+):
     metrics = [
         {
             "metric_id": "unsupported-top",
@@ -259,7 +288,10 @@ def test_unsupported_top_ranked_metric_does_not_block_next_valid_metric() -> Non
         ],
     )
 
-    assert [figure["figure_id"] for figure in figures] == ["supported-next"]
+    assert [figure["figure_id"] for figure in figures] == [
+        "unsupported-top",
+        "supported-next",
+    ]
 
 
 def test_key_figure_selection_considers_metrics_beyond_the_metric_spine_cap() -> None:

@@ -13,6 +13,7 @@ from src.contracts.claim_validation import (
     ClaimSemanticGroundingResult,
     ClaimSemanticValidationIdentity,
 )
+from src.contracts.protected_facts import ProtectedFactComparison
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_to_payload,
@@ -72,6 +73,9 @@ def _semantic_result(claim_input, outcome: str) -> ClaimSemanticGroundingResult:
         outcome=outcome,
         reason=f"semantic_{outcome}",
         identity=identity,
+        protected_facts=ProtectedFactComparison.from_payload(
+            {}, proposition_status="compatible"
+        ),
     )
 
 

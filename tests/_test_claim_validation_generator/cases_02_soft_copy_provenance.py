@@ -40,9 +40,7 @@ def test_retained_claim_validation_uses_soft_copy_factual_provenance() -> None:
             },
         },
         _evidence(),
-        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
-            AssertionError("unused")
-        ),
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.readiness_status == "awaiting_review"
@@ -99,6 +97,7 @@ def test_retained_claim_validation_uses_canonical_abbreviation_sentence_grid(
                 "findings": [{"id": "f1", "text": evidence, "evidence": evidence}]
             }
         },
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert len(package.results) == 1
@@ -179,15 +178,12 @@ def test_retained_claim_validation_rejects_invented_soft_copy_quantity() -> None
             },
         },
         _evidence(),
-        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
-            AssertionError("unused")
-        ),
+        semantic_batch_validator=_semantic_batch_contradicted,
     )
 
     assert package.readiness_status == "not_publishable"
-    assert any(
-        check.reason == "quantity_not_entailed" for check in package.results[0].checks
-    )
+    assert package.results[0].semantic_outcome == "contradicted"
+    assert package.results[0].semantic_validator_used is True
 
 
 def test_retained_claim_validation_rejects_soft_copy_protected_fact_mismatch() -> None:
@@ -208,13 +204,33 @@ def test_retained_claim_validation_rejects_soft_copy_protected_fact_mismatch() -
             },
         },
         _evidence(),
+        semantic_batch_validator=lambda inputs: [
+            ClaimSemanticGroundingResult(
+                schema_version="1.0",
+                outcome="entailed",
+                reason="contradictory_timeframe_verdict",
+                identity=_semantic_result(inputs[0]).identity,
+                protected_facts=ProtectedFactComparison.from_payload(
+                    {
+                        "timeframe": {
+                            "claim_value": "2025",
+                            "evidence_value": "2026",
+                            "status": "incompatible",
+                        }
+                    },
+                    proposition_status="compatible",
+                ),
+            )
+        ],
     )
 
     assert package.readiness_status == "not_publishable"
-    assert any(
-        check.reason == "protected_fact_timeframe_incompatible"
-        for check in package.results[0].checks
+    assert package.results[0].status == "unresolved"
+    assert (
+        package.results[0].semantic_disagreement
+        == "entailed_with_incompatible_protected_facts"
     )
+    assert package.results[0].semantic_validator_used is True
 
 
 def test_retained_claim_validation_keeps_soft_copy_interpretation_nonfactual() -> None:
@@ -237,10 +253,11 @@ def test_retained_claim_validation_keeps_soft_copy_interpretation_nonfactual() -
         _evidence(),
     )
 
-    assert package.readiness_status == "awaiting_review"
-    assert package.unsupported_factual_count == 0
-    assert package.results[0].candidate.kind == "interpretive"
-    assert package.results[0].candidate.factual is False
+    assert package.readiness_status == "not_publishable"
+    assert package.unsupported_factual_count == 1
+    assert package.unresolved_factual_count == 0
+    assert package.results[0].candidate.kind == "descriptive"
+    assert package.results[0].candidate.factual is True
 
 
 def test_retained_claim_validation_does_not_trust_interpretive_numeric_repair() -> None:
@@ -264,7 +281,8 @@ def test_retained_claim_validation_does_not_trust_interpretive_numeric_repair() 
     )
 
     assert package.readiness_status == "not_publishable"
-    assert package.unsupported_factual_count == 1
+    assert package.unsupported_factual_count == 0
+    assert package.unresolved_factual_count == 1
     assert package.results[0].candidate.factual is True
 
 
@@ -286,10 +304,12 @@ def test_supported_interpretive_numeric_repair_remains_groundable() -> None:
             },
         },
         _evidence(),
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.readiness_status == "awaiting_review"
     assert package.unsupported_factual_count == 0
+    assert package.unresolved_factual_count == 0
     assert package.results[0].candidate.factual is True
 
 
@@ -344,7 +364,7 @@ def test_retained_claim_validation_does_not_downgrade_declared_factual_copy() ->
     )
 
     assert package.readiness_status == "awaiting_review"
-    assert package.results[0].candidate.kind == "interpretive"
+    assert package.results[0].candidate.kind == "descriptive"
     assert package.results[0].candidate.factual is True
     assert package.results[0].semantic_validator_used is True
 
@@ -564,16 +584,19 @@ def test_evidence_bound_qualitative_recommendation_reaches_semantic_grounding(
     )
 
     assert len(semantic_calls) == 1
-    assert len(semantic_calls[0]) == 1
-    assert semantic_calls[0][0].candidate.text == premise
-    assert semantic_calls[0][0].candidate.factual is True
+    assert len(semantic_calls[0]) == 2
+    assert {item.candidate.text for item in semantic_calls[0]} == {
+        premise,
+        recommendation,
+    }
+    assert all(item.candidate.factual is True for item in semantic_calls[0])
     assert package.results[0].semantic_validator_used is True
     assert package.results[0].status == "unresolved"
     assert package.results[1].candidate.text == recommendation
-    assert package.results[1].candidate.factual is False
-    assert package.results[1].semantic_validator_used is False
+    assert package.results[1].candidate.factual is True
+    assert package.results[1].semantic_validator_used is True
     assert package.results[1].status == "unresolved"
-    assert package.unresolved_factual_count == 1
+    assert package.unresolved_factual_count == 2
     assert package.readiness_status == "not_publishable"
 
 
@@ -581,9 +604,9 @@ def test_evidence_bound_pure_normative_recommendation_remains_nonfactual() -> No
     claim = "Retailers should reconsider marketplace investment."
     calls = []
 
-    def semantic_batch(_claims):
+    def semantic_batch(claims):
         calls.append(True)
-        raise AssertionError("pure normative recommendation was grounded")
+        return _semantic_batch_supported(claims)
 
     package = validate_retained_claims(
         {
@@ -604,8 +627,9 @@ def test_evidence_bound_pure_normative_recommendation_remains_nonfactual() -> No
         semantic_batch_validator=semantic_batch,
     )
 
-    assert calls == []
-    assert package.results[0].candidate.factual is False
+    assert calls == [True]
+    assert package.results[0].candidate.factual is True
+    assert package.results[0].semantic_validator_used is True
     assert package.readiness_status == "awaiting_review"
 
 
@@ -637,5 +661,6 @@ def test_evidence_independent_normative_recommendation_remains_nonfactual() -> N
     )
 
     assert calls == []
-    assert package.results[0].candidate.factual is False
-    assert package.readiness_status == "awaiting_review"
+    assert package.results[0].candidate.factual is True
+    assert package.results[0].status == "unsupported"
+    assert package.readiness_status == "not_publishable"

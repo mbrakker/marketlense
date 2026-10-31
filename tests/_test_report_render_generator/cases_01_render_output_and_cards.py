@@ -470,6 +470,9 @@ def test_verified_readiness_reuses_canonical_semantic_binding_without_raw_pdf_pa
             configuration_policy_identity="grounding-policy-sha256",
             relevant_input_hash="grounding-input-sha256",
         ),
+        protected_facts=ProtectedFactComparison.from_payload(
+            {}, proposition_status="compatible"
+        ),
     )
     candidate = apply_retained_claim_semantic_results(
         package, semantic_inputs, [semantic_result]

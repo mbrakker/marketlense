@@ -6,7 +6,10 @@ from src.contracts.claim_validation import (
     ClaimSemanticValidationIdentity,
 )
 from src.contracts.pdf_text import PdfTextPage
-from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
+from src.contracts.protected_facts import (
+    PROTECTED_FACT_DIMENSIONS,
+    ProtectedFactComparison,
+)
 from src.contracts.validation import ValidationRequest
 from src.generators.artifact_normalization import bind_artifact_evidence_spans
 from src.generators.claim_validation_generator import (
@@ -116,6 +119,9 @@ def _page_grounded_semantic_result(semantic_input):
         outcome="entailed",
         reason="cited_page_entails_claim",
         identity=identity,
+        protected_facts=ProtectedFactComparison.from_payload(
+            {}, proposition_status="compatible"
+        ),
     )
 
 
@@ -332,6 +338,26 @@ def test_grounding_rule_can_validate_claim_against_its_cited_source_page(tmp_pat
         }
         for entry in payload["retained_claims_to_ground"]
     ]
+    checks.extend(
+        {
+            "item_id": entry["item_id"],
+            "section": entry["section"],
+            "text": entry["text"],
+            "classification": "factual_claim",
+            "entailment_outcome": "entailed",
+            "proposition_status": "compatible",
+            "protected_facts": {
+                dimension: {
+                    "claim_value": None,
+                    "evidence_value": None,
+                    "status": "unknown",
+                }
+                for dimension in PROTECTED_FACT_DIMENSIONS
+            },
+            "reason": "metadata title is available for the public grounding boundary",
+        }
+        for entry in payload["public_factual_items"]
+    )
     model_client = FakeOpenAI(grounding_payload={"unsupported": [], "checks": checks})
     runtime = SimpleNamespace(
         request=request,
@@ -477,17 +503,26 @@ def test_activate_numeric_insight_grounding_uses_validated_finding_relationship(
         wrong_metrics: "contradicted",
         wrong_denominator: "not_established",
     }
-    checks = [
-        {
+    all_entries = [
+        *payload["retained_claims_to_ground"],
+        *payload["public_factual_items"],
+    ]
+    seen_item_ids: set[str] = set()
+    checks = []
+    unsupported = []
+    for item in all_entries:
+        if item["item_id"] in seen_item_ids:
+            continue
+        seen_item_ids.add(item["item_id"])
+        outcome = outcomes.get(item["text"], "entailed")
+        check = {
             "item_id": item["item_id"],
             "section": item["section"],
             "text": item["text"],
             "classification": "factual_claim",
-            "entailment_outcome": outcomes.get(item["text"], "entailed"),
+            "entailment_outcome": outcome,
             "proposition_status": (
-                "incompatible"
-                if outcomes.get(item["text"]) == "contradicted"
-                else "compatible"
+                "incompatible" if outcome == "contradicted" else "compatible"
             ),
             "protected_facts": {
                 dimension: {
@@ -499,9 +534,26 @@ def test_activate_numeric_insight_grounding_uses_validated_finding_relationship(
             },
             "reason": "grounding_result",
         }
-        for item in payload["public_factual_items"]
-    ]
-    model_client = FakeOpenAI(grounding_payload={"unsupported": [], "checks": checks})
+        checks.append(check)
+        if outcome != "entailed":
+            unsupported.append(
+                {
+                    "item_id": item["item_id"],
+                    "section": item["section"],
+                    "text": item["text"],
+                    "classification": "factual_claim",
+                    "entailment_outcome": outcome,
+                    "violation_type": (
+                        "contradicted"
+                        if outcome == "contradicted"
+                        else "not_established"
+                    ),
+                    "reason": "grounding_result",
+                }
+            )
+    model_client = FakeOpenAI(
+        grounding_payload={"unsupported": unsupported, "checks": checks}
+    )
     runtime = SimpleNamespace(
         request=request,
         settings=_settings(tmp_path),

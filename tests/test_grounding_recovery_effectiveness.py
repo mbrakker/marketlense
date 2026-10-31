@@ -114,6 +114,7 @@ def _check(item_id: str, text: str) -> dict[str, object]:
 class _SubdivisionProvider:
     def __init__(self, entries: list[dict[str, object]], *, fail_split: bool):
         self.entries = entries
+        self.public_entries: list[dict[str, object]] = []
         self.fail_split = fail_split
         self.calls: list[tuple[str, str]] = []
 
@@ -142,7 +143,18 @@ class _SubdivisionProvider:
             raise AssertionError(f"unexpected grounding task: {task_id}")
         response = {
             "unsupported": [],
-            "checks": [_check(entry["item_id"], entry["text"]) for entry in selected],
+            "checks": [
+                *[_check(entry["item_id"], entry["text"]) for entry in selected],
+                *(
+                    [
+                        _check(entry["item_id"], entry["text"])
+                        for entry in self.public_entries
+                    ]
+                    if ":batch:01:" in task_id
+                    or (":batch:01_split1" in task_id and "_split2" not in task_id)
+                    else []
+                ),
+            ],
         }
         return OpenAIResponseResult(
             schema_version="1.0",
@@ -175,7 +187,18 @@ class _RecursiveSubdivisionProvider(_SubdivisionProvider):
             raise AssertionError(f"unexpected grounding task: {task_id}")
         response = {
             "unsupported": [],
-            "checks": [_check(entry["item_id"], entry["text"]) for entry in selected],
+            "checks": [
+                *[_check(entry["item_id"], entry["text"]) for entry in selected],
+                *(
+                    [
+                        _check(entry["item_id"], entry["text"])
+                        for entry in self.public_entries
+                    ]
+                    if ":batch:01:" in task_id
+                    or (":batch:01_split1" in task_id and "_split2" not in task_id)
+                    else []
+                ),
+            ],
         }
         return OpenAIResponseResult(
             schema_version="1.0",
@@ -213,6 +236,7 @@ def _run_with_provider(tmp_path, provider: _SubdivisionProvider):
     entries = payload["retained_claims_to_ground"]
     assert isinstance(entries, list)
     provider.entries = entries
+    provider.public_entries = list(payload["public_factual_items"])
     settings = _settings(tmp_path)
     settings = replace(
         settings,

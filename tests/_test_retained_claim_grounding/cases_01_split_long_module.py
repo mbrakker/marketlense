@@ -9,7 +9,7 @@ __file__ = str(
 from ._split_support_test_retained_claim_grounding import *  # noqa: F401,F403
 
 
-def test_deterministic_retained_claim_failure_enters_candidate_repair_plan() -> None:
+def test_retained_claim_semantics_are_not_certified_by_quote_heuristics() -> None:
     claim = (
         "“Actively exploring” and “plan to implement in the near future” are "
         "distinct positions grouped in the same finding."
@@ -46,30 +46,14 @@ def test_deterministic_retained_claim_failure_enters_candidate_repair_plan() -> 
     )
 
     assert package.unsupported_factual_count == 1
-    assert "quote_not_matched" in package.results[0].reasons
+    assert package.results[0].reasons == ["unknown_evidence_reference"]
     issues = _deterministic_claim_validation_issues(package)
     assert {issue.rule_id for issue in issues} == {
-        "retained_claim.evidence_reference_completeness",
-        "retained_claim.quote_match",
+        "retained_claim.evidence_reference_completeness"
     }
-    quote_issue = next(
-        issue for issue in issues if issue.rule_id == "retained_claim.quote_match"
-    )
-    assert quote_issue.entity_id == package.results[0].candidate.claim_id
-    assert quote_issue.evidence_ids == ["f1"]
-
-    plan = _build_regeneration_plan(
-        issues=issues,
-        artifacts=artifacts,
-        broad_retry_available=False,
-    )
-
-    assert plan.mode == "targeted"
-    assert plan.targets[0].target_section == "linkedin_post"
-    assert plan.targets[0].allowed_paths == ["linkedin_post[claim_index=0]"]
 
 
-def test_grounding_rule_blocks_deterministic_quote_failure_before_promotion(
+def test_grounding_rule_leaves_quote_semantics_to_the_model(
     tmp_path,
 ) -> None:
     claim = (
@@ -137,11 +121,7 @@ def test_grounding_rule_blocks_deterministic_quote_failure_before_promotion(
     deterministic_failures = [
         issue for issue in issues if issue.rule_id == "retained_claim.quote_match"
     ]
-    assert len(deterministic_failures) == 1
-    assert deterministic_failures[0].severity == "error"
-    assert deterministic_failures[0].entity_id == (
-        f"soft_copy:linkedin_post:{text_hash[:16]}"
-    )
+    assert deterministic_failures == []
     assert len(provider.requests) == 1
 
 
@@ -424,13 +404,11 @@ def test_namespaced_retained_grounding_identity_maps_to_claim_lineage(tmp_path) 
             }
         },
     )
-    item_id = grounding_payload(request, artifacts)["retained_claims_to_ground"][0][
-        "item_id"
-    ]
+    payload = grounding_payload(request, artifacts)
     model_client = FakeOpenAI(
         grounding_payload={
             "unsupported": [],
-            "checks": [_grounding_check(item_id, sentence, "entailed")],
+            "checks": _grounding_checks_for_payload(payload),
         }
     )
     captured_packages: list[ClaimValidationPackage] = []
@@ -459,7 +437,9 @@ def test_namespaced_retained_grounding_identity_maps_to_claim_lineage(tmp_path) 
     assert result.semantic_identity.claim_id == claim_id
 
 
-def test_semantic_fallback_payload_omits_proven_and_failed_claims() -> None:
+def test_semantic_fallback_payload_retains_all_unresolved_evidence_bound_claims() -> (
+    None
+):
     unresolved_text = (
         "Wallet use is becoming a common checkout method across retailers."
     )
@@ -518,17 +498,19 @@ def test_semantic_fallback_payload_omits_proven_and_failed_claims() -> None:
     payload = grounding_payload(request, request.artifacts)
 
     assert [item["item_id"] for item in payload["retained_claims_to_ground"]] == [
-        "summary_claim:unresolved"
+        "summary_claim:unresolved",
+        "summary_claim:supported",
+        "summary_claim:contradicted",
     ]
 
 
 def test_reused_report_grounding_maps_semantics_and_current_identity(tmp_path) -> None:
     request = _retained_request()
     item_id = "summary_claim:claim-1"
-    text = request.artifacts["summary"]["claim_evidence_map"][0]["claim"]
+    payload = grounding_payload(request, request.artifacts)
     reused_output = {
         "unsupported": [],
-        "checks": [_grounding_check(item_id, text, "entailed")],
+        "checks": _grounding_checks_for_payload(payload),
     }
     reuse_requests = []
     captured_packages: list[ClaimValidationPackage] = []
@@ -579,12 +561,11 @@ def test_reused_report_grounding_maps_semantics_and_current_identity(tmp_path) -
 
 def test_incomplete_reusable_grounding_is_rejected_and_revalidated(tmp_path) -> None:
     request = _retained_request()
-    item_id = "summary_claim:claim-1"
-    text = request.artifacts["summary"]["claim_evidence_map"][0]["claim"]
+    payload = grounding_payload(request, request.artifacts)
     model_client = FakeOpenAI(
         grounding_payload={
             "unsupported": [],
-            "checks": [_grounding_check(item_id, text, "entailed")],
+            "checks": _grounding_checks_for_payload(payload),
         }
     )
     captured_packages: list[ClaimValidationPackage] = []
@@ -720,14 +701,8 @@ def test_multiple_retained_claims_use_one_report_level_grounding_call(tmp_path) 
             }
         },
     )
-    checks = [
-        _grounding_check(
-            "summary_claim:claim-1",
-            request.artifacts["summary"]["claim_evidence_map"][0]["claim"],
-            "entailed",
-        ),
-        _grounding_check("summary_claim:claim-2", second_text, "entailed"),
-    ]
+    payload = grounding_payload(request, request.artifacts)
+    checks = _grounding_checks_for_payload(payload)
     model_client = FakeOpenAI(grounding_payload={"unsupported": [], "checks": checks})
     captured_packages: list[ClaimValidationPackage] = []
 
