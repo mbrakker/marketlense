@@ -7905,7 +7905,7 @@ contract/static gates; PARTIAL for real-report effectiveness. Step 3 remains
 unstarted/not ready until a current-SHA provider-backed retained-report replay
 with available source PDFs and artifacts is completed.**
 
-#### Final semantic-authority five-fix reconciliation — 2026-10-31 (`4120f981`)
+#### Final semantic-authority five-fix reconciliation — 2026-10-31 (`2e503304`)
 
 This follow-up closes the five root causes identified in the preceding
 semantic-authority review. The earlier migration-debt paragraph above describes
@@ -7920,7 +7920,7 @@ reconciled here rather than restored to deterministic semantic acceptance.
 | Visual pre-review cap | Feature-ranked overflow candidates were omitted before multimodal assessment. | Technical candidates are retained and sent through existing bounded ranking batches; rank coverage is logged as complete or `incomplete_unassessed`. Model-rejected rows are not resurrected by fallback. | Candidate prefilter, batching, overflow, fallback-rejection, and coverage regressions pass. |
 | Cross-report evidence cap | Source/order truncation could make one report consume the semantic-synthesis budget and hide other reports. | The existing total budget now uses stable round-robin report diversity and records `unassessed_overflow` plus `coverage_status`; retrieval remains ordering telemetry only. | Cross-report assembly/signal regressions cover overflow, diversity, provenance, and incomplete coverage. |
 
-The affected focused command completed with **426 passed, 7 deselected in
+The affected focused command completed with **428 passed, 7 deselected in
 12.00s**. Changed-file Ruff and formatting passed; full-repository mypy passed
 with **0 tracked errors across 786 source files**; and the prompt-fixture gate
 passed. The prompt corpus was not changed by this slice: current and baseline
@@ -7954,3 +7954,22 @@ caused by the migrated test additions was split and its ownership gate now
 passes. The remaining isolated wheelhouse failure is the existing CPython
 3.14-versus-3.12 environment guard. This is a release limitation, not a
 quality pass: hosted CI must still confirm the branch's complete test state.
+
+#### Hosted CI terminal result — 2026-10-31 (`2e503304`, run `41216218560`)
+
+The hosted policy, architecture, formatting, Ruff, type, documentation,
+backlog, schema, and WordPress-subproject checks completed successfully; the
+WordPress staging REST check was skipped by its existing guard. Mutation
+partition 1 passed. Mutation partition 0 failed before mutation because its
+unmutated target suite did not pass for
+`src/generators/_artifact_generator/generation.py`; no mutation result was
+produced. The hosted default suite completed with **7,841 passed, 469 failed,
+and 1 skipped in 480.73s**. Its failures are the same legacy semantic-
+migration, regeneration, category-fit, publisher-inventory, artifact, and
+PDF-heuristic families reproduced from the clean pre-slice worktree, rather
+than a focused failure in the five semantic-authority boundaries. Coverage and
+later release-gate steps did not run after the unit-stage failure. The
+`release_evidence` prerequisite check correctly failed because the `tests` and
+`mutation` jobs were non-success; no release bundle, canonical artifact, or
+WordPress write was created. Hosted run URL:
+`https://github.com/mbrakker/marketlense/actions/runs/41216218560`.

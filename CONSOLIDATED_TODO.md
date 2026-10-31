@@ -1504,7 +1504,7 @@ EXERCISED**. E13/E18 remain **Active/PARTIAL**, Step 2 remains
 publication, or WordPress write occurred.
 
 **Semantic-authority five-root-cause reconciliation — 2026-10-31
-(`4120f981`):** The active semantic boundary now fails closed on internally
+(`2e503304`):** The active semantic boundary now fails closed on internally
 contradictory entailed grounding results, applies the final independent
 editorial verdict to the authoritative readiness validation, preserves
 source-bound metrics without numeric-text vetoes, sends technically valid
@@ -1512,7 +1512,7 @@ visual overflow through existing bounded LLM batches with explicit unassessed
 coverage, and preserves cross-report source diversity under the existing
 evidence budget. The grounding validator identity is `2.1`; the existing
 semantic, readiness, key-figure, candidate-selection, fallback, and
-cross-report suites passed **426 tests with 7 deselected**. Changed-file Ruff,
+cross-report suites passed **428 tests with 7 deselected**. Changed-file Ruff,
 formatting, full mypy (0 tracked errors), and prompt-fixture regression passed.
 The prompt corpus remains unchanged at 113,206 tokens / `$0.024974`.
 The retained 15-case/39-variant replay is provider-free because current-SHA
@@ -1525,3 +1525,11 @@ the pre-existing semantic-migration regression set (7,838 passed, 2 skipped,
 471 failed, 39 deselected); the focused slice and all changed-file/static
 gates pass. This remains a release limitation and is not treated as a green
 full-suite result.
+
+Hosted run `41216218560` confirmed the static/policy gates and mutation
+partition 1, but the default suite ended with **7,841 passed, 469 failed, and
+1 skipped**; mutation partition 0 stopped because the unmutated artifact-
+generation target suite failed, and `release_evidence` correctly blocked on
+those prerequisites. The hosted result is recorded in the Step 2 quality
+report; E18 remains **Active/PARTIAL**, Step 2 **PARTIAL/NO-GO**, and Step 3
+**unstarted/not ready**.

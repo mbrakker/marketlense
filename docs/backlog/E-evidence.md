@@ -1415,7 +1415,7 @@ source-bound metrics are no longer rejected by numeric-text matching; valid
 visual overflow is assessed through existing bounded batches or recorded as
 unassessed; and cross-report evidence uses stable round-robin source diversity
 with explicit incomplete coverage. The focused affected command passed
-**426 tests, 7 deselected**; changed-file Ruff/formatting, full mypy with zero
+**428 tests, 7 deselected**; changed-file Ruff/formatting, full mypy with zero
 tracked errors, and the prompt-fixture gate passed. The prompt corpus remains
 at 113,206 tokens and `$0.024974`.
 
@@ -1426,3 +1426,12 @@ so no live editorial-quality or real-report improvement is claimed. E18 stays
 **unstarted/not ready**. No publication or WordPress write occurred. Full
 root-cause evidence and the exact limitation are recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+Hosted run `41216218560` on `2e503304` passed the static/policy gates and
+mutation partition 1, but the default suite ended with **7,841 passed, 469
+failed, and 1 skipped**. Mutation partition 0 failed its unmutated
+`_artifact_generator/generation.py` target suite, so `release_evidence`
+correctly blocked. No coverage/release bundle, publication, or WordPress write
+was produced; this keeps E18 **Active/PARTIAL**, Step 2 **PARTIAL/NO-GO**, and
+Step 3 **unstarted/not ready**. See the Step 2 quality report for the hosted
+failure families and clean-baseline comparison.
