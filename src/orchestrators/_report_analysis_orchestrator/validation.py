@@ -899,9 +899,7 @@ def _executed_repair_metadata(
             dict.fromkeys(
                 str(evidence_id).strip()
                 for decision in decisions
-                for evidence_id in (
-                    getattr(decision, "evidence_ids_used", []) or []
-                )
+                for evidence_id in (getattr(decision, "evidence_ids_used", []) or [])
                 if str(evidence_id).strip()
             )
         )

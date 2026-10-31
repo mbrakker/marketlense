@@ -890,8 +890,7 @@ def _source_span_is_compatible(
 
     def has_location(span: dict[str, Any]) -> bool:
         return any(
-            field in span and span[field] not in (None, "")
-            for field in location_fields
+            field in span and span[field] not in (None, "") for field in location_fields
         )
 
     if require_source_location and not has_location(claimed):

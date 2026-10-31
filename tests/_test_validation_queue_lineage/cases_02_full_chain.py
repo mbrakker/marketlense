@@ -423,9 +423,7 @@ def test_a21_full_chain_preserves_grounding_disposition(
                 == "pass"
             )
             for family in ("expert_comment", "linkedin_post"):
-                prompt = artifacts["_cache"]["prompts"][
-                    f"report_vs/artifacts/{family}"
-                ]
+                prompt = artifacts["_cache"]["prompts"][f"report_vs/artifacts/{family}"]
                 assert prompt["dependency_manifest"]["namespace"] == (
                     f"report_vs/artifacts/{family}"
                 )
