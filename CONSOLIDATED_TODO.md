@@ -1466,3 +1466,22 @@ correction. The live Reuters result remains **LIVE WORKFLOW PASS —
 TRANSACTIONAL REPAIR NOT EXERCISED**; E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. See the
 Step 2 quality report for the exact failure, fix, and limits.
+
+**Final transactional-repair hardening — 2026-10-31 (`24c889ad`):** The
+existing repair boundary now records known invalid provider proposals as
+typed `ABSTAIN` decisions that advance the bounded strategy ladder, restricts
+model removal to planner-authorized `REMOVE_CLAIM`, preserves executed
+action/strategy/evidence metadata in audits and deltas, and requires meaningful
+source locations for new material factual claims while retaining valid legacy
+interpretive spans. Focused repair/regeneration/queue tests passed **467**;
+targeted mypy, Ruff, and formatting passed. The final local full-suite run had
+8,291 passes and two skips; the long-file ownership failure was corrected in
+the final tree, while the remaining CPython 3.14 wheelhouse failure requires
+CPython 3.12. The exact frozen E13 A21, Mobile, and DoubleVerify manifests were
+hash-verified from retained inputs but all stopped before provider construction
+on the existing legacy `ReportFigureAsset` field-completeness check, so no
+current-SHA repair effectiveness or scorecard denominator is claimed. The
+prior Reuters run remains **LIVE WORKFLOW PASS — TRANSACTIONAL REPAIR NOT
+EXERCISED**. E13/E18 remain **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**; no canonical,
+publication, or WordPress write occurred.

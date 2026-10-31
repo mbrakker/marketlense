@@ -7784,3 +7784,52 @@ The overall status remains **PARTIAL / NO-GO for Step 3** because a current-SHA
 provider-backed failed-claim replacement and broader repair-effectiveness
 evidence were not available. No additional live replay was run merely to seek
 a repair failure.
+
+#### Final transactional-repair hardening — 2026-10-31 (`24c889ad`)
+
+The final repair hardening is committed as `d072f81f` with the test-ownership
+and formatting corrections in `7d22c656` and `24c889ad`. The changes are
+limited to existing validation, regeneration, planner, audit, and regression
+boundaries:
+
+| Boundary | Correction | Safety result |
+| --- | --- | --- |
+| Soft-copy factual eligibility | Evidence-bound source-derived premises remain in semantic grounding; standalone normative recommendations remain editorial/non-factual. Validator identity advanced to `retained_claim_validation:v9`. | Existing factual gates remain active; no evidence-free recommendation is promoted as a fact. |
+| Provider repair proposals | Known invalid evidence, action, path, and patch proposals become recorded `ABSTAIN` decisions and advance the bounded strategy ladder. Unknown/structural `AppError` failures still propagate typed. | No rejected provider patch mutates the target; safe removal remains deterministic. |
+| Removal authority | Model `remove` is accepted only when the planner selected `REMOVE_CLAIM`; `REGENERATE_ITEM` and `REBIND_EVIDENCE` cannot delete claims. | Unsupported model deletion is rejected and later explicit safe removal can run. |
+| Retry/audit identity | Stable target strategy keys prevent a split target from repeating a rejected strategy; executed decision action, strategy, and evidence IDs are authoritative in audit and `RepairDelta`. | Planner metadata cannot masquerade as executed evidence or reset the bounded ladder. |
+| Source-span guard | New material/repaired factual claims require a meaningful source location; equivalent page-only/complete spans remain compatible. | Evidence-ID-only factual provenance fails closed. |
+
+Focused verification at the final SHA passed **467 tests**. Changed-source
+targeted mypy passed for all six production modules; the changed-file Ruff and
+Ruff-format checks passed. The full local parallel suite at the preceding
+implementation state recorded **8,291 passed, 2 skipped, 2 failures**: the
+long-test-file ownership failure was corrected and its final targeted gate
+passed; the remaining failure is the existing CPython 3.14 wheelhouse guard,
+which requires CPython 3.12 and is unrelated to this slice.
+
+The exact frozen E13 manifests were copied from retained local artifacts and
+their **90 input-file hashes** matched the manifests. At final SHA
+`24c889ad9b50246b3e77c3069d765544fbec5be6`, all three manifest replays
+(A21 five-case, Mobile editorial, and DoubleVerify public-editorial) stopped
+in existing preflight before model-client construction. Each retained figure
+asset lacks fields required by the current `ReportFigureAsset` contract, so
+the runner returned `ValueError: ... figure asset 0 payload fields are
+incomplete`; provider calls, repair attempts, scorecards, and replay artifacts
+were **0/unavailable**. No legacy payload was edited or padded. This is a
+frozen-corpus compatibility limitation, not a repair-quality result.
+
+The prior isolated provider-backed Reuters workflow remains the only retained
+real-report repair-adjacent run and ended exactly as:
+
+**LIVE WORKFLOW PASS — TRANSACTIONAL REPAIR NOT EXERCISED**
+
+The focused regressions demonstrate provider rejection/strategy advancement,
+explicit removal authority, audit provenance, and rollback safety, but no
+current-SHA provider failure produced a genuine replacement-and-promotion
+repair. No canonical artifact, readiness state, publication, or WordPress
+write was changed.
+
+**Verdict: PASS for the targeted transactional-repair safeguards and focused
+regressions; PARTIAL / NO-GO for live repair effectiveness and Step 3
+readiness.**

@@ -935,3 +935,38 @@ publication-readiness passes, but the frozen repair corpus still has no strict
 success@1/@3, six frozen-scope violations, and seven unsupported-evidence
 introduction attempts. These repair findings are not substituted for the
 separate production readiness result.
+
+## Final transactional-repair hardening preflight — 2026-10-31, `24c889ad`
+
+The transactional repair correction is implemented at final SHA
+`24c889ad9b50246b3e77c3069d765544fbec5be6` (implementation root commit
+`d072f81f4b2ecc01e27e8e9ac50f396fadfcbed5`, followed by test ownership and
+formatting corrections). The focused repair/regeneration/queue suite passed
+**467 tests**; changed production modules passed targeted mypy, and Ruff plus
+Ruff-format passed. The unrelated dirty `Wordpress/dist/marketlense.zip`
+remained unstaged.
+
+All three unchanged frozen manifests were prepared from retained local source
+artifacts. The 90 referenced input files matched their manifest SHA-256 values.
+The existing replay runner nevertheless stopped all three cases during
+preflight, before model-client construction, because the retained legacy
+`ReportFigureAsset` objects do not contain the complete current asset-field
+set:
+
+| Manifest | Result | Provider calls | Exact terminal reason |
+| --- | --- | ---: | --- |
+| `baseline-a21-five.json` | not replayed | 0 | `2026-global-co-8970fc13f012 production analysis state figure asset 0 payload fields are incomplete` |
+| `baseline-mobile-editorial.json` | not replayed | 0 | `public-editorial-linkedin-mobile-app selection figure asset 0 payload fields are incomplete` |
+| `baseline-doubleverify-linkedin-public-editorial.json` | not replayed | 0 | `doubleverify-linkedin-public-editorial-hard-failure selection figure asset 0 payload fields are incomplete` |
+
+No manifest, source payload, or figure asset was altered to bypass this
+contract. Consequently there is no honest current-SHA E13 success denominator,
+provider usage, repair-attributable cost/latency, promotion, or scorecard
+artifact. The previously retained Reuters run remains **LIVE WORKFLOW PASS —
+TRANSACTIONAL REPAIR NOT EXERCISED**; it did not exercise a current-SHA
+transactional repair either.
+
+E13 therefore remains **Active/PARTIAL**. The focused safeguards are proven;
+live repair effectiveness remains unmeasured until the frozen corpus is
+reissued in the current payload contract or the existing runner gains an
+approved compatibility path. No publication or WordPress write occurred.

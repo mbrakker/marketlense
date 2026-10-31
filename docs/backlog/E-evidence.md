@@ -257,6 +257,21 @@ Commit and push the smallest proven change.
 
 **Latest retained measurement:** The October 1 replay at producer `eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6` retains seven unchanged frozen cases: four currently reproducible and three no longer reproducing. Strict success@1/@3 is 0/4, with nine candidate attempts, eight rollbacks and one promotion. The frozen scorecard records six out-of-scope attempts, seven unsupported-evidence introduction attempts, 18 new hard failures across eight attempts and one provenance/lineage introduction attempt. DoubleVerify's validation pass/promotion exceeded the frozen scope and is not strict success. Historical comparisons are identity-incompatible; no paired gain or residual-odds reduction is proven. Whole-replay usage is 165 calls and estimated $0.415041; complete repair attribution remains unavailable for Mobile. The separate IAS first-attempt canary passed readiness with 46 calls, publication disabled, and did not prove repair effectiveness. See the [result](../../docs/quality/e13-repair-benchmark/results/2026-10-01-eae746de.json), SHA-256 `08ba6900f921d839f6e34d509c0e41b4ec3091db70c329da486b97685b09efd6`, and [owning benchmark evidence](../../docs/quality/e13-repair-benchmark/README.md) for prior September measurements, exact commands and identities. E13 remains Active.
 
+**Correction evidence — 2026-10-31 (`24c889ad`):** The existing
+transactional-repair boundary now fail-closed-abstains on known invalid
+provider proposals, preserves executed decision metadata, prevents model
+removal under non-removal planner actions, and advances split targets through
+the existing bounded strategy planner. Focused repair/regeneration/queue
+verification passed 467 tests; no validator, retry limit, publication path, or
+scorecard rule was weakened. The unchanged A21, Mobile, and DoubleVerify
+manifests were copied from retained local artifacts and all 90 input hashes
+matched, but each stopped in current replay preflight because its legacy
+figure-asset payload lacks fields required by the current `ReportFigureAsset`
+contract. Provider calls and repair attempts were therefore zero/unavailable,
+and no E13 success denominator or live repair improvement is claimed. E13
+remains Active/PARTIAL; the prior Reuters workflow remains **LIVE WORKFLOW
+PASS — TRANSACTIONAL REPAIR NOT EXERCISED**.
+
 - **Acceptance criteria:**
   - Canonical rollback/promotion safety is unchanged: every attempt begins from the last promoted artifact, no rejected candidate can become canonical input, and full existing schema, evidence-lineage, grounding, semantic, public-editorial, readiness, and publication guards remain active.
   - Atomic targeted repair produces **zero out-of-scope mutation** on the retained real-failure corpus. A fixture that changes an unrelated family/field is rejected before promotion with a stable scope-violation reason, while explicitly declared deterministic dependents remain auditable.
