@@ -649,58 +649,6 @@ def test_candidate_blocks_factual_soft_copy_claim_with_wrong_source_offsets(
     )
 
 
-def test_new_material_claim_rejects_evidence_id_only_source_span() -> None:
-    canonical = [
-        {
-            "evidence_id": "qc_001",
-            "source_pack": "quote_candidates",
-            "page": 6,
-        }
-    ]
-
-    assert not _source_span_is_compatible(
-        {"evidence_id": "qc_001"}, canonical, require_source_location=True
-    )
-
-
-def test_page_only_and_complete_canonical_source_spans_remain_compatible() -> None:
-    page_only = [
-        {
-            "evidence_id": "qc_001",
-            "source_pack": "quote_candidates",
-            "page": 6,
-        }
-    ]
-    complete = [
-        {
-            "evidence_id": "qc_001",
-            "source_pack": "quote_candidates",
-            "page": 6,
-            "start_offset": 10,
-            "end_offset": 24,
-        }
-    ]
-
-    assert _source_span_is_compatible(
-        {"evidence_id": "qc_001", "page": 6},
-        page_only,
-        require_source_location=True,
-    )
-    assert _source_span_is_compatible(
-        {
-            "evidence_id": "qc_001",
-            "page": 6,
-            "start_offset": 10,
-            "end_offset": 24,
-        },
-        complete,
-        require_source_location=True,
-    )
-    assert _source_span_is_compatible(
-        {"evidence_id": "qc_001"}, page_only, require_source_location=False
-    )
-
-
 @pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
 def test_candidate_blocks_unchanged_factual_soft_copy_claim_that_loses_lineage(
     family: str,

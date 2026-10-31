@@ -79,4 +79,56 @@ def test_candidate_keeps_identifier_continuity_blocked_without_source_pages() ->
     )
 
 
+def test_new_material_claim_rejects_evidence_id_only_source_span() -> None:
+    canonical = [
+        {
+            "evidence_id": "qc_001",
+            "source_pack": "quote_candidates",
+            "page": 6,
+        }
+    ]
+
+    assert not _source_span_is_compatible(
+        {"evidence_id": "qc_001"}, canonical, require_source_location=True
+    )
+
+
+def test_page_only_and_complete_canonical_source_spans_remain_compatible() -> None:
+    page_only = [
+        {
+            "evidence_id": "qc_001",
+            "source_pack": "quote_candidates",
+            "page": 6,
+        }
+    ]
+    complete = [
+        {
+            "evidence_id": "qc_001",
+            "source_pack": "quote_candidates",
+            "page": 6,
+            "start_offset": 10,
+            "end_offset": 24,
+        }
+    ]
+
+    assert _source_span_is_compatible(
+        {"evidence_id": "qc_001", "page": 6},
+        page_only,
+        require_source_location=True,
+    )
+    assert _source_span_is_compatible(
+        {
+            "evidence_id": "qc_001",
+            "page": 6,
+            "start_offset": 10,
+            "end_offset": 24,
+        },
+        complete,
+        require_source_location=True,
+    )
+    assert _source_span_is_compatible(
+        {"evidence_id": "qc_001"}, page_only, require_source_location=False
+    )
+
+
 __all__ = [name for name in globals() if name.startswith("test_")]
