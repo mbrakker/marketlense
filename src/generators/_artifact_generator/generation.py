@@ -67,7 +67,6 @@ from src.generators.artifact_normalization import (
     preserve_public_source_displays,
     select_artifact_insights,
     soft_copy_context_evidence_anchors,
-    stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
     supported_fidelity_evidence_ids,
     validate_artifact_candidate_evidence_ids,
@@ -1368,11 +1367,10 @@ def generate_artifacts(
         ),
     )
     raw_editorial_plan = editorial_plan_result.get("editorial_plan")
-    editorial_plan = stabilize_broad_artifact_editorial_plan(
-        normalize_artifact_editorial_plan(raw_editorial_plan),
-        doc_map=safe_doc_map,
-        evidence_packs=safe_evidence,
-    )
+    # Theme meaning and editorial coverage are model-owned.  Keep this
+    # deterministic step to schema/identity normalization only; section-band
+    # reshuffling would be a semantic override before the next LLM boundary.
+    editorial_plan = normalize_artifact_editorial_plan(raw_editorial_plan)
     # In verified mode this remains a discovery-only guide.  The authoritative
     # plan is generated again from the admitted verified-fact snapshot below.
     discovery_editorial_plan = deepcopy(editorial_plan)
@@ -1982,11 +1980,7 @@ def generate_artifacts(
             )
             raise
         raw_editorial_plan = verified_plan_result.get("editorial_plan")
-        editorial_plan = stabilize_broad_artifact_editorial_plan(
-            normalize_artifact_editorial_plan(raw_editorial_plan),
-            doc_map=active_doc_map,
-            evidence_packs=active_evidence,
-        )
+        editorial_plan = normalize_artifact_editorial_plan(raw_editorial_plan)
         editorial_plan_coverage.update(
             {
                 "planned_themes": [

@@ -1377,39 +1377,27 @@ def _html_results(
                 "publish_readiness.rendered_scaffolding", [name for name, _ in surfaces]
             )
         )
-    title_values = [
-        value for name, value in surfaces if name in {"title", "h1", "heading"}
-    ]
-    if any(
-        _FILENAME_TITLE.search(value) or _DUPLICATED_YEAR.search(value)
-        for value in title_values
-    ):
-        results.append(
-            _fail(
-                "publish_readiness.public_title_quality",
-                ["title", "heading"],
-                "filename-style title or duplicated year rendered",
-            )
+    # Filename-style wording and repeated years are semantic/editorial
+    # judgments.  Keep the technical readiness boundary independent from the
+    # public-editorial LLM reviewer, which receives the actual final wording.
+    results.append(
+        _pass(
+            "publish_readiness.public_title_quality",
+            ["title", "heading"],
+            "deferred to independent public-editorial semantic review",
         )
-    else:
-        results.append(
-            _pass("publish_readiness.public_title_quality", ["title", "heading"])
+    )
+    # Repetition and boilerplate are semantic/editorial judgments.  The
+    # independent public-editorial reviewer receives the material public copy
+    # and owns this decision; deterministic HTML readiness must not duplicate
+    # it with a string heuristic.
+    results.append(
+        _pass(
+            "publish_readiness.repeated_boilerplate",
+            ["body", "caption", "quotation"],
+            "deferred to independent public-editorial semantic review",
         )
-    if _has_repeated_boilerplate(surfaces):
-        results.append(
-            _fail(
-                "publish_readiness.repeated_boilerplate",
-                ["body", "caption", "quotation"],
-                "substantial public sentence repeats",
-            )
-        )
-    else:
-        results.append(
-            _pass(
-                "publish_readiness.repeated_boilerplate",
-                ["body", "caption", "quotation"],
-            )
-        )
+    )
     return results
 
 

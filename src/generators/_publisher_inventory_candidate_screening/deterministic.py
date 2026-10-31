@@ -14,6 +14,7 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryCandidateScreeningItem,
 )
 from src.generators._publisher_inventory_candidate_screening.shared import (
+    _COLLECTION_ROOT_URL_TOKENS,
     _DIRECT_DETAIL_SOURCE_URL_MARKERS,
     _EDITORIAL_NON_REPORT_URL_MARKERS,
     _EDITORIAL_REPORT_URL_MARKERS,
@@ -27,7 +28,6 @@ from src.generators._publisher_inventory_candidate_screening.shared import (
     _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS,
     _GENERIC_CTA_TITLES,
     _INFORMATIONAL_TITLE_PREFIXES,
-    _COLLECTION_ROOT_URL_TOKENS,
     _REPORT_CONTEXT_STOP_WORDS,
     _contains_any_title_marker,
     _normalize_title_fingerprint,
@@ -148,102 +148,18 @@ def _is_probable_report_asset(
 def _prefilter_screening_decision(
     candidate: PublisherInventoryCandidateScreeningItem,
 ) -> PublisherInventoryCandidateScreeningDecision | None:
-    normalized_title = _normalize_title_fingerprint(candidate.title)
-    normalized_url = candidate.canonical_url.casefold()
-    parsed_url = urlsplit(normalized_url)
-    if normalized_url.endswith(".pdf") and not _has_pdf_report_signal(candidate):
+    # URL syntax is a technical eligibility check.  Report qualification is a
+    # semantic judgment and must reach the existing batched screening model,
+    # even when title or URL wording looks obviously report-like or not.
+    parsed_url = urlsplit(str(candidate.canonical_url or "").strip())
+    if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
         return PublisherInventoryCandidateScreeningDecision(
             schema_version="1.0",
             canonical_url=candidate.canonical_url,
             accepted=False,
-            reason="low_report_probability_prefilter",
+            reason="invalid_candidate_url",
         )
-    if any(token in parsed_url.query for token in _FALLBACK_LISTING_QUERY_KEYS):
-        return PublisherInventoryCandidateScreeningDecision(
-            schema_version="1.0",
-            canonical_url=candidate.canonical_url,
-            accepted=False,
-            reason="low_report_probability_prefilter",
-        )
-    if _looks_like_confident_direct_detail_source(candidate):
-        return PublisherInventoryCandidateScreeningDecision(
-            schema_version="1.0",
-            canonical_url=candidate.canonical_url,
-            accepted=True,
-            reason="direct_detail_source_prefilter",
-        )
-    if _looks_like_collection_root_candidate_url(candidate.canonical_url):
-        return PublisherInventoryCandidateScreeningDecision(
-            schema_version="1.0",
-            canonical_url=candidate.canonical_url,
-            accepted=False,
-            reason="low_report_probability_prefilter",
-        )
-    if _has_editorial_report_detail_candidate(candidate):
-        return PublisherInventoryCandidateScreeningDecision(
-            schema_version="1.0",
-            canonical_url=candidate.canonical_url,
-            accepted=True,
-            reason="editorial_report_detail_url_prefilter",
-        )
-    if (
-        _is_generic_cta_title(normalized_title)
-        and _looks_like_insights_detail_url(candidate.canonical_url)
-        and not _has_specific_editorial_report_slug(candidate.canonical_url)
-    ):
-        return PublisherInventoryCandidateScreeningDecision(
-            schema_version="1.0",
-            canonical_url=candidate.canonical_url,
-            accepted=False,
-            reason="low_report_probability_prefilter",
-        )
-    if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
-        return PublisherInventoryCandidateScreeningDecision(
-            schema_version="1.0",
-            canonical_url=candidate.canonical_url,
-            accepted=False,
-            reason="low_report_probability_prefilter",
-        )
-    if _contains_any_title_marker(normalized_title, _FALLBACK_NON_REPORT_TITLE_MARKERS):
-        return PublisherInventoryCandidateScreeningDecision(
-            schema_version="1.0",
-            canonical_url=candidate.canonical_url,
-            accepted=False,
-            reason="low_report_probability_prefilter",
-        )
-    if _has_strong_report_detail_url(candidate.canonical_url):
-        return PublisherInventoryCandidateScreeningDecision(
-            schema_version="1.0",
-            canonical_url=candidate.canonical_url,
-            accepted=True,
-            reason="strong_report_detail_url_prefilter",
-        )
-    if _contains_any_title_marker(
-        normalized_title, _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS
-    ):
-        return PublisherInventoryCandidateScreeningDecision(
-            schema_version="1.0",
-            canonical_url=candidate.canonical_url,
-            accepted=True,
-            reason="specific_report_title_prefilter",
-        )
-    if _has_report_archive_context(
-        candidate.source_page_url
-    ) and _looks_like_human_archive_title(normalized_title):
-        return PublisherInventoryCandidateScreeningDecision(
-            schema_version="1.0",
-            canonical_url=candidate.canonical_url,
-            accepted=True,
-            reason="report_archive_context_prefilter",
-        )
-    if _is_probable_report_asset(candidate):
-        return None
-    return PublisherInventoryCandidateScreeningDecision(
-        schema_version="1.0",
-        canonical_url=candidate.canonical_url,
-        accepted=False,
-        reason="low_report_probability_prefilter",
-    )
+    return None
 
 
 def _has_strong_report_detail_url(url: str) -> bool:

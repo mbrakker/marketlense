@@ -42,7 +42,6 @@ from .ranking import (
     _rank_candidates_batch,
     _rank_threshold_pass,
     _split_candidates_by_kind,
-    _truncate_prefiltered_candidates,
 )
 
 _RANK_RESPONSE_CHUNK_SIZE = 4
@@ -757,14 +756,10 @@ def select_report_figures(
                 1 for candidate in prefiltered_candidates if candidate.kind == "chart"
             ),
         }
+        # Feature scores provide deterministic retrieval order only.  Keep
+        # every technically valid candidate in the multimodal review; the
+        # model, not a pre-LLM cap, owns semantic selection.
         truncated_kind_counts = dict(prefilter_kind_counts)
-        if runtime.settings.rank_max_candidates > 0:
-            prefiltered_candidates, truncated_kind_counts = (
-                _truncate_prefiltered_candidates(
-                    prefiltered_candidates,
-                    int(runtime.settings.rank_max_candidates),
-                )
-            )
         logger.info(
             log_event(
                 runtime.ctx,

@@ -101,6 +101,12 @@ _NUMBER_RX = re.compile(r"\b(?:\d+(?:\.\d+)?%?|\d+\s*(?:bn|m|k|million|billion))
 def score_report_value(
     request: ReportValueScoreRequest, ctx: RunContext
 ) -> ReportValueScoreResponse:
+    """Compute discovery telemetry used for ranking, never qualification.
+
+    The marker-based components intentionally remain a cheap retrieval signal.
+    Publisher eligibility and report qualification are decided by the existing
+    publisher-screening LLM; this score must not accept or reject a candidate.
+    """
     title = request.report_name.strip()
     landing_url = request.landing_page_url.strip()
     source_url = request.source_page_url.strip()

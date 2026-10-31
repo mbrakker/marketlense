@@ -19,15 +19,15 @@ from src.contracts.analytics_projection import ClaimEmbeddingRecord
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
-    CrossReportEvidenceAgreementType,
     CrossReportEvidenceAgreementGroup,
     CrossReportEvidenceAgreementResult,
+    CrossReportEvidenceAgreementType,
     CrossReportEvidenceInputResult,
     CrossReportEvidenceReference,
     CrossReportProjectedDataReadResponse,
     CrossReportRawMetricReference,
-    CrossReportSemanticPreselectionSummary,
     CrossReportSelectedSourceReport,
+    CrossReportSemanticPreselectionSummary,
     CrossReportSignalScore,
     CrossReportSignalScoreResult,
     CrossReportSourceSelectionResult,
@@ -145,7 +145,9 @@ def _cosine_similarity(left: list[float], right: list[float]) -> float:
     right_norm = math.sqrt(sum(value * value for value in right))
     if left_norm <= 0.0 or right_norm <= 0.0:
         return 0.0
-    return sum(a * b for a, b in zip(left, right)) / (left_norm * right_norm)
+    return sum(a * b for a, b in zip(left, right, strict=False)) / (
+        left_norm * right_norm
+    )
 
 
 def _centroid(vectors: list[list[float]]) -> list[float]:
@@ -278,23 +280,28 @@ def _semantic_preselected_evidence(
             scored[0].evidence_id,
         ),
     )
-    selected_claim_limit = max(1, min(max_evidence_items, len(semantic_ranked)))
-    selected_claims = [
-        item for item, _record, _score in semantic_ranked[:selected_claim_limit]
-    ]
-    selected_entity_uids = {item.entity_uid for item in selected_claims}
+    # Embedding similarity is retrieval ordering telemetry, not semantic
+    # authority.  Keep every candidate claim in the LLM input; the explicit
+    # downstream evidence cap is the only bounded selection at this boundary.
+    ranked_claims = [item for item, _record, _score in semantic_ranked]
+    rank_by_entity = {item.entity_uid: rank for rank, item in enumerate(ranked_claims)}
+    preselected = sorted(
+        candidate_evidence,
+        key=lambda item: (
+            0 if str(item.content_class) == "claim" else 1,
+            (
+                rank_by_entity.get(item.entity_uid, len(ranked_claims))
+                if item.entity_uid in rank_by_entity
+                else selected_order.get(item.report_id, 9999)
+            ),
+            selected_order.get(item.report_id, 9999),
+            item.evidence_id,
+        ),
+    )
+    selected_claims = claim_evidence
     selected_embedding_by_entity = {
-        item.entity_uid: record
-        for item, record, _score in semantic_ranked[:selected_claim_limit]
+        item.entity_uid: record for item, record, _score in semantic_ranked
     }
-    preselected = [
-        item
-        for item in candidate_evidence
-        if str(item.content_class) != "claim" or item.entity_uid in selected_entity_uids
-    ]
-    dropped_count = len(claim_evidence) - len(selected_claims)
-    if dropped_count > 0:
-        dropped["semantic_claim_preselection"] = dropped_count
     selected_embedding_uids = [
         str(selected_embedding_by_entity[item.entity_uid].embedding_uid)
         for item in preselected
@@ -302,7 +309,7 @@ def _semantic_preselected_evidence(
         and item.entity_uid in selected_embedding_by_entity
     ]
     summary = _semantic_preselection_summary(
-        mode="claim_embedding_similarity",
+        mode="claim_embedding_retrieval_order",
         candidate_claim_count=len(claim_evidence),
         embedding_count=len(claim_embeddings),
         fresh_embedding_count=len(fresh_records),
@@ -329,7 +336,9 @@ def _signal_score_weights(raw_weights: dict[str, float] | None) -> dict[str, flo
             if parsed < 0:
                 raise AppError(
                     code="cross_report_signal_weight_invalid",
-                    message=f"Cross-report signal score weight must be non-negative: {key}",
+                    message=(
+                        f"Cross-report signal score weight must be non-negative: {key}"
+                    ),
                     retryable=False,
                     severity="error",
                     context={"weight": key, "value": parsed},
@@ -408,37 +417,12 @@ def _evidence_matches_signal(
 
 
 def _contradiction_score(evidence) -> float:
-    positive_markers = {
-        "adoption",
-        "accelerate",
-        "growth",
-        "higher",
-        "increase",
-        "increasing",
-        "rise",
-        "strong",
-    }
-    uncertainty_markers = {
-        "decline",
-        "decrease",
-        "down",
-        "fall",
-        "risk",
-        "slower",
-        "uneven",
-        "weak",
-    }
-    tokens = {
-        token.casefold()
-        for item in evidence
-        for token in re.findall(r"[A-Za-z0-9]+", item.text)
-    }
-    return (
-        1.0
-        if tokens.intersection(positive_markers)
-        and tokens.intersection(uncertainty_markers)
-        else 0.0
-    )
+    # Directional language is not a contradiction detector.  Preserve the
+    # component for the persisted score contract, but leave adjudication to
+    # the existing cross-report synthesis model with metric/population/period
+    # context in the prompt.
+    del evidence
+    return 0.0
 
 
 def _support_score(evidence) -> float:
@@ -518,18 +502,24 @@ def score_cross_report_signals(
         if value.strip()
     }
     for label in _signal_candidates(request, evidence_inputs, theme_selection):
-        matched_evidence = [
-            item
-            for item in evidence_inputs.evidence
-            if _evidence_matches_signal(
-                item,
-                label,
-                source_by_report_id.get(item.report_id),
-            )
-        ]
-        if not matched_evidence:
-            dropped["no_matching_evidence"] += 1
-            continue
+        # Lexical/topic matching is retrieval order only.  Keep the complete
+        # bounded evidence set in the synthesis input so a paraphrased or
+        # cross-lingual finding cannot be silently discarded before the model
+        # judges semantic relevance.
+        matched_evidence = sorted(
+            evidence_inputs.evidence,
+            key=lambda item: (
+                0
+                if _evidence_matches_signal(
+                    item,
+                    label,
+                    source_by_report_id.get(item.report_id),
+                )
+                else 1,
+                item.report_id,
+                item.evidence_id,
+            ),
+        )
         supporting_sources = {
             item.report_id
             for item in matched_evidence
@@ -585,10 +575,12 @@ def score_cross_report_signals(
     signal_scores.sort(
         key=lambda score: (-score.total_score, score.signal_id),
     )
-    selected_scores = signal_scores[:max_signals]
-    dropped_count = max(len(signal_scores) - len(selected_scores), 0)
-    if dropped_count:
-        dropped["max_signals_reached"] = dropped_count
+    # ``max_signals`` remains a request/configuration compatibility field, but
+    # deterministic score order must not decide which semantic signal reaches
+    # the synthesis model.  Keep the complete bounded candidate set and let
+    # the existing LLM adjudicate relevance, comparability, novelty and
+    # commercial significance.  The score remains retrieval telemetry.
+    selected_scores = signal_scores
     result = CrossReportSignalScoreResult(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         selected_theme=selected_theme,
@@ -627,32 +619,8 @@ def score_cross_report_signals(
 
 
 def _directional_markers(evidence) -> tuple[set[str], set[str]]:
-    positive_markers = {
-        "accelerating",
-        "growth",
-        "increase",
-        "increasing",
-        "rising",
-        "strong",
-    }
-    negative_markers = {
-        "decline",
-        "declining",
-        "decrease",
-        "decreasing",
-        "falling",
-        "slower",
-        "weak",
-    }
-    positive_evidence: set[str] = set()
-    negative_evidence: set[str] = set()
-    for item in evidence:
-        tokens = {token.casefold() for token in re.findall(r"[A-Za-z0-9]+", item.text)}
-        if tokens.intersection(positive_markers):
-            positive_evidence.add(item.evidence_id)
-        if tokens.intersection(negative_markers):
-            negative_evidence.add(item.evidence_id)
-    return positive_evidence, negative_evidence
+    del evidence
+    return set(), set()
 
 
 def _agreement_type_and_reasons(
@@ -663,12 +631,11 @@ def _agreement_type_and_reasons(
 ) -> tuple[CrossReportEvidenceAgreementType, list[str]]:
     if publisher_count < 2 or report_count < 2:
         return "thin_coverage", ["single_report_coverage"]
-    positive_evidence, negative_evidence = _directional_markers(evidence)
-    positive_only = positive_evidence - negative_evidence
-    negative_only = negative_evidence - positive_evidence
-    if positive_only and negative_only:
-        return "divergent", ["opposed_directional_language"]
-    return "convergent", ["multi_publisher_alignment"]
+    # Multi-report agreement, divergence, comparability and contradiction are
+    # semantic outcomes.  Mark the group as awaiting the existing synthesis
+    # model rather than presenting keyword-derived convergence as fact.
+    del evidence
+    return "thin_coverage", ["semantic_agreement_pending_llm"]
 
 
 def group_cross_report_evidence_agreement(

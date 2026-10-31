@@ -64,6 +64,7 @@ TABLE_EXPAND_MIN_V_OVERLAP = 0.2
 CHART_RANKED_TABLE_DUP_IOU = 0.65
 CHART_RANKED_TABLE_DUP_CONTAINMENT = 0.82
 
+
 def _panel_title_looks_short_proper_name(text: str) -> bool:
     normalized = _s(text).strip()
     if not normalized or len(normalized) > 28:
@@ -76,6 +77,7 @@ def _panel_title_looks_short_proper_name(text: str) -> bool:
     if normalized.upper() == normalized:
         return False
     return PANEL_SHORT_PROPER_NAME_RX.fullmatch(normalized) is not None
+
 
 def _prune_charts_overlapping_ranked_tables(
     charts: List[Candidate], tables: List[Candidate]
@@ -362,11 +364,8 @@ def _prune_final_chart_candidates(
                 text = page.get_text("text", clip=fitz.Rect(candidate.bbox))
             except PDF_FIGURE_EXCEPTIONS:
                 text = ""
-        if _final_chart_candidate_looks_forecast_table(candidate, text):
-            pruned += 1
-            continue
-        if _final_chart_candidate_looks_heading_slice(candidate, text):
-            pruned += 1
-            continue
+        # Forecast/table-like text and heading-shaped captions are semantic
+        # judgments.  Preserve the candidate for the visual model instead of
+        # silently treating either observation as a rejection.
         kept.append(candidate)
     return kept, pruned, adjusted

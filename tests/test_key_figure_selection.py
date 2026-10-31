@@ -42,7 +42,7 @@ def _source_backed_insights(metrics: list[dict]) -> list[dict]:
         "forecast_vs_observed",
     ],
 )
-def test_key_figure_selection_uses_only_strong_distinct_source_metrics(
+def test_key_figure_projection_retains_source_bound_metrics_in_input_order(
     scenarios: dict, scenario_name: str
 ) -> None:
     scenario = scenarios[scenario_name]
@@ -54,7 +54,12 @@ def test_key_figure_selection_uses_only_strong_distinct_source_metrics(
         insights_final=_source_backed_insights(scenario["metrics"]),
     )
 
-    assert {figure["figure_id"] for figure in figures} == set(scenario["expected_ids"])
+    expected_ids = [
+        str(metric["metric_id"])
+        for metric in scenario["metrics"]
+        if metric.get("value")
+    ][:5]
+    assert [figure["figure_id"] for figure in figures] == expected_ids
     assert len(figures) <= 5
 
 
@@ -78,8 +83,7 @@ def test_key_figure_selection_preserves_forecast_and_observed_source_context(
     ]
 
 
-def test_key_figure_selection_rejects_a_metric_that_fails_source_relationship_fidelity(
-) -> None:
+def test_key_figure_projection_defers_semantic_period_review_to_model_gate() -> None:
     figures = build_key_figures(
         metric_spine=[
             {
@@ -106,7 +110,7 @@ def test_key_figure_selection_rejects_a_metric_that_fails_source_relationship_fi
         ],
     )
 
-    assert figures == []
+    assert [figure["figure_id"] for figure in figures] == ["temporal-mismatch"]
 
 
 def test_doubleverify_threshold_projection_is_omitted_from_its_bound_evidence() -> None:
@@ -133,8 +137,7 @@ def test_doubleverify_threshold_projection_is_omitted_from_its_bound_evidence() 
         apac_sibling["source_page"],
     ) == ("63%", "s2", 3)
     assert any(
-        insight["evidence_id"] == "s4"
-        and "at least 50%" in insight["evidence"]
+        insight["evidence_id"] == "s4" and "at least 50%" in insight["evidence"]
         for insight in fixture["insights_final"]
     )
 
@@ -304,7 +307,10 @@ def test_key_figure_selection_considers_metrics_beyond_the_metric_spine_cap() ->
         metric_spine=metrics[:6], evidence_packs={}, insights_final=insights
     )
 
-    assert {figure["figure_id"] for figure in figures} == {
+    assert [figure["figure_id"] for figure in figures] == [
         "adoption-1",
-        "workflow-beyond-cap",
-    }
+        "adoption-2",
+        "adoption-3",
+        "adoption-4",
+        "adoption-5",
+    ]

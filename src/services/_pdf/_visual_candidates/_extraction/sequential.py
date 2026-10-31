@@ -5,32 +5,39 @@ and worker orchestration while qualification policies remain in sibling modules.
 """
 
 from __future__ import annotations
+
 from pathlib import Path
-import re
 from typing import Dict, List, Optional
+
 import pymupdf as fitz
+
 from src.contracts.candidates import Candidate, CandidateFeatures
+from src.services._pdf._visual_candidates.raster import (
+    _candidate_ocr_density,
+    _chart_confidence_score,
+    _visual_probe_profile,
+)
+from src.services._pdf._visual_candidates.screening import (
+    _caption_has_figure_hint,
+    _text_has_visual_context_hint,
+    _visual_text_dense_recovery_allowed,
+)
 from src.services._pdf.page_artifacts import PdfPageArtifactCache
 from src.services._pdf.visual_heuristics import (
-    CHART_CAPTIONED_DRAW_MAX_ASPECT,
     CHART_CAPTION_HINTS,
     CHART_EDGE_TEXT_HEADING_GAP_SCALE,
     CHART_EDGE_TEXT_HEADING_GAP_X_SCALE,
-    INFO_CHART_MAX_ASPECT,
     PANEL_CHART_INTERNAL_TITLE_EXTRA_TOP_PAD,
     _adjust_rect_for_text_margins,
     _caption_near_top,
     _chart_candidate_score,
-    _infographic_is_label_dense_not_prose,
-    _chart_is_label_dense_not_prose,
-    _panel_chart_is_label_dense_not_prose,
     _chart_text_heavy,
     _clamp_bottom_to_next_chart_blocker,
     _clamp_bottom_to_note,
     _clamp_top_to_caption,
     _clamp_top_to_heading,
-    _extend_chart_rect_with_adjacent_drawings,
     _expand_rect_into_whitespace,
+    _extend_chart_rect_with_adjacent_drawings,
     _extend_panel_with_adjacent_text_blocks,
     _extend_with_adjacent_text_blocks,
     _extend_with_heading_above,
@@ -43,18 +50,11 @@ from src.services._pdf.visual_heuristics import (
     _nearest_heading_above,
     _note_block_bottom,
     _pad_rect,
-    _panel_caption_looks_top_band,
-    _panel_chart_has_data_signal,
-    _panel_chart_has_compact_stat_card_signal,
-    _panel_candidate_shadowed_by_heading_candidate,
-    _panel_candidate_shadowed_by_larger_panel,
-    _panel_chart_has_structured_card_signal,
     _panel_caption_looks_like_compact_metric,
-    _panel_component_looks_like_guidance_card,
-    _panel_component_looks_like_independent_data_panel,
+    _panel_caption_looks_top_band,
     _panel_neighbor_x_bounds,
-    _panel_stacked_bottom_clip_y,
     _panel_should_clamp_to_internal_caption,
+    _panel_stacked_bottom_clip_y,
     _panel_title_slice_bounds,
     _rect_iou,
     _save_thumb,
@@ -63,46 +63,15 @@ from src.services._pdf.visual_heuristics import (
     _trim_top_page_number,
     _VisualOverlapIndex,
 )
-from src.services._pdf._visual_candidates.raster import (
-    _candidate_ocr_density,
-    _chart_confidence_score,
-    _embedded_visual_is_oversized_wrapper,
-    _embedded_visual_looks_chart_like,
-    _embedded_visual_looks_decorative,
-    _embedded_visual_looks_photo_like,
-    _embedded_visual_qualifies_contextual_card,
-    _embedded_visual_qualifies_relaxed_geometry,
-    _has_side_by_side_visual_sibling,
-    _visual_probe_profile,
-)
-from src.services._pdf._visual_candidates.screening import (
-    _SOURCE_OR_STATLINK_RX,
-    _caption_has_figure_hint,
-    _next_figure_caption_below,
-    _text_has_visual_context_hint,
-    _visual_candidate_looks_bare_heading_fragment,
-    _visual_candidate_looks_cover_art,
-    _visual_candidate_looks_inline_numbered_panel,
-    _visual_candidate_looks_narrative_panel_card,
-    _visual_candidate_looks_note_fragment,
-    _visual_candidate_looks_photo_narrative_card,
-    _visual_candidate_looks_reference_or_prose,
-    _visual_candidate_looks_section_opener_banner,
-    _visual_candidate_looks_table_like,
-    _visual_text_dense_recovery_allowed,
-)
 
 from .context import (
-    _VisualPageCandidateEntry,
     _append_visual_page_candidate,
     _build_visual_page_context,
     _emit_visual_page_candidates,
     _initial_visual_stats,
+    _VisualPageCandidateEntry,
 )
 
-PANEL_CHART_CONTEXT_TEXT_RATIO_MAX = 0.85
-SMALL_DECORATIVE_RASTER_MAX_AREA_FRAC = 0.12
-SMALL_DECORATIVE_RASTER_MAX_TEXT_CHARS = 180
 VISUAL_OVERLAP_INDEX_MIN_KEPT = 8
 
 
@@ -160,108 +129,11 @@ def _extract_visuals_sequential(
                     )
                 if cap and _is_page_number_text(cap):
                     cap = ""
-                cap_lower = (cap or "").lower()
                 has_hint = _text_has_visual_context_hint(cap or "")
                 has_context_hint = has_hint or rect_item.kind == "panel"
-                aspect_max = (
-                    INFO_CHART_MAX_ASPECT
-                    if rect_item.kind
-                    in (
-                        "heading",
-                        "panel",
-                    )
-                    else 2.5
-                )
-                if (
-                    rect_item.kind == "draw"
-                    and cap_rect is not None
-                    and any(cap_lower.startswith(hint) for hint in CHART_CAPTION_HINTS)
-                ):
-                    aspect_max = max(aspect_max, CHART_CAPTIONED_DRAW_MAX_ASPECT)
-                relaxed_image_geometry = False
-                contextual_image_card = False
-                if (
-                    rect_item.kind in ("xref", "block")
-                    and not has_hint
-                    and not page_ctx.page_has_chart_captions
-                ):
-                    relaxed_image_geometry = (
-                        _embedded_visual_qualifies_relaxed_geometry(
-                            page_ctx.page,
-                            rect_candidate,
-                            area_frac=area_frac,
-                            probe_cache=page_ctx.probe_cache,
-                        )
-                    )
-                    contextual_image_card = _embedded_visual_qualifies_contextual_card(
-                        page_ctx.page,
-                        rect_candidate,
-                        area_frac=area_frac,
-                        blocks=page_ctx.artifacts.text_blocks,
-                        probe_cache=page_ctx.probe_cache,
-                    )
-                min_aspect = (
-                    0.45 if (relaxed_image_geometry or contextual_image_card) else 0.55
-                )
-                max_aspect = (
-                    3.4
-                    if (relaxed_image_geometry or contextual_image_card)
-                    else aspect_max
-                )
-                if rect_item.kind == "panel" and aspect > max_aspect:
-                    try:
-                        pre_geom_panel_text = page_ctx.page.get_text(
-                            "text", clip=rect_candidate
-                        )
-                    except Exception:
-                        pre_geom_panel_text = ""
-                    if _panel_chart_has_compact_stat_card_signal(pre_geom_panel_text):
-                        max_aspect = max(max_aspect, 5.25)
-                if area_frac < 0.05 or not (min_aspect <= aspect <= max_aspect):
+                if rect_candidate.width <= 0 or rect_candidate.height <= 0:
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
                     _tally_reason(stats, "geometry")
-                    continue
-                is_infographic = bool(
-                    re.match(r"^\s*infographic\b", cap or "", re.IGNORECASE)
-                )
-                if (
-                    rect_candidate.y0 < page_ctx.top_cut
-                    or rect_candidate.y1 > page_ctx.bot_cut
-                ):
-                    if has_context_hint or contextual_image_card:
-                        if (
-                            rect_candidate.y0 < page_ctx.page_rect.y0 - 2.0
-                            or rect_candidate.y1 > page_ctx.page_rect.y1 + 2.0
-                        ):
-                            stats["rejected"] = _int_count(stats["rejected"]) + 1
-                            _tally_reason(stats, "margin")
-                            continue
-                    elif (
-                        rect_candidate.y0 < page_ctx.relaxed_top
-                        or rect_candidate.y1 > page_ctx.relaxed_bot
-                    ):
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "margin")
-                        continue
-                if not has_hint and area_frac < 0.08:
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "caption_hint")
-                    continue
-                if (
-                    rect_item.kind in ("block", "draw")
-                    and not has_context_hint
-                    and area_frac < 0.12
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "block_small_no_caption")
-                    continue
-                if (
-                    rect_item.kind in ("block", "draw")
-                    and not has_context_hint
-                    and area_frac > 0.8
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "block_full_page_no_caption")
                     continue
                 try:
                     raw_bbox_text = page_ctx.page.get_text("text", clip=rect_candidate)
@@ -280,41 +152,7 @@ def _extract_visuals_sequential(
                 raw_text_heavy = _chart_text_heavy(
                     raw_text_lines, raw_text_chars, raw_text_ratio
                 )
-                image_chart_like = False
-                image_decorative = False
-                image_photo_like = False
-                if rect_item.kind in ("xref", "block") and not has_hint:
-                    if _embedded_visual_is_oversized_wrapper(
-                        rect_item,
-                        page_ctx.rect_items,
-                        page_ctx.page_rect,
-                        relationships=page_ctx.relationships,
-                    ):
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "oversized_wrapper_image")
-                        continue
-                    image_chart_like = (
-                        contextual_image_card
-                        or _embedded_visual_looks_chart_like(
-                            page_ctx.page,
-                            rect_candidate,
-                            probe_cache=page_ctx.probe_cache,
-                        )
-                    )
-                    image_photo_like = _embedded_visual_looks_photo_like(
-                        page_ctx.page,
-                        rect_candidate,
-                        probe_cache=page_ctx.probe_cache,
-                    )
-                    if not image_chart_like:
-                        image_decorative = _embedded_visual_looks_decorative(
-                            page_ctx.page,
-                            rect_candidate,
-                            probe_cache=page_ctx.probe_cache,
-                        )
                 text_dense_recovery_allowed = False
-                infographic_dense_recovery_allowed = False
-                panel_data_signal = False
                 if (
                     rect_item.kind in ("draw", "panel")
                     and cap_rect is not None
@@ -354,124 +192,12 @@ def _extract_visuals_sequential(
                         text_chars,
                         text_ratio,
                     )
-                    if is_infographic:
-                        infographic_dense_recovery_allowed = (
-                            _infographic_is_label_dense_not_prose(bbox_text)
-                            or _infographic_is_label_dense_not_prose(raw_bbox_text)
-                        )
-                if rect_item.kind == "panel":
-                    panel_text = bbox_text if bbox_text else raw_bbox_text
-                    panel_data_signal = _panel_chart_has_data_signal(panel_text) or (
-                        _panel_component_looks_like_guidance_card(panel_text)
-                    )
-                    if _panel_candidate_shadowed_by_heading_candidate(
-                        rect_item,
-                        page_ctx.rect_items,
-                        relationships=page_ctx.relationships,
-                    ):
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "panel_shadowed_by_heading")
-                        continue
-                    if _panel_candidate_shadowed_by_larger_panel(
-                        rect_item,
-                        page_ctx.rect_items,
-                        panel_text,
-                        relationships=page_ctx.relationships,
-                    ):
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "panel_shadowed_by_larger_panel")
-                        continue
-                    if not panel_data_signal and (
-                        raw_text_heavy
-                        or (
-                            raw_text_lines >= 5
-                            and raw_text_chars >= 150
-                            and raw_text_ratio >= 0.25
-                        )
-                    ):
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "panel_no_data_signal")
-                        continue
-                if rect_item.kind in ("xref", "block") and not has_hint:
-                    if (
-                        image_photo_like
-                        and not contextual_image_card
-                        and not relaxed_image_geometry
-                    ):
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "photo_panel")
-                        continue
-                    if (
-                        not image_chart_like
-                        and (not cap or len(cap.strip()) < 8)
-                        and text_chars <= 8
-                        and area_frac < 0.5
-                    ):
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "decorative_image")
-                        continue
-                    if (
-                        not image_chart_like
-                        and text_chars <= 8
-                        and area_frac <= 0.2
-                        and _has_side_by_side_visual_sibling(
-                            rect_item,
-                            page_ctx.rect_items,
-                            page_ctx.page_rect,
-                            relationships=page_ctx.relationships,
-                        )
-                    ):
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "photo_panel")
-                        continue
-                    if (
-                        rect_item.kind == "xref"
-                        and not contextual_image_card
-                        and not relaxed_image_geometry
-                        and area_frac <= SMALL_DECORATIVE_RASTER_MAX_AREA_FRAC
-                        and text_chars <= SMALL_DECORATIVE_RASTER_MAX_TEXT_CHARS
-                    ):
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "small_decorative_image")
-                        continue
-                    if image_decorative and text_chars <= 24 and area_frac <= 0.5:
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "decorative_image")
-                        continue
                 if raw_text_heavy:
-                    if (
-                        rect_item.kind in ("draw", "panel")
-                        and cap_rect is not None
-                        and (
-                            (has_context_hint and raw_text_ratio <= 0.55)
-                            or (
-                                rect_item.kind == "panel"
-                                and (
-                                    (
-                                        panel_data_signal
-                                        and raw_text_ratio
-                                        <= PANEL_CHART_CONTEXT_TEXT_RATIO_MAX
-                                    )
-                                    or _panel_chart_is_label_dense_not_prose(
-                                        bbox_text if bbox_text else raw_bbox_text
-                                    )
-                                    or _panel_component_looks_like_independent_data_panel(
-                                        bbox_text if bbox_text else raw_bbox_text
-                                    )
-                                    or _panel_chart_has_structured_card_signal(
-                                        bbox_text if bbox_text else raw_bbox_text
-                                    )
-                                )
-                            )
-                            or text_dense_recovery_allowed
-                            or infographic_dense_recovery_allowed
-                        )
-                    ):
-                        pass
-                    else:
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "text_dense")
-                        continue
+                    # Text density is retrieval telemetry only.  Text-heavy
+                    # visuals may contain the report's most important tables,
+                    # composite metrics or labelled charts; let the visual
+                    # model decide their semantic usefulness.
+                    _tally_reason(stats, "text_dense_observed")
                 legacy_order_candidate = not raw_text_heavy or (
                     rect_item.kind in ("draw", "panel")
                     and has_context_hint
@@ -717,125 +443,9 @@ def _extract_visuals_sequential(
                 text_ratio = (
                     (text_chars / page_ctx.page_chars) if page_ctx.page_chars else 0.0
                 )
-                if _visual_candidate_looks_table_like(
-                    cap or "",
-                    bbox_text,
-                    kind=rect_item.kind,
-                    panel_data_signal=panel_data_signal,
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "table_like_visual")
-                    continue
-                if _visual_candidate_looks_reference_or_prose(
-                    cap or "",
-                    bbox_text,
-                    text_ratio=text_ratio,
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "reference_or_prose_visual")
-                    continue
-                if _visual_candidate_looks_note_fragment(
-                    cap or "",
-                    bbox_text,
-                    kind=rect_item.kind,
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "note_fragment_visual")
-                    continue
-                if _visual_candidate_looks_bare_heading_fragment(
-                    cap or "",
-                    bbox_text,
-                    kind=rect_item.kind,
-                    area_frac=area_frac,
-                    aspect=aspect,
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "bare_heading_fragment")
-                    continue
-                if _visual_candidate_looks_cover_art(
-                    final_rect,
-                    page_ctx.page_rect,
-                    cap or "",
-                    area_frac=area_frac,
-                    text_chars=text_chars,
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "front_matter_visual")
-                    continue
-                if _visual_candidate_looks_photo_narrative_card(
-                    page_ctx.page,
-                    final_rect,
-                    cap or "",
-                    caption_rect=cap_rect,
-                    kind=rect_item.kind,
-                    area_frac=area_frac,
-                    aspect=aspect,
-                    text_chars=text_chars,
-                    panel_data_signal=panel_data_signal,
-                    probe_cache=page_ctx.probe_cache,
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "photo_panel")
-                    continue
-                if _visual_candidate_looks_narrative_panel_card(
-                    cap or "",
-                    bbox_text,
-                    kind=rect_item.kind,
-                    text_ratio=text_ratio,
-                    area_frac=area_frac,
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "narrative_panel")
-                    continue
-                if _visual_candidate_looks_section_opener_banner(
-                    final_rect,
-                    page_ctx.page_rect,
-                    cap or "",
-                    bbox_text,
-                    kind=rect_item.kind,
-                    area_frac=area_frac,
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "section_opener_visual")
-                    continue
-                if _visual_candidate_looks_inline_numbered_panel(
-                    cap or "",
-                    bbox_text,
-                    note_included=note_included,
-                    area_frac=area_frac,
-                    aspect=aspect,
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "inline_numbered_panel")
-                    continue
-                if (
-                    rect_item.kind in ("draw", "heading")
-                    and cap_rect is not None
-                    and _caption_has_figure_hint(cap or "")
-                    and cap_rect.y0
-                    <= page_ctx.page_rect.y0 + page_ctx.page_rect.height * 0.1
-                    and _SOURCE_OR_STATLINK_RX.search(bbox_text)
-                ):
-                    next_caption_rect = _next_figure_caption_below(
-                        page_ctx.page,
-                        cap_rect,
-                        blocks=page_ctx.artifacts.text_blocks,
-                    )
-                else:
-                    next_caption_rect = None
-                weak_stacked_upper = (
-                    next_caption_rect is not None
-                    and _SOURCE_OR_STATLINK_RX.search(bbox_text)
-                    and text_chars <= 260
-                    and not _chart_is_label_dense_not_prose(bbox_text)
-                    and not _panel_chart_has_data_signal(bbox_text)
-                )
-                if next_caption_rect is not None and (
-                    final_rect.y1 >= next_caption_rect.y0 - 6.0 or weak_stacked_upper
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "stacked_top_figure")
-                    continue
+                # Caption, text, table, photo and panel semantics are model
+                # decisions.  Keep these observations in the candidate set so
+                # no viable visual source is removed before visual review.
                 pix = None
                 if save_thumbs:
                     render_rect = final_rect

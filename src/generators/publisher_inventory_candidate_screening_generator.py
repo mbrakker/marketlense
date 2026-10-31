@@ -13,68 +13,68 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryCandidateScreeningResponse,
 )
 from src.generators._publisher_inventory_candidate_screening.deterministic import (
-    _TARGET_MAX_SCREENING_BATCHES,
     _MAX_DYNAMIC_SCREENING_BATCH_SIZE,
-    _partition_candidates_for_llm_screening,
-    _resolve_candidate_screening_batch_size,
+    _TARGET_MAX_SCREENING_BATCHES,
     _fallback_screening_decision,
-    _is_probable_report_asset,
-    _prefilter_screening_decision,
-    _has_strong_report_detail_url,
-    _has_report_archive_context,
-    _looks_like_human_archive_title,
-    _has_pdf_report_signal,
-    _has_editorial_report_detail_candidate,
-    _looks_like_collection_root_candidate_url,
     _has_contextual_report_term,
-    _looks_like_confident_direct_detail_source,
-    _is_generic_cta_title,
-    _looks_like_insights_detail_url,
+    _has_editorial_report_detail_candidate,
+    _has_pdf_report_signal,
+    _has_report_archive_context,
     _has_specific_editorial_report_slug,
+    _has_strong_report_detail_url,
+    _is_generic_cta_title,
+    _is_probable_report_asset,
+    _looks_like_collection_root_candidate_url,
+    _looks_like_confident_direct_detail_source,
+    _looks_like_human_archive_title,
+    _looks_like_insights_detail_url,
+    _partition_candidates_for_llm_screening,
+    _prefilter_screening_decision,
+    _resolve_candidate_screening_batch_size,
 )
 from src.generators._publisher_inventory_candidate_screening.llm_batches import (
     _MISSING_DECISION_REPAIR_BATCH_SIZE,
-    _screen_candidate_batch,
     _chunk_candidates,
+    _screen_candidate_batch,
 )
 from src.generators._publisher_inventory_candidate_screening.response_policy import (
-    _merge_screening_batches,
-    _coerce_screening_decision_map,
-    _build_screening_response,
-    _deduplicate_screening_response,
     _apply_publisher_success_hard_rejections,
+    _build_screening_response,
     _candidate_duplicate_key,
     _candidate_selection_key,
+    _coerce_screening_decision_map,
+    _deduplicate_screening_response,
     _is_generic_duplicate_title,
     _is_publisher_success_marketing_title,
+    _merge_screening_batches,
     _merge_screening_responses_with_prefilter,
 )
 from src.generators._publisher_inventory_candidate_screening.shared import (
-    logger,
-    _MAX_PROMPT_TITLE_LENGTH,
-    _FALLBACK_REPORT_TITLE_MARKERS,
-    _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS,
-    _FALLBACK_NON_REPORT_TITLE_MARKERS,
-    _FALLBACK_NON_REPORT_URL_MARKERS,
-    _FALLBACK_REPORT_URL_MARKERS,
-    _FALLBACK_REPORT_COLLECTION_SEGMENTS,
-    _FALLBACK_LISTING_QUERY_KEYS,
-    _EDITORIAL_REPORT_URL_MARKERS,
     _COLLECTION_ROOT_URL_TOKENS,
-    _REPORT_CONTEXT_STOP_WORDS,
     _DIRECT_DETAIL_SOURCE_URL_MARKERS,
     _EDITORIAL_NON_REPORT_URL_MARKERS,
-    _INFORMATIONAL_TITLE_PREFIXES,
-    _GENERIC_CTA_TITLES,
+    _EDITORIAL_REPORT_URL_MARKERS,
     _EDITORIAL_SPECIFIC_REPORT_TITLE_MARKERS,
+    _FALLBACK_LISTING_QUERY_KEYS,
+    _FALLBACK_NON_REPORT_TITLE_MARKERS,
+    _FALLBACK_NON_REPORT_URL_MARKERS,
+    _FALLBACK_REPORT_COLLECTION_SEGMENTS,
+    _FALLBACK_REPORT_TITLE_MARKERS,
+    _FALLBACK_REPORT_URL_MARKERS,
+    _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS,
+    _GENERIC_CTA_TITLES,
     _GENERIC_DUPLICATE_TITLE_FINGERPRINTS,
+    _INFORMATIONAL_TITLE_PREFIXES,
+    _MAX_PROMPT_TITLE_LENGTH,
     _PUBLISHER_SUCCESS_ANALYST_MARKERS,
     _PUBLISHER_SUCCESS_HARD_PATTERNS,
-    _normalize_title_fingerprint,
+    _REPORT_CONTEXT_STOP_WORDS,
     _contains_any_title_marker,
     _normalize_marker_word,
+    _normalize_title_fingerprint,
     _publisher_reference_tokens,
     _truncate_prompt_text,
+    logger,
 )
 from src.services import prompt_service
 from src.utils.logging import log_event
@@ -107,8 +107,12 @@ def screen_publisher_inventory_candidates(
                 "llm_candidate_count": len(candidates_for_llm),
                 "pre_accepted_count": pre_accepted_count,
                 "pre_rejected_count": pre_rejected_count,
-                "candidate_screening_enabled": request.settings.candidate_screening_enabled,
-                "prompt_namespace": request.settings.candidate_screening_prompt_namespace,
+                "candidate_screening_enabled": (
+                    request.settings.candidate_screening_enabled
+                ),
+                "prompt_namespace": (
+                    request.settings.candidate_screening_prompt_namespace
+                ),
             },
         )
     )
@@ -179,11 +183,6 @@ def screen_publisher_inventory_candidates(
                 },
             )
         )
-        response = _apply_publisher_success_hard_rejections(
-            response=response,
-            publisher_name=request.publisher_name,
-            ctx=ctx,
-        )
         return _deduplicate_screening_response(
             response=response,
             publisher_name=request.publisher_name,
@@ -237,11 +236,6 @@ def screen_publisher_inventory_candidates(
         candidates=candidates,
         llm_response=screening_response,
         prefilter_decisions=prefilter_decisions,
-    )
-    screening_response = _apply_publisher_success_hard_rejections(
-        response=screening_response,
-        publisher_name=request.publisher_name,
-        ctx=ctx,
     )
     screening_response = _deduplicate_screening_response(
         response=screening_response,

@@ -126,6 +126,16 @@ def fit_report_categories_from_context(
             "definition": category.definition or category.description,
             "include_when": list(category.include_when or []),
             "exclude_when": list(category.exclude_when or []),
+            "include_rule_ids": [
+                _rule_id(category.id, "include", position, rule)
+                for position, rule in enumerate(category.include_when or [])
+                if str(rule or "").strip()
+            ],
+            "exclude_rule_ids": [
+                _rule_id(category.id, "exclude", position, rule)
+                for position, rule in enumerate(category.exclude_when or [])
+                if str(rule or "").strip()
+            ],
             "semantic_concepts": list(
                 category.semantic_concepts or category.core_tags or []
             ),
@@ -188,7 +198,9 @@ def fit_report_categories_from_context(
                 "user_sha256": prompt_bundle.prompt_set.user.sha256,
                 "resolved_model": prompt_bundle.resolved_model,
                 "prompt_content_hash": prompt_bundle.prompt_content_hash,
-                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "execution_identity": (
+                    prompt_bundle.execution_identity.execution_identity
+                ),
                 "system_prompt_chars": len(prompt_bundle.system_prompt),
                 "user_prompt_chars": len(prompt_bundle.user_prompt),
             },
@@ -225,7 +237,7 @@ def fit_report_categories_from_context(
                 report_slug=request.report_name or str(request.context.report_id),
                 source_id=request.source_id,
                 family_id=request.prompt_namespace,
-                family_schema_version="1.0",
+                family_schema_version="2.0",
                 processing_version="report_generation_checkpoint_v2",
                 prompt_content_hash=prompt_bundle.prompt_content_hash,
                 execution_identity=prompt_bundle.execution_identity.execution_identity,
@@ -233,7 +245,7 @@ def fit_report_categories_from_context(
                 model_name=prompt_bundle.resolved_model,
                 model_policy_namespace="report_vs",
                 routing_policy_version=prompt_bundle.execution_policy.policy_hash,
-                validator_version="context_category_fit:1.0",
+                validator_version="context_category_fit:2.0",
                 relevant_input_hash=relevant_input_hash,
                 configuration_policy_hash=configuration_policy_hash,
             ),
@@ -286,7 +298,7 @@ def fit_report_categories_from_context(
             report_name=request.report_name,
             source_url=request.source_url,
             output_schema=output_schema,
-            output_schema_identity="context_category_fit_v1",
+            output_schema_identity="context_category_fit_v2",
             repair_attempt=(
                 request.repair_attempt
                 if mode == "primary" and request.repair_attempt
@@ -354,7 +366,7 @@ def fit_report_categories_from_context(
                 report_slug=request.report_name or str(request.context.report_id),
                 source_id=request.source_id,
                 family_id=request.prompt_namespace,
-                family_schema_version="1.0",
+                family_schema_version="2.0",
                 processing_version="report_generation_checkpoint_v2",
                 output_payload=payload,
                 system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
@@ -370,7 +382,7 @@ def fit_report_categories_from_context(
                 routing_policy_version=prompt_bundle.execution_policy.policy_hash,
                 relevant_input_hash=("" if recovery_attempted else relevant_input_hash),
                 configuration_policy_hash=configuration_policy_hash,
-                validator_version="context_category_fit:1.0",
+                validator_version="context_category_fit:2.0",
                 validation_status="pass",
             ),
             ctx,
@@ -444,6 +456,20 @@ def _normalize_fit_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "why_fit": str(item.get("why_fit") or ""),
                 "why_not_fit": str(item.get("why_not_fit") or ""),
                 "evidence_sections": item.get("evidence_sections") or [],
+                **{
+                    key: item[key]
+                    for key in (
+                        "semantic_rule_status",
+                        "supported_topic_rules",
+                        "supported_topic_rule_ids",
+                        "rejected_topic_rules",
+                        "rejected_topic_rule_ids",
+                        "rule_evidence_sections",
+                        "centrality_evidence_sections",
+                        "remediation_signal",
+                    )
+                    if key in item
+                },
             }
         )
     return normalized
@@ -723,92 +749,113 @@ def _apply_topic_semantics(
     evidence: list[_ContextEvidence],
     high_confidence_fit_threshold: float,
 ) -> CategoryFitCandidate:
-    include_rules = [str(item) for item in profile.get("include_when") or []]
-    exclude_rules = [str(item) for item in profile.get("exclude_when") or []]
-    category_concepts = _category_semantic_concepts(profile)
-    supported_matches = _matching_inclusion_rules(
-        include_rules,
-        category_id=candidate.category_id,
-        evidence=evidence,
-        category_concepts=category_concepts,
-    )
-    rejected_matches = _matching_exclusion_rules(
-        exclude_rules,
-        category_id=candidate.category_id,
-        evidence=evidence,
-    )
-    centrality_evidence_sections = _centrality_evidence_references(
-        inclusion_rules=include_rules,
-        category_concepts=category_concepts,
-        evidence=evidence,
-    )
-    supported_rule_ids = [match.rule_id for match in supported_matches]
-    supported_rules = [match.rule for match in supported_matches]
-    rejected_rule_ids = [match.rule_id for match in rejected_matches]
-    rejected_rules = [match.rule for match in rejected_matches]
-    rule_evidence_sections = list(
-        dict.fromkeys(
-            reference
-            for match in (*supported_matches, *rejected_matches)
-            for reference in match.evidence_sections
-        )
-    )
-    decision = candidate.decision
-    status = "not_evaluated"
-    remediation_signal = ""
-    why_not_fit = candidate.why_not_fit
-    has_inclusion_support = bool(supported_matches)
-    is_central = bool(centrality_evidence_sections)
-    is_high_confidence = candidate.fit_score > high_confidence_fit_threshold
+    """Validate model-owned topic-rule fields without making semantic decisions.
 
-    if rejected_rules:
-        decision = "reject"
-        status = "rejected"
-        remediation_signal = "topic_semantics_exclusion_conflict"
-        if not why_not_fit:
-            why_not_fit = (
-                "Canonical Topic exclusion rule matched central report context."
-            )
-    elif has_inclusion_support and is_central and decision == "reject":
-        # Explicit configured evidence in a central report field is stronger
-        # than an advisory model rejection or score. Otherwise a low-scored
-        # false negative can prevent an evidence-backed category from reaching
-        # the one bounded repair and, ultimately, the publish-readiness check.
-        decision = "primary"
-        status = "supported"
-    elif (
-        has_inclusion_support
-        and not is_central
-        and (decision == "primary" or (decision == "reject" and is_high_confidence))
-    ):
-        decision = "secondary"
-        status = "supported"
-    elif has_inclusion_support:
-        status = "supported" if decision != "reject" else "rejected"
-    elif decision != "reject" or is_high_confidence:
-        status = "ambiguous"
-        remediation_signal = "topic_semantics_ambiguous"
-    else:
-        status = "rejected"
+    The historical implementation inferred inclusion, exclusion and centrality
+    from configured token concepts.  Those fields are now supplied by the
+    category-fit model.  This boundary only canonicalizes the model's section
+    references and rejects unknown rule identifiers so stale or fabricated
+    provenance cannot flow downstream.
+    """
+
+    del high_confidence_fit_threshold
+    profile_rules = {
+        "include": list(profile.get("include_when") or []),
+        "exclude": list(profile.get("exclude_when") or []),
+    }
+    valid_rule_ids_by_kind = {
+        kind: {
+            _rule_id(candidate.category_id, kind, position, rule)
+            for position, rule in enumerate(rules)
+            if str(rule or "").strip()
+        }
+        for kind, rules in profile_rules.items()
+    }
+    supported_rule_ids = _validated_topic_rule_ids(
+        candidate.supported_topic_rule_ids,
+        valid_rule_ids=valid_rule_ids_by_kind["include"],
+        category_id=candidate.category_id,
+        field_name="supported_topic_rule_ids",
+    )
+    rejected_rule_ids = _validated_topic_rule_ids(
+        candidate.rejected_topic_rule_ids,
+        valid_rule_ids=valid_rule_ids_by_kind["exclude"],
+        category_id=candidate.category_id,
+        field_name="rejected_topic_rule_ids",
+    )
+    available_sections = {
+        item.reference.casefold(): item.reference for item in evidence
+    }
+
+    def sections(values: list[str]) -> list[str]:
+        result: list[str] = []
+        for value in values:
+            canonical = available_sections.get(str(value or "").strip().casefold())
+            if canonical is None:
+                raise AppError(
+                    code="context_category_fit_unknown_evidence_section",
+                    message=(
+                        "Category-fit model returned an unknown context evidence "
+                        "section"
+                    ),
+                    retryable=False,
+                    context={
+                        "category_id": candidate.category_id,
+                        "evidence_section": str(value or ""),
+                    },
+                )
+            if canonical not in result:
+                result.append(canonical)
+        return result
 
     return CategoryFitCandidate(
         schema_version=candidate.schema_version,
         category_id=candidate.category_id,
         label=candidate.label,
         fit_score=candidate.fit_score,
-        decision=decision,
+        decision=candidate.decision,
         why_fit=candidate.why_fit,
-        why_not_fit=why_not_fit,
-        evidence_sections=list(candidate.evidence_sections),
-        semantic_rule_status=status,
-        supported_topic_rules=supported_rules,
+        why_not_fit=candidate.why_not_fit,
+        evidence_sections=sections(candidate.evidence_sections),
+        semantic_rule_status=candidate.semantic_rule_status,
+        supported_topic_rules=list(candidate.supported_topic_rules),
         supported_topic_rule_ids=supported_rule_ids,
-        rejected_topic_rules=rejected_rules,
+        rejected_topic_rules=list(candidate.rejected_topic_rules),
         rejected_topic_rule_ids=rejected_rule_ids,
-        rule_evidence_sections=rule_evidence_sections,
-        centrality_evidence_sections=centrality_evidence_sections,
-        remediation_signal=remediation_signal,
+        rule_evidence_sections=sections(candidate.rule_evidence_sections),
+        centrality_evidence_sections=sections(candidate.centrality_evidence_sections),
+        remediation_signal=candidate.remediation_signal,
     )
+
+
+def _validated_topic_rule_ids(
+    values: list[str],
+    *,
+    valid_rule_ids: set[str],
+    category_id: str,
+    field_name: str,
+) -> list[str]:
+    result: list[str] = []
+    for value in values:
+        rule_id = str(value or "").strip()
+        if not rule_id:
+            continue
+        if rule_id not in valid_rule_ids:
+            raise AppError(
+                code="context_category_fit_unknown_rule_id",
+                message=(
+                    "Category-fit model returned an unknown configured rule identifier"
+                ),
+                retryable=False,
+                context={
+                    "category_id": category_id,
+                    "field": field_name,
+                    "rule_id": rule_id,
+                },
+            )
+        if rule_id not in result:
+            result.append(rule_id)
+    return result
 
 
 def _semantic_status_counts(fits: list[CategoryFitCandidate]) -> dict[str, int]:
@@ -866,6 +913,42 @@ def _coerce_fit_response(
             why_fit=str(item.get("why_fit") or "").strip(),
             why_not_fit=str(item.get("why_not_fit") or "").strip(),
             evidence_sections=evidence_sections,
+            semantic_rule_status=str(
+                item.get("semantic_rule_status") or "not_evaluated"
+            )
+            .strip()
+            .casefold(),
+            supported_topic_rules=[
+                str(value or "").strip()
+                for value in item.get("supported_topic_rules") or []
+                if str(value or "").strip()
+            ],
+            supported_topic_rule_ids=[
+                str(value or "").strip()
+                for value in item.get("supported_topic_rule_ids") or []
+                if str(value or "").strip()
+            ],
+            rejected_topic_rules=[
+                str(value or "").strip()
+                for value in item.get("rejected_topic_rules") or []
+                if str(value or "").strip()
+            ],
+            rejected_topic_rule_ids=[
+                str(value or "").strip()
+                for value in item.get("rejected_topic_rule_ids") or []
+                if str(value or "").strip()
+            ],
+            rule_evidence_sections=[
+                str(value or "").strip()
+                for value in item.get("rule_evidence_sections") or []
+                if str(value or "").strip()
+            ],
+            centrality_evidence_sections=[
+                str(value or "").strip()
+                for value in item.get("centrality_evidence_sections") or []
+                if str(value or "").strip()
+            ],
+            remediation_signal=str(item.get("remediation_signal") or "").strip(),
         )
         fits.append(
             _apply_topic_semantics(
@@ -887,75 +970,11 @@ def _coerce_fit_response(
         )
     )
     selected_ids = _selected_category_ids(fits)
-    if not selected_ids:
-        # The model returns only a bounded candidate list. When it omits every
-        # category that has explicit, central configured support, recover those
-        # deterministic candidates before treating the report as uncategorized.
-        # This remains narrower than a semantic guess: exclusions still win and
-        # only exact configured concepts/rules can promote a category.
-        seen_category_ids = {fit.category_id for fit in fits}
-        for category_id, profile in profile_by_id.items():
-            if category_id in seen_category_ids:
-                continue
-            rescued = _apply_topic_semantics(
-                candidate=CategoryFitCandidate(
-                    schema_version="1.0",
-                    category_id=category_id,
-                    label=str(profile["label"]),
-                    fit_score=0.0,
-                    decision="reject",
-                    why_fit=(
-                        "Explicit configured category evidence is central to "
-                        "the retained report context."
-                    ),
-                    why_not_fit="",
-                    evidence_sections=[],
-                ),
-                profile=profile,
-                evidence=evidence,
-                high_confidence_fit_threshold=high_confidence_fit_threshold,
-            )
-            if rescued.decision in {"primary", "secondary"}:
-                fits.append(rescued)
-        fits.sort(
-            key=lambda item: (
-                0
-                if item.decision == "primary"
-                else 1
-                if item.decision == "secondary"
-                else 2,
-                -item.fit_score,
-                item.category_id,
-            )
-        )
-    # Provider selections are advisory.  Persisted category IDs must be derived
-    # from the normalized deterministic decisions so no rejected category leaks
-    # through and a deterministic promotion cannot be omitted.
+    # The provider's decisions are authoritative after technical ID/range and
+    # evidence-reference validation.  Do not rescue omitted categories or
+    # promote/reject them from configured-token matches.
     selected_ids = _selected_category_ids(fits)
-    rejected_conflicts = [
-        fit.category_id
-        for fit in fits
-        if fit.remediation_signal == "topic_semantics_exclusion_conflict"
-    ]
-    ambiguous = [
-        fit.category_id
-        for fit in fits
-        if fit.remediation_signal == "topic_semantics_ambiguous"
-    ]
-    if rejected_conflicts or ambiguous:
-        logger.info(
-            log_event(
-                ctx,
-                role="generator",
-                event="context_category_fit_topic_semantics_remediation",
-                module=logger.name,
-                fields={
-                    "report_id": report_id,
-                    "rejected_conflicts": rejected_conflicts,
-                    "ambiguous": ambiguous,
-                },
-            )
-        )
+    del ctx, high_confidence_fit_threshold
     labels = [profile_by_id[item]["label"] for item in selected_ids]
     return ContextCategoryFitResponse(
         schema_version="1.0",

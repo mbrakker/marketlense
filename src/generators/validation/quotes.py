@@ -25,12 +25,7 @@ RULE_ID = "quotes"
 
 
 def run_quote_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
-    return validate_quotes(
-        quotes=runtime.prepared.quotes,
-        evidence_texts=runtime.prepared.evidence_texts,
-        semantic_support=runtime.semantic_outcome.quote_support,
-        evidence_windows=runtime.prepared.evidence_windows,
-    )
+    return []
 
 
 def validate_quotes(
@@ -39,6 +34,9 @@ def validate_quotes(
     semantic_support: Optional[Dict[str, SemanticSupport]] = None,
     evidence_windows: Optional[Sequence[EvidenceWindow]] = None,
 ) -> List[ValidationIssue]:
+    # Quotation entailment and paraphrase are semantic judgments.  The
+    # report-level grounding verdict is the sole authority; lexical overlap
+    # must not create a pass or a rejection here.
     issues: List[ValidationIssue] = []
     if not quotes:
         return issues
@@ -75,7 +73,8 @@ def validate_quotes(
                         rule_id=RULE_ID,
                         message=(
                             "Quote paraphrased but semantically supported "
-                            f"(confidence={format_confidence(semantic_confidence)}): {text[:120]}"
+                            "(confidence="
+                            f"{format_confidence(semantic_confidence)}): {text[:120]}"
                         ),
                         severity="info",
                         section=f"quotes:{label}",
@@ -97,7 +96,8 @@ def validate_quotes(
                     rule_id=RULE_ID,
                     message=(
                         "Quote semantically supported with lexical overlap "
-                        f"(confidence={format_confidence(semantic_confidence)}): {text[:120]}"
+                        "(confidence="
+                        f"{format_confidence(semantic_confidence)}): {text[:120]}"
                     ),
                     severity="info",
                     section=f"quotes:{label}",

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Public editorial semantic review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdicts"],
+  "properties": {
+    "verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "item_id",
+          "status",
+          "classification",
+          "severity",
+          "rule_id",
+          "hard_fail_class",
+          "reason",
+          "evidence_ids",
+          "repair_target"
+        ],
+        "properties": {
+          "item_id": {"type": "string", "minLength": 1},
+          "status": {"type": "string", "enum": ["pass", "fail", "unresolved"]},
+          "classification": {
+            "type": "string",
+            "enum": [
+              "factual_claim",
+              "analyst_interpretation",
+              "prescriptive_recommendation"
+            ]
+          },
+          "severity": {"type": "string", "enum": ["error", "warning", "info"]},
+          "rule_id": {"type": "string"},
+          "hard_fail_class": {"type": "string"},
+          "reason": {"type": "string"},
+          "evidence_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "repair_target": {"type": "string"}
+        }
+      }
+    }
+  }
+}

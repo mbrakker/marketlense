@@ -19,7 +19,8 @@ from .semantic import run_semantic_rule
 from .shared import LOGGER_NAME, logger
 from .topic_sections import run_topic_section_rule
 
-_VERIFIED_FACTS_LEGACY_RULES = frozenset({"semantic", "numbers"})
+_FULL_LEGACY_SEMANTIC_RULES = frozenset({"semantic", "numbers", "metrics", "quotes"})
+_VERIFIED_FACTS_LEGACY_RULES = frozenset({"semantic", "numbers", "quotes"})
 
 
 @dataclass(frozen=True)
@@ -103,7 +104,9 @@ def rules_for_validation_mode(
     normalized = str(mode or "full").strip()
     if normalized == "inline_deterministic":
         return tuple(
-            rule for rule in registry if rule.rule_id not in {"semantic", "grounding"}
+            rule
+            for rule in registry
+            if rule.rule_id not in {"semantic", "numbers", "quotes", "grounding"}
         )
     if normalized == "deferred_grounding":
         return tuple(rule for rule in registry if rule.rule_id == "grounding")
@@ -120,6 +123,10 @@ def rules_for_validation_mode(
             rule
             for rule in registry
             if rule.rule_id not in _VERIFIED_FACTS_LEGACY_RULES
+        )
+    if normalized == "full":
+        return tuple(
+            rule for rule in registry if rule.rule_id not in _FULL_LEGACY_SEMANTIC_RULES
         )
     return tuple(registry)
 

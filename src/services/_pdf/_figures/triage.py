@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import List, Optional
 
 import pymupdf as fitz
@@ -19,6 +19,7 @@ from ..visual_heuristics import CAPTION_HINTS, PDF_FIGURE_EXCEPTIONS
 PDF_FIGURE_TRIAGE_EXCEPTIONS = (AppError,) + PDF_FIGURE_EXCEPTIONS
 
 VISUAL_CONTEXT_HINTS = CAPTION_HINTS + ("infographic",)
+
 
 @dataclass(frozen=True)
 class _CandidatePagePlan:
@@ -41,6 +42,7 @@ class _CandidatePageScore:
     image_blocks: int
     drawing_count: int
 
+
 def _candidate_page_text(artifacts) -> str:
     return "\n".join(
         str(block[4] or "").strip()
@@ -58,7 +60,9 @@ def _candidate_page_drawing_count(page: fitz.Page) -> int:
 
 def _candidate_page_image_area_fraction(page: fitz.Page, artifacts) -> float:
     page_area = max(1.0, float(page.rect.get_area()))
-    image_area = sum(max(0.0, float(rect.get_area())) for rect in artifacts.image_block_rects)
+    image_area = sum(
+        max(0.0, float(rect.get_area())) for rect in artifacts.image_block_rects
+    )
     return min(1.0, image_area / page_area)
 
 
@@ -171,7 +175,6 @@ def _plan_candidate_pages(
     triaged_full_scan_pages = 0
     degraded_pages: list[PdfDegradedPage] = []
     page_triage_records: list[PdfCandidatePageTriageRecord] = []
-    skipped_score_candidates: list[tuple[int, _CandidatePageScore]] = []
     threshold = min(1.0, max(0.0, float(page_gate_min_score)))
     for index in requested_pages:
         try:
@@ -194,12 +197,13 @@ def _plan_candidate_pages(
                 continue
             if artifacts.full_page_scan_without_text:
                 triaged_full_scan_pages += 1
+                triaged_pages.append(index)
                 table_pages.append(index)
                 page_triage_records.append(
                     _page_triage_record(
                         score,
                         threshold=threshold,
-                        action="include_table_only_full_scan",
+                        action="include_all_full_scan",
                     )
                 )
                 continue
@@ -252,50 +256,18 @@ def _plan_candidate_pages(
             table_pages.append(index)
             triaged_pages.append(index)
             continue
-        if score.score >= threshold:
-            triaged_pages.append(index)
-            table_pages.append(index)
-            page_triage_records.append(
-                _page_triage_record(
-                    score,
-                    threshold=threshold,
-                    action="include_score",
-                )
-            )
-            continue
-        skipped_score_candidates.append((index, score))
+        # Score components are retrieval telemetry only.  The visual model
+        # must see every technically readable page; semantic page triage is
+        # not allowed to remove a viable source before adjudication.
+        triaged_pages.append(index)
+        table_pages.append(index)
         page_triage_records.append(
             _page_triage_record(
                 score,
                 threshold=threshold,
-                action="skip_low_score",
+                action="include_all",
             )
         )
-    recall_floor = _resolve_page_gate_recall_floor(
-        len(requested_pages),
-        min_recall_pages=page_gate_min_recall_pages,
-        min_recall_page_fraction=page_gate_min_recall_page_fraction,
-    )
-    included_pages = set(triaged_pages) | set(table_pages)
-    if page_gate_enabled and len(included_pages) < recall_floor:
-        need = recall_floor - len(included_pages)
-        recall_candidates = sorted(
-            skipped_score_candidates,
-            key=lambda item: (-item[1].score, item[0]),
-        )[:need]
-        record_by_page = {record.page: idx for idx, record in enumerate(page_triage_records)}
-        for index, score in recall_candidates:
-            if index not in triaged_pages:
-                triaged_pages.append(index)
-            if index not in table_pages:
-                table_pages.append(index)
-            record_index = record_by_page.get(index)
-            if record_index is not None:
-                page_triage_records[record_index] = replace(
-                    page_triage_records[record_index],
-                    action="include_recall_floor",
-                    reasons=list(score.reasons) + ["recall_floor"],
-                )
     triaged_pages.sort()
     table_pages.sort()
     page_triage_skipped_pages = sum(

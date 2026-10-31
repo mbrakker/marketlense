@@ -18,7 +18,6 @@ from src.utils.candidate_features import candidate_features, candidate_features_
 from src.utils.coercion import coerce_float, coerce_int
 from src.utils.costing import estimate_cost_usd, estimate_text_tokens
 from src.utils.logging import log_event
-from src.utils.url_utils import text_has_url_or_domain_marker
 
 
 @dataclass(frozen=True)
@@ -148,71 +147,16 @@ def _compact_rank_row(candidate: Candidate) -> dict[str, Any]:
 
 
 def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
+    """Return only technically invalid crop geometry.
+
+    Visual importance, chart/table status, and substantive content are model
+    judgments.  Feature values remain available to rank bounded overflow, but
+    they must not veto a candidate before the multimodal selector.
+    """
+
     area = _candidate_meta(candidate, "area_frac", 0.0)
     if area <= 0.0:
         return "missing_area"
-    if candidate.kind == "table":
-        features = candidate_features(candidate)
-        rows = coerce_int(features.rows, 0)
-        cols = coerce_int(features.cols, 0)
-        numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
-        avg_words_per_cell = coerce_float(features.avg_words_per_cell, 0.0)
-        table_confidence = coerce_float(features.table_confidence, 0.0)
-        preview_normalized = " ".join(
-            str(candidate.preview_text or "").replace("|", " ").lower().split()
-        )
-        if rows < 2 or cols < 2:
-            return "table_low_structure"
-        if rows < 3 and numeric_ratio < 0.08:
-            return "table_low_data"
-        if area < 0.025 and numeric_ratio < 0.12:
-            return "table_too_small"
-        if (
-            preview_normalized.startswith("figure ")
-            and numeric_ratio <= 0.05
-            and avg_words_per_cell >= 6.0
-        ):
-            return "table_figure_text_block"
-        if (
-            preview_normalized.startswith("box ")
-            and numeric_ratio <= 0.05
-            and avg_words_per_cell >= 6.0
-        ):
-            return "table_box_text_block"
-        if (
-            text_has_url_or_domain_marker(
-                preview_normalized,
-                domains={"doi.org"},
-            )
-            and rows >= 8
-            and numeric_ratio <= 0.12
-        ):
-            return "table_reference_text_block"
-        if (
-            area >= 0.18
-            and rows >= 8
-            and cols <= 5
-            and numeric_ratio <= 0.03
-            and avg_words_per_cell >= 8.0
-        ):
-            return "table_large_text_block"
-        if 0.0 < table_confidence < 0.32 and numeric_ratio < 0.12 and rows < 5:
-            return "table_low_confidence"
-        return ""
-    text_ratio = _candidate_meta(candidate, "text_ratio", 0.0)
-    text_chars = _candidate_meta(candidate, "text_chars", 0.0)
-    visual_entropy = _candidate_meta(candidate, "visual_entropy", 0.0)
-    chart_confidence = _candidate_meta(candidate, "chart_confidence", 0.0)
-    if area < 0.035:
-        return "chart_too_small"
-    if text_ratio > 0.9 and area < 0.12:
-        return "chart_text_fragment"
-    if not (candidate.caption or "").strip() and area < 0.05 and text_ratio < 0.02:
-        return "chart_decorative"
-    if 0.0 < chart_confidence < 0.24 and area < 0.11:
-        return "chart_low_confidence"
-    if 0.0 < visual_entropy < 0.04 and text_chars < 30:
-        return "chart_low_visual_entropy"
     return ""
 
 
@@ -248,52 +192,22 @@ def _candidate_prefilter_priority(candidate: Candidate) -> float:
 
 def _candidate_is_obvious_reject(candidate: Candidate) -> tuple[bool, str]:
     reason = _candidate_prefilter_reject_reason(candidate)
-    if reason:
-        return True, reason
-    if candidate.kind == "table":
-        features = candidate_features(candidate)
-        rows = coerce_int(features.rows, 0)
-        cols = coerce_int(features.cols, 0)
-        numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
-        if rows < 3 and cols < 3 and numeric_ratio < 0.1:
-            return True, "table_ambiguous_low_data"
-        return False, ""
-    text_ratio = _candidate_meta(candidate, "text_ratio", 0.0)
-    text_chars = _candidate_meta(candidate, "text_chars", 0.0)
-    if text_ratio > 0.88 and text_chars < 70:
-        return True, "chart_text_heavy_fragment"
-    return False, ""
+    return bool(reason), reason
 
 
 def _candidate_is_obvious_pass(candidate: Candidate) -> bool:
-    if candidate.kind == "table":
-        features = candidate_features(candidate)
-        rows = coerce_int(features.rows, 0)
-        cols = coerce_int(features.cols, 0)
-        numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
-        area = _candidate_meta(candidate, "area_frac", 0.0)
-        return rows >= 4 and cols >= 3 and numeric_ratio >= 0.15 and area >= 0.05
-    area = _candidate_meta(candidate, "area_frac", 0.0)
-    text_ratio = _candidate_meta(candidate, "text_ratio", 0.0)
-    has_caption = bool((candidate.caption or "").strip())
-    return area >= 0.12 and text_ratio <= 0.65 and has_caption
+    # Adaptive crop refinement must not skip semantic review based on feature
+    # thresholds.  Geometry is checked by `_candidate_prefilter_reject_reason`.
+    del candidate
+    return False
 
 
 def _rank_threshold_pass(row: Any, settings: IngestSettings) -> tuple[bool, str]:
+    """Honor the model's keep decision; scores are ranking telemetry only."""
+
+    del settings
     if not bool(getattr(row, "keep", True)):
         return False, str(getattr(row, "reject_reason", "") or "model_reject")
-    score = coerce_int(getattr(row, "score", 0), 0)
-    quality = coerce_int(getattr(row, "quality_score", score), score)
-    insight = coerce_int(getattr(row, "insight_score", score), score)
-    data_score = coerce_int(getattr(row, "data_score", score), score)
-    if score < int(settings.rank_min_overall_score):
-        return False, "overall_below_threshold"
-    if quality < int(settings.rank_min_quality_score):
-        return False, "quality_below_threshold"
-    if insight < int(settings.rank_min_insight_score):
-        return False, "insight_below_threshold"
-    if data_score < int(settings.rank_min_data_score):
-        return False, "data_below_threshold"
     return True, ""
 
 
@@ -469,7 +383,9 @@ def _rank_candidates_batch(
             fields={
                 "candidate_kind": kind,
                 "prompt_content_hash": prompt_bundle.prompt_content_hash,
-                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "execution_identity": (
+                    prompt_bundle.execution_identity.execution_identity
+                ),
                 "system_prompt_chars": len(prompt_bundle.system_prompt),
                 "user_prompt_chars": len(prompt_bundle.user_prompt),
             },

@@ -14,9 +14,6 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryCandidateScreeningRequest,
     PublisherInventoryCandidateScreeningResponse,
 )
-from src.generators._publisher_inventory_candidate_screening.deterministic import (
-    _fallback_screening_decision,
-)
 from src.generators._publisher_inventory_candidate_screening.response_policy import (
     _build_screening_response,
     _coerce_screening_decision_map,
@@ -86,7 +83,9 @@ def _screen_candidate_batch(
                 "user_sha256": prompt_bundle.prompt_set.user.sha256,
                 "resolved_model": prompt_bundle.resolved_model,
                 "prompt_content_hash": prompt_bundle.prompt_content_hash,
-                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "execution_identity": (
+                    prompt_bundle.execution_identity.execution_identity
+                ),
                 "system_prompt_chars": len(prompt_bundle.system_prompt),
                 "user_prompt_chars": len(prompt_bundle.user_prompt),
             },
@@ -203,25 +202,22 @@ def _screen_candidate_batch(
             if candidate.canonical_url not in decision_map
         ]
     if missing_candidates:
-        fallback_decisions = {
-            candidate.canonical_url: _fallback_screening_decision(candidate)
-            for candidate in missing_candidates
-        }
-        decision_map.update(fallback_decisions)
-        logger.warning(
-            log_event(
-                ctx,
-                role="generator",
-                event="publisher_inventory_candidate_screen_missing_decisions_fallback",
-                module=logger.name,
-                fields={
-                    "publisher_name": request.publisher_name,
-                    "batch_index": batch_index,
-                    "batch_count": batch_count,
-                    "fallback_count": len(fallback_decisions),
-                    "fallback_urls": sorted(fallback_decisions),
-                },
-            )
+        raise AppError(
+            code="publisher_inventory_candidate_screen_incomplete",
+            message=(
+                "Candidate screening did not return a decision for every "
+                "technically eligible candidate"
+            ),
+            retryable=False,
+            severity="error",
+            context={
+                "publisher_name": request.publisher_name,
+                "batch_index": batch_index,
+                "batch_count": batch_count,
+                "missing_urls": [
+                    candidate.canonical_url for candidate in missing_candidates
+                ],
+            },
         )
     return _build_screening_response(
         candidates=candidates,

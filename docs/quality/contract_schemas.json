@@ -39695,6 +39695,7 @@
           "enum": [
             "",
             "signal_grounding_insufficient",
+            "signal_semantic_review_pending",
             "signal_topic_category_relationship_missing",
             "signal_publication_manifest_legacy"
           ]

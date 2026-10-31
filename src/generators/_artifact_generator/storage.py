@@ -808,27 +808,28 @@ def _soft_copy_claim_provenance_payload(
                     )
         elif text:
             retained = [claim for claim in claims if claim.artifact_family == family]
-            if not isinstance(declared, list) or not declared:
-                if not retained_soft_copy_claims_cover_text(text=text, claims=retained):
-                    # A regeneration candidate may contain newly generated
-                    # public prose without the model's binding payload. Keep
-                    # the candidate structurally serializable so the
-                    # candidate validator can reject and roll it back. The
-                    # canonical (non-candidate) path remains strict below.
-                    if regeneration_attempt <= 0:
-                        build_soft_copy_claim_provenance(
-                            artifact_family=family,
-                            text=text,
-                            declared_claims=declared,
-                            evidence_span_index=span_index,
-                            producing_prompt_identity=dict(
-                                prompt_identities.get(family) or {}
-                            ),
-                            generation_attempt=max(
-                                1, int(generation_attempts.get(family) or 1)
-                            ),
-                            regeneration_attempt=regeneration_attempt,
-                        )
+            if (
+                not isinstance(declared, list) or not declared
+            ) and not retained_soft_copy_claims_cover_text(text=text, claims=retained):
+                # A regeneration candidate may contain newly generated
+                # public prose without the model's binding payload. Keep
+                # the candidate structurally serializable so the
+                # candidate validator can reject and roll it back. The
+                # canonical (non-candidate) path remains strict below.
+                if regeneration_attempt <= 0:
+                    build_soft_copy_claim_provenance(
+                        artifact_family=family,
+                        text=text,
+                        declared_claims=declared,
+                        evidence_span_index=span_index,
+                        producing_prompt_identity=dict(
+                            prompt_identities.get(family) or {}
+                        ),
+                        generation_attempt=max(
+                            1, int(generation_attempts.get(family) or 1)
+                        ),
+                        regeneration_attempt=regeneration_attempt,
+                    )
             else:
                 # A complete prompt-family output is re-finalized as one
                 # canonical public surface. Its model-declared bindings
@@ -1196,14 +1197,9 @@ def _derive_metric_spine_from_insights(
         ).strip()
         evidence_ids = _artifact_evidence_ids(insight, fallback=evidence_id)
         label = _s(metric.get("label") or metric.get("metric")).strip()
-        if not label:
-            label = _metric_label_from_insight_text(
-                _s(insight.get("text")).strip(), value=value
-            )
-        if not label and _metric_text_is_unambiguous(
-            text=_s(insight.get("text")).strip(), value=value
-        ):
-            label = _s(insight.get("text")).strip()
+        # A metric label is an authoritative structured field.  Inferring it
+        # from public prose would make deterministic code decide the meaning
+        # of the claim before grounding.
         if not value or not evidence_id or not _is_complete_metric_label(label):
             continue
         missing_context_notes = [
@@ -1710,51 +1706,46 @@ def _select_key_figure_metrics(
     insights_final: List[Dict[str, Any]],
     editorial_plan: Dict[str, Any] | None,
 ) -> List[Dict[str, Any]]:
-    """Choose a small, non-redundant set without inventing replacement facts."""
+    """Retain source-bound metrics in model/metric-spine order.
 
+    Key-figure usefulness, redundancy, and commercial meaning are semantic
+    judgments owned by the downstream grounding and public-editorial review
+    models.  This projection therefore performs only technical checks: a
+    complete structured binding, exact numeric support when it is available,
+    and stable metric identity.  Do not rank or discard metrics by wording,
+    confidence, or inferred editorial value here.
+    """
+
+    del summary, editorial_plan
     evidence_text_by_id = _key_figure_evidence_text_by_id(
         evidence_packs=evidence_packs, insights_final=insights_final
     )
-    insights_by_evidence_id = {
-        _s(insight.get("evidence_id")).strip(): insight
-        for insight in insights_final
-        if isinstance(insight, dict) and _s(insight.get("evidence_id")).strip()
-    }
-    ranked = sorted(
-        (
-            metric
-            for metric in metric_spine
-            if isinstance(metric, dict)
-            and _s(metric.get("label")).strip()
-            and _s(metric.get("value")).strip()
-            and _s(metric.get("evidence_id")).strip()
-        ),
-        key=lambda metric: (
-            -_key_figure_score(
-                metric=metric,
-                summary=summary,
-                evidence_text="\n".join(
-                    evidence_text_by_id.get(evidence_id, "")
-                    for evidence_id in _artifact_evidence_ids(metric)
-                    if evidence_text_by_id.get(evidence_id, "")
-                ),
-                editorial_plan=editorial_plan,
-            ),
-            _s(metric.get("metric_id")).strip(),
-            _s(metric.get("label")).strip(),
-        ),
-    )
     selected: List[Dict[str, Any]] = []
-    for metric in ranked:
+    seen_metric_ids: set[str] = set()
+    for metric in metric_spine:
         if len(selected) >= _KEY_FIGURE_MAXIMUM:
             break
-        evidence_id = _s(metric.get("evidence_id")).strip()
+        if not isinstance(metric, dict):
+            continue
+        metric_id = _s(metric.get("metric_id")).strip()
+        if metric_id and metric_id in seen_metric_ids:
+            continue
+        if metric_id:
+            seen_metric_ids.add(metric_id)
+        if not (
+            _s(metric.get("label")).strip()
+            and _s(metric.get("value")).strip()
+            and _s(metric.get("evidence_id")).strip()
+        ):
+            continue
         evidence_ids = _artifact_evidence_ids(metric)
         evidence_text = "\n".join(
             evidence_text_by_id.get(bound_evidence_id, "")
             for bound_evidence_id in evidence_ids
             if evidence_text_by_id.get(bound_evidence_id, "")
         )
+        if not evidence_text:
+            evidence_text = _s(metric.get("source_statement")).strip()
         display = _key_figure_display(
             value=_s(metric.get("value")).strip(),
             unit=_s(metric.get("unit")).strip(),
@@ -1765,24 +1756,6 @@ def _select_key_figure_metrics(
         if not display_quantities or not all(
             quantity_supported(quantity, evidence_quantities, numeric_only=True)
             for quantity in display_quantities
-        ):
-            continue
-        if (
-            _key_figure_score(
-                metric=metric,
-                summary=summary,
-                evidence_text=evidence_text,
-                editorial_plan=editorial_plan,
-            )
-            < _KEY_FIGURE_MINIMUM_SCORE
-        ):
-            continue
-        if any(_key_figures_are_redundant(metric, prior) for prior in selected):
-            continue
-        if not _key_figure_relationship_is_valid(
-            metric=metric,
-            insight=insights_by_evidence_id.get(evidence_id),
-            evidence_text=evidence_text,
         ):
             continue
         selected.append(metric)
@@ -2276,7 +2249,8 @@ def finalize_regeneration_candidate_artifacts(
                 raise AppError(
                     code="regeneration_deterministic_projection_failed",
                     message=(
-                        "Final soft-copy provenance could not be rebuilt deterministically"
+                        "Final soft-copy provenance could not be rebuilt "
+                        "deterministically"
                     ),
                     retryable=False,
                     context={
@@ -2763,38 +2737,9 @@ def _key_figure_why_it_matters(
     metric: Dict[str, Any], *, insight_text: str = ""
 ) -> str:
     if insight_text:
-        # Do not carry an unsupported ranking/superlative into the derived
-        # figure surface. The metric tuple is the source-backed minimum and is
-        # safe even when a chart excerpt does not preserve all peer labels.
-        if re.search(
-            r"\b(?:led|most common|top)\b",
-            insight_text,
-            re.IGNORECASE,
-        ):
-            label = _s(metric.get("label")).strip()
-            value = _s(metric.get("value")).strip()
-            segment = _s(metric.get("segment")).strip()
-            geography = _s(metric.get("geography")).strip()
-            timeframe = _s(metric.get("timeframe")).strip()
-            subject = _s(metric.get("subject")).strip()
-            cohort = _s(metric.get("cohort")).strip()
-            denominator = _s(metric.get("denominator")).strip()
-            observation_status = _s(metric.get("observation_status")).strip()
-            if label and value:
-                context = ", ".join(
-                    item
-                    for item in (
-                        segment,
-                        geography,
-                        timeframe,
-                        subject,
-                        cohort,
-                        denominator,
-                        observation_status,
-                    )
-                    if item
-                )
-                return f"{label}: {value}" + (f" ({context})" if context else "")
+        # The insight wording is already an LLM-produced public field.  Do
+        # not rewrite its meaning with a ranking/superlative heuristic; the
+        # independent grounding and editorial reviewers own that judgment.
         return insight_text
     label = _s(metric.get("label")).strip()
     segment = _s(metric.get("segment")).strip()
@@ -2811,44 +2756,9 @@ def _key_figure_why_it_matters(
 
 
 def _sanitize_key_figure_ranking_language(figures: Any) -> None:
-    """Keep restored derived figures free of unverified ranking claims."""
+    """Retain model wording; semantic ranking language is review telemetry."""
 
-    if not isinstance(figures, list):
-        return
-    for figure in figures:
-        if not isinstance(figure, dict):
-            continue
-        current = _s(figure.get("why_it_matters")).strip()
-        normalized_current = _normalize_public_numeric_signs(current)
-        if normalized_current != current:
-            figure["why_it_matters"] = normalized_current
-            current = normalized_current
-        if not current or not re.search(
-            r"\b(?:led|most common|top)\b",
-            current,
-            re.IGNORECASE,
-        ):
-            continue
-        label = _s(figure.get("label")).strip()
-        value = _s(figure.get("figure")).strip()
-        if not label or not value:
-            continue
-        context = ", ".join(
-            _s(figure.get(field)).strip()
-            for field in (
-                "segment",
-                "geography",
-                "timeframe",
-                "subject",
-                "cohort",
-                "denominator",
-                "observation_status",
-            )
-            if _s(figure.get(field)).strip()
-        )
-        figure["why_it_matters"] = f"{label}: {value}" + (
-            f" ({context})" if context else ""
-        )
+    del figures
 
 
 def _chart_candidates(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:

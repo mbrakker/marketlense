@@ -55,16 +55,14 @@ def run_claim_support_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
         return issues
 
     verified_mode = runtime.prepared.verified_facts_mode
-    evidence_quality_grades = (
-        {}
-        if verified_mode
-        else _collect_evidence_quality_grades(runtime.request.evidence_packs)
-    )
     if verified_mode:
         return _run_verified_claim_support_rule(
             claim_map, set(runtime.prepared.evidence_map)
         )
-    known_evidence_ids = set(evidence_quality_grades)
+    # Evidence identity and span membership are technical checks.  Whether a
+    # sentence overstates or semantically follows its evidence belongs to the
+    # single grounding verdict, not to this legacy rule.
+    known_evidence_ids = set(runtime.prepared.evidence_map)
     for index, raw_claim in enumerate(claim_map):
         if not isinstance(raw_claim, dict):
             continue
@@ -77,10 +75,6 @@ def run_claim_support_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
             for span in raw_claim.get("evidence_spans") or []
             if isinstance(span, dict)
         ]
-        referenced_evidence_ids = _claim_evidence_ids(
-            evidence_id=evidence_id,
-            evidence_spans=evidence_spans,
-        )
         if not evidence_id:
             issues.append(
                 issue(
@@ -97,9 +91,6 @@ def run_claim_support_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
                 )
             )
             continue
-        inline_grade = _quality_grade(raw_claim)
-        if inline_grade:
-            evidence_quality_grades[evidence_id] = inline_grade
         if evidence_id not in known_evidence_ids:
             issues.append(
                 issue(
@@ -123,30 +114,6 @@ def run_claim_support_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
                     message=(
                         f"Summary claim '{claim_text[:120]}' is missing evidence "
                         "span references."
-                    ),
-                    severity="error",
-                    section=f"summary.claim_evidence_map[{index}]",
-                    repair_target="summary",
-                    entity_id=evidence_id,
-                )
-            )
-            continue
-        if _strong_claim_overstates_support(
-            claim_text=claim_text,
-            evidence_ids=referenced_evidence_ids,
-            evidence_quality_grades=evidence_quality_grades,
-            evidence_spans=evidence_spans,
-        ):
-            grades = [
-                evidence_quality_grades.get(item, "unknown")
-                for item in referenced_evidence_ids
-            ]
-            issues.append(
-                issue(
-                    rule_id=RULE_ID,
-                    message=(
-                        "weak_evidence_strong_claim: summary claim uses strong "
-                        f"language but evidence quality is {', '.join(grades)}."
                     ),
                     severity="error",
                     section=f"summary.claim_evidence_map[{index}]",
@@ -223,8 +190,7 @@ def _run_verified_claim_support_rule(
                 issue(
                     rule_id=RULE_ID,
                     message=(
-                        "Verified-fact summary claim has an inconsistent evidence "
-                        "span."
+                        "Verified-fact summary claim has an inconsistent evidence span."
                     ),
                     severity="error",
                     section=f"summary.claim_evidence_map[{index}]",

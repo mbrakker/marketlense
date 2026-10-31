@@ -253,9 +253,7 @@ def _signal_candidate_handler(
         ctx,
     )
     held_groups = [
-        group
-        for group in outcome.batch.groups
-        if group.validation_status == "approved" and group.publication_status == "held"
+        group for group in outcome.batch.groups if group.publication_status == "held"
     ]
     publication_hold_reason_counts: dict[str, int] = {}
     for group in held_groups:

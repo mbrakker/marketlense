@@ -12,6 +12,7 @@ import json
 import re
 from collections import Counter
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import asdict
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
@@ -81,6 +82,28 @@ ADVISORY_RULE_IDS = {
     "public_editorial_quality.action_specificity",
     "public_editorial_quality.nonspecific_decision_implication",
 }
+
+# Deterministic public-release checks are limited to contract and rendering
+# integrity.  Semantic factuality, interpretation, recommendation quality and
+# editorial usefulness are adjudicated by the independent public-editorial
+# model review at the orchestration boundary.  The older semantic detectors
+# remain available to existing diagnostics/tests, but their findings must not
+# become publication authority by themselves.
+DETERMINISTIC_PUBLIC_EDITORIAL_RULE_IDS = frozenset(
+    {
+        "public_editorial_quality.internal_identifier",
+        "public_editorial_quality.placeholder",
+        "public_editorial_quality.malformed_extraction_fragment",
+        "public_editorial_quality.text_corruption",
+        "public_editorial_quality.literal_truncation",
+        "public_editorial_quality.material_claim_evidence_missing",
+        "public_editorial_quality.missing_asset",
+        "public_editorial_quality.figure_linkage_missing",
+        "public_editorial_quality.private_operational_reference",
+        "public_editorial_quality.public_source_provenance_missing",
+        "public_editorial_quality.metadata_identity",
+    }
+)
 
 # These failures are source-fidelity release blockers, not weighted editorial
 # quality deductions.  They deliberately cannot be waived: any one prevents
@@ -285,12 +308,15 @@ def evaluate_public_editorial_quality(
         _metadata_issues(report_id, safe_artifacts, metadata_evidence or {}, html=html)
     )
 
-    # Source-fidelity failures are an explicit release policy and are never
-    # eligible for a quality-rule waiver.
+    # Source-fidelity and rendering failures are an explicit release policy and
+    # are never eligible for a quality-rule waiver.  Semantic/editorial
+    # judgments are deliberately omitted here; the independent LLM review
+    # owns those decisions in the report-analysis orchestrator.
     filtered = [
         issue
         for issue in issues
-        if issue.rule_id not in waivers or issue.hard_fail_class
+        if issue.rule_id in DETERMINISTIC_PUBLIC_EDITORIAL_RULE_IDS
+        and (issue.rule_id not in waivers or issue.hard_fail_class)
     ]
     filtered.sort(
         key=lambda item: (item.rule_id, item.affected_field, item.explanation)
@@ -931,6 +957,7 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 item = _item("summary", field_name, value, [], "summary")
                 _annotate_verified_item(item, artifacts)
                 yield item
+
     downstream_evidence = _downstream_evidence_items(artifacts)
     if verified_mode:
         downstream_evidence = _verified_evidence_items(
@@ -968,6 +995,109 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 item = _item(field_name, field_name, value, [], field_name)
                 _annotate_verified_item(item, artifacts)
                 yield item
+
+
+def public_editorial_semantic_review_items(
+    artifacts: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Return every public text item with its retained evidence context.
+
+    This is a pure projection for the existing model boundary.  It keeps
+    public copy out of ordinary quality logs while giving the semantic
+    reviewer one stable item identity per public surface.  No semantic
+    decision is made here.
+    """
+
+    items: list[dict[str, Any]] = list(_public_text_items(artifacts))
+    seen = {str(item.get("public_item_id") or "") for item in items}
+
+    def add_item(item: dict[str, Any]) -> None:
+        item_id = str(item.get("public_item_id") or "").strip()
+        if item_id and item_id not in seen:
+            seen.add(item_id)
+            items.append(item)
+
+    for insight in _dict_items(artifacts.get("insights_final")):
+        insight_id = insight_entity_id(insight)
+        if not insight_id:
+            continue
+        evidence_ids = _public_evidence_ids(insight)
+        evidence_text = str(
+            insight.get("evidence") or insight.get("source_excerpt") or ""
+        ).strip()
+        for field_name in ("text", "so_what", "now_what"):
+            value = _sanitize_public_prose(insight.get(field_name))
+            if value:
+                item = _item(
+                    "insights_final",
+                    f"insights:{insight_id}.{field_name}"
+                    if field_name != "text"
+                    else f"insights:{insight_id}",
+                    value,
+                    evidence_ids,
+                    "insights_bundle",
+                    evidence_text=evidence_text,
+                )
+                _annotate_verified_item(item, artifacts)
+                add_item(item)
+
+    for index, figure in enumerate(_dict_items(artifacts.get("key_figures")), start=1):
+        evidence_ids = _public_evidence_ids(figure)
+        evidence_text = str(
+            figure.get("evidence") or figure.get("source_excerpt") or ""
+        ).strip()
+        for field_name in ("label", "figure", "why_it_matters"):
+            value = _sanitize_public_prose(figure.get(field_name))
+            if value:
+                item = _item(
+                    "key_figures",
+                    f"key_figures:{index}.{field_name}",
+                    value,
+                    evidence_ids,
+                    "insights_bundle",
+                    evidence_text=evidence_text,
+                )
+                _annotate_verified_item(item, artifacts)
+                add_item(item)
+
+    for index, quote in enumerate(_dict_items(artifacts.get("quotes_final")), start=1):
+        value = _sanitize_public_prose(quote.get("text"))
+        if value:
+            item = _item(
+                "quotes_final",
+                f"quotes:{quote.get('id') or index}",
+                value,
+                _public_evidence_ids(quote),
+                "quotes",
+                evidence_text=str(
+                    quote.get("evidence") or quote.get("source_excerpt") or ""
+                ).strip(),
+            )
+            _annotate_verified_item(item, artifacts)
+            add_item(item)
+
+    for index, card in enumerate(
+        _dict_items(artifacts.get("chart_insight_cards")), start=1
+    ):
+        evidence_ids = _public_evidence_ids(card)
+        evidence_text = str(
+            card.get("evidence") or card.get("source_excerpt") or ""
+        ).strip()
+        for field_name in ("title", "caption", "public_takeaway"):
+            value = _sanitize_public_prose(card.get(field_name))
+            if value:
+                item = _item(
+                    "chart_insight_cards",
+                    f"chart_insight_cards:{index}.{field_name}",
+                    value,
+                    evidence_ids,
+                    "insights_bundle",
+                    evidence_text=evidence_text,
+                )
+                _annotate_verified_item(item, artifacts)
+                add_item(item)
+
+    return items
 
 
 def _retained_soft_copy_sentence_items(
@@ -1489,6 +1619,16 @@ def _string_list(value: object) -> list[str]:
     )
 
 
+def _public_evidence_ids(item: Mapping[str, Any]) -> list[str]:
+    """Return all retained evidence bindings in stable primary-first order."""
+
+    values = [
+        *_string_list(item.get("evidence_id")),
+        *_string_list(item.get("evidence_ids")),
+    ]
+    return list(dict.fromkeys(value for value in values if value))
+
+
 def _summary_evidence_items(summary: dict[str, Any]) -> list[tuple[str, str]]:
     return [
         (
@@ -1560,7 +1700,9 @@ def _annotate_verified_item(item: dict[str, Any], artifacts: object) -> None:
         return
     facts = _verified_fact_index(artifacts)
     item["verified_facts_mode"] = True
-    evidence_ids = set(item.get("evidence_ids") or [])
+    # Preserve the canonical primary-first evidence order so prompt payloads
+    # and their cache identities remain deterministic across runs.
+    evidence_ids = _public_evidence_ids(item)
     canonical_texts = [
         canonical_evidence_map({fact_id: fact}).get(f"verified-fact:{fact_id}", "")
         for fact_id, fact in facts.items()
@@ -1568,6 +1710,18 @@ def _annotate_verified_item(item: dict[str, Any], artifacts: object) -> None:
     ]
     if canonical_texts:
         item["evidence_text"] = "; ".join(text for text in canonical_texts if text)
+    bound_facts: dict[str, dict[str, Any]] = {}
+    for evidence_id in evidence_ids:
+        fact = fact_for_evidence_id(facts, evidence_id)
+        if fact is None:
+            continue
+        fact_id = str(fact.get("fact_id") or "").strip()
+        if fact_id:
+            bound_facts[f"verified-fact:{fact_id}"] = deepcopy(dict(fact))
+    if bound_facts:
+        # Keep the complete canonical fact, including report-specific nested
+        # metric fields, available to the independent semantic reviewer.
+        item["verified_facts"] = bound_facts
     fact = _fact_for_item(artifacts, item)
     if fact is not None:
         item["verified_fact_metric"] = fact.get("metric")
@@ -2395,10 +2549,12 @@ def _visible_report_id(report_id: str, text: str) -> bool:
 __all__ = [
     "ADVISORY_RULE_IDS",
     "BLOCKING_RULE_IDS",
+    "DETERMINISTIC_PUBLIC_EDITORIAL_RULE_IDS",
     "HARD_FAIL_CLASS_BY_RULE_ID",
     "enumerate_public_editorial_items",
     "evaluate_public_editorial_quality",
     "merge_public_editorial_quality_validation",
+    "public_editorial_semantic_review_items",
     "public_html_quality_issues",
     "quality_report_payload",
     "validation_issues_from_public_editorial_quality",

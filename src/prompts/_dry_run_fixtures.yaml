@@ -60,6 +60,8 @@ shared:
     Payment innovation is changing rapidly, but the current draft does not yet tie its claims tightly enough to explicit evidence.
   report_context_json: &report_context_json >-
     {"title":"Enterprise Payments Outlook 2026","publisher":"Market Lense Research","region":"Global","time_period":"2026","overview":"The report covers wallets, orchestration, fraud controls, and merchant infrastructure.","key_findings":["Wallet adoption continues to grow.","Merchants are investing in orchestration and fraud controls."]}
+  public_items_json: &public_items_json >-
+    {"public_items":[{"item_id":"insight:i1:text","artifact":"insights_final","field":"insights:i1","text":"Wallet adoption continues to expand across enterprise checkout flows.","evidence_ids":["verified-fact:f1"],"evidence_text":"Wallet adoption continues to expand across enterprise checkout flows.","verified_facts":{"verified-fact:f1":{"fact_id":"f1","source_identity":"fixture-pdf","proposition":"Wallet adoption continues to expand across enterprise checkout flows.","metric":{"value":"42","unit":"percent","timeframe":"2026","population":"enterprise merchants","methodology":{"qualifier":"survey estimate"}},"evidence":{"physical_page":4,"excerpt":"Wallet adoption continues to expand across enterprise checkout flows."}}}}]}
   category_profiles_json: &category_profiles_json >-
     [{"id":"digital_payments","label":"Digital Payments","definition":"Reports focused on payments infrastructure, wallets, merchant checkout, and transaction enablement."},{"id":"fintech","label":"Fintech","definition":"Reports centered on financial technology products and platforms."}]
   candidate_items_json: &candidate_items_json >-
@@ -721,3 +723,11 @@ fixtures:
       inspected_physical_pages_json: "[4]"
       attached_physical_pages_json: "[4]"
       image_page_map: "image 1 = physical PDF page 4"
+  - namespace: "report_vs/validate/public_editorial_quality"
+    family: "validation"
+    model: "gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_validation
+    system_variables: {}
+    user_variables:
+      public_items_json: *public_items_json

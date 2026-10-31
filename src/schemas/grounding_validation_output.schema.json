@@ -8,14 +8,15 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["section", "text", "reason"],
+        "additionalProperties": false,
+        "required": ["section", "text", "classification", "entailment_outcome", "violation_type", "reason"],
         "properties": {
-          "item_id": {"type": "string"},
+          "item_id": {"type": "string", "minLength": 1},
           "section": {"type": "string"},
           "text": {"type": "string"},
-          "classification": {"type": "string"},
+          "classification": {"type": "string", "enum": ["factual_claim", "analyst_interpretation", "prescriptive_recommendation"]},
           "entailment_outcome": {"type": "string", "enum": ["contradicted", "not_established"]},
-          "violation_type": {"type": "string"},
+          "violation_type": {"type": "string", "minLength": 1},
           "reason": {"type": "string"}
         }
       }
@@ -27,7 +28,7 @@
         "additionalProperties": false,
         "required": ["section", "text", "classification", "entailment_outcome", "proposition_status", "protected_facts", "reason"],
         "properties": {
-          "item_id": {"type": "string"},
+          "item_id": {"type": "string", "minLength": 1},
           "section": {"type": "string"},
           "text": {"type": "string"},
           "classification": {"type": "string", "enum": ["factual_claim", "analyst_interpretation", "prescriptive_recommendation"]},

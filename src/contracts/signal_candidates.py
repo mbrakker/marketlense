@@ -9,11 +9,14 @@ from src.contracts.cross_report_analysis import (
 )
 from src.contracts.schema_validation import (
     empty_required_value as _empty_required_value,
+)
+from src.contracts.schema_validation import (
     field_is_list_typed as _field_is_list_typed,
+)
+from src.contracts.schema_validation import (
     field_is_required as _field_is_required,
 )
 from src.utils.errors import AppError
-
 
 SIGNAL_CANDIDATE_SCHEMA_VERSION = "1.0"
 SIGNAL_CANDIDATE_MANIFEST_SCHEMA_VERSION = "1.0"
@@ -37,6 +40,7 @@ SignalPublicationStatus = Literal["eligible", "held"]
 SignalPublicationHoldReason = Literal[
     "",
     "signal_grounding_insufficient",
+    "signal_semantic_review_pending",
     "signal_topic_category_relationship_missing",
     "signal_publication_manifest_legacy",
 ]
@@ -55,12 +59,18 @@ class SignalCandidateSourceRef:
     entity_uid: str = field(metadata={"doc": "Projected source entity UID."})
     content_class: str = field(
         metadata={
-            "doc": "Projected content class such as claim, finding, quote, metric, or figure."
+            "doc": (
+                "Projected content class such as claim, finding, quote, metric, "
+                "or figure."
+            )
         }
     )
     page_refs: List[int] = field(
         metadata={
-            "doc": "One-based source page references retained for traceability when available.",
+            "doc": (
+                "One-based source page references retained for traceability when "
+                "available."
+            ),
             "required": False,
         }
     )
@@ -94,12 +104,18 @@ class SignalCandidate:
     )
     source_refs: List[SignalCandidateSourceRef] = field(
         metadata={
-            "doc": "Traceable links to projected claims, findings, quotes, metrics, figures, and pages."
+            "doc": (
+                "Traceable links to projected claims, findings, quotes, metrics, "
+                "figures, and pages."
+            )
         }
     )
     raw_source_context: Dict[str, Any] = field(
         metadata={
-            "doc": "Raw deterministic scoring and source context without metric normalization."
+            "doc": (
+                "Raw deterministic scoring and source context without metric "
+                "normalization."
+            )
         }
     )
     validation_status: SignalCandidateValidationStatus = field(
@@ -499,6 +515,7 @@ def _validate_dataclass_instance(instance: object, *, path: str) -> None:
             if field_def.name == "publication_hold_reason" and field_value not in {
                 "",
                 "signal_grounding_insufficient",
+                "signal_semantic_review_pending",
                 "signal_topic_category_relationship_missing",
                 "signal_publication_manifest_legacy",
             }:

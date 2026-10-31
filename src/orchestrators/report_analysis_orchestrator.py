@@ -1220,6 +1220,7 @@ def run_report_analysis(
             artifacts=artifacts_payload or {},
             pack_name="public_editorial_quality_before",
             ctx=mode_ctx,
+            openai_client=validation_openai_client,
         )
     )
     validation_report = _merge_public_editorial_quality(
@@ -1344,6 +1345,7 @@ def run_report_analysis(
         artifacts=artifacts_payload or {},
         pack_name="public_editorial_quality_after",
         ctx=mode_ctx,
+        openai_client=validation_openai_client,
     )
     if editorial_after_path:
         mode_evidence_paths["public_editorial_quality_after"] = editorial_after_path

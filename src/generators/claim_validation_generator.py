@@ -201,14 +201,10 @@ def attach_claim_validation_execution_identity(
 
 
 def _claim_kind(text: str) -> ClaimKind:
-    if _QUOTED_RE.search(text):
-        return "quotation"
-    if extract_quantities(text):
-        return "numeric"
-    if _CAUSAL_RE.search(text):
-        return "causal"
-    if _INTERPRETIVE_RE.search(text):
-        return "interpretive"
+    # Claim kind is retained as a compatibility field, not a semantic gate.
+    # Regexes cannot decide whether a sentence is factual, interpretive, or
+    # normative; the existing grounding model owns that classification.
+    del text
     return "descriptive"
 
 
@@ -223,38 +219,19 @@ def _claim_requires_factual_validation(
     classification: str,
     evidence_bound: bool = False,
 ) -> bool:
-    """Keep material source-derived propositions in the factual gate.
+    """Return the material-item readiness flag without judging its meaning.
 
-    Editorial classification describes the intended voice, not the contents of
-    a repaired sentence.  The existing claim-kind detector is deliberately
-    reused here: analytical language remains non-factual when it has no
-    source-derived premise, while numbers, quotations, causal assertions,
-    explicit comparisons, and evidence-bound recommendations require the
-    canonical evidence/semantic checks.  A recommendation remains an
-    editorial recommendation in semantic grounding; this flag only determines
-    whether its empirical premises need factual validation.
+    This helper is retained for the persisted contract and for callers that
+    need to describe a candidate.  Semantic classification belongs to the
+    grounding model: editorial wording, numeric overlap, and claim-kind
+    regular expressions must not decide whether an item reaches that model.
+    Every enumerated public item is therefore readiness-relevant.  Technical
+    evidence-reference failures are handled separately by the deterministic
+    checks.
     """
 
-    if classification == "factual":
-        return True
-    if classification in {"interpretive", "recommendation"}:
-        if kind in {"numeric", "quotation", "causal"} or bool(
-            _COMPARATIVE_RE.search(text)
-        ):
-            return True
-        if not evidence_bound:
-            return False
-        if kind != "interpretive":
-            return True
-        # A multi-sentence recommendation can carry a source-derived premise
-        # before its normative conclusion. Keep that complete proposition in
-        # semantic grounding, while a standalone "should" sentence remains a
-        # permitted editorial recommendation.
-        sentences = soft_copy_material_sentences(text)
-        return len(sentences) > 1 and any(
-            _claim_kind(sentence) != "interpretive" for sentence in sentences
-        )
-    return _factual(kind)
+    del text, kind, classification, evidence_bound
+    return True
 
 
 def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | None]]:
@@ -804,97 +781,19 @@ def _checks(
     if verified_facts_only:
         return checks, None
     cited = [source_evidence[reference.evidence_id][1] for reference in known]
-    protected_facts = None
-    if cited:
-        protected_facts = compare_protected_fact_texts(text, "\n".join(cited))
-        checks.extend(
-            ClaimValidationCheck(
-                schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
-                name=f"protected_fact_{dimension}_consistency",
-                status="failed",
-                reason=f"protected_fact_{dimension}_incompatible",
-            )
-            for dimension in protected_facts.incompatible_dimensions
-        )
-    if candidate.kind == "numeric":
-        quantities = extract_quantities(text)
-        cited_quantities = [
-            value for source in cited for value in extract_quantities(source)
-        ]
-        quantity_status, quantity_reason = _numeric_evidence_status(
-            quantities, cited_quantities
-        )
-        checks.append(
-            ClaimValidationCheck(
-                schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
-                name="number_value_unit_match",
-                status=quantity_status,
-                reason=quantity_reason,
-            )
-        )
-    elif candidate.kind == "quotation":
-        quoted_spans = _QUOTED_RE.findall(text)
-        normalized_sources = [normalize_for_lookup(source) for source in cited]
-        normalized_quotes = [
-            normalize_for_lookup(quote).replace('"', "") for quote in quoted_spans
-        ]
-        if normalized_quotes:
-            quote_matched = all(
-                quote and any(quote in source for source in normalized_sources)
-                for quote in normalized_quotes
-            )
-        else:
-            normalized = normalize_for_lookup(text).replace('"', "")
-            quote_matched = bool(normalized) and any(
-                normalized in source for source in normalized_sources
-            )
-        # A trailing possessive and a closing single quote can look identical.
-        # A supported shorter parse cannot prove the longer quotation: abstain
-        # so the existing semantic path resolves the complete claim.
-        minimal_quotes = [
-            normalize_for_lookup(quote).replace('"', "")
-            for quote in _MINIMAL_QUOTED_RE.findall(text)
-        ]
-        ambiguous = (
-            not quote_matched
-            and minimal_quotes != normalized_quotes
-            and bool(minimal_quotes)
-            and all(
-                quote and any(quote in source for source in normalized_sources)
-                for quote in minimal_quotes
-            )
-        )
-        checks.append(
-            ClaimValidationCheck(
-                schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
-                name="quote_match",
-                status="passed"
-                if quote_matched
-                else "not_applicable"
-                if ambiguous
-                else "failed",
-                reason="quote_matched"
-                if quote_matched
-                else "ambiguous_quote_boundaries"
-                if ambiguous
-                else "quote_not_matched",
-            )
-        )
-    else:
-        checks.append(
-            ClaimValidationCheck(
-                schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
-                name="entity_geography_period_consistency",
-                status="not_applicable",
-                reason="requires_semantic_or_editorial_assessment",
-            )
-        )
-    chart_relationship_check = _chart_relationship_fidelity_check(
-        text,
-        [source_evidence[reference.evidence_id] for reference in known],
+    # Keep protected-dimension comparison as bounded diagnostic context for
+    # audit/reuse, but never turn it into a deterministic semantic verdict.
+    protected_facts = (
+        compare_protected_fact_texts(text, "\n".join(cited)) if cited else None
     )
-    if chart_relationship_check is not None:
-        checks.append(chart_relationship_check)
+    checks.append(
+        ClaimValidationCheck(
+            schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
+            name="semantic_grounding_required",
+            status="not_applicable",
+            reason="semantic_authority_deferred_to_grounding_model",
+        )
+    )
     return checks, protected_facts
 
 
@@ -1124,9 +1023,9 @@ def _validate_claims_against_sources(
     """Validate claims against authoritative retained source text.
 
     Candidate extraction remains owned by the artifact or evidence-pack boundary.
-    Deterministic checks always run first. Retained-claim semantic fallback is
-    collected into one batch and consumes only identity-matched tri-state results.
-    Evidence-fidelity fallbacks batch only claims supplied identical ordered evidence.
+    Deterministic checks establish only technical evidence/provenance integrity.
+    Every material candidate with a valid evidence binding is sent to the
+    existing semantic batch and consumes only identity-matched tri-state results.
     """
 
     if semantic_validator is not None and evidence_semantic_batch_validator is not None:
@@ -1160,19 +1059,18 @@ def _validate_claims_against_sources(
                 ),
                 verified_facts_only=verified_facts_only,
             )
-        failed = [check.reason for check in checks if check.status == "failed"]
-        deterministic_entailment = any(
-            check.name in {"number_value_unit_match", "quote_match"}
-            and check.status == "passed"
+        structural_failures = [
+            check.reason
             for check in checks
-        )
-        status = (
-            "supported"
-            if deterministic_entailment and not failed
-            else "unsupported"
-            if failed
-            else "unresolved"
-        )
+            if check.status == "failed"
+            and check.name
+            in {"evidence_reference_completeness", "soft_copy_provenance_integrity"}
+        ]
+        # Numeric, quotation, protected-dimension and chart comparisons are
+        # diagnostics only.  They cannot certify or reject meaning before the
+        # grounding model has classified and entailed the complete item.
+        status = "unsupported" if structural_failures else "unresolved"
+        failed = structural_failures
         deterministic_status = status
         semantic_used = False
         execution_identity = ""
@@ -1315,11 +1213,7 @@ def _semantic_inputs(
     seen_semantic_identities: set[tuple[object, ...]] = set()
     for result in results:
         candidate = result.candidate
-        if (
-            not candidate.factual
-            or result.deterministic_status != "unresolved"
-            or any(check.status == "failed" for check in result.checks)
-        ):
+        if result.deterministic_status != "unresolved":
             continue
         refs = candidate.evidence_references
         if not refs or any(ref.evidence_id not in source_evidence for ref in refs):
@@ -1573,26 +1467,12 @@ def _apply_semantic_results(
             )
             continue
 
+        # Protected-fact comparisons are retained as audit context only.  They
+        # cannot override the independent grounding model's semantic outcome;
+        # that would recreate the deterministic entailment veto this package
+        # is intended to eliminate.
         disagreement = semantic.disagreement
         outcome = semantic.outcome
-        incompatible_dimensions = (
-            semantic.protected_facts.incompatible_dimensions
-            if semantic.protected_facts is not None
-            else []
-        )
-        incompatible_proposition = bool(
-            semantic.protected_facts is not None
-            and semantic.protected_facts.proposition_status == "incompatible"
-        )
-        if outcome == "entailed" and (
-            incompatible_dimensions or incompatible_proposition
-        ):
-            disagreement = disagreement or (
-                "entailed_with_incompatible_protected_dimensions"
-                if incompatible_dimensions
-                else "entailed_with_incompatible_proposition"
-            )
-            outcome = "contradicted"
         status = {
             "entailed": "supported",
             "contradicted": "unsupported",
@@ -1627,12 +1507,8 @@ def _claim_validation_package(
 def _claim_validation_package_for_hash(
     *, artifact_hash: str, results: list[ClaimValidationResult]
 ) -> ClaimValidationPackage:
-    unsupported = sum(
-        1 for item in results if item.candidate.factual and item.status == "unsupported"
-    )
-    unresolved = sum(
-        1 for item in results if item.candidate.factual and item.status == "unresolved"
-    )
+    unsupported = sum(1 for item in results if item.status == "unsupported")
+    unresolved = sum(1 for item in results if item.status == "unresolved")
     deterministic_passes = sum(
         1
         for item in results
@@ -1772,17 +1648,10 @@ def materialize_retained_claim_package(
         for result in current_results
         if isinstance(result, dict) and result.get("semantic_validator_used") is True
     ]
-    factual_results = [
-        result
-        for result in current_results
-        if isinstance(result, dict)
-        and isinstance(result.get("candidate"), dict)
-        and result["candidate"].get("factual") is True
-    ]
     unsupported = sum(
-        result.get("status") == "unsupported" for result in factual_results
+        result.get("status") == "unsupported" for result in current_results
     )
-    unresolved = sum(result.get("status") == "unresolved" for result in factual_results)
+    unresolved = sum(result.get("status") == "unresolved" for result in current_results)
     deterministic_passes = sum(
         result.get("status") == "supported"
         and result.get("semantic_validator_used") is not True
@@ -1905,11 +1774,8 @@ def _claim_validation_semantic_results_for_final_inputs(
     semantic_results = [
         result for result in raw_results if result["semantic_validator_used"] is True
     ]
-    factual_results = [
-        result for result in raw_results if result["candidate"]["factual"] is True
-    ]
-    unsupported = sum(result["status"] == "unsupported" for result in factual_results)
-    unresolved = sum(result["status"] == "unresolved" for result in factual_results)
+    unsupported = sum(result["status"] == "unsupported" for result in raw_results)
+    unresolved = sum(result["status"] == "unresolved" for result in raw_results)
     deterministic_passes = sum(
         result["status"] == "supported"
         and result["semantic_validator_used"] is not True
@@ -2160,21 +2026,16 @@ def reuse_retained_claim_semantic_results(
                 reject("prior_package_invalid")
                 old_results = []
             else:
-                factual = [
-                    result
-                    for result in results_value
-                    if result["candidate"].get("factual") is True
-                ]
                 semantic = [
                     result
                     for result in results_value
                     if result.get("semantic_validator_used") is True
                 ]
                 unsupported = sum(
-                    result.get("status") == "unsupported" for result in factual
+                    result.get("status") == "unsupported" for result in results_value
                 )
                 unresolved = sum(
-                    result.get("status") == "unresolved" for result in factual
+                    result.get("status") == "unresolved" for result in results_value
                 )
                 semantic_execution_ids = sorted(
                     {
@@ -2776,7 +2637,10 @@ def _evidence_fidelity_candidates(
                         text=text,
                         text_hash=_hash(text),
                         kind=kind,
-                        factual=_factual(kind),
+                        # Evidence-pack findings are also material semantic
+                        # propositions.  Do not let their deterministic kind
+                        # taxonomy bypass the grounding model.
+                        factual=True,
                         evidence_references=_source_references(
                             item,
                             source_evidence,

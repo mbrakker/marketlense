@@ -112,7 +112,7 @@ def test_signal_scoring_ranks_text_taxonomy_without_metric_normalization(
         "report-b-quote-1",
     ]
     assert signal.component_scores == {
-        "contradiction": 1.0,
+        "contradiction": 0.0,
         "diversity": 1.0,
         "recency": 1.0,
         "recurrence": 1.0,
@@ -224,11 +224,12 @@ def test_evidence_assembly_prefers_fresh_semantic_claim_embeddings_under_cap(
         "report-b:claim:ai-checkout",
     ]
     assert result.semantic_preselection is not None
-    assert result.semantic_preselection.mode == "claim_embedding_similarity"
+    assert result.semantic_preselection.mode == "claim_embedding_retrieval_order"
     assert result.semantic_preselection.candidate_claim_count == 3
-    assert result.semantic_preselection.selected_claim_count == 2
+    assert result.semantic_preselection.selected_claim_count == 3
     assert result.semantic_preselection.stale_embedding_count == 0
-    assert result.dropped_evidence_counts["semantic_claim_preselection"] == 1
+    assert "semantic_claim_preselection" not in result.dropped_evidence_counts
+    assert result.dropped_evidence_counts["max_evidence_items_reached"] == 1
     events = _events(caplog)
     assert_logs_have_required_fields(events)
     complete = [
@@ -237,7 +238,7 @@ def test_evidence_assembly_prefers_fresh_semantic_claim_embeddings_under_cap(
         if event["event"] == "cross_report_evidence_input_assembly_complete"
     ][0]
     assert complete["fields"]["semantic_preselection_present"] is True
-    assert complete["fields"]["semantic_preselection_selected_count"] == 2
+    assert complete["fields"]["semantic_preselection_selected_count"] == 3
 
 
 def test_evidence_assembly_falls_back_when_claim_embeddings_are_absent(
@@ -383,7 +384,8 @@ def test_evidence_assembly_excludes_stale_claim_embeddings(
     assert result.semantic_preselection is not None
     assert result.semantic_preselection.stale_embedding_count == 1
     assert result.semantic_preselection.selected_embedding_uids == [
-        f"{fresh_a.entity_uid}:embedding:test"
+        f"{fresh_a.entity_uid}:embedding:test",
+        f"{fresh_b.entity_uid}:embedding:test",
     ]
 
 
@@ -439,7 +441,7 @@ def test_signal_scoring_matches_short_labels_on_token_boundaries(
     ai_signal = next(
         score for score in result.signal_scores if score.signal_id == "signal-ai"
     )
-    assert ai_signal.evidence_ids == ["report-a-claim-2"]
+    assert ai_signal.evidence_ids == ["report-a-claim-2", "report-a-claim-1"]
 
 
 def test_signal_scoring_disambiguates_slug_collisions(
@@ -494,7 +496,7 @@ def test_signal_scoring_disambiguates_slug_collisions(
     )
 
     result = score_cross_report_signals(
-        request, evidence_inputs, theme_selection, run_context, max_signals=4
+        request, evidence_inputs, theme_selection, run_context, max_signals=1
     )
 
     assert len(result.selected_signal_ids) == len(set(result.selected_signal_ids))
@@ -731,11 +733,11 @@ def test_evidence_agreement_groups_convergent_signal_inputs(
         request, evidence_inputs, signal_result, run_context
     )
 
-    assert result.agreement_counts["convergent"] >= 1
+    assert result.agreement_counts["thin_coverage"] >= 1
     ai_group = next(
         group for group in result.evidence_groups if group.group_id == "group-signal-ai"
     )
-    assert ai_group.agreement_type == "convergent"
+    assert ai_group.agreement_type == "thin_coverage"
     assert ai_group.evidence_ids == ["report-a-claim-1", "report-b-finding-1"]
     assert ai_group.publisher_count == 2
     prompt_group = next(
@@ -743,8 +745,8 @@ def test_evidence_agreement_groups_convergent_signal_inputs(
         for item in result.prompt_uncertainty_inputs
         if item["group_id"] == "group-signal-ai"
     )
-    assert prompt_group["agreement_type"] == "convergent"
-    assert prompt_group["uncertainty_reasons"] == ["multi_publisher_alignment"]
+    assert prompt_group["agreement_type"] == "thin_coverage"
+    assert prompt_group["uncertainty_reasons"] == ["semantic_agreement_pending_llm"]
     events = _events(caplog)
     assert_logs_have_required_fields(events)
     complete = [
@@ -752,7 +754,7 @@ def test_evidence_agreement_groups_convergent_signal_inputs(
         for event in events
         if event["event"] == "cross_report_evidence_agreement_grouping_complete"
     ][0]
-    assert complete["fields"]["agreement_counts"]["convergent"] >= 1
+    assert complete["fields"]["agreement_counts"]["thin_coverage"] >= 1
 
 
 def test_evidence_agreement_groups_divergent_signal_inputs(
@@ -793,7 +795,10 @@ def test_evidence_agreement_groups_divergent_signal_inputs(
                 "report-b-finding-1",
                 report_id="report-b",
                 content_class="finding",
-                text="AI commerce adoption is declining in budget-constrained retail teams.",
+                text=(
+                    "AI commerce adoption is declining in budget-constrained retail "
+                    "teams."
+                ),
             ),
         ],
         raw_metrics=[],
@@ -816,9 +821,9 @@ def test_evidence_agreement_groups_divergent_signal_inputs(
     ai_group = next(
         group for group in result.evidence_groups if group.group_id == "group-signal-ai"
     )
-    assert ai_group.agreement_type == "divergent"
-    assert "opposed_directional_language" in ai_group.uncertainty_reasons
-    assert result.agreement_counts["divergent"] >= 1
+    assert ai_group.agreement_type == "thin_coverage"
+    assert ai_group.uncertainty_reasons == ["semantic_agreement_pending_llm"]
+    assert result.agreement_counts["thin_coverage"] >= 1
 
 
 def test_evidence_agreement_requires_distinct_directional_evidence_for_divergence(
@@ -882,8 +887,8 @@ def test_evidence_agreement_requires_distinct_directional_evidence_for_divergenc
     ai_group = next(
         group for group in result.evidence_groups if group.group_id == "group-signal-ai"
     )
-    assert ai_group.agreement_type == "convergent"
-    assert ai_group.uncertainty_reasons == ["multi_publisher_alignment"]
+    assert ai_group.agreement_type == "thin_coverage"
+    assert ai_group.uncertainty_reasons == ["semantic_agreement_pending_llm"]
 
 
 def test_evidence_agreement_same_publisher_opposition_is_thin_coverage(

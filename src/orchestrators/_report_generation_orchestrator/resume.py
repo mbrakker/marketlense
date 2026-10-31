@@ -641,7 +641,10 @@ def _validate_checkpoint_editorial_plan(
             raise
         raise AppError(
             code="report_pipeline_checkpoint_artifact_schema_invalid",
-            message="Checkpoint artifacts do not satisfy the current editorial plan contract",
+            message=(
+                "Checkpoint artifacts do not satisfy the current editorial plan "
+                "contract"
+            ),
             cause=exc,
             retryable=False,
             context={
@@ -654,7 +657,10 @@ def _validate_checkpoint_editorial_plan(
     except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         raise AppError(
             code="report_pipeline_checkpoint_artifact_schema_invalid",
-            message="Checkpoint artifacts do not satisfy the current editorial plan contract",
+            message=(
+                "Checkpoint artifacts do not satisfy the current editorial plan "
+                "contract"
+            ),
             cause=exc,
             retryable=False,
             context={
@@ -1526,6 +1532,7 @@ def _resume_prompt_family_repair(
         artifacts=candidate_artifacts,
         pack_name="public_editorial_quality_prompt_repair",
         ctx=repair_ctx,
+        openai_client=validation_openai_client,
     )
     validation = _merge_public_editorial_quality(validation, editorial_validation)
     candidate_validation_path = _store_validation_snapshot(

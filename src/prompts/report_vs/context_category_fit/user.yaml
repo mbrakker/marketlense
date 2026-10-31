@@ -23,7 +23,12 @@ text: |
         "decision": "primary",
         "why_fit": "short evidence-based rationale",
         "why_not_fit": "short caveat or rejection rationale",
-        "evidence_sections": ["Section title"]
+        "evidence_sections": ["Section title"],
+        "semantic_rule_status": "supported",
+        "supported_topic_rule_ids": ["category_id:include:stable_rule_hash"],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": ["Section title"],
+        "centrality_evidence_sections": ["Section title"]
       }
     ]
   }

@@ -18,9 +18,13 @@ text: |
   ids, claim ids, labels, or invented ids in `raw_metric_ids`. If the Raw metric
   appendix is empty, every section must use `"raw_metric_ids": []`.
 
-  Every generated claim must cite at least one provided evidence id. If the
-  evidence is divergent or thin, preserve that uncertainty instead of forcing
-  consensus.
+  Every generated claim must cite at least one provided evidence id. The
+  supplied agreement groups are retrieval context only: do not treat their
+  `agreement_type` as a semantic verdict. Independently assess relevance,
+  comparability, novelty, convergence, divergence and contradiction from the
+  complete evidence, preserving differences in metric, population, geography,
+  denominator and period. If the evidence is thin or cannot be compared,
+  preserve that uncertainty instead of forcing consensus.
 
   Editorial quality requirements:
   - Lead with the cross-report thesis, not a mechanical recap.

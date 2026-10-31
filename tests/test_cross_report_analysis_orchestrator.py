@@ -476,9 +476,8 @@ def test_cross_report_orchestrator_wires_theme_rotation_settings(
     )
 
     assert outcome.generated_result.selected_theme.rejection_risks
-    assert any(
-        risk.startswith("recent_category_repetition:")
-        for risk in outcome.generated_result.selected_theme.rejection_risks
+    assert "semantic_novelty_pending_llm" in (
+        outcome.generated_result.selected_theme.rejection_risks
     )
     events = [
         json.loads(record.message)

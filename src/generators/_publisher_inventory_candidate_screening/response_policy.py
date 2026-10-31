@@ -96,7 +96,9 @@ def _coerce_screening_decision_map(
         if not isinstance(accepted, bool):
             raise AppError(
                 code="publisher_inventory_candidate_screen_invalid_payload",
-                message="Candidate screening decisions must include boolean accepted values",
+                message=(
+                    "Candidate screening decisions must include boolean accepted values"
+                ),
                 retryable=False,
                 severity="error",
                 context={"canonical_url": canonical_url},
@@ -283,9 +285,9 @@ def _apply_publisher_success_hard_rejections(
 def _candidate_duplicate_key(
     candidate: PublisherInventoryCandidateScreeningItem,
 ) -> str:
-    title_key = _normalize_title_fingerprint(candidate.title)
-    if title_key and not _is_generic_duplicate_title(title_key):
-        return title_key
+    # Same-title resources may be distinct reports or editions.  Only the
+    # canonical URL is a technical identity suitable for deterministic
+    # de-duplication; semantic equivalence belongs to the screening model.
     return candidate.canonical_url
 
 

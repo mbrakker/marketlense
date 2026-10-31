@@ -7833,3 +7833,74 @@ write was changed.
 **Verdict: PASS for the targeted transactional-repair safeguards and focused
 regressions; PARTIAL / NO-GO for live repair effectiveness and Step 3
 readiness.**
+
+#### Semantic-authority migration — 2026-10-31 (implementation based on `e7f4fd1a`)
+
+This slice applies the GPT-6 semantic-authority decision across active
+production paths. Existing LLM stages now own material factuality, entailment,
+interpretation, recommendation quality, public-editorial quality, report
+qualification, category fit, visual significance, and cross-report semantic
+agreement. Deterministic code remains responsible for source identity,
+physical-page and evidence-ID integrity, schema/coverage, immutable verified
+facts, exact arithmetic, orchestration, retries, cache identity, and
+publication transactions. Retrieval heuristics remain ordering/recall aids;
+they no longer certify or veto semantic content before the relevant model
+stage. Repair evidence remains bounded to source-authorized identities and is
+independently grounded before promotion.
+
+The grounding contract was advanced to
+`retained_claim_validation:v10` / `grounding_validation_output:2.0`, with
+complete canonical verified facts and evidence available to the existing
+grounding call. The public-editorial release boundary now uses the existing
+structured-output/recovery/reuse path for an independent semantic review;
+technical HTML, identity, asset, schema, and source-integrity checks remain
+deterministic and unwaivable. The grounding user prompt no longer duplicates
+the system-side authority policy. A valid rejected factual item is represented
+by a consistent non-entailed `checks` record plus its matching `unsupported`
+disposition; mismatched or incomplete pairs fail closed.
+
+The three-iteration prompt fixture baseline was regenerated with repository
+tooling. The prior baseline was 111,573 total tokens / `$0.024659` across 50
+fixtures; the new baseline is 113,206 / `$0.024974` across 51 fixtures. The
+validation family is 9,640 → 10,921 tokens and `$0.001725` → `$0.002005`;
+the increase is 35 tokens from complete grounding instructions plus 1,246
+tokens for the new independent public-editorial review. Report is 22,875 →
+23,144 tokens (`$0.008573` → `$0.008600`), from the category-fit authority
+context; cross-report is 2,385 → 2,468 (`$0.000599` → `$0.000607`). Publishing,
+browser, ranking, and crop families are unchanged. The fixture gate passed
+with zero deltas against the regenerated baseline; thresholds and pricing were
+not changed.
+
+Focused verification passed:
+
+* 83 semantic-authority, prompt, cross-report, and signal tests;
+* 16 canonical verified-grounding, multi-fact, and fabricated-number tests;
+* full-repository mypy baseline: 0 tracked errors across 786 source files;
+* changed-file Ruff, Python compilation, diff checks, and the prompt-fixture
+  gate.
+
+The exact Step 0 reference replay is recorded at
+`out/verified-claims-step2-semantic-authority-replay-20261031.json`. It covers
+all 15 cases and 39 variants across Capgemini, Activate, KPMG, Reuters
+Institute, and Adjust, with no fabricated fixture substitution. It was
+provider-free: the active worktree has no retained frozen-five artifacts or
+source PDFs at the manifest paths, so all 39 visual assessments were skipped,
+the five retained-report selections were unavailable, and provider calls,
+tokens, cost, latency, and live quality outcomes are null/zero. The parent
+worktree contains `.env`, but credentials alone do not establish a valid
+current-SHA real-report replay. This run therefore proves input/reference
+coverage only and does not claim improved live semantic quality.
+
+The broader legacy grounding/public-editorial suites still contain assertions
+that intentionally require the removed deterministic semantic authority (for
+example lexical quote support, numeric pre-support, and deterministic metric
+mismatch findings). They are recorded as migration debt rather than restored
+through heuristic compatibility. The targeted contract suite is green; the
+full local Ruff invocation still reports the repository's pre-existing debt
+outside the changed-file gate. No provider, canonical artifact, publication,
+or WordPress write was performed.
+
+**Verdict: PASS for the implemented semantic-authority boundaries and local
+contract/static gates; PARTIAL for real-report effectiveness. Step 3 remains
+unstarted/not ready until a current-SHA provider-backed retained-report replay
+with available source PDFs and artifacts is completed.**

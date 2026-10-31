@@ -122,6 +122,18 @@ _REPORT_DETAIL_TITLE_MARKERS = {
     "whitepaper",
     "white paper",
 }
+_TECHNICAL_ASSET_SUFFIXES = {
+    ".avi",
+    ".gif",
+    ".jpeg",
+    ".jpg",
+    ".mov",
+    ".mp3",
+    ".mp4",
+    ".png",
+    ".svg",
+    ".webp",
+}
 
 
 def assert_candidate_download_ready(
@@ -176,7 +188,7 @@ def assert_candidate_download_ready(
         )
         raise AppError(
             code=f"report_download_{rejection_reason}",
-            message="The candidate URL does not look like a report acquisition target",
+            message="The candidate URL has a technically unsupported asset type",
             retryable=False,
             context={
                 "normalized_url": normalized_url,
@@ -238,7 +250,8 @@ def evaluate_candidate_download_readiness(
     if any(marker in url_value for marker in _ASSET_URL_MARKERS):
         score -= 0.9
         signals.append("asset_url_marker")
-        return round(score, 3), "candidate_rejected_asset_page", signals
+        if _url_path_suffix(url_value) in _TECHNICAL_ASSET_SUFFIXES:
+            return round(score, 3), "candidate_rejected_asset_page", signals
     if any(marker in url_value for marker in _MARKETING_URL_MARKERS):
         score -= 0.7
         signals.append("marketing_url_marker")
@@ -257,17 +270,10 @@ def evaluate_candidate_download_readiness(
     ):
         score -= 0.6
         signals.append("mixed_content_hub_candidate")
-        return round(score, 3), "candidate_rejected_mixed_content_hub", signals
-
-    if score >= 0.35:
-        return round(score, 3), None, signals
-    if any(marker in url_value for marker in _MARKETING_URL_MARKERS):
-        return round(score, 3), "candidate_rejected_marketing_page", signals
-    if any(marker in title for marker in _NON_REPORT_TITLE_MARKERS) or any(
-        marker in url_value for marker in _NON_REPORT_URL_MARKERS
-    ):
-        return round(score, 3), "candidate_rejected_non_report", signals
-    return round(score, 3), "candidate_rejected_non_report", signals
+    # Title, URL, source-page and confidence signals are acquisition telemetry
+    # only.  Report qualification remains owned by the existing screening model;
+    # none of these semantic cues may veto a candidate before that decision.
+    return round(score, 3), None, signals
 
 
 def _is_mixed_content_hub_candidate(
@@ -289,9 +295,7 @@ def _is_mixed_content_hub_candidate(
         return True
     last_segment = segments[-1]
     last_stem = _document_path_stem(last_segment)
-    last_tokens = [
-        token for token in last_stem.replace("_", "-").split("-") if token
-    ]
+    last_tokens = [token for token in last_stem.replace("_", "-").split("-") if token]
     title_has_detail_signal = any(
         marker in str(title or "") for marker in _REPORT_DETAIL_TITLE_MARKERS
     )
@@ -335,3 +339,8 @@ def _url_surface_key(url: str) -> str:
 
 def _document_path_stem(segment: str) -> str:
     return re.sub(r"\.(?:html?|aspx?)$", "", str(segment or "").casefold())
+
+
+def _url_path_suffix(url: str) -> str:
+    leaf = urlsplit(str(url or "").strip()).path.rsplit("/", 1)[-1].lower()
+    return f".{leaf.rsplit('.', 1)[-1]}" if "." in leaf else ""

@@ -509,6 +509,23 @@ review remain open. Step 2 remains **PARTIAL/NO-GO** and Step 3 remains
 unstarted; no status is closed from this checkpoint alone. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
+**Evidence update — 2026-10-31 semantic authority migration (implementation
+based on `e7f4fd1a`):** Active semantic gates now use existing LLM stages for
+material grounding, public-editorial quality, report qualification, category
+fit, visual significance, and cross-report agreement; deterministic code keeps
+technical source/schema/identity and publication authority. Grounding and
+public-editorial identities were advanced, the valid checks-plus-unsupported
+rejection pair is now accepted only when identity-consistent, and the prompt
+fixture baseline was regenerated through tooling (113,206 tokens, `$0.024974`,
+51 fixtures; gate passed). Focused semantic/contract tests (83), canonical
+verified-grounding tests (16), changed Ruff, compilation, and full mypy (0
+tracked errors across 786 files) passed. The provider-free replay covered all
+15/39 Step 0 reference cases but had no current-worktree retained artifacts or
+source PDFs, so it supplies no live quality result. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. Full details and artifact path are in the Step 2
+quality report.
+
 Ruff, compileall, and diff checks passed. Provider-free retained replay still
 covers 15 cases/39 variants with five matching hashes and zero calls, but the
 retained records contain no authoritative verified-fact snapshots. Four fresh

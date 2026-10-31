@@ -30,24 +30,10 @@ RULE_ID = "numbers"
 
 
 def run_number_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
-    if runtime.prepared.verified_facts_mode:
-        return validate_new_numbers(
-            artifacts=runtime.request.artifacts,
-            insights=runtime.prepared.insights,
-            report=runtime.request.report,
-            evidence_texts=runtime.prepared.evidence_texts,
-            evidence_windows=runtime.prepared.evidence_windows,
-            source_text="",
-            verified_facts_mode=True,
-        )
-    return validate_new_numbers(
-        artifacts=runtime.request.artifacts,
-        insights=runtime.prepared.insights,
-        report=runtime.request.report,
-        evidence_texts=runtime.prepared.evidence_texts,
-        evidence_windows=runtime.prepared.evidence_windows,
-        source_text=runtime.prepared.pdf_text,
-    )
+    # Numeric entailment is owned by the grounding verdict.  Exact immutable
+    # fact checks remain available through the verified-fact rule paths, while
+    # this legacy registry rule is intentionally non-authoritative.
+    return []
 
 
 def validate_new_numbers(
@@ -169,7 +155,10 @@ def validate_new_numbers(
                         replace(
                             issue(
                                 rule_id=RULE_ID,
-                                message=f"Number {missing_value} not present in report or evidence",
+                                message=(
+                                    f"Number {missing_value} not present in report "
+                                    "or evidence"
+                                ),
                                 severity=severity,
                                 section=section,
                                 entity_id=claim.claim_id if claim else "",
@@ -181,7 +170,7 @@ def validate_new_numbers(
             continue
         unsupported_pairs = unsupported_period_time_pairs(text, source_text)
         source_pairs = period_time_pairs(source_text)
-        source_values_by_period = {period: value for period, value in source_pairs}
+        source_values_by_period = dict(source_pairs)
         for period, value in sorted(unsupported_pairs):
             key = (section, f"{period}:{value}", "error")
             if key in seen:

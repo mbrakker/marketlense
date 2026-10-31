@@ -108,9 +108,7 @@ def extract_taxonomy(
         ctx,
     )
     allowed_tags = _collect_allowed_tags(mappings_resp)
-    retrieval_context_json = shared_retrieval_context_json(
-        request.retrieval_context
-    )
+    retrieval_context_json = shared_retrieval_context_json(request.retrieval_context)
     logger.info(
         log_event(
             ctx,
@@ -123,6 +121,7 @@ def extract_taxonomy(
             },
         )
     )
+
     def prepare_taxonomy_prompt(retrieval_json: str):
         return prepare_prompt_bundle(
             namespace=request.prompt_namespace,
@@ -177,7 +176,9 @@ def extract_taxonomy(
             module=logger.name,
             fields={
                 "prompt_content_hash": prompt_bundle.prompt_content_hash,
-                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "execution_identity": (
+                    prompt_bundle.execution_identity.execution_identity
+                ),
                 "system_prompt_chars": len(prompt_bundle.system_prompt),
                 "user_prompt_chars": len(prompt_bundle.user_prompt),
             },
@@ -427,12 +428,9 @@ def extract_taxonomy(
         secondary_tags=secondary_tags,
         known_tags=initial_taxonomy,
     )
-    primary_tags, secondary_tags, tag_evidence = _apply_inference_rules(
-        primary_tags=primary_tags,
-        secondary_tags=secondary_tags,
-        tag_evidence=tag_evidence,
-        inference_rules=mappings_resp.mappings.inference_rules,
-    )
+    # Tag/category meaning is owned by the taxonomy model.  Mapping rules are
+    # retained for compatibility and audit history, but must not add, remove,
+    # or reclassify a semantic tag after the model response.
     taxonomy = _finalize_taxonomy_list(
         raw_taxonomy=payload.get("taxonomy"),
         primary_tags=primary_tags,
@@ -680,12 +678,8 @@ def _load_cached_taxonomy(
             secondary_tags=secondary_tags,
             known_tags=initial_taxonomy,
         )
-        primary_tags, secondary_tags, tag_evidence = _apply_inference_rules(
-            primary_tags=primary_tags,
-            secondary_tags=secondary_tags,
-            tag_evidence=tag_evidence,
-            inference_rules=inference_rules,
-        )
+        # Cached taxonomy payloads are already model adjudications; do not
+        # apply deterministic keyword inference while adapting them.
         taxonomy = _finalize_taxonomy_list(
             raw_taxonomy=taxonomy_payload.get("taxonomy"),
             primary_tags=primary_tags,

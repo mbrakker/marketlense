@@ -202,8 +202,16 @@ def _candidate_from_signal(
             evidence=group_evidence,
             raw_metric_policy=raw_metric_policy,
         ),
-        validation_status="approved",
-        validation_notes=["source_backed", f"support_level:{support_level}"],
+        # Source aggregation and deterministic scores establish lineage only.
+        # Agreement, relevance and commercial meaning remain owned by the
+        # existing cross-report synthesis model, so a standalone Signal
+        # extraction cannot approve a semantic candidate.
+        validation_status="blocked",
+        validation_notes=[
+            "source_backed",
+            f"support_level:{support_level}",
+            "semantic_review_pending_llm",
+        ],
         group_id=f"signal-group:{group.group_id}",
         extraction_request_id=request.request_id,
         generated_at_utc=generated_at_utc,
@@ -299,8 +307,10 @@ def _group_from_candidates(
     topic_ids = _unique_ordered(
         [category_id for ids in group_source_categories.values() for category_id in ids]
     )
-    publication_status: SignalPublicationStatus
-    publication_hold_reason: SignalPublicationHoldReason
+    publication_status: SignalPublicationStatus = "held"
+    publication_hold_reason: SignalPublicationHoldReason = (
+        "signal_semantic_review_pending"
+    )
     if (
         len(source_report_ids) < minimum_source_reports
         or len(evidence_ids) < minimum_evidence_items
@@ -310,9 +320,6 @@ def _group_from_candidates(
     elif any(not categories for categories in group_source_categories.values()):
         publication_status = "held"
         publication_hold_reason = "signal_topic_category_relationship_missing"
-    else:
-        publication_status = "eligible"
-        publication_hold_reason = ""
     signal_group = SignalCandidateGroup(
         schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
         group_id=f"signal-group:{group.group_id}",
@@ -330,7 +337,10 @@ def _group_from_candidates(
             "uncertainty_reasons": list(group.uncertainty_reasons),
             "raw_metric_policy": "raw_metrics_preserved_without_normalization",
         },
-        validation_status="approved",
+        # This path has not run a semantic verdict.  Keep the group blocked so
+        # the downstream Signal publisher cannot mistake source coverage for
+        # LLM-owned agreement or novelty.
+        validation_status="blocked",
         extraction_request_id=candidates[0].extraction_request_id,
         generated_at_utc=generated_at_utc,
         topic=request.topic,

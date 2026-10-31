@@ -228,7 +228,8 @@ def test_signal_candidate_batch_captures_single_report_support_and_lineage(
     assert candidate.candidate_type == "weak_signal"
     assert candidate.title == "AI"
     assert candidate.support_level == "single_report"
-    assert candidate.validation_status == "approved"
+    assert candidate.validation_status == "blocked"
+    assert "semantic_review_pending_llm" in candidate.validation_notes
     assert candidate.source_report_ids == ["report-a"]
     assert candidate.evidence_ids == ["report-a:claim:1"]
     assert candidate.source_refs[0].source_table == "report_claims"
@@ -273,7 +274,7 @@ def test_single_source_group_is_held_before_publication_generation(run_context) 
     )
 
     group = batch.groups[0]
-    assert group.validation_status == "approved"
+    assert group.validation_status == "blocked"
     assert group.publication_status == "held"
     assert group.publication_hold_reason == "signal_grounding_insufficient"
     assert group.source_report_ids == ["report-a"]
@@ -318,7 +319,7 @@ def test_signal_group_without_source_category_relationship_is_held(run_context) 
     )
 
     group = batch.groups[0]
-    assert group.validation_status == "approved"
+    assert group.validation_status == "blocked"
     assert group.publication_status == "held"
     assert group.publication_hold_reason == "signal_topic_category_relationship_missing"
     assert group.topic_ids == []
@@ -414,8 +415,8 @@ def test_signal_candidate_batch_preserves_divergent_caveats_and_raw_context(
         "report-a": ["retail"],
         "report-b": ["retail"],
     }
-    assert group.publication_status == "eligible"
-    assert group.publication_hold_reason == ""
+    assert group.publication_status == "held"
+    assert group.publication_hold_reason == "signal_semantic_review_pending"
     encoded = json.dumps(candidate.raw_source_context, sort_keys=True)
     assert "AI commerce adoption is declining" in encoded
     assert "raw_metrics_preserved_without_normalization" in encoded

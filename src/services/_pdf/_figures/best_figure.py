@@ -167,9 +167,7 @@ def _bounded_figure_asset_parts(
         extension=".png",
         max_length=min(96, filename_budget),
     )
-    if (
-        len(str((compact_asset_directory / compact_filename).resolve())) > 240
-    ):
+    if len(str((compact_asset_directory / compact_filename).resolve())) > 240:
         return None, None
     return compact_report_name, compact_filename
 
@@ -191,39 +189,23 @@ def _extract_best_figure_png(
             for pno, page in enumerate(local_doc):
                 page_rect = page.rect
                 page_area = page_rect.get_area()
-                top_cut = page_rect.y0 + page_rect.height * 0.12
-                bot_cut = page_rect.y1 - page_rect.height * 0.12
-
-                figure_targets = _figure_line_targets(page)
-
                 for xref, *_ in page.get_images(full=True):
                     rects = page.get_image_rects(xref)
                     if not rects:
                         continue
                     bbox = rects[0]
-                    if bbox.y0 < top_cut or bbox.y1 > bot_cut:
+                    if bbox.width <= 0 or bbox.height <= 0:
                         continue
 
                     area = bbox.get_area()
-                    if area / page_area < min_page_area_frac:
-                        continue
-
-                    aspect = bbox.width / max(1, bbox.height)
-                    if not (0.6 <= aspect <= 2.2):
+                    if area <= 0 or page_area <= 0:
                         continue
 
                     caption = _figure_nearest_block_text(page, bbox)
-                    cap_score = _figure_score_text(caption)
-
-                    prox_bonus = 0
-                    if figure_targets:
-                        d = min(_figure_distance(bbox, t) for t in figure_targets)
-                        if d < 200:
-                            prox_bonus = 3
-                        elif d < 350:
-                            prox_bonus = 1
-
-                    score = (area**0.9) * (1 + 0.15 * cap_score + 0.10 * prox_bonus)
+                    # This is only a technical fallback when no candidate was
+                    # admitted.  Caption keywords and proximity must not
+                    # decide which source visual is semantically authoritative.
+                    score = area
 
                     if score > best[1]:
                         pix = _png_safe_pixmap(fitz.Pixmap(local_doc, xref))

@@ -1026,6 +1026,18 @@ saving; E17 remains Active pending broader staged economics evidence. Full
 metrics, repair ledger, and limitations are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
+**Current-head implementation evidence — 2026-10-31:** The semantic-authority
+slice routes active material semantic judgments through the existing LLM
+grounding, qualification, category-fit, visual-ranking, cross-report, and
+independent public-editorial stages. Technical source identity, page/span and
+schema checks remain deterministic and fail closed. The regenerated prompt
+baseline is 113,206 tokens / `$0.024974` over 51 fixtures, and the unchanged
+fixture gate passes. Focused contract/static verification passed, but the
+provider-free frozen-five replay could not locate retained artifacts or source
+PDFs in the active worktree; no live quality claim is made. E18 therefore
+remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 is
+**unstarted/not ready** pending a valid current-SHA real-report replay.
+
 **Completion evidence — E17 P1.1 — 2026-10-25:** Provider-free integration
 tests now exercise real verified multi-fact batch construction and the actual
 structured-output recovery path. They prove exact linked-fact retention,

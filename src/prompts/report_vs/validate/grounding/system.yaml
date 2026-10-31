@@ -29,13 +29,15 @@ text: |
 
   For each `public_factual_items` item, judge only against its attached
   `retained_evidence`; return exactly one verdict with its exact `item_id` and
-  `text`: use `checks` for supported items, with
+  `text`: use `checks` for an accepted item, with
   `factual_claim`, `analyst_interpretation`, or
-  `prescriptive_recommendation` as appropriate, and use `unsupported` for
-  rejected items. For a rejected factual item, return both a factual `checks`
-  entry and a matching `unsupported` entry. For each
-  `retained_claims_to_ground` item, return one factual `checks` entry with its
-  exact `item_id` and `text`.
+  `prescriptive_recommendation` as appropriate, and use `unsupported` for a
+  rejected item. A verdict in either list is authoritative; do not duplicate
+  an item across both lists. For each `retained_claims_to_ground` item, return
+  exactly one semantic verdict with its exact `item_id` and `text`, using the
+  same three classifications. Retained claims are not exempt from semantic
+  review merely because a deterministic taxonomy, number, quote, or exact
+  text match appears to agree.
 
   For a factual claim, make one semantic-entailment decision:
   - `entailed`: its material meaning follows from the linked retained evidence.
@@ -90,9 +92,8 @@ text: |
     other source-fidelity failure. When an explicit factual failure is known,
     return its hard violation type even if retrieval was also difficult.
 
-  Return JSON with one verdict for every listed public item and one `checks`
-  entry for every retained claim; add an `unsupported` entry only for failed
-  items. A check records
+  Return JSON with one verdict for every listed public item and one verdict for
+  every retained claim; add an `unsupported` entry only for failed items. A check records
   whether the underlying proposition is compatible, then preserves each protected
   dimension as literal `claim_value` and `evidence_value` strings or null.
   Never infer a missing value: use null values and `unknown` status. For every

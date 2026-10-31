@@ -14,4 +14,15 @@ text: |
   - category_fits should include the strongest 5-8 candidate categories only, including every selected category.
   - why_fit and why_not_fit must cite the actual report context, not generic category language.
   - evidence_sections should contain section labels from the provided context when possible.
+  - For every returned category, evaluate the configured include_when and exclude_when
+    rules against the report context. Return semantic_rule_status as supported,
+    rejected, ambiguous, or not_evaluated, and identify the applicable configured
+    rule IDs (from include_rule_ids and exclude_rule_ids) in
+    supported_topic_rule_ids and rejected_topic_rule_ids.
+  - rule_evidence_sections must contain the context section labels that support the
+    rule judgments. centrality_evidence_sections must identify context sections that
+    establish that a selected category is central rather than incidental.
+  - These rule judgments are semantic model decisions. The application only checks
+    that returned category IDs, configured rule IDs, evidence section labels, score
+    ranges, and selection limits are technically valid.
   - Output must be a single JSON object matching the required schema.

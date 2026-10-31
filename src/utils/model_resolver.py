@@ -35,6 +35,7 @@ REPORT_GENERATION_NAMESPACES: tuple[str, ...] = (
     "report_vs/validate/visual_claim_correction",
     "report_vs/validate/visual_claim_verification",
     "report_vs/validate/editorial_review",
+    "report_vs/validate/public_editorial_quality",
     "report_vs/taxonomy",
     "report_vs/taxonomy_repair",
     "report_vs/context_category_fit",
@@ -101,6 +102,7 @@ PRODUCTION_LLM_NAMESPACES: tuple[str, ...] = (
     "report_vs/validate/visual_claim_correction",
     "report_vs/validate/visual_claim_verification",
     "report_vs/validate/editorial_review",
+    "report_vs/validate/public_editorial_quality",
     "signal_generation/synthesis",
     "briefing_generation/synthesis",
 )
@@ -372,7 +374,9 @@ def execution_policies_from_config(
         if not key or not isinstance(raw_value, dict):
             raise AppError(
                 code="llm_execution_policy_invalid",
-                message="Execution policy entries require a namespace and mapping value",
+                message=(
+                    "Execution policy entries require a namespace and mapping value"
+                ),
                 retryable=False,
                 context={"namespace": str(raw_key)},
             )

@@ -3,10 +3,8 @@ text: |
   claims listed here:
   {{ report_json }}
 
-  Source text for corroborating those listed items (JSON):
+  Legacy source context for corroborating those listed items (JSON):
   {{ evidence_json }}
 
-  Task:
-  Return the schema-valid JSON required by the system for every listed public
-  item and retained claim, including required `checks`, `unsupported`, and
-  protected-dimension entries.
+  Return only the schema-valid JSON required by the grounding system prompt,
+  with exactly one verdict for every listed public item and retained claim.

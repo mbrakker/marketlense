@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 PUBLIC_EDITORIAL_QUALITY_SCHEMA_VERSION = "1.0"
-PUBLIC_EDITORIAL_VALIDATOR_VERSION = "public-editorial-quality:v15"
+PUBLIC_EDITORIAL_VALIDATOR_VERSION = "public-editorial-quality:v16"
 
 
 @dataclass(frozen=True)
@@ -40,13 +40,18 @@ class PublicEditorialQualityIssue:
     public_item_id: str = field(
         default="",
         metadata={
-            "doc": "Stable atomic public-item identifier for diagnosis and repair routing."
+            "doc": (
+                "Stable atomic public-item identifier for diagnosis and repair routing."
+            )
         },
     )
     hard_fail_class: str = field(
         default="",
         metadata={
-            "doc": "Unwaivable source-fidelity failure class, or empty for quality-only findings."
+            "doc": (
+                "Unwaivable source-fidelity failure class, or empty for "
+                "quality-only findings."
+            )
         },
     )
     validator_version: str = field(

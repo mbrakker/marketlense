@@ -80,103 +80,16 @@ _QUALITATIVE_VALUE_VERB = re.compile(
 
 
 def run_artifact_quality_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
-    issues: List[ValidationIssue] = []
-    artifacts = (
-        runtime.request.artifacts if isinstance(runtime.request.artifacts, dict) else {}
-    )
-    for path, text, has_structured_category in _artifact_copy_fields(artifacts):
-        normalized = " ".join(text.split())
-        if not normalized:
-            continue
-        for label, pattern in _BANNED_PATTERNS:
-            if not pattern.search(normalized):
-                continue
-            if _is_allowed_technical_usage(normalized, label):
-                continue
-            issues.append(
-                ValidationIssue(
-                    schema_version="1.0",
-                    message=f"Generated copy uses banned generic pattern: {label}",
-                    severity="warning",
-                    affected_section=path,
-                    rule_id=RULE_ID,
-                    repair_target="artifact_copy",
-                    entity_id=path,
-                )
-            )
-        first_sentence = _first_sentence(normalized)
-        if not first_sentence or has_structured_category:
-            continue
-        if path.startswith("summary."):
-            if _has_concrete_signal(first_sentence):
-                continue
-            stronger_evidence_id = _stronger_retained_insight_evidence_id(artifacts)
-            if not stronger_evidence_id:
-                continue
-            claim_id = _summary_opening_claim_id(
-                artifacts=artifacts,
-                path=path,
-                sentence=first_sentence,
-            )
-            issues.append(
-                ValidationIssue(
-                    schema_version="1.0",
-                    message=(
-                        "Summary opening is broader than a retained source-supported "
-                        "finding."
-                    ),
-                    severity="warning",
-                    affected_section=path,
-                    rule_id=RULE_ID,
-                    repair_target="artifact_copy",
-                    entity_id=claim_id or path,
-                    evidence_ids=[stronger_evidence_id],
-                )
-            )
-            continue
-        if path == "insights_final[0].text":
-            if _has_concrete_signal(first_sentence):
-                continue
-            stronger_evidence_id = _stronger_retained_insight_evidence_id(
-                artifacts, start_index=1
-            )
-            if not stronger_evidence_id:
-                continue
-            insights = artifacts.get("insights_final")
-            lead = insights[0] if isinstance(insights, list) and insights else {}
-            lead_id = _s(lead.get("id")).strip() if isinstance(lead, dict) else ""
-            issues.append(
-                ValidationIssue(
-                    schema_version="1.0",
-                    message=(
-                        "Core signal is broader than another retained "
-                        "source-supported insight."
-                    ),
-                    severity="warning",
-                    affected_section=path,
-                    rule_id=RULE_ID,
-                    repair_target="artifact_copy",
-                    entity_id=f"insight:{lead_id}:text" if lead_id else path,
-                    evidence_ids=[stronger_evidence_id],
-                )
-            )
-            continue
-        if not _has_generic_copy_signal(first_sentence):
-            issues.append(
-                ValidationIssue(
-                    schema_version="1.0",
-                    message=(
-                        "Generated copy opens without a concrete metric or specific "
-                        "qualitative relationship."
-                    ),
-                    severity="warning",
-                    affected_section=path,
-                    rule_id=RULE_ID,
-                    repair_target="artifact_copy",
-                    entity_id=path,
-                )
-            )
-    return issues
+    """Keep the legacy hook without giving heuristics semantic authority.
+
+    Copy specificity, redundancy, generic phrasing and contextual usefulness
+    are interpreted by the independent public-editorial review.  Returning
+    heuristic warnings here would still let the legacy registry trigger repair
+    or suppress model-adjudicated output.
+    """
+
+    del runtime
+    return []
 
 
 def _stronger_retained_insight_evidence_id(

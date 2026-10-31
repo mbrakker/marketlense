@@ -1,0 +1,10 @@
+text: |
+  Review this complete public-item batch. The evidence_text values and any
+  complete verified_facts objects are retained source context for the listed
+  evidence_ids; do not borrow evidence or metric fields between items.
+
+  {{ public_items_json }}
+
+  Return exactly one verdict per item with the item's exact item_id. Include a
+  substantive reason for every fail or unresolved result and preserve the
+  evidence IDs that support that reason.

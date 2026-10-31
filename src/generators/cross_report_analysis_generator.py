@@ -85,7 +85,10 @@ def _known_evidence_aliases(
         if len(owners) > 1:
             raise AppError(
                 code="cross_report_analysis_evidence_alias_collision",
-                message="Cross-report evidence aliases must not collide across evidence rows",
+                message=(
+                    "Cross-report evidence aliases must not collide across "
+                    "evidence rows"
+                ),
                 retryable=False,
                 severity="error",
                 context={
@@ -399,12 +402,13 @@ def validate_cross_report_generated_analysis(
     if missing_evidence_ids:
         issues.append("unknown_evidence_ids")
     metric_violations = _metric_normalization_violations(generated)
-    if metric_violations:
-        issues.append("metric_normalization_language")
+    # This lexical list is retained as audit telemetry only.  Whether a
+    # cross-report comparison is analytically valid is a model-owned semantic
+    # decision made by the existing synthesis stage.
     if prompt_budget_chars > max_prompt_chars:
         issues.append("prompt_budget_exceeded")
 
-    passed = not issues and not missing_evidence_ids and not metric_violations
+    passed = not issues and not missing_evidence_ids
     result = CrossReportValidationResult(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         status="pass" if passed else "fail",
@@ -428,7 +432,9 @@ def validate_cross_report_generated_analysis(
                 "checked_evidence_ids": result.checked_evidence_ids,
                 "missing_evidence_ids": result.missing_evidence_ids,
                 "issues": result.issues,
-                "metric_normalization_violations": result.metric_normalization_violations,
+                "metric_normalization_violations": (
+                    result.metric_normalization_violations
+                ),
                 "prompt_budget_chars": result.prompt_budget_chars,
                 "max_prompt_chars": max_prompt_chars,
             },
@@ -444,7 +450,9 @@ def validate_cross_report_generated_analysis(
                 "analysis_id": generated.analysis_id,
                 "issues": result.issues,
                 "missing_evidence_ids": result.missing_evidence_ids,
-                "metric_normalization_violations": result.metric_normalization_violations,
+                "metric_normalization_violations": (
+                    result.metric_normalization_violations
+                ),
                 "prompt_budget_chars": result.prompt_budget_chars,
                 "max_prompt_chars": max_prompt_chars,
             },
@@ -517,7 +525,10 @@ def build_cross_report_publish_package(
     if entity_type is None:
         raise AppError(
             code="publish_entity_metadata_unsupported",
-            message="Cross-report package target route is not a supported public entity route.",
+            message=(
+                "Cross-report package target route is not a supported public entity "
+                "route."
+            ),
             retryable=False,
             severity="error",
             context={"target_route": target_route},
@@ -673,7 +684,9 @@ def generate_cross_report_analysis(
                 "user_path": prompt_bundle.prompt_set.user.path,
                 "user_sha256": prompt_bundle.prompt_set.user.sha256,
                 "prompt_content_hash": prompt_bundle.prompt_content_hash,
-                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "execution_identity": (
+                    prompt_bundle.execution_identity.execution_identity
+                ),
                 "rendered_system_prompt_chars": len(prompt_bundle.system_prompt),
                 "rendered_user_prompt_chars": len(prompt_bundle.user_prompt),
                 "model": prompt_bundle.resolved_model,
@@ -703,7 +716,9 @@ def generate_cross_report_analysis(
         )
         raise AppError(
             code="cross_report_prompt_budget_exceeded",
-            message="Rendered cross-report prompts exceed the configured character budget",
+            message=(
+                "Rendered cross-report prompts exceed the configured character budget"
+            ),
             retryable=False,
             severity="error",
             context={

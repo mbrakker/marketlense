@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import inspect
+import json
 import math
 import re
 from copy import deepcopy
@@ -17,6 +18,12 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from src.contracts.files import ReadJsonRequest
 from src.contracts.pdf_text import PdfTextPage
+from src.contracts.prompt_family_materialization import (
+    PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    PromptFamilyMaterializationRequest,
+    PromptFamilyReuseRequest,
+)
+from src.contracts.public_editorial_quality import PublicEditorialQualityIssue
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     FailureFingerprint,
@@ -37,12 +44,14 @@ from src.contracts.report_analysis import (
 )
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_identity import ReportTitleResolution
+from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
     soft_copy_public_text,
 )
+from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import (
     ValidationIssue,
     ValidationReport,
@@ -59,9 +68,11 @@ from src.generators.artifact_normalization import (
     bind_artifact_evidence_spans,
     page_bound_direct_evidence_packs,
 )
+from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     merge_public_editorial_quality_validation,
+    public_editorial_semantic_review_items,
     quality_report_payload,
 )
 from src.generators.report_generation_dependencies import ReportAnalysisDependencies
@@ -69,6 +80,10 @@ from src.generators.report_generation_shared import merge_artifacts_into_payload
 from src.generators.report_regeneration_generator import (
     retained_grounding_evidence_ids_for_target,
     retained_soft_copy_claim_grounding_for_target,
+)
+from src.generators.structured_output_execution import (
+    invoke_structured_output_model,
+    recovery_prompt_bundle,
 )
 from src.generators.validation.regeneration_candidate import (
     CandidateIntegrityResult,
@@ -85,6 +100,16 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
 )
 from src.orchestrators._report_analysis_orchestrator.shared import logger
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.services import prompt_service
+from src.services.prompt_family_materialization_service import (
+    materialize_prompt_family,
+    read_reusable_prompt_family,
+)
+from src.services.schema_validator_service import (
+    provider_output_schema,
+    validate_schema,
+)
+from src.services.structured_output_service import execute_structured_output
 from src.utils.artifact_diff import artifact_diff_paths as _artifact_diff_paths
 from src.utils.cache_utils import sha256_json
 from src.utils.editorial_identity import failed_insight_id
@@ -130,6 +155,435 @@ def _verified_structural_report_code(
     return ""
 
 
+_PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
+_PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v17"
+
+
+def _substantive_public_review_reason(value: object) -> bool:
+    words = re.findall(r"[A-Za-z0-9][A-Za-z0-9_'/-]*", str(value or ""))
+    return len(words) >= 8
+
+
+def _public_editorial_review_issue(
+    *,
+    report_id: str,
+    item: dict[str, Any] | None,
+    rule_id: str,
+    severity: str,
+    hard_fail_class: str,
+    explanation: str,
+    evidence_ids: list[str] | None = None,
+    repair_target: str = "",
+) -> PublicEditorialQualityIssue:
+    safe_item = item or {}
+    retained_evidence_ids = list(evidence_ids or safe_item.get("evidence_ids") or [])
+    eligible = bool(
+        repair_target
+        and retained_evidence_ids
+        and str(safe_item.get("evidence_text") or "").strip()
+    )
+    return PublicEditorialQualityIssue(
+        report_id=str(report_id),
+        rule_id=rule_id,
+        severity=severity,
+        affected_artifact=str(safe_item.get("artifact") or "public_report"),
+        affected_field=str(safe_item.get("field") or "public_items"),
+        evidence_ids=retained_evidence_ids,
+        explanation=explanation,
+        repair_eligible=eligible,
+        repair_status="not_requested" if eligible else "abstained",
+        repair_target=str(repair_target) if eligible else "",
+        public_item_id=str(safe_item.get("public_item_id") or ""),
+        hard_fail_class=str(hard_fail_class or ""),
+    )
+
+
+def _validate_public_editorial_review_payload(
+    payload: object,
+    items: list[dict[str, Any]],
+    ctx,
+) -> None:
+    validate_schema(
+        SchemaValidateRequest(
+            schema_version="1.0",
+            payload=payload,
+            schema_name=_PUBLIC_EDITORIAL_REVIEW_SCHEMA,
+        ),
+        ctx,
+    )
+    if not isinstance(payload, dict) or not isinstance(payload.get("verdicts"), list):
+        raise AppError(
+            code="public_editorial_quality_review_incomplete",
+            message="Public editorial semantic review did not return verdicts",
+            retryable=False,
+        )
+    expected = {
+        str(item.get("public_item_id") or "").strip(): item
+        for item in items
+        if str(item.get("public_item_id") or "").strip()
+    }
+    verdicts = payload["verdicts"]
+    actual: dict[str, dict[str, Any]] = {}
+    for verdict in verdicts:
+        if not isinstance(verdict, dict):
+            raise AppError(
+                code="public_editorial_quality_review_incomplete",
+                message=(
+                    "Public editorial semantic review contains a non-object verdict"
+                ),
+                retryable=False,
+            )
+        item_id = str(verdict.get("item_id") or "").strip()
+        if item_id not in expected or item_id in actual:
+            raise AppError(
+                code="public_editorial_quality_review_coverage_mismatch",
+                message=(
+                    "Public editorial semantic review has unknown or duplicate item IDs"
+                ),
+                retryable=False,
+                context={"item_id": item_id},
+            )
+        reason = str(verdict.get("reason") or "").strip()
+        if not _substantive_public_review_reason(reason):
+            raise AppError(
+                code="public_editorial_quality_review_reason_missing",
+                message="Public editorial semantic review reason is not substantive",
+                retryable=False,
+                context={"item_id": item_id},
+            )
+        evidence_ids = [
+            str(value).strip()
+            for value in verdict.get("evidence_ids") or []
+            if str(value).strip()
+        ]
+        status = str(verdict.get("status") or "").strip()
+        classification = str(verdict.get("classification") or "").strip()
+        if (
+            status == "pass"
+            and classification != "prescriptive_recommendation"
+            and not evidence_ids
+        ):
+            raise AppError(
+                code="public_editorial_quality_review_evidence_missing",
+                message=(
+                    "Passing factual or interpretive public semantic verdicts "
+                    "require retained evidence IDs"
+                ),
+                retryable=False,
+                context={"item_id": item_id},
+            )
+        if status in {"fail", "unresolved"} and not evidence_ids:
+            raise AppError(
+                code="public_editorial_quality_review_evidence_missing",
+                message=(
+                    "Failing or unresolved public semantic verdicts require "
+                    "retained evidence IDs"
+                ),
+                retryable=False,
+                context={"item_id": item_id},
+            )
+        allowed_evidence_ids = {
+            str(value).strip()
+            for value in expected[item_id].get("evidence_ids") or []
+            if str(value).strip()
+        }
+        if not set(evidence_ids).issubset(allowed_evidence_ids):
+            raise AppError(
+                code="public_editorial_quality_review_evidence_mismatch",
+                message=(
+                    "Public editorial semantic review cites evidence not bound to "
+                    "the item"
+                ),
+                retryable=False,
+                context={"item_id": item_id},
+            )
+        repair_target = str(verdict.get("repair_target") or "").strip()
+        expected_target = str(expected[item_id].get("repair_target") or "").strip()
+        if repair_target and repair_target != expected_target:
+            raise AppError(
+                code="public_editorial_quality_review_repair_target_mismatch",
+                message=(
+                    "Public editorial semantic review selected an invalid repair target"
+                ),
+                retryable=False,
+                context={"item_id": item_id},
+            )
+        actual[item_id] = verdict
+    if set(actual) != set(expected):
+        raise AppError(
+            code="public_editorial_quality_review_coverage_mismatch",
+            message="Public editorial semantic review did not cover every public item",
+            retryable=False,
+            context={
+                "missing_item_ids": sorted(set(expected) - set(actual)),
+                "unexpected_item_ids": sorted(set(actual) - set(expected)),
+            },
+        )
+
+
+def _public_editorial_semantic_review(
+    *,
+    runtime: ReportRuntimeState,
+    artifacts: Dict[str, Any],
+    ctx,
+    openai_client: Any,
+) -> list[PublicEditorialQualityIssue]:
+    """Ask the existing structured-output path to judge public semantics.
+
+    Deterministic code owns item identity, evidence membership, schema and
+    retry/reuse bookkeeping.  The model owns the semantic pass/fail decision.
+    """
+
+    items = public_editorial_semantic_review_items(artifacts)
+    report_id = str(runtime.file.file_id)
+    if not items:
+        return []
+    if openai_client is None:
+        return [
+            _public_editorial_review_issue(
+                report_id=report_id,
+                item=None,
+                rule_id="public_editorial_quality.semantic_review_unresolved",
+                severity="error",
+                hard_fail_class="semantic_review_unresolved",
+                explanation=(
+                    "Independent public-editorial semantic review was not configured; "
+                    "publication cannot rely on deterministic semantic heuristics."
+                ),
+            )
+        ]
+
+    review_items: list[dict[str, Any]] = []
+    for item in items:
+        review_item: dict[str, Any] = {
+            "item_id": str(item.get("public_item_id") or "").strip(),
+            "artifact": str(item.get("artifact") or ""),
+            "field": str(item.get("field") or ""),
+            "text": str(item.get("text") or ""),
+            "evidence_ids": list(item.get("evidence_ids") or []),
+            "evidence_text": str(item.get("evidence_text") or ""),
+        }
+        verified_facts = item.get("verified_facts")
+        if isinstance(verified_facts, dict) and verified_facts:
+            review_item["verified_facts"] = verified_facts
+        review_items.append(review_item)
+    prompt_bundle = prepare_prompt_bundle(
+        namespace=_PUBLIC_EDITORIAL_REVIEW_NAMESPACE,
+        settings=runtime.settings,
+        ctx=ctx,
+        prompt_client=prompt_service,
+        system_variables={},
+        user_variables={
+            "public_items_json": json.dumps(
+                {"public_items": review_items},
+                ensure_ascii=False,
+                sort_keys=True,
+                indent=2,
+            )
+        },
+        reload_if_changed=True,
+    )
+    output_schema = provider_output_schema(_PUBLIC_EDITORIAL_REVIEW_SCHEMA)
+    relevant_input_hash = sha256_json(
+        {"public_items": review_items, "validator": _PUBLIC_EDITORIAL_REVIEW_VALIDATOR}
+    )
+    configuration_policy_hash = sha256_json(
+        {
+            "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
+            "execution_policy": asdict(prompt_bundle.execution_policy.policy),
+            "routing_policy": asdict(prompt_bundle.routing_decision),
+        }
+    )
+    source_id = str(getattr(runtime.ctx, "source_identity_id", "") or "").strip()
+    reused_payload: dict[str, Any] | None = None
+    if source_id:
+        reuse = read_reusable_prompt_family(
+            PromptFamilyReuseRequest(
+                schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                db_path=runtime.settings.reports_db,
+                output_dir=runtime.settings.output_dir,
+                report_id=report_id,
+                report_slug=runtime.report_name,
+                source_id=source_id,
+                family_id=_PUBLIC_EDITORIAL_REVIEW_NAMESPACE,
+                family_schema_version="2.0",
+                processing_version="report_generation_checkpoint_v2",
+                prompt_content_hash=prompt_bundle.prompt_content_hash,
+                execution_identity=prompt_bundle.execution_identity.execution_identity,
+                model_provider=str(prompt_bundle.execution_policy.policy.provider),
+                model_name=prompt_bundle.resolved_model,
+                model_policy_namespace="report_vs",
+                routing_policy_version=prompt_bundle.execution_policy.policy_hash,
+                validator_version=_PUBLIC_EDITORIAL_REVIEW_VALIDATOR,
+                relevant_input_hash=relevant_input_hash,
+                configuration_policy_hash=configuration_policy_hash,
+            ),
+            ctx,
+        )
+        if reuse.reusable:
+            if not isinstance(reuse.output_payload, dict):
+                candidate = None
+            else:
+                candidate = dict(reuse.output_payload)
+            if candidate is not None:
+                try:
+                    _validate_public_editorial_review_payload(candidate, items, ctx)
+                except AppError:
+                    pass
+                else:
+                    reused_payload = candidate
+
+    recovery_attempted = False
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        nonlocal recovery_attempted
+        if mode != "primary":
+            recovery_attempted = True
+        bundle = prompt_bundle
+        if mode != "primary":
+            bundle = recovery_prompt_bundle(
+                mode=mode,
+                artifact_family="public_editorial_quality",
+                schema_errors=schema_errors,
+                original_response=original_response,
+                output_schema=output_schema,
+                source_evidence={"public_items": review_items},
+                settings=runtime.settings,
+                ctx=ctx,
+                prompt_client=prompt_service,
+                vector_store_id=None,
+            )
+        return invoke_structured_output_model(
+            openai_client=openai_client,
+            prompt_bundle=bundle,
+            settings=runtime.settings,
+            ctx=ctx,
+            vector_store_id=None,
+            report_id=report_id,
+            artifact_family="public_editorial_quality",
+            stage=f"public_editorial_quality_{mode}",
+            publisher_name=runtime.publisher_name,
+            report_name=runtime.source_report_name or runtime.report_title,
+            source_url=runtime.source_url,
+            output_schema=output_schema,
+            output_schema_identity="public_editorial_quality_review_v2",
+            repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[mode],
+        )
+
+    try:
+        if reused_payload is None:
+            recovery = execute_structured_output(
+                StructuredOutputExecutionRequest(
+                    schema_version="1.0",
+                    report_id=report_id,
+                    artifact_family="public_editorial_quality",
+                    schema_name=_PUBLIC_EDITORIAL_REVIEW_SCHEMA,
+                    model=prompt_bundle.resolved_model,
+                    workflow="report_analysis",
+                    prompt_family=prompt_bundle.routing_decision.namespace,
+                    terminal_failure_code="public_editorial_quality_review_invalid_json",
+                ),
+                ctx,
+                call_model=call_model,
+                normalize_payload=lambda payload: (
+                    dict(payload) if isinstance(payload, dict) else payload
+                ),
+                validate_payload=lambda payload: (
+                    _validate_public_editorial_review_payload(payload, items, ctx)
+                ),
+                is_substantive=lambda payload: (
+                    isinstance(payload, dict) and bool(payload.get("verdicts"))
+                ),
+                model_pricing=runtime.settings.model_pricing,
+            )
+            payload = recovery.payload
+        else:
+            payload = reused_payload
+        _validate_public_editorial_review_payload(payload, items, ctx)
+    except AppError as exc:
+        return [
+            _public_editorial_review_issue(
+                report_id=report_id,
+                item=None,
+                rule_id="public_editorial_quality.semantic_review_unresolved",
+                severity="error",
+                hard_fail_class="semantic_review_unresolved",
+                explanation=(
+                    "Independent public-editorial semantic review failed closed: "
+                    f"{exc.code}"
+                ),
+            )
+        ]
+
+    if reused_payload is None and source_id and not recovery_attempted:
+        materialize_prompt_family(
+            PromptFamilyMaterializationRequest(
+                schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                db_path=runtime.settings.reports_db,
+                output_dir=runtime.settings.output_dir,
+                report_id=report_id,
+                report_slug=runtime.report_name,
+                source_id=source_id,
+                family_id=_PUBLIC_EDITORIAL_REVIEW_NAMESPACE,
+                family_schema_version="2.0",
+                processing_version="report_generation_checkpoint_v2",
+                output_payload=payload,
+                system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
+                user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                prompt_content_hash=prompt_bundle.prompt_content_hash,
+                prompt_dependency_manifest=asdict(prompt_bundle.dependency_manifest),
+                execution_identity=prompt_bundle.execution_identity.execution_identity,
+                execution_identity_manifest=asdict(prompt_bundle.execution_identity),
+                prompt_policy_version=prompt_bundle.prompt_content_hash,
+                model_name=prompt_bundle.resolved_model,
+                model_provider=str(prompt_bundle.execution_policy.policy.provider),
+                model_policy_namespace="report_vs",
+                routing_policy_version=prompt_bundle.execution_policy.policy_hash,
+                relevant_input_hash=relevant_input_hash,
+                configuration_policy_hash=configuration_policy_hash,
+                validator_version=_PUBLIC_EDITORIAL_REVIEW_VALIDATOR,
+                validation_status="pass",
+            ),
+            ctx,
+        )
+
+    verdict_by_id = {
+        str(verdict["item_id"]): verdict for verdict in payload["verdicts"]
+    }
+    item_by_id = {str(item.get("public_item_id")): item for item in items}
+    issues: list[PublicEditorialQualityIssue] = []
+    for item_id, verdict in sorted(verdict_by_id.items()):
+        if verdict["status"] == "pass":
+            continue
+        raw_rule_id = str(verdict.get("rule_id") or "").strip()
+        rule_id = (
+            raw_rule_id
+            if raw_rule_id.startswith("public_editorial_quality.semantic_")
+            else "public_editorial_quality.semantic_review"
+        )
+        issues.append(
+            _public_editorial_review_issue(
+                report_id=report_id,
+                item=item_by_id[item_id],
+                rule_id=rule_id,
+                severity="error",
+                hard_fail_class=(
+                    str(verdict.get("hard_fail_class") or "").strip()
+                    or "semantic_review_unresolved"
+                ),
+                explanation=str(verdict.get("reason") or "").strip(),
+                evidence_ids=[
+                    str(value).strip()
+                    for value in verdict.get("evidence_ids") or []
+                    if str(value).strip()
+                ],
+                repair_target=str(verdict.get("repair_target") or "").strip(),
+            )
+        )
+    return issues
+
+
 def _evaluate_and_store_public_editorial_quality(
     *,
     runtime: ReportRuntimeState,
@@ -137,8 +591,9 @@ def _evaluate_and_store_public_editorial_quality(
     artifacts: Dict[str, Any],
     pack_name: str,
     ctx,
+    openai_client=None,
 ) -> tuple[ValidationReport | None, str]:
-    """Persist the private report and adapt blockers for the existing repair loop."""
+    """Persist technical checks plus the independent semantic release gate."""
     if not isinstance(artifacts, dict):
         return None, ""
     quality = evaluate_public_editorial_quality(
@@ -148,6 +603,21 @@ def _evaluate_and_store_public_editorial_quality(
             runtime.settings, "public_editorial_quality_disabled_rule_waivers", {}
         ),
     )
+    semantic_issues = _public_editorial_semantic_review(
+        runtime=runtime,
+        artifacts=artifacts,
+        ctx=ctx,
+        openai_client=openai_client,
+    )
+    if semantic_issues:
+        quality = replace(
+            quality,
+            issues=[*quality.issues, *semantic_issues],
+            status="fail",
+            publishable=False,
+            hard_fail_count=quality.hard_fail_count
+            + sum(bool(issue.hard_fail_class) for issue in semantic_issues),
+        )
     stored = dependencies.analysis_store_pack(
         AnalysisStorePackRequest(
             schema_version="1.0",
@@ -1920,6 +2390,7 @@ def _validate_regeneration_baseline(
         artifacts=current_artifacts,
         pack_name="public_editorial_quality_regen_baseline",
         ctx=baseline_ctx,
+        openai_client=validation_openai_client,
     )
     validation = _merge_public_editorial_quality(validation, editorial_validation)
     return _with_retained_claim_repair_diagnostics(
@@ -2650,6 +3121,7 @@ def _run_validation_regeneration_loop(
                 artifacts=candidate_artifacts,
                 pack_name=f"public_editorial_quality_regen_attempt_{attempt_index}",
                 ctx=attempt_ctx,
+                openai_client=validation_openai_client,
             )
         )
         candidate_validation_report = _merge_public_editorial_quality(

@@ -21,11 +21,7 @@ from ..page_artifacts import PdfPageArtifactCache, create_page_artifact_cache
 from ..shared import candidate_logger
 from ..table_heuristics import _resolve_candidate_parallel_workers
 from ..visual_heuristics import PDF_FIGURE_EXCEPTIONS
-from .pruning import (
-    _prune_charts_overlapping_ranked_tables,
-    _prune_final_chart_candidates,
-    _prune_tables_overlapping_chart_panels,
-)
+from .pruning import _prune_final_chart_candidates
 from .triage import (
     _CandidatePagePlan,
     _degraded_page_record,
@@ -190,22 +186,11 @@ def _extract_candidate_artifacts(
         doc=triage_doc if parallel_workers <= 1 else None,
         artifact_cache=artifact_cache,
     )
-    (
-        artifacts.charts,
-        artifacts.chart_ranked_overlap_pruned,
-    ) = _prune_charts_overlapping_ranked_tables(artifacts.charts, artifacts.tables)
-    if artifacts.chart_ranked_overlap_pruned:
-        artifacts.chart_stats["ranked_table_overlap_pruned"] = (
-            artifacts.chart_ranked_overlap_pruned
-        )
-    (
-        artifacts.tables,
-        artifacts.table_chart_overlap_pruned,
-    ) = _prune_tables_overlapping_chart_panels(artifacts.tables, artifacts.charts)
-    if artifacts.table_chart_overlap_pruned:
-        artifacts.table_stats["chart_overlap_pruned"] = (
-            artifacts.table_chart_overlap_pruned
-        )
+    # Charts and tables are independent visual candidates.  Overlap and
+    # table/chart resemblance are semantic adjudication inputs, not safe
+    # extraction-time rejection criteria.
+    artifacts.chart_ranked_overlap_pruned = 0
+    artifacts.table_chart_overlap_pruned = 0
     return artifacts
 
 

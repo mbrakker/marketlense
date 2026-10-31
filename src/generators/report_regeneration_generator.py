@@ -61,7 +61,6 @@ from src.generators.artifact_normalization import (
     remap_editorial_plan_to_verified_facts,
     restore_artifact_insight_factual_fields,
     select_artifact_insights,
-    stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
     validate_final_insight_candidate_lineage,
 )
@@ -72,10 +71,6 @@ from src.generators.artifact_prompt_provenance import (
     ARTIFACT_PROMPT_VALIDATOR_VERSION,
     artifact_family_for_producing_namespace,
     artifact_prompt_identity,
-)
-from src.generators.evidence_compatibility import (
-    CompatibilityQuery,
-    rank_compatible_alternatives,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.public_editorial_quality_generator import (
@@ -294,11 +289,9 @@ def regenerate_artifacts(
     base_vars = artifact_base_variables(active_doc_map, active_evidence)
     base_vars.pop("canonical_evidence_ids_json", None)
     _apply_visual_authority_pool(state)
-    state.editorial_plan = stabilize_broad_artifact_editorial_plan(
-        state.editorial_plan,
-        doc_map=active_doc_map,
-        evidence_packs=active_evidence,
-    )
+    # Regeneration must preserve the model-owned plan.  Deterministic section
+    # reshuffling would make a semantic editorial decision outside the LLM.
+    state.editorial_plan = normalize_artifact_editorial_plan(state.editorial_plan)
     if state.visual_authority_digest:
         base_vars["_visual_authority_digest"] = state.visual_authority_digest
     runtime = _RegenerationRuntime(
@@ -358,9 +351,7 @@ def regenerate_artifacts(
         # The attempt fingerprint must describe the evidence actually used,
         # not the planned evidence, so a failed strategy cannot be repeated
         # under another nominal label.
-        target_decisions = [
-            decision for decision in state.repair_decisions[repair_decision_count:]
-        ]
+        target_decisions = list(state.repair_decisions[repair_decision_count:])
         if target_decisions:
             state.selected_evidence_ids.extend(
                 evidence_id
@@ -1246,7 +1237,6 @@ def _soft_copy_parent_evidence_ids(
             if value:
                 parent_theme_ids.add(value)
 
-    query_tokens = _evidence_query_tokens(claim_text)
     insight_entries = [
         entry
         for entry in artifacts.get("insights_final") or []
@@ -1257,18 +1247,6 @@ def _soft_copy_parent_evidence_ids(
         for entry in _copy_dict(artifacts.get("editorial_plan")).get("themes") or []
         if isinstance(entry, dict)
     ]
-    if query_tokens:
-        for insight in insight_entries:
-            if _token_overlap(query_tokens, _s(insight.get("text"))) >= 2:
-                parent_insight_ids.add(_s(insight.get("id")).strip())
-        for theme in theme_entries:
-            if _token_overlap(query_tokens, _s(theme.get("theme"))) >= 2:
-                parent_theme_ids.add(
-                    _s(
-                        theme.get("id") or theme.get("theme_id") or theme.get("theme")
-                    ).strip()
-                )
-
     evidence_ids: List[str] = []
     for insight in sorted(
         insight_entries, key=lambda entry: _s(entry.get("id")).strip()
@@ -1297,18 +1275,6 @@ def _entry_declared_evidence_ids(entry: Dict[str, Any]) -> List[str]:
     return _unique_strings(value for value in values if _s(value).strip())
 
 
-def _evidence_query_tokens(value: str) -> set[str]:
-    return {
-        token.casefold()
-        for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]+", value)
-        if len(token) >= 4
-    }
-
-
-def _token_overlap(query_tokens: set[str], value: str) -> int:
-    return len(query_tokens.intersection(_evidence_query_tokens(value)))
-
-
 def _typed_compatible_evidence_entries(
     *,
     evidence_by_id: Dict[str, Dict[str, Any]],
@@ -1320,48 +1286,31 @@ def _typed_compatible_evidence_entries(
     exclude_ids: set[str] | None = None,
     require_relevance: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Rank retained alternatives with the bounded typed compatibility scorer.
+    """Return bounded, identity-valid repair alternatives for the repair LLM.
 
-    Replaces the former lexical-only fallback: same-number/wrong-geography,
-    wrong-period, wrong-cohort, wrong-denominator, and forecast-vs-observed
-    near-matches can never outrank compatible evidence, and conflicting or
-    quarantined entries are never returned.
+    This is deliberately a candidate-discovery boundary.  Text overlap and
+    string-parsed protected dimensions cannot decide whether an alternative
+    supports a rewritten proposition; the existing repair call and its
+    independent grounding validation own that judgment.
     """
 
     def unwrap(entry: Dict[str, Any]) -> Dict[str, Any]:
         payload = entry.get("entry") if isinstance(entry, dict) else None
         return payload if isinstance(payload, dict) else entry
 
-    query = CompatibilityQuery(
-        text=search_text,
-        metric=metric or {},
-        pages=pages or [],
-        section=section,
-    )
-    blocked = set(quarantined_ids) | set(exclude_ids or set())
-    ranked = rank_compatible_alternatives(
-        query,
-        [
-            (evidence_id, unwrap(entry))
-            for evidence_id, entry in evidence_by_id.items()
-            if evidence_id not in blocked
-        ],
-        quarantined_ids=sorted(blocked),
-        limit=MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES * 4,
-    )
-    if require_relevance:
-        # A claim-scoped fallback is repair support only when it is relevant
-        # to the failed material through its metric payload or shared tokens;
-        # otherwise the repair abstains instead of inventing support.
-        ranked = [
-            item
-            for item in ranked
-            if item.breakdown.get("token_relevance", 0.0) > 0.0
-            or item.breakdown.get("metric_match", 0.0) > 0.0
-        ]
+    del search_text, metric, pages, section, require_relevance
+    blocked = {
+        _normalized_evidence_id(evidence_id)
+        for evidence_id in (*quarantined_ids, *(exclude_ids or set()))
+    }
+    eligible = [
+        (evidence_id, unwrap(entry))
+        for evidence_id, entry in evidence_by_id.items()
+        if evidence_id not in blocked
+    ]
+    eligible.sort(key=lambda item: (item[0], _canonical_json(item[1])))
     return [
-        evidence_by_id[item.evidence_id]
-        for item in ranked[:MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES]
+        entry for _evidence_id, entry in eligible[:MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES]
     ]
 
 
@@ -2925,7 +2874,9 @@ def _repair_decision_error(
         context["path"] = path
     return AppError(
         code="regeneration_repair_decision_invalid",
-        message="Model repair decision or minimal patch failed deterministic validation.",
+        message=(
+            "Model repair decision or minimal patch failed deterministic validation."
+        ),
         retryable=False,
         context=context,
     )
@@ -5407,7 +5358,9 @@ def _handle_insights_bundle_regeneration(
     if execution.target.repair_action == "CORRECT_PROTECTED_FACT":
         raise AppError(
             code="no_material_repair_available",
-            message="The canonical insight metric has no changed supported leaf to copy.",
+            message=(
+                "The canonical insight metric has no changed supported leaf to copy."
+            ),
             retryable=False,
             context={"report_id": execution.runtime.request.report_id},
         )
@@ -5996,26 +5949,6 @@ def _remove_failed_insight_with_retained_replacement(
             if support_pages and (
                 not candidate_pages or not candidate_pages <= support_pages
             ):
-                continue
-            candidate_metric = candidate.get("metric")
-            metric: Dict[str, Any] = (
-                candidate_metric if isinstance(candidate_metric, dict) else {}
-            )
-            compatible = rank_compatible_alternatives(
-                CompatibilityQuery(
-                    text=_s(candidate.get("text")),
-                    metric=metric,
-                    pages=tuple(candidate_pages),
-                ),
-                [
-                    (
-                        evidence_id,
-                        {"text": candidate["evidence"], "pages": list(candidate_pages)},
-                    )
-                ],
-                limit=1,
-            )
-            if not compatible:
                 continue
             proposed = select_artifact_insights(
                 final_insights=[*retained_final, candidate],
@@ -7030,7 +6963,8 @@ _REGENERATION_HANDLER_REGISTRY: Dict[str, _RegenerationHandler] = {
         ),
         current_section_payload=_insights_bundle_section_payload,
         extra_fix_checklist=(
-            "Each final insight must map cleanly to evidence_id and supporting evidence text.",
+            "Each final insight must map cleanly to evidence_id and supporting "
+            "evidence text.",
         ),
         handle=_handle_insights_bundle_regeneration,
     ),
@@ -7039,7 +6973,8 @@ _REGENERATION_HANDLER_REGISTRY: Dict[str, _RegenerationHandler] = {
         prompt_namespaces=(),
         current_section_payload=_key_figures_section_payload,
         extra_fix_checklist=(
-            "Keep only source-backed, distinct metrics that pass label/value relationship fidelity.",
+            "Keep only source-backed, distinct metrics that pass label/value "
+            "relationship fidelity.",
         ),
         handle=_handle_key_figures_regeneration,
     ),
@@ -7064,7 +6999,8 @@ _REGENERATION_HANDLER_REGISTRY: Dict[str, _RegenerationHandler] = {
         prompt_namespaces=("report_vs/artifacts/regenerate/expert_comment",),
         current_section_payload=_expert_comment_section_payload,
         extra_fix_checklist=(
-            "Do not introduce new claims that are absent from the updated summary/insights/quotes.",
+            "Do not introduce new claims that are absent from the updated "
+            "summary/insights/quotes.",
         ),
         handle=_handle_expert_comment_regeneration,
     ),
@@ -7073,7 +7009,8 @@ _REGENERATION_HANDLER_REGISTRY: Dict[str, _RegenerationHandler] = {
         prompt_namespaces=("report_vs/artifacts/regenerate/linkedin_post",),
         current_section_payload=_linkedin_post_section_payload,
         extra_fix_checklist=(
-            "Do not introduce new claims that are absent from the updated summary/insights/quotes.",
+            "Do not introduce new claims that are absent from the updated "
+            "summary/insights/quotes.",
         ),
         handle=_handle_linkedin_post_regeneration,
     ),
@@ -7092,7 +7029,9 @@ def _resolve_regeneration_handler(target_section: str) -> _RegenerationHandler:
     if handler is None:
         raise AppError(
             code="artifact_regeneration_target_unsupported",
-            message=f"Unsupported artifact regeneration target_section: {target_section}",
+            message=(
+                f"Unsupported artifact regeneration target_section: {target_section}"
+            ),
             retryable=False,
             context={"target_section": target_section},
         )

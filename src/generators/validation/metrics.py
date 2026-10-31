@@ -21,20 +21,15 @@ _COMPARISON_CUE = re.compile(
 
 
 def run_metric_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
-    if runtime.prepared.verified_facts_mode:
-        return validate_insight_metrics(
-            insights=runtime.prepared.insights,
-            evidence_map=runtime.prepared.evidence_map,
-            semantic_support=runtime.semantic_outcome.metric_support,
-            evidence_windows=runtime.prepared.evidence_windows,
-            verified_facts=runtime.prepared.verified_facts,
-            verified_facts_mode=True,
-        )
-    return validate_insight_metrics(
-        insights=runtime.prepared.insights,
-        evidence_map=runtime.prepared.evidence_map,
-        semantic_support=runtime.semantic_outcome.metric_support,
-        evidence_windows=runtime.prepared.evidence_windows,
+    if not runtime.prepared.verified_facts_mode:
+        # Normal-mode metric entailment is owned by grounding.  The legacy
+        # helper remains available for diagnostics, but it is not a release
+        # decision in the rule registry.
+        return []
+    return _validate_verified_fact_metrics(
+        runtime.prepared.insights,
+        runtime.prepared.verified_facts,
+        runtime.prepared.evidence_map,
     )
 
 
@@ -50,6 +45,9 @@ def validate_insight_metrics(
         return _validate_verified_fact_metrics(
             insights, verified_facts or {}, evidence_map
         )
+    # This direct helper preserves the historical diagnostic output for
+    # callers that explicitly request it.  The active rule registry routes
+    # normal-mode semantic authority through grounding instead.
     issues: List[ValidationIssue] = []
     windows = list(evidence_windows or [])
     for idx, insight in enumerate(insights):

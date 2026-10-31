@@ -8,12 +8,9 @@ from __future__ import annotations
 
 import json
 import logging
-from collections import Counter
-from dataclasses import replace
 from datetime import date
 from typing import Any
 
-from src.contracts.files import ListDirectoryRequest, ReadTextFilesRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
@@ -26,6 +23,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportValidationResult,
     validate_cross_report_contract,
 )
+from src.contracts.files import ListDirectoryRequest, ReadTextFilesRequest
 from src.contracts.run_context import RunContext
 from src.services import file_service
 from src.utils.errors import AppError
@@ -35,7 +33,6 @@ from .shared import (
     _DEFAULT_THEME_SCORE_WEIGHTS,
     _clean_values,
     _parse_iso_date,
-    _selected_source_date,
     _slug,
     _source_recency_scores,
     _taxonomy_sort_key,
@@ -255,37 +252,11 @@ def _theme_novelty(
     matched_categories: list[str],
     recent_themes: list[dict[str, Any]],
 ) -> tuple[float, list[str]]:
-    risks: list[str] = []
-    novelty_score = 1.0
-    normalized_tags = {tag.strip().casefold() for tag in matched_tags if tag.strip()}
-    normalized_categories = {
-        category.strip().casefold()
-        for category in matched_categories
-        if category.strip()
-    }
-    for recent in recent_themes:
-        if str(recent.get("theme_id", "")).strip() == theme_id:
-            novelty_score = 0.0
-            risks.append("recent_theme_repetition")
-        recent_tags = {
-            str(tag).strip().casefold()
-            for tag in recent.get("matched_tags", [])
-            if str(tag).strip()
-        }
-        recent_categories = {
-            str(category).strip().casefold()
-            for category in recent.get("matched_categories", [])
-            if str(category).strip()
-        }
-        for tag in sorted(normalized_tags.intersection(recent_tags)):
-            novelty_score = min(novelty_score, 0.5)
-            risks.append(f"recent_tag_repetition:{tag}")
-        for category in sorted(normalized_categories.intersection(recent_categories)):
-            novelty_score = min(novelty_score, 0.5)
-            risks.append(f"recent_category_repetition:{category}")
-    if "recent_theme_repetition" in risks:
-        novelty_score = 0.0
-    return novelty_score, sorted(set(risks))
+    # Taxonomy-token overlap cannot establish conceptual novelty.  Keep the
+    # field for compatibility and expose the bounded context to the synthesis
+    # model, which owns the semantic novelty judgment.
+    del theme_id, matched_tags, matched_categories, recent_themes
+    return 1.0, ["semantic_novelty_pending_llm"]
 
 
 def _load_recent_theme_metadata(
@@ -499,7 +470,10 @@ def select_cross_report_theme(
     if not request.auto_theme and not request.topic.strip():
         raise AppError(
             code="cross_report_topic_required",
-            message="Cross-report theme selection requires a topic unless auto_theme is enabled",
+            message=(
+                "Cross-report theme selection requires a topic unless auto_theme "
+                "is enabled"
+            ),
             retryable=False,
             severity="error",
             context={"request_id": request.request_id},
@@ -580,7 +554,9 @@ def select_cross_report_theme(
         )
         raise AppError(
             code="cross_report_no_theme_candidates",
-            message="Cross-report theme selection found no deterministic theme candidates",
+            message=(
+                "Cross-report theme selection found no deterministic theme candidates"
+            ),
             retryable=False,
             severity="error",
             context={"request_id": request.request_id, "reason": "no_theme_candidates"},

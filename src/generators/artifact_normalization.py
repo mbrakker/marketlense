@@ -30,8 +30,8 @@ from src.utils.quantity import (
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
-EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:2.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:25"
+EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:3.0"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:26"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -830,7 +830,14 @@ def preserve_public_source_displays(
     expert_comment: str,
     linkedin_post: str,
 ) -> tuple[str, str]:
-    """Preserve unique, source-backed factual displays in public artifacts."""
+    """Return public copy unchanged for independent semantic review.
+
+    Source-display substitution used to infer factual compatibility from text
+    overlap.  The retained grounding/editorial LLMs now own that judgment;
+    this boundary only keeps the public copy produced by those stages.
+    """
+
+    return expert_comment, linkedin_post
 
     safe_summary = summary if isinstance(summary, dict) else {}
     summary_evidence = " ".join(
@@ -909,6 +916,8 @@ def preserve_soft_copy_binding_source_displays(
     the exact sentence that will be retained.  The provenance builder then
     derives its ID, hash, and source spans from that corrected sentence.
     """
+
+    return
 
     summary_evidence = " ".join(
         _s(item.get("evidence"))
@@ -1122,6 +1131,11 @@ def constrain_summary_to_source_backed_claims(
     require_direct_fallback: bool = False,
 ) -> bool:
     """Fail closed to direct claim copy when a strong claim has weak evidence."""
+
+    # A deterministic text-strength/evidence heuristic cannot replace or
+    # suppress model-authored prose.  The existing grounding and independent
+    # public-editorial review own this decision and fail closed when needed.
+    return False
 
     claims = summary.get("claim_evidence_map") if isinstance(summary, dict) else None
     if not isinstance(claims, list):
@@ -1422,10 +1436,6 @@ def normalize_artifact_insights(
             metric["value"], metric["unit"] = normalize_public_metric_display(
                 value=metric["value"], unit=metric["unit"]
             )
-        if not verified_mode and TEMPORAL_ONLY_METRIC_RE.fullmatch(
-            metric["value"].strip()
-        ):
-            _clear_unproven_metric_metadata(metric)
         pages_raw_obj = item.get("pages")
         pages_raw = pages_raw_obj if isinstance(pages_raw_obj, list) else []
         pages = [int(p) for p in pages_raw if isinstance(p, int)]
@@ -1444,23 +1454,9 @@ def normalize_artifact_insights(
         }
         if isinstance(item.get("evidence_ids"), list) and evidence_ids:
             insight["evidence_ids"] = evidence_ids
-        timeframe = _s(metric.get("timeframe")).strip()
-        binding_evidence = " ".join(
-            [
-                insight["evidence"],
-                *[
-                    _s(span.get("text") or span.get("evidence"))
-                    for span in insight["evidence_spans"]
-                    if isinstance(span, dict)
-                ],
-            ]
-        )
-        if (
-            not verified_mode
-            and timeframe
-            and not _source_text_contains_field(timeframe, binding_evidence)
-        ):
-            metric["timeframe"] = ""
+        # Do not infer whether a model-provided timeframe is source-supported
+        # from lexical presence.  Grounding owns that semantic relationship;
+        # normalization preserves the structured input for its verdict.
         for field_name in INSIGHT_TEXT_FIELDS:
             value = _normalize_insight_text_field(field_name, item.get(field_name))
             if value:
@@ -1892,7 +1888,13 @@ def eligible_final_insight_candidates(
             insight for insight in group if _s(insight.get("evidence_id")).strip()
         ]
         if reliable:
-            authoritative = min(reliable, key=_insight_quality_key)
+            authoritative = min(
+                (
+                    (source_order, insight)
+                    for source_order, insight in enumerate(reliable)
+                ),
+                key=lambda item: _factual_binding_key(item[1], item[0]),
+            )[1]
             # A verified-fact projection already carries the authoritative
             # composite metric and source binding.  Re-scoping it through the
             # final-editorial observation matcher can manufacture an
@@ -1937,7 +1939,10 @@ def _candidate_factual_fields(
         ]
         if not reliable or _candidate_group_has_factual_conflict(reliable):
             continue
-        best_candidates[insight_id] = min(reliable, key=_insight_quality_key)
+        best_candidates[insight_id] = min(
+            ((source_order, insight) for source_order, insight in enumerate(reliable)),
+            key=lambda item: _factual_binding_key(item[1], item[0]),
+        )[1]
 
     facts: Dict[str, Dict[str, Any]] = {}
     for insight_id, insight in best_candidates.items():
@@ -2924,29 +2929,20 @@ def _ranked_unique_insights(
         else:
             candidate_by_id[insight_id] = min(reliable, key=_insight_rank_key)
 
-    ambiguous_final_texts = _resolve_duplicate_final_wording(
-        final_by_id=final_by_id,
-        final_without_id=final_without_id,
-        candidate_alternatives_by_id=candidate_alternatives_by_id,
-    )
-
     ordered_items = [
         *final_by_id.values(),
         *final_without_id,
         *candidate_by_id.values(),
         *candidate_without_id,
     ]
-    ordered_items.sort(key=_insight_rank_key)
-    ambiguous_public_texts = _ambiguous_public_duplicate_keys(ordered_items)
+    # The final model's order is the semantic/editorial order.  Deterministic
+    # code may prefer a technically stronger source binding, but it must not
+    # re-rank candidates by relevance, novelty, commercial value, or any other
+    # semantic score before the next model boundary sees them.
+    ordered_items.sort(key=lambda item: item[0])
     ranked: List[tuple[int, Dict[str, Any]]] = []
     for source_order, insight in ordered_items:
         if not _s(insight.get("evidence_id")).strip():
-            continue
-        duplicate_key = _insight_duplicate_key(insight)
-        if (
-            duplicate_key in ambiguous_final_texts
-            or duplicate_key in ambiguous_public_texts
-        ):
             continue
         if any(
             _insights_semantically_equivalent(insight, retained)
@@ -3057,19 +3053,29 @@ def _resolve_duplicate_final_wording(
 def _best_ranked_insight(
     items: List[tuple[int, Dict[str, Any]]],
 ) -> tuple[int, Dict[str, Any]]:
-    return min(items, key=_insight_rank_key)
+    return min(items, key=lambda item: item[0])
 
 
 def _insight_rank_key(item: tuple[int, Dict[str, Any]]) -> tuple[float, ...]:
-    source_order, insight = item
-    return (*_insight_quality_key(insight), source_order)
+    return (float(item[0]),)
 
 
 def _insight_quality_key(insight: Dict[str, Any]) -> tuple[float, ...]:
-    """Return a deterministic quality tuple using only retained signals."""
+    """Return a technical binding tuple for compatibility callers only."""
 
-    metric = insight.get("metric")
-    metric = metric if isinstance(metric, dict) else {}
+    return _factual_binding_key(insight, 0)
+
+
+def _factual_binding_key(
+    insight: Dict[str, Any], source_order: int
+) -> tuple[float, ...]:
+    """Order equivalent representations by source-binding completeness only.
+
+    This helper is intentionally limited to mechanical provenance fields.  It
+    must never use model scores, confidence, topic labels, or public wording
+    to decide which semantic proposition survives.
+    """
+
     evidence_id = _s(insight.get("evidence_id")).strip()
     evidence = _s(insight.get("evidence")).strip()
     pages = [
@@ -3090,29 +3096,13 @@ def _insight_quality_key(insight: Dict[str, Any]) -> tuple[float, ...]:
         if isinstance(spans, list)
         else []
     )
-    metric_label = _s(metric.get("label")).strip()
-    metric_value = _s(metric.get("value")).strip()
-    binding_count = sum(
-        bool(_s(metric.get(field_name)).strip()) for field_name in METRIC_BINDING_FIELDS
-    )
-    relevance = _numeric_score(insight.get("decision_relevance_score"))
-    metric_strength = _numeric_score(insight.get("metric_strength_score"))
-    novelty = _numeric_score(insight.get("novelty_score"))
-    score = _numeric_score(insight.get("score"))
-    evidence_strength = (
-        bool(evidence_id) * 4
-        + bool(evidence) * 2
-        + bool(pages) * 2
-        + min(len(page_bound_spans), 2) * 2
-        + bool(metric_label and metric_value) * 2
-        + min(binding_count, len(METRIC_BINDING_FIELDS))
-    )
     return (
-        -float(evidence_strength),
-        -relevance,
-        -metric_strength,
-        -novelty,
-        -score,
+        -float(bool(evidence_id)),
+        -float(bool(evidence)),
+        -float(bool(pages)),
+        -float(len(page_bound_spans)),
+        -float(len(pages)),
+        float(source_order),
     )
 
 
@@ -3134,17 +3124,21 @@ def _insight_metric_signature(insight: Dict[str, Any]) -> tuple[tuple[str, str],
 def _insights_semantically_equivalent(
     left: Dict[str, Any], right: Dict[str, Any]
 ) -> bool:
-    """Collapse only an explicitly identical public proposition and binding."""
+    """Recognize only an exact retained identity, never semantic paraphrase.
 
-    left_metric = _insight_metric_signature(left)
-    right_metric = _insight_metric_signature(right)
-    if left_metric != right_metric:
+    Proposition equivalence belongs to the existing LLM selection/review
+    stages.  A deterministic selector may collapse repeated representations of
+    one stable candidate only when its evidence identity and protected metric
+    binding are also identical.
+    """
+
+    left_id = normalize_for_lookup(left.get("id"))
+    right_id = normalize_for_lookup(right.get("id"))
+    if not left_id or left_id != right_id:
         return False
-    left_proposition = normalize_for_lookup(left.get("text"))
-    right_proposition = normalize_for_lookup(right.get("text"))
-    # Evidence excerpts are source support, not propositions.  They are never
-    # used to collapse differently worded claims.
-    return bool(left_proposition and left_proposition == right_proposition)
+    if _ordered_item_evidence_ids(left) != _ordered_item_evidence_ids(right):
+        return False
+    return _insight_metric_signature(left) == _insight_metric_signature(right)
 
 
 def _append_distinct_insight(
@@ -3152,15 +3146,11 @@ def _append_distinct_insight(
     selected_keys: set[str],
     insight: Dict[str, Any],
 ) -> None:
-    duplicate_key = _insight_duplicate_key(insight)
-    if duplicate_key and duplicate_key in selected_keys:
+    identity_key = normalize_for_lookup(insight.get("id"))
+    if identity_key and identity_key in selected_keys:
         return
-    if any(
-        _insights_semantically_equivalent(insight, retained) for retained in selected
-    ):
-        return
-    if duplicate_key:
-        selected_keys.add(duplicate_key)
+    if identity_key:
+        selected_keys.add(identity_key)
     selected.append(insight)
 
 

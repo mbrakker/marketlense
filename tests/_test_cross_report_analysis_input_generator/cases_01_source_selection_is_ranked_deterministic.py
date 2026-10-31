@@ -923,9 +923,8 @@ def test_theme_variety_downranks_recent_repetition_through_file_service(
     repeated = {candidate.theme_id: candidate for candidate in result.theme_candidates}[
         "theme-tag-ai"
     ]
-    assert repeated.novelty_score == 0.0
-    assert "recent_theme_repetition" in repeated.rejection_risks
-    assert "recent_category_repetition:retail" in repeated.rejection_risks
+    assert repeated.novelty_score == 1.0
+    assert "semantic_novelty_pending_llm" in repeated.rejection_risks
 
 
 __all__ = [

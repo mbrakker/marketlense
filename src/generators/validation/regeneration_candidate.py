@@ -177,7 +177,10 @@ def validate_regeneration_candidate(
                 issues.append(
                     issue(
                         rule_id="regeneration_removed_insight_reintroduced",
-                        message="Deliberately removed insight ID reappeared in the candidate.",
+                        message=(
+                            "Deliberately removed insight ID reappeared in the "
+                            "candidate."
+                        ),
                         severity="error",
                         section=f"{section}:{insight_id}",
                         repair_target="insights_bundle",
@@ -190,7 +193,10 @@ def validate_regeneration_candidate(
             issues.append(
                 issue(
                     rule_id="regeneration_removed_summary_claim_reintroduced",
-                    message="A deliberately removed summary claim reappeared in the candidate.",
+                    message=(
+                        "A deliberately removed summary claim reappeared in the "
+                        "candidate."
+                    ),
                     severity="error",
                     section=f"summary.claim_evidence_map:{claim_id}",
                     repair_target="summary",
@@ -454,7 +460,7 @@ def retained_claim_repair_issues(
     for result in package.results:
         candidate = result.candidate
         target = family_targets.get(candidate.source_family)
-        if not target or not candidate.factual:
+        if not target:
             continue
         affected = candidate.affected_section or candidate.source_family
         entity_id = candidate.entity_id or candidate.claim_id
@@ -935,7 +941,8 @@ def _repair_selection_for_claim(
         return (
             (
                 None,
-                "A repaired factual soft-copy claim is missing repair-selection lineage.",
+                "A repaired factual soft-copy claim is missing repair-selection "
+                "lineage.",
             )
             if require_selection
             else (None, "")
@@ -969,7 +976,8 @@ def _repair_selection_for_claim(
     ):
         return (
             None,
-            "A repaired factual soft-copy claim has no selected evidence in its repair selection.",
+            "A repaired factual soft-copy claim has no selected evidence in its "
+            "repair selection.",
         )
     return selection, ""
 

@@ -5,10 +5,19 @@ and worker orchestration while qualification policies remain in sibling modules.
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass, replace
 from typing import Dict, List, Optional
+
 import pymupdf as fitz
+
 from src.contracts.candidates import Candidate
+from src.services._pdf._visual_candidates.raster import (
+    _RasterProbeCache,
+)
+from src.services._pdf._visual_candidates.screening import (
+    _page_has_chart_caption_blocks,
+)
 from src.services._pdf.page_artifacts import (
     PdfPageArtifactCache,
     PdfPageArtifacts,
@@ -24,12 +33,6 @@ from src.services._pdf.visual_heuristics import (
     _tally_reason,
     _VisualCandidateRelationships,
     _VisualOverlapIndex,
-)
-from src.services._pdf._visual_candidates.raster import (
-    _RasterProbeCache,
-)
-from src.services._pdf._visual_candidates.screening import (
-    _page_has_chart_caption_blocks,
 )
 
 PANEL_CHART_CONTEXT_TEXT_RATIO_MAX = 0.85
@@ -76,9 +79,10 @@ def _build_visual_page_context(
 ) -> Optional[_VisualPageContext]:
     artifacts = get_page_artifacts(page, cache=artifact_cache)
     if artifacts.full_page_scan_without_text:
-        stats["skipped_pages"] = _int_count(stats.get("skipped_pages", 0)) + 1
-        _tally_reason(stats, "page_full_scan_no_text")
-        return None
+        # A scanned page without a text layer is still a valid visual source.
+        # Keep it in the candidate stream; semantic usefulness belongs to the
+        # visual model, while this stage only establishes technical geometry.
+        _tally_reason(stats, "page_full_scan_no_text_included")
     page_chars = artifacts.text_char_count
     page_rect = page.rect
     rect_items = _collect_chart_rects(

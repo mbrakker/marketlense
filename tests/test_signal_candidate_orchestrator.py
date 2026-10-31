@@ -6,6 +6,10 @@ from dataclasses import replace
 
 import pytest
 
+from src.contracts.analytics_projection import (
+    ClaimEmbeddingReadResponse,
+    ClaimEmbeddingRecord,
+)
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
@@ -14,16 +18,12 @@ from src.contracts.cross_report_analysis import (
     CrossReportProjectedDataReadResponse,
     CrossReportSourceReportCandidate,
 )
-from src.contracts.analytics_projection import (
-    ClaimEmbeddingReadResponse,
-    ClaimEmbeddingRecord,
-)
+from src.contracts.remediation import RemediationListRequest
 from src.contracts.semantic_ids import EntityUid, ReportId
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateExtractionRequest,
 )
-from src.contracts.remediation import RemediationListRequest
 from src.orchestrators.signal_candidate_orchestrator import (
     run_signal_candidate_extraction,
 )
@@ -207,7 +207,13 @@ def test_signal_candidate_orchestrator_extracts_stores_and_clusters_candidates(
     assert outcome.stored_response.candidate_count == 2
     assert repeat.candidate_count == 2
     assert {candidate.support_level for candidate in outcome.batch.candidates} == {
-        "multi_report_convergent"
+        "weak_coverage"
+    }
+    assert {candidate.validation_status for candidate in outcome.batch.candidates} == {
+        "blocked"
+    }
+    assert {group.publication_hold_reason for group in outcome.batch.groups} == {
+        "signal_semantic_review_pending"
     }
     assert [candidate.candidate_id for candidate in outcome.batch.candidates] == [
         "signal-candidate:theme-explicit-ai-commerce:signal-ai",
