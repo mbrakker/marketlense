@@ -80,6 +80,8 @@ from src.orchestrators._report_analysis_orchestrator.payload import (
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
+    _build_target,
+    _stable_target_strategy_fingerprint,
 )
 from src.orchestrators._report_analysis_orchestrator.shared import logger
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
@@ -840,11 +842,10 @@ def _attempt_strategy_fingerprint(plan, regeneration_response) -> str:
     under a different nominal label with the same effective inputs.
     """
 
-    strategy = str(getattr(regeneration_response, "repair_strategy", "") or "").strip()
-    actual_evidence = list(
-        getattr(regeneration_response, "selected_evidence_ids", []) or []
+    _action, strategy, actual_evidence, has_decisions = _executed_repair_metadata(
+        regeneration_response
     )
-    if not strategy and not actual_evidence:
+    if not has_decisions and not strategy and not actual_evidence:
         return _plan_strategy_fingerprint(plan)
     fingerprints = [
         issue.failure_fingerprint
@@ -862,6 +863,55 @@ def _attempt_strategy_fingerprint(plan, regeneration_response) -> str:
         for issue in target.issues
     ]
     return repair_strategy_fingerprint(fingerprints, strategy, actual_evidence)
+
+
+def _executed_repair_metadata(
+    regeneration_response,
+) -> tuple[str, str, list[str], bool]:
+    """Return the repair action, strategy, and evidence actually executed.
+
+    A response can retain planner-level metadata even when the generator
+    abstained, removed a claim, or used a different evidence set. Once a
+    decision record exists it is the authoritative execution record; the
+    response-level fields are only the legacy fallback for older responses that
+    predate decision records.
+    """
+
+    if regeneration_response is None:
+        return "", "", [], False
+    decisions = list(getattr(regeneration_response, "repair_decisions", []) or [])
+    if decisions:
+        actions = "+".join(
+            dict.fromkeys(
+                str(getattr(decision, "repair_action", "") or "").strip()
+                for decision in decisions
+                if str(getattr(decision, "repair_action", "") or "").strip()
+            )
+        )
+        strategies = "+".join(
+            dict.fromkeys(
+                str(getattr(decision, "repair_strategy", "") or "").strip()
+                for decision in decisions
+                if str(getattr(decision, "repair_strategy", "") or "").strip()
+            )
+        )
+        evidence_ids = list(
+            dict.fromkeys(
+                str(evidence_id).strip()
+                for decision in decisions
+                for evidence_id in (
+                    getattr(decision, "evidence_ids_used", []) or []
+                )
+                if str(evidence_id).strip()
+            )
+        )
+        return actions, strategies, evidence_ids, True
+    return (
+        str(getattr(regeneration_response, "repair_action", "") or "").strip(),
+        str(getattr(regeneration_response, "repair_strategy", "") or "").strip(),
+        list(getattr(regeneration_response, "selected_evidence_ids", []) or []),
+        False,
+    )
 
 
 _PAYLOAD_OVERRIDE_FIELDS = frozenset({"title", "publisher"})
@@ -1483,31 +1533,12 @@ def _candidate_audit(
         issues=list(candidate_result.issues),
         severity="error" if not candidate_result.passed else "pass",
     )
-    actual_action = (
-        str(getattr(regeneration_response, "repair_action", "") or "").strip()
-        if regeneration_response is not None
-        else ""
-    )
-    actual_strategy = (
-        str(getattr(regeneration_response, "repair_strategy", "") or "").strip()
-        if regeneration_response is not None
-        else ""
-    )
-    actual_evidence_ids = (
-        list(getattr(regeneration_response, "selected_evidence_ids", []) or [])
-        if regeneration_response is not None
-        else []
-    )
-    execution_decisions = (
-        list(getattr(regeneration_response, "repair_decisions", []) or [])
-        if regeneration_response is not None
-        else []
-    )
-    executed_evidence_ids = [
-        evidence_id
-        for decision in execution_decisions
-        for evidence_id in decision.evidence_ids_used
-    ]
+    (
+        actual_action,
+        actual_strategy,
+        actual_evidence_ids,
+        has_execution_decisions,
+    ) = _executed_repair_metadata(regeneration_response)
     return RegenerationCandidateAudit(
         attempt_index=attempt_index,
         transformation_scope=list(transformation_scope),
@@ -1527,7 +1558,7 @@ def _candidate_audit(
             actual_action
             or (
                 "+".join(target.repair_action for target in plan.targets)
-                if plan
+                if plan and not has_execution_decisions
                 else ""
             )
         ),
@@ -1535,7 +1566,7 @@ def _candidate_audit(
             actual_strategy
             or (
                 "+".join(target.repair_strategy for target in plan.targets)
-                if plan
+                if plan and not has_execution_decisions
                 else ""
             )
         ),
@@ -1566,22 +1597,18 @@ def _candidate_audit(
             else []
         ),
         selected_evidence_ids=(
-            sorted(set(executed_evidence_ids))
-            if execution_decisions
+            sorted(set(actual_evidence_ids))
+            if has_execution_decisions or actual_evidence_ids
             else (
-                sorted(set(actual_evidence_ids))
-                if actual_evidence_ids
-                else (
-                    sorted(
-                        {
-                            value
-                            for target in plan.targets
-                            for value in target.selected_evidence_ids
-                        }
-                    )
-                    if plan
-                    else []
+                sorted(
+                    {
+                        value
+                        for target in plan.targets
+                        for value in target.selected_evidence_ids
+                    }
                 )
+                if plan
+                else []
             )
         ),
         quarantined_evidence_ids=(
@@ -1978,27 +2005,18 @@ def _preflight_empty_grounding_strategies(
                     for issue in target.issues
                     if str(issue.entity_id or "").strip() in supported_claim_ids
                 ]
-                supported_paths = sorted(
-                    path
-                    for claim_id in supported_claim_ids
-                    for path in claim_grounding[claim_id].get("allowed_paths", [])
+                # Partitioning changes the target identity and its writable
+                # paths. Re-run the existing bounded planner for that exact
+                # subset so a rejected strategy cannot reappear merely by
+                # replacing the target dataclass.
+                supported_target = _build_target(
+                    target.target_section,
+                    supported_issues,
+                    rejected_strategy_keys,
+                    artifacts,
                 )
-                split_targets.append(
-                    replace(
-                        target,
-                        issues=supported_issues,
-                        allowed_paths=supported_paths,
-                        selected_evidence_ids=sorted(
-                            {
-                                evidence_id
-                                for claim_id in supported_claim_ids
-                                for evidence_id in claim_grounding[claim_id].get(
-                                    "evidence_ids", []
-                                )
-                            }
-                        ),
-                    )
-                )
+                if supported_target is not None:
+                    split_targets.append(supported_target)
             split_targets.append(
                 replace(
                     target,
@@ -2704,6 +2722,12 @@ def _run_validation_regeneration_loop(
                 for item in candidate_result.issues
             )
         )
+        (
+            executed_action,
+            executed_strategy,
+            executed_evidence_ids,
+            _has_execution_decisions,
+        ) = _executed_repair_metadata(regeneration_response)
         repair_delta = replace(
             repair_delta,
             mutation_scope_result="fail" if scope_failed else "pass",
@@ -2712,15 +2736,9 @@ def _run_validation_regeneration_loop(
                 candidate_validation_report, repair_delta
             ),
             semantic_grounding_validation_status=(semantic_grounding_validation_status),
-            repair_action=str(
-                getattr(regeneration_response, "repair_action", "") or ""
-            ),
-            repair_strategy=str(
-                getattr(regeneration_response, "repair_strategy", "") or ""
-            ),
-            evidence_ids_used=list(
-                getattr(regeneration_response, "selected_evidence_ids", []) or []
-            ),
+            repair_action=executed_action,
+            repair_strategy=executed_strategy,
+            evidence_ids_used=executed_evidence_ids,
             strategy_fingerprint=strategy_fingerprint,
             candidate_sha256=candidate_sha256,
             input_sha256=candidate_input_sha256,
@@ -2730,14 +2748,23 @@ def _run_validation_regeneration_loop(
         # audit records what the attempt actually used. Both are retained so a
         # rejected candidate rules out its planned combination for every later
         # attempt regardless of which evidence the generator finally selected.
-        planned_strategy_keys = {
-            repair_strategy_fingerprint(
-                [issue.failure_fingerprint for issue in target.issues],
-                target.repair_strategy,
-                target.selected_evidence_ids,
+        planned_strategy_keys: set[str] = set()
+        for target in plan.targets:
+            planned_strategy_keys.add(
+                repair_strategy_fingerprint(
+                    [issue.failure_fingerprint for issue in target.issues],
+                    target.repair_strategy,
+                    target.selected_evidence_ids,
+                )
             )
-            for target in plan.targets
-        }
+            planned_strategy_keys.add(
+                _stable_target_strategy_fingerprint(
+                    target.target_section,
+                    target.repair_strategy,
+                    target.selected_evidence_ids,
+                    target.allowed_paths,
+                )
+            )
         evidence_paths[f"public_editorial_quality_regen_attempt_{attempt_index}"] = (
             editorial_path
         )

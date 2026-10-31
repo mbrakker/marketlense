@@ -72,32 +72,34 @@ def test_atomic_repair_rejects_selected_evidence_missing_from_retained_package(
         ],
     )
 
-    with pytest.raises(AppError) as captured:
-        _regenerate_artifacts(
-            ArtifactRegenerationRequest(
-                report_id="report-1",
-                report_name="report-1",
-                attempt_index=2,
-                plan=RegenerationPlan(
-                    mode="targeted",
-                    targets=[target],
-                    unmappable_issues=[],
-                    broad_retry_allowed=False,
-                ),
-                current_artifacts=current,
-                doc_map=evidence_packs["doc_map"],
-                evidence_packs=evidence_packs,
-                settings=_settings(tmp_path),
-                ctx=_ctx(),
-                source_status=current["source_status"],
-                categories=["Category"],
+    response = _regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=2,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[target],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
             ),
-            openai_client=_UnknownSelectedEvidenceClient(),
-            prompt_client=_FakePromptClient(),
-        )
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=_UnknownSelectedEvidenceClient(),
+        prompt_client=_FakePromptClient(),
+    )
 
-    assert captured.value.code == "regeneration_repair_decision_invalid"
-    assert captured.value.context["reason"] == "evidence_not_retained_or_quarantined"
+    assert response.repair_decisions[-1].repair_action == "ABSTAIN"
+    assert (
+        response.repair_decisions[-1].repair_strategy
+        == "current_evidence:provider_rejected:evidence_not_retained_or_quarantined"
+    )
 
 
 @pytest.mark.parametrize(

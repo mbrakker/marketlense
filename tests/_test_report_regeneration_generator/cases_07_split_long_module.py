@@ -689,36 +689,24 @@ def test_summary_copy_claim_action_preserves_or_removes_claim_map_row(
     )
 
     repaired_summary = response.updated_artifacts["summary"]
-    expected_map = (
-        summary_sentences
-        if claim_action == "abstain" or shared_evidence_binding
-        else summary_sentences[:3]
-    )
-    expected_summary = (
-        "A retained executive claim. An unsupported forecast claim."
-        if claim_action == "abstain"
-        else "A retained executive claim."
-    )
+    expected_map = summary_sentences
+    expected_summary = "A retained executive claim. An unsupported forecast claim."
     assert repaired_summary["executive_summary"] == expected_summary
     claim_ids = {
         claim["claim_id"]
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     }
-    assert (failed_claim.claim_id in claim_ids) is (claim_action == "abstain")
+    assert failed_claim.claim_id in claim_ids
     assert [item["claim"] for item in repaired_summary["claim_evidence_map"]] == [
         sentence for _family, sentence, _evidence_id in expected_map
     ]
     map_row_path = "summary.claim_evidence_map[3]"
-    assert (map_row_path in response.deterministic_mutation_paths) is (
-        claim_action == "remove" and not shared_evidence_binding
-    )
-    assert response.repair_action == (
-        "ABSTAIN" if claim_action == "abstain" else "REMOVE_CLAIM"
-    )
+    assert map_row_path not in response.deterministic_mutation_paths
+    assert response.repair_action == "ABSTAIN"
     assert response.repair_strategy == (
-        "claim_proposal_abstain"
+        "current_evidence:claim_proposal_abstain"
         if claim_action == "abstain"
-        else "claim_proposal_remove"
+        else "current_evidence:provider_rejected:claim_proposal_removal_not_permitted"
     )
 
 

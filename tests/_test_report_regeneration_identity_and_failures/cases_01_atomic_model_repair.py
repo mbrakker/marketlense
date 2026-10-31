@@ -554,30 +554,33 @@ def test_model_repair_rejects_illegal_sibling_patch_before_candidate_write(
     )
     client = _RepairDecisionOpenAIClient(decision)
 
-    with pytest.raises(AppError) as error:
-        regenerate_artifacts(
-            ArtifactRegenerationRequest(
-                report_id="report-1",
-                report_name="report-1",
-                attempt_index=1,
-                plan=_atomic_insight_plan(),
-                current_artifacts=current,
-                doc_map=_evidence_packs()["doc_map"],
-                evidence_packs=_evidence_packs(),
-                settings=_settings(tmp_path),
-                ctx=_ctx(),
-                source_status=current["source_status"],
-                categories=["Category"],
-                vector_store_id=None,
-                md5="md5",
-            ),
-            openai_client=client,
-            prompt_client=_FakePromptClient(),
-        )
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=_atomic_insight_plan(),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=client,
+        prompt_client=_FakePromptClient(),
+    )
 
-    assert error.value.code == "regeneration_repair_decision_invalid"
+    assert response.repair_decisions[-1].repair_action == "ABSTAIN"
+    assert (
+        response.repair_decisions[-1].repair_strategy
+        == "current_evidence:provider_rejected:changed_path_outside_allowed_paths"
+    )
+    assert response.updated_artifacts["insights_final"] == current["insights_final"]
     assert len(client.calls) == 1
-    assert not list((tmp_path / "out").rglob("artifacts_regen_candidate_1.json"))
 
 
 def test_model_repair_rejects_non_string_patch_value_before_candidate_write(
@@ -621,33 +624,36 @@ def test_model_repair_rejects_quarantined_evidence_before_candidate_write(
     current = _source_backed_artifacts()
     client = _RepairDecisionOpenAIClient(_atomic_insight_decision(evidence_ids=["f1"]))
 
-    with pytest.raises(AppError) as error:
-        regenerate_artifacts(
-            ArtifactRegenerationRequest(
-                report_id="report-1",
-                report_name="report-1",
-                attempt_index=1,
-                plan=_atomic_insight_plan(quarantined=["f1"]),
-                current_artifacts=current,
-                doc_map=_evidence_packs()["doc_map"],
-                evidence_packs=_evidence_packs(),
-                settings=_settings(tmp_path),
-                ctx=_ctx(),
-                source_status=current["source_status"],
-                categories=["Category"],
-                vector_store_id=None,
-                md5="md5",
-            ),
-            openai_client=client,
-            prompt_client=_FakePromptClient(),
-        )
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=_atomic_insight_plan(quarantined=["f1"]),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=client,
+        prompt_client=_FakePromptClient(),
+    )
 
-    assert error.value.code == "regeneration_repair_decision_invalid"
+    assert response.repair_decisions[-1].repair_action == "ABSTAIN"
+    assert (
+        response.repair_decisions[-1].repair_strategy
+        == "current_evidence:provider_rejected:evidence_not_retained_or_quarantined"
+    )
     assert len(client.calls) == 1
     prompt_variables = _parse_fixture_variables(client.calls[0].user_prompt)
     repair_context = json.loads(prompt_variables["repair_context_json"])
     assert "f1" not in repair_context["allowed_evidence_ids"]
-    assert not list((tmp_path / "out").rglob("artifacts_regen_candidate_1.json"))
+    assert response.updated_artifacts["insights_final"] == current["insights_final"]
 
 
 def test_model_repair_rejects_evidence_missing_from_retained_package(
@@ -658,30 +664,33 @@ def test_model_repair_rejects_evidence_missing_from_retained_package(
         _atomic_insight_decision(evidence_ids=["not-retained"])
     )
 
-    with pytest.raises(AppError) as error:
-        regenerate_artifacts(
-            ArtifactRegenerationRequest(
-                report_id="report-1",
-                report_name="report-1",
-                attempt_index=1,
-                plan=_atomic_insight_plan(),
-                current_artifacts=current,
-                doc_map=_evidence_packs()["doc_map"],
-                evidence_packs=_evidence_packs(),
-                settings=_settings(tmp_path),
-                ctx=_ctx(),
-                source_status=current["source_status"],
-                categories=["Category"],
-                vector_store_id=None,
-                md5="md5",
-            ),
-            openai_client=client,
-            prompt_client=_FakePromptClient(),
-        )
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=_atomic_insight_plan(),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=client,
+        prompt_client=_FakePromptClient(),
+    )
 
-    assert error.value.code == "regeneration_repair_decision_invalid"
+    assert response.repair_decisions[-1].repair_action == "ABSTAIN"
+    assert (
+        response.repair_decisions[-1].repair_strategy
+        == "current_evidence:provider_rejected:evidence_not_retained_or_quarantined"
+    )
     assert len(client.calls) == 1
-    assert not list((tmp_path / "out").rglob("artifacts_regen_candidate_1.json"))
+    assert response.updated_artifacts["insights_final"] == current["insights_final"]
 
 
 def test_invalid_repair_contract_does_not_trigger_a_second_provider_call(

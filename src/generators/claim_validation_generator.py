@@ -238,10 +238,21 @@ def _claim_requires_factual_validation(
     if classification == "factual":
         return True
     if classification in {"interpretive", "recommendation"}:
-        return (
-            evidence_bound
-            or kind in {"numeric", "quotation", "causal"}
-            or bool(_COMPARATIVE_RE.search(text))
+        if kind in {"numeric", "quotation", "causal"} or bool(
+            _COMPARATIVE_RE.search(text)
+        ):
+            return True
+        if not evidence_bound:
+            return False
+        if kind != "interpretive":
+            return True
+        # A multi-sentence recommendation can carry a source-derived premise
+        # before its normative conclusion. Keep that complete proposition in
+        # semantic grounding, while a standalone "should" sentence remains a
+        # permitted editorial recommendation.
+        sentences = soft_copy_material_sentences(text)
+        return len(sentences) > 1 and any(
+            _claim_kind(sentence) != "interpretive" for sentence in sentences
         )
     return _factual(kind)
 
@@ -488,6 +499,7 @@ def _candidates(
                 text=claim,
                 kind=kind,
                 classification=classification,
+                evidence_bound=bool(_references(raw, evidence)),
             ),
             evidence_references=_references(raw, evidence),
             affected_section=affected_section,

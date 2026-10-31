@@ -519,3 +519,123 @@ def test_recommendation_with_material_qualitative_premise_requires_evidence() ->
     assert package.unsupported_factual_count == 1
     assert package.results[0].candidate.factual is True
     assert "missing_evidence_reference" in package.results[0].reasons
+
+
+@pytest.mark.parametrize("family", ["summary", "expert_comment", "linkedin_post"])
+def test_evidence_bound_qualitative_recommendation_reaches_semantic_grounding(
+    family: str,
+) -> None:
+    premise = "Consumers are shifting toward direct purchasing."
+    recommendation = "Retailers should reconsider marketplace investment."
+    claim = f"{premise} {recommendation}"
+    artifacts = {
+        "summary": {"executive_summary": claim} if family == "summary" else {},
+        **({family: claim} if family != "summary" else {}),
+        "soft_copy_claim_provenance": {
+            "schema_version": "1.0",
+            "claims": [
+                _soft_copy_claim(
+                    artifact_family=family,
+                    text=premise,
+                    classification="recommendation",
+                    evidence_ids=["f1"],
+                ),
+                _soft_copy_claim(
+                    artifact_family=family,
+                    text=recommendation,
+                    classification="recommendation",
+                    evidence_ids=["f1"],
+                ),
+            ],
+        },
+    }
+    semantic_calls = []
+
+    def semantic_batch(claims):
+        semantic_calls.append(claims)
+        from .cases_03_hybrid_grounding import _semantic_result
+
+        return [_semantic_result(item, "not_established") for item in claims]
+
+    package = validate_retained_claims(
+        artifacts,
+        _evidence(),
+        semantic_batch_validator=semantic_batch,
+    )
+
+    assert len(semantic_calls) == 1
+    assert len(semantic_calls[0]) == 1
+    assert semantic_calls[0][0].candidate.text == premise
+    assert semantic_calls[0][0].candidate.factual is True
+    assert package.results[0].semantic_validator_used is True
+    assert package.results[0].status == "unresolved"
+    assert package.results[1].candidate.text == recommendation
+    assert package.results[1].candidate.factual is False
+    assert package.results[1].semantic_validator_used is False
+    assert package.results[1].status == "unresolved"
+    assert package.unresolved_factual_count == 1
+    assert package.readiness_status == "not_publishable"
+
+
+def test_evidence_bound_pure_normative_recommendation_remains_nonfactual() -> None:
+    claim = "Retailers should reconsider marketplace investment."
+    calls = []
+
+    def semantic_batch(_claims):
+        calls.append(True)
+        raise AssertionError("pure normative recommendation was grounded")
+
+    package = validate_retained_claims(
+        {
+            "expert_comment": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="expert_comment",
+                        text=claim,
+                        classification="recommendation",
+                        evidence_ids=["f1"],
+                    )
+                ],
+            },
+        },
+        _evidence(),
+        semantic_batch_validator=semantic_batch,
+    )
+
+    assert calls == []
+    assert package.results[0].candidate.factual is False
+    assert package.readiness_status == "awaiting_review"
+
+
+def test_evidence_independent_normative_recommendation_remains_nonfactual() -> None:
+    claim = "Retailers should reconsider marketplace investment."
+    calls = []
+
+    def semantic_batch(_claims):
+        calls.append(True)
+        raise AssertionError("evidence-independent recommendation was grounded")
+
+    package = validate_retained_claims(
+        {
+            "expert_comment": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="expert_comment",
+                        text=claim,
+                        classification="recommendation",
+                        evidence_ids=[],
+                    )
+                ],
+            },
+        },
+        _evidence(),
+        semantic_batch_validator=semantic_batch,
+    )
+
+    assert calls == []
+    assert package.results[0].candidate.factual is False
+    assert package.readiness_status == "awaiting_review"

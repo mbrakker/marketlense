@@ -136,15 +136,33 @@ def test_claim_repair_proposal_rejects_removal_for_non_atomic_target():
     assert captured.value.context["reason"] == "claim_proposal_removal_not_permitted"
 
 
-def test_claim_repair_proposal_allows_existing_soft_copy_leaf_removal():
+def test_claim_repair_proposal_allows_planner_authorized_soft_copy_leaf_removal():
+    execution = _execution()
+    execution.target = RegenerationTarget(
+        target_section="expert_comment",
+        issues=execution.target.issues,
+        repair_action="REMOVE_CLAIM",
+        allowed_paths=execution.target.allowed_paths,
+    )
     proposal = _validated_claim_repair_proposal(
         _proposal("remove"),
-        execution=_execution(),
+        execution=execution,
         grounding_package={"evidence_ids": [], "quarantined_evidence_ids": []},
     )
 
     assert proposal.action == "remove"
     assert proposal.evidence_ids_used == []
+
+
+def test_claim_repair_proposal_cannot_remove_under_regenerate_item():
+    with pytest.raises(AppError) as captured:
+        _validated_claim_repair_proposal(
+            _proposal("remove"),
+            execution=_execution(),
+            grounding_package={"evidence_ids": [], "quarantined_evidence_ids": []},
+        )
+
+    assert captured.value.context["reason"] == "claim_proposal_removal_not_permitted"
 
 
 def test_claim_repair_proposal_treats_exact_replacement_as_a_no_op():

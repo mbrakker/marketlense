@@ -657,12 +657,17 @@ def _full_chain_chat_response_factory(
                     )
                 )
                 if schema_name == "regeneration_claim_repair_proposal_v1":
-                    # This fixture exercises the explicit safe-removal path:
-                    # the isolated proposal authorizes removal because its
-                    # generic replacement is not a retained source-backed fact.
+                    # Removal is valid only after the planner explicitly
+                    # selects REMOVE_CLAIM. Earlier regeneration/rebinding
+                    # strategies must abstain and let the bounded ladder
+                    # advance to that deterministic safe-removal step.
                     proposal = {
                         "schema_version": "1.0",
-                        "action": "remove",
+                        "action": (
+                            "remove"
+                            if repair_context.get("repair_action") == "REMOVE_CLAIM"
+                            else "abstain"
+                        ),
                         "replacement_text": "",
                         "evidence_ids_used": [],
                     }

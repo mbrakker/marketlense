@@ -36,6 +36,7 @@ from src.generators.validation.metrics import validate_insight_metrics
 from src.generators.validation.numbers import validate_new_numbers
 from src.generators.validation.regeneration_candidate import (
     CandidateIntegrityResult,
+    _source_span_is_compatible,
     _verify_derived_artifact_roots,
     retained_claim_repair_issues,
     validate_regeneration_candidate,

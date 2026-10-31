@@ -39,6 +39,7 @@ __all__ = [
     "_build_target",
     "_issue_grounding",
     "_normalize_regeneration_issue",
+    "_stable_target_strategy_fingerprint",
     "_target_prompt_namespaces",
     "_target_section",
     "_target_steps",
@@ -546,7 +547,16 @@ def _allowed_paths(
         return sorted(set(family_roots))
 
     if repair_action in {"REMOVE_CLAIM", "ABSTAIN"}:
-        path_issues = issues
+        # Safe removal only needs the exact retained leaf identified by a
+        # blocking issue.  A companion warning (for example, the generic
+        # artifact-quality warning emitted for the same soft-copy sentence)
+        # often has no claim identity of its own and must not make an
+        # otherwise deterministic removal target appear unresolved.
+        path_issues = [
+            issue
+            for issue in issues
+            if str(issue.severity or "").strip().lower() == "error"
+        ] or issues
     else:
         blocking_issues = [
             issue
@@ -1346,6 +1356,16 @@ def _build_target(
             and not candidate_paths
         ):
             continue
+        if (
+            _stable_target_strategy_fingerprint(
+                target_key,
+                strategy,
+                strategy_evidence_ids,
+                candidate_paths,
+            )
+            in rejected
+        ):
+            continue
         if action == "CORRECT_PROTECTED_FACT" and not _canonical_metric_copy_changes(
             candidate_paths, artifacts or {}
         ):
@@ -1375,6 +1395,21 @@ def _build_target(
             {value for issue in ordered_issues for value in issue.excluded_evidence_ids}
         ),
     )
+
+
+def _stable_target_strategy_fingerprint(
+    target_key: str,
+    strategy: str,
+    evidence_ids: Sequence[str],
+    allowed_paths: Sequence[str],
+) -> str:
+    """Identify a strategy without volatile validation-message fingerprints."""
+
+    identity = [
+        f"target:{str(target_key or '').strip()}",
+        f"paths:{'|'.join(sorted(str(path).strip() for path in allowed_paths))}",
+    ]
+    return repair_strategy_fingerprint(identity, strategy, list(evidence_ids))
 
 
 def _summary_issue_groups(

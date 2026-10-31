@@ -859,7 +859,11 @@ def _validate_factual_soft_copy_claim(
             )
             continue
         for span in claimed_spans:
-            if canonical and not _source_span_is_compatible(span, canonical):
+            if canonical and not _source_span_is_compatible(
+                span,
+                canonical,
+                require_source_location=require_source_span_provenance,
+            ):
                 issues.append(
                     _source_page_issue(
                         _EvidenceRecord(
@@ -876,10 +880,25 @@ def _validate_factual_soft_copy_claim(
 
 
 def _source_span_is_compatible(
-    claimed: dict[str, Any], canonical: Sequence[dict[str, Any]]
+    claimed: dict[str, Any],
+    canonical: Sequence[dict[str, Any]],
+    *,
+    require_source_location: bool = False,
 ) -> bool:
     fields = ("source_pack", "page", "section_id", "start_offset", "end_offset")
+    location_fields = ("page", "section_id", "start_offset", "end_offset")
+
+    def has_location(span: dict[str, Any]) -> bool:
+        return any(
+            field in span and span[field] not in (None, "")
+            for field in location_fields
+        )
+
+    if require_source_location and not has_location(claimed):
+        return False
     for reference in canonical:
+        if require_source_location and not has_location(reference):
+            continue
         if all(
             field not in claimed
             or field not in reference

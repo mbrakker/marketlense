@@ -934,7 +934,12 @@ def _evidence_packs() -> dict:
         "findings": {
             "findings": [
                 {"id": "f1", "evidence": "Evidence text", "text": "Finding text"},
-                {"id": "f2", "evidence": "Evidence text 2", "text": "Second finding"},
+                {
+                    "id": "f2",
+                    "evidence": "Evidence text 2",
+                    "text": "Second finding",
+                    "page": 2,
+                },
             ]
         },
         "quote_candidates": {

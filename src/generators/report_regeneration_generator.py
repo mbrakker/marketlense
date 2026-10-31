@@ -2482,12 +2482,30 @@ def _render_regeneration_model(
     claim_action = ""
     claim_replacement_text = ""
     if atomic_claim_repair:
-        proposal = _validated_claim_repair_proposal(
-            result.get("claim_repair_proposal"),
-            execution=execution,
-            grounding_package=decision_grounding,
-            target=active_target,
-        )
+        try:
+            proposal = _validated_claim_repair_proposal(
+                result.get("claim_repair_proposal"),
+                execution=execution,
+                grounding_package=decision_grounding,
+                target=active_target,
+            )
+        except AppError as exc:
+            rejection_reason = _provider_rejection_reason(exc)
+            if not rejection_reason:
+                raise
+            decision = _record_claim_execution(
+                execution,
+                target=active_target,
+                action="ABSTAIN",
+                strategy=f"provider_rejected:{rejection_reason}",
+            )
+            return {
+                "_claim_repair_action": "abstain",
+                "_claim_repair_replacement_text": "",
+                "_claim_repair_no_op": False,
+                "_provider_rejection_reason": rejection_reason,
+                "_repair_decision": decision,
+            }
         claim_action = proposal.action
         claim_replacement_text = proposal.replacement_text
         if proposal.action in {"abstain", "remove"}:
@@ -2530,13 +2548,43 @@ def _render_regeneration_model(
             target=active_target,
         )
     else:
-        decision = _validated_repair_decision(
-            result.get("repair_decision"),
-            execution=execution,
-            current_artifacts=_current_repair_artifacts(execution.state),
-            grounding_package=decision_grounding,
-            target=active_target,
-        )
+        try:
+            decision = _validated_repair_decision(
+                result.get("repair_decision"),
+                execution=execution,
+                current_artifacts=_current_repair_artifacts(execution.state),
+                grounding_package=decision_grounding,
+                target=active_target,
+            )
+        except AppError as exc:
+            rejection_reason = _provider_rejection_reason(exc)
+            if not rejection_reason:
+                raise
+            root_key = {
+                "report_vs/artifacts/regenerate/summary": "summary",
+                "report_vs/artifacts/regenerate/insights_candidates": (
+                    "insights_candidates"
+                ),
+                "report_vs/artifacts/regenerate/insights_final": "insights_final",
+                "report_vs/artifacts/regenerate/quotes": "quotes_final",
+                "report_vs/artifacts/regenerate/expert_comment": "expert_comment",
+                "report_vs/artifacts/regenerate/linkedin_post": "linkedin_post",
+            }.get(namespace)
+            if not root_key:
+                raise
+            decision = _record_claim_execution(
+                execution,
+                target=active_target,
+                action="ABSTAIN",
+                strategy=f"provider_rejected:{rejection_reason}",
+            )
+            return {
+                root_key: deepcopy(
+                    _current_repair_artifacts(execution.state)[root_key]
+                ),
+                "_repair_decision": decision,
+                "_provider_rejection_reason": rejection_reason,
+            }
     patched_artifacts = _apply_repair_decision_patch(
         current_artifacts=_current_repair_artifacts(execution.state),
         decision=decision,
@@ -2883,6 +2931,34 @@ def _repair_decision_error(
     )
 
 
+_EXPECTED_PROVIDER_REJECTION_REASONS = frozenset(
+    {
+        "claim_proposal_missing",
+        "claim_proposal_contract_invalid",
+        "claim_proposal_action_payload_invalid",
+        "claim_proposal_replacement_missing",
+        "claim_proposal_removal_not_permitted",
+        "evidence_not_retained_or_quarantined",
+        "decision_missing",
+        "planner_metadata_in_provider_decision",
+        "decision_contract_invalid",
+        "patch_operation_unsupported",
+        "duplicate_patch_path",
+        "duplicate_evidence_identity",
+        "changed_path_outside_allowed_paths",
+        "patch_target_unresolved_or_ambiguous",
+        "patch_target_not_atomic",
+        "patch_value_over_broad",
+    }
+)
+
+
+def _provider_rejection_reason(error: AppError) -> str:
+    context = error.context if isinstance(error.context, dict) else {}
+    reason = str(context.get("reason") or "").strip()
+    return reason if reason in _EXPECTED_PROVIDER_REJECTION_REASONS else ""
+
+
 def _record_claim_execution(
     execution: _RegenerationHandlerExecution,
     *,
@@ -2907,10 +2983,20 @@ def _record_claim_execution(
     protected_fields = _required_repair_protected_fields(
         _current_repair_artifacts(execution.state), target
     )
+    normalized_strategy = str(strategy or "").strip()
+    planned_strategy = str(target.repair_strategy or "").strip()
+    if (
+        action == "ABSTAIN"
+        and planned_strategy
+        and normalized_strategy
+        and normalized_strategy not in {"safe_abstain", "safe_removal"}
+        and not normalized_strategy.startswith(f"{planned_strategy}:")
+    ):
+        normalized_strategy = f"{planned_strategy}:{normalized_strategy}"
     decision = RepairDecision(
         diagnosed_failure_class=failure_class,
         repair_action=action,
-        repair_strategy=strategy,
+        repair_strategy=normalized_strategy,
         evidence_ids_used=list(dict.fromkeys(str(value) for value in evidence_ids)),
         protected_fields=list(protected_fields or []),
         changed_paths=list(dict.fromkeys(str(value) for value in changed_paths)),
@@ -2988,20 +3074,10 @@ def _validated_claim_repair_proposal(
             raise _repair_decision_error(
                 execution, "claim_proposal_action_payload_invalid"
             )
-        if action == "remove" and target.repair_action not in {
-            "REMOVE_CLAIM",
-            "ABSTAIN",
-        }:
-            scoped_soft_copy_removal = (
-                target.target_section in {"summary", "expert_comment", "linkedin_post"}
-                and len(target.allowed_paths) == 1
-                and re.fullmatch(r".+\[claim_index=\d+\]", target.allowed_paths[0])
-                is not None
+        if action == "remove" and target.repair_action != "REMOVE_CLAIM":
+            raise _repair_decision_error(
+                execution, "claim_proposal_removal_not_permitted"
             )
-            if not scoped_soft_copy_removal:
-                raise _repair_decision_error(
-                    execution, "claim_proposal_removal_not_permitted"
-                )
         return _ClaimRepairProposal(
             action=action,
             replacement_text="",
@@ -5615,6 +5691,13 @@ def _regenerate_one_final_insight(
             "final_insight_target_count": 1,
         },
     )
+    executed_decision = result.get("_repair_decision")
+    if (
+        isinstance(executed_decision, RepairDecision)
+        and executed_decision.repair_action == "ABSTAIN"
+    ):
+        execution.state.prompt_namespaces.append(namespace)
+        return True
     regenerated = normalize_artifact_insights(
         result.get("insights_final"),
         prefix="insight",

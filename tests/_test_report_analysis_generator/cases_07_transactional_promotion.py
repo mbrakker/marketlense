@@ -13,6 +13,7 @@ from src.contracts.report_analysis import (
 from src.generators.claim_validation_generator import claim_validation_package_hash
 from src.generators.validation.regeneration_candidate import CandidateIntegrityResult
 from src.orchestrators._report_analysis_orchestrator.validation import (
+    _attempt_strategy_fingerprint,
     _candidate_audit,
     _load_promoted_claim_validation_for_reuse,
     _run_validation_regeneration_loop,
@@ -445,6 +446,61 @@ def test_candidate_audit_records_executed_evidence_without_planner_fallback(
     )
 
     assert audit.selected_evidence_ids == expected
+
+
+def test_executed_decision_metadata_overrides_planner_response_fields(tmp_path) -> None:
+    runtime = _runtime(tmp_path)
+    current = _artifacts_without_retained_claims(
+        summary={"tldr": "Original", "claim_evidence_map": []}
+    )
+    candidate = deepcopy(current)
+    plan = SimpleNamespace(
+        targets=[
+            SimpleNamespace(
+                repair_action="REGENERATE_ITEM",
+                repair_strategy="current_evidence",
+                allowed_paths=["summary.tldr"],
+                selected_evidence_ids=["planner-f1"],
+                quarantined_evidence_ids=[],
+                issues=[],
+            )
+        ]
+    )
+    decision = RepairDecision(
+        diagnosed_failure_class="grounding",
+        repair_action="ABSTAIN",
+        repair_strategy="current_evidence:provider_rejected:evidence_not_retained_or_quarantined",
+        evidence_ids_used=[],
+    )
+    response = SimpleNamespace(
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        selected_evidence_ids=["planner-f1"],
+        deterministic_mutation_paths=[],
+        repair_decisions=[decision],
+    )
+
+    audit = _candidate_audit(
+        runtime=runtime,
+        attempt_index=1,
+        transformation_scope=["summary"],
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        current_artifacts_path="current.json",
+        candidate_artifacts_path="candidate.json",
+        candidate_result=CandidateIntegrityResult(issues=[], evidence_lineage=[]),
+        plan=plan,
+        regeneration_response=response,
+    )
+
+    assert audit.repair_action == "ABSTAIN"
+    assert audit.repair_strategy == (
+        "current_evidence:provider_rejected:evidence_not_retained_or_quarantined"
+    )
+    assert audit.selected_evidence_ids == []
+    assert _attempt_strategy_fingerprint(
+        plan, response
+    ) != _attempt_strategy_fingerprint(plan, SimpleNamespace(repair_decisions=[]))
 
 
 __all__ = [

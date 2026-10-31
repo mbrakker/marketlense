@@ -283,6 +283,11 @@ def test_a21_full_chain_preserves_grounding_disposition(
             else ["expert_comment"]
         )
         assert regeneration_audit["transformation_scope"] == expected_scope
+        if reproduce_ias_soft_copy:
+            assert regeneration_audit["repair_action"] == "ABSTAIN"
+            assert regeneration_audit["repair_strategy"].startswith(
+                "current_evidence:claim_proposal_abstain"
+            )
         assert _UNSUPPORTED_SOFT_COPY_CLAIM not in artifacts["expert_comment"]
         if reproduce_ias_soft_copy:
             initial_by_family = {}
@@ -375,7 +380,31 @@ def test_a21_full_chain_preserves_grounding_disposition(
                         encoding="utf-8"
                     )
                 )["status"]
+                == "fail"
+            )
+            assert (
+                json.loads(
+                    (analysis_dir / "validation_regen_candidate_2.json").read_text(
+                        encoding="utf-8"
+                    )
+                )["status"]
+                == "fail"
+            )
+            assert (
+                json.loads(
+                    (analysis_dir / "validation_regen_candidate_3.json").read_text(
+                        encoding="utf-8"
+                    )
+                )["status"]
                 == "pass"
+            )
+            assert (
+                json.loads(
+                    (analysis_dir / "regeneration_candidate_audit_3.json").read_text(
+                        encoding="utf-8"
+                    )
+                )["repair_action"]
+                == "REMOVE_CLAIM"
             )
             assert (
                 json.loads(
@@ -395,9 +424,11 @@ def test_a21_full_chain_preserves_grounding_disposition(
             )
             for family in ("expert_comment", "linkedin_post"):
                 prompt = artifacts["_cache"]["prompts"][
-                    f"report_vs/artifacts/regenerate/{family}"
+                    f"report_vs/artifacts/{family}"
                 ]
-                assert prompt["namespace"] == f"report_vs/artifacts/regenerate/{family}"
+                assert prompt["dependency_manifest"]["namespace"] == (
+                    f"report_vs/artifacts/{family}"
+                )
                 assert prompt["execution_identity"]
                 assert prompt["prompt_content_hash"]
         assert entity.first_pass is False
