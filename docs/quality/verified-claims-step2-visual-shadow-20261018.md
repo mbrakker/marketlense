@@ -7921,7 +7921,7 @@ reconciled here rather than restored to deterministic semantic acceptance.
 | Cross-report evidence cap | Source/order truncation could make one report consume the semantic-synthesis budget and hide other reports. | The existing total budget now uses stable round-robin report diversity and records `unassessed_overflow` plus `coverage_status`; retrieval remains ordering telemetry only. | Cross-report assembly/signal regressions cover overflow, diversity, provenance, and incomplete coverage. |
 
 The affected focused command completed with **428 passed, 7 deselected in
-12.00s**. Changed-file Ruff and formatting passed; full-repository mypy passed
+13.60s**. Changed-file Ruff and formatting passed; full-repository mypy passed
 with **0 tracked errors across 786 source files**; and the prompt-fixture gate
 passed. The prompt corpus was not changed by this slice: current and baseline
 totals remain **113,206 tokens / `$0.024974`**, including validation
