@@ -247,9 +247,7 @@ def test_expert_context_retains_composite_metric_observation_boundaries() -> Non
     assert implication["metric"]["observations"] == observations
 
 
-def test_activate_cohort_relationship_validator_rejects_top_cohort_value_swaps() -> (
-    None
-):
+def test_activate_cohort_relationship_semantics_are_deferred_to_model() -> None:
     cases = (
         (
             VIDEO_ID,
@@ -281,9 +279,10 @@ def test_activate_cohort_relationship_validator_rejects_top_cohort_value_swaps()
         assert "public_editorial_quality.metric_label_relationship" not in {
             issue.rule_id for issue in accepted.issues
         }
-        assert "public_editorial_quality.metric_label_relationship" in {
+        assert "public_editorial_quality.metric_label_relationship" not in {
             issue.rule_id for issue in rejected.issues
         }
+        assert accepted.status == rejected.status == "pass"
 
 
 def test_complete_structured_metric_binding_is_retained_with_its_source() -> None:

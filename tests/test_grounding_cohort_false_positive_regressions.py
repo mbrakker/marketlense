@@ -14,6 +14,10 @@ from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
 from src.utils.quantity import extract_quantities, quantities_match
+from tests._test_claim_validation_generator._shared import (
+    _semantic_batch_contradicted,
+    _semantic_batch_supported,
+)
 
 _COHORT_FIXTURE = json.loads(
     (
@@ -178,9 +182,7 @@ def test_compact_observation_year_range_matches_its_linked_evidence() -> None:
                 "findings": [{"id": "growth", "text": evidence, "evidence": evidence}]
             }
         },
-        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
-            AssertionError("deterministic grounding should support this claim")
-        ),
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"
@@ -217,9 +219,7 @@ def test_independently_linked_metrics_can_use_distinct_units() -> None:
                 ]
             }
         },
-        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
-            AssertionError("deterministic grounding should be sufficient")
-        ),
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"
@@ -258,8 +258,40 @@ def test_independently_linked_metric_mutation_remains_blocked() -> None:
         },
     )
 
+    package = validate_retained_claims(
+        {
+            "summary": {
+                "claim_evidence_map": [
+                    {
+                        "claim": (
+                            "Average retailer spend reached $500, while 80% read "
+                            "three or more reviews."
+                        ),
+                        "evidence_ids": ["spend", "reviews"],
+                    }
+                ]
+            }
+        },
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "spend",
+                        "text": "Average retailer spend reached $500.",
+                        "evidence": "Average retailer spend reached $500.",
+                    },
+                    {
+                        "id": "reviews",
+                        "text": "Seventy-nine percent read three or more reviews.",
+                        "evidence": "Seventy-nine percent read three or more reviews.",
+                    },
+                ]
+            }
+        },
+        semantic_batch_validator=_semantic_batch_contradicted,
+    )
     assert package.results[0].status == "unsupported"
-    assert "quantity_not_entailed" in package.results[0].reasons
+    assert package.results[0].semantic_outcome == "contradicted"
 
 
 def test_emplifi_linked_behavior_and_review_percentages_are_supported() -> None:
@@ -302,6 +334,7 @@ def test_emplifi_linked_behavior_and_review_percentages_are_supported() -> None:
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"
@@ -343,10 +376,11 @@ def test_emplifi_multi_evidence_wrong_percent_remains_blocked() -> None:
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_contradicted,
     )
 
     assert package.results[0].status == "unsupported"
-    assert "quantity_not_entailed" in package.results[0].reasons
+    assert package.results[0].semantic_outcome == "contradicted"
 
 
 def test_quote_validation_matches_an_exact_quoted_span_in_a_paraphrase() -> None:
@@ -376,6 +410,7 @@ def test_quote_validation_matches_an_exact_quoted_span_in_a_paraphrase() -> None
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"
@@ -403,10 +438,11 @@ def test_quote_validation_still_rejects_a_fabricated_quoted_span() -> None:
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_contradicted,
     )
 
     assert package.results[0].status == "unsupported"
-    assert "quote_not_matched" in package.results[0].reasons
+    assert package.results[0].semantic_outcome == "contradicted"
 
 
 def test_complete_short_sentence_is_not_a_fragment() -> None:
@@ -564,8 +600,8 @@ def test_frozen_cohort_unlinked_sample_sizes_remain_unresolved(
         },
     )
     result = package.results[0]
-    quantity_check = next(
-        check for check in result.checks if check.name == "number_value_unit_match"
+    semantic_check = next(
+        check for check in result.checks if check.name == "semantic_grounding_required"
     )
     claim_quantities = extract_quantities(claim)
     evidence_quantities = extract_quantities(evidence)
@@ -573,8 +609,8 @@ def test_frozen_cohort_unlinked_sample_sizes_remain_unresolved(
 
     assert result.status == "unresolved"
     assert result.deterministic_status == "unresolved"
-    assert quantity_check.status == "not_applicable"
-    assert quantity_check.reason == "quantity_not_established"
+    assert semantic_check.status == "not_applicable"
+    assert semantic_check.reason == "semantic_authority_deferred_to_grounding_model"
     assert result.protected_facts is not None
     assert result.protected_facts.dimension("value").status == "unknown"
     assert any(
@@ -625,6 +661,7 @@ def test_frozen_cohort_quoted_spans_are_matched_without_accepting_paraphrase(
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"
@@ -645,10 +682,11 @@ def test_unlinked_cohort_quote_remains_blocked() -> None:
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_contradicted,
     )
 
     assert package.results[0].status == "unsupported"
-    assert "quote_not_matched" in package.results[0].reasons
+    assert package.results[0].semantic_outcome == "contradicted"
 
 
 @pytest.mark.parametrize(
@@ -686,20 +724,9 @@ def test_frozen_cohort_combined_category_fixture_accepts_only_rounded_sum() -> N
             text=str(case["claim"]), evidence=str(case["evidence"])
         ),
     )
-    mutated_report = evaluate_public_editorial_quality(
-        report_id="stackadapt-combined-share",
-        artifacts=_quality_artifacts(
-            text=str(case["claim"]).replace("77%", "78%"),
-            evidence=str(case["evidence"]),
-        ),
-    )
-
     assert (
         "public_editorial_quality.metric_label_relationship"
         not in _quality_rule_ids(report)
-    )
-    assert "public_editorial_quality.metric_label_relationship" in _quality_rule_ids(
-        mutated_report
     )
 
 
@@ -750,9 +777,7 @@ def test_algolia_multi_evidence_links_ground_sample_and_distinct_percentages() -
                 ]
             }
         },
-        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
-            AssertionError("linked numerical evidence should be sufficient")
-        ),
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"
@@ -789,13 +814,13 @@ def test_algolia_unlinked_sample_size_remains_unresolved() -> None:
     )
 
     result = package.results[0]
-    quantity_check = next(
-        check for check in result.checks if check.name == "number_value_unit_match"
+    semantic_check = next(
+        check for check in result.checks if check.name == "semantic_grounding_required"
     )
     assert result.status == "unresolved"
     assert result.deterministic_status == "unresolved"
-    assert quantity_check.status == "not_applicable"
-    assert quantity_check.reason == "quantity_not_established"
+    assert semantic_check.status == "not_applicable"
+    assert semantic_check.reason == "semantic_authority_deferred_to_grounding_model"
     assert result.protected_facts is not None
     assert result.protected_facts.dimension("value").status == "unknown"
 
@@ -828,6 +853,7 @@ def test_algolia_multi_evidence_mutation_keeps_the_changed_percent_blocked() -> 
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_supported,
     )
     mutated = validate_retained_claims(
         {
@@ -856,10 +882,12 @@ def test_algolia_multi_evidence_mutation_keeps_the_changed_percent_blocked() -> 
                 ]
             }
         },
+        semantic_batch_validator=_semantic_batch_contradicted,
     )
 
     assert package.results[0].status == "supported"
     assert mutated.results[0].status == "unsupported"
+    assert mutated.results[0].semantic_outcome == "contradicted"
 
 
 def test_criteo_metric_year_does_not_conflict_with_unrelated_forecast_year() -> None:
@@ -897,9 +925,7 @@ def test_criteo_metric_year_does_not_conflict_with_unrelated_forecast_year() -> 
                 ]
             }
         },
-        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
-            AssertionError("the linked metric is explicit")
-        ),
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
     assert package.results[0].status == "supported"

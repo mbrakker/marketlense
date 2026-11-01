@@ -248,6 +248,9 @@ def test_legacy_unfiltered_prompt_family_cannot_restore_findings(tmp_path):
             client_calls.append(ctx.task_id)
             return client.openai_respond_with_vector_store(request, ctx)
 
+        def openai_chat_json(self, request, ctx):
+            return client.openai_chat_json(request, ctx)
+
     filtered_materializations = []
 
     def materialize_and_capture(request, ctx):

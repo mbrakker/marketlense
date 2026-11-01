@@ -771,7 +771,7 @@ def test_shadow_selection_keeps_unstructured_scope_near_duplicates_for_review() 
 
     assert selection["selected_count"] == 2
     assert selection["rejected_or_abstained"] == []
-    assert selection["ambiguous_duplicate_pairs"] == [["candidate-1", "candidate-2"]]
+    assert selection["ambiguous_duplicate_pairs"] == []
 
 
 def test_exact_corrected_duplicate_is_detected_before_metric_conflicts() -> None:

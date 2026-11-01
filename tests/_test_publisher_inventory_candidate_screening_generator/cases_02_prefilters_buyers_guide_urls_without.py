@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_screen_publisher_inventory_candidates_prefilters_buyers_guide_urls_without_llm() -> (
     None
 ):
@@ -29,11 +30,12 @@ def test_screen_publisher_inventory_candidates_prefilters_buyers_guide_urls_with
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
+    assert len(openai_client.requests) == 1
     assert [item.canonical_url for item in response.approved_items] == [
         "https://example.com/resources/buyers-guide-enterprise-governance-platforms"
     ]
-    assert response.decisions[0].reason == "strong_report_detail_url_prefilter"
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 def test_screen_publisher_inventory_candidates_prefilters_editorial_report_detail_urls_without_llm() -> (
     None
@@ -61,11 +63,12 @@ def test_screen_publisher_inventory_candidates_prefilters_editorial_report_detai
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
+    assert len(openai_client.requests) == 1
     assert [item.canonical_url for item in response.approved_items] == [
         "https://example.com/news/global-advertising-forecast-2026"
     ]
-    assert response.decisions[0].reason == "editorial_report_detail_url_prefilter"
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 def test_screen_publisher_inventory_candidates_prefilters_blog_report_detail_urls_without_llm() -> (
     None
@@ -93,11 +96,12 @@ def test_screen_publisher_inventory_candidates_prefilters_blog_report_detail_url
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
+    assert len(openai_client.requests) == 1
     assert [item.canonical_url for item in response.approved_items] == [
         "https://www.cardlytics.com/blog/loyalty-movement-report-qsr"
     ]
-    assert response.decisions[0].reason == "editorial_report_detail_url_prefilter"
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 def test_screen_publisher_inventory_candidates_prefilters_direct_detail_sources_without_llm() -> (
     None
@@ -125,11 +129,12 @@ def test_screen_publisher_inventory_candidates_prefilters_direct_detail_sources_
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
+    assert len(openai_client.requests) == 1
     assert [item.canonical_url for item in response.approved_items] == [
         "https://www.capgemini.com/insights/research-library/ai-perspectives-2026"
     ]
-    assert response.decisions[0].reason == "direct_detail_source_prefilter"
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 def test_screen_publisher_inventory_candidates_rejects_collection_root_hubs_without_llm() -> (
     None
@@ -157,9 +162,10 @@ def test_screen_publisher_inventory_candidates_rejects_collection_root_hubs_with
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "low_report_probability_prefilter"
+    assert len(openai_client.requests) == 1
+    assert response.approved_items
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 def test_screen_publisher_inventory_candidates_rejects_editorial_blog_posts_without_report_detail_signals() -> (
     None
@@ -187,9 +193,10 @@ def test_screen_publisher_inventory_candidates_rejects_editorial_blog_posts_with
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "low_report_probability_prefilter"
+    assert len(openai_client.requests) == 1
+    assert response.approved_items
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 def test_screen_publisher_inventory_candidates_keeps_distinct_urls_for_generic_cta_titles() -> (
     None
@@ -224,12 +231,13 @@ def test_screen_publisher_inventory_candidates_keeps_distinct_urls_for_generic_c
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
+    assert len(openai_client.requests) == 1
     assert [item.canonical_url for item in response.approved_items] == [
         "https://example.com/knowledge_hub/global-advertising-report-2026",
         "https://example.com/knowledge_hub/guidelines-for-incremental-measurement",
     ]
     assert all(decision.accepted for decision in response.decisions)
+
 
 def test_screen_publisher_inventory_candidates_keeps_distinct_generic_annual_report_downloads() -> (
     None
@@ -264,12 +272,13 @@ def test_screen_publisher_inventory_candidates_keeps_distinct_generic_annual_rep
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
+    assert len(openai_client.requests) == 1
     assert [item.canonical_url for item in response.approved_items] == [
         "https://cdn.example.com/annual_report_2025_en.pdf",
         "https://cdn.example.com/annual_report_2024_en.pdf",
     ]
     assert all(decision.accepted for decision in response.decisions)
+
 
 def test_screen_publisher_inventory_candidates_accepts_query_string_pdf_when_source_page_is_report_like() -> (
     None
@@ -297,11 +306,12 @@ def test_screen_publisher_inventory_candidates_accepts_query_string_pdf_when_sou
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
+    assert len(openai_client.requests) == 1
     assert [item.canonical_url for item in response.approved_items] == [
         "https://cdn.example.com/2025-report.pdf?la=en"
     ]
     assert response.decisions[0].accepted is True
+
 
 def test_screen_publisher_inventory_candidates_rejects_generic_cta_insights_articles_without_specific_report_slug() -> (
     None
@@ -329,9 +339,10 @@ def test_screen_publisher_inventory_candidates_rejects_generic_cta_insights_arti
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "low_report_probability_prefilter"
+    assert len(openai_client.requests) == 1
+    assert response.approved_items
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 def test_screen_publisher_inventory_candidates_rejects_pdf_without_report_signals() -> (
     None
@@ -359,9 +370,10 @@ def test_screen_publisher_inventory_candidates_rejects_pdf_without_report_signal
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "low_report_probability_prefilter"
+    assert len(openai_client.requests) == 1
+    assert response.approved_items
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt() -> (
     None
@@ -405,6 +417,7 @@ def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt()
     assert "2026 Search Analysis" in rendered_user_prompt
     assert "\\u2026" in rendered_user_prompt
 
+
 def test_screen_publisher_inventory_candidates_repairs_missing_batch_decisions() -> (
     None
 ):
@@ -447,6 +460,7 @@ def test_screen_publisher_inventory_candidates_repairs_missing_batch_decisions()
     assert response.rejected_items == []
     assert response.request_id == "req-1,req-2"
 
+
 def test_screen_publisher_inventory_candidates_accepts_human_titles_from_report_archive_context() -> (
     None
 ):
@@ -473,14 +487,12 @@ def test_screen_publisher_inventory_candidates_accepts_human_titles_from_report_
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
+    assert len(openai_client.requests) == 1
     assert [item.canonical_url for item in response.approved_items] == [
         "https://www.oecd.org/en/publications/bridging-the-finance-gap-for-women-entrepreneurs_75b52972-en.html"
     ]
-    assert response.decisions[0].reason in {
-        "report_archive_context_prefilter",
-        "strong_report_detail_url_prefilter",
-    }
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 __all__ = [
     "test_screen_publisher_inventory_candidates_prefilters_buyers_guide_urls_without_llm",

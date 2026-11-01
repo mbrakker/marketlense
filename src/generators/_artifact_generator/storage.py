@@ -807,28 +807,27 @@ def _soft_copy_claim_provenance_payload(
         elif text:
             retained = [claim for claim in claims if claim.artifact_family == family]
             if (
-                not isinstance(declared, list) or not declared
-            ) and not retained_soft_copy_claims_cover_text(text=text, claims=retained):
+                (not isinstance(declared, list) or not declared)
+                and not retained_soft_copy_claims_cover_text(text=text, claims=retained)
+                and regeneration_attempt <= 0
+            ):
                 # A regeneration candidate may contain newly generated
                 # public prose without the model's binding payload. Keep
                 # the candidate structurally serializable so the
                 # candidate validator can reject and roll it back. The
                 # canonical (non-candidate) path remains strict below.
-                if regeneration_attempt <= 0:
-                    build_soft_copy_claim_provenance(
-                        artifact_family=family,
-                        text=text,
-                        declared_claims=declared,
-                        evidence_span_index=span_index,
-                        producing_prompt_identity=dict(
-                            prompt_identities.get(family) or {}
-                        ),
-                        generation_attempt=max(
-                            1, int(generation_attempts.get(family) or 1)
-                        ),
-                        regeneration_attempt=regeneration_attempt,
-                    )
-            else:
+                build_soft_copy_claim_provenance(
+                    artifact_family=family,
+                    text=text,
+                    declared_claims=declared,
+                    evidence_span_index=span_index,
+                    producing_prompt_identity=dict(prompt_identities.get(family) or {}),
+                    generation_attempt=max(
+                        1, int(generation_attempts.get(family) or 1)
+                    ),
+                    regeneration_attempt=regeneration_attempt,
+                )
+            elif isinstance(declared, list) and declared:
                 # A complete prompt-family output is re-finalized as one
                 # canonical public surface. Its model-declared bindings
                 # therefore replace every earlier retained claim for that
@@ -1727,14 +1726,14 @@ def _select_key_figure_metrics(
         metric_id = _s(metric.get("metric_id")).strip()
         if metric_id and metric_id in seen_metric_ids:
             continue
-        if metric_id:
-            seen_metric_ids.add(metric_id)
         if not (
             _s(metric.get("label")).strip()
             and _s(metric.get("value")).strip()
             and _s(metric.get("evidence_id")).strip()
         ):
             continue
+        if metric_id:
+            seen_metric_ids.add(metric_id)
         selected.append(metric)
     return selected
 

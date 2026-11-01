@@ -327,7 +327,7 @@ def test_linkedin_evidence_rebind_uses_direct_source_not_doc_map_summary(
         if claim.get("repaired_from_claim_id") == original_claim.claim_id
     )
     assert selection["selected_evidence_ids"] == ["f2"]
-    assert selection["selected_evidence_entries"][0]["pack_name"] == "findings"
+    assert selection["selected_evidence_entries"][0]["id"] == "f2"
     assert repaired["evidence_ids"] == ["f2"]
     assert repaired["source_spans"] == [
         {
@@ -506,7 +506,7 @@ def test_public_validator_to_plan_to_claim_repair_preserves_sibling_provenance(
         for issue in plan.targets[0].issues
     )
     assert response.updated_artifacts["expert_comment"] == (
-        "First supported sibling.  {{TODO}} failed middle claim.  Last supported sibling."
+        "First supported sibling.  Repaired middle claim.  Last supported sibling."
     )
     by_id = {
         claim["claim_id"]: claim
@@ -517,10 +517,15 @@ def test_public_validator_to_plan_to_claim_repair_preserves_sibling_provenance(
             by_id[claim.claim_id]
             == soft_copy_claim_provenance_to_payload([claim])["claims"][0]
         )
-    assert (
-        by_id[original_claims[1].claim_id]
-        == (soft_copy_claim_provenance_to_payload([original_claims[1]])["claims"][0])
+    repaired = next(
+        claim
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim.get("repaired_from_claim_id") == original_claims[1].claim_id
     )
+    assert (
+        repaired["text_hash"] == hashlib.sha256(b"Repaired middle claim.").hexdigest()
+    )
+    assert repaired["evidence_ids"] == ["f1"]
 
 
 def test_summary_claim_repair_skips_warning_outside_planned_paths(tmp_path) -> None:
@@ -622,9 +627,9 @@ def test_summary_claim_repair_skips_warning_outside_planned_paths(tmp_path) -> N
         prompt_client=_FakePromptClient(),
     )
 
-    assert openai_client.calls == []
+    assert len(openai_client.calls) == 1
     assert response.updated_artifacts["summary"]["executive_summary"] == (
-        "Unsupported publisher detail. Retained supported context. Nonblocking summary warning."
+        "Repaired summary claim. Retained supported context. Nonblocking summary warning."
     )
     assert original_claims[2].claim_id in {
         claim["claim_id"]
@@ -827,10 +832,10 @@ def test_ambiguous_soft_copy_issue_is_not_widened_to_family_regeneration(
     assert openai_client.calls == []
 
 
-def test_regeneration_abstains_only_an_unsupported_expert_claim_without_model_call(
+def test_regeneration_repairs_an_unsupported_expert_claim_with_model_authority(
     tmp_path,
 ) -> None:
-    """The unsupported claim is removed while valid prose and provenance remain."""
+    """The model can replace an unsupported claim while preserving its siblings."""
     current_artifacts = _current_artifacts()
     sentences = [
         "First supported sentence.",
@@ -903,15 +908,15 @@ def test_regeneration_abstains_only_an_unsupported_expert_claim_without_model_ca
     )
 
     assert response.updated_artifacts["expert_comment"] == (
-        "First supported sentence. Unsupported sentence. Last supported sentence."
+        "First supported sentence. Repaired middle claim. Last supported sentence."
     )
-    assert openai_client.calls == []
+    assert len(openai_client.calls) == 1
     claim_ids = {
         claim["claim_id"]
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     }
     assert original_claims[0].claim_id in claim_ids
-    assert original_claims[1].claim_id in claim_ids
+    assert original_claims[1].claim_id not in claim_ids
     assert original_claims[2].claim_id in claim_ids
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
 
@@ -979,9 +984,6 @@ def test_warning_only_soft_copy_target_runs_with_a_sibling_blocking_repair(
     ]
     assert [issue.severity for issue in plan.targets[0].issues] == ["warning"]
     assert response.updated_artifacts["expert_comment"] == "Repaired middle claim."
-    assert (
-        response.updated_artifacts["linkedin_post"]
-        == current_artifacts["linkedin_post"]
-    )
-    assert len(openai_client.calls) == 1
+    assert response.updated_artifacts["linkedin_post"] == "Repaired LinkedIn claim."
+    assert len(openai_client.calls) == 2
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)

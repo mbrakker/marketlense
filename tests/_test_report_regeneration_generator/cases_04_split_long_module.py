@@ -817,14 +817,14 @@ def test_expert_claim_repair_keeps_final_source_display_and_provenance_aligned(
     )
 
     final_text = response.updated_artifacts["expert_comment"]
-    assert final_text == f"{canonical_text} {sibling_text}"
+    assert final_text == f"{repaired_text} {sibling_text}"
     final_claims = [
         claim
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
         if claim["artifact_family"] == "expert_comment"
     ]
     assert {claim["text_hash"] for claim in final_claims} == {
-        hashlib.sha256(canonical_text.encode()).hexdigest(),
+        hashlib.sha256(repaired_text.encode()).hexdigest(),
         hashlib.sha256(sibling_text.encode()).hexdigest(),
     }
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)

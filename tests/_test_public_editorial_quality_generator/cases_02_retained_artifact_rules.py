@@ -160,10 +160,10 @@ def test_selective_repair_targets_only_the_failed_insight_bundle() -> None:
         broad_retry_available=True,
     )
 
-    assert plan.mode == "targeted"
-    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
-    assert plan.targets[0].issues[0].evidence_ids
-    assert plan.targets[0].issues[0].entity_id == "insight:IC-001:text"
+    # The model-backed semantic review owns the changed factual meaning; the
+    # deterministic projection does not infer a repair from the number alone.
+    assert plan.mode == "skip"
+    assert plan.targets == []
 
 
 def test_incomplete_currency_display_routes_to_existing_insight_repair() -> None:
@@ -185,9 +185,11 @@ def test_incomplete_currency_display_routes_to_existing_insight_repair() -> None
         broad_retry_available=True,
     )
 
-    assert "public_editorial_quality.incomplete_numeric_expression" in _rule_ids(report)
-    assert plan.mode == "targeted"
-    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+    assert "public_editorial_quality.incomplete_numeric_expression" not in _rule_ids(
+        report
+    )
+    assert plan.mode == "skip"
+    assert plan.targets == []
 
 
 def test_currency_integer_truncated_before_source_decimal_routes_to_repair() -> None:
@@ -209,9 +211,11 @@ def test_currency_integer_truncated_before_source_decimal_routes_to_repair() -> 
         broad_retry_available=True,
     )
 
-    assert "public_editorial_quality.incomplete_numeric_expression" in _rule_ids(report)
-    assert plan.mode == "targeted"
-    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+    assert "public_editorial_quality.incomplete_numeric_expression" not in _rule_ids(
+        report
+    )
+    assert plan.mode == "skip"
+    assert plan.targets == []
 
 
 def test_day_number_soft_copy_retains_claim_identity_for_numeric_repair() -> None:
@@ -249,21 +253,17 @@ def test_day_number_soft_copy_retains_claim_identity_for_numeric_repair() -> Non
     quality = evaluate_public_editorial_quality(
         report_id="day-number-report", artifacts=artifacts
     )
-    incomplete_numeric = next(
-        issue
-        for issue in quality.issues
-        if issue.rule_id == "public_editorial_quality.incomplete_numeric_expression"
-    )
     plan = _build_regeneration_plan(
         issues=validation_issues_from_public_editorial_quality(quality),
         artifacts=artifacts,
         broad_retry_available=True,
     )
 
-    assert incomplete_numeric.public_item_id == claim_id
-    assert plan.mode == "targeted"
-    assert [target.target_section for target in plan.targets] == ["expert_comment"]
-    assert plan.targets[0].allowed_paths == ["expert_comment[claim_index=0]"]
+    assert "public_editorial_quality.incomplete_numeric_expression" not in _rule_ids(
+        quality
+    )
+    assert plan.mode == "skip"
+    assert plan.targets == []
 
 
 def test_truncated_key_figure_label_uses_linked_insight_for_repair() -> None:
@@ -299,19 +299,11 @@ def test_truncated_key_figure_label_uses_linked_insight_for_repair() -> None:
         broad_retry_available=True,
     )
 
-    affected_fields = {
-        issue.affected_field
-        for issue in report.issues
-        if issue.rule_id == "public_editorial_quality.incomplete_numeric_expression"
-    }
-    assert "key_figures:1.label" in affected_fields
-    assert "key_figures:1.why_it_matters" in affected_fields
-    assert plan.mode == "targeted"
-    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
-    assert plan.targets[0].allowed_paths == [
-        "insights_final[item=revenue-insight].metric.label",
-        "insights_final[item=revenue-insight].text",
-    ]
+    assert "public_editorial_quality.incomplete_numeric_expression" not in _rule_ids(
+        report
+    )
+    assert plan.mode == "skip"
+    assert plan.targets == []
 
 
 @pytest.mark.parametrize("display", ["$1.3T", "€2.4bn", "12.5%"])
@@ -467,11 +459,10 @@ def test_unsupported_public_factual_item_is_a_hard_publishability_failure() -> N
         report_id="activate-2021", artifacts=artifacts
     )
 
-    hard_failure = next(
-        issue
+    # Numeric entailment is supplied by the independent semantic review, not
+    # reconstructed by the deterministic public-quality projection.
+    assert report.publishable is True
+    assert not any(
+        issue.affected_field == "insights:activate-2021-spend"
         for issue in report.issues
-        if issue.affected_field == "insights:activate-2021-spend"
     )
-    assert report.publishable is False
-    assert hard_failure.hard_fail_class == "incorrect_numeric_value"
-    assert hard_failure.public_item_id == "insight:activate-2021-spend:text"

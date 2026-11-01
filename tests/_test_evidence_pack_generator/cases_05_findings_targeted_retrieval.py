@@ -106,16 +106,20 @@ def test_findings_targeted_fallback_recovers_incomplete_numeric_body_relationshi
             )
 
         def openai_chat_json(self, request, ctx):
-            self.findings_requests.append((request, "targeted_fallback_source_pages"))
-            return OpenAIResponseResult(
-                schema_version="1.0",
-                text=json.dumps(complete),
-                parsed_json=complete,
-                input_tokens=11,
-                output_tokens=7,
-                tool_calls=0,
-                model=request.model,
-            )
+            if request.stage == "evidence_pack_targeted_fallback":
+                self.findings_requests.append(
+                    (request, "targeted_fallback_source_pages")
+                )
+                return OpenAIResponseResult(
+                    schema_version="1.0",
+                    text=json.dumps(complete),
+                    parsed_json=complete,
+                    input_tokens=11,
+                    output_tokens=7,
+                    tool_calls=0,
+                    model=request.model,
+                )
+            return semantic_response_for_request(request)
 
     client = PartialThenTargetedClient()
     prompt_client = RecordingPromptClient()
@@ -192,7 +196,7 @@ def test_findings_targeted_fallback_recovers_incomplete_numeric_body_relationshi
     assert any(
         finding["id"] == "casino-only" for finding in packs["findings"]["findings"]
     )
-    assert packs["evidence_fidelity"]["deterministic_pass_count"] >= 1
+    assert packs["evidence_fidelity"]["semantic_validation_count"] >= 2
     assert packs["evidence_fidelity"]["unsupported_factual_count"] == 0
 
 
@@ -467,7 +471,7 @@ def test_findings_targeted_fallback_keeps_ma_means_as_deal_counts(tmp_path):
     assert "7.3 deals" in findings[1]["text"]
     assert all("M&A deals" not in finding["text"] for finding in findings)
     assert packs["evidence_fidelity"]["unsupported_factual_count"] == 0
-    assert packs["evidence_fidelity"]["deterministic_pass_count"] >= 2
+    assert packs["evidence_fidelity"]["semantic_validation_count"] >= 2
 
 
 def test_findings_target_source_page_context_is_bounded_and_page_scoped():
@@ -958,9 +962,7 @@ def test_quote_page_binding_overrides_a_printed_label_with_physical_page() -> No
             SimpleNamespace(
                 status="supported",
                 candidate=SimpleNamespace(
-                    claim_id=(
-                        "evidence:quote_candidates:execution-risk-focus-areas"
-                    ),
+                    claim_id=("evidence:quote_candidates:execution-risk-focus-areas"),
                     evidence_references=[SimpleNamespace(page=35)],
                 ),
             )

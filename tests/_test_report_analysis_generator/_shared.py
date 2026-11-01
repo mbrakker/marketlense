@@ -37,6 +37,8 @@ from src.contracts.drive import DriveFile
 
 from src.contracts.ingest import IngestSettings
 
+from src.contracts.openai import OpenAIResponseResult
+
 from src.contracts.pdf_text import PdfTextExtractResponse
 
 from src.contracts.pdf_utils import PdfInfoResponse
@@ -80,11 +82,94 @@ from src.generators.report_generation_shared import derive_title, report_slug
 
 from src.orchestrators import retry_orchestrator as retry_orch
 
-from src.orchestrators.report_analysis_orchestrator import run_report_analysis
+from src.orchestrators.report_analysis_orchestrator import (
+    run_report_analysis as _production_run_report_analysis,
+)
 
 from src.utils.errors import AppError
 
 from src.utils.structured_output import StructuredOutputFailure
+
+from .._test_validation_generator._shared import _grounding_contract_payload
+
+
+class _SemanticPassOpenAIClient:
+    """Schema-complete semantic pass fake for orchestration fixtures."""
+
+    @staticmethod
+    def _public_items(user_prompt: str) -> list[dict]:
+        marker = '"public_items"'
+        marker_index = user_prompt.find(marker)
+        if marker_index < 0:
+            return []
+        object_start = user_prompt.rfind("{", 0, marker_index)
+        if object_start < 0:
+            return []
+        try:
+            payload, _ = json.JSONDecoder().raw_decode(user_prompt[object_start:])
+        except json.JSONDecodeError:
+            return []
+        items = payload.get("public_items") if isinstance(payload, dict) else None
+        return (
+            [item for item in items if isinstance(item, dict)]
+            if isinstance(items, list)
+            else []
+        )
+
+    def openai_chat_json(self, request, ctx):
+        del ctx
+        if request.artifact_family == "validation_grounding":
+            payload = _grounding_contract_payload(
+                request, {"checks": [], "unsupported": []}
+            )
+        elif request.artifact_family == "public_editorial_quality":
+            verdicts = []
+            for item in self._public_items(request.user_prompt):
+                evidence_ids = [
+                    str(value).strip()
+                    for value in item.get("evidence_ids") or []
+                    if str(value).strip()
+                ]
+                verdicts.append(
+                    {
+                        "item_id": str(item.get("item_id") or ""),
+                        "status": "pass",
+                        "classification": (
+                            "factual_claim"
+                            if evidence_ids or item.get("verified_facts")
+                            else "prescriptive_recommendation"
+                        ),
+                        "severity": "info",
+                        "rule_id": "",
+                        "hard_fail_class": "",
+                        "reason": (
+                            "The final wording is supported by the retained source "
+                            "context and is suitable for publication."
+                        ),
+                        "evidence_ids": evidence_ids,
+                        "repair_target": "",
+                    }
+                )
+            payload = {"verdicts": verdicts}
+        else:
+            payload = {"metrics": [], "quotes": [], "checks": [], "unsupported": []}
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=json.dumps(payload),
+            parsed_json=payload,
+            input_tokens=0,
+            output_tokens=0,
+            tool_calls=0,
+            model=request.model,
+        )
+
+
+def run_report_analysis(*args, **kwargs):
+    """Keep orchestration fixtures on the explicit model-backed path."""
+
+    kwargs.setdefault("validation_openai_client", _SemanticPassOpenAIClient())
+    kwargs.setdefault("regeneration_openai_client", _SemanticPassOpenAIClient())
+    return _production_run_report_analysis(*args, **kwargs)
 
 
 def _runtime(tmp_path: Path) -> ReportRuntimeState:

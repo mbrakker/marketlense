@@ -15,6 +15,7 @@ def test_derive_metric_spine_from_insights_uses_embedded_metric_contract() -> No
                 ),
                 "evidence_id": "q5",
                 "metric": {
+                    "label": "AI recommendations already drive purchases",
                     "value": "46",
                     "unit": "percent",
                     "timeframe": "2026",
@@ -149,7 +150,7 @@ def test_activate_2026_128_million_key_figure_uses_its_explicit_metric_label() -
         ("Monthly U.K. adult generative AI users reached 8 million.", "8 million"),
     ],
 )
-def test_legacy_metric_label_never_truncates_us_or_uk_abbreviations(
+def test_unlabeled_metric_with_us_or_uk_abbreviation_abstains(
     text: str, value: str
 ) -> None:
     spine = derive_metric_spine_from_insights(
@@ -163,11 +164,10 @@ def test_legacy_metric_label_never_truncates_us_or_uk_abbreviations(
         ]
     )
 
-    assert spine[0]["label"] == text
-    assert not spine[0]["label"].endswith(("U.S.", "U.K."))
+    assert spine == []
 
 
-def test_legacy_multi_metric_insight_uses_sentence_for_its_metric_not_first() -> None:
+def test_unlabeled_multi_metric_insight_abstains_without_model_metric_label() -> None:
     spine = derive_metric_spine_from_insights(
         [
             {
@@ -182,8 +182,7 @@ def test_legacy_multi_metric_insight_uses_sentence_for_its_metric_not_first() ->
         ]
     )
 
-    assert spine[0]["label"] == "Digital video revenue grew 19.2%."
-    assert "Search retained" not in spine[0]["label"]
+    assert spine == []
 
 
 def test_legacy_metric_omits_key_figure_when_no_metric_specific_label_is_reliable() -> (
@@ -199,9 +198,7 @@ def test_legacy_metric_omits_key_figure_when_no_metric_specific_label_is_reliabl
     assert derive_metric_spine_from_insights([insight]) == []
 
 
-def test_legacy_metric_uses_its_complete_clause_when_supporting_metrics_follow() -> (
-    None
-):
+def test_unlabeled_metric_with_supporting_metrics_abstains() -> None:
     spine = derive_metric_spine_from_insights(
         [
             {
@@ -216,9 +213,7 @@ def test_legacy_metric_uses_its_complete_clause_when_supporting_metrics_follow()
         ]
     )
 
-    assert spine[0]["label"] == (
-        "Monthly U.S. adult generative AI users reached 128 million in 2025"
-    )
+    assert spine == []
 
 
 def test_legacy_metric_omits_a_lowercase_clause_without_a_complete_subject() -> None:
@@ -232,7 +227,7 @@ def test_legacy_metric_omits_a_lowercase_clause_without_a_complete_subject() -> 
     assert derive_metric_spine_from_insights([insight]) == []
 
 
-def test_metric_spine_label_does_not_split_a_decimal_display() -> None:
+def test_unlabeled_decimal_metric_abstains_without_authoritative_label() -> None:
     spine = derive_metric_spine_from_insights(
         [
             {
@@ -250,13 +245,10 @@ def test_metric_spine_label_does_not_split_a_decimal_display() -> None:
         ]
     )
 
-    assert spine[0]["label"] == (
-        "Global eCommerce is forecast to grow from $7.2 trillion in 2024 to "
-        "$10.4 trillion in 2028."
-    )
+    assert spine == []
 
 
-def test_metric_spine_label_keeps_leading_abbreviation_with_its_sentence() -> None:
+def test_unlabeled_leading_abbreviation_metric_abstains() -> None:
     spine = derive_metric_spine_from_insights(
         [
             {
@@ -271,13 +263,10 @@ def test_metric_spine_label_keeps_leading_abbreviation_with_its_sentence() -> No
         ]
     )
 
-    assert spine[0]["label"] == (
-        "U.S. retail media revenue is forecast to nearly double from $54 billion "
-        "in 2024 to $101 billion in 2028."
-    )
+    assert spine == []
 
 
-def test_metric_spine_label_keeps_a_complete_long_source_sentence() -> None:
+def test_unlabeled_long_source_sentence_abstains() -> None:
     text = (
         "Generative AI is already used for shopping inspiration or research by 41% "
         "of online shoppers aged 18-34, compared with 9% of shoppers aged 55 and "
@@ -297,7 +286,7 @@ def test_metric_spine_label_keeps_a_complete_long_source_sentence() -> None:
         ]
     )
 
-    assert spine[0]["label"] == text
+    assert spine == []
 
 
 @pytest.mark.parametrize(

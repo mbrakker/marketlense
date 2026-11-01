@@ -6,5 +6,10 @@ text: |
   {{ public_items_json }}
 
   Return exactly one verdict per item with the item's exact item_id. Include a
-  substantive reason for every fail or unresolved result and preserve the
-  evidence IDs that support that reason.
+  substantive reason for every fail or unresolved result. For a missing,
+  insufficient, or unavailable source binding, use an empty evidence_ids list
+  and identify that condition with rule_id
+  public_editorial_quality.material_claim_evidence_missing or hard_fail_class
+  missing_evidence, insufficient_evidence, or evidence_unavailable; never
+  invent an evidence ID. For contradictions or other evidence-backed failures,
+  preserve the evidence IDs that support that reason.

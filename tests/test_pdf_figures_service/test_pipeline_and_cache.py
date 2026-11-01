@@ -278,7 +278,11 @@ def test_collect_candidates_skips_full_page_scan_without_text(tmp_path, caplog) 
         _ctx(),
     )
 
-    assert response.candidates == []
+    assert len(response.candidates) == 1
+    candidate = response.candidates[0]
+    assert candidate.kind == "chart"
+    assert candidate.preview_text == ""
+    assert candidate.bbox == (0.0, 0.0, 620.0, 900.0)
     events = _events(caplog, "market_lense.pdf_service.candidate_extraction")
     complete = next(
         event for event in events if event.get("event") == "extract_candidates_complete"
@@ -376,13 +380,13 @@ def test_candidate_page_plan_scores_and_skips_low_value_pages() -> None:
     finally:
         doc.close()
 
-    assert plan.chart_pages == [1, 2]
-    assert plan.table_pages == [1, 2]
+    assert plan.chart_pages == [0, 1, 2, 3]
+    assert plan.table_pages == [0, 1, 2, 3]
     assert [record.action for record in plan.page_triage_records] == [
-        "skip_low_score",
-        "include_score",
-        "include_score",
-        "skip_low_score",
+        "include_all",
+        "include_all",
+        "include_all",
+        "include_all",
     ]
     assert plan.page_triage_records[1].score >= 0.25
     assert "visual_drawing_signal" in plan.page_triage_records[1].reasons
@@ -412,17 +416,10 @@ def test_candidate_page_plan_recall_floor_includes_top_scoring_pages() -> None:
     finally:
         doc.close()
 
-    assert len(plan.chart_pages or []) == 2
+    assert len(plan.chart_pages or []) == 4
     assert plan.chart_pages == plan.table_pages
-    assert (
-        sum(
-            1
-            for record in plan.page_triage_records
-            if record.action == "include_recall_floor"
-        )
-        == 2
-    )
-    assert plan.page_triage_skipped_pages == 2
+    assert all(record.action == "include_all" for record in plan.page_triage_records)
+    assert plan.page_triage_skipped_pages == 0
 
 
 def test_extract_best_figure_writes_asset_and_logs(

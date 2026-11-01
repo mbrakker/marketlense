@@ -196,6 +196,7 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
             category_labels=["Category"],
             vector_store_id=None,
             dependencies=dependencies,
+            validation_openai_client=_SemanticPassOpenAIClient(),
         )
     except AppError as exc:
         caught = exc

@@ -11,8 +11,6 @@ import json
 from dataclasses import replace
 from types import SimpleNamespace
 
-import pytest
-
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.generators.claim_validation_generator import (
@@ -24,7 +22,6 @@ from src.generators.validation.grounding import (
     grounding_payload,
     run_grounding_check,
 )
-from src.utils.errors import AppError
 from tests._test_validation_generator._shared import (
     FakePromptClient,
     _ctx,
@@ -325,24 +322,20 @@ def test_grounding_recovery_bounds_persistent_coverage_failure(tmp_path):
     assert not any(":batch:02:" in task_id for task_id, _stage in provider.calls)
 
 
-def test_grounding_coverage_reports_invalid_retained_classification():
+def test_grounding_coverage_accepts_authorized_retained_classification():
     _request, _package, semantic_inputs, payload = _claim_request(1)
     claim = semantic_inputs[0].candidate
     item_id = payload["retained_claims_to_ground"][0]["item_id"]
-    with pytest.raises(AppError) as exc_info:
-        _validate_grounding_check_coverage(
-            {
-                "checks": [
-                    {
-                        **_check(item_id, claim.text),
-                        "classification": "analyst_interpretation",
-                    }
-                ],
-                "unsupported": [],
-            },
-            semantic_inputs,
-            {claim.claim_id: item_id},
-        )
-
-    assert exc_info.value.code == "grounding_claim_check_coverage_invalid"
-    assert exc_info.value.context["missing_claim_ids"] == [item_id]
+    _validate_grounding_check_coverage(
+        {
+            "checks": [
+                {
+                    **_check(item_id, claim.text),
+                    "classification": "analyst_interpretation",
+                }
+            ],
+            "unsupported": [],
+        },
+        semantic_inputs,
+        {claim.claim_id: item_id},
+    )

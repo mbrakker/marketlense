@@ -942,17 +942,18 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                     _annotate_verified_item(item, artifacts)
                     yield item
             elif summary_evidence:
-                for evidence_id, evidence_text in summary_evidence:
-                    item = _item(
-                        "summary",
-                        field_name,
-                        value,
-                        [evidence_id],
-                        "summary",
-                        evidence_text=evidence_text,
-                    )
-                    _annotate_verified_item(item, artifacts)
-                    yield item
+                item = _item(
+                    "summary",
+                    field_name,
+                    value,
+                    [evidence_id for evidence_id, _ in summary_evidence],
+                    "summary",
+                    evidence_text=" ".join(
+                        evidence_text for _, evidence_text in summary_evidence
+                    ),
+                )
+                _annotate_verified_item(item, artifacts)
+                yield item
             else:
                 item = _item("summary", field_name, value, [], "summary")
                 _annotate_verified_item(item, artifacts)
@@ -980,17 +981,18 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                     _annotate_verified_item(item, artifacts)
                     yield item
             elif downstream_evidence:
-                for evidence_id, evidence_text in downstream_evidence:
-                    item = _item(
-                        field_name,
-                        field_name,
-                        value,
-                        [evidence_id],
-                        field_name,
-                        evidence_text=evidence_text,
-                    )
-                    _annotate_verified_item(item, artifacts)
-                    yield item
+                item = _item(
+                    field_name,
+                    field_name,
+                    value,
+                    [evidence_id for evidence_id, _ in downstream_evidence],
+                    field_name,
+                    evidence_text=" ".join(
+                        evidence_text for _, evidence_text in downstream_evidence
+                    ),
+                )
+                _annotate_verified_item(item, artifacts)
+                yield item
             else:
                 item = _item(field_name, field_name, value, [], field_name)
                 _annotate_verified_item(item, artifacts)

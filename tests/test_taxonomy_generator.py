@@ -348,9 +348,10 @@ def test_taxonomy_reuses_shared_search_results_without_file_search(tmp_path):
     assert response.region == "Germany"
     assert client.file_search_calls == 0
     assert len(client.chat_requests) == 1
-    assert "consumer payment behavior" in rendered_variables[1][
-        "shared_retrieval_context_json"
-    ]
+    assert (
+        "consumer payment behavior"
+        in rendered_variables[1]["shared_retrieval_context_json"]
+    )
 
 
 def test_taxonomy_repair_reuses_shared_search_results_without_file_search(tmp_path):
@@ -636,7 +637,7 @@ def test_taxonomy_corrupt_cache_falls_back_to_openai(tmp_path):
     assert response.taxonomy == ["retail_logistics"]
 
 
-def test_taxonomy_infers_agentic_commerce_from_ai_purchase_evidence(tmp_path):
+def test_taxonomy_preserves_model_agentic_commerce_classification(tmp_path):
     mapping_path = tmp_path / "category-mappings.yaml"
     _write_mapping_with_inference_rule(mapping_path)
     settings = _settings(tmp_path, mapping_path)
@@ -645,10 +646,10 @@ def test_taxonomy_infers_agentic_commerce_from_ai_purchase_evidence(tmp_path):
             "schema_version": "1.0",
             "taxonomy": [
                 "Generative AI and AI agents",
-                "Synthetic data and augmented audiences",
+                "agentic_commerce",
             ],
             "primary_tags": ["Generative AI and AI agents"],
-            "secondary_tags": ["Synthetic data and augmented audiences"],
+            "secondary_tags": ["agentic_commerce"],
             "tag_evidence": [
                 {
                     "tag": "Generative AI and AI agents",
@@ -657,10 +658,10 @@ def test_taxonomy_infers_agentic_commerce_from_ai_purchase_evidence(tmp_path):
                     "evidence": "Purchase decisions will increasingly be mediated by AI agents across commerce journeys.",
                 },
                 {
-                    "tag": "Synthetic data and augmented audiences",
+                    "tag": "agentic_commerce",
                     "tier": "secondary",
-                    "section_label": "Synthetic data",
-                    "evidence": "Synthetic data can improve audience modeling accuracy.",
+                    "section_label": "Brand building with AI",
+                    "evidence": "Purchase decisions will increasingly be mediated by AI agents across commerce journeys.",
                 },
             ],
             "region": "",
@@ -687,7 +688,7 @@ def test_taxonomy_infers_agentic_commerce_from_ai_purchase_evidence(tmp_path):
     assert inferred.section_label == "Brand building with AI"
 
 
-def test_taxonomy_rule_context_matching_normalizes_punctuation(tmp_path):
+def test_taxonomy_preserves_model_social_commerce_classification(tmp_path):
     mapping_path = tmp_path / "category-mappings.yaml"
     mapping_path.write_text(
         "\n".join(
@@ -724,16 +725,22 @@ def test_taxonomy_rule_context_matching_normalizes_punctuation(tmp_path):
     fake_openai = FakeOpenAI(
         {
             "schema_version": "1.0",
-            "taxonomy": ["creator_commerce"],
+            "taxonomy": ["creator_commerce", "social_commerce"],
             "primary_tags": ["creator_commerce"],
-            "secondary_tags": [],
+            "secondary_tags": ["social_commerce"],
             "tag_evidence": [
                 {
                     "tag": "creator_commerce",
                     "tier": "primary",
                     "section_label": "Retail Opportunity",
                     "evidence": "Brands are winning with in app checkout across creator feeds.",
-                }
+                },
+                {
+                    "tag": "social_commerce",
+                    "tier": "secondary",
+                    "section_label": "Retail Opportunity",
+                    "evidence": "Brands are winning with in app checkout across creator feeds.",
+                },
             ],
             "region": "US",
             "time_period": "2026",

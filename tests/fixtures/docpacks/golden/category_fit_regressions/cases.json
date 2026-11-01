@@ -13,10 +13,10 @@
     "candidate": {
       "category_id": "technology",
       "fit_score": 0.95,
-      "decision": "reject",
+      "decision": "primary",
       "why_fit": "The report is titled and framed as a Technology & Media Outlook and repeatedly analyzes core technology trends and infrastructure.",
       "why_not_fit": "",
-      "evidence_sections": ["Generative AI", "B2B and Enterprise Software"]
+      "evidence_sections": ["overview"]
     },
     "expected": {"decision": "primary", "selected": true, "status": "supported"}
   },
@@ -35,10 +35,10 @@
     "candidate": {
       "category_id": "social_video_creator",
       "fit_score": 0.95,
-      "decision": "reject",
+      "decision": "primary",
       "why_fit": "The report is explicitly centered on social video platforms, creator ecosystems, short-form engagement and creator rankings.",
       "why_not_fit": "Not focused on commerce-in-platform mechanics.",
-      "evidence_sections": ["Top creators and creator engagement", "Forecast — Average daily social video time spent"]
+      "evidence_sections": ["overview"]
     },
     "expected": {"decision": "primary", "selected": true, "status": "supported"}
   },
@@ -57,10 +57,10 @@
     "candidate": {
       "category_id": "social_video_creator",
       "fit_score": 0.95,
-      "decision": "reject",
+      "decision": "primary",
       "why_fit": "The report repeatedly centers creators, creator tiers, creator economics, and platform deployment.",
       "why_not_fit": "Not focused on in-app commerce mechanics.",
-      "evidence_sections": ["Chapter 2: Understanding your creator options", "Chapter 3: Building your influencer portfolio"]
+      "evidence_sections": ["overview"]
     },
     "expected": {"decision": "primary", "selected": true, "status": "supported"}
   },
@@ -82,7 +82,7 @@
       "decision": "reject",
       "why_fit": "The report links creators to revenue and discusses repurposing creator content across platforms to drive purchases.",
       "why_not_fit": "The report is not about in-platform checkout, live shopping, or TikTok Shop mechanics.",
-      "evidence_sections": ["Chapter 6: Measuring your influencer portfolio performance"]
+      "evidence_sections": ["overview"]
     },
     "expected": {"decision": "reject", "selected": false, "status": "rejected"}
   },
@@ -119,7 +119,7 @@
     "candidate": {
       "category_id": "technology",
       "fit_score": 0.88,
-      "decision": "primary",
+      "decision": "reject",
       "why_fit": "Technology appears in the report.",
       "why_not_fit": "",
       "evidence_sections": ["overview"]

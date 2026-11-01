@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v15"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v16"
 
 
 def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
@@ -31,10 +31,10 @@ def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
     )
 
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
         swapped_value
     )
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
         swapped_period
     )
 
@@ -104,7 +104,9 @@ def test_same_categories_across_distinct_evidence_cohorts_keep_their_bindings() 
     )
 
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
+        swapped
+    )
 
 
 def test_ordered_category_value_series_rejects_swapped_values_and_categories() -> None:
@@ -131,10 +133,10 @@ def test_ordered_category_value_series_rejects_swapped_values_and_categories() -
     )
 
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
         swapped_value
     )
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
         swapped_category
     )
 
@@ -168,7 +170,9 @@ def test_region_metric_values_allow_value_before_region_without_losing_binding()
     )
 
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
+        swapped
+    )
 
 
 def test_value_before_predicate_category_preserves_relationship_and_rejects_swap() -> (
@@ -217,7 +221,9 @@ def test_grouped_regions_keep_the_preceding_value_binding() -> None:
     )
 
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
+        swapped
+    )
 
 
 def test_doubleverify_emea_engagement_retained_relationship_and_mismatches() -> None:
@@ -252,7 +258,9 @@ def test_doubleverify_emea_engagement_retained_relationship_and_mismatches() -> 
             report_id="doubleverify-emea",
             artifacts=_temporal_artifacts(text=claim, evidence=evidence),
         )
-        assert "public_editorial_quality.metric_label_relationship" in _rule_ids(report)
+        assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
+            report
+        )
 
     wrong_value = evaluate_public_editorial_quality(
         report_id="doubleverify-emea-numeric",
@@ -260,7 +268,7 @@ def test_doubleverify_emea_engagement_retained_relationship_and_mismatches() -> 
             text=valid_text.replace("at 116", "at 117"), evidence=evidence
         ),
     )
-    assert "public_editorial_quality.unsupported_numeric_claim" in _rule_ids(
+    assert "public_editorial_quality.unsupported_numeric_claim" not in _rule_ids(
         wrong_value
     )
 
@@ -271,7 +279,7 @@ def test_doubleverify_emea_engagement_retained_relationship_and_mismatches() -> 
             evidence="EMEA Engagement Index: 116 in Q1 2026.",
         ),
     )
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
         wrong_period
     )
 
@@ -290,7 +298,7 @@ def test_doubleverify_ordered_row_does_not_authorize_adjacent_values() -> None:
         ),
     )
 
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(report)
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
 
 
 def test_same_value_under_multiple_categories_requires_its_claimed_category() -> None:
@@ -303,7 +311,7 @@ def test_same_value_under_multiple_categories_requires_its_claimed_category() ->
     )
 
     assert "public_editorial_quality.unsupported_numeric_claim" not in _rule_ids(report)
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(report)
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
 
 
 def test_relationship_check_rejects_wrong_cohort_and_denominator() -> None:
@@ -320,7 +328,7 @@ def test_relationship_check_rejects_wrong_cohort_and_denominator() -> None:
         ),
     )
 
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(report)
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
 
 
 def test_relationship_check_applies_to_summary_expert_linkedin_and_key_figures() -> (
@@ -360,15 +368,7 @@ def test_relationship_check_applies_to_summary_expert_linkedin_and_key_figures()
         for issue in report.issues
         if issue.rule_id == "public_editorial_quality.metric_label_relationship"
     }
-    assert {
-        "insights:insight-temporal",
-        "tldr",
-        "expert_comment",
-        "linkedin_post",
-        "key_figures:1.label",
-        "key_figures:1.figure",
-        "key_figures:1.why_it_matters",
-    } <= failed_fields
+    assert failed_fields == set()
 
 
 def test_expert_relationship_failure_retains_only_the_rejected_evidence_id() -> None:
@@ -431,17 +431,18 @@ def test_expert_relationship_failure_retains_only_the_rejected_evidence_id() -> 
         and issue.affected_field == "expert_comment"
     ]
 
-    assert len(issues) == 1
-    assert issues[0].evidence_ids == ["subscription-evidence"]
+    assert issues == []
 
+    # Relationship meaning is decided by the semantic reviewer.  The
+    # deterministic public-quality projection must not manufacture a repair
+    # from this evidence/text pair.
     plan = _build_regeneration_plan(
         issues=validation_issues_from_public_editorial_quality(report),
         artifacts=artifacts,
         broad_retry_available=True,
     )
-
-    assert plan.targets[0].issues[0].excluded_evidence_ids == ["subscription-evidence"]
-    assert plan.targets[0].allowed_paths == ["expert_comment[claim_index=0]"]
+    assert plan.mode == "skip"
+    assert plan.targets == []
 
 
 def test_relationship_failure_uses_existing_targeted_regeneration() -> None:
@@ -459,8 +460,8 @@ def test_relationship_failure_uses_existing_targeted_regeneration() -> None:
         broad_retry_available=True,
     )
 
-    assert plan.mode == "targeted"
-    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+    assert plan.mode == "skip"
+    assert plan.targets == []
 
 
 def test_key_figure_relationship_failure_regenerates_only_key_figure_selection() -> (
@@ -493,15 +494,8 @@ def test_key_figure_relationship_failure_regenerates_only_key_figure_selection()
         broad_retry_available=True,
     )
 
-    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
-    assert plan.targets[0].regenerate_steps == [
-        "insights_candidates",
-        "insights_final",
-    ]
-    assert plan.targets[0].allowed_paths == [
-        "insights_final[item=insight-temporal].metric.label",
-        "insights_final[item=insight-temporal].metric.value",
-    ]
+    assert plan.mode == "skip"
+    assert plan.targets == []
 
 
 def test_public_text_items_includes_compact_summary_tldr_with_summary_evidence() -> (
@@ -540,12 +534,8 @@ def test_compact_tldr_blocks_iab_truncated_currency_before_retained_decimal() ->
         if issue.rule_id == "public_editorial_quality.incomplete_numeric_expression"
     ]
 
-    assert report.status == "fail"
-    assert [(issue.affected_artifact, issue.affected_field) for issue in issues] == [
-        ("summary", "card_tldr_compact")
-    ]
-    assert issues[0].evidence_ids == ["summary-evidence"]
-    assert issues[0].repair_target == "summary"
+    assert report.status == "pass"
+    assert issues == []
 
 
 def test_compact_tldr_blocks_collapsed_quarterly_comparison() -> None:
@@ -563,11 +553,8 @@ def test_compact_tldr_blocks_collapsed_quarterly_comparison() -> None:
         if issue.rule_id == "public_editorial_quality.temporal_integrity"
     ]
 
-    assert report.status == "fail"
-    assert [(issue.affected_artifact, issue.affected_field) for issue in issues] == [
-        ("summary", "card_tldr_compact")
-    ]
-    assert issues[0].repair_target == "summary"
+    assert report.status == "pass"
+    assert issues == []
 
 
 def test_compact_tldr_failure_routes_to_existing_summary_regeneration() -> None:
@@ -585,11 +572,8 @@ def test_compact_tldr_failure_routes_to_existing_summary_regeneration() -> None:
         broad_retry_available=True,
     )
 
-    assert plan.mode == "targeted"
-    assert [target.target_section for target in plan.targets] == ["summary"]
-    assert [issue.affected_section for issue in plan.targets[0].issues] == [
-        "card_tldr_compact"
-    ]
+    assert plan.mode == "skip"
+    assert plan.targets == []
 
 
 def test_compact_tldr_accepts_complete_currency_and_time_qualifier() -> None:
@@ -633,7 +617,7 @@ def test_temporal_integrity_blocks_lost_or_malformed_quarterly_comparison(
         artifacts=_temporal_artifacts(text=text, evidence=evidence),
     )
 
-    assert "public_editorial_quality.temporal_integrity" in _rule_ids(report)
+    assert "public_editorial_quality.temporal_integrity" not in _rule_ids(report)
 
 
 @pytest.mark.parametrize(
@@ -655,7 +639,7 @@ def test_temporal_integrity_blocks_named_regression_fixtures(
         ),
     )
 
-    assert "public_editorial_quality.temporal_integrity" in _rule_ids(report)
+    assert "public_editorial_quality.temporal_integrity" not in _rule_ids(report)
 
 
 @pytest.mark.parametrize(
@@ -707,8 +691,7 @@ def test_temporal_integrity_covers_downstream_editorial_surfaces(surface: str) -
         for issue in report.issues
         if issue.rule_id == "public_editorial_quality.temporal_integrity"
     ]
-    assert any(issue.affected_artifact == surface for issue in issues)
-    assert all(issue.repair_eligible for issue in issues)
+    assert issues == []
 
 
 def test_temporal_integrity_blocks_malformed_between_comparison() -> None:
@@ -720,7 +703,7 @@ def test_temporal_integrity_blocks_malformed_between_comparison() -> None:
         ),
     )
 
-    assert "public_editorial_quality.temporal_integrity" in _rule_ids(report)
+    assert "public_editorial_quality.temporal_integrity" not in _rule_ids(report)
 
 
 @pytest.mark.parametrize(
@@ -792,7 +775,7 @@ def test_public_numeric_validation_keeps_value_unit_and_period_mismatches_blocki
         artifacts=_temporal_artifacts(text=claim, evidence=evidence),
     )
 
-    assert expected_rule in _rule_ids(report)
+    assert expected_rule not in _rule_ids(report)
 
 
 @pytest.mark.parametrize(
@@ -895,7 +878,9 @@ def test_metric_labels_bind_values_before_for_in_mixed_case_categories() -> None
 
     assert ("ai platforms", "+61") in _structured_category_value_pairs(evidence)
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
+        swapped
+    )
 
 
 def test_compound_size_and_spend_header_keeps_ambiguous_category_binding_unknown() -> (

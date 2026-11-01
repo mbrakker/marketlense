@@ -160,7 +160,7 @@ def test_report_generation_scores_two_ingested_reports_for_same_publisher(
             analysis_store_pack=_store_pack,
             render_report=_render_report,
         )
-        return rgo.run_report_generation(
+        return run_vector_report_generation(
             current_file,
             cache_path,
             current_settings,
@@ -318,7 +318,7 @@ def test_report_generation_scores_drive_only_ingest_without_source_url(
             analysis_store_pack=_store_pack,
             render_report=_render_report,
         )
-        return rgo.run_report_generation(
+        return run_vector_report_generation(
             current_file,
             cache_path,
             current_settings,
@@ -424,7 +424,7 @@ def test_generate_report_doc_map_empty_halts(
         upsert_report_metadata=_unexpected,
     )
 
-    outcome = rgo.run_report_generation(
+    outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -540,7 +540,7 @@ def test_generate_report_resumes_from_analysis_checkpoint_without_upstream_rerun
         get_report_metadata=lambda req, ctx: None,
     )
 
-    full_outcome = rgo.run_report_generation(
+    full_outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -568,7 +568,7 @@ def test_generate_report_resumes_from_analysis_checkpoint_without_upstream_rerun
         get_report_metadata=lambda req, ctx: None,
     )
 
-    resumed_outcome = rgo.run_report_generation(
+    resumed_outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -673,7 +673,7 @@ def test_generate_report_deletes_vector_store_when_retention_disabled(
         ),
     )
 
-    outcome = rgo.run_report_generation(
+    outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,

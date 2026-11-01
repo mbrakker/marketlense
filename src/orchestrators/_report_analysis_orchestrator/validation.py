@@ -159,6 +159,20 @@ _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_qualit
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
 _PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v17"
 
+_PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS = frozenset(
+    {
+        "public_editorial_quality.material_claim_evidence_missing",
+        "public_editorial_quality.semantic_evidence_missing",
+    }
+)
+_PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES = frozenset(
+    {
+        "missing_evidence",
+        "insufficient_evidence",
+        "evidence_unavailable",
+    }
+)
+
 
 def _substantive_public_review_reason(value: object) -> bool:
     words = re.findall(r"[A-Za-z0-9][A-Za-z0-9_'/-]*", str(value or ""))
@@ -274,15 +288,22 @@ def _validate_public_editorial_review_payload(
                 context={"item_id": item_id},
             )
         if status in {"fail", "unresolved"} and not evidence_ids:
-            raise AppError(
-                code="public_editorial_quality_review_evidence_missing",
-                message=(
-                    "Failing or unresolved public semantic verdicts require "
-                    "retained evidence IDs"
-                ),
-                retryable=False,
-                context={"item_id": item_id},
-            )
+            rule_id = str(verdict.get("rule_id") or "").strip()
+            hard_fail_class = str(verdict.get("hard_fail_class") or "").strip()
+            if (
+                rule_id not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS
+                and hard_fail_class not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES
+            ):
+                raise AppError(
+                    code="public_editorial_quality_review_evidence_missing",
+                    message=(
+                        "Failing or unresolved public semantic verdicts require "
+                        "retained evidence IDs unless the verdict explicitly "
+                        "classifies evidence as missing or unavailable"
+                    ),
+                    retryable=False,
+                    context={"item_id": item_id},
+                )
         allowed_evidence_ids = {
             str(value).strip()
             for value in expected[item_id].get("evidence_ids") or []

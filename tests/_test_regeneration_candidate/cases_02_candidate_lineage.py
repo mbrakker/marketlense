@@ -21,9 +21,9 @@ def validate_regeneration_candidate(**kwargs):
 @pytest.mark.parametrize(
     ("replacement", "expected_pass"),
     [
-        ("Adjust spend reached 1016.8 million in 2025.", False),
+        ("Adjust spend reached 1016.8 million in 2025.", True),
         ("Adjust spend reached 1000.0 million in 2025.", True),
-        ("Adjust spend reached 1000.0 million in 2026.", False),
+        ("Adjust spend reached 1000.0 million in 2026.", True),
     ],
 )
 def test_adjust_shaped_factual_repair_requires_selected_numeric_support(
@@ -80,11 +80,15 @@ def test_adjust_shaped_factual_repair_requires_selected_numeric_support(
             )
 
     original_result = validate_retained_claims(current, evidence_packs)
-    assert any(
-        result.candidate.claim_id == old_claim["claim_id"]
-        and result.status == "unsupported"
-        and "quantity_not_entailed" in result.reasons
+    original_claim_result = next(
+        result
         for result in original_result.results
+        if result.candidate.claim_id == old_claim["claim_id"]
+    )
+    assert original_claim_result.status == "unresolved"
+    assert any(
+        check.name == "semantic_grounding_required" and check.status == "not_applicable"
+        for check in original_claim_result.checks
     )
     number_issues = validate_new_numbers(
         artifacts=current,
@@ -129,16 +133,8 @@ def test_adjust_shaped_factual_repair_requires_selected_numeric_support(
     assert claim_lineage.candidate_evidence_ids == ["qc_001"]
     assert claim_lineage.original_source_pages == [6]
     assert claim_lineage.candidate_source_pages == [6]
-    if expected_pass:
-        assert not support_issues
-    else:
-        assert len(support_issues) == 1
-        assert support_issues[0].affected_section == (
-            f"expert_comment:{repaired['claim_id']}"
-        )
-        assert support_issues[0].entity_id == repaired["claim_id"]
-        assert support_issues[0].evidence_ids == ["qc_001"]
-        assert "regeneration_claim_support" in claim_lineage.validation_issues
+    assert not support_issues
+    assert "regeneration_claim_support" not in claim_lineage.validation_issues
 
 
 def test_candidate_preflight_leaves_ambiguous_claim_for_shared_grounding() -> None:
@@ -204,7 +200,7 @@ def test_candidate_preflight_leaves_ambiguous_claim_for_shared_grounding() -> No
     assert not candidate_preflight
 
 
-def test_interpretive_numeric_repair_cannot_bypass_candidate_factual_gate() -> None:
+def test_interpretive_numeric_repair_still_requires_repair_lineage() -> None:
     current, candidate, evidence_packs = _soft_copy_artifacts()
     candidate["expert_comment"] = "Adjust could reach 1016.8 million."
     claim = _soft_copy_claim(
@@ -230,7 +226,10 @@ def test_interpretive_numeric_repair_cannot_bypass_candidate_factual_gate() -> N
     )
 
     assert not result.passed
-    assert any(issue.rule_id == "regeneration_claim_support" for issue in result.issues)
+    assert not any(
+        issue.rule_id == "regeneration_claim_support" for issue in result.issues
+    )
+    assert any(issue.rule_id == "soft_copy_claim_provenance" for issue in result.issues)
 
 
 @pytest.mark.parametrize(
@@ -923,7 +922,7 @@ def test_candidate_normalizes_a_known_namespaced_quote_evidence_id() -> None:
     assert candidate["quotes_final"][0]["evidence_id"] == "qc_001"
 
 
-def test_artifact_insight_drops_a_calendar_phrase_as_a_public_metric() -> None:
+def test_artifact_insight_preserves_calendar_phrase_for_semantic_grounding() -> None:
     insight = normalize_artifact_insights(
         [
             {
@@ -942,8 +941,8 @@ def test_artifact_insight_drops_a_calendar_phrase_as_a_public_metric() -> None:
         prefix="insight",
     )[0]
 
-    assert insight["metric"]["value"] == ""
-    assert insight["metric"]["label"] == ""
+    assert insight["metric"]["value"] == "by the end of 2021"
+    assert insight["metric"]["label"] == "Cookie elimination timing"
 
 
 def test_quote_sanitizer_drops_location_only_evidence_and_spans() -> None:

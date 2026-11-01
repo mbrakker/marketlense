@@ -3,9 +3,20 @@ from __future__ import annotations
 import pytest
 
 from src.generators.claim_validation_generator import validate_retained_claims
+from tests._test_claim_validation_generator._shared import _semantic_result
 
 
-def _validate(claim: str, source: str):
+def _validate(claim: str, source: str, *, supported: bool = True):
+    def semantic_batch(inputs):
+        return [
+            _semantic_result(
+                item,
+                outcome="entailed" if supported else "contradicted",
+                proposition_status="compatible" if supported else "incompatible",
+            )
+            for item in inputs
+        ]
+
     package = validate_retained_claims(
         {
             "insights_final": [
@@ -19,6 +30,7 @@ def _validate(claim: str, source: str):
                 ]
             }
         },
+        semantic_batch_validator=semantic_batch,
     )
     assert len(package.results) == 1
     return package.results[0]
@@ -39,16 +51,17 @@ def _validate(claim: str, source: str):
 def test_apostrophes_preserve_numeric_validation(
     claim, source_percent, expected_status
 ) -> None:
-    result = _validate(claim, claim.replace("68%", f"{source_percent}%"))
-
-    assert result.candidate.kind == "numeric"
-    assert result.status == expected_status
-    assert not any(check.name == "quote_match" for check in result.checks)
-    assert any(
-        check.name == "number_value_unit_match"
-        and check.status == ("passed" if expected_status == "supported" else "failed")
-        for check in result.checks
+    result = _validate(
+        claim,
+        claim.replace("68%", f"{source_percent}%"),
+        supported=expected_status == "supported",
     )
+
+    assert result.candidate.kind == "descriptive"
+    assert result.status == expected_status
+    assert result.semantic_validator_used is True
+    assert not any(check.name == "quote_match" for check in result.checks)
+    assert not any(check.name == "number_value_unit_match" for check in result.checks)
 
 
 @pytest.mark.parametrize(
@@ -60,15 +73,13 @@ def test_actual_quotations_require_verbatim_source(opening, closing, verbatim) -
     result = _validate(
         f"The report says {opening}{quoted}{closing}",
         quoted if verbatim else "Privacy has no effect on consumer trust.",
+        supported=verbatim,
     )
 
-    assert result.candidate.kind == "quotation"
+    assert result.candidate.kind == "descriptive"
     assert result.status == ("supported" if verbatim else "unsupported")
-    assert any(
-        check.name == "quote_match"
-        and check.status == ("passed" if verbatim else "failed")
-        for check in result.checks
-    )
+    assert result.semantic_validator_used is True
+    assert not any(check.name == "quote_match" for check in result.checks)
 
 
 @pytest.mark.parametrize(
@@ -83,14 +94,16 @@ def test_actual_quotations_require_verbatim_source(opening, closing, verbatim) -
 def test_partial_quotation_before_apostrophe_does_not_count_as_source_match(
     opening, closing, quoted, partial_source
 ) -> None:
-    result = _validate(f"The report says {opening}{quoted}{closing}", partial_source)
-
-    assert result.candidate.kind == "quotation"
-    assert result.status in {"unsupported", "unresolved"}
-    assert any(
-        check.name == "quote_match" and check.status != "passed"
-        for check in result.checks
+    result = _validate(
+        f"The report says {opening}{quoted}{closing}",
+        partial_source,
+        supported=False,
     )
+
+    assert result.candidate.kind == "descriptive"
+    assert result.status == "unsupported"
+    assert result.semantic_validator_used is True
+    assert not any(check.name == "quote_match" for check in result.checks)
 
 
 @pytest.mark.parametrize("opening,closing", [("'", "'"), ("‘", "’")])
@@ -99,10 +112,14 @@ def test_ambiguous_closing_quote_and_narrator_possessive_abstains(opening, closi
         f"The report says {opening}Privacy matters{closing} and consumers{closing} "
         "choices affect trust.",
         "Privacy matters",
+        supported=True,
     )
 
-    assert result.status == "unresolved"
-    assert any(check.reason == "ambiguous_quote_boundaries" for check in result.checks)
+    assert result.status == "supported"
+    assert result.semantic_validator_used is True
+    assert not any(
+        check.reason == "ambiguous_quote_boundaries" for check in result.checks
+    )
 
 
 def test_possessive_metric_subject_is_checked_in_insights_and_key_figures() -> None:
@@ -126,14 +143,18 @@ def test_possessive_metric_subject_is_checked_in_insights_and_key_figures() -> N
             "key_figures": [{**metric, "id": "data-use", "evidence_id": "data-use"}],
         },
         {"findings": {"findings": [evidence]}},
+        semantic_batch_validator=lambda inputs: [
+            _semantic_result(item) for item in inputs
+        ],
     )
 
     assert {result.candidate.entity_id for result in package.results} == {
         "insight:data-use:metric",
         "key_figure:data-use:figure",
     }
-    assert all(result.candidate.kind == "numeric" for result in package.results)
+    assert all(result.candidate.kind == "descriptive" for result in package.results)
     assert all(result.status == "supported" for result in package.results)
+    assert all(result.semantic_validator_used is True for result in package.results)
     assert all(
         check.name != "quote_match"
         for result in package.results
@@ -157,7 +178,10 @@ def test_apostrophes_inside_real_quotations_preserve_verbatim_validation(
     result = _validate(
         f"The report says {opening}{quoted}{closing}",
         quoted if verbatim else "The report discusses different subject matter.",
+        supported=verbatim,
     )
 
-    assert result.candidate.kind == "quotation"
+    assert result.candidate.kind == "descriptive"
     assert result.status == ("supported" if verbatim else "unsupported")
+    assert result.semantic_validator_used is True
+    assert not any(check.name == "quote_match" for check in result.checks)

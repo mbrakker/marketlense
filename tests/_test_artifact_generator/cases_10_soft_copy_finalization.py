@@ -113,7 +113,7 @@ def test_fresh_and_cached_soft_copy_share_source_display_finalization(tmp_path) 
         "replay": replay["_cache"]["family_reuse"],
     }
     assert replay["summary"] == first["summary"]
-    assert replay["expert_comment"] == "Revenue +10% YoY."
+    assert replay["expert_comment"] == first["expert_comment"]
     first_claim = next(
         claim
         for claim in first["soft_copy_claim_provenance"]["claims"]

@@ -139,6 +139,7 @@ class _ClaimValidationInput:
     candidate: ClaimCandidate
     text: str
     require_all_evidence_references: bool = False
+    allow_unbound_evidence: bool = False
     provenance_error: str = ""
 
 
@@ -459,6 +460,7 @@ def _candidates(
         affected_section: str = "",
         entity_id: str = "",
         require_all_evidence_references: bool = False,
+        allow_unbound_evidence: bool = False,
         provenance_error: str = "",
     ) -> None:
         claim = str(text or "").strip()
@@ -488,6 +490,7 @@ def _candidates(
                 candidate=candidate,
                 text=claim,
                 require_all_evidence_references=require_all_evidence_references,
+                allow_unbound_evidence=allow_unbound_evidence,
                 provenance_error=provenance_error,
             )
         )
@@ -534,6 +537,10 @@ def _candidates(
                 kind=_claim_kind(claim),
                 classification=provenance.classification,
                 evidence_bound=bool(provenance.evidence_ids),
+            ),
+            allow_unbound_evidence=(
+                not provenance.evidence_ids
+                and provenance.classification in {"interpretive", "recommendation"}
             ),
         )
 
@@ -749,6 +756,7 @@ def _checks(
     source_evidence: dict[str, tuple[str, str, int | None]],
     *,
     require_all_evidence_references: bool = False,
+    allow_unbound_evidence: bool = False,
     verified_facts_only: bool = False,
 ) -> tuple[list[ClaimValidationCheck], ProtectedFactComparison | None]:
     refs = candidate.evidence_references
@@ -760,21 +768,30 @@ def _checks(
         ClaimValidationCheck(
             schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
             name="evidence_reference_completeness",
-            status="passed" if all_references_known else "failed",
-            reason="evidence_references_resolved"
-            if all_references_known
-            else "missing_evidence_reference"
-            if not refs
-            else "unknown_evidence_reference",
+            status="passed",
+            reason="unbound_semantic_claim_deferred",
         )
-        if require_all_evidence_references
-        else ClaimValidationCheck(
-            schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
-            name="evidence_reference_completeness",
-            status="passed" if known else "failed",
-            reason="evidence_reference_present"
-            if known
-            else "missing_or_unknown_evidence_reference",
+        if allow_unbound_evidence and not refs
+        else (
+            ClaimValidationCheck(
+                schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
+                name="evidence_reference_completeness",
+                status="passed" if all_references_known else "failed",
+                reason="evidence_references_resolved"
+                if all_references_known
+                else "missing_evidence_reference"
+                if not refs
+                else "unknown_evidence_reference",
+            )
+            if require_all_evidence_references
+            else ClaimValidationCheck(
+                schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
+                name="evidence_reference_completeness",
+                status="passed" if known else "failed",
+                reason="evidence_reference_present"
+                if known
+                else "missing_or_unknown_evidence_reference",
+            )
         )
     )
     checks = [evidence_check]
@@ -1057,6 +1074,7 @@ def _validate_claims_against_sources(
                 require_all_evidence_references=(
                     candidate_input.require_all_evidence_references
                 ),
+                allow_unbound_evidence=candidate_input.allow_unbound_evidence,
                 verified_facts_only=verified_facts_only,
             )
         structural_failures = [
@@ -1216,13 +1234,23 @@ def _semantic_inputs(
         if result.deterministic_status != "unresolved":
             continue
         refs = candidate.evidence_references
-        if not refs or any(ref.evidence_id not in source_evidence for ref in refs):
+        if any(ref.evidence_id not in source_evidence for ref in refs):
             continue
-        evidence_texts, evidence_identities = _semantic_evidence_bindings(
-            refs=refs,
-            source_evidence=source_evidence,
-            source_pages=source_pages,
-        )
+        if refs:
+            evidence_texts, evidence_identities = _semantic_evidence_bindings(
+                refs=refs,
+                source_evidence=source_evidence,
+                source_pages=source_pages,
+            )
+        else:
+            # Interpretive and normative soft-copy items are deliberately
+            # deferred to the semantic authority boundary when provenance
+            # explicitly permits an unbound item.  The model receives an
+            # empty evidence set and must therefore reject any empirical
+            # premise it cannot establish; this does not relax structural
+            # failures for factual claims or invalid provenance.
+            evidence_texts = []
+            evidence_identities = []
         evidence_hash = _hash(evidence_identities)
         semantic_identity = (
             candidate.claim_id,

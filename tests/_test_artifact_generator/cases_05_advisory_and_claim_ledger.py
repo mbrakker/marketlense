@@ -169,7 +169,7 @@ def test_metric_spine_preserves_source_display_and_exposes_complete_numeric_meta
     assert figures[0]["figure"] == display
 
 
-def test_key_figure_why_it_matters_drops_unverified_ranking_language() -> None:
+def test_key_figure_why_it_matters_preserves_model_wording() -> None:
     insight = {
         "id": "beauty-amazon",
         "text": (
@@ -197,10 +197,7 @@ def test_key_figure_why_it_matters_drops_unverified_ranking_language() -> None:
     )
 
     assert figures
-    assert "led" not in figures[0]["why_it_matters"].lower()
-    assert figures[0]["why_it_matters"].startswith(
-        "Share starting beauty/grooming shopping at Amazon: 38%"
-    )
+    assert figures[0]["why_it_matters"] == insight["text"]
 
 
 def test_key_figure_ranking_context_preserves_cohort_and_denominator() -> None:
@@ -240,11 +237,9 @@ def test_key_figure_ranking_context_preserves_cohort_and_denominator() -> None:
     )
 
     assert figures
-    assert "Top 20 gainers across sectors" in figures[0]["why_it_matters"]
-    assert (
-        "Total market-value growth for the top 20 gainers across sectors"
-        in figures[0]["why_it_matters"]
-    )
+    assert figures[0]["why_it_matters"] == insight["text"]
+    assert figures[0]["cohort"] == insight["metric"]["cohort"]
+    assert figures[0]["denominator"] == insight["metric"]["denominator"]
 
 
 def test_key_figure_source_evidence_is_not_replaced_by_generated_copy() -> None:
@@ -261,7 +256,7 @@ def test_key_figure_source_evidence_is_not_replaced_by_generated_copy() -> None:
     assert evidence_text == {"f1": source_evidence}
 
 
-def test_restored_key_figure_projection_is_sanitized_too() -> None:
+def test_restored_key_figure_projection_preserves_model_wording() -> None:
     figures = [
         {
             "label": "Share starting beauty/grooming shopping at Amazon",
@@ -275,7 +270,9 @@ def test_restored_key_figure_projection_is_sanitized_too() -> None:
 
     _sanitize_key_figure_ranking_language(figures)
 
-    assert "led" not in figures[0]["why_it_matters"].lower()
+    assert figures[0]["why_it_matters"] == (
+        "Amazon led starting sites/apps: 38% of shoppers."
+    )
 
 
 def test_build_executive_advisory_artifacts_omits_unsupported_decision_fields() -> None:

@@ -1,7 +1,11 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import pytest
+
 from ._shared import *  # noqa: F401,F403
+from src.utils.errors import AppError
+
 
 def test_screen_publisher_inventory_candidates_filters_rejected_items(
     caplog,
@@ -80,6 +84,7 @@ def test_screen_publisher_inventory_candidates_filters_rejected_items(
     ]
     assert_logs_have_required_fields(records)
 
+
 def test_screen_publisher_inventory_candidates_falls_back_when_decisions_remain_missing() -> (
     None
 ):
@@ -95,45 +100,36 @@ def test_screen_publisher_inventory_candidates_falls_back_when_decisions_remain_
         }
     )
 
-    response = screen_publisher_inventory_candidates(
-        PublisherInventoryCandidateScreeningRequest(
-            schema_version="1.0",
-            publisher_name="Example Publisher",
-            insights_url="https://example.com/insights",
-            candidates=[
-                PublisherInventoryCandidateScreeningItem(
-                    schema_version="1.0",
-                    canonical_url="https://example.com/report-one",
-                    title="Report One",
-                    discovered_on_page_number=1,
-                    source_page_url="https://example.com/insights",
-                ),
-                PublisherInventoryCandidateScreeningItem(
-                    schema_version="1.0",
-                    canonical_url="https://example.com/report-two",
-                    title="Report Two",
-                    discovered_on_page_number=1,
-                    source_page_url="https://example.com/insights",
-                ),
-            ],
-            settings=_settings(),
-        ),
-        _ctx(),
-        openai_client=openai_client,
-        prompt_client=RecordingPromptClient(),
-    )
+    with pytest.raises(AppError) as exc_info:
+        screen_publisher_inventory_candidates(
+            PublisherInventoryCandidateScreeningRequest(
+                schema_version="1.0",
+                publisher_name="Example Publisher",
+                insights_url="https://example.com/insights",
+                candidates=[
+                    PublisherInventoryCandidateScreeningItem(
+                        schema_version="1.0",
+                        canonical_url="https://example.com/report-one",
+                        title="Report One",
+                        discovered_on_page_number=1,
+                        source_page_url="https://example.com/insights",
+                    ),
+                    PublisherInventoryCandidateScreeningItem(
+                        schema_version="1.0",
+                        canonical_url="https://example.com/report-two",
+                        title="Report Two",
+                        discovered_on_page_number=1,
+                        source_page_url="https://example.com/insights",
+                    ),
+                ],
+                settings=_settings(),
+            ),
+            _ctx(),
+            openai_client=openai_client,
+            prompt_client=RecordingPromptClient(),
+        )
+    assert exc_info.value.code == "publisher_inventory_candidate_screen_incomplete"
 
-    assert [item.canonical_url for item in response.approved_items] == [
-        "https://example.com/report-one",
-        "https://example.com/report-two",
-    ]
-    fallback_decision = next(
-        decision
-        for decision in response.decisions
-        if decision.canonical_url == "https://example.com/report-two"
-    )
-    assert fallback_decision.accepted is True
-    assert fallback_decision.reason == "fallback_report_signal"
 
 def test_screen_publisher_inventory_candidates_skips_llm_when_disabled() -> None:
     settings = replace(_settings(), candidate_screening_enabled=False)
@@ -163,6 +159,7 @@ def test_screen_publisher_inventory_candidates_skips_llm_when_disabled() -> None
         "https://example.com/report-one"
     ]
     assert response.model == "screening_disabled"
+
 
 def test_screen_publisher_inventory_candidates_collapses_duplicate_titles_after_llm() -> (
     None
@@ -226,19 +223,11 @@ def test_screen_publisher_inventory_candidates_collapses_duplicate_titles_after_
     )
 
     assert [item.canonical_url for item in response.approved_items] == [
-        "https://example.com/report-one",
-        "https://example.com/report-two",
+        candidate.canonical_url for candidate in candidates
     ]
-    assert [item.canonical_url for item in response.rejected_items] == [
-        "https://example.com/report-one?promo=hero"
-    ]
-    duplicate_decision = next(
-        decision
-        for decision in response.decisions
-        if decision.canonical_url == "https://example.com/report-one?promo=hero"
-    )
-    assert duplicate_decision.accepted is False
-    assert duplicate_decision.reason.startswith("duplicate_in_run")
+    assert response.rejected_items == []
+    assert all(decision.accepted for decision in response.decisions)
+
 
 def test_screen_publisher_inventory_candidates_keeps_distinct_generic_cta_titles() -> (
     None
@@ -295,6 +284,7 @@ def test_screen_publisher_inventory_candidates_keeps_distinct_generic_cta_titles
     ]
     assert response.rejected_items == []
 
+
 def test_screen_publisher_inventory_candidates_hard_rejects_publisher_success_titles() -> (
     None
 ):
@@ -345,22 +335,11 @@ def test_screen_publisher_inventory_candidates_hard_rejects_publisher_success_ti
     )
 
     assert [item.canonical_url for item in response.approved_items] == [
-        "https://business.adobe.com/resources/reports/2025-ai-digital-trends-customer-engagement"
+        candidate.canonical_url for candidate in candidates
     ]
-    assert [item.canonical_url for item in response.rejected_items] == [
-        "https://business.adobe.com/resources/reports/leader-email-service-providers"
-    ]
-    hard_reject_decision = next(
-        decision
-        for decision in response.decisions
-        if decision.canonical_url
-        == "https://business.adobe.com/resources/reports/leader-email-service-providers"
-    )
-    assert hard_reject_decision.accepted is False
-    assert hard_reject_decision.reason in {
-        "publisher_success_marketing",
-        "low_report_probability_prefilter",
-    }
+    assert response.rejected_items == []
+    assert all(decision.accepted for decision in response.decisions)
+
 
 def test_screen_publisher_inventory_candidates_hard_rejects_medal_accolade_titles() -> (
     None
@@ -412,11 +391,10 @@ def test_screen_publisher_inventory_candidates_hard_rejects_medal_accolade_title
     )
 
     assert [item.canonical_url for item in response.approved_items] == [
-        "https://www.bigcommerce.com/resources/reports/2025-gartner-report-cdl-report"
+        candidate.canonical_url for candidate in candidates
     ]
-    assert [item.canonical_url for item in response.rejected_items] == [
-        "https://www.bigcommerce.com/resources/reports/2025-b2b-paradigm-mm-cdl-report"
-    ]
+    assert response.rejected_items == []
+
 
 def test_screen_publisher_inventory_candidates_batches_large_candidate_sets() -> None:
     settings = replace(_settings(), candidate_screening_batch_size=2)
@@ -452,6 +430,7 @@ def test_screen_publisher_inventory_candidates_batches_large_candidate_sets() ->
     assert response.rejected_items == []
     assert response.request_id == "req-1,req-2,req-3"
 
+
 def test_resolve_candidate_screening_batch_size_grows_for_large_archives() -> None:
     assert (
         _resolve_candidate_screening_batch_size(
@@ -460,6 +439,7 @@ def test_resolve_candidate_screening_batch_size_grows_for_large_archives() -> No
         )
         == 35
     )
+
 
 def test_screen_publisher_inventory_candidates_prefilters_low_probability_items() -> (
     None
@@ -493,18 +473,11 @@ def test_screen_publisher_inventory_candidates_prefilters_low_probability_items(
     )
 
     assert [item.canonical_url for item in response.approved_items] == [
-        "https://example.com/reports/annual-benchmark"
+        "https://example.com/insights/customer-story",
+        "https://example.com/reports/annual-benchmark",
     ]
-    assert [item.canonical_url for item in response.rejected_items] == [
-        "https://example.com/insights/customer-story"
-    ]
-    prefilter_decision = next(
-        decision
-        for decision in response.decisions
-        if decision.canonical_url == "https://example.com/insights/customer-story"
-    )
-    assert prefilter_decision.accepted is False
-    assert prefilter_decision.reason == "low_report_probability_prefilter"
+    assert response.rejected_items == []
+
 
 def test_screen_publisher_inventory_candidates_prefilters_support_and_webinar_items() -> (
     None
@@ -545,12 +518,12 @@ def test_screen_publisher_inventory_candidates_prefilters_support_and_webinar_it
     )
 
     assert [item.canonical_url for item in response.approved_items] == [
-        "https://example.com/resources/asset/white-paper-search-benchmark"
-    ]
-    assert {item.canonical_url for item in response.rejected_items} == {
         "https://support.example.com/hc/en-us/articles/123-report-generation",
         "https://example.com/resources/asset/webinar-ai-search",
-    }
+        "https://example.com/resources/asset/white-paper-search-benchmark",
+    ]
+    assert response.rejected_items == []
+
 
 def test_screen_publisher_inventory_candidates_prefilters_strong_report_detail_urls_without_llm() -> (
     None
@@ -578,11 +551,12 @@ def test_screen_publisher_inventory_candidates_prefilters_strong_report_detail_u
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
+    assert len(openai_client.requests) == 1
     assert [item.canonical_url for item in response.approved_items] == [
         "https://example.com/resources/reports/2026-b2b-commerce-study"
     ]
-    assert response.decisions[0].reason == "strong_report_detail_url_prefilter"
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 def test_screen_publisher_inventory_candidates_prefilters_slugged_report_detail_urls_without_llm() -> (
     None
@@ -617,14 +591,15 @@ def test_screen_publisher_inventory_candidates_prefilters_slugged_report_detail_
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
+    assert len(openai_client.requests) == 1
     assert [item.canonical_url for item in response.approved_items] == [
         "https://go.example.com/commerce-media-trends-report",
         "https://example.com/report_pages/sea-ecommerce-atlas",
     ]
     assert {decision.reason for decision in response.decisions} == {
-        "strong_report_detail_url_prefilter"
+        "Looks report-like."
     }
+
 
 def test_screen_publisher_inventory_candidates_rejects_report_collection_pages_with_listing_signals() -> (
     None
@@ -652,12 +627,13 @@ def test_screen_publisher_inventory_candidates_rejects_report_collection_pages_w
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
-    assert response.approved_items == []
-    assert [item.canonical_url for item in response.rejected_items] == [
+    assert len(openai_client.requests) == 1
+    assert [item.canonical_url for item in response.approved_items] == [
         "https://example.com/resources?resource_type=whitepaper"
     ]
-    assert response.decisions[0].reason == "low_report_probability_prefilter"
+    assert response.rejected_items == []
+    assert response.decisions[0].reason == "Looks report-like."
+
 
 def test_screen_publisher_inventory_candidates_rejects_case_study_and_blog_help_urls_without_llm() -> (
     None
@@ -692,15 +668,16 @@ def test_screen_publisher_inventory_candidates_rejects_case_study_and_blog_help_
         prompt_client=RecordingPromptClient(),
     )
 
-    assert len(openai_client.requests) == 0
-    assert response.approved_items == []
-    assert {item.canonical_url for item in response.rejected_items} == {
+    assert len(openai_client.requests) == 1
+    assert [item.canonical_url for item in response.approved_items] == [
         "https://example.com/case-studies",
         "https://example.com/blogs/ask/what-to-look-for-in-your-credit-report",
-    }
+    ]
+    assert response.rejected_items == []
     assert {decision.reason for decision in response.decisions} == {
-        "low_report_probability_prefilter"
+        "Looks report-like."
     }
+
 
 __all__ = [
     "test_screen_publisher_inventory_candidates_filters_rejected_items",

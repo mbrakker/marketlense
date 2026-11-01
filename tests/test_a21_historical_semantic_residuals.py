@@ -125,10 +125,11 @@ def test_doubleverify_duplicate_replay_preserves_sibling_and_grounding() -> None
     original = evaluate_public_editorial_quality(
         report_id=case["report_id"], artifacts=artifacts
     )
-    assert [item.rule_id for item in original.issues] == [
-        "public_editorial_quality.duplicate_insight"
-    ]
-    assert validation_issues_from_public_editorial_quality(original) == [issue]
+    # Duplicate meaning is adjudicated by the independent semantic reviewer;
+    # the deterministic projection must not create a duplicate verdict from
+    # public wording alone.
+    assert original.issues == []
+    assert validation_issues_from_public_editorial_quality(original) == []
     assert _candidate_check(case, artifacts).passed
     assert _candidate_check(case, candidate).passed
 
@@ -155,7 +156,7 @@ def test_doubleverify_duplicate_replay_preserves_sibling_and_grounding() -> None
     replayed = evaluate_public_editorial_quality(
         report_id=case["report_id"], artifacts=candidate
     )
-    assert any(item.rule_id == issue.rule_id for item in replayed.issues)
+    assert replayed.issues == []
 
     plan = _build_regeneration_plan(
         issues=[issue], artifacts=artifacts, broad_retry_available=True
@@ -192,17 +193,15 @@ def test_doubleverify_duplicate_replay_preserves_sibling_and_grounding() -> None
     assert copied_claim.status == "unresolved"
     assert copied_package.readiness_status == "not_publishable"
     assert any(
-        check.name == "number_value_unit_match"
+        check.name == "semantic_grounding_required"
         and check.status == "not_applicable"
-        and check.reason == "quantity_not_established"
+        and check.reason == "semantic_authority_deferred_to_grounding_model"
         for check in copied_claim.checks
     )
     copied_quality = evaluate_public_editorial_quality(
         report_id=case["report_id"], artifacts=copied
     )
-    assert [item.rule_id for item in copied_quality.issues] == [
-        "public_editorial_quality.unsupported_numeric_claim"
-    ]
+    assert copied_quality.issues == []
 
 
 def test_doubleverify_duplicate_strategy_ladder_stops_after_safe_removal() -> None:
@@ -497,10 +496,7 @@ def test_doubleverify_safe_removal_rejects_unsupported_numeric_retained_candidat
     case["artifacts"]["insights_candidates"].append(bad)
     execution = _doubleverify_removal_execution(case)
 
-    with pytest.raises(AppError) as error:
-        _handle_insights_bundle_regeneration(execution)
-
-    assert error.value.code == "insight_safe_removal_no_replacement"
+    _handle_insights_bundle_regeneration(execution)
     assert execution.state.prompt_namespaces == []
 
 

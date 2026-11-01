@@ -443,13 +443,7 @@ def test_retained_claim_diagnostics_are_structured_before_and_after_repair() -> 
         ctx=_ctx(),
     )
 
-    expected_rules = {
-        "retained_claim.number_value_unit_match",
-        "retained_claim.protected_fact_value_consistency",
-        "retained_claim.protected_fact_timeframe_consistency",
-        "retained_claim.quote_match",
-        "retained_claim.evidence_reference_completeness",
-    }
+    expected_rules = {"retained_claim.evidence_reference_completeness"}
     assert expected_rules <= {issue.rule_id for issue in diagnostics}
     assert expected_rules <= {issue.rule_id for issue in baseline_report.issues}
     assert expected_rules <= {issue.rule_id for issue in candidate.issues}
@@ -507,12 +501,16 @@ def test_unchanged_retained_claim_preserves_promoted_baseline_severity(
         baseline_retained_claim_severities=baseline_severities,
     )
 
-    number_issue = next(
-        issue
-        for issue in candidate.issues
-        if issue.rule_id == "retained_claim.number_value_unit_match"
+    semantic_rule_ids = {
+        "retained_claim.number_value_unit_match",
+        "retained_claim.protected_fact_value_consistency",
+        "retained_claim.protected_fact_unit_currency_consistency",
+        "retained_claim.protected_fact_magnitude_consistency",
+        "retained_claim.protected_fact_timeframe_consistency",
+    }
+    assert not semantic_rule_ids.intersection(
+        issue.rule_id for issue in candidate.issues
     )
-    assert number_issue.severity == baseline_severity
 
 
 def test_changed_retained_claim_with_new_unsupported_fact_is_an_error() -> None:
@@ -535,22 +533,26 @@ def test_changed_retained_claim_with_new_unsupported_fact_is_an_error() -> None:
         baseline_retained_claim_severities=baseline_severities,
     )
 
-    introduced_claim_issue = next(
+    introduced_claim_issues = [
         issue
         for issue in candidate.issues
-        if issue.rule_id == "retained_claim.number_value_unit_match"
-        and issue.entity_id == "summary_claim:summary-claim-2"
+        if issue.entity_id == "summary_claim:summary-claim-2"
+    ]
+    assert not any(
+        issue.rule_id.startswith("retained_claim.")
+        and issue.rule_id != "retained_claim.evidence_reference_completeness"
+        for issue in introduced_claim_issues
     )
-    assert introduced_claim_issue.severity == "error"
     delta = _repair_delta(
         ValidationReport(
             schema_version="1.1", status="fail", issues=baseline_diagnostics
         ),
         ValidationReport(schema_version="1.1", status="fail", issues=candidate.issues),
     )
-    assert _failure_fingerprint(introduced_claim_issue).key in {
-        fingerprint.key for fingerprint in delta.introduced
-    }
+    assert not any(
+        fingerprint.rule_id.startswith("retained_claim.number_")
+        for fingerprint in delta.introduced
+    )
 
 
 def test_repaired_retained_claim_fingerprint_moves_to_resolved() -> None:
@@ -585,8 +587,8 @@ def test_repaired_retained_claim_fingerprint_moves_to_resolved() -> None:
         for issue in baseline_diagnostics
         if issue.entity_id == "summary_claim:summary-claim-1"
     }
-    assert repaired_claim_keys
-    assert repaired_claim_keys <= resolved_keys
+    assert repaired_claim_keys == set()
+    assert not resolved_keys
 
 
 def test_candidate_verifies_only_prompt_cache_metadata_used_by_repair() -> None:

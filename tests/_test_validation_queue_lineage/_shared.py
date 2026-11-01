@@ -226,7 +226,7 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                     "decision": "primary",
                     "why_fit": "The retained source covers media planning and advertising priorities.",
                     "why_not_fit": "",
-                    "evidence_sections": ["market-demand"],
+                    "evidence_sections": ["Market demand"],
                 }
             ],
         },
@@ -347,7 +347,7 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                 "claim_evidence_map": [
                     {
                         "claim": "Customer demand is changing across segments.",
-                        "evidence_id": "market-demand",
+                        "evidence_id": "finding-1",
                         "evidence": "Customer demand is changing across segments.",
                         "pages": [1],
                     }
@@ -357,12 +357,12 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                 {
                     "claim": "Customer demand is changing across segments.",
                     "classification": "factual",
-                    "evidence_ids": ["market-demand"],
+                    "evidence_ids": ["finding-1"],
                 },
                 {
                     "claim": "Demand patterns are changing.",
                     "classification": "factual",
-                    "evidence_ids": ["market-demand"],
+                    "evidence_ids": ["finding-1"],
                 },
                 {
                     "claim": (
@@ -370,7 +370,7 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                         "across segments."
                     ),
                     "classification": "factual",
-                    "evidence_ids": ["market-demand"],
+                    "evidence_ids": ["finding-1"],
                 },
             ],
         },
@@ -380,7 +380,7 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                 {
                     "claim": "Use the retained evidence as a planning input.",
                     "classification": "recommendation",
-                    "evidence_ids": ["market-demand"],
+                    "evidence_ids": ["finding-1"],
                 }
             ],
         },
@@ -390,11 +390,43 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                 {
                     "claim": "Read the report as an input to planning.",
                     "classification": "recommendation",
-                    "evidence_ids": ["market-demand"],
+                    "evidence_ids": ["finding-1"],
                 }
             ],
         },
     }
+    # The category-fit contract was versioned without changing this fixture's
+    # observable payload. Keep both schema identities available to the shared
+    # queue fake so tests exercise the current provider boundary.
+    responses["context_category_fit_v2"] = responses["context_category_fit_v1"]
+    responses["grounding_validation_output_v4"] = responses[
+        "grounding_validation_output_v3"
+    ]
+    if schema_name == "public_editorial_quality_review_v2":
+        public_items = _public_review_items_from_call(call)
+        responses[schema_name] = {
+            "verdicts": [
+                {
+                    "item_id": str(item.get("item_id") or ""),
+                    "status": "pass",
+                    "classification": (
+                        "factual_claim"
+                        if item.get("evidence_ids")
+                        else "prescriptive_recommendation"
+                    ),
+                    "severity": "info",
+                    "rule_id": "",
+                    "hard_fail_class": "",
+                    "reason": (
+                        "The retained evidence supports this final public item and "
+                        "its stated market-intelligence meaning."
+                    ),
+                    "evidence_ids": list(item.get("evidence_ids") or []),
+                    "repair_target": "",
+                }
+                for item in public_items
+            ]
+        }
     if schema_name not in responses:
         raise AssertionError(f"missing full-chain model fixture for {schema_name}")
     return FakeOpenAIResult(
@@ -431,6 +463,35 @@ def _json_prompt_value(call: dict, label: str) -> object:
     return None
 
 
+def _public_review_items_from_call(call: dict) -> list[dict[str, object]]:
+    """Extract the rendered public-item JSON without deciding its semantics."""
+
+    decoder = json.JSONDecoder()
+    messages = call.get("messages") or call.get("input") or []
+    for message in messages if isinstance(messages, list) else []:
+        content = message.get("content") if isinstance(message, dict) else None
+        if isinstance(content, list):
+            content = "\n".join(
+                item.get("text", "")
+                for item in content
+                if isinstance(item, dict) and isinstance(item.get("text"), str)
+            )
+        if not isinstance(content, str):
+            continue
+        marker = content.find("{")
+        while marker >= 0:
+            try:
+                payload, _end = decoder.raw_decode(content[marker:])
+            except ValueError:
+                marker = content.find("{", marker + 1)
+                continue
+            items = payload.get("public_items") if isinstance(payload, dict) else None
+            if isinstance(items, list):
+                return [item for item in items if isinstance(item, dict)]
+            marker = content.find("{", marker + 1)
+    return []
+
+
 def _full_chain_response_factory(
     *,
     repair_soft_copy: bool = False,
@@ -456,6 +517,7 @@ def _full_chain_response_factory(
         if schema_name in {
             "grounding_validation_output_v2",
             "grounding_validation_output_v3",
+            "grounding_validation_output_v4",
         }:
             if detected_unsupported_claims is not None:
                 detected_unsupported_claims.extend(
@@ -480,6 +542,8 @@ def _full_chain_grounding_response(
     report_payload = _report_json_from_responses_call(call)
     claims = report_payload.get("retained_claims_to_ground")
     claims = claims if isinstance(claims, list) else []
+    public_items = report_payload.get("public_factual_items")
+    public_items = public_items if isinstance(public_items, list) else []
     unsupported_by_text = {
         text: (section, code) for section, text, code in unsupported_claims
     }
@@ -499,12 +563,23 @@ def _full_chain_grounding_response(
         "certainty",
         "causality",
     )
-    for claim in claims:
+    for claim in [*claims, *public_items]:
         if not isinstance(claim, dict):
             continue
         item_id = str(claim.get("item_id") or "")
         text = str(claim.get("text") or "")
-        section = str(claim.get("section") or "")
+        section = str(claim.get("section") or claim.get("artifact") or "")
+        classification = str(claim.get("classification") or "").strip()
+        if classification not in {
+            "factual_claim",
+            "analyst_interpretation",
+            "prescriptive_recommendation",
+        }:
+            classification = (
+                "prescriptive_recommendation"
+                if text.startswith(("Governance should", "Operating models should"))
+                else "factual_claim"
+            )
         unsupported_match = next(
             (
                 configured
@@ -513,7 +588,7 @@ def _full_chain_grounding_response(
             ),
             "",
         )
-        if unsupported_match:
+        if unsupported_match and classification != "prescriptive_recommendation":
             _configured_section, code = unsupported_by_text[unsupported_match]
             reason = "The retained source does not establish this claim" + (
                 f" ({code})." if code else "."
@@ -523,7 +598,7 @@ def _full_chain_grounding_response(
                     "item_id": item_id,
                     "section": section,
                     "text": text,
-                    "classification": "factual_claim",
+                    "classification": classification,
                     "entailment_outcome": "not_established",
                     "proposition_status": "unknown",
                     "protected_facts": {
@@ -542,7 +617,7 @@ def _full_chain_grounding_response(
                     "item_id": item_id,
                     "section": section,
                     "text": text,
-                    "classification": "factual_claim",
+                    "classification": classification,
                     "entailment_outcome": "not_established",
                     "violation_type": "unsupported_factual_claim",
                     "reason": reason,
@@ -554,7 +629,7 @@ def _full_chain_grounding_response(
                 "item_id": item_id,
                 "section": section,
                 "text": text,
-                "classification": "factual_claim",
+                "classification": classification,
                 "entailment_outcome": "entailed",
                 "proposition_status": "compatible",
                 "protected_facts": {
@@ -762,6 +837,7 @@ def _full_chain_chat_response_factory(
             if schema_name in {
                 "grounding_validation_output_v2",
                 "grounding_validation_output_v3",
+                "grounding_validation_output_v4",
             }:
                 if detected_unsupported_claims is not None:
                     detected_unsupported_claims.extend(

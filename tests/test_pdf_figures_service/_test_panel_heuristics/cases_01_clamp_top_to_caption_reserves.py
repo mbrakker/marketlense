@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_clamp_top_to_caption_reserves_crop_padding_from_prior_paragraph(
     tmp_path,
 ) -> None:
@@ -25,6 +26,7 @@ def test_clamp_top_to_caption_reserves_crop_padding_from_prior_paragraph(
 
     assert clamped.y0 > 186.0
     assert clamped.y0 < 187.0
+
 
 def test_collect_candidates_splits_stacked_captioned_draw_charts(tmp_path) -> None:
     pdf_path = tmp_path / "stacked-captioned-draw-charts.pdf"
@@ -63,7 +65,8 @@ def test_collect_candidates_splits_stacked_captioned_draw_charts(tmp_path) -> No
     assert lower.bbox[1] <= 452.0
     assert lower.bbox[3] >= 624.0
 
-def test_collect_candidates_rejects_top_stacked_captioned_draw_chart(tmp_path) -> None:
+
+def test_collect_candidates_retains_top_stacked_captioned_draw_charts(tmp_path) -> None:
     pdf_path = tmp_path / "top-stacked-captioned-draw-charts.pdf"
     out_dir = tmp_path / "out"
     _build_top_stacked_captioned_draw_charts_pdf(pdf_path)
@@ -81,8 +84,13 @@ def test_collect_candidates_rejects_top_stacked_captioned_draw_chart(tmp_path) -
     charts = [
         candidate for candidate in response.candidates if candidate.kind == "chart"
     ]
-    assert len(charts) == 1
-    assert (charts[0].caption or "").lower().startswith("figure 2")
+    assert len(charts) == 2
+    captions = [(candidate.caption or "").lower() for candidate in charts]
+    assert any(caption.startswith("figure 1") for caption in captions)
+    assert any(caption.startswith("figure 2") for caption in captions)
+    assert all(candidate.bbox[0] < candidate.bbox[2] for candidate in charts)
+    assert all(candidate.bbox[1] < candidate.bbox[3] for candidate in charts)
+
 
 def test_collect_candidates_detects_captionless_embedded_chart_image_card(
     tmp_path,
@@ -110,6 +118,7 @@ def test_collect_candidates_detects_captionless_embedded_chart_image_card(
     assert chart.bbox[1] >= 165.0
     assert chart.bbox[2] <= 880.0
     assert chart.bbox[3] > 430.0
+
 
 def test_collect_candidates_detects_relaxed_geometry_embedded_chart_images(
     tmp_path,
@@ -143,7 +152,8 @@ def test_collect_candidates_detects_relaxed_geometry_embedded_chart_images(
     assert narrow.bbox[2] <= 880.0
     assert narrow.bbox[3] >= 490.0
 
-def test_collect_candidates_does_not_relax_captioned_embedded_chart_geometry(
+
+def test_collect_candidates_retains_captioned_embedded_chart_for_visual_review(
     tmp_path,
 ) -> None:
     pdf_path = tmp_path / "relaxed-embedded-chart-with-figure-caption.pdf"
@@ -163,9 +173,14 @@ def test_collect_candidates_does_not_relax_captioned_embedded_chart_geometry(
     charts = [
         candidate for candidate in response.candidates if candidate.kind == "chart"
     ]
-    assert not any(candidate.page == 1 for candidate in charts)
+    page_one = [candidate for candidate in charts if candidate.page == 1]
+    assert len(page_one) == 1
+    assert page_one[0].bbox[0] >= 620.0
+    assert page_one[0].bbox[2] <= 842.0
+    assert page_one[0].bbox[1] < page_one[0].bbox[3]
 
-def test_collect_candidates_rejects_decorative_photo_panel_without_figure_context(
+
+def test_collect_candidates_retains_ambiguous_photo_panel_for_visual_review(
     tmp_path,
 ) -> None:
     pdf_path = tmp_path / "decorative-photo-panel.pdf"
@@ -185,7 +200,11 @@ def test_collect_candidates_rejects_decorative_photo_panel_without_figure_contex
     charts = [
         candidate for candidate in response.candidates if candidate.kind == "chart"
     ]
-    assert charts == []
+    assert len(charts) == 1
+    assert charts[0].bbox[0] < charts[0].bbox[2]
+    assert charts[0].bbox[1] < charts[0].bbox[3]
+    assert float((charts[0].meta or {}).get("chart_confidence", 0.0)) >= 0.0
+
 
 def test_visual_candidate_looks_table_like_keeps_compact_panel_rank_card() -> None:
     text = (
@@ -209,6 +228,7 @@ def test_visual_candidate_looks_table_like_keeps_compact_panel_rank_card() -> No
         is False
     )
 
+
 def test_final_chart_candidate_looks_heading_slice_keeps_large_panel_chart() -> None:
     candidate = Candidate(
         schema_version="1.0",
@@ -224,6 +244,7 @@ def test_final_chart_candidate_looks_heading_slice_keeps_large_panel_chart() -> 
         _final_chart_candidate_looks_heading_slice(candidate, "Trustworthy Ads\n")
         is False
     )
+
 
 def test_visual_candidate_looks_narrative_panel_card_rejects_long_worldpanel_style_card() -> (
     None
@@ -252,6 +273,7 @@ def test_visual_candidate_looks_narrative_panel_card_rejects_long_worldpanel_sty
         is True
     )
 
+
 def test_panel_chart_has_data_signal_rejects_non_numeric_label_grid() -> None:
     text = (
         "Trustworthy\n"
@@ -262,6 +284,7 @@ def test_panel_chart_has_data_signal_rejects_non_numeric_label_grid() -> None:
         "Captures my attention\n"
     )
     assert _panel_chart_has_data_signal(text) is False
+
 
 def test_visual_candidate_looks_inline_numbered_panel_rejects_short_numbered_sidebar() -> (
     None
@@ -284,6 +307,7 @@ def test_visual_candidate_looks_inline_numbered_panel_rejects_short_numbered_sid
         )
         is True
     )
+
 
 def test_collect_candidates_detects_panel_charts_without_figure_captions(
     tmp_path,
@@ -326,6 +350,7 @@ def test_collect_candidates_detects_panel_charts_without_figure_captions(
     assert left.bbox[2] < 500.0
     assert right.bbox[0] > 460.0
 
+
 def test_collect_candidates_groups_shared_title_split_panels_into_one_chart(
     tmp_path,
 ) -> None:
@@ -354,6 +379,7 @@ def test_collect_candidates_groups_shared_title_split_panels_into_one_chart(
     )
     assert charts[0].bbox[2] > 900.0
 
+
 def test_extend_panel_rect_with_nearby_label_blocks_respects_horizontal_guard() -> None:
     rect = fitz.Rect(430.0, 160.0, 900.0, 420.0)
     page_rect = fitz.Rect(0.0, 0.0, 960.0, 540.0)
@@ -374,6 +400,7 @@ def test_extend_panel_rect_with_nearby_label_blocks_respects_horizontal_guard() 
     assert expanded.x1 <= 940.0
     assert expanded.x0 > 320.0
     assert expanded.x1 > rect.x1
+
 
 def test_collect_candidates_groups_stacked_shared_title_panels_into_one_chart(
     tmp_path,
@@ -403,6 +430,7 @@ def test_collect_candidates_groups_stacked_shared_title_panels_into_one_chart(
     )
     assert charts[0].bbox[2] >= 748.0
     assert charts[0].bbox[3] >= 476.0
+
 
 def test_collect_candidates_keeps_stacked_independent_panel_cards_separate(
     tmp_path,
@@ -448,6 +476,7 @@ def test_collect_candidates_keeps_stacked_independent_panel_cards_separate(
     assert lower.bbox[1] >= 540.0
     assert upper.bbox[3] <= 560.0
 
+
 def test_collect_candidates_detects_wide_panel_chart_with_resource_title(
     tmp_path,
 ) -> None:
@@ -473,6 +502,7 @@ def test_collect_candidates_detects_wide_panel_chart_with_resource_title(
     assert charts[0].bbox[0] > 0.0
     assert charts[0].bbox[2] < 960.0
     assert charts[0].bbox[3] < 520.0
+
 
 def test_collect_candidates_detects_right_column_raster_chart_card_with_left_context(
     tmp_path,
@@ -508,7 +538,8 @@ def test_collect_candidates_detects_right_column_raster_chart_card_with_left_con
     assert charts[0].bbox[2] >= 800.0
     assert charts[0].bbox[3] >= 398.0
 
-def test_collect_candidates_rejects_right_column_raster_photo_card_with_left_context(
+
+def test_collect_candidates_retains_right_column_raster_photo_card_for_visual_review(
     tmp_path,
 ) -> None:
     pdf_path = tmp_path / "right-column-raster-photo-card.pdf"
@@ -528,9 +559,13 @@ def test_collect_candidates_rejects_right_column_raster_photo_card_with_left_con
     charts = [
         candidate for candidate in response.candidates if candidate.kind == "chart"
     ]
-    assert charts == []
+    assert len(charts) == 1
+    assert charts[0].bbox[0] >= 440.0
+    assert charts[0].bbox[2] <= 842.0
+    assert charts[0].bbox[0] < charts[0].bbox[2]
 
-def test_collect_candidates_rejects_light_raster_photo_card(
+
+def test_collect_candidates_retains_light_raster_photo_card_for_visual_review(
     tmp_path,
 ) -> None:
     pdf_path = tmp_path / "light-raster-photo-card.pdf"
@@ -550,9 +585,12 @@ def test_collect_candidates_rejects_light_raster_photo_card(
     charts = [
         candidate for candidate in response.candidates if candidate.kind == "chart"
     ]
-    assert charts == []
+    assert len(charts) == 1
+    assert charts[0].bbox[0] < charts[0].bbox[2]
+    assert charts[0].bbox[1] < charts[0].bbox[3]
 
-def test_collect_candidates_rejects_small_uncaptioned_decorative_raster_card(
+
+def test_collect_candidates_retains_small_ambiguous_raster_card_for_visual_review(
     tmp_path,
 ) -> None:
     pdf_path = tmp_path / "small-decorative-raster-card.pdf"
@@ -572,7 +610,10 @@ def test_collect_candidates_rejects_small_uncaptioned_decorative_raster_card(
     charts = [
         candidate for candidate in response.candidates if candidate.kind == "chart"
     ]
-    assert charts == []
+    assert len(charts) == 1
+    assert charts[0].bbox[0] < charts[0].bbox[2]
+    assert charts[0].bbox[1] < charts[0].bbox[3]
+
 
 def test_collect_candidates_rejects_panel_action_card_without_data_signal(
     tmp_path,
@@ -596,6 +637,7 @@ def test_collect_candidates_rejects_panel_action_card_without_data_signal(
     ]
     assert charts == []
 
+
 def test_panel_chart_has_compact_stat_card_signal_accepts_metric_card() -> None:
     text = (
         "44%\n"
@@ -603,6 +645,7 @@ def test_panel_chart_has_compact_stat_card_signal_accepts_metric_card() -> None:
         "Early findings: What matters to today's consumers, 2026\n"
     )
     assert _panel_chart_has_compact_stat_card_signal(text) is True
+
 
 def test_clamp_panel_rect_to_dominant_fill_rect_prefers_local_compact_card() -> None:
     doc = fitz.open()
@@ -640,6 +683,7 @@ def test_clamp_panel_rect_to_dominant_fill_rect_prefers_local_compact_card() -> 
     assert clamped.y1 <= 163.0
     assert clamped.y1 < 180.0
 
+
 def test_clamp_panel_rect_to_dominant_fill_rect_leaves_multi_stat_card_unchanged() -> (
     None
 ):
@@ -668,6 +712,7 @@ def test_clamp_panel_rect_to_dominant_fill_rect_leaves_multi_stat_card_unchanged
 
     assert clamped == original
 
+
 def test_panel_component_looks_like_guidance_card_accepts_step_and_key_cards() -> None:
     numbered_text = (
         "3 ways retailers can win with invisible AI experiences\n"
@@ -688,14 +733,15 @@ def test_panel_component_looks_like_guidance_card_accepts_step_and_key_cards() -
     assert _panel_component_looks_like_guidance_card(numbered_text) is True
     assert _panel_component_looks_like_guidance_card(colon_text) is True
 
+
 __all__ = [
     "test_clamp_top_to_caption_reserves_crop_padding_from_prior_paragraph",
     "test_collect_candidates_splits_stacked_captioned_draw_charts",
-    "test_collect_candidates_rejects_top_stacked_captioned_draw_chart",
+    "test_collect_candidates_retains_top_stacked_captioned_draw_charts",
     "test_collect_candidates_detects_captionless_embedded_chart_image_card",
     "test_collect_candidates_detects_relaxed_geometry_embedded_chart_images",
-    "test_collect_candidates_does_not_relax_captioned_embedded_chart_geometry",
-    "test_collect_candidates_rejects_decorative_photo_panel_without_figure_context",
+    "test_collect_candidates_retains_captioned_embedded_chart_for_visual_review",
+    "test_collect_candidates_retains_ambiguous_photo_panel_for_visual_review",
     "test_visual_candidate_looks_table_like_keeps_compact_panel_rank_card",
     "test_final_chart_candidate_looks_heading_slice_keeps_large_panel_chart",
     "test_visual_candidate_looks_narrative_panel_card_rejects_long_worldpanel_style_card",
@@ -708,9 +754,9 @@ __all__ = [
     "test_collect_candidates_keeps_stacked_independent_panel_cards_separate",
     "test_collect_candidates_detects_wide_panel_chart_with_resource_title",
     "test_collect_candidates_detects_right_column_raster_chart_card_with_left_context",
-    "test_collect_candidates_rejects_right_column_raster_photo_card_with_left_context",
-    "test_collect_candidates_rejects_light_raster_photo_card",
-    "test_collect_candidates_rejects_small_uncaptioned_decorative_raster_card",
+    "test_collect_candidates_retains_right_column_raster_photo_card_for_visual_review",
+    "test_collect_candidates_retains_light_raster_photo_card_for_visual_review",
+    "test_collect_candidates_retains_small_ambiguous_raster_card_for_visual_review",
     "test_collect_candidates_rejects_panel_action_card_without_data_signal",
     "test_panel_chart_has_compact_stat_card_signal_accepts_metric_card",
     "test_clamp_panel_rect_to_dominant_fill_rect_prefers_local_compact_card",

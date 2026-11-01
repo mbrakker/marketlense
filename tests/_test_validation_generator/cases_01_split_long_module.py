@@ -213,7 +213,10 @@ def test_validation_fails_on_report_directive_misattribution(tmp_path):
     )
     assert result.status == "fail"
     assert any(
-        "report_directive_misattribution" in issue.message for issue in result.issues
+        issue.rule_id == "grounding"
+        and issue.violation_type == "not_established"
+        and "No directive exists" in issue.message
+        for issue in result.issues
     )
     assert any(issue.severity == "error" for issue in result.issues)
 
@@ -305,7 +308,7 @@ def test_validation_number_matching_normalizes_percent_and_billions(tmp_path):
     assert not any("Number" in issue.message for issue in result.issues)
 
 
-def test_validation_number_check_rejects_changed_explicit_units(tmp_path):
+def test_inline_validation_defers_explicit_unit_semantics_to_grounding(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
         "insights_final": [
@@ -340,6 +343,7 @@ def test_validation_number_check_rejects_changed_explicit_units(tmp_path):
             artifacts=artifacts,
             evidence_packs={},
             vector_store_id=None,
+            validation_mode="inline_deterministic",
         ),
         settings,
         _ctx(),
@@ -347,8 +351,12 @@ def test_validation_number_check_rejects_changed_explicit_units(tmp_path):
         openai_client=fake_openai,
         analysis_store=FakeAnalysisStore(),
     )
-    assert result.status == "fail"
-    assert any("Number" in issue.message for issue in result.issues)
+    assert result.status == "pass"
+    assert result.severity == "pass"
+    assert not any("Number" in issue.message for issue in result.issues)
+    assert any(
+        issue.rule_id == "deferred_grounding_required" for issue in result.issues
+    )
 
 
 def test_grounding_unsupported_number_with_unit_mismatch_is_blocking(

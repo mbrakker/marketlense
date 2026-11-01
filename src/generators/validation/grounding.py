@@ -1449,13 +1449,16 @@ def run_grounding_check(
                     role="generator",
                     event="grounding_retryable_error_propagated",
                     module=LOGGER_NAME,
-                    fields={"code": exc.code, "message": exc.message},
+                    fields={
+                        "code": exc.code,
+                        "error_class": type(exc.cause or exc).__name__,
+                    },
                 )
             )
             raise
         error_context = exc.context if isinstance(exc.context, dict) else {}
         inner_error_class = s(error_context.get("error_class"))
-        failure_message = f"Grounding check failed: {exc.message}"
+        failure_message = f"Grounding check failed ({exc.code})."
         if inner_error_class:
             failure_message += f" (cause: {inner_error_class})"
         failure_item_ids = {
@@ -1484,7 +1487,6 @@ def run_grounding_check(
                 module=LOGGER_NAME,
                 fields={
                     "code": exc.code,
-                    "message": exc.message,
                     "inner_error_class": inner_error_class,
                     "repair_attempt": error_context.get("repair_attempt", 0),
                     "batch_index": error_context.get("batch_index", 0),
@@ -1519,6 +1521,7 @@ def run_grounding_check(
                     "warning" if request.deterministic_grounding_passed else "error"
                 ),
                 section="grounding",
+                violation_type=exc.code,
                 evidence_ids=failure_evidence_ids,
             )
         )
@@ -1716,7 +1719,6 @@ def _grounding_coverage_diagnostics(
         }
     )
     text_mismatch_ids: list[str] = []
-    classification_mismatch_ids: list[str] = []
     for item_id, expected_text in {**expected_claims, **expected_public}.items():
         entries = checks_by_id.get(item_id, ())
         if len(entries) != 1:
@@ -1724,11 +1726,6 @@ def _grounding_coverage_diagnostics(
         entry = entries[0]
         if not _grounding_text_matches(expected_text, s(entry.get("text"))):
             text_mismatch_ids.append(item_id)
-        if (
-            item_id in expected_claims
-            and s(entry.get("classification")) != "factual_claim"
-        ):
-            classification_mismatch_ids.append(item_id)
     context: dict[str, Any] = {
         "coverage_failure_category": category,
         "expected_claim_ids": list(expected_claims)[:32],
@@ -1737,9 +1734,6 @@ def _grounding_coverage_diagnostics(
         "returned_unsupported_item_ids": returned_unsupported_ids[:32],
         "duplicate_item_ids": duplicate_ids[:32],
         "text_mismatch_ids": list(dict.fromkeys(text_mismatch_ids))[:32],
-        "classification_mismatch_ids": list(dict.fromkeys(classification_mismatch_ids))[
-            :32
-        ],
     }
     for key, value in details.items():
         if isinstance(value, list):
@@ -1881,7 +1875,7 @@ def _validate_grounding_check_coverage(
             verdict = matching_checks[0]
             if (
                 not _grounding_text_matches(text, s(verdict.get("text")))
-                or s(verdict.get("classification")) != "factual_claim"
+                or s(verdict.get("classification")) not in valid_classifications
                 or s(verdict.get("entailment_outcome")) not in valid_outcomes
             ):
                 missing_claim_ids.append(claim_id)
@@ -1893,7 +1887,10 @@ def _validate_grounding_check_coverage(
                     or not _grounding_text_matches(
                         text, s(unsupported_entry.get("text"))
                     )
-                    or s(unsupported_entry.get("classification")) != "factual_claim"
+                    or s(unsupported_entry.get("classification"))
+                    not in valid_classifications
+                    or s(unsupported_entry.get("classification"))
+                    != s(verdict.get("classification"))
                     or s(unsupported_entry.get("entailment_outcome"))
                     != s(verdict.get("entailment_outcome"))
                 ):

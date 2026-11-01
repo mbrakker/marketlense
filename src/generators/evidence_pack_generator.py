@@ -578,10 +578,14 @@ def _merge_supported_fallback_findings(
 ) -> list[dict[str, object]]:
     """Keep primary findings and append only nonduplicate supported fallback claims."""
 
+    # Exact identity duplicates are safe to suppress even when the primary
+    # candidate is still awaiting the report-level semantic pass.  The
+    # fallback candidate will be semantically evaluated later; carrying an
+    # identical representation twice only creates duplicate validation work
+    # and can displace a distinct missing finding.
     seen_keys = {
         key
         for finding in findings
-        if str(finding.get("id") or "").strip() in grounded_finding_ids
         if (key := _findings_duplicate_key(finding)) is not None
     }
     merged = list(findings)
@@ -649,9 +653,16 @@ def _findings_target_missing_key_point_count(
 
 
 def _attach_verified_finding_pages(
-    findings: list[dict[str, object]], fidelity
+    findings: list[dict[str, object]], fidelity, *, allow_semantic_pending: bool = False
 ) -> set[str]:
-    """Bind supported findings to physical pages found in their source evidence."""
+    """Bind findings to physical pages found in their source evidence.
+
+    Targeted fallback candidates are source-bound before the report-level
+    semantic pass runs.  They may therefore still be ``unresolved`` here, but
+    an unresolved candidate with a complete physical binding is safe to carry
+    into that existing semantic pass.  Unknown or unsupported bindings remain
+    excluded.
+    """
 
     findings_by_id = {
         str(finding.get("id") or "").strip(): finding
@@ -661,7 +672,10 @@ def _attach_verified_finding_pages(
     supported_ids: set[str] = set()
     for result in fidelity.results:
         claim_id = str(result.candidate.claim_id)
-        if result.status != "supported" or not claim_id.startswith(
+        eligible_statuses = {"supported"}
+        if allow_semantic_pending:
+            eligible_statuses.add("unresolved")
+        if result.status not in eligible_statuses or not claim_id.startswith(
             "evidence:findings:"
         ):
             continue
@@ -684,9 +698,7 @@ def _attach_verified_finding_pages(
     return supported_ids
 
 
-def _attach_verified_quote_pages(
-    quotes: list[dict[str, object]], fidelity
-) -> set[str]:
+def _attach_verified_quote_pages(quotes: list[dict[str, object]], fidelity) -> set[str]:
     """Bind a quote only when fidelity resolves it to one physical PDF page."""
 
     quotes_by_id = {
@@ -760,9 +772,7 @@ def _missing_findings_retrieval_targets(
             )
         )
     ]
-    if qualitative and selected and not any(
-        item in qualitative for item in selected
-    ):
+    if qualitative and selected and not any(item in qualitative for item in selected):
         qualitative.sort(
             key=lambda item: (
                 -item[0],
@@ -774,10 +784,7 @@ def _missing_findings_retrieval_targets(
             )
         )
         selected[-1] = qualitative[0]
-    return [
-        target
-        for _missing_count, _index, target in selected
-    ]
+    return [target for _missing_count, _index, target in selected]
 
 
 def _normalize_m_and_a_deal_quantities(text: str) -> str:
@@ -2183,21 +2190,32 @@ def _generate_pack(
                         existing_ids.add(item_id)
                         fallback_findings.append(item)
                     supported_fallback_findings: list[dict[str, object]] = []
+                    directly_supported_fallback_count = 0
+                    source_bound_fallback_count = 0
                     if fallback_findings:
                         fallback_fidelity = validate_evidence_fidelity(
                             {"findings": {"findings": fallback_findings}},
                             source_spans=source_spans,
                         )
-                        directly_supported_fallback_ids = (
-                            _attach_verified_finding_pages(
-                                fallback_findings, fallback_fidelity
+                        source_bound_fallback_ids = _attach_verified_finding_pages(
+                            fallback_findings,
+                            fallback_fidelity,
+                            allow_semantic_pending=True,
+                        )
+                        source_bound_fallback_count = len(source_bound_fallback_ids)
+                        directly_supported_fallback_count = sum(
+                            result.status == "supported"
+                            and str(result.candidate.claim_id).removeprefix(
+                                "evidence:findings:"
                             )
+                            in source_bound_fallback_ids
+                            for result in fallback_fidelity.results
                         )
                         supported_fallback_findings = [
                             item
                             for item in fallback_findings
                             if str(item.get("id") or "").strip()
-                            in directly_supported_fallback_ids
+                            in source_bound_fallback_ids
                         ]
 
                         merged_findings = _merge_supported_fallback_findings(
@@ -2219,7 +2237,8 @@ def _generate_pack(
                                 "attempts": fallback.attempts,
                                 "target_count": len(missing_targets),
                                 "returned_findings": len(fallback_findings),
-                                "supported_findings": len(supported_fallback_findings),
+                                "supported_findings": directly_supported_fallback_count,
+                                "source_bound_findings": source_bound_fallback_count,
                                 "formal_abstention": bool(
                                     str(
                                         fallback.payload.get("not_found_reason") or ""

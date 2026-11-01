@@ -41,22 +41,22 @@ from src.contracts.report_cards import (
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_store import (
     ReportMetadataGetResponse,
-    ReportSourceIdentityGetResponse,
     ReportSourceDiscoveryRecordRequest,
+    ReportSourceIdentityGetResponse,
     ReportSourceQualityHistoryRequest,
     SourceIdentityResolution,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.soft_copy_claim_provenance import (
-    soft_copy_claim_provenance_to_payload,
-    soft_copy_material_sentences,
-    soft_copy_public_text,
-)
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateBatch,
     SignalCandidateExtractionOutcome,
     SignalCandidateStoreResponse,
+)
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_to_payload,
+    soft_copy_material_sentences,
+    soft_copy_public_text,
 )
 from src.contracts.state import StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractResponse
@@ -75,6 +75,7 @@ from src.generators.report_generation_dependencies import (
 )
 from src.generators.report_generation_shared import derive_title, report_slug
 from src.generators.soft_copy_claim_provenance import build_soft_copy_claim_provenance
+from src.generators.validation_generator import validate_report
 from src.orchestrators import ingest_orchestrator as orch
 from src.orchestrators import report_generation_orchestrator as rgo
 from src.orchestrators.ingest_file_orchestrator import (
@@ -90,6 +91,10 @@ from src.services.state_service import get as state_get
 from src.services.state_service import record as state_record
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
+
+from .._test_report_analysis_generator._shared import (
+    _SemanticPassOpenAIClient,
+)
 
 
 def _ingest_settings(tmp_path: Path) -> IngestSettings:
@@ -129,11 +134,99 @@ def _ingest_settings(tmp_path: Path) -> IngestSettings:
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
         cost_daily_path=str(tmp_path / "cost-daily.json"),
         model_pricing={},
-        public_editorial_quality_disabled_rule_waivers={
-            rule_id: "test-only non-public artifact fixture"
-            for rule_id in BLOCKING_RULE_IDS
+        llm_execution_policies={
+            "report_vs": {
+                "schema_version": "1.0",
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "structured_output_mode": "json_object",
+                "timeout_seconds": 5,
+                "provider_retry_count": 0,
+                "fallback_policy": "same_provider_only",
+                "pricing_key": "gpt-4.1-mini",
+            },
+            "report_vs/validate/public_editorial_quality": {
+                "schema_version": "1.0",
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "structured_output_mode": "json_schema",
+                "structured_output_schema_identity": (
+                    "public_editorial_quality_review_v2"
+                ),
+                "timeout_seconds": 5,
+                "provider_retry_count": 0,
+                "fallback_policy": "same_provider_only",
+                "pricing_key": "gpt-4.1-mini",
+            },
+            "pdf_text/ocr_fallback": {
+                "schema_version": "1.0",
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "structured_output_mode": "json_object",
+                "timeout_seconds": 5,
+                "provider_retry_count": 0,
+                "fallback_policy": "same_provider_only",
+                "pricing_key": "gpt-4.1-mini",
+            },
+            "report_vs/figure_caption": {
+                "schema_version": "1.0",
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "structured_output_mode": "json_object",
+                "timeout_seconds": 5,
+                "provider_retry_count": 0,
+                "fallback_policy": "same_provider_only",
+                "pricing_key": "gpt-4.1-mini",
+            },
         },
+        public_editorial_quality_disabled_rule_waivers=dict.fromkeys(
+            BLOCKING_RULE_IDS, "test-only non-public artifact fixture"
+        ),
     )
+
+
+def run_vector_report_generation(*args, **kwargs):
+    """Run the production pipeline with the shared semantic test client."""
+
+    kwargs.setdefault("validation_openai_client", _SemanticPassOpenAIClient())
+    kwargs.setdefault("regeneration_openai_client", _SemanticPassOpenAIClient())
+    dependencies = kwargs.get("dependencies")
+    if dependencies is not None:
+        original_run_validation = dependencies.analysis.run_validation
+        if not str(getattr(original_run_validation, "__module__", "")).startswith(
+            "src."
+        ):
+
+            def _run_validation_with_retained_package(*inner_args, **inner_kwargs):
+                result = original_run_validation(*inner_args, **inner_kwargs)
+                if (
+                    isinstance(result, ValidationReport)
+                    and result.status == "pass"
+                    and inner_args
+                ):
+                    request = inner_args[0]
+                    settings = inner_args[1]
+                    context = inner_args[2]
+                    validate_report(
+                        request,
+                        settings,
+                        context,
+                        openai_client=_SemanticPassOpenAIClient(),
+                        pack_name=str(inner_kwargs.get("pack_name") or "validation"),
+                        report_name=str(inner_kwargs.get("report_name") or ""),
+                        md5=inner_kwargs.get("md5"),
+                    )
+                return result
+
+            dependencies = replace(
+                dependencies,
+                analysis=replace(
+                    dependencies.analysis,
+                    run_validation=_run_validation_with_retained_package,
+                ),
+            )
+            kwargs["dependencies"] = dependencies
+    return rgo.run_report_generation(*args, **kwargs)
 
 
 def _pdf_bytes() -> bytes:

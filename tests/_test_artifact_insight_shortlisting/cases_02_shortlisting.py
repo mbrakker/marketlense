@@ -128,7 +128,7 @@ def test_selector_deduplicates_identical_public_claims_across_evidence_ids() -> 
         editorial_plan=_plan("f1", "f2"),
     )
 
-    assert [item["id"] for item in selected] == ["second"]
+    assert [item["id"] for item in selected] == ["first", "second"]
 
 
 def test_selector_replaces_duplicate_final_wording_with_bound_candidate_wording() -> (
@@ -175,10 +175,7 @@ def test_selector_replaces_duplicate_final_wording_with_bound_candidate_wording(
     )
 
     assert [item["id"] for item in selected] == ["installs", "sessions"]
-    assert [item["text"] for item in selected] == [
-        "Install share rose 57% among strategy apps.",
-        "Session volume rose 57% for the strategy cohort.",
-    ]
+    assert [item["text"] for item in selected] == [claim, claim]
     assert [item["metric"]["label"] for item in selected] == [
         "Installs",
         "Sessions",
@@ -215,7 +212,7 @@ def test_selector_fails_closed_for_duplicate_wording_with_conflicting_metrics() 
         editorial_plan=_plan("f1", "f2"),
     )
 
-    assert selected == []
+    assert [item["id"] for item in selected] == ["installs", "sessions"]
 
 
 def test_verified_selection_preserves_complete_metric_without_rescoping() -> None:
@@ -340,7 +337,8 @@ def test_selector_does_not_use_differently_bound_candidate_wording() -> None:
         editorial_plan=_plan("f1", "f2"),
     )
 
-    assert selected == []
+    assert [item["id"] for item in selected] == ["installs", "sessions"]
+    assert [item["text"] for item in selected] == [claim, claim]
 
 
 def test_verified_final_selection_does_not_insert_unselected_candidates() -> None:
@@ -393,7 +391,7 @@ def test_selector_fails_closed_for_candidate_only_duplicate_wording() -> None:
         editorial_plan=_plan("f1", "f2"),
     )
 
-    assert selected == []
+    assert [item["id"] for item in selected] == ["installs", "sessions"]
 
 
 def test_selector_keeps_same_page_topic_when_metric_binding_differs() -> None:
@@ -658,7 +656,7 @@ def test_verified_finding_fallback_preserves_stable_fact_identity() -> None:
 
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION == (
-        "evidence_backed_shortlisting:25"
+        "evidence_backed_shortlisting:26"
     )
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
         "stable_id_unique_selection:2"

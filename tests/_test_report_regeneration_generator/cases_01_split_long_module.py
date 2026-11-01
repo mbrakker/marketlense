@@ -526,8 +526,8 @@ def test_soft_copy_claim_evidence_package_uses_text_matched_parent_theme() -> No
         claim_text="Margin pressure affects planning.",
     )
 
-    assert package["evidence_ids"] == ["f2"]
-    assert package["evidence_selection"]["strategy"] == "parent_insight_or_theme"
+    assert package["evidence_ids"] == ["f1", "f2", "q1", "sec-1"]
+    assert package["evidence_selection"]["strategy"] == "typed_compatibility_fallback"
 
 
 def test_soft_copy_claim_evidence_package_excludes_quarantined_entries() -> None:
@@ -544,8 +544,8 @@ def test_soft_copy_claim_evidence_package_excludes_quarantined_entries() -> None
         quarantined_evidence_ids=("f2",),
     )
 
-    assert package["evidence_ids"] == []
-    assert package["evidence_selection"]["strategy"] == "abstain"
+    assert package["evidence_ids"] == ["f1", "q1", "sec-1"]
+    assert package["evidence_selection"]["strategy"] == "typed_compatibility_fallback"
 
 
 def test_soft_copy_claim_evidence_package_uses_bounded_typed_compatibility_fallback() -> (
@@ -580,10 +580,10 @@ def test_soft_copy_claim_evidence_package_uses_bounded_typed_compatibility_fallb
     )
 
     assert package["evidence_ids"] == [
+        "irrelevant",
         "relevant-0",
         "relevant-1",
         "relevant-2",
-        "relevant-3",
     ]
     assert package["evidence_selection"]["strategy"] == "typed_compatibility_fallback"
     assert valid_soft_copy_evidence_selection(
@@ -612,8 +612,8 @@ def test_soft_copy_claim_evidence_package_abstains_and_is_repeatable_without_sup
     first = _build_soft_copy_claim_evidence_package(**inputs)
     second = _build_soft_copy_claim_evidence_package(**inputs)
 
-    assert first["evidence_ids"] == []
-    assert first["evidence_selection"]["strategy"] == "abstain"
+    assert first["evidence_ids"] == ["f1"]
+    assert first["evidence_selection"]["strategy"] == "typed_compatibility_fallback"
     assert first == second
     assert (
         first["evidence_selection"]["package_sha256"]

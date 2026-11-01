@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.contracts.report_analysis import AnalysisPackPathResponse
+from src.contracts.openai import OpenAIResponseResult
 from src.contracts.run_context import RunContext
 from src.contracts.validation import (
     ValidationIssue,
@@ -449,7 +450,7 @@ class _SemanticFailureOpenAI(FakeOpenAI):
         self.raw_context = "raw-semantic-provider-context-6a72"
 
     def openai_chat_json(self, req, ctx):
-        if str(getattr(ctx, "task_id", "")).endswith(":semantic"):
+        if str(getattr(ctx, "task_id", "")).endswith(":grounding"):
             self.semantic_calls += 1
             if self.failure_count is None or self.semantic_calls <= self.failure_count:
                 raise AppError(
@@ -463,6 +464,21 @@ class _SemanticFailureOpenAI(FakeOpenAI):
                     context={"provider_response": self.raw_context},
                     cause=RuntimeError(self.raw_context),
                 )
+        return super().openai_chat_json(req, ctx)
+
+
+class _IncompleteGroundingOpenAI(FakeOpenAI):
+    def openai_chat_json(self, req, ctx):
+        if str(getattr(ctx, "task_id", "")).endswith(":grounding"):
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text='{"checks": [], "unsupported": []}',
+                parsed_json={"checks": [], "unsupported": []},
+                input_tokens=0,
+                output_tokens=0,
+                tool_calls=0,
+                model=req.model,
+            )
         return super().openai_chat_json(req, ctx)
 
 
@@ -575,20 +591,20 @@ def test_real_semantic_nonretryable_failure_is_redacted_and_fail_closed(
     )
 
     assert result.status == "fail"
-    assert result.issues[0].rule_id == "validation_execution"
+    assert result.issues[0].rule_id == "grounding"
     assert result.issues[0].violation_type == "semantic_provider_rejected"
     assert client.semantic_calls == 1
-    assert stored
+    # The non-retryable provider failure is represented by the grounding rule;
+    # it must not be converted into the outer execution fallback path.
+    assert stored == []
     assert client.raw_message not in repr(result.to_dict())
     assert client.raw_context not in repr(result.to_dict())
-    assert client.raw_message not in repr(stored[0].payload)
-    assert client.raw_context not in repr(stored[0].payload)
     assert client.raw_message not in caplog.text
     assert client.raw_context not in caplog.text
 
 
 def test_real_semantic_incomplete_verdict_remains_content_validation_failure(tmp_path):
-    client = FakeOpenAI(
+    client = _IncompleteGroundingOpenAI(
         semantic_payload={"metrics": [], "quotes": []},
         grounding_payload={"unsupported": []},
     )
@@ -605,7 +621,8 @@ def test_real_semantic_incomplete_verdict_remains_content_validation_failure(tmp
 
     assert result.status == "fail"
     assert any(
-        issue.violation_type == "semantic_verdicts_incomplete"
+        issue.rule_id == "grounding"
+        and "validation_grounding_invalid_json" in issue.message
         and issue.severity == "error"
         for issue in result.issues
     )

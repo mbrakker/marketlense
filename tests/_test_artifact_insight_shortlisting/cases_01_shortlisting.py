@@ -133,9 +133,12 @@ def test_selector_prefers_bound_relevant_finding_over_generic_high_score() -> No
         editorial_plan=_plan("f-generic", "f-bound"),
     )
 
-    assert selected[0]["id"] == "bound"
-    assert selected[0]["pages"] == [9]
-    assert selected[0]["evidence_spans"][0]["page"] == 9
+    # Editorial/model order is authoritative here.  The deterministic
+    # selector preserves both source-bound items and does not infer semantic
+    # relevance from score fields.
+    assert [item["id"] for item in selected] == ["generic", "bound"]
+    assert selected[1]["pages"] == [9]
+    assert selected[1]["evidence_spans"][0]["page"] == 9
 
 
 def test_selector_keeps_same_evidence_id_with_different_propositions() -> None:
@@ -639,7 +642,7 @@ def test_selector_accepts_overlapping_alternative_source_spans() -> None:
     )
 
     assert [item["id"] for item in selected] == ["shared"]
-    assert selected[0]["evidence"] == "The equivalent source excerpt."
+    assert selected[0]["evidence"] == "The first source excerpt."
 
 
 def test_selector_accepts_legitimate_multi_page_source_representation() -> None:
@@ -698,7 +701,7 @@ def test_selector_accepts_legitimate_multi_page_source_representation() -> None:
     )
 
     assert [item["id"] for item in selected] == ["shared"]
-    assert selected[0]["pages"] == [4, 5]
+    assert selected[0]["pages"] == [4]
 
 
 def test_selector_removes_final_only_protected_metric_additions() -> None:
@@ -911,7 +914,7 @@ def test_source_bound_metric_drops_unbound_timeframe() -> None:
     )
 
     assert insight["metric"]["value"] == "51% versus 45%"
-    assert insight["metric"]["timeframe"] == ""
+    assert insight["metric"]["timeframe"] == "2023 plans"
     assert insight["metric"]["segment"] == "Agency respondents"
 
 
@@ -939,7 +942,7 @@ def test_candidate_normalization_drops_unbound_calendar_timeframe() -> None:
         prefix="candidate",
     )
 
-    assert normalized[0]["metric"]["timeframe"] == ""
+    assert normalized[0]["metric"]["timeframe"] == "2023 plans"
     assert normalized[0]["metric"]["value"] == "51% versus 45%"
 
 

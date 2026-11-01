@@ -17,6 +17,7 @@ import pytest
 
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
+from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.contracts.prompts import (
     PromptDependency,
     PromptDependencyManifest,
@@ -48,10 +49,17 @@ class FakePromptClient:
             text="system",
             sha256="s",
         )
+        user_text = (
+            "user metrics {{ metrics_json }}\n"
+            "quotes {{ quotes_json }}\n"
+            "evidence {{ evidence_json }}"
+            if request.namespace == "report_vs/validate/semantic"
+            else "user {{ report_json }}"
+        )
         user = PromptTemplate(
             schema_version="1.0",
             path=f"{request.namespace}/user",
-            text="user {{ report_json }}",
+            text=user_text,
             sha256="u",
         )
         return PromptSet(
@@ -78,14 +86,246 @@ class FakePromptClient:
         )
 
     def render_prompt(self, request, ctx):
-        return SimpleNamespace(text=request.template.text)
+        rendered = request.template.text
+        for key, value in request.variables.items():
+            replacement = (
+                value
+                if isinstance(value, str)
+                else json.dumps(value, ensure_ascii=False)
+            )
+            rendered = rendered.replace("{{ " + key + " }}", replacement).replace(
+                "{{" + key + "}}", replacement
+            )
+        return SimpleNamespace(text=rendered)
+
+
+def _grounding_contract_payload(request, payload: dict) -> dict:
+    """Complete legacy test responses at the current grounding contract boundary."""
+
+    def classification(value: object) -> str:
+        normalized = str(value or "").strip().casefold()
+        return {
+            "factual": "factual_claim",
+            "fact": "factual_claim",
+            "factual_claim": "factual_claim",
+            "interpretive": "analyst_interpretation",
+            "analyst_interpretation": "analyst_interpretation",
+            "recommendation": "prescriptive_recommendation",
+            "prescriptive_recommendation": "prescriptive_recommendation",
+        }.get(normalized, "factual_claim")
+
+    try:
+        prompt_text = str(request.user_prompt)
+        report_json = prompt_text.split("user ", 1)[1]
+        batch = json.loads(report_json)
+    except (IndexError, TypeError, ValueError):
+        batch = {}
+        prompt_text = str(getattr(request, "user_prompt", "") or "")
+        decoder = json.JSONDecoder()
+        for index, char in enumerate(prompt_text):
+            if char != "{":
+                continue
+            try:
+                candidate, _end = decoder.raw_decode(prompt_text[index:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(candidate, dict) and any(
+                key in candidate
+                for key in ("retained_claims_to_ground", "public_factual_items")
+            ):
+                batch = candidate
+                break
+    if not isinstance(batch, dict):
+        return payload
+    expected: list[dict] = [
+        item
+        for key in ("retained_claims_to_ground", "public_factual_items")
+        for item in batch.get(key, [])
+        if isinstance(item, dict) and str(item.get("item_id") or "").strip()
+    ]
+    checks = [item for item in payload.get("checks", []) if isinstance(item, dict)]
+    unsupported = [
+        dict(item) for item in payload.get("unsupported", []) if isinstance(item, dict)
+    ]
+    # Older fixtures identify an unsupported item by its public section/text.
+    # Translate that retained test response into the current stable item-ID
+    # contract before the fake response reaches production validation.
+    for item in unsupported:
+        if str(item.get("item_id") or "").strip():
+            continue
+        section = str(item.get("section") or "").strip()
+        text = str(item.get("text") or "").strip()
+        matches = [
+            expected_item
+            for expected_item in expected
+            if (section and str(expected_item.get("section") or "").strip() == section)
+            or (text and str(expected_item.get("text") or "").strip() == text)
+        ]
+        if len(matches) > 1:
+            public_matches = [
+                expected_item
+                for expected_item in matches
+                if expected_item
+                in [
+                    item
+                    for item in batch.get("public_factual_items", [])
+                    if isinstance(item, dict)
+                ]
+            ]
+            if len(public_matches) == 1:
+                matches = public_matches
+        if len(matches) == 1:
+            item["item_id"] = str(matches[0]["item_id"])
+            item.setdefault("section", str(matches[0].get("section") or "grounding"))
+            item.setdefault("text", str(matches[0].get("text") or ""))
+            item.setdefault(
+                "classification",
+                classification(
+                    matches[0].get("declared_classification") or "factual_claim"
+                ),
+            )
+            item.setdefault("entailment_outcome", "not_established")
+            item.setdefault("violation_type", "unsupported_factual_claim")
+            item.setdefault("reason", "The test response marks this item unsupported.")
+    existing_ids = {
+        str(item.get("item_id") or "").strip()
+        for item in checks + unsupported
+        if str(item.get("item_id") or "").strip()
+    }
+
+    def protected_facts(status: str) -> dict[str, dict[str, object]]:
+        return {
+            dimension: {
+                "claim_value": None,
+                "evidence_value": None,
+                "status": status,
+            }
+            for dimension in PROTECTED_FACT_DIMENSIONS
+        }
+
+    unsupported_by_id = {
+        str(item.get("item_id") or "").strip(): item
+        for item in unsupported
+        if str(item.get("item_id") or "").strip()
+    }
+    for expected_item in expected:
+        item_id = str(expected_item["item_id"])
+        if item_id in existing_ids:
+            continue
+        failed = unsupported_by_id.get(item_id)
+        outcome = str(failed.get("entailment_outcome") or "") if failed else ""
+        if outcome not in {"contradicted", "not_established"}:
+            outcome = "entailed"
+        checks.append(
+            {
+                "item_id": item_id,
+                "section": str(expected_item.get("section") or "grounding"),
+                "text": str(expected_item.get("text") or ""),
+                "classification": (
+                    classification(failed.get("classification") or "factual_claim")
+                    if failed
+                    else classification(
+                        expected_item.get("declared_classification") or "factual_claim"
+                    )
+                ),
+                "entailment_outcome": outcome,
+                "proposition_status": (
+                    "incompatible"
+                    if outcome == "contradicted"
+                    else "unknown"
+                    if outcome == "not_established"
+                    else "compatible"
+                ),
+                "protected_facts": protected_facts(
+                    "incompatible"
+                    if outcome == "contradicted"
+                    else "unknown"
+                    if outcome == "not_established"
+                    else "compatible"
+                ),
+                "reason": (
+                    str(
+                        failed.get("reason")
+                        or "The test response marks this item unsupported."
+                    )
+                    if failed
+                    else "The test response accepts this item against its retained evidence."
+                ),
+            }
+        )
+    return {"checks": checks, "unsupported": unsupported}
+
+
+def _semantic_contract_payload(request, payload: dict) -> dict:
+    """Complete an ordinary fake semantic response without masking explicit failures."""
+
+    sections: dict[str, list[dict]] = {}
+    for line in str(request.user_prompt).splitlines():
+        for key in ("metrics", "quotes"):
+            prefix = f"{key} "
+            if line.startswith(prefix):
+                try:
+                    value = json.loads(line[len(prefix) :])
+                except (TypeError, ValueError):
+                    value = []
+                sections[key] = (
+                    [item for item in value if isinstance(item, dict)]
+                    if isinstance(value, list)
+                    else []
+                )
+    completed: dict[str, list[dict]] = {}
+    for key in ("metrics", "quotes"):
+        provided = [
+            dict(item) for item in payload.get(key, []) if isinstance(item, dict)
+        ]
+        provided_by_id = {
+            str(item.get("id") or "").strip(): item
+            for item in provided
+            if str(item.get("id") or "").strip()
+        }
+        entries: list[dict] = []
+        for expected in sections.get(key, []):
+            item_id = str(expected.get("id") or "").strip()
+            if not item_id:
+                continue
+            item = dict(provided_by_id.get(item_id) or {})
+            item.update(
+                {
+                    "id": item_id,
+                    "supported": bool(item.get("supported", True)),
+                    "confidence": float(item.get("confidence", 1.0)),
+                    "reason": str(
+                        item.get("reason")
+                        or "The fake model accepts the supplied evidence."
+                    ),
+                }
+            )
+            entries.append(item)
+        entries.extend(
+            item
+            for item in provided
+            if str(item.get("id") or "").strip()
+            not in {
+                str(expected.get("id") or "").strip()
+                for expected in sections.get(key, [])
+            }
+        )
+        completed[key] = entries
+    return completed
 
 
 class FakeOpenAI:
-    def __init__(self, *payloads, semantic_payload=None, grounding_payload=None):
+    def __init__(
+        self,
+        *payloads,
+        semantic_payload=None,
+        grounding_payload=None,
+        complete_grounding_contract: bool = True,
+    ):
         self.payloads = list(payloads) or [{}]
         self.semantic_payload = semantic_payload
         self.grounding_payload = grounding_payload
+        self.complete_grounding_contract = complete_grounding_contract
         self.requests = []
         self._lock = threading.Lock()
 
@@ -102,10 +342,18 @@ class FakeOpenAI:
 
     def openai_chat_json(self, req, ctx):
         payload = self._next_payload(ctx)
-        if str(getattr(ctx, "task_id", "")).endswith(":grounding") and isinstance(
-            payload, dict
+        if (
+            self.semantic_payload is None
+            and str(getattr(ctx, "task_id", "")).endswith(":semantic")
+            and isinstance(payload, dict)
         ):
-            payload = {"checks": [], **payload}
+            payload = _semantic_contract_payload(req, payload)
+        if (
+            self.complete_grounding_contract
+            and str(getattr(ctx, "task_id", "")).endswith(":grounding")
+            and isinstance(payload, dict)
+        ):
+            payload = _grounding_contract_payload(req, {"checks": [], **payload})
         with self._lock:
             self.requests.append(("chat", req.model, str(getattr(ctx, "task_id", ""))))
         return OpenAIResponseResult(

@@ -92,17 +92,17 @@
       "total_tokens": 23144
     },
     "validation": {
-      "estimated_cost_usd": 0.002005,
+      "estimated_cost_usd": 0.002023,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 2280,
       "expected_tool_calls": 0,
       "family": "validation",
-      "input_tokens": 8641,
+      "input_tokens": 8822,
       "namespace_count": 6,
       "runtime_ms": 5.2064,
       "schema_version": "1.0",
-      "total_tokens": 10921
+      "total_tokens": 11102
     }
   },
   "fixture_count": 51,
@@ -769,18 +769,18 @@
       "total_tokens": 2352
     },
     "report_vs/validate/public_editorial_quality": {
-      "estimated_cost_usd": 0.000277,
+      "estimated_cost_usd": 0.000295,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 380,
       "expected_tool_calls": 0,
       "family": "validation",
-      "input_tokens": 866,
+      "input_tokens": 1047,
       "model": "gpt-6-luna",
       "namespace": "report_vs/validate/public_editorial_quality",
       "runtime_ms": 1.4261,
       "schema_version": "1.0",
-      "total_tokens": 1246
+      "total_tokens": 1427
     },
     "report_vs/validate/semantic": {
       "estimated_cost_usd": 0.000244,
@@ -827,16 +827,16 @@
   },
   "schema_version": "1.0",
   "totals": {
-    "estimated_cost_usd": 0.024974,
+    "estimated_cost_usd": 0.024992,
     "expected_browser_attempts": 7,
     "expected_ocr_calls": 1,
     "expected_output_tokens": 34136,
     "expected_tool_calls": 0,
     "family": "totals",
-    "input_tokens": 79070,
+    "input_tokens": 79251,
     "namespace_count": 51,
     "runtime_ms": 50.5913,
     "schema_version": "1.0",
-    "total_tokens": 113206
+    "total_tokens": 113387
   }
 }

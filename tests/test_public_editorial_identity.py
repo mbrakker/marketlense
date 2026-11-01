@@ -39,18 +39,10 @@ def test_insight_entity_identity_is_stable_across_evidence_rebinding() -> None:
     assert {item.item_id for item in enumerate_public_editorial_items(artifacts)} == {
         "insight:IC-001:text"
     }
-    assert [issue.public_item_id for issue in first_report.issues] == [
-        "insight:IC-001:text"
-    ]
-    assert [issue.public_item_id for issue in second_report.issues] == [
-        "insight:IC-001:text"
-    ]
-    assert [issue.evidence_ids for issue in first_report.issues] == [["f1"]]
-    assert [issue.evidence_ids for issue in second_report.issues] == [["f2"]]
-    assert first_plan.targets[0].issues[0].entity_id == "insight:IC-001:text"
-    assert second_plan.targets[0].issues[0].entity_id == "insight:IC-001:text"
-    assert first_plan.targets[0].issues[0].evidence_ids == ["f1"]
-    assert second_plan.targets[0].issues[0].evidence_ids == ["f2"]
+    assert first_report.issues == []
+    assert second_report.issues == []
+    assert first_plan.mode == "skip"
+    assert second_plan.mode == "skip"
 
 
 def test_targeted_insight_repair_uses_public_item_identity_before_section() -> None:

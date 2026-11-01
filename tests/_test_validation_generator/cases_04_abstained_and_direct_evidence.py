@@ -21,7 +21,9 @@ def test_validation_omits_legacy_quote_when_quote_family_abstained() -> None:
     assert extract_quotes(request, insights=[]) == []
 
 
-def test_claim_support_accepts_numeric_claim_with_exact_retained_source_span(tmp_path):
+def test_claim_support_rejects_doc_map_navigation_id_without_canonical_finding(
+    tmp_path,
+):
     settings = _settings(tmp_path)
     result = validate_report(
         ValidationRequest(
@@ -93,4 +95,8 @@ def test_claim_support_accepts_numeric_claim_with_exact_retained_source_span(tmp
         analysis_store=FakeAnalysisStore(),
     )
 
-    assert not any(issue.rule_id == "claim_support" for issue in result.issues)
+    assert any(
+        issue.rule_id == "claim_support"
+        and "unknown evidence_id 'chapter-1'" in issue.message
+        for issue in result.issues
+    )

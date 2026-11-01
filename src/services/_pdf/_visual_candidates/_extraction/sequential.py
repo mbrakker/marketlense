@@ -15,6 +15,7 @@ from src.contracts.candidates import Candidate, CandidateFeatures
 from src.services._pdf._visual_candidates.raster import (
     _candidate_ocr_density,
     _chart_confidence_score,
+    _embedded_visual_is_oversized_wrapper,
     _visual_probe_profile,
 )
 from src.services._pdf._visual_candidates.screening import (
@@ -134,6 +135,15 @@ def _extract_visuals_sequential(
                 if rect_candidate.width <= 0 or rect_candidate.height <= 0:
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
                     _tally_reason(stats, "geometry")
+                    continue
+                if rect_item.kind == "xref" and _embedded_visual_is_oversized_wrapper(
+                    rect_item,
+                    page_ctx.rect_items,
+                    page_ctx.page_rect,
+                    relationships=page_ctx.relationships,
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "oversized_wrapper")
                     continue
                 try:
                     raw_bbox_text = page_ctx.page.get_text("text", clip=rect_candidate)

@@ -12,10 +12,8 @@ from src.utils.errors import AppError
 from tests.test_soft_copy_claim_provenance import _assemble_soft_copy
 
 
-def test_finalization_rebuilds_expert_provenance_after_numeric_display_correction() -> (
-    None
-):
-    """A final source-display correction keeps its declared semantic binding."""
+def test_finalization_preserves_editorial_wording_and_rebuilds_provenance() -> None:
+    """Source evidence does not deterministically rewrite the editorial claim."""
     payload = _assemble_soft_copy(
         expert_comment="Growth reaches 7.3% in January.",
         insights_final=[
@@ -48,7 +46,7 @@ def test_finalization_rebuilds_expert_provenance_after_numeric_display_correctio
         },
     )
 
-    assert payload["expert_comment"] == "Growth reaches +7.30% in January 2025."
+    assert payload["expert_comment"] == "Growth reaches 7.3% in January."
     claim = next(
         item
         for item in payload["soft_copy_claim_provenance"]["claims"]
@@ -59,7 +57,7 @@ def test_finalization_rebuilds_expert_provenance_after_numeric_display_correctio
     assert claim["evidence_ids"] == ["f1"]
 
 
-def test_regenerated_repair_binding_follows_final_source_corrected_sentence() -> None:
+def test_regenerated_repair_binding_preserves_final_editorial_sentence() -> None:
     stale_sentence = (
         "Global finance day 1 retention fell from 13% in 2024 to 12.9% in 2025."
     )
@@ -117,18 +115,18 @@ def test_regenerated_repair_binding_follows_final_source_corrected_sentence() ->
         soft_copy_repair_texts={"expert_comment": [stale_sentence]},
     )
 
-    assert finalized["expert_comment"] == source_sentence
+    assert finalized["expert_comment"] == stale_sentence
     claim = next(
         item
         for item in finalized["soft_copy_claim_provenance"]["claims"]
         if item["artifact_family"] == "expert_comment"
     )
-    assert claim["text_hash"] == sha256(source_sentence.encode()).hexdigest()
+    assert claim["text_hash"] == sha256(stale_sentence.encode()).hexdigest()
     assert claim["evidence_ids"] == ["finance-retention"]
     assert_retained_soft_copy_claims_match_public_copy(finalized)
 
 
-def test_summary_repair_carries_retained_binding_through_source_display_correction():
+def test_summary_repair_preserves_retained_binding_without_source_display_rewrite():
     old_metric_sentence = "Global eCommerce is forecast to add over $3T."
     corrected_metric_sentence = "Global eCommerce is forecast to add over $3.0T."
     old_compact = "Consumers consider the market outlook."
@@ -242,10 +240,8 @@ def test_summary_repair_carries_retained_binding_through_source_display_correcti
         soft_copy_repair_texts={"summary": [repaired_compact]},
     )
 
-    assert finalized["summary"]["executive_summary"].startswith(
-        corrected_metric_sentence
-    )
-    corrected_hash = sha256(corrected_metric_sentence.encode()).hexdigest()
+    assert finalized["summary"]["executive_summary"].startswith(old_metric_sentence)
+    corrected_hash = sha256(old_metric_sentence.encode()).hexdigest()
     corrected_claim = next(
         claim
         for claim in finalized["soft_copy_claim_provenance"]["claims"]
@@ -257,9 +253,7 @@ def test_summary_repair_carries_retained_binding_through_source_display_correcti
     assert_retained_soft_copy_claims_match_public_copy(finalized)
 
 
-def test_finalization_rebuilds_linkedin_provenance_after_range_display_correction() -> (
-    None
-):
+def test_finalization_preserves_linkedin_wording_and_rebuilds_provenance() -> None:
     payload = _assemble_soft_copy(
         linkedin_post=(
             "Paid subscriptions are forecast to rise from 4.1 to 5.7, which changes "
@@ -304,18 +298,16 @@ def test_finalization_rebuilds_linkedin_provenance_after_range_display_correctio
         },
     )
 
-    final_post = (
-        "Paid subscriptions are forecast to rise from 4.1 subscriptions per subscriber "
-        "today "
-        "to 5.7 by 2024, which changes distribution planning."
+    assert payload["linkedin_post"] == (
+        "Paid subscriptions are forecast to rise from 4.1 to 5.7, which changes "
+        "distribution planning."
     )
-    assert payload["linkedin_post"] == final_post
     claim = next(
         item
         for item in payload["soft_copy_claim_provenance"]["claims"]
         if item["artifact_family"] == "linkedin_post"
     )
-    assert claim["text_hash"] == sha256(final_post.encode()).hexdigest()
+    assert claim["text_hash"] == sha256(payload["linkedin_post"].encode()).hexdigest()
     assert claim["classification"] == "interpretive"
     assert claim["evidence_ids"] == ["f1"]
 
@@ -531,9 +523,7 @@ def test_finalization_omits_unbound_linkedin_sentence_before_retention() -> None
     assert_retained_soft_copy_claims_match_public_copy(payload)
 
 
-def test_finalization_derives_summary_fallback_bindings_from_retained_claim_map() -> (
-    None
-):
+def test_finalization_does_not_promote_summary_claims_without_model_authority() -> None:
     direct = "Revenue reached 7.30%."
     payload = _assemble_soft_copy(
         summary={
@@ -577,22 +567,25 @@ def test_finalization_derives_summary_fallback_bindings_from_retained_claim_map(
     )
 
     final_summary = payload["summary"]
-    assert final_summary["tldr"] == direct
-    assert final_summary["card_tldr_compact"] == direct
-    assert final_summary["executive_summary"] == direct
+    assert final_summary["tldr"] == "Unsupported forecast leads planning."
+    assert final_summary["card_tldr_compact"] == "Unsupported forecast leads planning."
+    assert final_summary["executive_summary"] == "Unsupported forecast leads planning."
     claims = [
         item
         for item in payload["soft_copy_claim_provenance"]["claims"]
         if item["artifact_family"] == "summary"
     ]
     assert len(claims) == 1
-    assert claims[0]["text_hash"] == sha256(direct.encode()).hexdigest()
-    assert claims[0]["classification"] == "factual"
-    assert claims[0]["evidence_ids"] == ["f1"]
+    assert (
+        claims[0]["text_hash"]
+        == sha256(b"Unsupported forecast leads planning.").hexdigest()
+    )
+    assert claims[0]["classification"] == "interpretive"
+    assert claims[0]["evidence_ids"] == ["section-1"]
 
 
-def test_finalization_uses_direct_summary_fallback_for_unbound_copy() -> None:
-    """A complete direct claim map replaces summary prose lacking bindings."""
+def test_finalization_abstains_unbound_summary_copy_without_model_authority() -> None:
+    """Unbound summary prose is removed rather than replaced deterministically."""
     direct = "Revenue reached 7.30%."
     payload = _assemble_soft_copy(
         summary={
@@ -624,13 +617,19 @@ def test_finalization_uses_direct_summary_fallback_for_unbound_copy() -> None:
         },
     )
 
-    assert payload["summary"]["tldr"] == direct
-    assert payload["summary"]["card_tldr_compact"] == direct
-    assert payload["summary"]["executive_summary"] == direct
+    assert payload["summary"] == {
+        "tldr": "",
+        "card_tldr_compact": "",
+        "executive_summary": "",
+        "claim_evidence_map": [],
+    }
+    assert payload["family_status"]["summary"]["status"] == "abstained"
     assert_retained_soft_copy_claims_match_public_copy(payload)
 
 
-def test_repaired_summary_with_invalid_compact_tldr_uses_direct_source_claim() -> None:
+def test_repaired_summary_with_invalid_compact_tldr_abstains_without_model_claim() -> (
+    None
+):
     direct = "Revenue reached 7.30%."
     invalid_compact = "Revenue reached 7.30%..."
     payload = _assemble_soft_copy(
@@ -669,9 +668,13 @@ def test_repaired_summary_with_invalid_compact_tldr_uses_direct_source_claim() -
         soft_copy_repair_texts={"summary": [invalid_compact]},
     )
 
-    assert payload["summary"]["card_tldr_compact"] == direct
-    assert payload["summary"]["tldr"] == direct
-    assert payload["summary"]["executive_summary"] == direct
+    assert payload["summary"] == {
+        "tldr": "",
+        "card_tldr_compact": "",
+        "executive_summary": "",
+        "claim_evidence_map": [],
+    }
+    assert payload["family_status"]["summary"]["status"] == "abstained"
     assert_retained_soft_copy_claims_match_public_copy(payload)
 
 

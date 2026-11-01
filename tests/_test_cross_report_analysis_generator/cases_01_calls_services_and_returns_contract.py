@@ -691,7 +691,7 @@ def test_validate_cross_report_generated_analysis_rejects_empty_required_section
     assert "sections_empty" in exc.value.context["issues"]
 
 
-def test_validate_cross_report_generated_analysis_rejects_metric_normalization_language(
+def test_validate_cross_report_generated_analysis_reports_metric_normalization_language(
     tmp_path,
     run_context,
     assert_app_error,
@@ -707,16 +707,12 @@ def test_validate_cross_report_generated_analysis_rejects_metric_normalization_l
         ],
     )
 
-    with pytest.raises(Exception) as exc:
-        validate_cross_report_generated_analysis(invalid, run_context)
-
-    assert_app_error(
-        exc.value,
-        code="cross_report_analysis_validation_failed",
-        retryable=False,
-        severity="error",
+    result = validate_cross_report_generated_analysis(
+        invalid,
+        run_context,
     )
-    assert exc.value.context["metric_normalization_violations"] == [
+    assert result.passed is True
+    assert result.metric_normalization_violations == [
         "normalized average",
         "average across publishers",
     ]
@@ -740,5 +736,5 @@ __all__ = [
     "test_validate_cross_report_generated_analysis_rejects_missing_section_evidence",
     "test_validate_cross_report_generated_analysis_rejects_unknown_evidence",
     "test_validate_cross_report_generated_analysis_rejects_empty_required_sections",
-    "test_validate_cross_report_generated_analysis_rejects_metric_normalization_language",
+    "test_validate_cross_report_generated_analysis_reports_metric_normalization_language",
 ]

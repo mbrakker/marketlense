@@ -136,7 +136,7 @@ def test_generate_report_resumes_from_all_semantic_checkpoints_with_validated_ar
         upsert_report_metadata=lambda req, ctx: None,
         get_report_metadata=lambda req, ctx: None,
     )
-    full_outcome = rgo.run_report_generation(
+    full_outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -168,7 +168,7 @@ def test_generate_report_resumes_from_all_semantic_checkpoints_with_validated_ar
     def _unexpected_render(*args, **kwargs):
         pytest.fail("render checkpoint restart reran rendering")
 
-    source_resume = rgo.run_report_generation(
+    source_resume = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -197,7 +197,7 @@ def test_generate_report_resumes_from_all_semantic_checkpoints_with_validated_ar
         full_render_payload
     )
 
-    selection_resume = rgo.run_report_generation(
+    selection_resume = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -226,7 +226,7 @@ def test_generate_report_resumes_from_all_semantic_checkpoints_with_validated_ar
         full_render_payload
     )
 
-    analysis_resume = rgo.run_report_generation(
+    analysis_resume = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -253,7 +253,7 @@ def test_generate_report_resumes_from_all_semantic_checkpoints_with_validated_ar
         full_render_payload
     )
 
-    render_resume = rgo.run_report_generation(
+    render_resume = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -377,7 +377,7 @@ def test_generate_report_latest_safe_restart_skips_corrupt_newer_checkpoint(
         upsert_report_metadata=lambda req, ctx: None,
         get_report_metadata=lambda req, ctx: None,
     )
-    full_outcome = rgo.run_report_generation(
+    full_outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -389,7 +389,7 @@ def test_generate_report_latest_safe_restart_skips_corrupt_newer_checkpoint(
     assert full_outcome.html_path
     Path(full_outcome.html_path).write_text("corrupted render", encoding="utf-8")
 
-    latest_outcome = rgo.run_report_generation(
+    latest_outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -490,7 +490,7 @@ def test_generate_report_restart_rejects_checkpoint_artifact_hash_mismatch(
         upsert_report_metadata=lambda req, ctx: None,
         get_report_metadata=lambda req, ctx: None,
     )
-    outcome = rgo.run_report_generation(
+    outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -503,7 +503,7 @@ def test_generate_report_restart_rejects_checkpoint_artifact_hash_mismatch(
     Path(outcome.html_path).write_text("tampered", encoding="utf-8")
 
     with pytest.raises(AppError) as exc_info:
-        rgo.run_report_generation(
+        run_vector_report_generation(
             file,
             str(pdf_path),
             settings,

@@ -153,6 +153,26 @@ def test_retained_category_fit_regression_cases(recorded_case: dict) -> None:
     candidate = {
         **recorded_case["candidate"],
         "label": recorded_case["candidate"]["category_id"],
+        # These retained cases now exercise the model-owned semantic verdict.
+        # The technical boundary still canonicalizes the references and rejects
+        # unknown rule identifiers, but it must not reconstruct the decision
+        # from configured topic wording.
+        "evidence_sections": ["overview"],
+        "rule_evidence_sections": ["overview"],
+        "centrality_evidence_sections": (
+            ["title", "overview"] if recorded_case["expected"]["selected"] else []
+        ),
+        "semantic_rule_status": recorded_case["expected"]["status"],
+        "supported_topic_rules": (
+            ["model-confirmed inclusion"]
+            if recorded_case["expected"]["status"] == "supported"
+            else []
+        ),
+        "rejected_topic_rules": (
+            ["model-confirmed exclusion"]
+            if recorded_case["expected"]["status"] == "rejected"
+            else []
+        ),
     }
     mapping_client = load_category_mappings
     mapping_path = "src/config/category-mappings.yaml"
@@ -198,17 +218,17 @@ def test_retained_category_fit_regression_cases(recorded_case: dict) -> None:
         if item.category_id in response.categories
     )
     if recorded_case["id"] == "explicit_exclusion_conflict":
-        assert fit.rejected_topic_rule_ids
-        assert fit.rule_evidence_sections == ["title", "overview"]
+        assert fit.rejected_topic_rules == ["model-confirmed exclusion"]
+        assert fit.rule_evidence_sections == ["overview"]
     else:
         assert not fit.rejected_topic_rule_ids
     if expected["status"] == "supported":
-        assert fit.supported_topic_rule_ids
+        assert fit.supported_topic_rules == ["model-confirmed inclusion"]
         assert fit.centrality_evidence_sections
 
 
-def test_central_inclusion_evidence_overrides_a_low_score_model_rejection() -> None:
-    """A provider score cannot suppress an explicit central mapping match."""
+def test_model_rejection_is_not_overridden_by_central_context_text() -> None:
+    """Category text cannot override the provider's semantic decision."""
 
     context = ReportCategoryContext(
         schema_version="1.0",
@@ -270,9 +290,9 @@ def test_central_inclusion_evidence_overrides_a_low_score_model_rejection() -> N
         mapping_client=mapping_client,
     )
 
-    assert response.categories == ["technology"]
-    assert response.fits[0].decision == "primary"
-    assert response.fits[0].semantic_rule_status == "supported"
+    assert response.categories == []
+    assert response.fits[0].decision == "reject"
+    assert response.fits[0].semantic_rule_status == "not_evaluated"
 
 
 def test_fit_report_categories_retains_five_evidence_backed_categories() -> None:
@@ -329,6 +349,7 @@ def test_fit_report_categories_retains_five_evidence_backed_categories() -> None
                         "why_fit": f"{category_id} is central.",
                         "why_not_fit": "",
                         "evidence_sections": ["overview"],
+                        "semantic_rule_status": "supported",
                     }
                     for index, category_id in enumerate(category_ids)
                 ],
@@ -345,8 +366,8 @@ def test_fit_report_categories_retains_five_evidence_backed_categories() -> None
     assert all(fit.semantic_rule_status == "supported" for fit in response.fits)
 
 
-def test_fit_report_categories_rescues_an_omitted_central_mapping() -> None:
-    """An incomplete model candidate list cannot suppress exact central support."""
+def test_fit_report_categories_does_not_rescue_omitted_model_candidates() -> None:
+    """An omitted category remains omitted until the model supplies a fit."""
 
     mappings = CategoryMappings(
         schema_version="1.0",
@@ -412,6 +433,6 @@ def test_fit_report_categories_rescues_an_omitted_central_mapping() -> None:
         mapping_client=mapping_client,
     )
 
-    assert response.categories == ["consumer_behavior"]
-    assert response.fits[0].category_id == "consumer_behavior"
-    assert response.fits[0].semantic_rule_status == "supported"
+    assert response.categories == []
+    assert [fit.category_id for fit in response.fits] == ["technology"]
+    assert response.fits[0].semantic_rule_status == "not_evaluated"

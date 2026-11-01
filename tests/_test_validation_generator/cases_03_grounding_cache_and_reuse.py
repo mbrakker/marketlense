@@ -11,7 +11,7 @@ from src.generators.validation.shared import downgrade_issues_for_data_gap
 from ._shared import *  # noqa: F401,F403
 
 
-def test_validation_keeps_unsupported_number_and_quote_errors_with_data_gap(tmp_path):
+def test_validation_keeps_unbound_factual_claims_blocking_with_data_gap(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
         "insights_final": [
@@ -44,10 +44,14 @@ def test_validation_keeps_unsupported_number_and_quote_errors_with_data_gap(tmp_
     )
     assert result.status == "fail"
     assert result.severity == "error"
-    assert {issue.rule_id for issue in result.issues if issue.severity == "error"} >= {
-        "metrics",
-        "quotes",
-    }
+    assert any(
+        issue.rule_id == "retained_claim.evidence_reference_completeness"
+        and issue.severity == "error"
+        for issue in result.issues
+    )
+    assert not any(
+        issue.rule_id in {"metrics", "quotes", "numbers"} for issue in result.issues
+    )
 
 
 def test_validation_allows_structured_retrieval_failure_under_data_gap_policy(
@@ -60,6 +64,14 @@ def test_validation_allows_structured_retrieval_failure_under_data_gap_policy(
         quote=Quote(text="", author=""),
         figure=Figure(title="", evidence=""),
         commentary="",
+    )
+    artifacts = {
+        "source_status": _low_text_status(),
+        "expert_comment": "The market expanded.",
+    }
+    _set_test_soft_copy_provenance(
+        artifacts,
+        {"expert_comment": ("recommendation", [])},
     )
     fake_openai = FakeOpenAI(
         semantic_payload={"metrics": [], "quotes": []},
@@ -79,7 +91,7 @@ def test_validation_allows_structured_retrieval_failure_under_data_gap_policy(
             schema_version="1.0",
             report_id="low_text_retrieval_report",
             report=report,
-            artifacts={"source_status": _low_text_status()},
+            artifacts=artifacts,
             evidence_packs={},
             vector_store_id=None,
         ),
@@ -122,7 +134,7 @@ def test_structured_retrieval_failure_without_data_gap_remains_blocking(tmp_path
             grounding_payload={
                 "unsupported": [
                     {
-                        "section": "summary",
+                        "section": "expert_comment",
                         "text": "The market expanded.",
                         "violation_type": "evidence_retrieval_failure",
                         "reason": "source context could not be accessed",
@@ -288,7 +300,7 @@ def test_validation_issue_order_preserved_with_parallel_checks(tmp_path):
             "unsupported": [
                 {
                     "section": "expert_comment",
-                    "text": "We expect",
+                    "text": "We expect revenue to reach 99 soon.",
                     "reason": "No evidence",
                 }
             ]
@@ -312,38 +324,9 @@ def test_validation_issue_order_preserved_with_parallel_checks(tmp_path):
     )
 
     messages = [issue.message for issue in result.issues]
-    idx_semantic_metric = next(
-        i
-        for i, message in enumerate(messages)
-        if "Semantic check: metric for i1 not supported" in message
-    )
-    idx_metric_exact = next(
-        i
-        for i, message in enumerate(messages)
-        if "Metric value '10' not found in evidence" in message
-    )
-    idx_quote_exact = next(
-        i
-        for i, message in enumerate(messages)
-        if "Quote not verbatim in evidence" in message
-    )
-    idx_number = next(
-        i
-        for i, message in enumerate(messages)
-        if "Number 99.0 not present in report or evidence" in message
-    )
-    idx_grounding = next(
-        i for i, message in enumerate(messages) if "No evidence: We expect" in message
-    )
-
-    assert (
-        idx_semantic_metric
-        < idx_metric_exact
-        < idx_quote_exact
-        < idx_number
-        < idx_grounding
-    )
-    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 2
+    assert messages[0].startswith("[grounding]")
+    assert all(message.startswith("[retained_claim.") for message in messages[1:])
+    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 1
 
 
 def test_validation_grounding_uses_chat_path_when_flag_disabled(tmp_path):
@@ -843,13 +826,14 @@ def test_validate_report_fails_readiness_on_missing_semantic_verdict(tmp_path) -
         openai_client=FakeOpenAI(
             semantic_payload={"metrics": [], "quotes": []},
             grounding_payload={"unsupported": []},
+            complete_grounding_contract=False,
         ),
         analysis_store=FakeAnalysisStore(),
     )
 
     assert result.status == "fail"
     assert any(
-        issue.violation_type == "semantic_verdicts_incomplete"
+        issue.violation_type == "validation_grounding_invalid_json"
         and issue.severity == "error"
         for issue in result.issues
     )
@@ -946,7 +930,7 @@ def test_validate_report_reuses_only_complete_semantic_materialization(
 
 
 __all__ = [
-    "test_validation_keeps_unsupported_number_and_quote_errors_with_data_gap",
+    "test_validation_keeps_unbound_factual_claims_blocking_with_data_gap",
     "test_validation_allows_structured_retrieval_failure_under_data_gap_policy",
     "test_structured_retrieval_failure_without_data_gap_remains_blocking",
     "test_blocking_data_gap_policy_keeps_retrieval_failure_blocking",

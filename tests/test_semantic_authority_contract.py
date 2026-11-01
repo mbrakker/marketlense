@@ -227,6 +227,30 @@ def test_public_review_receives_complete_canonical_verified_fact() -> None:
     )
 
 
+def test_public_review_keeps_one_identity_per_surface_with_all_evidence() -> None:
+    artifacts = {
+        "expert_comment": "The evidence supports a planning implication.",
+        "linkedin_post": "The evidence supports a planning implication.",
+        "insights_final": [
+            {"evidence_id": "f1", "evidence": "First retained finding."},
+            {"evidence_id": "f2", "evidence": "Second retained finding."},
+        ],
+    }
+
+    items = public_editorial_semantic_review_items(artifacts)
+    by_id = {item["public_item_id"]: item for item in items}
+
+    assert set(by_id) == {
+        "expert_comment:expert_comment",
+        "linkedin_post:linkedin_post",
+    }
+    assert by_id["expert_comment:expert_comment"]["evidence_ids"] == ["f1", "f2"]
+    assert (
+        by_id["expert_comment:expert_comment"]["evidence_text"]
+        == "First retained finding. Second retained finding."
+    )
+
+
 def test_every_material_claim_reaches_grounding_compatibility_boundary() -> None:
     assert (
         _claim_kind("Retailers should rebalance marketplace spending.") == "descriptive"

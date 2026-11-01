@@ -382,6 +382,7 @@ def test_validation_loop_preflights_empty_summary_package_to_safe_removal(tmp_pa
             category_labels=["Category"],
             vector_store_id=None,
             dependencies=_deps(regenerate_artifacts=_stop_at_regeneration),
+            validation_openai_client=_SemanticPassOpenAIClient(),
         )
 
     assert len(regeneration_requests) == 1
@@ -425,6 +426,7 @@ def test_verified_validation_loop_does_not_use_broad_retry_for_unmappable_issue(
             category_labels=["Category"],
             vector_store_id=None,
             dependencies=_deps(regenerate_artifacts=_unexpected_regeneration),
+            validation_openai_client=_SemanticPassOpenAIClient(),
         )
     )
 

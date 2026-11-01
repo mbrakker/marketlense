@@ -213,6 +213,30 @@ def test_key_figure_selection_keeps_authoritative_metric_when_display_differs() 
     assert [figure["figure_id"] for figure in figures] == ["formatted-users"]
 
 
+def test_incomplete_metric_does_not_block_later_complete_duplicate() -> None:
+    figures = build_key_figures(
+        metric_spine=[
+            {
+                "metric_id": "duplicate-metric",
+                "evidence_id": "duplicate-metric",
+                "label": "",
+                "value": "42%",
+            },
+            {
+                "metric_id": "duplicate-metric",
+                "evidence_id": "duplicate-metric",
+                "label": "Workflow adoption",
+                "value": "42%",
+            },
+        ],
+        evidence_packs={},
+        insights_final=[],
+    )
+
+    assert [figure["figure_id"] for figure in figures] == ["duplicate-metric"]
+    assert figures[0]["label"] == "Workflow adoption"
+
+
 def test_source_bound_metric_without_matching_prose_reaches_downstream_validation() -> (
     None
 ):

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_collect_candidates_detects_ranked_table_slide_without_chart_duplicate(
     tmp_path,
 ) -> None:
@@ -33,7 +34,8 @@ def test_collect_candidates_detects_ranked_table_slide_without_chart_duplicate(
     assert int(table.meta["rows"]) >= 5
     assert int(table.meta["cols"]) >= 2
 
-def test_collect_candidates_detects_full_page_image_table_without_photo_false_positive(
+
+def test_collect_candidates_retains_full_page_image_table_for_visual_review(
     tmp_path,
 ) -> None:
     pdf_path = tmp_path / "full-page-image-table.pdf"
@@ -61,7 +63,10 @@ def test_collect_candidates_detects_full_page_image_table_without_photo_false_po
     table = tables[0]
     assert table.page == 0
     assert (table.meta or {}).get("method") == "image"
-    assert charts == []
+    assert len(charts) >= 1
+    assert all(chart.bbox[0] < chart.bbox[2] for chart in charts)
+    assert all(chart.bbox[1] < chart.bbox[3] for chart in charts)
+
 
 def test_prune_charts_overlapping_ranked_tables_removes_chart_duplicate() -> None:
     charts = [
@@ -107,6 +112,7 @@ def test_prune_charts_overlapping_ranked_tables_removes_chart_duplicate() -> Non
     assert pruned == 1
     assert [candidate.id for candidate in kept] == ["chart-0-1"]
 
+
 def test_prune_charts_overlapping_ranked_tables_prunes_table_shadow_for_any_table_method() -> (
     None
 ):
@@ -142,6 +148,7 @@ def test_prune_charts_overlapping_ranked_tables_prunes_table_shadow_for_any_tabl
     assert pruned == 1
     assert kept == []
 
+
 def test_visual_candidate_looks_table_like_rejects_country_table_text() -> None:
     text = (
         "2022 2023 2024 2025 2026 2027\n"
@@ -152,6 +159,7 @@ def test_visual_candidate_looks_table_like_rejects_country_table_text() -> None:
         "Gross fixed capital formation 134.3 3.1 2.0 -1.1 1.1 1.4\n"
     )
     assert _visual_candidate_looks_table_like("Belgium", text) is True
+
 
 def test_visual_candidate_looks_table_like_rejects_forecast_header_block() -> None:
     text = (
@@ -172,6 +180,7 @@ def test_visual_candidate_looks_table_like_rejects_forecast_header_block() -> No
         )
         is True
     )
+
 
 def test_final_chart_candidate_looks_forecast_table_rejects_country_table_shadow() -> (
     None
@@ -195,6 +204,7 @@ def test_final_chart_candidate_looks_forecast_table_rejects_country_table_shadow
     )
 
     assert _final_chart_candidate_looks_forecast_table(candidate, text) is True
+
 
 def test_final_chart_candidate_looks_forecast_table_rejects_split_year_header_shadow() -> (
     None
@@ -225,6 +235,7 @@ def test_final_chart_candidate_looks_forecast_table_rejects_split_year_header_sh
 
     assert _final_chart_candidate_looks_forecast_table(candidate, text) is True
 
+
 def test_collect_candidates_table_bbox_keeps_title_and_notes_but_excludes_body_text(
     tmp_path,
 ) -> None:
@@ -252,6 +263,7 @@ def test_collect_candidates_table_bbox_keeps_title_and_notes_but_excludes_body_t
     assert table.bbox[3] >= 420.0
     assert table.bbox[3] < 485.0
 
+
 def test_expand_table_bbox_stream_trims_unrelated_top_notes_and_body_text(
     tmp_path,
 ) -> None:
@@ -269,6 +281,7 @@ def test_expand_table_bbox_stream_trims_unrelated_top_notes_and_body_text(
     assert expanded[1] < 365.0
     assert expanded[3] >= 660.0
     assert expanded[3] < 708.0
+
 
 def test_expand_table_bbox_stream_keeps_trailing_row_and_wrapped_footnotes(
     tmp_path,
@@ -288,6 +301,7 @@ def test_expand_table_bbox_stream_keeps_trailing_row_and_wrapped_footnotes(
     assert expanded[3] >= 648.0
     assert expanded[3] < 690.0
 
+
 def test_expand_table_bbox_stream_clamps_internal_title_and_references(
     tmp_path,
 ) -> None:
@@ -306,6 +320,7 @@ def test_expand_table_bbox_stream_clamps_internal_title_and_references(
     assert expanded[3] >= 380.0
     assert expanded[3] < 648.0
 
+
 def test_expand_table_bbox_stream_keeps_explicit_title_restores_right_edge_and_note(
     tmp_path,
 ) -> None:
@@ -323,6 +338,7 @@ def test_expand_table_bbox_stream_keeps_explicit_title_restores_right_edge_and_n
     assert expanded[2] >= 620.0
     assert expanded[3] >= 288.0
 
+
 def test_expand_table_bbox_stream_keeps_mixed_legend_and_footnote_footer(
     tmp_path,
 ) -> None:
@@ -338,6 +354,7 @@ def test_expand_table_bbox_stream_keeps_mixed_legend_and_footnote_footer(
 
     assert expanded[3] >= 420.0
     assert expanded[3] < 460.0
+
 
 def test_expand_table_bbox_lattice_keeps_mixed_legend_and_footnote_footer(
     tmp_path,
@@ -355,6 +372,7 @@ def test_expand_table_bbox_lattice_keeps_mixed_legend_and_footnote_footer(
     assert expanded[3] >= 480.0
     assert expanded[3] < 540.0
 
+
 def test_expand_table_bbox_lattice_restores_right_edge_from_overlapping_text(
     tmp_path,
 ) -> None:
@@ -369,6 +387,7 @@ def test_expand_table_bbox_lattice_restores_right_edge_from_overlapping_text(
         doc.close()
 
     assert expanded[2] >= 470.0
+
 
 def test_expand_table_bbox_lattice_restores_left_edge_and_title_from_dense_tabular_block(
     tmp_path,
@@ -387,6 +406,7 @@ def test_expand_table_bbox_lattice_restores_left_edge_and_title_from_dense_tabul
     assert expanded[1] <= 476.0
     assert expanded[2] >= 470.0
 
+
 def test_expand_table_bbox_stream_restores_top_slack_for_continuation_header_band(
     tmp_path,
 ) -> None:
@@ -402,6 +422,7 @@ def test_expand_table_bbox_stream_restores_top_slack_for_continuation_header_ban
 
     assert expanded[1] <= 58.0
     assert expanded[1] > 52.0
+
 
 def test_collect_candidates_rejects_boxed_prose_false_table(tmp_path) -> None:
     pdf_path = tmp_path / "boxed-prose.pdf"
@@ -422,6 +443,7 @@ def test_collect_candidates_rejects_boxed_prose_false_table(tmp_path) -> None:
         candidate for candidate in response.candidates if candidate.kind == "table"
     ]
     assert tables == []
+
 
 def test_collect_candidates_rejects_contents_like_false_table(tmp_path, caplog) -> None:
     pdf_path = tmp_path / "contents-like.pdf"
@@ -461,6 +483,7 @@ def test_collect_candidates_rejects_contents_like_false_table(tmp_path, caplog) 
         + int(reasons.get("section_list", 0))
         + int(reasons.get("stream_list", 0))
     ) >= 1
+
 
 def test_validate_table_candidate_rejects_contents_like_layout() -> None:
     toc_lines = "\n".join(
@@ -511,6 +534,7 @@ def test_validate_table_candidate_rejects_contents_like_layout() -> None:
     assert ok is False
     assert reason == "contents_like"
 
+
 def test_validate_table_candidate_rejects_section_list_with_dot_leaders() -> None:
     toc_text = "\n".join(
         [
@@ -552,6 +576,7 @@ def test_validate_table_candidate_rejects_section_list_with_dot_leaders() -> Non
 
     assert ok is False
     assert reason in {"section_list", "front_matter"}
+
 
 def test_validate_table_candidate_rejects_fragmented_dot_leader_section_list() -> None:
     toc_text = "\n".join(
@@ -597,6 +622,7 @@ def test_validate_table_candidate_rejects_fragmented_dot_leader_section_list() -
     assert ok is False
     assert reason == "section_list"
 
+
 def test_validate_table_candidate_rejects_reference_block() -> None:
     reference_text = "\n".join(
         [
@@ -633,6 +659,7 @@ def test_validate_table_candidate_rejects_reference_block() -> None:
 
     assert ok is False
     assert reason == "reference_block"
+
 
 def test_validate_table_candidate_rejects_multicolumn_reference_block() -> None:
     reference_text = "\n".join(
@@ -672,9 +699,10 @@ def test_validate_table_candidate_rejects_multicolumn_reference_block() -> None:
     assert ok is False
     assert reason == "reference_block"
 
+
 __all__ = [
     "test_collect_candidates_detects_ranked_table_slide_without_chart_duplicate",
-    "test_collect_candidates_detects_full_page_image_table_without_photo_false_positive",
+    "test_collect_candidates_retains_full_page_image_table_for_visual_review",
     "test_prune_charts_overlapping_ranked_tables_removes_chart_duplicate",
     "test_prune_charts_overlapping_ranked_tables_prunes_table_shadow_for_any_table_method",
     "test_visual_candidate_looks_table_like_rejects_country_table_text",

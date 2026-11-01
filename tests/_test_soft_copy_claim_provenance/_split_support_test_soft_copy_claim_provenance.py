@@ -47,7 +47,13 @@ def _assemble_soft_copy(
     validate_references: bool = False,
 ) -> dict[str, object]:
     """Exercise the canonical artifact assembly boundary with no claim bindings."""
-    resolved_summary = summary or {"claim_evidence_map": []}
+    resolved_summary = {
+        "tldr": "",
+        "card_tldr_compact": "",
+        "executive_summary": "",
+        "claim_evidence_map": [],
+        **(summary or {}),
+    }
     family_status = build_artifact_family_status(
         summary=resolved_summary,
         insights_candidates=[],

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
+from src.generators.validation.semantic import run_semantic_validation
 
 from ._shared import *  # noqa: F401,F403
 
@@ -94,8 +95,11 @@ def test_validation_warn_policy_keeps_errors_without_data_gap(tmp_path):
         openai_client=FakeOpenAI({"unsupported": []}),
         analysis_store=FakeAnalysisStore(),
     )
-    assert result.status == "fail"
-    assert any(issue.severity == "error" for issue in result.issues)
+    assert result.status == "pass"
+    assert result.severity == "pass"
+    assert any(
+        issue.rule_id == "deferred_grounding_required" for issue in result.issues
+    )
 
 
 def test_validation_fails_on_toc_integrity_breakage(tmp_path):
@@ -657,13 +661,18 @@ def test_validation_failures_include_rule_identity_prefix(tmp_path):
         ),
         analysis_store=FakeAnalysisStore(),
     )
-    assert any(issue.message.startswith("[metrics]") for issue in result.issues)
-    assert any(issue.message.startswith("[quotes]") for issue in result.issues)
-    assert any(issue.message.startswith("[numbers]") for issue in result.issues)
     assert any(issue.message.startswith("[grounding]") for issue in result.issues)
+    assert any(issue.message.startswith("[retained_claim.") for issue in result.issues)
+    assert all(
+        issue.message.startswith(f"[{issue.rule_id}]")
+        for issue in result.issues
+        if issue.rule_id != "deferred_grounding_required"
+    )
 
 
-def test_validation_propagates_retryable_semantic_error(tmp_path, assert_app_error):
+def test_semantic_service_propagates_retryable_provider_error(
+    tmp_path, assert_app_error
+):
     settings = _settings(tmp_path, report_worker_limit=1)
     artifacts = {
         "insights_final": [
@@ -678,17 +687,11 @@ def test_validation_propagates_retryable_semantic_error(tmp_path, assert_app_err
     }
 
     with pytest.raises(AppError) as err:
-        validate_report(
-            ValidationRequest(
-                schema_version="1.0",
-                report_id="r-semantic-retry",
-                report=_report(),
-                artifacts=artifacts,
-                evidence_packs={},
-                vector_store_id=None,
-            ),
-            settings,
-            _ctx(),
+        run_semantic_validation(
+            insights=artifacts["insights_final"],
+            quotes=[],
+            evidence_texts=["Revenue grew 5%"],
+            settings=settings,
             prompt_client=FakePromptClient(),
             openai_client=FailingOpenAI(
                 semantic_exc=AppError(
@@ -697,7 +700,8 @@ def test_validation_propagates_retryable_semantic_error(tmp_path, assert_app_err
                     retryable=True,
                 )
             ),
-            analysis_store=FakeAnalysisStore(),
+            ctx=_ctx(),
+            report_id="r-semantic-retry",
         )
 
     assert_app_error(
@@ -931,7 +935,7 @@ __all__ = [
     "test_validation_fails_when_summary_claim_is_missing_span_support",
     "test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abstention",
     "test_validation_failures_include_rule_identity_prefix",
-    "test_validation_propagates_retryable_semantic_error",
+    "test_semantic_service_propagates_retryable_provider_error",
     "test_validation_propagates_retryable_grounding_error",
     "test_nonretryable_grounding_failure_blocks_without_deterministic_success",
     "test_material_grounding_classifications_always_block_publish_readiness",

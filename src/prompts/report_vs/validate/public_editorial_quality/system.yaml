@@ -31,7 +31,13 @@ text: |
   source-grounded contradiction, unsupported material assertion, or material
   editorial-quality defect. Use status=unresolved when evidence is missing,
   contradictory, or the item cannot be judged. Every fail or unresolved
-  verdict must contain a specific, source-grounded reason and the relevant
+  verdict must contain a specific, source-grounded reason. For a missing,
+  insufficient, or unavailable evidence disposition, use an empty evidence_ids
+  array and set rule_id to
+  public_editorial_quality.material_claim_evidence_missing (or set
+  hard_fail_class to missing_evidence, insufficient_evidence, or
+  evidence_unavailable); never invent or borrow an evidence ID. For a
+  contradiction or other source-grounded failure, preserve the relevant bound
   evidence_ids. Mark material factual/source failures as severity=error.
   Never claim that an item is supported merely because the source is on the
   same topic. Return only JSON satisfying the public-editorial-quality schema.

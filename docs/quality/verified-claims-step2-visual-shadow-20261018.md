@@ -7973,3 +7973,90 @@ later release-gate steps did not run after the unit-stage failure. The
 `mutation` jobs were non-success; no release bundle, canonical artifact, or
 WordPress write was created. Hosted run URL:
 `https://github.com/mbrakker/marketlense/actions/runs/41216218560`.
+
+## Semantic-authority migration and local CI reconciliation — 2026-11-01
+
+### Scope and production changes
+
+The current implementation slice applies the semantic-authority decision at the
+existing generation and validation boundaries. LLM stages own material
+factuality, entailment, interpretations, recommendations, public-editorial
+quality, report qualification, category fit, visual significance, and
+cross-report semantic agreement. Deterministic code remains responsible for
+source identity, physical PDF pages and evidence IDs, schema/coverage,
+immutable verified facts, exact arithmetic, cache identity, bounded retries,
+orchestration, and publication transactions.
+
+The production corrections are narrow:
+
+- grounding, claim validation, public-editorial review, and regeneration now
+  preserve model decisions and fail closed only on malformed, incomplete,
+  contradictory, or structurally unbound results;
+- evidence-pack and key-figure paths preserve source-bound facts without
+  numeric-text or keyword semantic vetoes;
+- publisher/download and taxonomy paths retain semantic model output while
+  exposing technical qualification signals as telemetry;
+- the visual extractor rejects only the demonstrated oversized embedded-wrapper
+  geometry, while ambiguous/low-confidence candidates remain available for the
+  existing multimodal review path;
+- cache/reuse, stable IDs, source provenance, safe removal, readiness, and
+  publication guards remain unchanged and are covered by the migrated tests.
+
+No new LLM stage, validator, service, database, publication path, or WordPress
+write was introduced.
+
+### Local verification matrix
+
+| Gate | Result |
+| --- | --- |
+| CPython 3.12 default suite | **8,311 passed, 2 skipped, 39 deselected; 24 subtests** |
+| Coverage | **85.1591% global; 85.1995% generators; 86.2372% orchestrators; 84.6411% services**; configured floors pass |
+| Mutation | **65/65 killed** across 16 configured targets |
+| Full mypy | **0 tracked errors** across 786 source files |
+| Formatting / changed-file Ruff | Pass |
+| Architecture, role/I/O, policy, schema, documentation, ledger, runbooks, backlog, hygiene | Pass |
+| WordPress subproject / public-site quality | Pass; credential-gated staging REST remains guarded/skipped |
+| Prompt fixture comparator | Pass after baseline regeneration |
+| Retained quality comparator | **Fail**: generators 85.1995% < historical 87.1763% |
+
+The full default suite was also run under CPython 3.14 before the environment
+correction; its only failure was the existing CPython 3.12 wheelhouse guard.
+The authoritative run used installed CPython 3.12 and passed the full suite.
+Background-thread logging teardown emitted the existing closed-stream warning
+without failing tests.
+
+### Prompt baseline evidence
+
+The existing prompt-baseline tooling regenerated
+`docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json`. The stable
+before/after values are:
+
+| Scope | Previous | Current | Change |
+| --- | ---: | ---: | ---: |
+| Total tokens | 113,206 | 113,387 | +181 (+0.16%) |
+| Estimated cost | $0.024974 | $0.024992 | +$0.000018 (+0.07%) |
+| Validation tokens | 10,921 | 11,102 | +181 (+1.66%) |
+| Validation cost | $0.002005 | $0.002023 | +$0.000018 (+0.90%) |
+| Public-editorial input tokens | 866 | 1,047 | +181 |
+
+The delta is the intentional source-authority, protected-dimension, and
+missing-evidence guidance. Pricing, model selection, schemas, fixture set,
+retry budgets, and comparator thresholds were unchanged. The prompt gate passed;
+runtime remained host-variable but within the existing comparator tolerance.
+
+### Release and live-report limitations
+
+The retained historical quality comparator was not weakened: the current
+generator coverage of **85.1995%** is below the retained **87.1763%** baseline.
+This is the remaining local release blocker and keeps R3 active. The current
+worktree does not contain the retained frozen-five source PDFs/artifacts at the
+required live paths, so a provider-backed verified-mode editorial regression
+could not be run. No live provider calls, fresh source-page inspection,
+provider-token/cost/latency measurements, canonical mutation, publication, or
+WordPress write occurred in this slice. The provider-free reference replay is
+not a substitute for current-SHA editorial-quality evidence.
+
+**Verdict: PARTIAL / NO-GO for release promotion.** The semantic-authority
+implementation, full unit suite, coverage floors, mutation, prompt, static,
+schema, and policy checks pass. The retained generator non-regression gate and
+current-SHA real-report evidence remain unresolved; Step 3 must not begin.

@@ -251,13 +251,15 @@ def test_retained_claim_validation_keeps_soft_copy_interpretation_nonfactual() -
             },
         },
         _evidence(),
+        semantic_batch_validator=_semantic_batch_supported,
     )
 
-    assert package.readiness_status == "not_publishable"
-    assert package.unsupported_factual_count == 1
+    assert package.readiness_status == "awaiting_review"
+    assert package.unsupported_factual_count == 0
     assert package.unresolved_factual_count == 0
     assert package.results[0].candidate.kind == "descriptive"
     assert package.results[0].candidate.factual is True
+    assert package.results[0].semantic_validator_used is True
 
 
 def test_retained_claim_validation_does_not_trust_interpretive_numeric_repair() -> None:
@@ -533,12 +535,14 @@ def test_recommendation_with_material_qualitative_premise_requires_evidence() ->
             },
         },
         _evidence(),
+        semantic_batch_validator=_semantic_batch_contradicted,
     )
 
     assert package.readiness_status == "not_publishable"
     assert package.unsupported_factual_count == 1
     assert package.results[0].candidate.factual is True
-    assert "missing_evidence_reference" in package.results[0].reasons
+    assert package.results[0].semantic_outcome == "contradicted"
+    assert package.results[0].semantic_validator_used is True
 
 
 @pytest.mark.parametrize("family", ["summary", "expert_comment", "linkedin_post"])
@@ -633,13 +637,15 @@ def test_evidence_bound_pure_normative_recommendation_remains_nonfactual() -> No
     assert package.readiness_status == "awaiting_review"
 
 
-def test_evidence_independent_normative_recommendation_remains_nonfactual() -> None:
+def test_evidence_independent_normative_recommendation_reaches_semantic_authority() -> (
+    None
+):
     claim = "Retailers should reconsider marketplace investment."
     calls = []
 
-    def semantic_batch(_claims):
+    def semantic_batch(claims):
         calls.append(True)
-        raise AssertionError("evidence-independent recommendation was grounded")
+        return _semantic_batch_supported(claims)
 
     package = validate_retained_claims(
         {
@@ -660,7 +666,8 @@ def test_evidence_independent_normative_recommendation_remains_nonfactual() -> N
         semantic_batch_validator=semantic_batch,
     )
 
-    assert calls == []
+    assert calls == [True]
     assert package.results[0].candidate.factual is True
-    assert package.results[0].status == "unsupported"
-    assert package.readiness_status == "not_publishable"
+    assert package.results[0].status == "supported"
+    assert package.results[0].semantic_validator_used is True
+    assert package.readiness_status == "awaiting_review"

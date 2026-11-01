@@ -236,6 +236,8 @@ def test_misleading_doc_map_does_not_promote_unsupported_finding(tmp_path, caplo
     class UnsupportedFallbackClient:
         def __init__(self):
             self.findings_calls = 0
+            self.targeted_fallback_calls = 0
+            self.semantic_calls = 0
 
         def openai_respond_with_vector_store(self, request, ctx):
             if str(ctx.task_id).endswith(":doc_map"):
@@ -256,15 +258,21 @@ def test_misleading_doc_map_does_not_promote_unsupported_finding(tmp_path, caplo
             )
 
         def openai_chat_json(self, request, ctx):
-            self.findings_calls += 1
-            return OpenAIResponseResult(
-                schema_version="1.0",
-                text=json.dumps(misleading),
-                parsed_json=misleading,
-                input_tokens=3,
-                output_tokens=2,
-                tool_calls=0,
-                model=request.model,
+            if request.stage == "evidence_pack_targeted_fallback":
+                self.targeted_fallback_calls += 1
+                return OpenAIResponseResult(
+                    schema_version="1.0",
+                    text=json.dumps(misleading),
+                    parsed_json=misleading,
+                    input_tokens=3,
+                    output_tokens=2,
+                    tool_calls=0,
+                    model=request.model,
+                )
+            self.semantic_calls += 1
+            return semantic_response_for_request(
+                request,
+                supported_ids={"evidence:findings:supported-9b"},
             )
 
     caplog.set_level(logging.INFO, logger="market_lense.evidence_pack_generator")
@@ -287,11 +295,14 @@ def test_misleading_doc_map_does_not_promote_unsupported_finding(tmp_path, caplo
         analysis_store=FakeAnalysisStore(),
     )
 
-    assert client.findings_calls == 2
+    assert client.findings_calls == 1
+    assert client.targeted_fallback_calls == 1
+    assert client.semantic_calls == 1
     assert [finding["id"] for finding in packs["findings"]["findings"]] == [
         "supported-9b"
     ]
-    assert packs["evidence_fidelity"]["unsupported_factual_count"] == 0
+    assert packs["evidence_fidelity"]["unsupported_factual_count"] == 1
+    assert packs["evidence_fidelity"]["semantic_validation_count"] == 2
     fallback_events = []
     for record in caplog.records:
         try:
@@ -341,6 +352,7 @@ def test_supported_priority_body_finding_avoids_targeted_fallback(tmp_path):
     class CompleteBodyFindingClient:
         def __init__(self):
             self.findings_calls = 0
+            self.semantic_calls = 0
 
         def openai_respond_with_vector_store(self, request, ctx):
             if str(ctx.task_id).endswith(":doc_map"):
@@ -358,6 +370,20 @@ def test_supported_priority_body_finding_avoids_targeted_fallback(tmp_path):
                 model=request.model,
             )
 
+        def openai_chat_json(self, request, ctx):
+            if request.stage == "evidence_pack_targeted_fallback":
+                return OpenAIResponseResult(
+                    schema_version="1.0",
+                    text=json.dumps(finding),
+                    parsed_json=finding,
+                    input_tokens=4,
+                    output_tokens=3,
+                    tool_calls=0,
+                    model=request.model,
+                )
+            self.semantic_calls += 1
+            return semantic_response_for_request(request)
+
     client = CompleteBodyFindingClient()
     packs = generate_evidence_packs(
         report_id="supported-body-report",
@@ -372,8 +398,9 @@ def test_supported_priority_body_finding_avoids_targeted_fallback(tmp_path):
     )
 
     assert client.findings_calls == 1
+    assert client.semantic_calls == 1
     assert packs["findings"]["findings"][0]["id"] == "revenue-growth-2025"
-    assert packs["evidence_fidelity"]["deterministic_pass_count"] == 1
+    assert packs["evidence_fidelity"]["semantic_validation_count"] == 1
 
 
 def test_supported_finding_gets_physical_page_from_validated_source_reference(
@@ -413,6 +440,7 @@ def test_supported_finding_gets_physical_page_from_validated_source_reference(
     class SupportedWithoutPageClient:
         def __init__(self):
             self.findings_calls = 0
+            self.semantic_calls = 0
 
         def openai_respond_with_vector_store(self, request, ctx):
             if str(ctx.task_id).endswith(":doc_map"):
@@ -430,6 +458,20 @@ def test_supported_finding_gets_physical_page_from_validated_source_reference(
                 model=request.model,
             )
 
+        def openai_chat_json(self, request, ctx):
+            if request.stage == "evidence_pack_targeted_fallback":
+                return OpenAIResponseResult(
+                    schema_version="1.0",
+                    text=json.dumps(finding),
+                    parsed_json=finding,
+                    input_tokens=4,
+                    output_tokens=3,
+                    tool_calls=0,
+                    model=request.model,
+                )
+            self.semantic_calls += 1
+            return semantic_response_for_request(request)
+
     client = SupportedWithoutPageClient()
     packs = generate_evidence_packs(
         report_id="supported-without-page",
@@ -444,8 +486,9 @@ def test_supported_finding_gets_physical_page_from_validated_source_reference(
     )
 
     assert client.findings_calls == 1
+    assert client.semantic_calls == 1
     assert packs["findings"]["findings"][0]["pages"] == [4]
-    assert packs["evidence_fidelity"]["deterministic_pass_count"] == 1
+    assert packs["evidence_fidelity"]["semantic_validation_count"] == 1
 
 
 def test_semantically_supported_finding_gets_physical_page_after_final_validation(

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_panel_label_block_looks_like_footer_banner_accepts_mixed_year_page_line() -> (
     None
 ):
@@ -14,6 +15,7 @@ def test_panel_label_block_looks_like_footer_banner_accepts_mixed_year_page_line
         )
         is True
     )
+
 
 def test_panel_should_clamp_to_internal_caption_for_stacked_panel_pair() -> None:
     lower = _ChartRect(
@@ -31,6 +33,7 @@ def test_panel_should_clamp_to_internal_caption_for_stacked_panel_pair() -> None
 
     assert _panel_should_clamp_to_internal_caption(lower, [lower, upper]) is True
     assert _panel_should_clamp_to_internal_caption(upper, [lower, upper]) is False
+
 
 def test_panel_candidate_shadowed_by_heading_candidate_for_metric_stub_panel() -> None:
     panel = _ChartRect(
@@ -53,6 +56,7 @@ def test_panel_candidate_shadowed_by_heading_candidate_for_metric_stub_panel() -
         _panel_candidate_shadowed_by_heading_candidate(heading, [panel, heading])
         is False
     )
+
 
 def test_panel_candidate_shadowed_by_larger_panel_for_compact_banner() -> None:
     compact_panel = _ChartRect(
@@ -77,6 +81,7 @@ def test_panel_candidate_shadowed_by_larger_panel_for_compact_banner() -> None:
         is True
     )
 
+
 def test_panel_candidate_shadowed_by_larger_panel_keeps_equal_stacked_cards() -> None:
     upper_panel = _ChartRect(
         rect=fitz.Rect(36.0, 318.0, 559.0, 429.0),
@@ -100,6 +105,7 @@ def test_panel_candidate_shadowed_by_larger_panel_keeps_equal_stacked_cards() ->
         is False
     )
 
+
 def test_panel_stacked_bottom_clip_y_prefers_next_lower_panel() -> None:
     doc = fitz.open()
     page = doc.new_page(width=595, height=842)
@@ -121,6 +127,7 @@ def test_panel_stacked_bottom_clip_y_prefers_next_lower_panel() -> None:
         assert _panel_stacked_bottom_clip_y(page, lower, [upper, lower]) is None
     finally:
         doc.close()
+
 
 def test_panel_stacked_bottom_clip_y_skips_clip_when_bottom_axis_band_exists() -> None:
     doc = fitz.open()
@@ -147,6 +154,7 @@ def test_panel_stacked_bottom_clip_y_skips_clip_when_bottom_axis_band_exists() -
     finally:
         doc.close()
 
+
 def test_panel_chart_has_data_signal_accepts_dense_axis_only_panel() -> None:
     text = (
         "Better quality\n"
@@ -167,6 +175,7 @@ def test_panel_chart_has_data_signal_accepts_dense_axis_only_panel() -> None:
 
     assert _panel_chart_has_data_signal(text) is True
 
+
 def test_panel_preferred_local_title_line_prefers_near_component_title(
     tmp_path,
 ) -> None:
@@ -185,6 +194,7 @@ def test_panel_preferred_local_title_line_prefers_near_component_title(
 
     assert title is not None
     assert title.text == "Top Digital Formats"
+
 
 def test_panel_preferred_local_title_line_prefers_internal_card_title_over_metric_fragment(
     tmp_path,
@@ -205,11 +215,13 @@ def test_panel_preferred_local_title_line_prefers_internal_card_title_over_metri
     assert title is not None
     assert title.text == "Private labels go premium"
 
+
 def test_panel_title_looks_short_proper_name_accepts_country_like_title() -> None:
     assert _panel_title_looks_short_proper_name("Belgium") is True
     assert _panel_title_looks_short_proper_name("New Zealand") is True
     assert _panel_title_looks_short_proper_name("HIGH") is False
     assert _panel_title_looks_short_proper_name("2025") is False
+
 
 def test_panel_title_slice_bounds_separates_peer_titles(tmp_path) -> None:
     pdf_path = tmp_path / "panel-title-slices.pdf"
@@ -231,6 +243,7 @@ def test_panel_title_slice_bounds_separates_peer_titles(tmp_path) -> None:
     left, right = bounds
     assert left > 250.0
     assert right <= 960.0
+
 
 def test_collect_candidates_merges_multiline_metric_band_with_quote_card(
     tmp_path,
@@ -256,6 +269,7 @@ def test_collect_candidates_merges_multiline_metric_band_with_quote_card(
     assert charts[0].bbox[0] < 60.0
     assert charts[0].bbox[1] < 150.0
     assert charts[0].bbox[3] > 320.0
+
 
 def test_collect_candidates_keeps_dense_numeric_panel_chart(
     tmp_path,
@@ -283,6 +297,7 @@ def test_collect_candidates_keeps_dense_numeric_panel_chart(
     )
     assert charts[0].bbox[2] >= 648.0
     assert charts[0].bbox[3] >= 300.0
+
 
 def test_collect_candidates_merges_multiline_panel_title_with_numeric_side_card(
     tmp_path,
@@ -313,6 +328,7 @@ def test_collect_candidates_merges_multiline_panel_title_with_numeric_side_card(
     assert charts[0].bbox[1] < 36.0
     assert charts[0].bbox[2] > 660.0
 
+
 def test_panel_chart_rects_skip_pages_with_explicit_figure_captions(tmp_path) -> None:
     pdf_path = tmp_path / "panel-chart-with-caption.pdf"
     _build_panel_chart_slide_with_figure_caption_pdf(pdf_path)
@@ -323,6 +339,7 @@ def test_panel_chart_rects_skip_pages_with_explicit_figure_captions(tmp_path) ->
         assert _panel_chart_rects(page) == []
     finally:
         doc.close()
+
 
 def test_collect_candidates_recovers_internal_panel_cards_without_external_titles(
     tmp_path,
@@ -354,7 +371,10 @@ def test_collect_candidates_recovers_internal_panel_cards_without_external_title
         "3 ways retailers can prepare for 2026" in caption for caption in captions
     )
     assert all(chart.bbox[2] > 520.0 for chart in charts)
-    assert tables == []
+    assert len(tables) == 2
+    assert all(table.bbox[0] < table.bbox[2] for table in tables)
+    assert all(table.bbox[1] < table.bbox[3] for table in tables)
+
 
 def test_collect_candidates_extends_internal_panel_to_side_labels(tmp_path) -> None:
     pdf_path = tmp_path / "internal-panel-with-side-labels.pdf"
@@ -380,6 +400,7 @@ def test_collect_candidates_extends_internal_panel_to_side_labels(tmp_path) -> N
     assert chart.bbox[1] <= 170.0
     assert chart.bbox[3] >= 440.0
 
+
 def test_collect_candidates_extends_titled_panel_to_bottom_labels(tmp_path) -> None:
     pdf_path = tmp_path / "internal-panel-with-bottom-labels.pdf"
     out_dir = tmp_path / "out"
@@ -403,6 +424,7 @@ def test_collect_candidates_extends_titled_panel_to_bottom_labels(tmp_path) -> N
     assert chart.bbox[1] <= 90.0
     assert chart.bbox[3] >= 512.0
 
+
 def test_collect_candidates_keeps_internal_panel_title_band_padding(tmp_path) -> None:
     pdf_path = tmp_path / "panel-chart-with-wide-internal-title-band-e2e.pdf"
     out_dir = tmp_path / "out"
@@ -425,6 +447,7 @@ def test_collect_candidates_keeps_internal_panel_title_band_padding(tmp_path) ->
     assert len(charts) == 1
     assert charts[0].bbox[1] < 40.0
 
+
 def test_collect_candidates_rejects_contents_panel_page(tmp_path) -> None:
     pdf_path = tmp_path / "contents-panel-page.pdf"
     out_dir = tmp_path / "out"
@@ -445,6 +468,7 @@ def test_collect_candidates_rejects_contents_panel_page(tmp_path) -> None:
     ]
     assert charts == []
 
+
 def test_extend_with_adjacent_text_blocks_keeps_internal_title_band(tmp_path) -> None:
     pdf_path = tmp_path / "chart-with-internal-title-band.pdf"
     _build_chart_with_internal_title_band_pdf(pdf_path)
@@ -456,6 +480,7 @@ def test_extend_with_adjacent_text_blocks_keeps_internal_title_band(tmp_path) ->
     finally:
         doc.close()
     assert expanded.y0 < 120.0
+
 
 def test_extend_panel_with_adjacent_text_blocks_keeps_wide_internal_title_band(
     tmp_path,
@@ -471,6 +496,7 @@ def test_extend_panel_with_adjacent_text_blocks_keeps_wide_internal_title_band(
         doc.close()
 
     assert expanded.y0 < 120.0
+
 
 def test_extend_panel_with_adjacent_text_blocks_rejects_cross_panel_text(
     tmp_path,
@@ -488,6 +514,7 @@ def test_extend_panel_with_adjacent_text_blocks_rejects_cross_panel_text(
 
     assert expanded.x1 < 500.0
     assert expanded.y1 > 450.0
+
 
 def test_extend_panel_with_adjacent_text_blocks_attaches_overlapping_left_stat_block(
     tmp_path,
@@ -535,6 +562,7 @@ def test_extend_panel_with_adjacent_text_blocks_attaches_overlapping_left_stat_b
 
     assert expanded.x0 < 80.0
 
+
 def test_extend_panel_with_adjacent_text_blocks_attaches_narrow_centered_top_title(
     tmp_path,
 ) -> None:
@@ -569,6 +597,7 @@ def test_extend_panel_with_adjacent_text_blocks_attaches_narrow_centered_top_tit
 
     assert expanded.y0 < 340.0
 
+
 def test_visual_text_dense_recovery_only_uses_panel_heuristic_for_panel_kind() -> None:
     text = "\n".join(
         [
@@ -601,6 +630,7 @@ def test_visual_text_dense_recovery_only_uses_panel_heuristic_for_panel_kind() -
         is True
     )
     assert _panel_chart_has_data_signal(text) is True
+
 
 __all__ = [
     "test_panel_label_block_looks_like_footer_banner_accepts_mixed_year_page_line",

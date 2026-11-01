@@ -670,6 +670,7 @@ def test_rolled_back_summary_candidate_advances_to_bounded_safe_removal(tmp_path
         category_labels=["Category"],
         vector_store_id=None,
         dependencies=deps,
+        validation_openai_client=_SemanticPassOpenAIClient(),
     )
 
     assert [

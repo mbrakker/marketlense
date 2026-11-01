@@ -150,7 +150,7 @@ def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
         assert openai_client.calls
         assert prompt_client.render_calls
     elif artifact_family == "summary":
-        assert updated["summary"]["executive_summary"] == "Old TLDR."
+        assert updated["summary"]["executive_summary"] == ""
         assert updated["summary"]["tldr"] == "Old TLDR."
         assert updated["summary"]["card_tldr_compact"] == "Old TLDR."
     else:

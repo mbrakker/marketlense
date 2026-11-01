@@ -121,7 +121,11 @@ def test_verified_grounding_recovery_passes_missing_public_item_id_to_model(
             return super().render_prompt(prompt_request, ctx)
 
     prompt_client = RecordingPromptClient()
-    openai_client = FakeOpenAI(incomplete, complete)
+    openai_client = FakeOpenAI(
+        incomplete,
+        complete,
+        complete_grounding_contract=False,
+    )
     issues = run_grounding_check(
         request=request,
         settings=_settings(tmp_path),
@@ -170,7 +174,10 @@ def test_verified_grounding_failure_preserves_inner_contract_cause(tmp_path):
         evidence_texts=[],
         evidence_windows=[],
         prompt_client=FakePromptClient(),
-        openai_client=FakeOpenAI(grounding_payload={"unsupported": []}),
+        openai_client=FakeOpenAI(
+            grounding_payload={"unsupported": []},
+            complete_grounding_contract=False,
+        ),
         ctx=_ctx(),
         source_id=SOURCE_IDENTITY,
         prompt_family_reuse_reader=lambda *_args: SimpleNamespace(
@@ -181,7 +188,8 @@ def test_verified_grounding_failure_preserves_inner_contract_cause(tmp_path):
     )
 
     assert len(issues) == 1
-    assert "grounding_claim_check_coverage_invalid" in issues[0].message
+    assert "validation_grounding_invalid_json" in issues[0].message
+    assert "schema_missing_required" in issues[0].message
 
 
 def test_grounding_issue_retains_public_verified_evidence_for_repair(tmp_path):

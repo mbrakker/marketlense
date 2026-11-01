@@ -3,7 +3,7 @@ from src.generators.public_editorial_quality_generator import (
 )
 
 
-def test_normal_mode_numeric_quality_rule_remains_active():
+def test_normal_mode_public_quality_does_not_make_numeric_semantic_decisions():
     report = evaluate_public_editorial_quality(
         report_id="normal-mode",
         artifacts={
@@ -19,6 +19,6 @@ def test_normal_mode_numeric_quality_rule_remains_active():
         },
     )
 
-    assert "public_editorial_quality.unsupported_numeric_claim" in {
+    assert "public_editorial_quality.unsupported_numeric_claim" not in {
         issue.rule_id for issue in report.issues
     }

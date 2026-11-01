@@ -189,6 +189,7 @@ def test_verified_grounding_recovery_feedback_names_missing_public_item_and_repa
                 "text": first_item["text"],
                 "classification": "factual_claim",
                 "entailment_outcome": "not_established",
+                "violation_type": "unsupported_factual_claim",
                 "reason": "The source does not establish the first claim.",
             }
         ],
@@ -201,6 +202,7 @@ def test_verified_grounding_recovery_feedback_names_missing_public_item_and_repa
                 "text": item["text"],
                 "classification": "factual_claim",
                 "entailment_outcome": "not_established",
+                "violation_type": "unsupported_factual_claim",
                 "reason": "The source does not establish this claim.",
             }
             for item in requested_items

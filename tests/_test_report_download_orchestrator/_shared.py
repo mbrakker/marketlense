@@ -68,6 +68,9 @@ from src.contracts.state import (
 from src.orchestrators._report_download_orchestrator.promotions import (
     evaluate_private_api_playbook_auto_promotion,
 )
+from src.orchestrators._report_download_orchestrator.candidate_readiness import (
+    evaluate_candidate_download_readiness,
+)
 from src.orchestrators._report_download_orchestrator.route_planner import (
     plan_report_download_routes,
 )

@@ -284,7 +284,7 @@ def test_fit_report_categories_from_context_returns_selected_categories(
                     "decision": "secondary",
                     "why_fit": "AI agents are one of the report's main recurring themes.",
                     "why_not_fit": "",
-                    "evidence_sections": ["Key finding 1"],
+                    "evidence_sections": ["key_findings"],
                 },
                 {
                     "category_id": "consumer_behavior",
@@ -329,8 +329,8 @@ def test_fit_report_categories_from_context_returns_selected_categories(
     assert response.categories == ["technology", "ai_automation"]
     assert response.category_labels == ["Technology & Innovation", "AI & Automation"]
     assert response.fits[0].decision == "primary"
-    assert response.fits[0].semantic_rule_status == "supported"
-    assert response.fits[0].supported_topic_rules
+    assert response.fits[0].semantic_rule_status == "not_evaluated"
+    assert response.fits[0].supported_topic_rules == []
     assert response.fits[1].decision == "secondary"
     assert openai_client.requests[0][0].model == "gpt-5-mini"
     assert openai_client.requests[0][0].publisher_name == "Deloitte"
@@ -434,7 +434,7 @@ def test_fit_report_categories_from_context_defaults_missing_optional_fields() -
     assert response.categories == ["technology"]
     assert response.fits[0].why_not_fit == ""
     assert response.fits[0].evidence_sections == []
-    assert response.fits[0].semantic_rule_status == "supported"
+    assert response.fits[0].semantic_rule_status == "not_evaluated"
 
 
 def test_semantic_reclassification_is_limited_to_declared_candidates() -> None:
@@ -625,7 +625,7 @@ def test_fit_report_categories_marks_a_targeted_repair_request() -> None:
     assert '"selected_category_ids":' in request.user_prompt
 
 
-def test_fit_report_categories_rejects_topic_exclusion_conflict() -> None:
+def test_fit_report_categories_preserves_model_topic_decision() -> None:
     context = ReportCategoryContext(
         schema_version="1.0",
         report_id="file-1",
@@ -703,14 +703,14 @@ def test_fit_report_categories_rejects_topic_exclusion_conflict() -> None:
         mapping_client=mapping_client,
     )
 
-    assert response.categories == []
-    assert response.fits[0].decision == "reject"
-    assert response.fits[0].semantic_rule_status == "rejected"
-    assert response.fits[0].rejected_topic_rules
-    assert response.fits[0].remediation_signal == "topic_semantics_exclusion_conflict"
+    assert response.categories == ["technology"]
+    assert response.fits[0].decision == "primary"
+    assert response.fits[0].semantic_rule_status == "not_evaluated"
+    assert response.fits[0].rejected_topic_rules == []
+    assert response.fits[0].remediation_signal == ""
 
 
-def test_fit_report_categories_marks_ambiguous_topic_fit() -> None:
+def test_fit_report_categories_does_not_infer_ambiguous_topic_fit() -> None:
     context = ReportCategoryContext(
         schema_version="1.0",
         report_id="file-1",
@@ -783,9 +783,9 @@ def test_fit_report_categories_marks_ambiguous_topic_fit() -> None:
         mapping_client=mapping_client,
     )
 
-    assert response.categories == []
-    assert response.fits[0].semantic_rule_status == "ambiguous"
-    assert response.fits[0].remediation_signal == "topic_semantics_ambiguous"
+    assert response.categories == ["technology"]
+    assert response.fits[0].semantic_rule_status == "not_evaluated"
+    assert response.fits[0].remediation_signal == ""
 
 
 def test_fit_report_categories_supports_spatial_computing_as_technology() -> None:
@@ -852,17 +852,12 @@ def test_fit_report_categories_supports_spatial_computing_as_technology() -> Non
 
     assert response.categories == ["technology"]
     assert response.category_labels == ["Technology & Innovation"]
-    assert response.fits[0].semantic_rule_status == "supported"
-    assert (
-        "The report is primarily about immersive experiences, spatial "
-        "computing, virtual worlds, or Metaverse technology."
-    ) in response.fits[0].supported_topic_rules
+    assert response.fits[0].semantic_rule_status == "not_evaluated"
+    assert response.fits[0].supported_topic_rules == []
 
 
-def test_high_confidence_rejected_category_is_deterministically_promoted_when_central() -> (
-    None
-):
-    """A reject cannot survive explicit central inclusion evidence without exclusion."""
+def test_high_confidence_model_rejection_is_not_deterministically_promoted() -> None:
+    """Configured topic text cannot promote a model-rejected category."""
     context = ReportCategoryContext(
         schema_version="1.0",
         report_id="file-1",
@@ -936,14 +931,10 @@ def test_high_confidence_rejected_category_is_deterministically_promoted_when_ce
         mapping_client=mapping_client,
     )
 
-    assert response.categories == ["technology"]
+    assert response.categories == []
     candidate = response.fits[0]
-    assert candidate.decision == "primary"
-    assert candidate.semantic_rule_status == "supported"
-    assert candidate.supported_topic_rule_ids == ["technology:include:2aa37e1280a21972"]
-    assert candidate.rule_evidence_sections == ["title", "overview", "key_findings"]
-    assert candidate.centrality_evidence_sections == [
-        "title",
-        "overview",
-        "key_findings",
-    ]
+    assert candidate.decision == "reject"
+    assert candidate.semantic_rule_status == "not_evaluated"
+    assert candidate.supported_topic_rule_ids == []
+    assert candidate.rule_evidence_sections == []
+    assert candidate.centrality_evidence_sections == []

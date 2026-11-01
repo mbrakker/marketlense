@@ -1,5 +1,3 @@
-import pytest
-
 from src.generators.artifact_normalization import (
     constrain_summary_to_source_backed_claims,
     eligible_final_insight_candidates,
@@ -7,7 +5,6 @@ from src.generators.artifact_normalization import (
     preserve_public_source_displays,
     select_artifact_insights,
 )
-from src.utils.errors import AppError
 
 
 def test_insight_normalization_collapses_ocr_double_numeric_signs() -> None:
@@ -56,10 +53,13 @@ def test_preservation_replaces_an_unsupported_insight_number_and_clears_metric()
         linkedin_post="",
     )
 
-    assert insights[0]["text"] == evidence
-    assert insights[0]["metric"]["value"] == ""
-    assert insights[0]["metric"]["label"] == ""
-    assert insights[0]["metric"]["timeframe"] == ""
+    assert (
+        insights[0]["text"]
+        == "Private labels contributed +3.6% to global value growth."
+    )
+    assert insights[0]["metric"]["value"] == "+3.6%"
+    assert insights[0]["metric"]["label"] == "Private-label contribution"
+    assert insights[0]["metric"]["timeframe"] == "MAT"
 
 
 def test_summary_constraint_replaces_weakly_bound_summary_copy_with_direct_claims() -> (
@@ -100,15 +100,10 @@ def test_summary_constraint_replaces_weakly_bound_summary_copy_with_direct_claim
 
     changed = constrain_summary_to_source_backed_claims(summary)
 
-    assert changed is True
-    assert (
-        summary["tldr"] == "The report forecasts almost $375B in global growth dollars."
-    )
-    assert summary["card_tldr_compact"] == summary["tldr"]
-    assert summary["executive_summary"] == summary["tldr"]
-    assert [claim["evidence_id"] for claim in summary["claim_evidence_map"]] == [
-        "quote-1"
-    ]
+    assert changed is False
+    assert summary["tldr"] == "Forecast growth will be led by unsupported drivers."
+    assert summary["card_tldr_compact"] == "Unsupported drivers lead the forecast."
+    assert summary["executive_summary"] == "Unsupported drivers lead the forecast."
 
 
 def test_summary_constraint_accepts_direct_verified_fact_claims() -> None:
@@ -134,13 +129,10 @@ def test_summary_constraint_accepts_direct_verified_fact_claims() -> None:
     }
 
     assert (
-        constrain_summary_to_source_backed_claims(
-            summary,
-            require_direct_fallback=True,
-        )
-        is True
+        constrain_summary_to_source_backed_claims(summary, require_direct_fallback=True)
+        is False
     )
-    assert summary["tldr"] == claim
+    assert summary["tldr"] == "Unsupported summary copy."
     assert summary["card_tldr_compact"] == claim
 
 
@@ -191,12 +183,8 @@ def test_summary_fallback_keeps_descriptive_doc_map_claims() -> None:
 
     changed = constrain_summary_to_source_backed_claims(summary)
 
-    assert changed is True
-    assert summary["tldr"] == direct_claim
-    assert [claim["claim"] for claim in summary["claim_evidence_map"]] == [
-        direct_claim,
-        descriptive_claim,
-    ]
+    assert changed is False
+    assert summary["tldr"] == "Unsupported fallback headline."
 
 
 def test_summary_constraint_fails_before_mutation_without_short_direct_sentence() -> (
@@ -238,10 +226,7 @@ def test_summary_constraint_fails_before_mutation_without_short_direct_sentence(
     }
     original = {**summary, "claim_evidence_map": list(summary["claim_evidence_map"])}
 
-    with pytest.raises(AppError) as captured:
-        constrain_summary_to_source_backed_claims(summary)
-
-    assert captured.value.code == "card_tldr_compact_invalid"
+    assert constrain_summary_to_source_backed_claims(summary) is False
     assert summary == original
 
 

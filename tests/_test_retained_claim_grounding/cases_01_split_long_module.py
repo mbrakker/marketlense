@@ -601,7 +601,10 @@ def test_incomplete_grounding_output_exhausts_existing_bounded_recovery(
     tmp_path,
 ) -> None:
     request = _retained_request()
-    model_client = FakeOpenAI(grounding_payload={"unsupported": [], "checks": []})
+    model_client = FakeOpenAI(
+        grounding_payload={"unsupported": [], "checks": []},
+        complete_grounding_contract=False,
+    )
     captured_packages: list[ClaimValidationPackage] = []
 
     issues = run_grounding_check(
@@ -621,9 +624,7 @@ def test_incomplete_grounding_output_exhausts_existing_bounded_recovery(
     assert len(issues) == 1
     assert issues[0].rule_id == "grounding"
     assert issues[0].severity == "error"
-    assert (
-        "did not produce a substantive schema-valid JSON artifact" in issues[0].message
-    )
+    assert "validation_grounding_invalid_json" in issues[0].message
 
 
 def test_conflicting_claim_identity_fails_before_provider_call(tmp_path) -> None:
@@ -681,7 +682,7 @@ def test_conflicting_claim_identity_fails_before_provider_call(tmp_path) -> None
     assert captured_packages == []
     assert len(issues) == 1
     assert issues[0].severity == "error"
-    assert "conflicting text or evidence" in issues[0].message
+    assert "grounding_claim_identity_ambiguous" in issues[0].message
 
 
 def test_multiple_retained_claims_use_one_report_level_grounding_call(tmp_path) -> None:

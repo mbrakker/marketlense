@@ -165,7 +165,7 @@ def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_v
         render_report=_render_report,
     )
 
-    outcome = rgo.run_report_generation(
+    outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -436,7 +436,7 @@ def test_generate_report_vector_store_figure_caption_fail_open_runs_before_valid
         ),
     )
 
-    outcome = rgo.run_report_generation(
+    outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,

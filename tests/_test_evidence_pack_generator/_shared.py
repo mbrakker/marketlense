@@ -37,11 +37,18 @@ from src.utils.slugify import slugify
 
 class FakePromptClient:
     def load_prompt_set(self, request, ctx):
+        user_text = "user"
+        if request.namespace.endswith("/validate/semantic"):
+            user_text = (
+                "Metrics (JSON): {{ metrics_json }}\n"
+                "Quotes (JSON): {{ quotes_json }}\n"
+                "Evidence snippets (JSON): {{ evidence_json }}"
+            )
         tmpl = PromptTemplate(
             schema_version="1.0", path="system", text="sys", sha256="s"
         )
         user = PromptTemplate(
-            schema_version="1.0", path="user", text="user", sha256="u"
+            schema_version="1.0", path="user", text=user_text, sha256="u"
         )
         return PromptSet(
             schema_version="1.0",
@@ -67,7 +74,10 @@ class FakePromptClient:
         )
 
     def render_prompt(self, request, ctx):
-        return SimpleNamespace(text=request.template.text)
+        text = request.template.text
+        for key, value in request.variables.items():
+            text = text.replace("{{ " + key + " }}", str(value))
+        return SimpleNamespace(text=text)
 
 
 class RecordingPromptClient(FakePromptClient):
@@ -135,6 +145,73 @@ class RoutedOpenAIClient:
             model=req.model,
         )
 
+    def openai_chat_json(self, req, ctx):
+        """Serve the current semantic-validation contract for chat fallbacks."""
+
+        if (
+            "semantic" not in self._payloads_by_pack
+            and getattr(req, "artifact_family", "") == "validation_semantic"
+        ):
+            return semantic_response_for_request(req)
+        parsed = self._payloads_by_pack.get("semantic", {"metrics": [], "quotes": []})
+        text = self._text_by_pack.get("semantic", "")
+        if not text and isinstance(parsed, (dict, list)):
+            text = json.dumps(parsed)
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=text,
+            parsed_json=parsed,
+            input_tokens=1,
+            output_tokens=1,
+            tool_calls=0,
+            model=req.model,
+        )
+
+
+def semantic_response_for_request(
+    request,
+    *,
+    supported: bool = True,
+    reason: str = "The source supports the finding.",
+    supported_ids: set[str] | None = None,
+) -> OpenAIResponseResult:
+    metrics_text = request.user_prompt.split("Metrics (JSON):", 1)[1]
+    metrics_text = metrics_text.split("Quotes (JSON):", 1)[0].strip()
+    metrics = json.loads(metrics_text)
+    payload = {
+        "metrics": [
+            {
+                "id": metric["id"],
+                "supported": (
+                    metric["id"] in supported_ids
+                    if supported_ids is not None
+                    else supported
+                ),
+                "confidence": (
+                    1.0
+                    if (
+                        metric["id"] in supported_ids
+                        if supported_ids is not None
+                        else supported
+                    )
+                    else 0.0
+                ),
+                "reason": reason,
+            }
+            for metric in metrics
+        ],
+        "quotes": [],
+    }
+    return OpenAIResponseResult(
+        schema_version="1.0",
+        text=json.dumps(payload),
+        parsed_json=payload,
+        input_tokens=1,
+        output_tokens=1,
+        tool_calls=0,
+        model=request.model,
+    )
+
 
 class RetryingDocMapClient:
     def __init__(self):
@@ -193,7 +270,7 @@ class TextFallbackDocMapClient:
                     '"summary":"Examines cross-channel measurement practices for '
                     'retail media campaigns.","sections":[{"title":'
                     '"Cross-channel measurement methods","summary":"Connects '
-                    'retail media, ecommerce, and store activity for campaign '
+                    "retail media, ecommerce, and store activity for campaign "
                     'evaluation."}]}\n```'
                 ),
                 parsed_json=None,
@@ -240,8 +317,7 @@ def substantive_doc_map(doc_id="d1"):
         "doc_id": doc_id,
         "title": "Retail Measurement Outlook",
         "summary": (
-            "Examines cross-channel measurement practices for retail media "
-            "campaigns."
+            "Examines cross-channel measurement practices for retail media campaigns."
         ),
         "sections": [
             {

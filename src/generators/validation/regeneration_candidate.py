@@ -24,8 +24,6 @@ from src.generators._artifact_generator.storage import (
 )
 from src.generators.artifact_normalization import artifact_evidence_span_index
 from src.generators.claim_validation_generator import (
-    _claim_kind,
-    _claim_requires_factual_validation,
     _soft_copy_text_hash,
     validate_retained_claims,
 )
@@ -749,14 +747,16 @@ def _soft_copy_text_by_hash(text: str) -> dict[str, str]:
 def _soft_copy_claim_requires_factual_validation(
     claim: SoftCopyClaimProvenance, text: str
 ) -> bool:
-    if not text:
-        return claim.classification == "factual"
-    return _claim_requires_factual_validation(
-        text=text,
-        kind=_claim_kind(text),
-        classification=claim.classification,
-        evidence_bound=bool(claim.evidence_ids),
-    )
+    # Every material item still reaches the semantic grounding model.  This
+    # narrower predicate only controls the deterministic source-binding checks
+    # used during candidate promotion: an evidence-bound item, or a claim the
+    # producing artifact explicitly classified as factual, must have complete
+    # retained evidence lineage.  A pure interpretive/recommendation sentence
+    # with no empirical premise may remain unbound and is judged by the model.
+    if claim.evidence_ids or claim.classification == "factual":
+        return True
+    del text
+    return False
 
 
 def _soft_copy_claims(

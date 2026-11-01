@@ -87,7 +87,7 @@ def ias_soft_copy_payload(
                     or claim.startswith("Operating models should")
                     else "factual"
                 ),
-                "evidence_ids": ["market-demand"],
+                "evidence_ids": ["finding-1"],
             }
             for claim in entries
         ],

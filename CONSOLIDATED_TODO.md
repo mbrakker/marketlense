@@ -1533,3 +1533,38 @@ generation target suite failed, and `release_evidence` correctly blocked on
 those prerequisites. The hosted result is recorded in the Step 2 quality
 report; E18 remains **Active/PARTIAL**, Step 2 **PARTIAL/NO-GO**, and Step 3
 **unstarted/not ready**.
+
+**Semantic-authority migration and local CI reconciliation — 2026-11-01
+(worktree based on `ec3629d5`):** The current slice removes deterministic
+semantic ownership from active taxonomy, claim, evidence, publisher, grounding,
+readiness, and visual-candidate decision paths while retaining deterministic
+source identity, physical-page/evidence-ID integrity, schema/coverage,
+immutable verified facts, exact arithmetic, cache identity, retry, and
+publication safeguards. LLM outputs remain untrusted until the existing
+structured-output, provenance, and fail-closed boundaries accept them. PDF
+ambiguity is retained for multimodal review; only the demonstrated oversized
+wrapper geometry case is rejected deterministically. Report qualification and
+download signals are telemetry; semantic qualification remains model-owned.
+
+The exact local CPython 3.12 default suite passed **8,311 tests, 2 skipped,
+39 deselected, and 24 subtests**. Full coverage passed at **85.1591% global**,
+with generators **85.1995%**, orchestrators **86.2372%**, services **84.6411%**,
+contracts **97.97%**, and control-plane **90.60%**; all configured floors pass.
+The mutation gate killed **65/65 mutants** across all 16 configured targets.
+Formatting, changed-file Ruff, full mypy (zero tracked errors across 786 source
+files), architecture/policy, schema, documentation, ledger, runbook, backlog,
+WordPress-subproject, and prompt-fixture checks passed. The prompt snapshot was
+regenerated from **113,206 / $0.024974** to **113,387 / $0.024992**; the
+**+181-token / +$0.000018** change is limited to validation/public-editorial
+authority instructions and is accepted without threshold or pricing changes.
+
+The retained quality comparator remains red for one historical metric:
+`src/generators` coverage **85.1995%** is below the retained
+`87.1763%` baseline. No baseline, floor, allowlist, or test threshold was
+lowered. This keeps R3 active and prevents a green release claim despite the
+green full unit/coverage-floor/mutation result. No current-SHA provider-backed
+report run was possible because the retained frozen-five PDFs/artifacts are not
+available at the required live paths; no provider, canonical, publication, or
+WordPress write occurred. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full details are
+in the Step 2 quality report.

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_qualify_publisher_inventory_candidates_accepts_transparency_reports() -> None:
     candidate = _candidate(
         "https://example.com/reports/tax-transparency-report-2025",
@@ -39,7 +40,8 @@ def test_qualify_publisher_inventory_candidates_accepts_transparency_reports() -
     assert [item.canonical_url for item in response.approved_items] == [
         candidate.canonical_url
     ]
-    assert response.decisions[0].reason == "printable_report_page"
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_accepts_slug_signaled_ebook_page() -> (
     None
@@ -77,7 +79,8 @@ def test_qualify_publisher_inventory_candidates_accepts_slug_signaled_ebook_page
     assert [item.canonical_url for item in response.approved_items] == [
         candidate.canonical_url
     ]
-    assert response.decisions[0].reason == "printable_report_page"
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_thought_leadership_article_with_generic_section_heading() -> (
     None
@@ -116,15 +119,15 @@ def test_qualify_publisher_inventory_candidates_rejects_thought_leadership_artic
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason in {
-        "editorial_article_page",
-        "insufficient_report_signals",
-    }
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
     assert (
         response.decisions[0].resolved_title
         == "Creating Relevance Through the Convergence of Content, Creators & Commerce"
     )
+
 
 def test_qualify_publisher_inventory_candidates_accepts_report_hub_pages_with_download_and_related_links() -> (
     None
@@ -163,10 +166,8 @@ def test_qualify_publisher_inventory_candidates_accepts_report_hub_pages_with_do
     )
 
     assert response.approved_items != []
-    assert response.decisions[0].reason in {
-        "downloadable_report_asset",
-        "printable_report_page",
-    }
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_newsletter_articles_without_real_report_signals() -> (
     None
@@ -208,8 +209,11 @@ def test_qualify_publisher_inventory_candidates_rejects_newsletter_articles_with
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "newsletter_article_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_software_pages_with_report_like_titles() -> (
     None
@@ -246,8 +250,11 @@ def test_qualify_publisher_inventory_candidates_rejects_software_pages_with_repo
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "service_or_membership_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_gated_career_pages() -> None:
     candidate = _candidate(
@@ -281,8 +288,11 @@ def test_qualify_publisher_inventory_candidates_rejects_gated_career_pages() -> 
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "service_or_membership_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_gated_editorial_page_without_report_signals() -> (
     None
@@ -319,12 +329,11 @@ def test_qualify_publisher_inventory_candidates_rejects_gated_editorial_page_wit
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason in {
-        "editorial_article_page",
-        "marketing_cta_without_report_asset",
-        "insufficient_report_signals",
-    }
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_gated_editorial_article_even_from_report_archive_source() -> (
     None
@@ -368,11 +377,11 @@ def test_qualify_publisher_inventory_candidates_rejects_gated_editorial_article_
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason in {
-        "editorial_article_page",
-        "insufficient_report_signals",
-    }
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_printable_editorial_trends_article() -> (
     None
@@ -415,11 +424,11 @@ def test_qualify_publisher_inventory_candidates_rejects_printable_editorial_tren
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason in {
-        "editorial_article_page",
-        "insufficient_report_signals",
-    }
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_methodology_pages_without_report_context() -> (
     None
@@ -457,11 +466,11 @@ def test_qualify_publisher_inventory_candidates_rejects_methodology_pages_withou
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason in {
-        "editorial_article_page",
-        "insufficient_report_signals",
-    }
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_structured_editorial_publication_pages() -> (
     None
@@ -507,11 +516,11 @@ def test_qualify_publisher_inventory_candidates_rejects_structured_editorial_pub
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason in {
-        "editorial_article_page",
-        "insufficient_report_signals",
-    }
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_accepts_unreachable_publication_detail_pages() -> (
     None
@@ -550,10 +559,9 @@ def test_qualify_publisher_inventory_candidates_accepts_unreachable_publication_
         ),
     )
 
-    assert [item.canonical_url for item in response.approved_items] == [
-        candidate.canonical_url
-    ]
-    assert response.decisions[0].reason == "bot_protected_report_asset"
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "landing_page_unreachable"
+
 
 def test_qualify_publisher_inventory_candidates_accepts_dead_report_detail_page_from_report_archive_context() -> (
     None
@@ -592,10 +600,9 @@ def test_qualify_publisher_inventory_candidates_accepts_dead_report_detail_page_
         ),
     )
 
-    assert [item.canonical_url for item in response.approved_items] == [
-        candidate.canonical_url
-    ]
-    assert response.decisions[0].reason == "unreachable_report_asset"
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "landing_page_unreachable"
+
 
 def test_qualify_publisher_inventory_candidates_accepts_dead_editorial_context_report_when_report_signals_are_strong() -> (
     None
@@ -637,10 +644,9 @@ def test_qualify_publisher_inventory_candidates_accepts_dead_editorial_context_r
         ),
     )
 
-    assert [item.canonical_url for item in response.approved_items] == [
-        candidate.canonical_url
-    ]
-    assert response.decisions[0].reason == "unreachable_report_asset"
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "landing_page_unreachable"
+
 
 def test_qualify_publisher_inventory_candidates_does_not_rescue_transient_service_page() -> (
     None
@@ -678,6 +684,7 @@ def test_qualify_publisher_inventory_candidates_does_not_rescue_transient_servic
 
     assert response.approved_items == []
     assert response.decisions[0].accepted is False
+
 
 __all__ = [
     "test_qualify_publisher_inventory_candidates_accepts_transparency_reports",

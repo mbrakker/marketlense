@@ -449,7 +449,7 @@ def test_generate_report_vector_store_with_validation(
         )
 
     with caplog.at_level(logging.ERROR, logger=rgo.logger.name):
-        outcome = rgo.run_report_generation(
+        outcome = run_vector_report_generation(
             file,
             str(pdf_path),
             settings,
@@ -667,7 +667,7 @@ def test_generate_report_adds_signal_artifact_pack_after_projection(tmp_path) ->
         run_signal_candidate_extraction=_signal_extraction,
     )
 
-    outcome = rgo.run_report_generation(
+    outcome = run_vector_report_generation(
         file,
         str(pdf_path),
         settings,

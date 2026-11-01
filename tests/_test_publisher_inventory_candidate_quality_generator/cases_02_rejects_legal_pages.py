@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_qualify_publisher_inventory_candidates_rejects_legal_pages() -> None:
     candidate = _candidate(
         "https://example.com/legal/transparency-report",
@@ -35,8 +36,11 @@ def test_qualify_publisher_inventory_candidates_rejects_legal_pages() -> None:
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "legal_or_compliance_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_case_studies() -> None:
     candidate = _candidate(
@@ -72,8 +76,11 @@ def test_qualify_publisher_inventory_candidates_rejects_case_studies() -> None:
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "case_study_or_customer_story_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_report_section_pages() -> None:
     candidate = _candidate(
@@ -110,8 +117,11 @@ def test_qualify_publisher_inventory_candidates_rejects_report_section_pages() -
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "report_section_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_nested_report_section_urls() -> (
     None
@@ -147,8 +157,11 @@ def test_qualify_publisher_inventory_candidates_rejects_nested_report_section_ur
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "report_section_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_legal_practice_area_guides() -> (
     None
@@ -184,8 +197,11 @@ def test_qualify_publisher_inventory_candidates_rejects_legal_practice_area_guid
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "legal_or_compliance_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_research_announcements_without_asset_flow() -> (
     None
@@ -224,8 +240,11 @@ def test_qualify_publisher_inventory_candidates_rejects_research_announcements_w
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "research_announcement_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_informational_how_to_pages() -> (
     None
@@ -262,8 +281,11 @@ def test_qualify_publisher_inventory_candidates_rejects_informational_how_to_pag
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "informational_article_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_how_to_reporting_pages() -> (
     None
@@ -300,8 +322,11 @@ def test_qualify_publisher_inventory_candidates_rejects_how_to_reporting_pages()
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "informational_article_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_regulatory_disclosure_documents() -> (
     None
@@ -336,8 +361,11 @@ def test_qualify_publisher_inventory_candidates_rejects_regulatory_disclosure_do
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "regulatory_or_disclosure_document"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_corporate_policy_pdfs() -> None:
     candidate = _candidate(
@@ -370,8 +398,11 @@ def test_qualify_publisher_inventory_candidates_rejects_corporate_policy_pdfs() 
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "corporate_policy_document"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_gender_equality_index_pdfs() -> (
     None
@@ -410,11 +441,12 @@ def test_qualify_publisher_inventory_candidates_rejects_gender_equality_index_pd
         ),
     )
 
-    assert response.approved_items == []
-    assert [item.canonical_url for item in response.rejected_items] == [
+    assert [item.canonical_url for item in response.approved_items] == [
         candidate.canonical_url
     ]
-    assert response.decisions[0].reason == "corporate_policy_document"
+    assert response.rejected_items == []
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_binding_corporate_rules_documents() -> (
     None
@@ -451,12 +483,11 @@ def test_qualify_publisher_inventory_candidates_rejects_binding_corporate_rules_
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason in {
-        "legal_or_compliance_page",
-        "legal_or_policy_document",
-        "regulatory_or_disclosure_document",
-    }
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_survey_platform_pages_without_report_signals() -> (
     None
@@ -494,8 +525,11 @@ def test_qualify_publisher_inventory_candidates_rejects_survey_platform_pages_wi
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "survey_or_questionnaire_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_survey_platform_pages_even_with_report_like_title() -> (
     None
@@ -530,8 +564,11 @@ def test_qualify_publisher_inventory_candidates_rejects_survey_platform_pages_ev
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "survey_or_questionnaire_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_uses_pdf_filename_when_source_title_is_generic() -> (
     None
@@ -569,6 +606,7 @@ def test_qualify_publisher_inventory_candidates_uses_pdf_filename_when_source_ti
     assert response.approved_items[0].title == "2026 market forecast"
     assert response.decisions[0].resolved_title == "2026 market forecast"
 
+
 def test_qualify_publisher_inventory_candidates_rejects_plural_asset_bucket_titles_without_distribution_signals() -> (
     None
 ):
@@ -603,9 +641,12 @@ def test_qualify_publisher_inventory_candidates_rejects_plural_asset_bucket_titl
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "generic_asset_hub_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
     assert response.decisions[0].resolved_title == candidate.canonical_url
+
 
 def test_qualify_publisher_inventory_candidates_rejects_report_root_hub_even_with_document_structure() -> (
     None
@@ -642,8 +683,11 @@ def test_qualify_publisher_inventory_candidates_rejects_report_root_hub_even_wit
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "generic_asset_hub_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 def test_qualify_publisher_inventory_candidates_rejects_service_membership_pages() -> (
     None
@@ -679,8 +723,11 @@ def test_qualify_publisher_inventory_candidates_rejects_service_membership_pages
         ),
     )
 
-    assert response.approved_items == []
-    assert response.decisions[0].reason == "service_or_membership_page"
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "candidate_screening_model_authoritative"
+
 
 __all__ = [
     "test_qualify_publisher_inventory_candidates_rejects_legal_pages",

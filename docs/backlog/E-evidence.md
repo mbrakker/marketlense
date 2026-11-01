@@ -1435,3 +1435,47 @@ correctly blocked. No coverage/release bundle, publication, or WordPress write
 was produced; this keeps E18 **Active/PARTIAL**, Step 2 **PARTIAL/NO-GO**, and
 Step 3 **unstarted/not ready**. See the Step 2 quality report for the hosted
 failure families and clean-baseline comparison.
+
+### Current semantic-authority migration and local verification — 2026-11-01
+
+This slice completes the active migration at the existing boundaries. Material
+factuality, entailment, interpretation, recommendation quality, public-editorial
+quality, report qualification, category fit, visual significance, and
+cross-report semantic agreement remain LLM-owned. Deterministic code retains
+only source identity, physical-page/evidence-ID integrity, schema and coverage
+contracts, immutable verified facts, exact arithmetic, cache/retry identity,
+orchestration, and publication transactions. The targeted PDF correction rejects
+only an oversized wrapper geometry case; ambiguous candidates remain available
+for multimodal review. Publisher and download classification paths now preserve
+model decisions and expose technical screening telemetry instead of making
+semantic pre-admission decisions.
+
+Evidence from the exact CPython 3.12 local run:
+
+- Default pytest: **8,311 passed, 2 skipped, 39 deselected, 24 subtests**.
+- Coverage: **85.1591% global**, **85.1995% generators**, **86.2372%
+  orchestrators**, **84.6411% services**; contracts, control-plane, and all
+  configured floors passed.
+- Mutation: **65/65 killed** across 16 targets; the taxonomy target remained
+  at its existing 75% threshold with no surviving new mutation.
+- Full mypy: zero tracked errors across 786 source files. Formatting, Ruff,
+  architecture, role/I/O, policy, schema, docs, ledger, runbook, backlog,
+  repository-hygiene, and WordPress-subproject checks passed.
+- Prompt baseline: regenerated with the existing tool from **113,206 tokens /
+  $0.024974** to **113,387 / $0.024992**. The complete delta is validation
+  input (**+181 tokens, +$0.000018**), attributable to the semantic-authority
+  and missing-evidence instructions. The prompt comparator passes with the
+  existing thresholds and pricing.
+
+The retained quality comparator is the remaining local release blocker:
+generator coverage is **85.1995%**, below the historical **87.1763%** baseline.
+The baseline was deliberately not lowered or regenerated to hide the result;
+R3 remains active. No current-SHA provider-backed retained-report run was
+available because the frozen-five source PDFs/artifacts are absent at the
+required paths. Accordingly there are no live calls, token/cost/latency
+measurements, current-SHA editorial outcomes, or publication writes to claim.
+
+**Verdict: PARTIAL.** The semantic-authority implementation and focused/full
+unit/static/mutation/floor checks are green, but the retained generator
+non-regression gate and live report-quality evidence remain open. Step 2 stays
+**PARTIAL/NO-GO** and Step 3 remains **unstarted/not ready**.

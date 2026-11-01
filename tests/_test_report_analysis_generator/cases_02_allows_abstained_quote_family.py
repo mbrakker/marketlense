@@ -301,11 +301,11 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("baseline_retained_severity", "expected_outcome"),
-    [("error", "rolled_back"), ("warning", "promoted")],
+    ("candidate_outcome", "expected_outcome"),
+    [("rejected", "rolled_back"), ("accepted", "promoted")],
 )
-def test_candidate_promotion_preserves_promoted_retained_claim_severity(
-    tmp_path, baseline_retained_severity: str, expected_outcome: str
+def test_candidate_promotion_obeys_semantic_candidate_outcome(
+    tmp_path, candidate_outcome: str, expected_outcome: str
 ) -> None:
     runtime = replace(
         _runtime(tmp_path),
@@ -350,10 +350,11 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
     candidate = deepcopy(original)
     candidate["summary"]["tldr"] = "Repaired summary"
     _set_interpretive_summary_provenance(candidate)
-    retained_issues = [
-        replace(issue, severity=baseline_retained_severity)
-        for issue in retained_claim_repair_issues(original, evidence_packs)
-    ]
+    retained_issues = retained_claim_repair_issues(original, evidence_packs)
+    # The former numeric/period heuristic no longer creates a deterministic
+    # retained-claim failure. The injected candidate outcome below represents
+    # the model-backed semantic decision at this orchestration boundary.
+    assert retained_issues == []
     validation_calls: list[str] = []
     candidate_package_reads: list[str] = []
     promoted_candidate_packages = []
@@ -388,6 +389,24 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
                     "artifact_hash": sha256_json(req.artifacts),
                     "package_hash": "candidate-package-1",
                 }
+            )
+        if candidate_outcome == "rejected" and pack_name == (
+            "validation_regen_candidate_1"
+        ):
+            return ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                issues=[
+                    ValidationIssue(
+                        schema_version="1.0",
+                        message="[grounding] Candidate semantic rejection",
+                        severity="error",
+                        affected_section="summary.tldr",
+                        rule_id="grounding",
+                        repair_target="summary",
+                    )
+                ],
+                severity="error",
             )
         return ValidationReport(
             schema_version="1.1", status="pass", issues=[], severity="pass"
@@ -447,11 +466,10 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
             state.regeneration_attempts[
                 0
             ].repair_delta.semantic_grounding_validation_status
-            == "not_evaluated_due_to_deterministic_failure"
+            == "evaluated"
         )
         assert any(
-            item.rule_id == "retained_claim.number_value_unit_match"
-            for item in state.regeneration_attempts[0].repair_delta.persisting
+            issue.rule_id == "grounding" for issue in state.validation_report.issues
         )
     else:
         assert candidate_package_payload["artifact_hash"] == sha256_json(
@@ -464,9 +482,8 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
             == "evaluated"
         )
         assert "public_editorial_quality_regen_attempt_1" in state.evidence_paths
-        assert any(
+        assert not any(
             issue.rule_id == "retained_claim.number_value_unit_match"
-            and issue.severity == "warning"
             for issue in state.validation_report.issues
         )
 

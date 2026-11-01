@@ -448,7 +448,14 @@ def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
             # still quarantine through their dedicated validation rules.
             return False
     if rule_id.startswith("retained_claim."):
-        return rule_id == "retained_claim.evidence_reference_completeness"
+        # A baseline retained-claim finding may be intentionally downgraded to
+        # a warning for an unchanged claim.  Keep its source available so the
+        # bounded repair can preserve that warning; only a blocking evidence
+        # failure may quarantine the binding.
+        return (
+            str(issue.severity or "").strip().lower() == "error"
+            and rule_id == "retained_claim.evidence_reference_completeness"
+        )
     return str(issue.severity or "").strip().lower() == "error" and (
         rule_id == "grounding"
         or rule_id in {"numbers", "metrics"}

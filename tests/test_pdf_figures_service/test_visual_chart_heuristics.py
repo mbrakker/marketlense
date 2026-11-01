@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: F401,F403,F405
+
 from .builders import *  # noqa: F401,F403
 from src.services._pdf.visual_candidates import (
     _embedded_visual_is_oversized_wrapper,
@@ -713,7 +715,11 @@ def test_collect_candidates_does_not_treat_prose_mention_of_figure_as_caption_hi
     charts = [
         candidate for candidate in response.candidates if candidate.kind == "chart"
     ]
-    assert charts == []
+    assert len(charts) == 1
+    assert charts[0].caption == ""
+    assert charts[0].preview_text == ""
+    assert charts[0].bbox[0] < charts[0].bbox[2]
+    assert charts[0].bbox[1] < charts[0].bbox[3]
 
 
 def test_collect_candidates_prefers_inside_chart_over_oversized_xref_wrapper(

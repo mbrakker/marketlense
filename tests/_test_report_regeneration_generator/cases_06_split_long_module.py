@@ -135,7 +135,7 @@ def test_regeneration_repairs_multiple_exact_claim_ids_without_churning_siblings
     )
 
 
-def test_multi_claim_regeneration_repairs_supported_claim_and_abstains_unsupported_one(
+def test_multi_claim_regeneration_repairs_each_failed_claim_independently(
     tmp_path,
 ) -> None:
     sentences = [
@@ -218,16 +218,17 @@ def test_multi_claim_regeneration_repairs_supported_claim_and_abstains_unsupport
     )
 
     assert response.updated_artifacts["expert_comment"] == (
-        "First sibling. Repaired second claim. Bad third claim. Last sibling."
+        "First sibling. Repaired second claim. Repaired third claim. Last sibling."
     )
-    assert len(openai_client.calls) == 1
+    assert len(openai_client.calls) == 2
     provenance_ids = {
         claim["claim_id"]
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     }
     assert claims[0].claim_id in provenance_ids
     assert claims[3].claim_id in provenance_ids
-    assert claims[2].claim_id in provenance_ids
+    assert claims[1].claim_id not in provenance_ids
+    assert claims[2].claim_id not in provenance_ids
 
 
 def test_multi_claim_repair_keeps_quarantine_scoped_to_its_failed_claim(
@@ -311,23 +312,23 @@ def test_multi_claim_repair_keeps_quarantine_scoped_to_its_failed_claim(
     selections = response.updated_artifacts["_repair_evidence_selection"]
     first = selections[f"expert_comment:{claims[0].claim_id}"]
     second = selections[f"expert_comment:{claims[1].claim_id}"]
-    assert first["selected_evidence_ids"] == []
+    assert first["selected_evidence_ids"] == ["f2"]
     assert first["quarantined_evidence_ids"] == ["f1"]
     assert second["selected_evidence_ids"] == ["f2"]
     assert second["quarantined_evidence_ids"] == []
-    scoped_prompt = next(
+    scoped_prompts = [
         call
         for call in prompt_client.render_calls
         if call["path"] == "report_vs/artifacts/regenerate/expert_comment/user.yaml"
-    )
-    assert (
-        json.loads(scoped_prompt["variables"]["grounding_package_json"])[
+    ]
+    assert [
+        json.loads(call["variables"]["grounding_package_json"])[
             "quarantined_evidence_ids"
         ]
-        == []
-    )
+        for call in scoped_prompts
+    ] == [["f1"], []]
     assert response.updated_artifacts["expert_comment"] == (
-        "Bad first claim. Repaired second claim."
+        "Repaired second claim. Repaired third claim."
     )
 
 

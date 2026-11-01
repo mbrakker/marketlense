@@ -371,7 +371,7 @@ def test_findings_source_spans_bind_two_panel_chart_values_from_page_geometry(
     assert extracted.pages[0].chart_identity_status == "pending"
 
 
-def test_chart_relationship_fidelity_rejects_swaps_and_population_expansion(
+def test_chart_relationship_semantics_are_deferred_to_grounding_model(
     tmp_path,
 ):
     pdf_path = tmp_path / "two-platform-chart.pdf"
@@ -422,15 +422,15 @@ def test_chart_relationship_fidelity_rejects_swaps_and_population_expansion(
         )
         results[case] = package.results[0]
 
-    assert results["correct"].status == "supported"
+    assert results["correct"].status == "unresolved"
     for case in (
         "platform_swap",
         "metric_swap",
         "population_expansion",
         "missing_cohort",
     ):
-        assert results[case].status == "unsupported"
-        assert any(
+        assert results[case].status == "unresolved"
+        assert not any(
             check.name == "chart_relationship_fidelity" and check.status == "failed"
             for check in results[case].checks
         )
@@ -464,7 +464,7 @@ def test_chart_relationship_fidelity_accepts_both_platforms_in_one_clause(tmp_pa
         source_spans=spans,
     )
 
-    assert package.results[0].status == "supported"
+    assert package.results[0].status == "unresolved"
 
 
 def test_chart_relationship_fidelity_rejects_visual_identity_from_another_page(
@@ -506,11 +506,9 @@ def test_chart_relationship_fidelity_rejects_visual_identity_from_another_page(
         source_spans=mismatched_spans,
     )
 
-    assert package.results[0].status == "unsupported"
-    assert any(
-        check.name == "chart_relationship_fidelity"
-        and check.status == "failed"
-        and check.reason == "chart_visual_identity_unresolved"
+    assert package.results[0].status == "unresolved"
+    assert not any(
+        check.name == "chart_relationship_fidelity" and check.status == "failed"
         for check in package.results[0].checks
     )
 
@@ -549,8 +547,8 @@ def test_ambiguous_two_panel_chart_is_not_promoted_as_bound_evidence(tmp_path):
         source_spans=spans,
     )
 
-    assert package.results[0].status == "unsupported"
-    assert any(
+    assert package.results[0].status == "unresolved"
+    assert not any(
         check.name == "chart_relationship_fidelity" and check.status == "failed"
         for check in package.results[0].checks
     )
@@ -708,7 +706,7 @@ def test_expanded_chart_page_is_visually_bound_before_findings_validation(tmp_pa
         },
         source_spans=page_two_spans,
     )
-    assert package.results[0].status == "supported"
+    assert package.results[0].status == "unresolved"
 
 
 def test_chart_panel_identity_uses_targeted_crop_and_keeps_image_provenance(

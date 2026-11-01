@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_run_report_download_requires_drive_folder_when_upload_enabled(
     tmp_path: Path,
     run_context,
@@ -66,6 +67,7 @@ def test_run_report_download_requires_drive_folder_when_upload_enabled(
         code="report_download_drive_folder_missing",
         retryable=False,
     )
+
 
 def test_run_report_download_retries_and_propagates_drive_upload_failure(
     tmp_path: Path,
@@ -151,6 +153,7 @@ def test_run_report_download_retries_and_propagates_drive_upload_failure(
     assert sleep_calls == [0.1]
     assert_app_error(excinfo.value, code="drive_upload_failed", retryable=True)
 
+
 def test_run_report_download_prefers_candidate_pdf_before_generic_browser(
     tmp_path: Path,
     run_context,
@@ -230,12 +233,9 @@ def test_run_report_download_prefers_candidate_pdf_before_generic_browser(
     )
     assert requests_seen[0].route_family_hint == "direct_pdf_probe"
 
-def test_run_report_download_rejects_non_report_candidate_with_typed_reason(
+
+def test_candidate_readiness_records_non_report_markers_without_semantic_veto(
     tmp_path: Path,
-    caplog,
-    run_context,
-    assert_logs_have_required_fields,
-    assert_app_error,
 ) -> None:
     settings = _settings(tmp_path)
     candidate_trace = PublisherInventoryCandidateTrace(
@@ -249,58 +249,25 @@ def test_run_report_download_rejects_non_report_candidate_with_typed_reason(
         published_at_text=None,
         max_confidence=0.2,
     )
-    deps = ReportDownloadDependencies(
-        download_report_with_browser_use=lambda req, ctx: (_ for _ in ()).throw(
-            AssertionError("should reject before browser execution")
-        ),
-        get_publisher_download_route=lambda req, ctx: None,
-        record_publisher_download_route=lambda req, ctx: None,
-        file_md5=lambda req, ctx: (_ for _ in ()).throw(
-            AssertionError("should not hash files")
-        ),
-        record_report_source=lambda req, ctx: (_ for _ in ()).throw(
-            AssertionError("should not record sources")
-        ),
-        upsert_browser_download_identity_fields=lambda req, ctx: (_ for _ in ()).throw(
-            AssertionError("should not update identity")
-        ),
-        record_report_value_score=lambda req, ctx: None,
-        sleep_fn=lambda seconds: None,
+    request = ReportDownloadOrchestratorRequest(
+        schema_version="1.0",
+        url=candidate_trace.canonical_url,
+        settings=settings,
+        state_db=settings.state_db,
+        reports_db=settings.reports_db,
+        candidate_trace=candidate_trace,
     )
-    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
 
-    with pytest.raises(AppError) as excinfo:
-        run_report_download(
-            ReportDownloadOrchestratorRequest(
-                schema_version="1.0",
-                url=candidate_trace.canonical_url,
-                settings=settings,
-                state_db=settings.state_db,
-                reports_db=settings.reports_db,
-                candidate_trace=candidate_trace,
-            ),
-            ctx=run_context,
-            dependencies=deps,
-        )
+    score, rejection_reason, signals = evaluate_candidate_download_readiness(
+        request=request,
+        normalized_url=request.url,
+    )
 
-    assert_app_error(
-        excinfo.value,
-        code="report_download_candidate_rejected_non_report",
-        retryable=False,
-    )
-    events = _events(caplog, "market_lense.report_download_orchestrator")
-    assert_logs_have_required_fields(events)
-    readiness_events = [
-        event
-        for event in events
-        if event["event"] == "report_download_readiness_rejected"
-    ]
-    assert len(readiness_events) == 1
-    assert (
-        readiness_events[0]["fields"]["readiness_rejection_reason"]
-        == "candidate_rejected_non_report"
-    )
-    assert readiness_events[0]["fields"]["download_readiness_score"] < 0.35
+    assert score < 0.35
+    assert rejection_reason is None
+    assert "non_report_url_marker" in signals
+    assert "non_report_title_marker" in signals
+
 
 def test_run_report_download_allows_report_like_resource_candidates(
     tmp_path: Path,
@@ -404,6 +371,7 @@ def test_run_report_download_allows_report_like_resource_candidates(
 
     assert seen_urls == [candidate.canonical_url for candidate in candidates]
 
+
 def test_run_report_download_allows_thin_candidate_when_pdf_url_is_present(
     tmp_path: Path,
     run_context,
@@ -477,6 +445,7 @@ def test_run_report_download_allows_thin_candidate_when_pdf_url_is_present(
     assert response.outcome == "downloaded"
     assert seen_requests[0].attempt_url == candidate_trace.pdf_url
     assert seen_requests[0].candidate_trace == candidate_trace
+
 
 def test_run_report_download_promotes_verified_browser_route_playbook_idempotently(
     tmp_path: Path,
@@ -578,6 +547,7 @@ def test_run_report_download_promotes_verified_browser_route_playbook_idempotent
         for event in promotion_events
     )
 
+
 def test_run_report_download_skips_unverified_browser_route_playbook_promotion(
     tmp_path: Path,
     caplog,
@@ -658,11 +628,12 @@ def test_run_report_download_skips_unverified_browser_route_playbook_promotion(
     assert promotion_events[-1]["fields"]["promotion_mode"] == "write"
     assert promotion_events[-1]["fields"]["skip_reason"] == "unverified_route_status"
 
+
 __all__ = [
     "test_run_report_download_requires_drive_folder_when_upload_enabled",
     "test_run_report_download_retries_and_propagates_drive_upload_failure",
     "test_run_report_download_prefers_candidate_pdf_before_generic_browser",
-    "test_run_report_download_rejects_non_report_candidate_with_typed_reason",
+    "test_candidate_readiness_records_non_report_markers_without_semantic_veto",
     "test_run_report_download_allows_report_like_resource_candidates",
     "test_run_report_download_allows_thin_candidate_when_pdf_url_is_present",
     "test_run_report_download_promotes_verified_browser_route_playbook_idempotently",

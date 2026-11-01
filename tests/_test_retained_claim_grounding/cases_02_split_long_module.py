@@ -458,7 +458,7 @@ def test_grounding_batch_failure_discards_sibling_results_and_stops_refill(
 
     assert called == [1, 2] or called == [2, 1]
     assert len(issues) == 1
-    assert "batch provider failed" in issues[0].message
+    assert "grounding_batch_failed" in issues[0].message
     assert materialized == []
     assert captured_packages == []
 
