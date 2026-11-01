@@ -375,9 +375,7 @@ BOUNDARY_EXPORT_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "src/generators/_publisher_inventory_candidate_screening/deterministic.py": (
         "_partition_candidates_for_llm_screening",
         "_resolve_candidate_screening_batch_size",
-        "_fallback_screening_decision",
         "_prefilter_screening_decision",
-        "_has_strong_report_detail_url",
     ),
     "src/generators/_publisher_inventory_candidate_screening/response_policy.py": (
         "_merge_screening_batches",
