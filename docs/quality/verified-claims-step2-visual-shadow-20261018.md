@@ -8176,13 +8176,29 @@ live LLM/provider workflow, browser acquisition, or WordPress publication.
 Therefore it establishes the code-fixable P0/P1 and release-gate evidence only;
 it does not establish calibrated current-SHA editorial quality, transactional
 repair effectiveness on source reports, or Step 2 live selection/grounding
-improvement. Hosted CI on the pushed commit remains required.
+improvement. Hosted CI confirmation is recorded in the addendum below.
 
 **Pre-E2E verdict: PASS** for the implemented authority/attribution/editorial
 contract corrections, fresh local full suite, static/schema/prompt/coverage/
 mutation/quality gates, and provider-free regressions. **Overall Step 2 verdict:
-PARTIAL / NO-GO** pending hosted confirmation and later source-backed
-acceptance. E18 remains **Active/PARTIAL** and Step 3 remains
+PARTIAL / NO-GO** pending later source-backed acceptance. E18 remains
+**Active/PARTIAL** and Step 3 remains
+**unstarted/not ready**.
+
+### Hosted confirmation — 2026-11-01
+
+The code commit `6f5cf8e0609c5ce84eed88a674ce296be6d9ed01` passed hosted CI run
+`41310882638`: `tests` passed in 7m53s, mutation partition 1 passed in 4m40s,
+mutation partition 0 passed in 6m38s, and `release_evidence` passed in 1m14s.
+The WordPress staging REST check was skipped by its existing credential guard;
+no publication or provider-backed report run occurred. Hosted warnings were
+limited to the runner's existing Ubuntu label and Node.js 20 action-deprecation
+notices. This confirms the deterministic pre-E2E gates on the code commit; it
+does not change the later source-backed Step 2 limitation.
+
+**Hosted pre-E2E verdict: PASS.** The overall Step 2 verdict remains
+**PARTIAL / NO-GO** for lack of fresh current-SHA source-report editorial
+evidence. E18 remains **Active/PARTIAL** and Step 3 remains
 **unstarted/not ready**.
 
 ## Final P0/P1 pre-E2E corrective implementation — 2026-11-01
