@@ -194,18 +194,13 @@ def test_signal_workflow_dry_run_reads_projected_data_and_reports_payload(
         read_projected_data_fn=_read_projected_data,
     )
 
-    assert outcome.publish_result.status == "dry_run"
-    assert outcome.publish_result.target_route == "wordpress:ml_signal"
-    assert outcome.publish_result.target_post_type == "ml_signal"
-    assert outcome.publish_result.target_slug == "ai-commerce-checkout-behavior-signal"
-    assert outcome.publish_result.category_slugs == ["retail-strategy"]
-    assert outcome.publish_result.tag_slugs == ["ai-commerce"]
-    assert outcome.publish_result.taxonomy_term_slugs == {
-        "ml_publisher": ["publisher-a", "publisher-b"]
-    }
+    assert outcome.publish_result.status == "skipped"
+    assert (
+        outcome.publish_result.error_code == "signal_publish_validation_status_invalid"
+    )
     assert read_requests[0].db_path == str(tmp_path / "analytics.sqlite")
     assert read_requests[0].minimum_projection_status == "projected"
-    assert len(list(tmp_path.rglob("*.png"))) == 3
+    assert list(tmp_path.rglob("*.png")) == []
 
 
 def test_signal_workflow_reads_candidates_from_separate_signal_store(
@@ -259,7 +254,7 @@ def test_signal_projection_stage_does_not_render_covers_or_publish(
         ),
     )
 
-    assert result.projection.validation_status == "approved"
+    assert result.projection.validation_status == "blocked"
     assert result.projection.target_route == "wordpress:ml_signal"
     assert list(tmp_path.rglob("*.png")) == []
 
@@ -392,6 +387,12 @@ def test_publish_signal_projection_live_builds_payload_and_reuses_idempotency(
         _projected_data(),
         run_context,
     )
+    projection = replace(
+        projection,
+        validation_status="approved",
+        candidate_group_id="signal-group:ai-commerce",
+        candidate_manifest_sha256="a" * 64,
+    )
     publish_calls = []
 
     def _lookup(request, ctx):
@@ -468,6 +469,12 @@ def test_publish_signal_projection_rejects_url_outside_signals_section(
         _generation_request(),
         _projected_data(),
         run_context,
+    )
+    projection = replace(
+        projection,
+        validation_status="approved",
+        candidate_group_id="signal-group:ai-commerce",
+        candidate_manifest_sha256="a" * 64,
     )
 
     def _publish(request, settings, ctx):

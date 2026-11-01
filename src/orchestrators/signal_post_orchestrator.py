@@ -116,6 +116,29 @@ def _signal_not_requested_result(
     )
 
 
+def _signal_publish_blocked_result(
+    *,
+    request: SignalPostWorkflowRequest,
+    projection: SignalPublishProjection,
+) -> CrossReportPublishResultSummary:
+    return CrossReportPublishResultSummary(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        publication_mode=cast(PublicationMode, request.publication_mode),
+        status=cast(CrossReportPublishStatus, "skipped"),
+        target_route=projection.target_route,
+        idempotency_reused=False,
+        target_post_type="ml_signal",
+        target_slug=projection.slug,
+        category_slugs=list(projection.topic_ids),
+        tag_slugs=list(projection.tag_labels),
+        taxonomy_term_slugs={},
+        error_code="signal_publish_validation_status_invalid",
+        error_message=(
+            "Signal publication requires an approved frozen candidate manifest."
+        ),
+    )
+
+
 def _signal_card_payload(
     request: SignalPostWorkflowRequest,
     projection: SignalPublishProjection,
@@ -194,6 +217,7 @@ def generate_signal_post_projection(
             field_name
             for field_name, values in (
                 ("extraction_request_id", generation.extraction_request_id),
+                ("candidate_manifest_sha256", generation.candidate_manifest_sha256),
                 ("candidate_ids", generation.candidate_ids),
                 ("source_report_ids", generation.source_report_ids),
                 ("evidence_ids", generation.evidence_ids),
@@ -291,14 +315,20 @@ def _run_signal_post_workflow(
     )
     projected_request = generation_result.projected_data_request
     projection = generation_result.projection
-    signal_card = _signal_card_payload(request, projection, ctx)
 
     if request.publication_mode in {"generate_only", "validate_only"}:
+        _signal_card_payload(request, projection, ctx)
         publish_result = _signal_not_requested_result(
             request=request,
             projection=projection,
         )
+    elif projection.validation_status != "approved":
+        publish_result = _signal_publish_blocked_result(
+            request=request,
+            projection=projection,
+        )
     else:
+        signal_card = _signal_card_payload(request, projection, ctx)
         dry_run = request.publication_mode == "publish_dry_run"
         if publish_settings is None and dry_run:
             resolved_publish_settings = _dry_run_publish_settings(request)

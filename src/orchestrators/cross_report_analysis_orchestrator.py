@@ -80,7 +80,7 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cross_report_analysis_orchestrator")
 _IDEMPOTENCY_SCOPE = "cross_report_analysis_orchestrator.generate"
-_IDEMPOTENCY_MATERIAL_VERSION = "2.1"
+_IDEMPOTENCY_MATERIAL_VERSION = "2.2"
 
 
 def _hash_payload(payload: dict[str, Any]) -> str:
@@ -120,6 +120,15 @@ def _config_fingerprint(settings: Any) -> dict[str, Any]:
         ),
         "signal_score_weights": getattr(
             settings, "cross_report_analysis_signal_score_weights", {}
+        ),
+        "publish_enabled": getattr(
+            settings, "cross_report_analysis_publish_enabled", False
+        ),
+        "publish_requires_validation_pass": getattr(
+            settings, "cross_report_analysis_publish_requires_validation_pass", True
+        ),
+        "min_theme_source_publishers": getattr(
+            settings, "cross_report_analysis_min_theme_source_publishers", 2
         ),
     }
 
@@ -701,9 +710,12 @@ def _run_cross_report_analysis(
         "theme_selected",
         {"selected_theme_id": theme_selection.selected_theme.theme_id},
     )
+    prepublication_request = replace(
+        request.analysis_request, publication_mode="generate_only"
+    )
     publishability_result: CrossReportPublishabilityResult = (
         validate_cross_report_publishability(
-            request.analysis_request,
+            prepublication_request,
             theme_selection,
             source_selection,
             ctx,
@@ -751,7 +763,7 @@ def _run_cross_report_analysis(
         claim_embeddings=claim_embedding_response.embeddings,
     )
     publishability_result = validate_cross_report_publishability(
-        request.analysis_request,
+        prepublication_request,
         theme_selection,
         source_selection,
         ctx,
@@ -856,6 +868,19 @@ def _run_cross_report_analysis(
         },
     )
     if lookup.found and lookup.record is not None:
+        if request.analysis_request.publication_mode == "publish_live" and not bool(
+            getattr(settings, "cross_report_analysis_publish_enabled", False)
+        ):
+            raise AppError(
+                code="cross_report_publish_live_disabled",
+                message="Cross-report live publication is disabled by configuration",
+                retryable=False,
+                severity="error",
+                context={
+                    "publication_mode": request.analysis_request.publication_mode,
+                    "target_route": request.publish_target_route,
+                },
+            )
         reused = _outcome_from_payload(
             lookup.record.outcome_payload,
             idempotency_reused=True,

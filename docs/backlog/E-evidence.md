@@ -1558,3 +1558,31 @@ provider call, PDF acquisition, canonical artifact mutation, publication, or
 WordPress write occurred. E18 remains **Active/PARTIAL** and Step 2 remains
 **PARTIAL/NO-GO**; current-SHA real-report quality and broader stability gates
 remain open.
+
+**Follow-up authority correction — 2026-11-01 (provider-free slice based on
+`242a957d`):** The remaining P0/P1/P2 cross-report boundary defects are
+corrected without adding a validator, model stage, service, or publication
+path. Direct/legacy Signal fallback is now reviewable but blocked; frozen
+Signal generation requires an approved candidate group, exact manifest
+SHA-256, current projected source rows, eligible sources, and unchanged
+evidence. The additive Signal projection contract carries the manifest
+checksum so the publisher can reconcile the same immutable authority.
+
+Briefing publishability and the publisher both require a passed final
+validation result, even when the legacy compatibility flag is false. Failed
+artifacts remain available for generate-only/diagnostic workflows. The
+cross-report idempotency material version is 2.2 and includes release-policy
+fields; cached live outcomes recheck the current live-publication setting.
+Final source diversity is measured from bounded evidence contributors rather
+than selected inventory. Unknown authority modes, malformed qualified source
+identities, and verified analyst quote/claim pages outside their canonical
+finding binding are rejected or retained as diagnostics with explicit reasons.
+
+Focused provider-free regressions passed for the new unit and integration
+boundaries, together with the affected Signal, cross-report, analytics-store,
+generator, and publisher suites. No live LLM, browser, PDF cohort,
+canonical-artifact mutation, publication, or WordPress write was performed.
+This proves the deterministic authority correction only; it does not claim
+current-SHA real-report semantic/editorial acceptance. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.

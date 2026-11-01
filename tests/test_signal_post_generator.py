@@ -134,6 +134,7 @@ def _frozen_request(**changes: object) -> SignalPostGenerationRequest:
         **{
             **_request().__dict__,
             "candidate_group_id": "signal-group:ai-commerce",
+            "candidate_manifest_sha256": "a" * 64,
             "extraction_request_id": "extract-ai-commerce",
             "candidate_ids": ["signal-candidate:ai-commerce"],
             "source_report_ids": ["report-a", "report-b"],
@@ -205,7 +206,13 @@ def _frozen_candidate_data(
         source_report_ids=["report-a", "report-b"],
         evidence_ids=["report-a:claim:1", "report-b:claim:1"],
         caveats=["coverage_limited_to_selected_projected_reports"],
-        raw_group_context={"agreement_type": "convergent"},
+        raw_group_context={
+            "agreement_type": "convergent",
+            "source_content_hashes": {
+                "report-a": "report-a-hash",
+                "report-b": "report-b-hash",
+            },
+        },
         validation_status="approved",
         extraction_request_id="extract-ai-commerce",
         generated_at_utc="2026-06-02T12:00:00Z",
@@ -223,6 +230,7 @@ def _frozen_candidate_data(
         db_path="state/signals.sqlite",
         candidates=[candidate],
         groups=[group],
+        manifest_sha256="a" * 64,
     )
 
 
@@ -252,7 +260,7 @@ def test_signal_generator_builds_grounded_publish_projection(
         SignalSourceAttribution(report_id="report-a", publisher="Publisher A"),
         SignalSourceAttribution(report_id="report-b", publisher="Publisher B"),
     ]
-    assert projection.validation_status == "approved"
+    assert projection.validation_status == "blocked"
     assert projection.confidence >= 0.7
     assert projection.card_content.summary
     assert projection.card_content.source_count == 2

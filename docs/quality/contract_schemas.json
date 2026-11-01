@@ -50787,6 +50787,9 @@
         "candidate_group_id": {
           "type": "string"
         },
+        "candidate_manifest_sha256": {
+          "type": "string"
+        },
         "card_content": {
           "$ref": "#/$defs/src.contracts.signal_cards.SignalCardContent"
         },

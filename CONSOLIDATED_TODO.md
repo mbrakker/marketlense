@@ -1648,3 +1648,18 @@ artifact mutation, publication, or WordPress write was performed. Hosted CI is
 still required on the pushed commit. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details
 are recorded in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Cross-report publication authority and evidence-integrity correction —
+2026-11-01 (provider-free working tree based on `242a957d`):** Direct/legacy
+Signal fallback is now reviewable but blocked; only an approved frozen
+candidate group with an exact manifest checksum, current eligible sources, and
+unchanged evidence can authorize a Signal projection. Briefing publication
+requires a passed final validation regardless of the legacy compatibility flag;
+failed artifacts remain diagnostic-only. Idempotency material version 2.2 now
+binds release policy, cached live outcomes recheck live enablement, and final
+publisher diversity uses bounded evidence contributors. Unknown authority modes,
+malformed qualified identities, and verified analyst page bindings outside
+canonical finding pages fail closed with diagnostic reasons. Focused
+provider-free tests passed; no live provider/PDF run or publication occurred.
+This is deterministic authority evidence only: E18 remains **Active/PARTIAL**,
+Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

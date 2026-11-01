@@ -68,6 +68,7 @@ def _package(tmp_path) -> CrossReportPublishPackage:
         prompt_hashes={"system": "system-hash", "user": "user-hash"},
         machine_metadata={
             "analysis_id": "analysis-ai",
+            "validation_status": "pass",
             "selected_report_ids": ["report-a", "report-b"],
             "public_entity_metadata": {"publish_eligible": True},
             "publishability": {
@@ -180,6 +181,28 @@ def test_publish_cross_report_package_without_authorization_is_blocked(
 
     assert result.status == "blocked"
     assert result.error_code == "cross_report_publish_authorization_missing"
+    assert calls == []
+
+
+def test_publish_cross_report_package_rejects_failed_final_validation(
+    tmp_path,
+    run_context,
+) -> None:
+    machine_metadata = dict(_package(tmp_path).machine_metadata)
+    machine_metadata["validation_status"] = "fail"
+    calls = []
+
+    result = publish_cross_report_package(
+        replace(_package(tmp_path), machine_metadata=machine_metadata),
+        _settings(tmp_path),
+        run_context,
+        dry_run=True,
+        publish_html_fn=lambda request, settings, ctx: calls.append("publish"),
+        find_post_by_file_id_fn=lambda request, ctx: calls.append("lookup"),
+    )
+
+    assert result.status == "blocked"
+    assert result.error_code == "cross_report_publish_validation_failed"
     assert calls == []
 
 

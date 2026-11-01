@@ -27,7 +27,7 @@ from src.services._analytics_store.common import (
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.verified_facts import (
-    expected_pdf_sha256,
+    QUALIFIED_SOURCE_IDENTITY_RE,
     verified_source_identity_matches_runtime,
 )
 
@@ -107,12 +107,19 @@ def _valid_digest(value: str) -> bool:
     return bool(re.fullmatch(r"[0-9a-fA-F]{64}", value))
 
 
+def _qualified_source_pdf_sha256(value: object) -> str:
+    match = QUALIFIED_SOURCE_IDENTITY_RE.fullmatch(str(value or "").strip())
+    return match.group("sha").lower() if match else ""
+
+
 def _verified_source_eligibility(
     report_row: sqlite3.Row,
     expected_sources: dict[str, dict[str, str]],
     require_verified_source_lineage: bool = False,
 ) -> tuple[bool, str]:
-    authority_mode = _row_text(report_row, "authority_mode") or "normal"
+    authority_mode = _row_text(report_row, "authority_mode").strip().casefold()
+    if authority_mode not in {"normal", "verified"}:
+        return False, "source_authority_mode_invalid"
     validation_status = _row_text(report_row, "validation_status").casefold()
     validation_severity = _row_text(report_row, "validation_severity").casefold()
     if validation_status != "pass":
@@ -130,10 +137,9 @@ def _verified_source_eligibility(
     fact_digest = _row_text(report_row, "verified_fact_digest")
     if not source_identity or not source_pdf_sha256 or not fact_digest:
         return False, "verified_authority_lineage_missing"
-    try:
-        embedded_pdf_sha256 = expected_pdf_sha256(source_identity)
-    except (TypeError, ValueError):
-        embedded_pdf_sha256 = ""
+    embedded_pdf_sha256 = _qualified_source_pdf_sha256(source_identity)
+    if not embedded_pdf_sha256:
+        return False, "verified_source_identity_invalid"
     if (
         not embedded_pdf_sha256
         or embedded_pdf_sha256.casefold() != source_pdf_sha256.casefold()
@@ -386,14 +392,13 @@ def _verified_row_source_reason(
     report_fact_digest = _row_text(report_row, "verified_fact_digest")
     if not source_identity or not source_pdf_sha256 or not fact_digest:
         return "row_verified_binding_missing"
+    if not _qualified_source_pdf_sha256(source_identity):
+        return "row_source_identity_invalid"
     if not verified_source_identity_matches_runtime(report_identity, source_identity):
         return "row_source_identity_mismatch"
     if source_pdf_sha256.casefold() != report_pdf_sha256.casefold():
         return "row_source_pdf_mismatch"
-    try:
-        embedded_pdf_sha256 = expected_pdf_sha256(source_identity)
-    except (TypeError, ValueError):
-        embedded_pdf_sha256 = ""
+    embedded_pdf_sha256 = _qualified_source_pdf_sha256(source_identity)
     if (
         not embedded_pdf_sha256
         or embedded_pdf_sha256.casefold() != source_pdf_sha256.casefold()
@@ -492,24 +497,43 @@ def _verified_rows_for_report(
     return valid_findings, valid_metrics, bindings
 
 
+def _verified_analyst_row_binding_details(
+    row: sqlite3.Row,
+    *,
+    bindings: dict[str, dict[str, Any]],
+    is_quote: bool,
+) -> tuple[dict[str, Any] | None, str]:
+    evidence_id = _row_text(row, "evidence_id")
+    binding = bindings.get(evidence_id)
+    if binding is None:
+        return None, ""
+    binding_pages = binding.get("pages")
+    if not isinstance(binding_pages, list) or not _valid_page_list(binding_pages):
+        return None, "row_finding_pages_invalid"
+    if is_quote:
+        page = row["page"]
+        if not isinstance(page, int) or isinstance(page, bool) or page <= 0:
+            return None, "row_quote_page_invalid"
+        if page not in binding_pages:
+            return None, "row_quote_page_not_supported"
+        return binding, ""
+    pages, pages_valid = _strict_json_list(row["pages_json"])
+    if not pages_valid or not _valid_page_list(pages) or not pages:
+        return None, "row_claim_pages_invalid"
+    if not set(pages).issubset(set(binding_pages)):
+        return None, "row_claim_pages_not_supported"
+    return binding, ""
+
+
 def _verified_analyst_row_binding(
     row: sqlite3.Row,
     *,
     bindings: dict[str, dict[str, Any]],
     is_quote: bool,
 ) -> dict[str, Any] | None:
-    evidence_id = _row_text(row, "evidence_id")
-    binding = bindings.get(evidence_id)
-    if binding is None:
-        return None
-    if is_quote:
-        page = row["page"]
-        if not isinstance(page, int) or isinstance(page, bool):
-            return None
-        return binding
-    pages, pages_valid = _strict_json_list(row["pages_json"])
-    if not pages_valid or not _valid_page_list(pages) or not pages:
-        return None
+    binding, _ = _verified_analyst_row_binding_details(
+        row, bindings=bindings, is_quote=is_quote
+    )
     return binding
 
 
@@ -826,7 +850,9 @@ def read_cross_report_projected_data(
             raw_metrics: list[CrossReportRawMetricReference] = []
             for report_id in sorted(report_rows):
                 report_row = report_rows[report_id]
-                authority_mode = _row_text(report_row, "authority_mode") or "normal"
+                authority_mode = (
+                    _row_text(report_row, "authority_mode").strip().casefold()
+                )
                 report_findings = findings_by_report.get(report_id, [])
                 report_metrics = metrics_by_report.get(report_id, [])
                 report_claims = claims_by_report.get(report_id, [])
@@ -843,28 +869,31 @@ def read_cross_report_projected_data(
                     )
                     bound_claims: list[sqlite3.Row] = []
                     for row in report_claims:
-                        binding = _verified_analyst_row_binding(
+                        binding, binding_reason = _verified_analyst_row_binding_details(
                             row, bindings=bindings, is_quote=False
                         )
                         if binding is None:
-                            excluded_counts["unbound_verified_claim"] = (
-                                excluded_counts.get("unbound_verified_claim", 0) + 1
-                            )
+                            reason = binding_reason or "unbound_verified_claim"
+                            excluded_counts[reason] = excluded_counts.get(reason, 0) + 1
                             continue
                         bound_claims.append(row)
                     report_claims = bound_claims
                     bound_quotes: list[sqlite3.Row] = []
                     for row in report_quotes:
-                        binding = _verified_analyst_row_binding(
+                        binding, binding_reason = _verified_analyst_row_binding_details(
                             row, bindings=bindings, is_quote=True
                         )
                         if binding is None:
-                            excluded_counts["unbound_verified_quote"] = (
-                                excluded_counts.get("unbound_verified_quote", 0) + 1
-                            )
+                            reason = binding_reason or "unbound_verified_quote"
+                            excluded_counts[reason] = excluded_counts.get(reason, 0) + 1
                             continue
                         bound_quotes.append(row)
                     report_quotes = bound_quotes
+                elif authority_mode not in {"normal", "verified"}:
+                    report_findings = []
+                    report_metrics = []
+                    report_claims = []
+                    report_quotes = []
                 source_candidates.append(
                     _source_candidate(
                         report_row,

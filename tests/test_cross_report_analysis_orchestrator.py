@@ -577,7 +577,7 @@ def test_cross_report_orchestrator_runs_pipeline_and_reuses_idempotency(
         if event["event"] == "cross_report_orchestrator_transition"
         and event["fields"]["transition"] == "idempotency_checked"
     ][0]
-    assert idempotency_event["fields"]["material_version"] == "2.1"
+    assert idempotency_event["fields"]["material_version"] == "2.2"
     assert "output_root" in idempotency_event["fields"]["material_fields"]
     assert "semantic_preselection" in idempotency_event["fields"]["material_fields"]
 

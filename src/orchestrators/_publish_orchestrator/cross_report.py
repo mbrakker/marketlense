@@ -291,7 +291,31 @@ def _signal_projection_package(
         source_artifact_id=stable_file_id,
         canonical_route_intent=projection.target_route,
     )
-    signal_publishable = projection.validation_status == "approved"
+    candidate_manifest_sha256 = str(projection.candidate_manifest_sha256 or "")
+    manifest_valid = len(candidate_manifest_sha256) == 64 and all(
+        character in "0123456789abcdef" for character in candidate_manifest_sha256
+    )
+    signal_publishable = bool(
+        projection.validation_status == "approved"
+        and projection.candidate_group_id
+        and manifest_valid
+    )
+    signal_publishability_issues = (
+        []
+        if signal_publishable
+        else [
+            issue
+            for issue in (
+                "signal_not_approved"
+                if projection.validation_status != "approved"
+                else "",
+                "signal_candidate_manifest_missing"
+                if not projection.candidate_group_id or not manifest_valid
+                else "",
+            )
+            if issue
+        ]
+    )
     signal_html_text = ensure_publish_entity_metadata_html(
         projection.html_text or f"<html><body>{projection.body_html}</body></html>",
         publish_entity_metadata,
@@ -332,14 +356,18 @@ def _signal_projection_package(
             "schema_version": WORDPRESS_ENTITY_SCHEMA_VERSION,
             "signal_slug": projection.slug,
             "validation_status": projection.validation_status,
+            "candidate_group_id": projection.candidate_group_id,
+            "candidate_manifest_sha256": candidate_manifest_sha256,
             "selected_report_ids": list(projection.source_report_ids),
             "publishability": {
                 "publishable": signal_publishable,
                 "diagnostic": False,
                 "override_applied": False,
-                "issues": [] if signal_publishable else ["signal_not_approved"],
+                "issues": signal_publishability_issues,
                 "selected_theme_id": projection.candidate_group_id or projection.slug,
                 "selected_report_ids": list(projection.source_report_ids),
+                "candidate_group_id": projection.candidate_group_id,
+                "candidate_manifest_sha256": candidate_manifest_sha256,
             },
             "confidence": projection.confidence,
             "uncertainty": projection.uncertainty,

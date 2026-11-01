@@ -82,6 +82,7 @@ def _selected_sources(
         for source in projected_data.source_candidates
         if source.projection_status == "projected"
         and source.evidence_count > 0
+        and source.source_validation_eligible is True
         and _source_matches_request(source, request)
     ]
     return sorted(
@@ -343,10 +344,19 @@ def _frozen_manifest_inputs(
             retryable=False,
             severity="error",
         )
+    if not request.candidate_manifest_sha256:
+        raise AppError(
+            code="signal_frozen_manifest_incomplete",
+            message="Frozen Signal generation requires a candidate manifest checksum",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
     missing_fields = [
         field_name
         for field_name, value in (
             ("extraction_request_id", request.extraction_request_id),
+            ("candidate_manifest_sha256", request.candidate_manifest_sha256),
             ("candidate_ids", request.candidate_ids),
             ("source_report_ids", request.source_report_ids),
             ("evidence_ids", request.evidence_ids),
@@ -365,6 +375,17 @@ def _frozen_manifest_inputs(
             retryable=False,
             severity="error",
             context={"missing_fields": missing_fields},
+        )
+    if len(request.candidate_manifest_sha256) != 64 or any(
+        character not in "0123456789abcdef"
+        for character in request.candidate_manifest_sha256
+    ):
+        raise AppError(
+            code="signal_frozen_manifest_invalid",
+            message="Frozen Signal manifest requires a lowercase SHA-256 checksum",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
         )
     if any(
         len(values) != len(set(values))
@@ -604,6 +625,16 @@ def _frozen_manifest_inputs(
             severity="error",
             context={"candidate_group_id": request.candidate_group_id},
         )
+    if any(
+        source.source_validation_eligible is not True for source in selected_sources
+    ):
+        raise AppError(
+            code="signal_frozen_manifest_source_ineligible",
+            message="A frozen Signal source is no longer eligible for publication",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
 
     frozen_source_hashes = group.raw_group_context.get("source_content_hashes")
     if request.candidate_manifest_sha256 and not isinstance(frozen_source_hashes, dict):
@@ -770,7 +801,7 @@ def _projection_from_candidates(
         evidence_ids = list(request.evidence_ids)
         topic_ids = list(request.topic_ids)
     else:
-        source_report_ids = _unique_ordered(
+        candidate_source_report_ids = _unique_ordered(
             [
                 report_id
                 for candidate in candidates
@@ -782,17 +813,27 @@ def _projection_from_candidates(
         }
         selected_sources = [
             source_by_report_id[report_id]
-            for report_id in source_report_ids
+            for report_id in candidate_source_report_ids
             if report_id in source_by_report_id
             and source_by_report_id[report_id].projection_status == "projected"
             and source_by_report_id[report_id].evidence_count > 0
+            and source_by_report_id[report_id].source_validation_eligible is True
             and _source_matches_request(source_by_report_id[report_id], request)
         ]
-        evidence_ids = _unique_ordered(
+        source_report_ids = [source.report_id for source in selected_sources]
+        candidate_evidence_ids = set(
             [
                 evidence_id
                 for candidate in candidates
                 for evidence_id in candidate.evidence_ids
+            ]
+        )
+        evidence_ids = _unique_ordered(
+            [
+                item.evidence_id
+                for item in projected_data.evidence
+                if item.evidence_id in candidate_evidence_ids
+                and item.report_id in set(source_report_ids)
             ]
         )
         topic_ids = _unique_ordered(
@@ -848,6 +889,9 @@ def _projection_from_candidates(
         uncertainty=uncertainty,
     )
     summary = html.escape(candidates[0].summary)
+    frozen_manifest = (
+        request.candidate_manifest_sha256 if request.candidate_group_id else ""
+    )
     return SignalPublishProjection(
         schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
         title=title,
@@ -866,7 +910,7 @@ def _projection_from_candidates(
         topic_ids=topic_ids,
         confidence=max(candidate.confidence for candidate in candidates),
         uncertainty=uncertainty,
-        validation_status="approved",
+        validation_status=("approved" if request.candidate_group_id else "blocked"),
         card_content=build_signal_card_content(
             title=title,
             summary=candidates[0].summary,
@@ -877,6 +921,7 @@ def _projection_from_candidates(
         ),
         file_id=f"signal:{slug}",
         candidate_group_id=request.candidate_group_id,
+        candidate_manifest_sha256=frozen_manifest,
         html_text=f"<html><body>{body_html}</body></html>",
         topic_labels=topic_labels,
         tag_labels=tag_labels,
@@ -1026,7 +1071,7 @@ def build_signal_publish_projection(
         topic_ids=topic_ids,
         confidence=confidence,
         uncertainty=uncertainty,
-        validation_status="approved",
+        validation_status="blocked",
         card_content=build_signal_card_content(
             title=title,
             summary=str(selected_evidence[0].text),
@@ -1037,6 +1082,7 @@ def build_signal_publish_projection(
         ),
         file_id=f"signal:{slug}",
         candidate_group_id=request.candidate_group_id,
+        candidate_manifest_sha256="",
         html_text=f"<html><body>{body_html}</body></html>",
         topic_labels=topic_labels,
         tag_labels=tag_labels,

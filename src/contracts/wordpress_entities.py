@@ -104,6 +104,13 @@ class SignalPublishProjection:
             "required": False,
         },
     )
+    candidate_manifest_sha256: str = field(
+        default="",
+        metadata={
+            "doc": "Immutable approved candidate manifest checksum for queued Signals.",
+            "required": False,
+        },
+    )
     html_text: str = field(
         default="",
         metadata={"doc": "Complete Signal HTML document used for review/publish."},
@@ -165,6 +172,9 @@ class SignalPublishProjection:
             source_attributions=source_attributions,
             file_id=str(payload.get("file_id") or ""),
             candidate_group_id=str(payload.get("candidate_group_id") or ""),
+            candidate_manifest_sha256=str(
+                payload.get("candidate_manifest_sha256") or ""
+            ),
             html_text=str(payload.get("html_text") or ""),
             topic_labels=_string_list(payload, "topic_labels")
             if "topic_labels" in payload

@@ -252,6 +252,13 @@ def _cross_report_publish_authorization_error(
                 retryable=False,
                 severity="error",
             )
+        if metadata.get("validation_status") != "pass":
+            return AppError(
+                code="cross_report_publish_validation_failed",
+                message="Cross-report package does not carry a passed final validation",
+                retryable=False,
+                severity="error",
+            )
         selected_report_ids = list(metadata.get("selected_report_ids") or [])
         approved_report_ids = list(authorization.get("selected_report_ids") or [])
         if selected_report_ids != package.selected_report_ids:
@@ -341,6 +348,27 @@ def _cross_report_publish_authorization_error(
             return AppError(
                 code="cross_report_publish_authorization_missing",
                 message="Signal package has no approved publication authorization",
+                retryable=False,
+                severity="error",
+            )
+        candidate_group_id = str(metadata.get("candidate_group_id") or "")
+        candidate_manifest_sha256 = str(metadata.get("candidate_manifest_sha256") or "")
+        if (
+            not candidate_group_id
+            or len(candidate_manifest_sha256) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in candidate_manifest_sha256
+            )
+            or authorization.get("candidate_group_id") != candidate_group_id
+            or authorization.get("candidate_manifest_sha256")
+            != candidate_manifest_sha256
+        ):
+            return AppError(
+                code="cross_report_publish_authorization_stale",
+                message=(
+                    "Signal candidate manifest authorization is incomplete or stale"
+                ),
                 retryable=False,
                 severity="error",
             )

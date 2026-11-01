@@ -182,3 +182,36 @@ briefing source freezing. The focused projection/read cases are retained in
 `tests/integration/test_analytics_store_cross_report_authority.py`. No
 provider call, PDF acquisition, canonical artifact mutation, publication, or
 WordPress write was performed.
+
+### Cross-report publication authority and evidence-integrity correction — 2026-11-01
+
+The follow-up correction closes the remaining publication-authority paths at
+their existing boundaries. A deterministic Signal projection fallback remains
+reviewable, but is now `blocked`; only an approved frozen candidate group with
+the matching lowercase manifest SHA-256, projected source rows, eligible
+current sources, and unchanged evidence can produce an approved Signal
+projection. The optional `candidate_manifest_sha256` field is additive in the
+Signal projection contract and its schema snapshot; legacy payloads remain
+readable but cannot authorize publication.
+
+Briefing publication now requires a passed final validation result regardless
+of the retained compatibility setting. Failed or absent validation remains
+available for generate-only and diagnostic artifacts but blocks dry-run/live
+publication before WordPress work. Cross-report idempotency material version
+2.2 includes the live-publication flag, validation-policy flag, and minimum
+publisher policy, and cached live outcomes recheck the current live-enable
+setting. Final publisher diversity is counted from the reports represented by
+the bounded evidence set, while inventory counts remain preliminary screening
+only.
+
+Verified cross-report reads now reject unknown authority modes and non-exact
+qualified source identities. Verified analyst claim/quote pages must be
+positive and belong to the canonical finding page binding; invalid rows remain
+diagnostic with precise exclusion reasons. Provider-free unit and integration
+regressions exercise Signal denial, frozen-source eligibility, failed Briefing
+validation, policy fingerprints, evidence-contributor coverage, malformed
+authority identity, and valid/invalid page bindings. No provider call, PDF
+acquisition, canonical artifact mutation, publication, or WordPress write was
+performed. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**,
+and Step 3 remains **unstarted/not ready** pending current-SHA real-report
+editorial evidence.

@@ -486,10 +486,8 @@ def build_cross_report_publish_package(
     validate_cross_report_contract(agreement_result)
     if publishability_result is not None:
         validate_cross_report_contract(publishability_result)
-    if (
-        publish_requires_validation_pass
-        and not validation_result.passed
-        and (publishability_result is None or publishability_result.publishable)
+    if not validation_result.passed and (
+        publishability_result is None or publishability_result.publishable
     ):
         logger.info(
             log_event(

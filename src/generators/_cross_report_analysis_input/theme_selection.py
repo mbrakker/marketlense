@@ -602,15 +602,36 @@ def _publishability_issues(
     evidence_input: CrossReportEvidenceInputResult | None,
 ) -> tuple[list[str], int, int, int]:
     selected_sources = source_selection.selected_sources
-    source_report_count = len(selected_sources)
-    source_publisher_count = len(
-        {source.publisher.strip().casefold() for source in selected_sources}
-    )
-    evidence_count = (
-        len(evidence_input.evidence)
-        if evidence_input is not None
-        else sum(source.evidence_count for source in selected_sources)
-    )
+    if evidence_input is not None:
+        selected_source_by_report_id = {
+            source.report_id: source for source in selected_sources
+        }
+        contributing_report_ids = {
+            evidence.report_id
+            for evidence in evidence_input.evidence
+            if evidence.report_id in selected_source_by_report_id
+        }
+        contributing_sources = [
+            selected_source_by_report_id[report_id]
+            for report_id in contributing_report_ids
+        ]
+        source_report_count = len(contributing_report_ids)
+        source_publisher_count = len(
+            {
+                (source.publisher_id or source.publisher).strip().casefold()
+                for source in contributing_sources
+            }
+        )
+        evidence_count = len(evidence_input.evidence)
+    else:
+        source_report_count = len(selected_sources)
+        source_publisher_count = len(
+            {
+                (source.publisher_id or source.publisher).strip().casefold()
+                for source in selected_sources
+            }
+        )
+        evidence_count = sum(source.evidence_count for source in selected_sources)
     issues: list[str] = []
     if source_report_count < min_source_reports:
         issues.append("source_report_count_below_minimum")
@@ -625,10 +646,7 @@ def _publishability_issues(
         issues.append("metric_normalization_dependency")
     if any(not source.source_validation_eligible for source in selected_sources):
         issues.append("verified_source_not_eligible")
-    if (
-        request.publication_mode in {"publish_dry_run", "publish_live"}
-        and publish_requires_validation_pass
-    ):
+    if request.publication_mode in {"publish_dry_run", "publish_live"}:
         if validation_result is None:
             issues.append("validation_result_required_for_publication")
         elif not validation_result.passed:
