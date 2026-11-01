@@ -1469,6 +1469,26 @@ source-fidelity evidence, not live repair-success evidence. E18 remains
 **unstarted/not ready**. Full metrics, insight ledger, paths, and limitations
 are recorded in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
+**Authority and cross-report contract correction — 2026-11-01 (working tree
+based on `8ba0663a`):** The current slice adds the missing P0/P1 enforcement
+without a new validator, LLM stage, service, or publication path. Public
+editorial status/severity contradictions are rejected and failed persisted
+reviews cannot merge to a warning-only PASS. Verified analytics use the
+canonical retained authority context and complete metric objects; cross-report
+selection requires exact source identity/PDF SHA/fact-digest lineage and keeps
+stale or legacy rows diagnostic-only. Checkpoint reentry validates serialized
+authority and current source identity, and the reports schema advances
+additively to v32. The focused authority regressions passed **47 tests**; the
+CPython 3.12 full suite passed **8,360 tests, 2 skipped, and 24 subtests** in
+583.52 seconds. Coverage floors, configured static/schema/documentation gates,
+mutation (**67/68**, with the retained taxonomy survivor at its existing 75%
+threshold), and the retained quality comparator passed. No provider, PDF,
+canonical artifact, publication, or WordPress write is allowed or claimed.
+E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready** until fresh
+source-report editorial evidence exists. Detailed evidence belongs in the
+Step 2 quality report; this backlog remains the status authority.
+
 **Hosted regression correction — 2026-10-30 (`0d97c913`):** The first hosted
 run after the replay documentation exposed four existing-suite compatibility
 failures: unchanged interpretive siblings with legacy evidence IDs but no

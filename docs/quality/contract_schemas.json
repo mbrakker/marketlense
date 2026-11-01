@@ -4697,6 +4697,15 @@
           },
           "type": "array"
         },
+        "expected_verified_sources": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "type": "object"
+        },
         "minimum_projection_status": {
           "enum": [
             "not_projected",
@@ -4709,6 +4718,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "require_verified_source_lineage": {
+          "type": "boolean"
         },
         "schema_version": {
           "type": "string"
@@ -4922,9 +4934,15 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity": {
+          "type": "string"
+        },
         "source_metadata": {
           "additionalProperties": {},
           "type": "object"
+        },
+        "source_pdf_sha256": {
+          "type": "string"
         },
         "source_table": {
           "type": "string"
@@ -4933,6 +4951,12 @@
           "type": "string"
         },
         "title": {
+          "type": "string"
+        },
+        "verified_fact_digest": {
+          "type": "string"
+        },
+        "verified_fact_id": {
           "type": "string"
         }
       },
@@ -5058,6 +5082,10 @@
         "label": {
           "type": "string"
         },
+        "metric_context": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "metric_id": {
           "type": "string"
         },
@@ -5073,11 +5101,23 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity": {
+          "type": "string"
+        },
         "source_metadata": {
           "additionalProperties": {},
           "type": "object"
         },
+        "source_pdf_sha256": {
+          "type": "string"
+        },
         "unit": {
+          "type": "string"
+        },
+        "verified_fact_digest": {
+          "type": "string"
+        },
+        "verified_fact_id": {
           "type": "string"
         }
       },
@@ -5098,6 +5138,9 @@
     "src.contracts._cross_report_analysis.selection.CrossReportSelectedSourceReport": {
       "additionalProperties": false,
       "properties": {
+        "authority_mode": {
+          "type": "string"
+        },
         "category_ids": {
           "items": {
             "type": "string"
@@ -5150,6 +5193,9 @@
         "source_url": {
           "type": "string"
         },
+        "source_validation_eligible": {
+          "type": "boolean"
+        },
         "tags": {
           "items": {
             "type": "string"
@@ -5157,6 +5203,15 @@
           "type": "array"
         },
         "title": {
+          "type": "string"
+        },
+        "verified_fact_digest": {
+          "type": "string"
+        },
+        "verified_source_identity": {
+          "type": "string"
+        },
+        "verified_source_pdf_sha256": {
           "type": "string"
         }
       },
@@ -5389,6 +5444,9 @@
     "src.contracts._cross_report_analysis.selection.CrossReportSourceReportCandidate": {
       "additionalProperties": false,
       "properties": {
+        "authority_mode": {
+          "type": "string"
+        },
         "category_ids": {
           "items": {
             "type": "string"
@@ -5468,6 +5526,9 @@
         "source_url": {
           "type": "string"
         },
+        "source_validation_eligible": {
+          "type": "boolean"
+        },
         "tags": {
           "items": {
             "type": "string"
@@ -5479,6 +5540,15 @@
         },
         "total_score": {
           "type": "number"
+        },
+        "verified_fact_digest": {
+          "type": "string"
+        },
+        "verified_source_identity": {
+          "type": "string"
+        },
+        "verified_source_pdf_sha256": {
+          "type": "string"
         }
       },
       "required": [
@@ -12205,6 +12275,9 @@
         "analysis_run_id": {
           "type": "string"
         },
+        "authority_mode": {
+          "type": "string"
+        },
         "ingest_run_id": {
           "type": "string"
         },
@@ -12249,6 +12322,9 @@
         "source_url": {
           "type": "string"
         },
+        "source_validation_eligible": {
+          "type": "boolean"
+        },
         "text_density": {
           "type": "number"
         },
@@ -12265,6 +12341,15 @@
           "type": "string"
         },
         "validation_status": {
+          "type": "string"
+        },
+        "verified_fact_digest": {
+          "type": "string"
+        },
+        "verified_source_identity": {
+          "type": "string"
+        },
+        "verified_source_pdf_sha256": {
           "type": "string"
         }
       },
@@ -13307,6 +13392,16 @@
         "evidence": {
           "type": "string"
         },
+        "evidence_id": {
+          "type": "string"
+        },
+        "evidence_spans": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
         "finding_id": {
           "type": "string"
         },
@@ -13315,6 +13410,10 @@
         },
         "lineage": {
           "$ref": "#/$defs/src.contracts.analytics_projection.ProjectionLineage"
+        },
+        "metric_context": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "pages": {
           "items": {
@@ -13328,7 +13427,19 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity": {
+          "type": "string"
+        },
+        "source_pdf_sha256": {
+          "type": "string"
+        },
         "text": {
+          "type": "string"
+        },
+        "verified_fact_digest": {
+          "type": "string"
+        },
+        "verified_fact_id": {
           "type": "string"
         }
       },
@@ -13351,11 +13462,22 @@
         "evidence_id": {
           "type": "string"
         },
+        "evidence_spans": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
         "lineage": {
           "$ref": "#/$defs/src.contracts.analytics_projection.ProjectionLineage"
         },
         "metric": {
           "type": "string"
+        },
+        "metric_context": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "metric_id": {
           "type": "string"
@@ -13375,10 +13497,22 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity": {
+          "type": "string"
+        },
+        "source_pdf_sha256": {
+          "type": "string"
+        },
         "unit": {
           "type": "string"
         },
         "value": {
+          "type": "string"
+        },
+        "verified_fact_digest": {
+          "type": "string"
+        },
+        "verified_fact_id": {
           "type": "string"
         }
       },

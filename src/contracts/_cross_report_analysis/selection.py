@@ -161,6 +161,26 @@ class CrossReportSourceReportCandidate:
             "required": False,
         },
     )
+    authority_mode: str = field(
+        default="normal",
+        metadata={"doc": "Source authority mode: normal or verified."},
+    )
+    source_validation_eligible: bool = field(
+        default=True,
+        metadata={"doc": "Whether this source may authorize cross-report use."},
+    )
+    verified_source_identity: str = field(
+        default="",
+        metadata={"doc": "Hash-qualified verified source identity, if present."},
+    )
+    verified_source_pdf_sha256: str = field(
+        default="",
+        metadata={"doc": "Verified source PDF SHA-256, if present."},
+    )
+    verified_fact_digest: str = field(
+        default="",
+        metadata={"doc": "Verified-fact digest, if present."},
+    )
 
 
 @dataclass(frozen=True)
@@ -216,6 +236,26 @@ class CrossReportSelectedSourceReport:
             "required": False,
         },
     )
+    authority_mode: str = field(
+        default="normal",
+        metadata={"doc": "Source authority mode: normal or verified."},
+    )
+    source_validation_eligible: bool = field(
+        default=True,
+        metadata={"doc": "Whether this selected source may authorize use."},
+    )
+    verified_source_identity: str = field(
+        default="",
+        metadata={"doc": "Hash-qualified verified source identity, if present."},
+    )
+    verified_source_pdf_sha256: str = field(
+        default="",
+        metadata={"doc": "Verified source PDF SHA-256, if present."},
+    )
+    verified_fact_digest: str = field(
+        default="",
+        metadata={"doc": "Verified-fact digest, if present."},
+    )
 
 
 @dataclass(frozen=True)
@@ -237,6 +277,22 @@ class CrossReportEvidenceReference:
     text: str = field(metadata={"doc": "Compact text payload supplied to synthesis."})
     source_metadata: Dict[str, Any] = field(
         metadata={"doc": "Source-specific metadata such as page, section, or citation."}
+    )
+    verified_fact_id: str = field(
+        default="",
+        metadata={"doc": "Canonical verified fact backing this evidence, if present."},
+    )
+    source_identity: str = field(
+        default="",
+        metadata={"doc": "Exact source identity backing this evidence, if present."},
+    )
+    source_pdf_sha256: str = field(
+        default="",
+        metadata={"doc": "Source PDF SHA-256 backing this evidence, if present."},
+    )
+    verified_fact_digest: str = field(
+        default="",
+        metadata={"doc": "Verified-fact digest backing this evidence, if present."},
     )
 
 
@@ -360,6 +416,26 @@ class CrossReportRawMetricReference:
     )
     source_metadata: Dict[str, Any] = field(
         metadata={"doc": "Source-specific metadata such as page or section."}
+    )
+    verified_fact_id: str = field(
+        default="",
+        metadata={"doc": "Canonical verified fact backing this metric, if present."},
+    )
+    source_identity: str = field(
+        default="",
+        metadata={"doc": "Exact source identity backing this metric, if present."},
+    )
+    source_pdf_sha256: str = field(
+        default="",
+        metadata={"doc": "Source PDF SHA-256 backing this metric, if present."},
+    )
+    verified_fact_digest: str = field(
+        default="",
+        metadata={"doc": "Verified-fact digest backing this metric, if present."},
+    )
+    metric_context: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Complete structured metric context from the source."},
     )
 
 

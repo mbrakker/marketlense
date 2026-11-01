@@ -8261,3 +8261,65 @@ coverage, mutation, and quality evidence. The complete report pipeline remains
 not execute the retained real-report/frozen-five workflow or obtain fresh live
 editorial evidence. E18 remains **Active/PARTIAL** and Step 3 is
 **unstarted/not ready**. Hosted CI on the pushed commit is still required.
+
+## Authority and contract closure — 2026-11-01 (provider-free)
+
+This addendum records the P0/P1 correction slice from parent `8ba0663a`. It
+does not claim a fresh report, PDF, provider, or publication result.
+
+### Producer-to-consumer authority matrix
+
+| Producer | Contract / identity | Consumer | Enforced invariant | Regression evidence |
+| --- | --- | --- | --- | --- |
+| Public editorial review response | Complete item/report verdict schema, retained item evidence IDs, source identity and fact digest | Review validator and `ValidationReport` adapter | Pass cannot carry error/failure/repair fields; fail/unresolved must be blocking; failed/nonpublishable persisted reports cannot merge to warning-only PASS | `tests/test_authority_contract_regressions.py`, public-editorial/semantic-authority suites |
+| Verified analysis artifacts | `VerifiedAuthorityContext`, canonical evidence packs, source identity, PDF SHA-256, fact digest | Analytics projection | Verified findings/metrics come only from canonical authority; complete metric objects and evidence spans remain available; legacy discovery/quotes cannot become authority | `tests/test_analytics_projection_foundation.py`, `tests/test_pre_e2e_integrity.py` |
+| Projection write/read | Reports DB v32 additive lineage columns and report-scoped IDs | Cross-report source/evidence/metric selection | A successful write is not eligibility; verified selection requires source validation, exact identity, PDF hash, and fact digest; stale/legacy rows are diagnostic-only | `tests/integration/test_analytics_store_cross_report_reads.py`, cross-report input suite |
+| Analysis/render checkpoints | Serialized authority/evidence packs plus current canary/runtime source identity | Checkpoint reentry and render | Reentry revalidates current canonical snapshot before render; no-canary saved verified state fails closed; normal mode is unchanged | `tests/test_authority_contract_regressions.py`, `tests/test_report_checkpoint_lineage_validation.py` |
+| Runtime source identity | Exact base or exact qualified identity; SHA hex case may normalize | Verified checkpoint/projection/source eligibility | No opaque case-fold, prefix, suffix, or mutable-ID match can authorize a source | `test_verified_source_identity_runtime_matching_is_exact` and cross-report regressions |
+
+### Provider-free verification
+
+| Check | Result |
+| --- | --- |
+| Focused authority-contract regressions plus original pre-E2E module, migration, and long-file ownership gate | **47 passed** |
+| Broader authority/analytics/cross-report/checkpoint/editorial regression suite | **158 passed**; integration analytics-store regression **8 passed** |
+| Full CPython 3.12 default pytest | **8,360 passed, 2 skipped, 24 subtests** in **583.52s (9:43)** |
+| Coverage gate | **PASS** — global 85.61%, contracts 97.98%, orchestrators 86.14%, generators 87.21%, services 84.60%, control-plane 90.60% |
+| Configured formatting/Ruff gate | **PASS** |
+| Full-repository mypy | **PASS** — 0 tracked errors across 786 source files |
+| Contract schema snapshot | **PASS** after repository-tool regeneration for the v32/lineage fields |
+| Prompt fixture corpus gate | **PASS** — 113,900 tokens / `$0.025043`, validation 11,615 / `$0.002074`; no prompt fixture or threshold was weakened in this slice |
+| Architecture, role/I/O, service-boundary, policy, logging, hygiene, ledger, runbook, backlog, and documentation gates | **PASS** |
+
+The full suite emitted the repository's existing closed-stream logging-teardown
+message during crop-refine tests; it did not fail a test or change an outcome.
+
+The mutation gate killed **67/68 mutants** across 17 targets. The one survivor
+is the retained taxonomy mutant; its target remains at the existing **75%**
+threshold. The quality regression comparator passed global, generator,
+orchestrator, and service coverage, every retained mutation target, all golden
+docpack metrics, and all candidate-extraction metrics. These are release-gate
+results, not provider evidence.
+
+### Confirmed versus untested claims
+
+Confirmed by provider-free tests: public review contradictions fail closed;
+warning-only failed snapshots are blocking; verified analytics cannot use
+discovery evidence as authority; complete metric context and lineage survive
+projection; stale/missing/legacy cross-report rows cannot be selected under
+verified policy; checkpoint authority and exact source identity are rechecked;
+and normal-mode behavior remains covered by existing tests.
+
+Not established by this slice: current-SHA source-page correctness on retained
+real PDFs, live LLM semantic quality, report-specific metric interpretation,
+fresh frozen-five/ten-report results, call/token/cost/latency behavior, or
+publication readiness. No provider call, PDF acquisition, canonical artifact
+mutation, WordPress write, or publication write occurred.
+
+### Verdict
+
+The deterministic authority/contract correction slice is **PASS** for the
+provider-free local gates. Overall Verified Claims Step 2 remains
+**PARTIAL / NO-GO** because current-SHA source-report editorial evidence is
+still absent. E18 remains **Active/PARTIAL** and Step 3 remains
+**unstarted/not ready**; hosted CI is still required for this commit.

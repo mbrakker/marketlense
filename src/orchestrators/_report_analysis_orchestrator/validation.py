@@ -300,6 +300,29 @@ def _validate_public_editorial_review_payload(
         ]
         status = str(verdict.get("status") or "").strip()
         classification = str(verdict.get("classification") or "").strip()
+        severity = str(verdict.get("severity") or "").strip()
+        rule_id = str(verdict.get("rule_id") or "").strip()
+        hard_fail_class = str(verdict.get("hard_fail_class") or "").strip()
+        repair_target = str(verdict.get("repair_target") or "").strip()
+        if status == "pass" and (
+            severity == "error" or rule_id or hard_fail_class or repair_target
+        ):
+            raise AppError(
+                code="public_editorial_quality_review_status_conflict",
+                message=(
+                    "A passing public semantic verdict cannot contain failure "
+                    "or repair fields"
+                ),
+                retryable=False,
+                context={"item_id": item_id},
+            )
+        if status in {"fail", "unresolved"} and severity != "error":
+            raise AppError(
+                code="public_editorial_quality_review_status_conflict",
+                message="A failing public semantic verdict must be an error",
+                retryable=False,
+                context={"item_id": item_id},
+            )
         if (
             status == "pass"
             and classification != "prescriptive_recommendation"
@@ -314,23 +337,22 @@ def _validate_public_editorial_review_payload(
                 retryable=False,
                 context={"item_id": item_id},
             )
-        if status in {"fail", "unresolved"} and not evidence_ids:
-            rule_id = str(verdict.get("rule_id") or "").strip()
-            hard_fail_class = str(verdict.get("hard_fail_class") or "").strip()
-            if (
-                rule_id not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS
-                and hard_fail_class not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES
-            ):
-                raise AppError(
-                    code="public_editorial_quality_review_evidence_missing",
-                    message=(
-                        "Failing or unresolved public semantic verdicts require "
-                        "retained evidence IDs unless the verdict explicitly "
-                        "classifies evidence as missing or unavailable"
-                    ),
-                    retryable=False,
-                    context={"item_id": item_id},
-                )
+        if (
+            status in {"fail", "unresolved"}
+            and not evidence_ids
+            and rule_id not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS
+            and hard_fail_class not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES
+        ):
+            raise AppError(
+                code="public_editorial_quality_review_evidence_missing",
+                message=(
+                    "Failing or unresolved public semantic verdicts require "
+                    "retained evidence IDs unless the verdict explicitly "
+                    "classifies evidence as missing or unavailable"
+                ),
+                retryable=False,
+                context={"item_id": item_id},
+            )
         allowed_evidence_ids = {
             str(value).strip()
             for value in expected[item_id].get("evidence_ids") or []
@@ -346,7 +368,6 @@ def _validate_public_editorial_review_payload(
                 retryable=False,
                 context={"item_id": item_id},
             )
-        repair_target = str(verdict.get("repair_target") or "").strip()
         expected_target = str(expected[item_id].get("repair_target") or "").strip()
         if repair_target and repair_target != expected_target:
             raise AppError(

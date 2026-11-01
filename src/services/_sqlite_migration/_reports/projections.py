@@ -19,11 +19,11 @@ from src.services._sqlite_migration._reports.schema import (
     _REPORT_METRICS_TABLE_SQL,
     _REPORT_QUOTES_TABLE_SQL,
     _REPORT_SECTIONS_TABLE_SQL,
+    _REPORT_SOURCE_REUSE_TELEMETRY_TABLE_SQL,
     _REPORT_SOURCES_TABLE_SQL,
     _REPORT_TAGS_TABLE_SQL,
     _REPORTS_CORE_TABLE_SQL,
     _REPORTS_REQUIRED_COLUMNS,
-    _REPORT_SOURCE_REUSE_TELEMETRY_TABLE_SQL,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
     _SIGNAL_CANDIDATES_TABLE_SQL,
     _SOURCE_IDENTITY_OBSERVATIONS_TABLE_SQL,
@@ -447,13 +447,62 @@ def _reports_db_031_create_immutable_signal_candidate_manifests(
     )
 
 
+def _reports_db_032_add_verified_projection_lineage(
+    conn: sqlite3.Connection,
+) -> None:
+    """Persist verified source eligibility and fact lineage without rewriting rows."""
+
+    for column_name, column_type in (
+        ("authority_mode", "TEXT NOT NULL DEFAULT 'normal'"),
+        ("source_validation_eligible", "INTEGER NOT NULL DEFAULT 1"),
+        ("verified_source_identity", "TEXT"),
+        ("verified_source_pdf_sha256", "TEXT"),
+        ("verified_fact_digest", "TEXT"),
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="reports",
+            column_name=column_name,
+            column_type=column_type,
+        )
+    for column_name, column_type in (
+        ("verified_fact_id", "TEXT NOT NULL DEFAULT ''"),
+        ("evidence_id", "TEXT NOT NULL DEFAULT ''"),
+        ("source_identity", "TEXT NOT NULL DEFAULT ''"),
+        ("source_pdf_sha256", "TEXT NOT NULL DEFAULT ''"),
+        ("verified_fact_digest", "TEXT NOT NULL DEFAULT ''"),
+        ("metric_context_json", "TEXT NOT NULL DEFAULT '{}'"),
+        ("evidence_spans_json", "TEXT NOT NULL DEFAULT '[]'"),
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="report_findings",
+            column_name=column_name,
+            column_type=column_type,
+        )
+    for column_name, column_type in (
+        ("verified_fact_id", "TEXT NOT NULL DEFAULT ''"),
+        ("source_identity", "TEXT NOT NULL DEFAULT ''"),
+        ("source_pdf_sha256", "TEXT NOT NULL DEFAULT ''"),
+        ("verified_fact_digest", "TEXT NOT NULL DEFAULT ''"),
+        ("metric_context_json", "TEXT NOT NULL DEFAULT '{}'"),
+        ("evidence_spans_json", "TEXT NOT NULL DEFAULT '[]'"),
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="report_metrics",
+            column_name=column_name,
+            column_type=column_type,
+        )
+
+
 def _reports_db_023_create_corpus_rehabilitation_campaigns(
     conn: sqlite3.Connection,
 ) -> None:
     """Persist bounded approved rehabilitation campaigns and their reconciliation."""
     from .schema import (
-        _CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL,
         _CORPUS_REHABILITATION_CAMPAIGN_ITEMS_TABLE_SQL,
+        _CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL,
     )
 
     conn.execute(_CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL)

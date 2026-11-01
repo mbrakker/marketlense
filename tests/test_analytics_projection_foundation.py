@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from copy import deepcopy
 from dataclasses import asdict, replace
 
 import pytest
@@ -46,6 +47,11 @@ from src.services.report_store_service import (
     record_source_identity_observation,
 )
 from src.utils.errors import AppError
+from src.utils.verified_facts import build_verified_authority_context
+from tests.test_verified_facts_validation_authority import (
+    SOURCE_IDENTITY,
+    _authority_artifacts,
+)
 
 
 def _payload() -> ReportPayload:
@@ -337,6 +343,101 @@ def test_projection_prefers_source_backed_publisher_identity(
 
     assert batch.report.publisher == "Acme Research"
     assert batch.report.publisher_id == "publisher:acme-research"
+
+
+def test_verified_projection_uses_canonical_authority_not_discovery_findings(
+    ingest_settings: IngestSettings,
+    run_context: RunContext,
+) -> None:
+    base = _analysis_state(ingest_settings, run_context)
+    artifacts = _authority_artifacts()
+    authority = build_verified_authority_context(
+        artifacts, expected_source_identity=SOURCE_IDENTITY
+    )
+    runtime = replace(
+        base.runtime,
+        ctx=replace(base.runtime.ctx, source_identity_id=SOURCE_IDENTITY),
+    )
+    source = replace(base.source, runtime=runtime)
+    selection = replace(base.selection, runtime=runtime, source=source)
+    discovery = deepcopy(base.evidence_packs)
+    discovery["findings"]["findings"] = [
+        {
+            "id": "discovery-only",
+            "text": "UNTRUSTED DISCOVERY ASSERTION",
+            "evidence": "Untrusted context",
+            "pages": [1],
+        }
+    ]
+    analysis = replace(
+        base,
+        runtime=runtime,
+        source=source,
+        selection=selection,
+        evidence_packs=discovery,
+        artifacts_payload=artifacts,
+        authoritative_evidence_packs=authority.evidence_packs,
+        verified_authority_context=authority,
+    )
+
+    batch = build_projection(
+        AnalyticsProjectionBuildRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            analysis=analysis,
+            rendered_html_path="out/report.html",
+            generated_at_utc="2026-04-22T12:00:00Z",
+        )
+    )
+
+    assert [row.finding_id for row in batch.findings] == ["verified-fact:fact-1"]
+    assert batch.findings[0].verified_fact_id == "fact-1"
+    assert batch.findings[0].evidence_id == "verified-fact:fact-1"
+    assert batch.findings[0].source_identity == SOURCE_IDENTITY
+    assert batch.findings[0].metric_context["denominator"] == "respondents"
+    assert batch.findings[0].metric_context["cohort"] == "survey respondents"
+    assert batch.metrics[0].verified_fact_id == "fact-1"
+    assert batch.metrics[0].metric_context["observation_status"] == "observed"
+    assert all("UNTRUSTED" not in row.text for row in batch.findings)
+    finding_queue = next(
+        row for row in batch.vector_queue if row.entity_type == "finding"
+    )
+    assert finding_queue.metadata["verified_fact_id"] == "fact-1"
+    assert finding_queue.metadata["source_identity"] == SOURCE_IDENTITY
+
+
+def test_verified_projection_rejects_contradictory_authority_snapshot(
+    ingest_settings: IngestSettings,
+    run_context: RunContext,
+) -> None:
+    base = _analysis_state(ingest_settings, run_context)
+    artifacts = _authority_artifacts()
+    authority = build_verified_authority_context(
+        artifacts, expected_source_identity=SOURCE_IDENTITY
+    )
+    invalid_authority = replace(authority, verified_fact_digest="b" * 64)
+    runtime = replace(
+        base.runtime,
+        ctx=replace(base.runtime.ctx, source_identity_id=SOURCE_IDENTITY),
+    )
+    analysis = replace(
+        base,
+        runtime=runtime,
+        artifacts_payload=artifacts,
+        authoritative_evidence_packs=authority.evidence_packs,
+        verified_authority_context=invalid_authority,
+    )
+
+    with pytest.raises(AppError) as raised:
+        build_projection(
+            AnalyticsProjectionBuildRequest(
+                schema_version=PROJECTION_SCHEMA_VERSION,
+                analysis=analysis,
+                rendered_html_path="out/report.html",
+                generated_at_utc="2026-04-22T12:00:00Z",
+            )
+        )
+
+    assert raised.value.code == "analytics_projection_verified_authority_invalid"
 
 
 def test_projection_store_idempotent_upsert_and_report_scoped_stale_cleanup(
@@ -726,8 +827,8 @@ def test_projection_store_migrates_legacy_reports_schema_and_records_ledger(
                 """
             ).fetchall()
         }
-    assert schema_version == (31,)
-    assert ledger_count == 31
+    assert schema_version == (32,)
+    assert ledger_count == 32
     assert analytics_tables == {
         "report_sections",
         "report_findings",

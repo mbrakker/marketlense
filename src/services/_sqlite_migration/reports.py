@@ -29,6 +29,7 @@ from src.services._sqlite_migration._reports.projections import (
     _reports_db_029_add_source_provenance_roles,
     _reports_db_030_add_signal_publication_manifest,
     _reports_db_031_create_immutable_signal_candidate_manifests,
+    _reports_db_032_add_verified_projection_lineage,
 )
 from src.services._sqlite_migration._reports.routing import (
     _reports_db_006_create_or_upgrade_download_route_history,
@@ -63,11 +64,11 @@ from src.services._sqlite_migration._reports.schema import (
     _REPORT_METRICS_TABLE_SQL,
     _REPORT_QUOTES_TABLE_SQL,
     _REPORT_SECTIONS_TABLE_SQL,
+    _REPORT_SOURCE_REUSE_TELEMETRY_TABLE_SQL,
     _REPORT_SOURCES_TABLE_SQL,
     _REPORT_TAGS_TABLE_SQL,
     _REPORTS_CORE_TABLE_SQL,
     _REPORTS_REQUIRED_COLUMNS,
-    _REPORT_SOURCE_REUSE_TELEMETRY_TABLE_SQL,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
     _SIGNAL_CANDIDATES_TABLE_SQL,
     _SOURCE_IDENTITY_OBSERVATIONS_TABLE_SQL,
@@ -233,5 +234,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_031_create_immutable_signal_candidate_manifests",
         version=31,
         apply_fn=_reports_db_031_create_immutable_signal_candidate_manifests,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_032_add_verified_projection_lineage",
+        version=32,
+        apply_fn=_reports_db_032_add_verified_projection_lineage,
     ),
 )

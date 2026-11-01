@@ -93,7 +93,7 @@ def _review_verdict(
             "and its protected context."
         ),
         "evidence_ids": list(evidence_ids or []),
-        "repair_target": "insights_final",
+        "repair_target": "",
     }
 
 

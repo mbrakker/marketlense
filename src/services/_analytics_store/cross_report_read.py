@@ -7,6 +7,7 @@ import json
 import logging
 import sqlite3
 from typing import Any, Sequence, cast
+
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportEvidenceReference,
@@ -18,13 +19,13 @@ from src.contracts.cross_report_analysis import (
     validate_cross_report_contract,
 )
 from src.contracts.run_context import RunContext
-from src.utils.errors import AppError
-from src.utils.logging import log_event
-
 from src.services._analytics_store.common import (
     _CROSS_REPORT_READ_CONTENT_CLASSES,
     _analytics_conn,
 )
+from src.utils.errors import AppError
+from src.utils.logging import log_event
+from src.utils.verified_facts import verified_source_identity_matches_runtime
 
 logger = logging.getLogger("market_lense.analytics_store_service")
 
@@ -59,6 +60,49 @@ def _json_list(value: Any) -> list[Any]:
     except (TypeError, ValueError):
         return []
     return decoded if isinstance(decoded, list) else []
+
+
+def _json_dict(value: Any) -> dict[str, Any]:
+    if value is None or value == "":
+        return {}
+    try:
+        decoded = json.loads(str(value))
+    except (TypeError, ValueError):
+        return {}
+    return decoded if isinstance(decoded, dict) else {}
+
+
+def _verified_source_eligibility(
+    report_row: sqlite3.Row,
+    expected_sources: dict[str, dict[str, str]],
+    require_verified_source_lineage: bool = False,
+) -> tuple[bool, str]:
+    authority_mode = _row_text(report_row, "authority_mode") or "normal"
+    if authority_mode != "verified":
+        if require_verified_source_lineage:
+            return False, "verified_source_lineage_missing"
+        return True, ""
+    if not bool(report_row["source_validation_eligible"]):
+        return False, "source_validation_not_passed"
+    source_identity = _row_text(report_row, "verified_source_identity")
+    source_pdf_sha256 = _row_text(report_row, "verified_source_pdf_sha256")
+    fact_digest = _row_text(report_row, "verified_fact_digest")
+    if not source_identity or not source_pdf_sha256 or not fact_digest:
+        return False, "verified_authority_lineage_missing"
+    expected = expected_sources.get(_row_text(report_row, "report_id"))
+    if expected:
+        expected_identity = str(expected.get("source_identity") or "").strip()
+        expected_pdf = str(expected.get("source_pdf_sha256") or "").strip()
+        expected_digest = str(expected.get("verified_fact_digest") or "").strip()
+        if expected_identity and not verified_source_identity_matches_runtime(
+            expected_identity, source_identity
+        ):
+            return False, "verified_source_identity_stale"
+        if expected_pdf and source_pdf_sha256.casefold() != expected_pdf.casefold():
+            return False, "verified_source_pdf_stale"
+        if expected_digest and fact_digest.casefold() != expected_digest.casefold():
+            return False, "verified_fact_digest_stale"
+    return True, ""
 
 
 def _fetch_grouped_rows(
@@ -217,6 +261,7 @@ def _source_candidate(
     quotes: list[sqlite3.Row],
     metrics: list[sqlite3.Row],
     content_hashes: dict[str, str],
+    source_validation_eligible: bool | None = None,
 ) -> CrossReportSourceReportCandidate:
     claim_count = len(claims)
     finding_count = len(findings)
@@ -249,6 +294,15 @@ def _source_candidate(
             }
         ),
         source_url=_row_text(report_row, "source_url"),
+        authority_mode=_row_text(report_row, "authority_mode") or "normal",
+        source_validation_eligible=(
+            bool(report_row["source_validation_eligible"])
+            if source_validation_eligible is None
+            else source_validation_eligible
+        ),
+        verified_source_identity=_row_text(report_row, "verified_source_identity"),
+        verified_source_pdf_sha256=_row_text(report_row, "verified_source_pdf_sha256"),
+        verified_fact_digest=_row_text(report_row, "verified_fact_digest"),
         tags=sorted({_row_text(row, "tag") for row in tags if _row_text(row, "tag")}),
         evidence_count=evidence_count,
         claim_count=claim_count,
@@ -283,6 +337,10 @@ def _claim_evidence(
             "pages": _json_list(row["pages_json"]),
             "source_url": _row_text(report_row, "source_url"),
         },
+        verified_fact_id="",
+        source_identity=_row_text(report_row, "verified_source_identity"),
+        source_pdf_sha256=_row_text(report_row, "verified_source_pdf_sha256"),
+        verified_fact_digest=_row_text(report_row, "verified_fact_digest"),
     )
 
 
@@ -291,7 +349,7 @@ def _finding_evidence(
 ) -> CrossReportEvidenceReference:
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        evidence_id=_scoped_row_id(row, "finding_uid", "finding_uid", "finding"),
+        evidence_id=_scoped_row_id(row, "evidence_id", "finding_uid", "finding"),
         report_id=_row_text(row, "report_id"),
         publisher=_report_publisher(report_row),
         title=_row_text(report_row, "title"),
@@ -304,7 +362,20 @@ def _finding_evidence(
             "confidence": _row_text(row, "confidence"),
             "pages": _json_list(row["pages_json"]),
             "source_url": _row_text(report_row, "source_url"),
+            "metric_context": _json_dict(row["metric_context_json"]),
+            "evidence_spans": _json_list(row["evidence_spans_json"]),
+            "authority_mode": _row_text(report_row, "authority_mode") or "normal",
+            "source_validation_eligible": bool(
+                report_row["source_validation_eligible"]
+            ),
         },
+        verified_fact_id=_row_text(row, "verified_fact_id"),
+        source_identity=_row_text(row, "source_identity")
+        or _row_text(report_row, "verified_source_identity"),
+        source_pdf_sha256=_row_text(row, "source_pdf_sha256")
+        or _row_text(report_row, "verified_source_pdf_sha256"),
+        verified_fact_digest=_row_text(row, "verified_fact_digest")
+        or _row_text(report_row, "verified_fact_digest"),
     )
 
 
@@ -328,6 +399,9 @@ def _quote_evidence(
             "source_url": _row_text(report_row, "source_url"),
             "quote_id": _row_text(row, "quote_id"),
         },
+        source_identity=_row_text(report_row, "verified_source_identity"),
+        source_pdf_sha256=_row_text(report_row, "verified_source_pdf_sha256"),
+        verified_fact_digest=_row_text(report_row, "verified_fact_digest"),
     )
 
 
@@ -349,7 +423,21 @@ def _raw_metric(
             "entity_uid": _row_text(row, "metric_uid"),
             "pages": _json_list(row["pages_json"]),
             "source_url": _row_text(report_row, "source_url"),
+            "metric_context": _json_dict(row["metric_context_json"]),
+            "evidence_spans": _json_list(row["evidence_spans_json"]),
+            "authority_mode": _row_text(report_row, "authority_mode") or "normal",
+            "source_validation_eligible": bool(
+                report_row["source_validation_eligible"]
+            ),
         },
+        verified_fact_id=_row_text(row, "verified_fact_id"),
+        source_identity=_row_text(row, "source_identity")
+        or _row_text(report_row, "verified_source_identity"),
+        source_pdf_sha256=_row_text(row, "source_pdf_sha256")
+        or _row_text(report_row, "verified_source_pdf_sha256"),
+        verified_fact_digest=_row_text(row, "verified_fact_digest")
+        or _row_text(report_row, "verified_fact_digest"),
+        metric_context=_json_dict(row["metric_context_json"]),
     )
 
 
@@ -407,7 +495,9 @@ def read_cross_report_projected_data(
                 """
                 SELECT file_id, report_id, title, publisher, publisher_id, source_md5,
                        source_url, md5, time_period, projection_status,
-                       projection_generated_at_utc
+                       projection_generated_at_utc, authority_mode,
+                       source_validation_eligible, verified_source_identity,
+                       verified_source_pdf_sha256, verified_fact_digest
                 FROM reports
                 ORDER BY report_id
                 """
@@ -458,6 +548,15 @@ def read_cross_report_projected_data(
                 )
             ]
             report_rows = {_row_text(row, "report_id"): row for row in filtered_rows}
+            authority_status = {
+                report_id: _verified_source_eligibility(
+                    row,
+                    request.expected_verified_sources,
+                    request.require_verified_source_lineage
+                    or bool(request.expected_verified_sources),
+                )
+                for report_id, row in report_rows.items()
+            }
             source_candidates: list[CrossReportSourceReportCandidate] = []
             evidence: list[CrossReportEvidenceReference] = []
             raw_metrics: list[CrossReportRawMetricReference] = []
@@ -473,6 +572,7 @@ def read_cross_report_projected_data(
                         quotes=quotes_by_report.get(report_id, []),
                         metrics=metrics_by_report.get(report_id, []),
                         content_hashes=content_hashes.get(report_id, {}),
+                        source_validation_eligible=authority_status[report_id][0],
                     )
                 )
                 if "claim" in requested_content_classes:

@@ -121,3 +121,34 @@ The returned `CrossReportEvidenceInputResult.semantic_preselection` summary reco
 ## Future Cross-Report Analytics
 
 Future analytics can build on this foundation by querying the projection tables for relational reporting and by benchmarking/tuning embedding-backed evidence preselection. The current implementation deliberately does not add dashboards, clustering, external vector search, or a new product UI.
+
+## Verified-fact authority and cross-report eligibility — 2026-11-01
+
+The verified-mode projection path now treats the retained
+`VerifiedAuthorityContext` as the only source of findings, metrics, evidence
+lineage, and source eligibility. Before projection, the authority is rebuilt
+from the retained artifacts and checked against the retained source identity,
+PDF SHA-256, verified-fact digest, and canonical evidence packs. Discovery
+findings, quote candidates, and legacy metric projections are not used as
+verified authority; normal-mode projection remains unchanged. Full metric
+objects are carried through `metric_context`, so report-specific qualifiers
+and unknown fields are not discarded.
+
+Cross-report reads retain ineligible or stale rows for diagnostics, but source
+selection and theme publishability reject them under verified policy. A
+verified selected source must carry the canonical source identity, PDF hash,
+fact digest, authority mode, and source-validation eligibility. An
+`expected_verified_sources` request automatically requires that lineage, so a
+successful database write or diagnostic read cannot authorize a legacy or
+stale row. The additive reports schema migration is v32; it preserves the
+existing report-scoped IDs and adds the authority/lineage fields to reports,
+findings, metrics, and cross-report contracts.
+
+Checkpoint reentry applies the same authority and snapshot checks before
+rendering, and qualified source identities use exact base/qualified matching
+(with case-insensitive comparison only for the SHA-256 hex digest). The
+provider-free regressions are in `tests/test_authority_contract_regressions.py`,
+`tests/test_analytics_projection_foundation.py`,
+`tests/integration/test_analytics_store_cross_report_reads.py`, and
+`tests/test_report_checkpoint_lineage_validation.py`; live report processing
+and publication were not run for this slice.

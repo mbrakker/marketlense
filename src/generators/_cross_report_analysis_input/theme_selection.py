@@ -617,6 +617,8 @@ def _publishability_issues(
         issues.append("duplicate_theme_risk")
     if "metric_normalization_dependency" in risks:
         issues.append("metric_normalization_dependency")
+    if any(not source.source_validation_eligible for source in selected_sources):
+        issues.append("verified_source_not_eligible")
     if (
         request.publication_mode in {"publish_dry_run", "publish_live"}
         and publish_requires_validation_pass
@@ -683,7 +685,10 @@ def validate_cross_report_publishability(
         publish_requires_validation_pass=publish_requires_validation_pass,
         validation_result=validation_result,
     )
-    override_applied = bool(issues and request.override_publishability)
+    authority_block = "verified_source_not_eligible" in issues
+    override_applied = bool(
+        issues and request.override_publishability and not authority_block
+    )
     diagnostic = bool(issues and request.diagnostic)
     publishable = not issues or override_applied
     result = CrossReportPublishabilityResult(

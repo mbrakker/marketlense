@@ -8,12 +8,12 @@ from dataclasses import is_dataclass
 import pytest
 
 from src.contracts.analytics_projection import (
+    PROJECTION_SCHEMA_VERSION,
+    PROJECTION_VERSION,
     AnalyticsProjectionBatch,
     AnalyticsProjectionFailureRequest,
     AnalyticsProjectionUpsertRequest,
     AnalyticsReportRow,
-    PROJECTION_SCHEMA_VERSION,
-    PROJECTION_VERSION,
     ProjectionLineage,
     ReportCategoryProjection,
     ReportClaimProjection,
@@ -25,9 +25,13 @@ from src.contracts.analytics_projection import (
 )
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportAnalysisRequest,
     CrossReportProjectedDataReadRequest,
 )
 from src.contracts.run_context import RunContext
+from src.generators._cross_report_analysis_input.source_selection import (
+    _projection_readiness_rejection_reasons,
+)
 from src.services.analytics_store_service import (
     read_cross_report_projected_data,
     record_projection_failure,
@@ -67,6 +71,12 @@ def _batch(
     tag: str,
     category_id: str,
     category_label: str,
+    authority_mode: str = "normal",
+    source_validation_eligible: bool = True,
+    verified_source_identity: str = "",
+    verified_source_pdf_sha256: str = "",
+    verified_fact_digest: str = "",
+    verified_fact_id: str = "",
 ) -> AnalyticsProjectionBatch:
     lineage = _lineage(report_id)
     report = AnalyticsReportRow(
@@ -83,6 +93,11 @@ def _batch(
         time_period=time_period,
         validation_status="pass",
         validation_severity="pass",
+        authority_mode=authority_mode,
+        source_validation_eligible=source_validation_eligible,
+        verified_source_identity=verified_source_identity,
+        verified_source_pdf_sha256=verified_source_pdf_sha256,
+        verified_fact_digest=verified_fact_digest,
         text_density=1200.0,
         text_not_available=False,
         projection_generated_at_utc=generated_at_utc,
@@ -103,6 +118,24 @@ def _batch(
                 confidence="high",
                 pages=[2],
                 lineage=lineage,
+                verified_fact_id=verified_fact_id,
+                evidence_id=(
+                    f"verified-fact:{verified_fact_id}" if verified_fact_id else ""
+                ),
+                source_identity=verified_source_identity,
+                source_pdf_sha256=verified_source_pdf_sha256,
+                verified_fact_digest=verified_fact_digest,
+                metric_context={
+                    "denominator": "respondents",
+                    "cohort": "buyers",
+                    "geography": "US",
+                    "period": "2026",
+                    "comparator": "prior year",
+                    "observation_status": "observed",
+                    "unknown_report_field": {"method": "composite"},
+                }
+                if verified_fact_id
+                else {},
             )
         ],
         metrics=[
@@ -117,6 +150,24 @@ def _batch(
                 evidence_id=f"{report_id}:finding:1",
                 pages=[3],
                 lineage=lineage,
+                verified_fact_id=verified_fact_id,
+                source_identity=verified_source_identity,
+                source_pdf_sha256=verified_source_pdf_sha256,
+                verified_fact_digest=verified_fact_digest,
+                metric_context={
+                    "label": "Adoption",
+                    "value": "42",
+                    "unit": "percent",
+                    "denominator": "respondents",
+                    "cohort": "buyers",
+                    "geography": "US",
+                    "period": "2026",
+                    "comparator": "prior year",
+                    "observation_status": "observed",
+                    "unknown_report_field": {"method": "composite"},
+                }
+                if verified_fact_id
+                else {},
             )
         ],
         quotes=[
@@ -285,6 +336,246 @@ def test_cross_report_projected_data_read_filters_and_contracts(
         "cross_report_projected_data_read_start",
         "cross_report_projected_data_read_complete",
     }
+
+
+@pytest.mark.integration
+def test_verified_cross_report_lineage_is_scoped_and_failed_sources_are_not_eligible(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "verified-reports.sqlite")
+    ctx = _ctx()
+    source_identity = "same-source|pdf-sha256:" + "a" * 64
+    fact_digest = "b" * 64
+    for report_id, publisher in (
+        ("report-a", "Publisher A"),
+        ("report-b", "Publisher B"),
+    ):
+        upsert_projection(
+            AnalyticsProjectionUpsertRequest(
+                schema_version=PROJECTION_SCHEMA_VERSION,
+                db_path=db_path,
+                batch=_batch(
+                    report_id,
+                    title=f"{publisher} Outlook",
+                    publisher=publisher,
+                    publisher_id=publisher.lower().replace(" ", "-"),
+                    generated_at_utc="2026-05-01T00:00:00Z",
+                    tag="AI",
+                    category_id="retail",
+                    category_label="Retail",
+                    authority_mode="verified",
+                    source_validation_eligible=True,
+                    verified_source_identity=source_identity,
+                    verified_source_pdf_sha256="a" * 64,
+                    verified_fact_digest=fact_digest,
+                    verified_fact_id="fact-1",
+                ),
+            ),
+            ctx,
+        )
+
+    response = read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=db_path,
+            content_classes=["finding", "metric"],
+            expected_verified_sources={
+                "report-a": {
+                    "source_identity": source_identity,
+                    "source_pdf_sha256": "a" * 64,
+                    "verified_fact_digest": fact_digest,
+                },
+                "report-b": {
+                    "source_identity": source_identity,
+                    "source_pdf_sha256": "a" * 64,
+                    "verified_fact_digest": fact_digest,
+                },
+            },
+        ),
+        ctx,
+    )
+
+    assert {item.evidence_id for item in response.evidence} == {
+        "report-a:finding:verified-fact:fact-1",
+        "report-b:finding:verified-fact:fact-1",
+    }
+    assert {item.verified_fact_id for item in response.evidence} == {"fact-1"}
+    assert {
+        item.metric_context["unknown_report_field"]["method"]
+        for item in response.raw_metrics
+    } == {"composite"}
+
+    failed = _batch(
+        "report-failed",
+        title="Failed Source",
+        publisher="Publisher C",
+        publisher_id="publisher-c",
+        generated_at_utc="2026-05-01T00:00:00Z",
+        tag="AI",
+        category_id="retail",
+        category_label="Retail",
+        authority_mode="verified",
+        source_validation_eligible=False,
+        verified_source_identity=source_identity,
+        verified_source_pdf_sha256="a" * 64,
+        verified_fact_digest=fact_digest,
+        verified_fact_id="fact-1",
+    )
+    upsert_projection(
+        AnalyticsProjectionUpsertRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=db_path,
+            batch=failed,
+        ),
+        ctx,
+    )
+    failed_response = read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=db_path,
+            source_report_ids=["report-failed"],
+        ),
+        ctx,
+    )
+    failed_candidate = failed_response.source_candidates[0]
+    assert failed_candidate.projection_status == "projected"
+    assert failed_candidate.source_validation_eligible is False
+    request = CrossReportAnalysisRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        request_id="selection",
+        topic="AI",
+        auto_theme=False,
+        category_filters=[],
+        tag_filters=[],
+        publisher_filters=[],
+        date_range_start=None,
+        date_range_end=None,
+        max_source_reports=2,
+        diagnostic=False,
+        override_publishability=False,
+        publication_mode="generate_only",
+    )
+    assert _projection_readiness_rejection_reasons(failed_candidate, request) == [
+        "verified_source_not_eligible"
+    ]
+
+
+@pytest.mark.integration
+def test_cross_report_read_marks_stale_and_legacy_lineage_diagnostic_only(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "stale-lineage.sqlite")
+    ctx = _ctx()
+    source_identity = "same-source|pdf-sha256:" + "a" * 64
+    upsert_projection(
+        AnalyticsProjectionUpsertRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=db_path,
+            batch=_batch(
+                "report-verified",
+                title="Verified report",
+                publisher="Publisher A",
+                publisher_id="publisher-a",
+                generated_at_utc="2026-05-01T00:00:00Z",
+                tag="AI",
+                category_id="retail",
+                category_label="Retail",
+                authority_mode="verified",
+                source_validation_eligible=True,
+                verified_source_identity=source_identity,
+                verified_source_pdf_sha256="a" * 64,
+                verified_fact_digest="b" * 64,
+                verified_fact_id="fact-1",
+            ),
+        ),
+        ctx,
+    )
+    upsert_projection(
+        AnalyticsProjectionUpsertRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=db_path,
+            batch=_batch(
+                "report-legacy",
+                title="Legacy report",
+                publisher="Publisher B",
+                publisher_id="publisher-b",
+                generated_at_utc="2026-05-01T00:00:00Z",
+                tag="AI",
+                category_id="retail",
+                category_label="Retail",
+            ),
+        ),
+        ctx,
+    )
+
+    stale = read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=db_path,
+            source_report_ids=["report-verified"],
+            expected_verified_sources={
+                "report-verified": {
+                    "source_identity": source_identity,
+                    "source_pdf_sha256": "c" * 64,
+                    "verified_fact_digest": "b" * 64,
+                }
+            },
+            require_verified_source_lineage=True,
+        ),
+        ctx,
+    )
+    stale_candidate = stale.source_candidates[0]
+    assert stale_candidate.source_validation_eligible is False
+    assert _projection_readiness_rejection_reasons(
+        stale_candidate,
+        CrossReportAnalysisRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            request_id="stale-selection",
+            topic="AI",
+            auto_theme=False,
+            category_filters=[],
+            tag_filters=[],
+            publisher_filters=[],
+            date_range_start=None,
+            date_range_end=None,
+            max_source_reports=1,
+            diagnostic=False,
+            override_publishability=False,
+            publication_mode="generate_only",
+        ),
+    ) == ["verified_source_not_eligible"]
+
+    legacy = read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=db_path,
+            source_report_ids=["report-legacy"],
+            require_verified_source_lineage=True,
+        ),
+        ctx,
+    )
+    assert legacy.source_candidates[0].source_validation_eligible is False
+    diagnostic_request = CrossReportAnalysisRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        request_id="legacy-diagnostic",
+        topic="AI",
+        auto_theme=False,
+        category_filters=[],
+        tag_filters=[],
+        publisher_filters=[],
+        date_range_start=None,
+        date_range_end=None,
+        max_source_reports=1,
+        diagnostic=True,
+        override_publishability=False,
+        publication_mode="generate_only",
+    )
+    assert (
+        _projection_readiness_rejection_reasons(
+            legacy.source_candidates[0], diagnostic_request
+        )
+        == []
+    )
 
 
 @pytest.mark.integration

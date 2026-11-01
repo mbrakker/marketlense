@@ -12,7 +12,6 @@ from src.contracts.semantic_ids import (
     SemanticIdContract,
 )
 
-
 PROJECTION_SCHEMA_VERSION = "1.0"
 PROJECTION_VERSION = "analytics_projection.v1"
 
@@ -119,6 +118,41 @@ class AnalyticsReportRow(SemanticIdContract):
             "required": False,
         },
     )
+    authority_mode: str = field(
+        default="normal",
+        metadata={
+            "doc": "Source authority mode: normal or verified.",
+            "required": False,
+        },
+    )
+    source_validation_eligible: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether the stored projection may authorize cross-report use.",
+            "required": False,
+        },
+    )
+    verified_source_identity: str = field(
+        default="",
+        metadata={
+            "doc": "Hash-qualified verified source identity, when admitted.",
+            "required": False,
+        },
+    )
+    verified_source_pdf_sha256: str = field(
+        default="",
+        metadata={
+            "doc": "Authoritative source PDF SHA-256, when admitted.",
+            "required": False,
+        },
+    )
+    verified_fact_digest: str = field(
+        default="",
+        metadata={
+            "doc": "Digest of the admitted canonical verified-fact snapshot.",
+            "required": False,
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -150,6 +184,34 @@ class ReportFindingProjection(SemanticIdContract):
     confidence: str = field(metadata={"doc": "Confidence descriptor or value."})
     pages: List[int] = field(metadata={"doc": "One-based source pages."})
     lineage: ProjectionLineage = field(metadata={"doc": "Projection lineage metadata."})
+    verified_fact_id: str = field(
+        default="",
+        metadata={"doc": "Canonical fact ID backing the finding, if verified."},
+    )
+    evidence_id: str = field(
+        default="",
+        metadata={"doc": "Canonical evidence ID backing the finding, if verified."},
+    )
+    source_identity: str = field(
+        default="",
+        metadata={"doc": "Exact source identity for verified findings."},
+    )
+    source_pdf_sha256: str = field(
+        default="",
+        metadata={"doc": "Exact source PDF SHA-256 for verified findings."},
+    )
+    verified_fact_digest: str = field(
+        default="",
+        metadata={"doc": "Verified-fact snapshot digest for verified findings."},
+    )
+    metric_context: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Complete authoritative metric object, if present."},
+    )
+    evidence_spans: List[Dict[str, Any]] = field(
+        default_factory=list,
+        metadata={"doc": "Canonical evidence spans retained for verified findings."},
+    )
 
 
 @dataclass(frozen=True)
@@ -168,6 +230,32 @@ class ReportMetricProjection(SemanticIdContract):
     )
     pages: List[int] = field(metadata={"doc": "One-based source pages."})
     lineage: ProjectionLineage = field(metadata={"doc": "Projection lineage metadata."})
+    verified_fact_id: str = field(
+        default="",
+        metadata={"doc": "Canonical fact ID backing the metric, if verified."},
+    )
+    source_identity: str = field(
+        default="",
+        metadata={"doc": "Exact source identity for verified metrics."},
+    )
+    source_pdf_sha256: str = field(
+        default="",
+        metadata={"doc": "Exact source PDF SHA-256 for verified metrics."},
+    )
+    verified_fact_digest: str = field(
+        default="",
+        metadata={"doc": "Verified-fact snapshot digest for verified metrics."},
+    )
+    metric_context: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Complete authoritative metric object, including unknown fields."
+        },
+    )
+    evidence_spans: List[Dict[str, Any]] = field(
+        default_factory=list,
+        metadata={"doc": "Canonical evidence spans retained for verified metrics."},
+    )
 
 
 @dataclass(frozen=True)

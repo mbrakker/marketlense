@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import asdict
-from typing import Any
+from typing import Any, cast
 
 from src.contracts.analytics_projection import (
     PROJECTION_SCHEMA_VERSION,
@@ -24,6 +25,7 @@ from src.generators._analytics_projection.common import (
     _uid,
 )
 from src.utils.errors import AppError
+
 
 def _build_sections(
     *,
@@ -70,12 +72,14 @@ def _build_sections(
         rows.append(row)
     return rows
 
+
 def _build_findings(
     *,
     report_id: ReportId,
     findings_pack: dict[str, Any],
     generated_at_utc: str,
     analysis_run_id: str,
+    authority: dict[str, Any] | None = None,
 ) -> list[ReportFindingProjection]:
     raw_findings = findings_pack.get("findings")
     findings: list[Any] = raw_findings if isinstance(raw_findings, list) else []
@@ -104,15 +108,53 @@ def _build_findings(
                 confidence=_clean_text(raw.get("confidence")),
                 pages=_clean_int_list(raw.get("pages") or []),
                 lineage=_lineage(
-                    source_pack="findings",
+                    source_pack=(
+                        "verified_facts" if authority is not None else "findings"
+                    ),
                     source_ref=f"findings[{index}]",
                     generated_at_utc=generated_at_utc,
                     analysis_run_id=analysis_run_id,
                     model=_source_pack_model(findings_pack),
                 ),
+                verified_fact_id=_clean_text(raw.get("verified_fact_id"))
+                if authority is not None
+                else "",
+                evidence_id=_clean_text(raw.get("evidence_id") or finding_id)
+                if authority is not None
+                else "",
+                source_identity=_clean_text(
+                    raw.get("source_identity")
+                    or (authority or {}).get("source_identity")
+                )
+                if authority is not None
+                else "",
+                source_pdf_sha256=_clean_text(
+                    raw.get("source_pdf_sha256")
+                    or (authority or {}).get("source_pdf_sha256")
+                )
+                if authority is not None
+                else "",
+                verified_fact_digest=_clean_text(
+                    raw.get("verified_fact_digest")
+                    or (authority or {}).get("verified_fact_digest")
+                )
+                if authority is not None
+                else "",
+                metric_context=(
+                    cast(dict[str, Any], deepcopy(raw.get("metric")))
+                    if authority is not None and isinstance(raw.get("metric"), dict)
+                    else {}
+                ),
+                evidence_spans=(
+                    cast(list[dict[str, Any]], deepcopy(raw.get("evidence_spans")))
+                    if authority is not None
+                    and isinstance(raw.get("evidence_spans"), list)
+                    else []
+                ),
             )
         )
     return rows
+
 
 def _build_metrics(
     *,
@@ -149,14 +191,38 @@ def _build_metrics(
                 evidence_id=_clean_text(raw.get("evidence_id")),
                 pages=_clean_int_list(raw.get("pages") or []),
                 lineage=_lineage(
-                    source_pack="artifacts.metric_spine",
+                    source_pack=(
+                        "verified_facts"
+                        if raw.get("verified_fact_id")
+                        else "artifacts.metric_spine"
+                    ),
                     source_ref=f"metric_spine[{index}]",
                     generated_at_utc=generated_at_utc,
                     analysis_run_id=analysis_run_id,
                 ),
+                verified_fact_id=_clean_text(raw.get("verified_fact_id")),
+                source_identity=_clean_text(raw.get("source_identity")),
+                source_pdf_sha256=_clean_text(raw.get("source_pdf_sha256")),
+                verified_fact_digest=_clean_text(raw.get("verified_fact_digest")),
+                metric_context=cast(
+                    dict[str, Any],
+                    deepcopy(
+                        raw.get("metric_context")
+                        if isinstance(raw.get("metric_context"), dict)
+                        else raw.get("metric")
+                        if isinstance(raw.get("metric"), dict)
+                        else {}
+                    ),
+                ),
+                evidence_spans=(
+                    cast(list[dict[str, Any]], deepcopy(raw.get("evidence_spans")))
+                    if isinstance(raw.get("evidence_spans"), list)
+                    else []
+                ),
             )
         )
     return rows
+
 
 def _build_quotes(
     *,
@@ -218,12 +284,14 @@ def _build_quotes(
         )
     return rows
 
+
 def _build_claims(
     *,
     report_id: ReportId,
     artifacts: dict[str, Any],
     generated_at_utc: str,
     analysis_run_id: str,
+    verified_evidence_ids: set[str] | None = None,
 ) -> list[ReportClaimProjection]:
     raw_summary = artifacts.get("summary")
     summary: dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
@@ -232,6 +300,12 @@ def _build_claims(
     rows: list[ReportClaimProjection] = []
     for index, raw in enumerate(claims):
         if not isinstance(raw, dict):
+            continue
+        evidence_id = _clean_text(raw.get("evidence_id"))
+        if (
+            verified_evidence_ids is not None
+            and evidence_id not in verified_evidence_ids
+        ):
             continue
         claim = _clean_text(raw.get("claim"))
         evidence = _clean_text(raw.get("evidence"))
@@ -249,7 +323,7 @@ def _build_claims(
                 claim_uid=_uid(report_id, "claim", "", {"index": index, **raw}),
                 report_id=report_id,
                 claim=claim,
-                evidence_id=_clean_text(raw.get("evidence_id")),
+                evidence_id=evidence_id,
                 evidence=evidence,
                 pages=_clean_int_list(raw.get("pages") or []),
                 lineage=_lineage(
@@ -262,6 +336,7 @@ def _build_claims(
             )
         )
     return rows
+
 
 def _build_tags(
     *,
@@ -296,6 +371,7 @@ def _build_tags(
                 )
             )
     return rows
+
 
 def _build_categories(
     *,
@@ -362,6 +438,7 @@ def _build_categories(
             )
         )
     return rows
+
 
 def _build_figures(
     *,

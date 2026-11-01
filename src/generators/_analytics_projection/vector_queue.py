@@ -26,6 +26,7 @@ from src.generators._analytics_projection.text_payloads import (
     _section_text,
 )
 
+
 def _queue_metadata(
     *,
     report: AnalyticsReportRow,
@@ -36,8 +37,9 @@ def _queue_metadata(
     category_ids: list[str],
     taxonomy: list[str],
     validation_status: str,
+    entity: Any | None = None,
 ) -> dict[str, Any]:
-    return {
+    metadata = {
         "schema_version": PROJECTION_SCHEMA_VERSION,
         "entity_type": entity_type,
         "report_id": str(report.report_id),
@@ -52,7 +54,34 @@ def _queue_metadata(
         "source_pack": source_pack,
         "source_ref": source_ref,
         "validation_status": validation_status,
+        "authority_mode": report.authority_mode,
+        "source_validation_eligible": report.source_validation_eligible,
+        "source_identity": report.verified_source_identity,
+        "source_pdf_sha256": report.verified_source_pdf_sha256,
+        "verified_fact_digest": report.verified_fact_digest,
     }
+    for name in (
+        "verified_fact_id",
+        "evidence_id",
+        "source_identity",
+        "source_pdf_sha256",
+        "verified_fact_digest",
+    ):
+        value = getattr(entity, name, "") if entity is not None else ""
+        if value:
+            metadata[name] = value
+    metric_context = (
+        getattr(entity, "metric_context", None) if entity is not None else None
+    )
+    if isinstance(metric_context, dict) and metric_context:
+        metadata["metric_context"] = metric_context
+    evidence_spans = (
+        getattr(entity, "evidence_spans", None) if entity is not None else None
+    )
+    if isinstance(evidence_spans, list) and evidence_spans:
+        metadata["evidence_spans"] = evidence_spans
+    return metadata
+
 
 def _queue_row(
     *,
@@ -88,6 +117,7 @@ def _queue_row(
         updated_at_utc=generated_at_utc,
     )
 
+
 def _build_vector_queue(
     *,
     report: AnalyticsReportRow,
@@ -101,6 +131,7 @@ def _build_vector_queue(
     category_ids: list[str],
     taxonomy: list[str],
     generated_at_utc: str,
+    verified_mode: bool = False,
 ) -> list[VectorProjectionQueueRow]:
     rows: list[VectorProjectionQueueRow] = []
     report_id = report.report_id
@@ -146,6 +177,7 @@ def _build_vector_queue(
             category_ids=category_ids,
             taxonomy=taxonomy,
             validation_status=report.validation_status,
+            entity=section,
         )
         rows.append(
             _queue_row(
@@ -154,7 +186,7 @@ def _build_vector_queue(
                 report_id=report_id,
                 text_payload=_section_text(section),
                 metadata=metadata,
-                content_class="evidence",
+                content_class="derived_evidence" if verified_mode else "evidence",
                 generated_at_utc=generated_at_utc,
             )
         )
@@ -168,6 +200,7 @@ def _build_vector_queue(
             category_ids=category_ids,
             taxonomy=taxonomy,
             validation_status=report.validation_status,
+            entity=finding,
         )
         rows.append(
             _queue_row(
@@ -190,6 +223,7 @@ def _build_vector_queue(
             category_ids=category_ids,
             taxonomy=taxonomy,
             validation_status=report.validation_status,
+            entity=claim,
         )
         rows.append(
             _queue_row(
@@ -212,6 +246,7 @@ def _build_vector_queue(
             category_ids=category_ids,
             taxonomy=taxonomy,
             validation_status=report.validation_status,
+            entity=metric,
         )
         rows.append(
             _queue_row(
@@ -234,6 +269,7 @@ def _build_vector_queue(
             category_ids=category_ids,
             taxonomy=taxonomy,
             validation_status=report.validation_status,
+            entity=quote,
         )
         rows.append(
             _queue_row(

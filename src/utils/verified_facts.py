@@ -86,10 +86,14 @@ def verified_source_identity_matches_runtime(
     match = QUALIFIED_SOURCE_IDENTITY_RE.fullmatch(verified)
     if not match:
         return False
-    return runtime.casefold() in {
-        verified.casefold(),
-        match.group("base").casefold(),
-    }
+    if runtime == match.group("base"):
+        return True
+    runtime_match = QUALIFIED_SOURCE_IDENTITY_RE.fullmatch(runtime)
+    return bool(
+        runtime_match
+        and runtime_match.group("base") == match.group("base")
+        and runtime_match.group("sha").casefold() == match.group("sha").casefold()
+    )
 
 
 def _raw_facts(artifacts: object, evidence_packs: object) -> list[Mapping[str, Any]]:

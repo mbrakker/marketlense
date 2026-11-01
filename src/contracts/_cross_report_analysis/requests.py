@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from src.contracts._cross_report_analysis import (
     CrossReportReadContentClass,
@@ -153,6 +153,26 @@ class CrossReportProjectedDataReadRequest:
                 "Minimum projection status to include: projected includes only "
                 "ready reports."
             )
+        },
+    )
+    expected_verified_sources: Dict[str, Dict[str, str]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Optional current verified source snapshots keyed by report ID; "
+                "mismatched stored identity, PDF hash, or fact digest is stale."
+            ),
+            "required": False,
+        },
+    )
+    require_verified_source_lineage: bool = field(
+        default=False,
+        metadata={
+            "doc": (
+                "When true, legacy or normal-mode projections without verified "
+                "authority are diagnostic-only and cannot be selected."
+            ),
+            "required": False,
         },
     )
 

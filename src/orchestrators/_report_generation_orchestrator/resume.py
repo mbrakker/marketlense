@@ -106,6 +106,7 @@ from src.utils.logging import child_context, log_event
 from src.utils.verified_facts import (
     build_verified_authority_context,
     verified_facts_mode,
+    verified_source_identity_matches_runtime,
 )
 
 from .checkpoints import (
@@ -1131,11 +1132,14 @@ def _require_verified_authority_snapshot(
     runtime: ReportRuntimeState,
     artifacts: object,
     canary: VisualAuthorityCanaryConfig | None,
+    *,
+    saved_authority: VerifiedAuthorityContext | None = None,
+    saved_evidence_packs: object = None,
 ) -> VerifiedAuthorityContext | None:
-    """Reject checkpoint reuse when an opt-in run has only legacy artifacts."""
+    """Reject reuse unless the retained verified authority is revalidated."""
 
     if canary is None:
-        if verified_facts_mode(artifacts, ""):
+        if saved_authority is not None or verified_facts_mode(artifacts, ""):
             raise AppError(
                 code="verified_facts_canary_configuration_missing",
                 message=(
@@ -1159,7 +1163,7 @@ def _require_verified_authority_snapshot(
             context={"file_id": runtime.file.file_id},
         )
     try:
-        return build_verified_authority_context(
+        current_authority = build_verified_authority_context(
             artifacts,
             expected_source_identity=canary.source_identity,
         )
@@ -1174,6 +1178,34 @@ def _require_verified_authority_snapshot(
                 "validation_code": exc.code,
             },
         ) from exc
+    runtime_identity = str(
+        getattr(getattr(runtime, "ctx", None), "source_identity_id", "") or ""
+    ).strip()
+    if not verified_source_identity_matches_runtime(
+        runtime_identity, current_authority.source_identity
+    ):
+        raise AppError(
+            code="verified_facts_canary_artifacts_invalid",
+            message="Verified checkpoint source identity does not match runtime",
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
+    if saved_authority is not None:
+        if current_authority != saved_authority:
+            raise AppError(
+                code="verified_facts_canary_artifacts_invalid",
+                message="Serialized verified checkpoint authority is stale",
+                retryable=False,
+                context={"file_id": runtime.file.file_id},
+            )
+        if saved_evidence_packs != current_authority.evidence_packs:
+            raise AppError(
+                code="verified_facts_canary_artifacts_invalid",
+                message="Serialized verified checkpoint evidence packs are stale",
+                retryable=False,
+                context={"file_id": runtime.file.file_id},
+            )
+    return current_authority
 
 
 def _outcome_from_render_checkpoint(raw_outcome: object) -> IngestOutcome:
@@ -1230,7 +1262,11 @@ def _resume_from_analysis_checkpoint(
         runtime, source, selection, checkpoint_payload.get("analysis")
     )
     authority_context = _require_verified_authority_snapshot(
-        runtime, analysis.artifacts_payload, visual_authority_canary
+        runtime,
+        analysis.artifacts_payload,
+        visual_authority_canary,
+        saved_authority=analysis.verified_authority_context,
+        saved_evidence_packs=analysis.authoritative_evidence_packs,
     )
     if authority_context is not None:
         analysis = replace(
@@ -1928,15 +1964,43 @@ def _resume_from_render_checkpoint(
         runtime, stage_name=STAGE_RENDER_COMPLETE
     )
     _log_semantic_restart(runtime, checkpoint, checkpoint_path)
-    if visual_authority_canary is not None:
-        analysis_payload = checkpoint.payload.get("analysis")
-        artifacts = (
-            analysis_payload.get("artifacts_payload")
-            if isinstance(analysis_payload, dict)
-            else None
+    analysis_payload = checkpoint.payload.get("analysis")
+    artifacts = (
+        analysis_payload.get("artifacts_payload")
+        if isinstance(analysis_payload, dict)
+        else None
+    )
+    raw_authority = (
+        analysis_payload.get("verified_authority_context")
+        if isinstance(analysis_payload, dict)
+        else None
+    )
+    verified_marker_present = verified_facts_mode(artifacts, "")
+    if (
+        visual_authority_canary is not None
+        or raw_authority is not None
+        or verified_marker_present
+    ):
+        if not isinstance(analysis_payload, dict):
+            raise AppError(
+                code="verified_facts_canary_artifacts_missing",
+                message="Verified render checkpoint has no analysis authority state",
+                retryable=False,
+                context={"file_id": runtime.file.file_id},
+            )
+        source = _source_state_from_checkpoint(runtime, analysis_payload.get("source"))
+        selection = _selection_state_from_checkpoint(
+            runtime, source, analysis_payload.get("selection")
+        )
+        analysis = _analysis_state_from_checkpoint(
+            runtime, source, selection, analysis_payload
         )
         _require_verified_authority_snapshot(
-            runtime, artifacts, visual_authority_canary
+            runtime,
+            analysis.artifacts_payload,
+            visual_authority_canary,
+            saved_authority=analysis.verified_authority_context,
+            saved_evidence_packs=analysis.authoritative_evidence_packs,
         )
     return _outcome_from_render_checkpoint(checkpoint.payload.get("outcome"))
 

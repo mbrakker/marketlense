@@ -114,8 +114,7 @@ def _report_source_identity_from_store(
         "source_identity_id": str(row[0] or "").strip(),
         "source_metadata_hash": str(row[1] or "").strip(),
         "source_identity_status": str(row[2] or "unknown").strip() or "unknown",
-        "source_publication_date_status": str(row[3] or "unknown").strip()
-        or "unknown",
+        "source_publication_date_status": str(row[3] or "unknown").strip() or "unknown",
         "source_url": str(row[4] or "").strip(),
     }
 
@@ -152,13 +151,15 @@ def _upsert_report(
         publisher=publisher,
         source_md5=source_md5,
     )
-    source_url = report.source_url.strip() or source_identity.get(
-        "source_url", ""
-    ) or _report_source_url_from_store(
-        conn,
-        report_title=title,
-        publisher=publisher,
-        source_md5=source_md5,
+    source_url = (
+        report.source_url.strip()
+        or source_identity.get("source_url", "")
+        or _report_source_url_from_store(
+            conn,
+            report_title=title,
+            publisher=publisher,
+            source_md5=source_md5,
+        )
     )
     if not title:
         raise AppError(
@@ -190,6 +191,11 @@ def _upsert_report(
             analysis_run_id,
             validation_status,
             validation_severity,
+            authority_mode,
+            source_validation_eligible,
+            verified_source_identity,
+            verified_source_pdf_sha256,
+            verified_fact_digest,
             text_density,
             text_not_available,
             projection_schema_version,
@@ -204,7 +210,7 @@ def _upsert_report(
             created_at,
             updated_at
         )
-        VALUES(?, ?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'projected', 1, NULL, NULL, NULL, ?, ?, strftime('%s','now'), strftime('%s','now'))
+        VALUES(?, ?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'projected', 1, NULL, NULL, NULL, ?, ?, strftime('%s','now'), strftime('%s','now'))
         ON CONFLICT(file_id) DO UPDATE SET
             title=excluded.title,
             publisher=excluded.publisher,
@@ -222,6 +228,11 @@ def _upsert_report(
             analysis_run_id=excluded.analysis_run_id,
             validation_status=excluded.validation_status,
             validation_severity=excluded.validation_severity,
+            authority_mode=excluded.authority_mode,
+            source_validation_eligible=excluded.source_validation_eligible,
+            verified_source_identity=excluded.verified_source_identity,
+            verified_source_pdf_sha256=excluded.verified_source_pdf_sha256,
+            verified_fact_digest=excluded.verified_fact_digest,
             text_density=excluded.text_density,
             text_not_available=excluded.text_not_available,
             projection_schema_version=excluded.projection_schema_version,
@@ -253,6 +264,11 @@ def _upsert_report(
             report.analysis_run_id,
             report.validation_status,
             report.validation_severity,
+            report.authority_mode,
+            1 if report.source_validation_eligible else 0,
+            report.verified_source_identity or None,
+            report.verified_source_pdf_sha256 or None,
+            report.verified_fact_digest or None,
             float(report.text_density),
             1 if report.text_not_available else 0,
             report.schema_version,
@@ -307,13 +323,20 @@ def _upsert_sections(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
 def _upsert_findings(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
     conn.executemany(
         """
-        INSERT INTO report_findings(finding_uid, report_id, finding_id, text, evidence, confidence, pages_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO report_findings(finding_uid, report_id, finding_id, text, evidence, confidence, pages_json, verified_fact_id, evidence_id, source_identity, source_pdf_sha256, verified_fact_digest, metric_context_json, evidence_spans_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(finding_uid) DO UPDATE SET
             text=excluded.text,
             evidence=excluded.evidence,
             confidence=excluded.confidence,
             pages_json=excluded.pages_json,
+            verified_fact_id=excluded.verified_fact_id,
+            evidence_id=excluded.evidence_id,
+            source_identity=excluded.source_identity,
+            source_pdf_sha256=excluded.source_pdf_sha256,
+            verified_fact_digest=excluded.verified_fact_digest,
+            metric_context_json=excluded.metric_context_json,
+            evidence_spans_json=excluded.evidence_spans_json,
             schema_version=excluded.schema_version,
             projection_version=excluded.projection_version,
             source_pack=excluded.source_pack,
@@ -331,6 +354,13 @@ def _upsert_findings(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 row.evidence,
                 row.confidence,
                 _json(row.pages),
+                row.verified_fact_id,
+                row.evidence_id,
+                row.source_identity,
+                row.source_pdf_sha256,
+                row.verified_fact_digest,
+                _json(row.metric_context),
+                _json(row.evidence_spans),
                 row.schema_version,
                 *_lineage_values(row.lineage),
             )
@@ -342,14 +372,20 @@ def _upsert_findings(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
 def _upsert_metrics(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
     conn.executemany(
         """
-        INSERT INTO report_metrics(metric_uid, report_id, metric_id, metric, value, unit, evidence_id, pages_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO report_metrics(metric_uid, report_id, metric_id, metric, value, unit, evidence_id, pages_json, verified_fact_id, source_identity, source_pdf_sha256, verified_fact_digest, metric_context_json, evidence_spans_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(metric_uid) DO UPDATE SET
             metric=excluded.metric,
             value=excluded.value,
             unit=excluded.unit,
             evidence_id=excluded.evidence_id,
             pages_json=excluded.pages_json,
+            verified_fact_id=excluded.verified_fact_id,
+            source_identity=excluded.source_identity,
+            source_pdf_sha256=excluded.source_pdf_sha256,
+            verified_fact_digest=excluded.verified_fact_digest,
+            metric_context_json=excluded.metric_context_json,
+            evidence_spans_json=excluded.evidence_spans_json,
             schema_version=excluded.schema_version,
             projection_version=excluded.projection_version,
             source_pack=excluded.source_pack,
@@ -368,6 +404,12 @@ def _upsert_metrics(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 row.unit,
                 row.evidence_id,
                 _json(row.pages),
+                row.verified_fact_id,
+                row.source_identity,
+                row.source_pdf_sha256,
+                row.verified_fact_digest,
+                _json(row.metric_context),
+                _json(row.evidence_spans),
                 row.schema_version,
                 *_lineage_values(row.lineage),
             )

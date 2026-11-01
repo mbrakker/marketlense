@@ -1498,3 +1498,26 @@ baseline. The baseline was not lowered. The release result remains
 **PARTIAL/NO-GO**, R3 remains active, and no current-SHA provider-backed report
 run or publication write occurred. Hosted evidence is recorded in the Step 2
 quality report.
+
+### Verified authority and cross-report contract closure — 2026-11-01
+
+This provider-free slice closes the demonstrated P0/P1 authority gaps at the
+existing producer/contract/consumer boundaries. Public editorial item verdicts
+now reject pass/fail severity and repair-field contradictions, failed or
+nonpublishable persisted review reports become blocking validation issues, and
+malformed review payloads remain fail-closed. Verified analytics are projected
+from the canonical `VerifiedAuthorityContext` and complete metric objects, not
+discovery findings or legacy quote candidates. Cross-report selection requires
+explicit verified source lineage (identity, PDF SHA-256, fact digest, authority
+mode, and eligibility); stale or legacy rows remain diagnostic-only. Checkpoint
+reentry validates the retained snapshot before render, and source identity
+matching is exact except for SHA hex case.
+
+The reports database contract is advanced additively to schema v32. Focused
+authority, analytics, cross-report, checkpoint, public-editorial, schema, and
+regression tests passed; the full local and hosted results are recorded in the
+Step 2 quality report for the final commit. No provider call, PDF acquisition,
+canonical artifact mutation, publication, or WordPress write was performed.
+This evidence supports the deterministic correction slice only: E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready** pending current-SHA source-report editorial evidence.

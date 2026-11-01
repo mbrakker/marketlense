@@ -114,9 +114,12 @@ def _projection_readiness_rejection_reasons(
     candidate: CrossReportSourceReportCandidate,
     request: CrossReportAnalysisRequest,
 ) -> list[str]:
-    if request.diagnostic or candidate.projection_status == "projected":
-        return []
-    return [f"projection_status_{candidate.projection_status}"]
+    reasons: list[str] = []
+    if candidate.projection_status != "projected" and not request.diagnostic:
+        reasons.append(f"projection_status_{candidate.projection_status}")
+    if not candidate.source_validation_eligible and not request.diagnostic:
+        reasons.append("verified_source_not_eligible")
+    return reasons
 
 
 def _relevance_score(
@@ -298,6 +301,11 @@ def _select_diverse_sources(
                 tags=winner.tags,
                 category_ids=winner.category_ids,
                 source_url=winner.source_url,
+                authority_mode=winner.authority_mode,
+                source_validation_eligible=winner.source_validation_eligible,
+                verified_source_identity=winner.verified_source_identity,
+                verified_source_pdf_sha256=winner.verified_source_pdf_sha256,
+                verified_fact_digest=winner.verified_fact_digest,
             )
         )
         rank += 1

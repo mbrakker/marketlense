@@ -344,7 +344,7 @@ def validation_issues_from_public_editorial_quality(
     report: PublicEditorialQualityReport,
 ) -> list[ValidationIssue]:
     """Adapt enabled blockers to the existing targeted-regeneration contract."""
-    return [
+    issues = [
         ValidationIssue(
             schema_version="1.0",
             message=f"[{issue.rule_id}] {issue.explanation}",
@@ -358,6 +358,28 @@ def validation_issues_from_public_editorial_quality(
         for issue in report.issues
         if issue.severity == "error"
     ]
+    # Persisted quality snapshots are an input to the release gate, not an
+    # authority that may contradict their own aggregate disposition.  A
+    # failed/non-publishable snapshot with warning-only detail must still
+    # remain blocking until it is re-evaluated by the owning workflow.
+    if (report.status != "pass" or not report.publishable) and not issues:
+        issues.append(
+            ValidationIssue(
+                schema_version="1.0",
+                message=(
+                    "[public_editorial_quality.report_status_conflict] "
+                    "The persisted public editorial quality report is not "
+                    "publishable but contains no blocking issue."
+                ),
+                severity="error",
+                affected_section="public_editorial_quality",
+                rule_id="public_editorial_quality.report_status_conflict",
+                repair_target="",
+                entity_id="",
+                evidence_ids=[],
+            )
+        )
+    return issues
 
 
 def merge_public_editorial_quality_validation(

@@ -10,6 +10,7 @@ from src.contracts.analytics_projection import (
     AnalyticsProjectionBuildRequest,
     AnalyticsReportRow,
 )
+from src.contracts.report_generation import VerifiedAuthorityContext
 from src.contracts.semantic_ids import PublisherId, ReportId
 from src.generators._analytics_projection.builders import (
     _build_categories,
@@ -30,13 +31,125 @@ from src.generators._analytics_projection.common import (
 from src.generators._analytics_projection.vector_queue import _build_vector_queue
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.verified_facts import (
+    build_verified_authority_context,
+    verified_facts_mode,
+    verified_source_identity_matches_runtime,
+)
 
 logger = logging.getLogger("market_lense.analytics_projection_generator")
+
+
+def _verified_projection_authority(
+    analysis: Any,
+) -> VerifiedAuthorityContext | None:
+    """Return only a context revalidated from the retained canonical snapshot."""
+
+    artifacts = (
+        analysis.artifacts_payload
+        if isinstance(analysis.artifacts_payload, dict)
+        else {}
+    )
+    authority = analysis.verified_authority_context
+    if authority is None:
+        if verified_facts_mode(artifacts, ""):
+            raise AppError(
+                code="analytics_projection_verified_authority_missing",
+                message=(
+                    "Verified analytics projection has no trusted authority context"
+                ),
+                retryable=False,
+                severity="error",
+            )
+        return None
+    try:
+        canonical = build_verified_authority_context(
+            artifacts, expected_source_identity=authority.source_identity
+        )
+    except AppError as exc:
+        raise AppError(
+            code="analytics_projection_verified_authority_invalid",
+            message=(
+                "Verified analytics projection authority could not be revalidated"
+            ),
+            cause=exc,
+            retryable=False,
+            severity="error",
+        ) from exc
+    runtime_identity = str(
+        getattr(getattr(analysis.runtime, "ctx", None), "source_identity_id", "") or ""
+    ).strip()
+    if not verified_source_identity_matches_runtime(
+        runtime_identity, canonical.source_identity
+    ):
+        raise AppError(
+            code="analytics_projection_verified_authority_invalid",
+            message=(
+                "Verified analytics projection source identity does not match runtime"
+            ),
+            retryable=False,
+            severity="error",
+        )
+    if canonical != authority:
+        raise AppError(
+            code="analytics_projection_verified_authority_invalid",
+            message="Verified analytics projection retained authority is stale",
+            retryable=False,
+            severity="error",
+        )
+    if analysis.authoritative_evidence_packs != canonical.evidence_packs:
+        raise AppError(
+            code="analytics_projection_verified_authority_invalid",
+            message="Verified analytics projection evidence packs are not canonical",
+            retryable=False,
+            severity="error",
+        )
+    return canonical
+
+
+def _verified_metric_spine(authority: VerifiedAuthorityContext) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    findings_by_fact_id = {
+        str(row.get("verified_fact_id")): row
+        for row in authority.evidence_packs.get("findings", {}).get("findings", [])
+        if isinstance(row, dict) and row.get("verified_fact_id")
+    }
+    for fact_id, fact in authority.verified_facts.items():
+        metric = fact.get("metric") if isinstance(fact, dict) else None
+        if not isinstance(metric, dict):
+            continue
+        label = _clean_text(metric.get("label") or metric.get("metric"))
+        value = _clean_text(metric.get("value"))
+        if not label or not value:
+            continue
+        evidence_id = f"verified-fact:{fact_id}"
+        rows.append(
+            {
+                "metric_id": str(fact_id),
+                "label": label,
+                "value": value,
+                "unit": _clean_text(metric.get("unit")),
+                "evidence_id": evidence_id,
+                "pages": list(fact.get("supporting_physical_pages") or []),
+                "verified_fact_id": str(fact_id),
+                "source_identity": str(fact.get("source_identity") or ""),
+                "source_pdf_sha256": str(fact.get("source_pdf_sha256") or ""),
+                "verified_fact_digest": authority.verified_fact_digest,
+                "metric_context": metric,
+                "evidence_spans": findings_by_fact_id.get(str(fact_id), {}).get(
+                    "evidence_spans", []
+                ),
+            }
+        )
+    return rows
+
 
 def build_projection(
     request: AnalyticsProjectionBuildRequest,
 ) -> AnalyticsProjectionBatch:
     analysis = request.analysis
+    authority = _verified_projection_authority(analysis)
+    verified_mode = authority is not None
     report_id = ReportId(str(analysis.runtime.file.file_id))
     payload = analysis.normalized_payload
     title = _clean_text(payload.title or analysis.runtime.report_title)
@@ -102,6 +215,17 @@ def build_projection(
         text_not_available=bool(getattr(payload, "_text_not_available", False)),
         projection_generated_at_utc=generated_at_utc,
         source_url=_clean_text(payload.source),
+        authority_mode="verified" if verified_mode else "normal",
+        source_validation_eligible=(
+            not verified_mode
+            or (
+                validation_status == "pass"
+                and validation_severity not in {"error", "fail"}
+            )
+        ),
+        verified_source_identity=authority.source_identity if authority else "",
+        verified_source_pdf_sha256=authority.source_pdf_sha256 if authority else "",
+        verified_fact_digest=authority.verified_fact_digest if authority else "",
     )
     sections = _build_sections(
         report_id=report_id,
@@ -111,20 +235,39 @@ def build_projection(
     )
     findings = _build_findings(
         report_id=report_id,
-        findings_pack=analysis.evidence_packs.get("findings", {}),
+        findings_pack=(
+            authority.evidence_packs.get("findings", {})
+            if authority
+            else analysis.evidence_packs.get("findings", {})
+        ),
         generated_at_utc=generated_at_utc,
         analysis_run_id=analysis_run_id,
+        authority=(
+            {
+                "source_identity": authority.source_identity,
+                "source_pdf_sha256": authority.source_pdf_sha256,
+                "verified_fact_digest": authority.verified_fact_digest,
+            }
+            if authority
+            else None
+        ),
     )
     metrics = _build_metrics(
         report_id=report_id,
-        metric_spine=artifacts.get("metric_spine", []),
+        metric_spine=(
+            _verified_metric_spine(authority)
+            if authority
+            else artifacts.get("metric_spine", [])
+        ),
         generated_at_utc=generated_at_utc,
         analysis_run_id=analysis_run_id,
     )
     quotes = _build_quotes(
         report_id=report_id,
         artifacts=artifacts,
-        quote_candidates=analysis.evidence_packs.get("quote_candidates", {}),
+        quote_candidates=(
+            {} if authority else analysis.evidence_packs.get("quote_candidates", {})
+        ),
         generated_at_utc=generated_at_utc,
         analysis_run_id=analysis_run_id,
     )
@@ -133,6 +276,17 @@ def build_projection(
         artifacts=artifacts,
         generated_at_utc=generated_at_utc,
         analysis_run_id=analysis_run_id,
+        verified_evidence_ids=(
+            {
+                str(row.get("id") or "")
+                for row in authority.evidence_packs.get("findings", {}).get(
+                    "findings", []
+                )
+                if isinstance(row, dict) and row.get("id")
+            }
+            if authority
+            else None
+        ),
     )
     payload_taxonomy = _clean_string_list(payload.taxonomy)
     tags = _build_tags(
@@ -168,6 +322,7 @@ def build_projection(
         category_ids=payload_categories,
         taxonomy=payload_taxonomy,
         generated_at_utc=generated_at_utc,
+        verified_mode=verified_mode,
     )
     batch = AnalyticsProjectionBatch(
         schema_version=PROJECTION_SCHEMA_VERSION,
