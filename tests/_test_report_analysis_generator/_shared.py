@@ -150,7 +150,41 @@ class _SemanticPassOpenAIClient:
                         "repair_target": "",
                     }
                 )
-            payload = {"verdicts": verdicts}
+            evidence_ids = list(
+                dict.fromkeys(
+                    evidence_id
+                    for verdict in verdicts
+                    for evidence_id in verdict["evidence_ids"]
+                )
+            )
+            payload = {
+                "verdicts": verdicts,
+                "report_verdict": {
+                    "status": "pass",
+                    "severity": "info",
+                    "rule_id": "",
+                    "hard_fail_class": "",
+                    "reason": (
+                        "The final report covers retained findings with distinct "
+                        "analysis and commercially useful limitations."
+                    ),
+                    "evidence_ids": evidence_ids,
+                    "repair_target": "",
+                    "affected_item_id": "",
+                    "dimensions": {
+                        dimension: {
+                            "status": "pass",
+                            "reason": "The final report satisfies this dimension.",
+                        }
+                        for dimension in (
+                            "material_coverage",
+                            "analytical_depth",
+                            "distinctness",
+                            "limitations",
+                        )
+                    },
+                },
+            }
         else:
             payload = {"metrics": [], "quotes": [], "checks": [], "unsupported": []}
         return OpenAIResponseResult(

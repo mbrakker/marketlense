@@ -4,6 +4,13 @@ import ast
 import importlib
 from pathlib import Path
 
+from src.generators.publisher_inventory_candidate_quality_generator import (
+    _contains_report_style_title_marker,
+    _looks_like_publication_detail_url,
+    _looks_like_report_collection_root_url,
+    _normalize_title,
+)
+
 
 PACKAGE = Path("src/generators/_publisher_inventory_candidate_quality")
 FACADE = Path("src/generators/publisher_inventory_candidate_quality_generator.py")
@@ -72,3 +79,36 @@ def test_candidate_quality_facade_imports_owners_in_dependency_order() -> None:
         "_publisher_inventory_candidate_quality.evaluation",
         "_publisher_inventory_candidate_quality.workflow",
     ]
+
+
+def test_candidate_quality_title_compatibility_normalizes_real_landing_titles() -> None:
+    assert _normalize_title("Download now 2026 Retail Report") == ("2026 Retail Report")
+    assert _normalize_title("Research Pack PDF 2.5 MB") == "Research Pack"
+    assert _normalize_title("Research brief...") == "Research brief"
+    assert _normalize_title("Reports") == ""
+    assert _contains_report_style_title_marker("2026 Retail Studies")
+    assert _contains_report_style_title_marker("Customer Research White Paper")
+    assert not _contains_report_style_title_marker("Customer story")
+
+
+def test_candidate_quality_url_compatibility_distinguishes_detail_and_collection() -> (
+    None
+):
+    assert _looks_like_publication_detail_url(
+        "https://example.test/publications/retail_report.html"
+    )
+    assert _looks_like_publication_detail_url(
+        "https://example.test/publications/retail_report"
+    )
+    assert not _looks_like_publication_detail_url("https://example.test/publications/")
+    assert not _looks_like_publication_detail_url(
+        "https://example.test/publications/2026"
+    )
+
+    assert _looks_like_report_collection_root_url("https://example.test/reports")
+    assert _looks_like_report_collection_root_url(
+        "https://example.test/research/library"
+    )
+    assert not _looks_like_report_collection_root_url(
+        "https://example.test/reports/customer-story"
+    )

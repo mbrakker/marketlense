@@ -151,7 +151,7 @@ def _ingest_settings(tmp_path: Path) -> IngestSettings:
                 "model": "gpt-4.1-mini",
                 "structured_output_mode": "json_schema",
                 "structured_output_schema_identity": (
-                    "public_editorial_quality_review_v2"
+                    "public_editorial_quality_review_v3"
                 ),
                 "timeout_seconds": 5,
                 "provider_retry_count": 0,

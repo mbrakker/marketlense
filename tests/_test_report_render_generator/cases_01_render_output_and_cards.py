@@ -433,15 +433,31 @@ def test_verified_readiness_reuses_canonical_semantic_binding_without_raw_pdf_pa
         "key_figures": [],
         "quotes_final": [],
     }
+    authority_digest = sha256_json(
+        {"source_identity": source_identity, "verified_facts": [fact]}
+    )
+    artifacts["_cache"] = {
+        "visual_authority_canary": {
+            "enabled": True,
+            "digest": authority_digest,
+            "verified_fact_digest": authority_digest,
+            "verified_facts": [fact],
+            "verified_evidence_packs": evidence_packs,
+        }
+    }
+    authority = build_verified_authority_context(
+        artifacts, expected_source_identity=source_identity
+    )
+    factual_evidence_packs = authority.evidence_packs
     package = validate_retained_claims(
         artifacts,
-        evidence_packs,
+        factual_evidence_packs,
         source_identity=source_identity,
         verified_facts_only=True,
     )
     semantic_inputs = retained_claim_semantic_inputs(
         package,
-        evidence_packs,
+        factual_evidence_packs,
         source_identity=source_identity,
         source_pages=[],
     )
@@ -497,18 +513,17 @@ def test_verified_readiness_reuses_canonical_semantic_binding_without_raw_pdf_pa
         ),
         runtime.ctx,
     )
+    baseline_analysis = _analysis(runtime, source, _selection(runtime, source))
     analysis = replace(
-        _analysis(runtime, source, _selection(runtime, source)),
+        baseline_analysis,
         artifacts_payload=artifacts,
         evidence_packs=evidence_packs,
-        authoritative_evidence_packs=evidence_packs,
-        verified_authority_context=VerifiedAuthorityContext(
-            source_identity=source_identity,
-            source_pdf_sha256="a" * 64,
-            verified_fact_digest="authority-digest",
-            verified_facts={"fact-1": fact},
-            evidence_packs=evidence_packs,
-        ),
+        authoritative_evidence_packs=authority.evidence_packs,
+        verified_authority_context=authority,
+        data_dict={
+            **baseline_analysis.data_dict,
+            "authoritative_evidence_packs": authority.evidence_packs,
+        },
     )
     html_path = Path(runtime.settings.output_dir) / "final-report.html"
     html_path.parent.mkdir(parents=True, exist_ok=True)

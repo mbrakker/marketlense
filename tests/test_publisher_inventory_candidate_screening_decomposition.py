@@ -41,20 +41,7 @@ DETERMINISTIC_SYMBOLS = {
     "_MAX_DYNAMIC_SCREENING_BATCH_SIZE",
     "_partition_candidates_for_llm_screening",
     "_resolve_candidate_screening_batch_size",
-    "_fallback_screening_decision",
-    "_is_probable_report_asset",
     "_prefilter_screening_decision",
-    "_has_strong_report_detail_url",
-    "_has_report_archive_context",
-    "_looks_like_human_archive_title",
-    "_has_pdf_report_signal",
-    "_has_editorial_report_detail_candidate",
-    "_looks_like_collection_root_candidate_url",
-    "_has_contextual_report_term",
-    "_looks_like_confident_direct_detail_source",
-    "_is_generic_cta_title",
-    "_looks_like_insights_detail_url",
-    "_has_specific_editorial_report_slug",
 }
 
 RESPONSE_SYMBOLS = {

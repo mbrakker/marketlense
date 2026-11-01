@@ -522,35 +522,6 @@ def _text_issues(
                     relationship_explanation,
                 )
             )
-        if any(
-            str(evidence_id).startswith("verified-fact:")
-            for evidence_id in item.get("evidence_ids") or []
-        ):
-            verified_evidence = str(item.get("evidence_text") or "")
-            verified_metric = item.get("verified_fact_metric")
-            if _unsupported_numbers(text, verified_evidence, verified_metric):
-                issues.append(
-                    _issue(
-                        report_id,
-                        "public_editorial_quality.unsupported_numeric_claim",
-                        item,
-                        (
-                            "material numeric claim is absent from the canonical "
-                            "verified fact"
-                        ),
-                    )
-                )
-            verified_explanation = _verified_metric_text_explanation(
-                text, verified_metric, verified_evidence
-            )
-            if verified_explanation:
-                rule_id = (
-                    "public_editorial_quality.temporal_integrity"
-                    if "timeframe" in verified_explanation
-                    or "forecast" in verified_explanation
-                    else "public_editorial_quality.metric_label_relationship"
-                )
-                issues.append(_issue(report_id, rule_id, item, verified_explanation))
     if field.endswith((".so_what", ".now_what")) and _is_nonspecific_action(text):
         issues.append(
             _issue(
@@ -1100,6 +1071,85 @@ def public_editorial_semantic_review_items(
                 add_item(item)
 
     return items
+
+
+def public_editorial_report_review_scope(
+    artifacts: dict[str, Any],
+    items: list[dict[str, Any]],
+    *,
+    source_identity: str = "",
+    verified_fact_digest: str = "",
+) -> dict[str, Any]:
+    """Build the report-level context for the existing semantic review call.
+
+    Item projections remain the authority for atomic source-fidelity checks.
+    This companion projection gives the same call enough context to assess
+    omissions, repetition, analytical depth, and report usefulness without
+    repeating the complete fact snapshot on every item.
+    """
+
+    safe_artifacts = artifacts if isinstance(artifacts, dict) else {}
+    facts = _verified_fact_index(safe_artifacts)
+    canary = (
+        safe_artifacts.get("_cache", {}).get("visual_authority_canary")
+        if isinstance(safe_artifacts.get("_cache"), Mapping)
+        else None
+    )
+    first_fact = next(iter(facts.values()), {})
+    resolved_source_identity = (
+        str(source_identity or "").strip()
+        or str(first_fact.get("source_identity") or "").strip()
+    )
+    resolved_digest = (
+        str(verified_fact_digest or "").strip()
+        or str(
+            canary.get("verified_fact_digest") or canary.get("digest") or ""
+            if isinstance(canary, Mapping)
+            else ""
+        ).strip()
+    )
+
+    evidence_context: dict[str, dict[str, Any]] = {}
+    public_content: list[dict[str, Any]] = []
+    for item in items:
+        item_id = str(item.get("public_item_id") or "").strip()
+        if not item_id:
+            continue
+        evidence_ids = _public_evidence_ids(item)
+        evidence_text = str(item.get("evidence_text") or "").strip()
+        for evidence_id in evidence_ids:
+            entry = evidence_context.setdefault(
+                evidence_id,
+                {"evidence_id": evidence_id, "texts": []},
+            )
+            if evidence_text and evidence_text not in entry["texts"]:
+                entry["texts"].append(evidence_text)
+        public_content.append(
+            {
+                "item_id": item_id,
+                "artifact": str(item.get("artifact") or ""),
+                "field": str(item.get("field") or ""),
+                "text": str(item.get("text") or ""),
+                "evidence_ids": evidence_ids,
+            }
+        )
+
+    editorial_plan = safe_artifacts.get("editorial_plan")
+    return {
+        "authority": "canonical_verified_facts" if facts else "retained_evidence",
+        "source_identity": resolved_source_identity,
+        "source_pdf_sha256": str(first_fact.get("source_pdf_sha256") or "").strip(),
+        "verified_fact_digest": resolved_digest,
+        "verified_facts": {
+            f"verified-fact:{fact_id}": deepcopy(fact)
+            for fact_id, fact in facts.items()
+        },
+        "editorial_plan": deepcopy(editorial_plan)
+        if isinstance(editorial_plan, (dict, list))
+        else {},
+        "evidence_context": list(evidence_context.values()),
+        "public_content": public_content,
+    }
 
 
 def _retained_soft_copy_sentence_items(
@@ -1724,45 +1774,6 @@ def _annotate_verified_item(item: dict[str, Any], artifacts: object) -> None:
         # Keep the complete canonical fact, including report-specific nested
         # metric fields, available to the independent semantic reviewer.
         item["verified_facts"] = bound_facts
-    fact = _fact_for_item(artifacts, item)
-    if fact is not None:
-        item["verified_fact_metric"] = fact.get("metric")
-
-
-def _verified_metric_text_explanation(
-    text: str, metric: object, evidence_text: str
-) -> str:
-    if not isinstance(metric, Mapping):
-        return ""
-    relationship = _metric_label_relationship_explanation(text, evidence_text)
-    if relationship:
-        return relationship
-    timeframe = str(metric.get("timeframe") or "").strip()
-    expected_years = set(re.findall(r"\b(?:19|20)\d{2}\b", timeframe))
-    claimed_years = set(re.findall(r"\b(?:19|20)\d{2}\b", text))
-    if expected_years and claimed_years and not claimed_years.issubset(expected_years):
-        return "uses a different timeframe from the canonical verified fact"
-    status = (
-        str(metric.get("observation_status") or metric.get("forecast_status") or "")
-        .strip()
-        .casefold()
-    )
-    if status in {"observed", "actual", "historical"} and _FORECAST_MARKER.search(text):
-        return "adds a forecast marker to an observed canonical fact"
-    label = str(metric.get("label") or "").strip()
-    quantities = _material_quantities(text)
-    if label and quantities:
-        first_quantity = quantities[0]
-        prefix = text[: first_quantity.start].strip(" ,:;-")
-        prefix = re.sub(
-            r"\b(?:reached|was|is|were|are|stood at|accounts for|accounted for)\b.*$",
-            "",
-            prefix,
-            flags=re.IGNORECASE,
-        ).strip()
-        if prefix and _normalized_text(label) not in _normalized_text(prefix):
-            return "attaches a retained metric value to a different source metric label"
-    return ""
 
 
 def _temporal_integrity_explanation(text: str, evidence_text: str) -> str:
@@ -2556,6 +2567,7 @@ __all__ = [
     "enumerate_public_editorial_items",
     "evaluate_public_editorial_quality",
     "merge_public_editorial_quality_validation",
+    "public_editorial_report_review_scope",
     "public_editorial_semantic_review_items",
     "public_html_quality_issues",
     "quality_report_payload",

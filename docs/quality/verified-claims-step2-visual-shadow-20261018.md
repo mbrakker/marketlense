@@ -8118,3 +8118,69 @@ WordPress write occurred. Hosted run:
 **Updated verdict: PARTIAL / NO-GO.** Semantic-authority tests and hosted
 pre-release gates are green, but the retained generator non-regression gate and
 current-SHA real-report evidence remain open; Step 3 must not begin.
+
+## Pre-E2E P0/P1 closure and release-gate recheck — 2026-11-01
+
+This section records the provider-free correction pass based on reviewed HEAD
+`81bd56fb`. It does not claim a current-SHA real-report or live-provider
+acceptance result.
+
+### Root-cause corrections and observed evidence
+
+| Defect | Earliest correction | Observed behavior | Evidence |
+| --- | --- | --- | --- |
+| Verified authority could be absent or stale at the final render/readiness boundary. | `report_render_generator.py` now rebuilds and compares the canonical `VerifiedAuthorityContext` against source identity, digest, facts, evidence packs, artifact bindings, and serialized projections before render/readiness side effects. | Missing authority, invalid snapshot, stale context, stale packs, and serialized projection mismatches fail with nonretryable structural errors; normal mode continues through its existing path. | `tests/test_pre_e2e_integrity.py` boundary tests; existing checkpoint/reentry authority tests. |
+| Explicit public-editorial `evidence_ids=[]` inherited the original item IDs. | `_public_editorial_review_issue()` now distinguishes `None` (unspecified) from `[]` (explicitly unavailable); reason validation is structural nonempty text. | Missing-evidence outcomes remain unbound and non-repairable; a short but nonempty reason is accepted structurally. | Targeted attribution and reason tests in `tests/test_pre_e2e_integrity.py`. |
+| Independent editorial review lacked report-level materiality context. | The existing public-editorial review call now receives the plan, final public surfaces, complete canonical facts once, evidence context, source identity and digest; schema/validator/cache identities advanced to the current report-review contract. | Complete report verdicts are required in production verified mode; unsafe, incomplete, unlocalized, or mismatched verdicts fail closed, while precisely targeted failures retain existing scoped repair. | Report-scope, dimension, target, and controlled-review regressions in `tests/test_pre_e2e_integrity.py`; existing validation/regeneration suites. |
+| Historical generator comparator failed after semantic-ownership cleanup. | Removed only the unreachable duplicate verified-metric heuristic after repository-wide caller/compatibility inspection; retained technical identity/provenance checks and added behavior-backed tests for public surfaces, metadata, metric relationships, and fail-closed authority. | No threshold, baseline, exclusion, or semantic-quality gate was changed; the fresh full-suite generator comparator passes. | Fresh full suite, coverage comparator, and mutation partitions below. |
+
+Structural quarantine, transactional repair, safe removal, retained-claim
+validation, cache invalidation, and publication-readiness protections were not
+weakened. No additional LLM stage, service, validator, database, provider call,
+canonical artifact mutation, publication, or WordPress write was introduced by
+this correction pass.
+
+### Before/after release measurements
+
+| Slice | Hosted failing baseline (`10906a99`, run `41282490348`) | Fresh local corrected tree | Retained comparator | Result |
+| --- | ---: | ---: | ---: | --- |
+| Global | 85.1049% | 85.6226% | 83.3816% | Pass |
+| `src/generators` | 85.1995% | **87.2055%** | **87.1763%** | **Pass** |
+| `src/orchestrators` | 86.2439% | 86.1626% | 84.8022% | Pass |
+| `src/services` | 84.5030% | 84.6387% | 82.5763% | Pass |
+
+The fresh CPython 3.12 default run passed **8,339 tests, 2 skipped, 39
+deselected, and 24 subtests in 1,461.18 seconds (24:21)**. The configured
+coverage floors and unchanged quality comparator passed. Local mutation
+partition 0 passed with **32/33** mutants killed (the one taxonomy survivor
+remains at the retained 75% target); partition 1 passed with **35/35** killed.
+The prompt, contract-schema, documentation-reference, Ruff, and full mypy
+gates passed; mypy reported **0 tracked errors across 786 source files**.
+
+The prompt fixture baseline was regenerated through the existing tool. The
+current approved configuration is **113,935 tokens / `$0.025046`**, versus the
+prior committed **113,387 / `$0.024992`**: **+548 tokens / +$0.000054**. The
+validation family is **11,650 / `$0.002077`**, versus **11,102 / `$0.002023`**:
+**+548 tokens / +$0.000054**. The affected public-editorial namespace is
+**1,595 / `$0.000349`**, versus **1,047 / `$0.000295`**. The unchanged fixture
+thresholds, pricing, model configuration, schemas, and factual checks were
+preserved; the regression gate passes exactly against the regenerated baseline.
+
+The full suite emitted two existing threaded logging-teardown messages about a
+closed stream during crop-refine tests; they did not fail or alter test results.
+
+### Scope and remaining acceptance
+
+This pass intentionally did **not** run a real report, frozen-five/ten cohort,
+live LLM/provider workflow, browser acquisition, or WordPress publication.
+Therefore it establishes the code-fixable P0/P1 and release-gate evidence only;
+it does not establish calibrated current-SHA editorial quality, transactional
+repair effectiveness on source reports, or Step 2 live selection/grounding
+improvement. Hosted CI on the pushed commit remains required.
+
+**Pre-E2E verdict: PASS** for the implemented authority/attribution/editorial
+contract corrections, fresh local full suite, static/schema/prompt/coverage/
+mutation/quality gates, and provider-free regressions. **Overall Step 2 verdict:
+PARTIAL / NO-GO** pending hosted confirmation and later source-backed
+acceptance. E18 remains **Active/PARTIAL** and Step 3 remains
+**unstarted/not ready**.

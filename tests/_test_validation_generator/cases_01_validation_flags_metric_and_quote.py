@@ -557,27 +557,6 @@ def test_claim_support_allows_contrast_scoped_only_with_weak_evidence(tmp_path):
     assert not any(issue.rule_id == "claim_support" for issue in result.issues)
 
 
-def test_claim_support_contrast_scope_boundaries():
-    """Only contrast-governed exclusivity terms lose their strong-claim force."""
-
-    assert _has_unscoped_strong_language(
-        "Brands should use only first-party data rather than third-party cookies."
-    )
-    assert _has_unscoped_strong_language(
-        "Growth reached 42 percent rather than the expected 5 percent."
-    )
-    assert _has_unscoped_strong_language(
-        "Rather than treating it as messaging. It will only strengthen trust."
-    )
-    assert not _has_unscoped_strong_language(
-        "Authenticity should be managed across touchpoints rather than treated "
-        "only as messaging."
-    )
-    assert not _has_unscoped_strong_language(
-        "Brands should invest in owned reviews, not only in paid ratings."
-    )
-
-
 def test_artifact_quality_flags_banned_generic_copy_and_allows_technical_terms(
     tmp_path,
 ):

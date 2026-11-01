@@ -169,28 +169,27 @@ Commit and push the smallest proven change.
  
 ---
  
-## R3. Restore service quality coverage above the retained baseline
+## R3. Restore generator quality coverage above the retained baseline
 
 **Canonical status:** Active as of the archived 2026-10-08 reconciliation. **Mapped technical slices:** none; outcome specification stands alone.
 
-- **Baseline:** `docs/quality/baseline_2026-02-21.json`, generated July 12 under a legacy filename, records services 82.5763%. CI enforces this historical threshold alongside the separate 75% floor. The artifact lacks producer SHA, command/environment and passing-run provenance; no current coverage/regression was measured here. Preserve the enforced threshold and obtain one attributable exact-commit full-suite/gate baseline with meaningful behavior coverage. Focused behavior coverage now also protects exact-nanosecond checksum-sidecar freshness, corrupt-lock diagnosis, and atomic same-key idempotency checksum conflicts; these checks do not refresh the exact-commit full-suite coverage baseline.
-- **Target behaviour:** Behavior-focused tests protect high-risk stateful/external paths; passing exact-commit CI retains at least the enforced historical service threshold and supplies a fully attributable baseline without other domain regressions.
+- **Baseline:** `docs/quality/baseline_2026-02-21.json`, generated July 12 under a legacy filename, records the retained global/generator/orchestrator/service comparator values: 83.3816%, 87.1763%, 84.8022%, and 82.5763%. CI also enforces the separate configured floors. The artifact lacks producer SHA, command/environment and passing-run provenance; preserve all thresholds and obtain attributable exact-commit full-suite/gate evidence with meaningful behavior coverage. Focused behavior coverage now also protects exact-nanosecond checksum-sidecar freshness, corrupt-lock diagnosis, and atomic same-key idempotency checksum conflicts; these checks do not replace the exact-commit release comparator.
+- **Target behaviour:** Behavior-focused tests protect high-risk stateful/external and generator paths; passing exact-commit CI retains at least every historical comparator and configured floor without other domain regressions.
 - **What to implement, in order:**
-  1. Run/inspect exact current coverage by service module and rank uncovered behavior by operational risk, focusing first on ledger/recovery, browser-worker lifecycle, artifact lineage and other durable external/stateful paths.
+  1. Run/inspect exact current coverage by generator and service module and rank uncovered behavior by operational risk, focusing first on report regeneration, artifact lineage, ledger/recovery, browser-worker lifecycle and other durable external/stateful paths.
   2. Add tests that assert returned contracts, persisted state, retries/idempotency/failure handling or boundary calls—not lines executed solely for coverage.
   3. Re-run focused suites and then the full CI/coverage command on one exact commit; retain the measured global/contracts/generators/orchestrators/services/control-plane values.
   4. Fix real regressions exposed by the tests without adding exemptions or lowering the 75% floor.
   5. Refresh the baseline only from passing exact-commit suite/gates with producer SHA, commands/environment, domain values and input artifact hashes. The historical threshold remains enforced until a justified attributable replacement passes.
 - **Acceptance criteria:**
-  - `src/services` coverage is **not below 82.5763%** on the retained passing exact-commit full-suite measurement and increases where the selected behavior tests add meaningful protection.
-  - Global/generator/orchestrator coverage does not regress from its retained release baseline.
+  - Global, `src/generators`, `src/orchestrators`, and `src/services` coverage is **not below 83.3816%, 87.1763%, 84.8022%, and 82.5763%** respectively on the retained passing exact-commit full-suite measurement, and increases where the selected behavior tests add meaningful protection.
   - Added tests cover observable contracts/state/failure behavior; no coverage-only dead paths, exclusions, or lowered thresholds are introduced.
   - Baseline artifact records exact SHA, command/environment and measured values and is updated only after all relevant tests/gates pass.
 
 ### Luna implementation prompt — R3
 
 ```text
-Work on R3 — Restore service quality coverage above the retained baseline at the current MarketLense HEAD.
+Work on R3 — Restore generator quality coverage above the retained baseline at the current MarketLense HEAD.
 Owner specification: docs/backlog/R-engineering.md; canonical status: CONSOLIDATED_TODO.md.
 First inspect the current implementation and the unmet acceptance criteria in this outcome.
 Select one coherent, highest-impact unverified slice; consult its technical specification below.

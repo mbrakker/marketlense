@@ -76,6 +76,7 @@ from src.services.report_analysis_store_service import store_pack
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.publication_projection import publication_projection_hash
+from src.utils.verified_facts import build_verified_authority_context
 
 
 def _template_bundle_sha(template_contents: dict[str, str]) -> str:

@@ -402,8 +402,16 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
     responses["grounding_validation_output_v4"] = responses[
         "grounding_validation_output_v3"
     ]
-    if schema_name == "public_editorial_quality_review_v2":
+    if schema_name == "public_editorial_quality_review_v3":
         public_items = _public_review_items_from_call(call)
+        report_evidence_ids = list(
+            dict.fromkeys(
+                str(evidence_id).strip()
+                for item in public_items
+                for evidence_id in item.get("evidence_ids") or []
+                if str(evidence_id).strip()
+            )
+        )
         responses[schema_name] = {
             "verdicts": [
                 {
@@ -425,7 +433,32 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                     "repair_target": "",
                 }
                 for item in public_items
-            ]
+            ],
+            "report_verdict": {
+                "status": "pass",
+                "severity": "info",
+                "rule_id": "",
+                "hard_fail_class": "",
+                "reason": (
+                    "The admitted source findings are covered by distinct public "
+                    "analysis with useful implications and stated limitations."
+                ),
+                "evidence_ids": report_evidence_ids,
+                "repair_target": "",
+                "affected_item_id": "",
+                "dimensions": {
+                    dimension: {
+                        "status": "pass",
+                        "reason": "The final report satisfies this report-level dimension.",
+                    }
+                    for dimension in (
+                        "material_coverage",
+                        "analytical_depth",
+                        "distinctness",
+                        "limitations",
+                    )
+                },
+            },
         }
     if schema_name not in responses:
         raise AssertionError(f"missing full-chain model fixture for {schema_name}")

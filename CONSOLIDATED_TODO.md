@@ -87,7 +87,7 @@ The register's five workstreams remain the prioritisation lanes, **not** a newly
 | Active | E18 | [Stabilize LLM report analysis and first-pass validation](docs/backlog/E-evidence.md#e18-stabilize-llm-report-analysis-and-first-pass-validation) | Four sequential stages: pin repeated-generation and fixed-input validator baseline; address proven factual drift; stabilize insight selection; fix proven semantic-verdict/repair instability and verify frozen-five quality, first-pass readiness, speed and cost. A bounded Activate physical p. 53 evidence-binding slice and the 2026-10-20 CI evidence-contract/comparator correction are verified; the broader stability and readiness gates remain open. |
 | Active | R1 | [Publish release-evidence reviews where reviewers work](docs/backlog/R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work) | Renderer/workflow commit `974ee328505af12bda78222e0c85326cada5957d`; backlog/status follow-up `7b56f0e8403008a7dfb64de511ab39bf8b430715`. Full R1 run `38176147143` passed at SHA `b3464bc5bbdb3d03149d9285506af69d8555d4e6` (7,205 pytest cases). Full current-code run `38179966176` passed at SHA `f5d5dd370abb44f7726196c4b7f954477a3e51a8` (7,229 pytest cases; all required gates passed; optional WordPress staging REST gate skipped). Artifact `11718610500` has all 17/17 required paths (392,779 bytes; expires 2026-10-25). Re-rendering its review/queue JSON produced a 1,224-byte summary with exact SHA, passed canonical validation, zero unwaived/waived issues, historical-unmatched runtime and representative-scope caveat, successful upload and complete bundle. Keep Active because the actual private GitHub rendered-summary page could not be inspected in the signed-out browser. |
 | Active | R2 | [Enforce role boundaries, direct-I/O discipline, and controlled module growth](docs/backlog/R-engineering.md#r2-enforce-role-boundaries-direct-io-discipline-and-controlled-module-growth) | Close targeted boundary-coverage and expiring-waiver gaps without generic governance noise. |
-| Active | R3 | [Restore service quality coverage above the retained baseline](docs/backlog/R-engineering.md#r3-restore-service-quality-coverage-above-the-retained-baseline) | Add behavior-focused service coverage and refresh the baseline only from a passing exact-commit run. |
+| Active | R3 | [Restore generator quality coverage above the retained baseline](docs/backlog/R-engineering.md#r3-restore-generator-quality-coverage-above-the-retained-baseline) | Add behavior-focused generator/service coverage and refresh the baseline only from a passing exact-commit run. |
 | Closed | R4 | Publication usage/projection reconciliation guard | Missing/invalid/materially lagged usage/projection evidence stops public writes without rebuilding. |
 | Closed | R5 | Hash-verified dependency lock artifacts | Native Ubuntu CPython 3.12 wheelhouse and offline hash-locked install are verified. |
 | Closed | R6 | [Review bounded-log reduction telemetry and remediate recurring callers](docs/backlog/R-engineering.md#r6-review-bounded-log-reduction-telemetry-and-remediate-recurring-callers) | CTO scorecard and executive totals implemented; 162 focused tests pass with 100% contract coverage. Exact-HEAD fixture flags a recurring owner-mapped group; inspected retained log sample has 0 reductions in 20,444 events. Actual caller fixes remain review-driven if a corpus flags them. |
@@ -336,9 +336,9 @@ acceptance is demonstrated.
 
 [Full R2 specification](docs/backlog/R-engineering.md#r2-enforce-role-boundaries-direct-io-discipline-and-controlled-module-growth).
 
-#### R3. Restore service quality coverage above the retained baseline
+#### R3. Restore generator quality coverage above the retained baseline
 
-[Full R3 specification](docs/backlog/R-engineering.md#r3-restore-service-quality-coverage-above-the-retained-baseline).
+[Full R3 specification](docs/backlog/R-engineering.md#r3-restore-generator-quality-coverage-above-the-retained-baseline).
 
 #### R7. Prove recoverable backups and full-state disaster restoration
 
@@ -1588,3 +1588,34 @@ docpack, and candidate-extraction comparisons passed. No baseline or gate was
 lowered. R3 remains active; E18/Step 2 remain **Active/PARTIAL** and Step 3
 remains **unstarted/not ready**. No current-SHA provider or publication work
 was performed.
+
+**Pre-E2E P0/P1 correction and release-gate evidence — 2026-11-01 (working
+tree based on reviewed HEAD `81bd56fb`):** The verified render/readiness trust
+boundary now requires and reconciles the canonical `VerifiedAuthorityContext`
+before render or publication side effects; normal mode remains unchanged.
+Explicit empty editorial evidence IDs remain empty and non-repairable, report-
+level public-editorial acceptance is validated through the existing review
+call, and the complete canonical fact scope is supplied once with identity and
+digest. Structural quarantine/transactional repair protections were retained.
+The duplicate unreachable verified-metric heuristic was removed only after
+caller/compatibility inspection; meaningful public-surface, metadata,
+relationship-binding, authority-boundary, and fail-closed tests were added.
+
+Fresh CPython 3.12 verification passed **8,339 tests, 2 skipped, 39
+deselected, and 24 subtests in 24:21**. Coverage is **85.6226% global,
+87.2055% generators, 86.1626% orchestrators, and 84.6387% services**; the
+unchanged generator comparator now passes its retained **87.1763%** baseline.
+The two local mutation partitions passed (**32/33** and **35/35** killed; the
+single taxonomy survivor remains at its retained 75% baseline), and the
+quality/docpack/candidate comparator passed. Ruff, full mypy (0 tracked errors
+across 786 source files), prompt-fixture regression, contract-schema snapshot,
+and documentation-reference generation passed. The prompt baseline now records
+the already-approved current configuration at **113,935 tokens / `$0.025046`**
+versus **113,387 / `$0.024992`** previously; validation is **11,650 / `$0.002077`**
+versus **11,102 / `$0.002023`**, with no threshold or quality reduction.
+
+No real report, frozen cohort, live provider, browser acquisition, canonical
+artifact mutation, publication, or WordPress write was performed. Hosted CI is
+still required on the pushed commit. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details
+are recorded in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

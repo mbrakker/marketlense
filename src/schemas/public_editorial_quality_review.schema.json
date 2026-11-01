@@ -43,6 +43,69 @@
           "repair_target": {"type": "string"}
         }
       }
+    },
+    "report_verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "severity",
+        "rule_id",
+        "hard_fail_class",
+        "reason",
+        "evidence_ids",
+        "repair_target",
+        "affected_item_id",
+        "dimensions"
+      ],
+      "properties": {
+        "status": {"type": "string", "enum": ["pass", "fail", "unresolved"]},
+        "severity": {"type": "string", "enum": ["error", "warning", "info"]},
+        "rule_id": {"type": "string"},
+        "hard_fail_class": {"type": "string"},
+        "reason": {"type": "string"},
+        "evidence_ids": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "repair_target": {"type": "string"},
+        "affected_item_id": {"type": "string"},
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "material_coverage",
+            "analytical_depth",
+            "distinctness",
+            "limitations"
+          ],
+          "properties": {
+            "material_coverage": {
+              "$ref": "#/$defs/report_dimension"
+            },
+            "analytical_depth": {
+              "$ref": "#/$defs/report_dimension"
+            },
+            "distinctness": {
+              "$ref": "#/$defs/report_dimension"
+            },
+            "limitations": {
+              "$ref": "#/$defs/report_dimension"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "report_dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason"],
+      "properties": {
+        "status": {"type": "string", "enum": ["pass", "fail", "unresolved"]},
+        "reason": {"type": "string"}
+      }
     }
   }
 }

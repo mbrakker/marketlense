@@ -461,7 +461,7 @@ llm_execution_policies:
     timeout_seconds: 600
     provider_retry_count: 0
     structured_output_mode: json_schema
-    structured_output_schema_identity: "public_editorial_quality_review_v2"
+    structured_output_schema_identity: "public_editorial_quality_review_v3"
     fallback_policy: same_provider_only
     pricing_key: "gpt-6-luna"
   report_vs/validate/visual_claim_correction:

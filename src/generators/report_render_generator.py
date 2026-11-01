@@ -67,6 +67,10 @@ from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.slugify import slugify
 from src.utils.time_period import normalize_time_period
+from src.utils.verified_facts import (
+    build_verified_authority_context,
+    verified_facts_mode,
+)
 
 _GENERATED_REPORT_TITLE = re.compile(
     r"^[0-9a-f]{32,64}(?:[-_.](?:pdf|report))?$", re.IGNORECASE
@@ -823,6 +827,94 @@ def _file_exists_via_service(
     return bool(stat.exists)
 
 
+def _verified_render_authority(
+    runtime: ReportRuntimeState,
+    analysis: ReportAnalysisState,
+):
+    """Reconcile the trusted verified snapshot before any render side effect."""
+
+    artifacts = analysis.artifacts_payload or {}
+    if not verified_facts_mode(artifacts, runtime.analysis_mode):
+        return None
+
+    expected_source_identity = str(runtime.ctx.source_identity_id or "").strip()
+    authority = analysis.verified_authority_context
+    if authority is None or not expected_source_identity:
+        raise AppError(
+            code="verified_authority_context_missing",
+            message=(
+                "Verified-facts rendering requires a trusted authority context "
+                "and admitted source identity"
+            ),
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
+
+    try:
+        canonical = build_verified_authority_context(
+            artifacts,
+            expected_source_identity=expected_source_identity,
+        )
+    except AppError as exc:
+        raise AppError(
+            code="verified_authority_context_invalid",
+            message="Verified-facts rendering authority is invalid",
+            retryable=False,
+            context={
+                "file_id": runtime.file.file_id,
+                "validation_code": exc.code,
+            },
+            cause=exc,
+        ) from exc
+
+    if authority != canonical:
+        raise AppError(
+            code="verified_authority_context_mismatch",
+            message=(
+                "The render authority context does not match the canonical "
+                "verified-fact snapshot"
+            ),
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
+
+    retained_packs = analysis.authoritative_evidence_packs
+    if retained_packs != canonical.evidence_packs:
+        raise AppError(
+            code="verified_authority_projection_mismatch",
+            message=(
+                "Retained authoritative evidence packs do not match the verified "
+                "authority context"
+            ),
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
+
+    data_projection = analysis.data_dict.get("authoritative_evidence_packs")
+    if data_projection != canonical.evidence_packs:
+        raise AppError(
+            code="verified_authority_projection_mismatch",
+            message=(
+                "The serialized authoritative evidence projection does not match "
+                "the verified authority context"
+            ),
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
+    data_context = analysis.data_dict.get("verified_authority_context")
+    if data_context is not None and data_context != asdict(canonical):
+        raise AppError(
+            code="verified_authority_context_mismatch",
+            message=(
+                "The serialized verified authority context does not match the "
+                "canonical snapshot"
+            ),
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
+    return canonical
+
+
 def render_preview_asset(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
@@ -909,6 +1001,7 @@ def render_report_output(
             ocr_fallback_used=source.ocr_fallback_used,
             ocr_pdf_path=source.ocr_pdf_path or None,
         )
+    _verified_render_authority(runtime, analysis)
     title_identity_error = _title_identity_error(runtime, source, analysis)
     if title_identity_error:
         logger.info(
@@ -1531,6 +1624,7 @@ def _persist_publish_readiness(
     build_provenance: dict[str, str],
 ) -> tuple[str, str, str, str]:
     """Persist the single readiness decision after the final render is complete."""
+    _verified_render_authority(runtime, analysis)
     final_html = dependencies.read_text(
         ReadTextRequest(schema_version="1.0", path=final_html_path),
         child_context(
