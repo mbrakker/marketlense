@@ -3,7 +3,7 @@
   "title": "Public editorial semantic review",
   "type": "object",
   "additionalProperties": false,
-  "required": ["verdicts"],
+  "required": ["verdicts", "report_verdict"],
   "properties": {
     "verdicts": {
       "type": "array",

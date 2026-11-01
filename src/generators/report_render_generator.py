@@ -70,6 +70,7 @@ from src.utils.time_period import normalize_time_period
 from src.utils.verified_facts import (
     build_verified_authority_context,
     verified_facts_mode,
+    verified_source_identity_matches_runtime,
 )
 
 _GENERATED_REPORT_TITLE = re.compile(
@@ -834,12 +835,15 @@ def _verified_render_authority(
     """Reconcile the trusted verified snapshot before any render side effect."""
 
     artifacts = analysis.artifacts_payload or {}
-    if not verified_facts_mode(artifacts, runtime.analysis_mode):
+    authority = analysis.verified_authority_context
+    trusted_verified_intent = authority is not None or verified_facts_mode(
+        artifacts, runtime.analysis_mode
+    )
+    if not trusted_verified_intent:
         return None
 
-    expected_source_identity = str(runtime.ctx.source_identity_id or "").strip()
-    authority = analysis.verified_authority_context
-    if authority is None or not expected_source_identity:
+    runtime_source_identity = str(runtime.ctx.source_identity_id or "").strip()
+    if authority is None or not runtime_source_identity:
         raise AppError(
             code="verified_authority_context_missing",
             message=(
@@ -849,11 +853,23 @@ def _verified_render_authority(
             retryable=False,
             context={"file_id": runtime.file.file_id},
         )
+    if not verified_source_identity_matches_runtime(
+        runtime_source_identity, authority.source_identity
+    ):
+        raise AppError(
+            code="verified_source_identity_mismatch",
+            message=(
+                "The runtime source identity is not the exact qualified verified "
+                "authority identity"
+            ),
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
 
     try:
         canonical = build_verified_authority_context(
             artifacts,
-            expected_source_identity=expected_source_identity,
+            expected_source_identity=authority.source_identity,
         )
     except AppError as exc:
         raise AppError(

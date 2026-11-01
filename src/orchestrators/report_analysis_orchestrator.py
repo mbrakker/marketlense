@@ -1203,6 +1203,9 @@ def run_report_analysis(
             vector_store_id=vector_state.vector_store_id,
             vector_store_content_hash=vector_store_content_hash or "",
             source_id=factual_source_identity,
+            validation_mode=(
+                "verified_facts" if verified_authority_context is not None else "full"
+            ),
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
@@ -1221,6 +1224,16 @@ def run_report_analysis(
             pack_name="public_editorial_quality_before",
             ctx=mode_ctx,
             openai_client=validation_openai_client,
+            verified_source_identity=(
+                factual_source_identity
+                if verified_authority_context is not None
+                else ""
+            ),
+            verified_fact_digest=(
+                verified_authority_context.verified_fact_digest
+                if verified_authority_context is not None
+                else ""
+            ),
         )
     )
     validation_report = _merge_public_editorial_quality(
@@ -1284,6 +1297,17 @@ def run_report_analysis(
             dependencies=dependencies,
             validation_openai_client=validation_openai_client,
             regeneration_openai_client=regeneration_openai_client,
+            verified_source_identity=(
+                factual_source_identity
+                if verified_authority_context is not None
+                else ""
+            ),
+            verified_fact_digest=(
+                verified_authority_context.verified_fact_digest
+                if verified_authority_context is not None
+                else ""
+            ),
+            verified_authority_context=verified_authority_context,
         )
         for field_name, value in payload_identity_overrides.items():
             # Canonical source-identity corrections survive promotion with the
@@ -1347,6 +1371,16 @@ def run_report_analysis(
             pack_name="public_editorial_quality_after",
             ctx=mode_ctx,
             openai_client=validation_openai_client,
+            verified_source_identity=(
+                factual_source_identity
+                if verified_authority_context is not None
+                else ""
+            ),
+            verified_fact_digest=(
+                verified_authority_context.verified_fact_digest
+                if verified_authority_context is not None
+                else ""
+            ),
         )
     )
     validation_report = _merge_public_editorial_quality(

@@ -25,6 +25,10 @@ VERIFIED_FACTS_MODES = frozenset(
 PDF_SHA256_RE = re.compile(
     r"(?:^|[|,; ])pdf-sha256[:=]([0-9a-f]{64})(?:$|[|,; ])", re.IGNORECASE
 )
+QUALIFIED_SOURCE_IDENTITY_RE = re.compile(
+    r"^(?P<base>[^|]+)\|pdf-sha256:(?P<sha>[0-9a-f]{64})$",
+    re.IGNORECASE,
+)
 
 PROTECTED_METRIC_FIELDS = (
     "label",
@@ -68,6 +72,24 @@ def verified_facts_mode(artifacts: object, validation_mode: str = "") -> bool:
 def expected_pdf_sha256(source_identity: object) -> str:
     match = PDF_SHA256_RE.search(str(source_identity or "").strip())
     return match.group(1).lower() if match else ""
+
+
+def verified_source_identity_matches_runtime(
+    runtime_identity: object, verified_identity: object
+) -> bool:
+    """Accept only the exact qualified authority or its exact base identity."""
+
+    runtime = str(runtime_identity or "").strip()
+    verified = str(verified_identity or "").strip()
+    if not runtime or not verified:
+        return False
+    match = QUALIFIED_SOURCE_IDENTITY_RE.fullmatch(verified)
+    if not match:
+        return False
+    return runtime.casefold() in {
+        verified.casefold(),
+        match.group("base").casefold(),
+    }
 
 
 def _raw_facts(artifacts: object, evidence_packs: object) -> list[Mapping[str, Any]]:
@@ -225,7 +247,12 @@ def build_verified_authority_context(
 
     expected_identity = str(expected_source_identity or "").strip()
     expected_hash = expected_pdf_sha256(expected_identity)
-    if not expected_identity or not expected_hash:
+    qualified_identity = QUALIFIED_SOURCE_IDENTITY_RE.fullmatch(expected_identity)
+    if (
+        not qualified_identity
+        or not expected_hash
+        or expected_hash != qualified_identity.group("sha").lower()
+    ):
         raise _invalid("verified authority requires a hash-qualified source identity")
     if not isinstance(artifacts, Mapping):
         raise _invalid("verified authority artifacts are missing")

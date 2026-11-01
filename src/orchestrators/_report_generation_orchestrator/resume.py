@@ -1464,6 +1464,7 @@ def _resume_prompt_family_repair(
                 if analysis.validation_report is not None
                 else {}
             ),
+            verified_facts_only=authority_context is not None,
         )
         if candidate_enforced
         else CandidateIntegrityResult(issues=[], evidence_lineage=[])
@@ -1515,6 +1516,9 @@ def _resume_prompt_family_repair(
             evidence_packs=factual_evidence_packs,
             vector_store_id=analysis.vector_store_id,
             source_id=factual_source_identity,
+            validation_mode=(
+                "verified_facts" if authority_context is not None else "full"
+            ),
             deterministic_grounding_passed=candidate_result.passed,
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
@@ -1533,6 +1537,14 @@ def _resume_prompt_family_repair(
         pack_name="public_editorial_quality_prompt_repair",
         ctx=repair_ctx,
         openai_client=validation_openai_client,
+        verified_source_identity=(
+            factual_source_identity if authority_context is not None else ""
+        ),
+        verified_fact_digest=(
+            authority_context.verified_fact_digest
+            if authority_context is not None
+            else ""
+        ),
     )
     validation = _merge_public_editorial_quality(validation, editorial_validation)
     candidate_validation_path = _store_validation_snapshot(

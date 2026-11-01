@@ -80,6 +80,7 @@ def validate_regeneration_candidate(
     planned_prompt_namespaces: Sequence[str] = (),
     actual_prompt_namespaces: Sequence[str] = (),
     baseline_retained_claim_severities: Mapping[str, str] | None = None,
+    verified_facts_only: bool = False,
 ) -> CandidateIntegrityResult:
     """Validate candidate schema, IDs, source pages, and material continuity.
 
@@ -109,7 +110,12 @@ def validate_regeneration_candidate(
         )
 
     try:
-        validate_evidence_references(candidate_artifacts, evidence_packs, ctx)
+        validate_evidence_references(
+            candidate_artifacts,
+            evidence_packs,
+            ctx,
+            verified_facts_only=verified_facts_only,
+        )
     except AppError as exc:
         missing = _string_values(exc.context.get("missing_references", []))
         if missing:
@@ -155,7 +161,9 @@ def validate_regeneration_candidate(
             evidence_packs,
             previous_artifacts=current_artifacts,
             baseline_retained_claim_severities=baseline_retained_claim_severities,
-            verified_facts_only=verified_facts_mode(candidate_artifacts),
+            verified_facts_only=(
+                verified_facts_only or verified_facts_mode(candidate_artifacts)
+            ),
         )
     )
     candidate_by_key = {record.key: record for record in candidate_records}

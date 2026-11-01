@@ -270,9 +270,11 @@ def validate_evidence_references(
     artifacts_payload: dict[str, Any],
     evidence_pack_payloads: dict[str, Any],
     ctx: RunContext,
+    *,
+    verified_facts_only: bool = False,
 ) -> None:
     evidence_ids: set[str] = set()
-    verified_mode = verified_facts_mode(artifacts_payload)
+    verified_mode = verified_facts_only or verified_facts_mode(artifacts_payload)
     if verified_mode:
         facts = validated_verified_facts(artifacts_payload, evidence_pack_payloads)
         evidence_ids.update(f"verified-fact:{fact_id}" for fact_id in facts)

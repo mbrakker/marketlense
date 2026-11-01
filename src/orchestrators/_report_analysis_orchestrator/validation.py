@@ -42,7 +42,7 @@ from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
 )
-from src.contracts.report_generation import ReportRuntimeState
+from src.contracts.report_generation import ReportRuntimeState, VerifiedAuthorityContext
 from src.contracts.report_identity import ReportTitleResolution
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
@@ -116,7 +116,10 @@ from src.utils.cache_utils import sha256_json
 from src.utils.editorial_identity import failed_insight_id
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
-from src.utils.verified_facts import verified_facts_mode
+from src.utils.verified_facts import (
+    build_verified_authority_context,
+    verified_facts_mode,
+)
 
 __all__ = [
     "_evaluate_and_store_public_editorial_quality",
@@ -158,7 +161,7 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v18"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v19"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.0"
 _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v3"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
@@ -180,6 +183,9 @@ _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES = frozenset(
         "insufficient_evidence",
         "evidence_unavailable",
     }
+)
+_PUBLIC_EDITORIAL_SEMANTIC_RULE_ID = re.compile(
+    r"^public_editorial_quality\.semantic_[a-z0-9_.-]+$"
 )
 
 
@@ -231,6 +237,14 @@ def _validate_public_editorial_review_payload(
     ctx,
     report_scope: dict[str, Any] | None = None,
 ) -> None:
+    if not isinstance(payload, dict) or not isinstance(
+        payload.get("report_verdict"), dict
+    ):
+        raise AppError(
+            code="public_editorial_quality_report_review_incomplete",
+            message="Public editorial semantic review did not return a report verdict",
+            retryable=False,
+        )
     validate_schema(
         SchemaValidateRequest(
             schema_version="1.0",
@@ -355,17 +369,9 @@ def _validate_public_editorial_review_payload(
             },
         )
 
+    report_verdict = payload["report_verdict"]
     if report_scope is None:
         return
-    report_verdict = (
-        payload.get("report_verdict") if isinstance(payload, dict) else None
-    )
-    if not isinstance(report_verdict, dict):
-        raise AppError(
-            code="public_editorial_quality_report_review_incomplete",
-            message="Public editorial semantic review did not return a report verdict",
-            retryable=False,
-        )
     report_status = str(report_verdict.get("status") or "").strip()
     report_severity = str(report_verdict.get("severity") or "").strip()
     report_rule_id = str(report_verdict.get("rule_id") or "").strip()
@@ -534,6 +540,8 @@ def _public_editorial_semantic_review(
     artifacts: Dict[str, Any],
     ctx,
     openai_client: Any,
+    verified_source_identity: str = "",
+    verified_fact_digest: str = "",
 ) -> list[PublicEditorialQualityIssue]:
     """Ask the existing structured-output path to judge public semantics.
 
@@ -549,11 +557,14 @@ def _public_editorial_semantic_review(
         # whether that absence is acceptable; do not turn an intentionally
         # abstained non-public family into a semantic-review failure.
         return []
-    source_id = str(getattr(runtime.ctx, "source_identity_id", "") or "").strip()
+    source_id = str(
+        verified_source_identity or getattr(runtime.ctx, "source_identity_id", "") or ""
+    ).strip()
     report_scope = public_editorial_report_review_scope(
         artifacts,
         items,
         source_identity=source_id,
+        verified_fact_digest=verified_fact_digest,
     )
     if openai_client is None:
         return [
@@ -789,7 +800,10 @@ def _public_editorial_semantic_review(
         raw_rule_id = str(verdict.get("rule_id") or "").strip()
         rule_id = (
             raw_rule_id
-            if raw_rule_id.startswith("public_editorial_quality.semantic_")
+            if (
+                raw_rule_id in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS
+                or _PUBLIC_EDITORIAL_SEMANTIC_RULE_ID.fullmatch(raw_rule_id)
+            )
             else "public_editorial_quality.semantic_review"
         )
         issues.append(
@@ -797,7 +811,7 @@ def _public_editorial_semantic_review(
                 report_id=report_id,
                 item=item_by_id[item_id],
                 rule_id=rule_id,
-                severity="error",
+                severity=str(verdict.get("severity") or "error").strip(),
                 hard_fail_class=(
                     str(verdict.get("hard_fail_class") or "").strip()
                     or "semantic_review_unresolved"
@@ -837,7 +851,7 @@ def _public_editorial_semantic_review(
                     .startswith("public_editorial_quality.")
                     else "public_editorial_quality.report_acceptance"
                 ),
-                severity="error",
+                severity=str(report_verdict.get("severity") or "error").strip(),
                 hard_fail_class=(
                     str(report_verdict.get("hard_fail_class") or "").strip()
                     or "report_editorial_acceptance"
@@ -862,10 +876,30 @@ def _evaluate_and_store_public_editorial_quality(
     pack_name: str,
     ctx,
     openai_client=None,
+    verified_source_identity: str = "",
+    verified_fact_digest: str = "",
 ) -> tuple[ValidationReport | None, str]:
     """Persist technical checks plus the independent semantic release gate."""
     if not isinstance(artifacts, dict):
         return None, ""
+    canonical_source_identity = verified_source_identity
+    canonical_fact_digest = verified_fact_digest
+    if verified_source_identity:
+        authority = build_verified_authority_context(
+            artifacts,
+            expected_source_identity=verified_source_identity,
+        )
+        if verified_fact_digest and (
+            authority.verified_fact_digest != verified_fact_digest
+        ):
+            raise AppError(
+                code="verified_fact_snapshot_invalid",
+                message="Verified-facts editorial review received a stale fact digest",
+                retryable=False,
+                context={"report_id": runtime.file.file_id},
+            )
+        canonical_source_identity = authority.source_identity
+        canonical_fact_digest = authority.verified_fact_digest
     quality = evaluate_public_editorial_quality(
         report_id=str(runtime.file.file_id),
         artifacts=artifacts,
@@ -878,6 +912,8 @@ def _evaluate_and_store_public_editorial_quality(
         artifacts=artifacts,
         ctx=ctx,
         openai_client=openai_client,
+        verified_source_identity=canonical_source_identity,
+        verified_fact_digest=canonical_fact_digest,
     )
     if semantic_issues:
         quality = replace(
@@ -2635,6 +2671,8 @@ def _validate_regeneration_baseline(
     source_title_resolution: ReportTitleResolution | None = None,
     validation_openai_client=None,
     source_identity: str = "",
+    verified_source_identity: str = "",
+    verified_fact_digest: str = "",
 ) -> ValidationReport:
     """Run the current production validation stack on unchanged artifacts."""
 
@@ -2656,6 +2694,7 @@ def _validate_regeneration_baseline(
         candidate_artifacts=current_artifacts,
         evidence_packs=evidence_packs,
         ctx=baseline_ctx,
+        verified_facts_only=bool(verified_source_identity),
     )
     validation = _run_validation_with_fallback(
         runtime=runtime,
@@ -2671,6 +2710,7 @@ def _validate_regeneration_baseline(
             source_id=str(
                 source_identity or runtime.ctx.source_identity_id or ""
             ).strip(),
+            validation_mode=("verified_facts" if verified_source_identity else "full"),
             deterministic_grounding_passed=baseline_integrity.passed,
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
@@ -2690,6 +2730,8 @@ def _validate_regeneration_baseline(
         pack_name="public_editorial_quality_regen_baseline",
         ctx=baseline_ctx,
         openai_client=validation_openai_client,
+        verified_source_identity=verified_source_identity,
+        verified_fact_digest=verified_fact_digest,
     )
     validation = _merge_public_editorial_quality(validation, editorial_validation)
     return _with_retained_claim_repair_diagnostics(
@@ -2931,6 +2973,9 @@ def _run_validation_regeneration_loop(
     regeneration_openai_client=None,
     discovery_evidence_packs: Optional[Dict[str, Any]] = None,
     source_identity: str = "",
+    verified_source_identity: str = "",
+    verified_fact_digest: str = "",
+    verified_authority_context: VerifiedAuthorityContext | None = None,
 ) -> tuple[
     Dict[str, Any],
     ValidationReport,
@@ -2939,7 +2984,12 @@ def _run_validation_regeneration_loop(
     Dict[str, str],
     Dict[str, str],
 ]:
-    verified_mode = verified_facts_mode(current_artifacts, "")
+    # The explicit qualified identity is the trusted workflow signal.  The
+    # artifact marker remains a compatibility signal for direct legacy callers,
+    # but it cannot downgrade an admitted verified run when the marker is lost.
+    verified_mode = bool(verified_source_identity) or verified_facts_mode(
+        current_artifacts, ""
+    )
     if verified_mode:
         structural_issues = [
             issue
@@ -3200,6 +3250,50 @@ def _run_validation_regeneration_loop(
             **regeneration_kwargs,
         )
         candidate_artifacts = regeneration_response.updated_artifacts
+        if verified_source_identity:
+            try:
+                candidate_authority = build_verified_authority_context(
+                    candidate_artifacts,
+                    expected_source_identity=verified_source_identity,
+                )
+            except AppError as exc:
+                raise AppError(
+                    code="verified_fact_snapshot_invalid",
+                    message=(
+                        "Verified-facts regeneration candidate lost its authority "
+                        "snapshot"
+                    ),
+                    retryable=False,
+                    context={
+                        "report_id": runtime.file.file_id,
+                        "validation_code": exc.code,
+                    },
+                    cause=exc,
+                ) from exc
+            if verified_fact_digest and (
+                candidate_authority.verified_fact_digest != verified_fact_digest
+            ):
+                raise AppError(
+                    code="verified_fact_snapshot_invalid",
+                    message=(
+                        "Verified-facts regeneration candidate changed its fact digest"
+                    ),
+                    retryable=False,
+                    context={"report_id": runtime.file.file_id},
+                )
+            if (
+                verified_authority_context is not None
+                and candidate_authority != verified_authority_context
+            ):
+                raise AppError(
+                    code="verified_fact_snapshot_invalid",
+                    message=(
+                        "Verified-facts regeneration candidate changed its authority "
+                        "snapshot"
+                    ),
+                    retryable=False,
+                    context={"report_id": runtime.file.file_id},
+                )
         _reconcile_candidate_key_figure_projections(
             before=artifacts_before,
             candidate=candidate_artifacts,
@@ -3259,6 +3353,7 @@ def _run_validation_regeneration_loop(
                     for issue in target.issues
                 ),
                 removed_summary_claim_paths=tuple(sorted(removed_summary_claim_paths)),
+                verified_facts_only=bool(verified_source_identity),
             )
             if candidate_enforced
             else CandidateIntegrityResult(issues=[], evidence_lineage=[])
@@ -3384,9 +3479,13 @@ def _run_validation_regeneration_loop(
                     sha256_json(working_artifacts) if claim_reuse_eligible else ""
                 ),
                 validation_mode=(
-                    "inline_deterministic"
-                    if deterministic_candidate_rejection
-                    else "full"
+                    "verified_facts"
+                    if verified_source_identity
+                    else (
+                        "inline_deterministic"
+                        if deterministic_candidate_rejection
+                        else "full"
+                    )
                 ),
                 deterministic_grounding_passed=candidate_result.passed,
                 publisher_name=runtime.publisher_name,
@@ -3421,6 +3520,8 @@ def _run_validation_regeneration_loop(
                 pack_name=f"public_editorial_quality_regen_attempt_{attempt_index}",
                 ctx=attempt_ctx,
                 openai_client=validation_openai_client,
+                verified_source_identity=verified_source_identity,
+                verified_fact_digest=verified_fact_digest,
             )
         )
         candidate_validation_report = _merge_public_editorial_quality(

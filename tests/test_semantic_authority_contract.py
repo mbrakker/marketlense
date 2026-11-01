@@ -97,6 +97,31 @@ def _review_verdict(
     }
 
 
+def _report_verdict() -> dict:
+    return {
+        "status": "pass",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The report remains grounded in retained source context.",
+        "evidence_ids": [],
+        "repair_target": "",
+        "affected_item_id": "",
+        "dimensions": {
+            name: {
+                "status": "pass",
+                "reason": "The report satisfies this review dimension.",
+            }
+            for name in (
+                "material_coverage",
+                "analytical_depth",
+                "distinctness",
+                "limitations",
+            )
+        },
+    }
+
+
 def _semantic_case(
     *,
     outcome: str,
@@ -179,7 +204,10 @@ def _compatible_protected_facts() -> dict[str, dict[str, str]]:
 
 def test_public_review_requires_evidence_for_factual_pass() -> None:
     item = _public_item()
-    payload = {"verdicts": [_review_verdict(item_id=item["public_item_id"])]}
+    payload = {
+        "verdicts": [_review_verdict(item_id=item["public_item_id"])],
+        "report_verdict": _report_verdict(),
+    }
 
     with pytest.raises(AppError) as exc_info:
         _validate_public_editorial_review_payload(payload, [item], _ctx())
@@ -195,7 +223,8 @@ def test_public_review_allows_pure_normative_pass_without_source_entailment() ->
                 item_id=item["public_item_id"],
                 classification="prescriptive_recommendation",
             )
-        ]
+        ],
+        "report_verdict": _report_verdict(),
     }
 
     _validate_public_editorial_review_payload(payload, [item], _ctx())

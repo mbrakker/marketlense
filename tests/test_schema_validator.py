@@ -194,6 +194,23 @@ def test_provider_schema_types_const_values_for_strict_openai_responses():
     }
 
 
+def test_public_editorial_review_provider_schema_requires_report_verdict():
+    schema = provider_output_schema("public_editorial_quality_review")
+
+    assert "report_verdict" in schema["required"]
+    with pytest.raises(AppError) as exc_info:
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0",
+                payload={"verdicts": []},
+                schema_name="public_editorial_quality_review",
+            ),
+            _ctx(),
+        )
+
+    assert exc_info.value.code == "schema_missing_required"
+
+
 def test_repair_decision_provider_schema_omits_unsupported_keywords():
     schema = provider_output_schema("regeneration_repair_decision")
     repair = schema["properties"]["repair_decision"]["properties"]

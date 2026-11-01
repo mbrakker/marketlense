@@ -486,6 +486,127 @@ def test_verified_render_accepts_matching_canonical_authority_projection(
     assert _verified_render_authority(runtime, analysis) == authority
 
 
+def test_verified_render_accepts_exact_base_runtime_identity(
+    tmp_path,
+) -> None:
+    runtime = _runtime(tmp_path, md5="source-md5")
+    qualified_identity = "frozen-report|pdf-sha256:" + "a" * 64
+    runtime = replace(
+        runtime, ctx=replace(runtime.ctx, source_identity_id="frozen-report")
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    artifacts = _authority_artifacts()
+    authority = build_verified_authority_context(
+        artifacts, expected_source_identity=qualified_identity
+    )
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        artifacts_payload=artifacts,
+        authoritative_evidence_packs=authority.evidence_packs,
+        verified_authority_context=authority,
+        data_dict={
+            "authoritative_evidence_packs": authority.evidence_packs,
+            "verified_authority_context": asdict(authority),
+        },
+    )
+
+    assert _verified_render_authority(runtime, analysis) == authority
+
+
+def test_verified_render_rejects_wrong_qualified_runtime_identity(
+    tmp_path,
+) -> None:
+    runtime = _runtime(tmp_path, md5="source-md5")
+    authority_identity = "frozen-report|pdf-sha256:" + "a" * 64
+    runtime = replace(
+        runtime,
+        ctx=replace(
+            runtime.ctx,
+            source_identity_id="frozen-report|pdf-sha256:" + "b" * 64,
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    artifacts = _authority_artifacts()
+    authority = build_verified_authority_context(
+        artifacts, expected_source_identity=authority_identity
+    )
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        artifacts_payload=artifacts,
+        authoritative_evidence_packs=authority.evidence_packs,
+        verified_authority_context=authority,
+        data_dict={
+            "authoritative_evidence_packs": authority.evidence_packs,
+            "verified_authority_context": asdict(authority),
+        },
+    )
+
+    with pytest.raises(AppError) as raised:
+        _verified_render_authority(runtime, analysis)
+
+    assert raised.value.code == "verified_source_identity_mismatch"
+    assert raised.value.retryable is False
+
+
+def test_verified_render_rejects_noncanonical_authority_qualifier(tmp_path) -> None:
+    runtime = _runtime(tmp_path, md5="source-md5")
+    qualified_identity = "frozen-report|pdf-sha256:" + "a" * 64
+    runtime = replace(
+        runtime, ctx=replace(runtime.ctx, source_identity_id="frozen-report")
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    artifacts = _authority_artifacts()
+    authority = build_verified_authority_context(
+        artifacts, expected_source_identity=qualified_identity
+    )
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        artifacts_payload=artifacts,
+        authoritative_evidence_packs=authority.evidence_packs,
+        verified_authority_context=replace(
+            authority, source_identity=f"{qualified_identity}|suffix"
+        ),
+        data_dict={"authoritative_evidence_packs": authority.evidence_packs},
+    )
+
+    with pytest.raises(AppError) as raised:
+        _verified_render_authority(runtime, analysis)
+
+    assert raised.value.code == "verified_source_identity_mismatch"
+
+
+def test_verified_render_rejects_missing_fact_snapshot_before_side_effects(
+    tmp_path,
+) -> None:
+    runtime = _runtime(tmp_path, md5="source-md5")
+    source_identity = "frozen-report|pdf-sha256:" + "a" * 64
+    runtime = replace(
+        runtime, ctx=replace(runtime.ctx, source_identity_id=source_identity)
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    artifacts = _authority_artifacts()
+    artifacts.pop("verified_facts")
+    authority = build_verified_authority_context(
+        _authority_artifacts(), expected_source_identity=source_identity
+    )
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        artifacts_payload=artifacts,
+        authoritative_evidence_packs=authority.evidence_packs,
+        verified_authority_context=authority,
+        data_dict={"authoritative_evidence_packs": authority.evidence_packs},
+    )
+
+    with pytest.raises(AppError) as raised:
+        _verified_render_authority(runtime, analysis)
+
+    assert raised.value.code == "verified_authority_context_invalid"
+
+
 def test_verified_render_rejects_stale_context_and_serialized_projection(
     tmp_path,
 ) -> None:
@@ -645,7 +766,10 @@ def test_metadata_quality_reconciles_html_meta_and_json_ld_identity() -> None:
       <span class="meta-pill">Published: 2025-01-01</span>
     </div>
     <script type="application/ld+json">
-      {"publisher":{"name":"Wrong JSON Publisher"},"author":{"name":"Wrong JSON Author"}}
+      {
+        "publisher":{"name":"Wrong JSON Publisher"},
+        "author":{"name":"Wrong JSON Author"}
+      }
     </script>
     <script type="application/ld+json">not-json</script>
     <script type="application/ld+json">["not", "an", "object"]</script>
@@ -704,7 +828,10 @@ def test_public_quality_html_and_editorial_projections_remain_deterministic() ->
         (
             "Retailers account for 30% of online sales.",
             "Retailers account for 20% of online sales.",
-            "attaches a retained metric value to a different source cohort or denominator",
+            (
+                "attaches a retained metric value to a different source cohort or "
+                "denominator"
+            ),
         ),
     ],
 )

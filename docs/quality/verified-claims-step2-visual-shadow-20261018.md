@@ -8184,3 +8184,64 @@ mutation/quality gates, and provider-free regressions. **Overall Step 2 verdict:
 PARTIAL / NO-GO** pending hosted confirmation and later source-backed
 acceptance. E18 remains **Active/PARTIAL** and Step 3 remains
 **unstarted/not ready**.
+
+## Final P0/P1 pre-E2E corrective implementation — 2026-11-01
+
+This addendum records the follow-up from starting commit
+`f73f307f081a1518a25b06515ebc66a242a49c95`. It is provider-free and does not
+claim fresh report selection, visual verification, live editorial quality, or
+publication readiness.
+
+### Corrections and evidence
+
+| Area | Minimal correction | Evidence |
+| --- | --- | --- |
+| Qualified source identity | Render/readiness now accepts either the exact qualified runtime identity or the exact base runtime identity only when the authority is exactly `base|pdf-sha256:<64 hex>`. Invalid qualifiers, loose prefix/suffix matches, mutable/file IDs, and mismatches fail closed before render side effects. Canonical authority is rebuilt against the qualified identity. | `tests/test_pre_e2e_integrity.py`; focused and full suites. |
+| Verified-mode continuity | A trusted authority context or explicit verified workflow intent selects verified mode. Missing facts, digest, canary, packs, or authority context are structural failures; they cannot trigger generic legacy fallback or broad regeneration. Candidate repair, checkpoint resume, and report validation carry the same mode and authority. | `tests/test_pre_e2e_integrity.py`, existing checkpoint/reentry and regeneration suites. |
+| Public editorial contract | `report_verdict` is now required at the public-review root, and the validator/cache contract advanced from `v18` to `v19`. Missing or malformed report-level verdicts fail before acceptance or cache reuse. | `tests/test_schema_validator.py`, public-editorial and validation suites. |
+| Missing-evidence attribution | Explicit empty evidence remains `evidence_ids=[]`; `material_claim_evidence_missing` and `semantic_evidence_missing` survive normalization with their severity, hard-fail class, target, and nonrepairable semantics. | `tests/test_pre_e2e_integrity.py`, semantic-authority suite. |
+| Report-level authority | Verified public review receives the qualified source identity, verified-fact digest, and complete canonical fact map through the existing review call. Invalid authority cannot fall back to retained evidence. | `tests/test_pre_e2e_integrity.py`, full validation/regeneration suites. |
+| Prompt contract | Removed the duplicated malformed public-editorial authority paragraph. The existing authority policy remains the single source of instruction; no new prompt namespace, LLM stage, or schema relaxation was added. | Prompt fixture regeneration and regression gate. |
+
+The protected unrelated `Wordpress/dist/marketlense.zip` modification remains
+untouched. No provider call, PDF acquisition, canonical artifact mutation,
+publication, or WordPress write was performed.
+
+### Provider-free verification results
+
+| Check | Result |
+| --- | --- |
+| Focused authority/schema/semantic/regeneration suite | **170 passed** in 8.73s |
+| Prompt/editorial/render/regeneration suite | **464 passed** in 48.53s |
+| Full CPython 3.12 suite | **8,344 passed, 2 skipped, 39 deselected, 24 subtests** in 1,461.19s |
+| Coverage | **85.61%** overall; contracts 97.97%, orchestrators 86.09%, generators 87.21%, services 84.64%, control-plane 90.60%; all floors passed |
+| Mypy | **0 tracked errors across 786 source files** |
+| Mutation partition 0 | **32/33** killed; the retained taxonomy survivor remains within the existing 75% target |
+| Mutation partition 1 | **35/35** killed |
+| Quality comparator | **PASS**; all retained coverage, mutation, docpack, and candidate metrics passed |
+| Contract schemas, Ruff, prompt/schema gates | **PASS** |
+
+The regenerated prompt baseline was produced by the repository tooling, with
+thresholds, pricing, model configuration, fixtures, schemas, and factual
+checks unchanged:
+
+| Namespace | Previous baseline | Current baseline | Change |
+| --- | ---: | ---: | ---: |
+| Total fixtures | 113,935 / `$0.025046` | 113,900 / `$0.025043` | −35 tokens / −$0.000003 |
+| Validation family | 11,650 / `$0.002077` | 11,615 / `$0.002074` | −35 tokens / −$0.000003 |
+| Public editorial quality | 1,595 / `$0.000349` | 1,560 / `$0.000346` | −35 tokens / −$0.000003 |
+
+The fixture regression passes against the regenerated baseline. The apparent
+decrease is solely the removed duplicate prompt text; no factual instruction
+was compressed or removed.
+
+### Verdict and remaining evidence
+
+The deterministic P0/P1 correction slice is **PASS**: source identity,
+verified-mode continuity, report-level schema/authority, attribution, cache
+invalidation, and prompt integrity are covered by focused, full-suite, static,
+coverage, mutation, and quality evidence. The complete report pipeline remains
+**PARTIAL / NO-GO** for Step 2 promotion because this pass intentionally did
+not execute the retained real-report/frozen-five workflow or obtain fresh live
+editorial evidence. E18 remains **Active/PARTIAL** and Step 3 is
+**unstarted/not ready**. Hosted CI on the pushed commit is still required.

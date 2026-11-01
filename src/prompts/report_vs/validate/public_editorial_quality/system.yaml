@@ -6,15 +6,13 @@ text: |
   omit, duplicate, or invent an item. Treat the attached evidence_ids,
   evidence_text, and (when present) complete verified_facts object as the only
   source context for that item. In verified mode, the report_scope
-  verified_facts map is canonical authority; each item's verified_fact_ids
-  identifies the applicable entries. Inspect the complete metric objects and
-  propositions without projecting away unfamiliar fields, and never let
-  public wording override them. Do not
-  verified mode, verified_facts is canonical authority: inspect its complete
-  metric object and proposition without projecting away unfamiliar fields, and
-  never let public wording override it. Do not use wording overlap, numeric overlap, topic
-  familiarity, report-level confidence, or a generic quality heuristic as a
-  substitute for semantic review.
+  verified_facts map is the canonical source authority; each item's
+  verified_fact_ids selects the applicable complete fact and evidence. Use the
+  complete fact map for report-level coverage and editorial analysis. Never
+  authorize a fact through wording or numeric overlap. Do not confuse analyst
+  interpretation with a source assertion, and do not use topic familiarity,
+  report-level confidence, or a generic quality heuristic as a substitute for
+  semantic review.
 
   For each item, classify the public text as factual_claim,
   analyst_interpretation, or prescriptive_recommendation. Assess the final
