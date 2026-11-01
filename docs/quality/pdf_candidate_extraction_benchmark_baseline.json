@@ -1,48 +1,48 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-06-28T00:00:00+00:00",
+  "generated_at": "2026-11-01T06:38:20.290701+00:00",
   "benchmarks": [
     {
       "pdf_path": "tests/fixtures/pdf_benchmark/golden/CAPGEMINI - 2026-Retail-Trends_ACIG.pdf",
       "report_name": "CAPGEMINI - 2026-Retail-Trends_ACIG",
-      "expected_candidate_count": 12,
+      "expected_candidate_count": 28,
       "expected_pdf_sha256": "72a04abd394dfcb6b14288b97548669501e70c087eb6cee8bc8b9a66589cb0c7",
-      "expected_signature": "b2e7ba59d7e7eff1cfa16b42d18782bd5acbd1978162075827cfa4958ac4c7e6",
+      "expected_signature": "75dac5fa9de62c18d7d9cbba9457a1d7bfbe1166c68a764bf0968f5bc7877078",
       "expected_degraded_page_count": 0,
-      "baseline_median_seconds": 5.3,
+      "baseline_median_seconds": 3.427205,
       "runtime_warn_percent": 25.0,
       "runtime_fail_percent": 75.0
     },
     {
       "pdf_path": "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf",
       "report_name": "IAS - Industry_Pulse_Report_2026_ACIG",
-      "expected_candidate_count": 13,
+      "expected_candidate_count": 86,
       "expected_pdf_sha256": "8b05b13067748baebff51844a702a05dd6eb560706db5fa94b2ee5badbd672cd",
-      "expected_signature": "b89d233d81139ed641ef846d6d2ce4e12ae61534e121c0bd9461451e01436c02",
+      "expected_signature": "e82d73ea1d3dc8c8cf27fcd11ba8cb749d80fd642e21a96ec4242f6a4889f442",
       "expected_degraded_page_count": 0,
-      "baseline_median_seconds": 17.054,
+      "baseline_median_seconds": 15.959452,
       "runtime_warn_percent": 25.0,
       "runtime_fail_percent": 75.0
     },
     {
       "pdf_path": "tests/fixtures/pdf_benchmark/golden/JULIUS BAER - Secular-outlook-2026_ACIG.pdf",
       "report_name": "JULIUS BAER - Secular-outlook-2026_ACIG",
-      "expected_candidate_count": 13,
+      "expected_candidate_count": 20,
       "expected_pdf_sha256": "156032ae914753000d51085c5e1c6e2f2d4680b9d046bb18df6cefcb265ce193",
-      "expected_signature": "f5b05e61721ab5ab29c0e5478d47db673b3a29011f6702f66306c7f16499a6e1",
+      "expected_signature": "ff7766f20de401157426eb7925fe2edf73d5c2ebab0b48bd19ea5d8b50a42355",
       "expected_degraded_page_count": 0,
-      "baseline_median_seconds": 19.207,
+      "baseline_median_seconds": 9.491729,
       "runtime_warn_percent": 25.0,
       "runtime_fail_percent": 75.0
     },
     {
       "pdf_path": "tests/fixtures/pdf_benchmark/golden/2026_Global_Food_and_Drink_Predictions.pdf",
       "report_name": "2026_Global_Food_and_Drink_Predictions",
-      "expected_candidate_count": 0,
+      "expected_candidate_count": 3,
       "expected_pdf_sha256": "0d10fa30d4df83b8ec74a63db363b5bd98eb52497e5cc9a2300152d9713d6b16",
-      "expected_signature": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "expected_signature": "2607e0621fa9571914c6e9943418829cf73e40879fd3d3acb5475967e4f25b05",
       "expected_degraded_page_count": 0,
-      "baseline_median_seconds": 1.15,
+      "baseline_median_seconds": 1.925554,
       "runtime_warn_percent": 25.0,
       "runtime_fail_percent": 75.0
     }

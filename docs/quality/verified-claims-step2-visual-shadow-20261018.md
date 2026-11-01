@@ -8060,3 +8060,26 @@ not a substitute for current-SHA editorial-quality evidence.
 implementation, full unit suite, coverage floors, mutation, prompt, static,
 schema, and policy checks pass. The retained generator non-regression gate and
 current-SHA real-report evidence remain unresolved; Step 3 must not begin.
+
+### PDF candidate benchmark reconciliation — 2026-11-01
+
+Hosted mutation partition 0 exposed an expected benchmark mismatch caused by
+the visual-recall correction in this slice. The extractor now retains
+technically valid ambiguous/overflow candidates for the existing multimodal
+review batches; it rejects only the demonstrated oversized embedded-wrapper
+geometry. The source PDF hashes were unchanged, and the repository benchmark
+tool regenerated the committed roster/signature baseline:
+
+| Fixture | Previous count | Current count | PDF SHA unchanged |
+| --- | ---: | ---: | --- |
+| Capgemini | 12 | 28 | Yes |
+| IAS | 13 | 86 | Yes |
+| Julius Baer | 13 | 20 | Yes |
+| Global Food & Drink | 0 | 3 | Yes |
+
+The refreshed signatures are the observed deterministic outputs from the same
+PDFs, not fabricated counts or threshold exemptions. A clean local recheck
+against the refreshed baseline passed all four rows with zero warnings, zero
+degraded pages, matching counts/signatures, and no runtime failure. This is a
+candidate-recall/visual-review compatibility update; it does not establish
+semantic admission or live editorial quality.

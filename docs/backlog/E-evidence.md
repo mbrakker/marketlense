@@ -1479,3 +1479,12 @@ measurements, current-SHA editorial outcomes, or publication writes to claim.
 unit/static/mutation/floor checks are green, but the retained generator
 non-regression gate and live report-quality evidence remain open. Step 2 stays
 **PARTIAL/NO-GO** and Step 3 remains **unstarted/not ready**.
+
+The hosted mutation partition also identified an intentional PDF benchmark
+roster change from the visual-recall correction. The repository benchmark tool
+refreshed the four exact fixture rows without changing their PDF hashes:
+Capgemini **12→28**, IAS **13→86**, Julius Baer **13→20**, and Global Food &
+Drink **0→3** candidates. The follow-up local benchmark passed all four rows
+with matching signatures, zero degraded pages, and no runtime failure. This
+baseline update records deterministic candidate recall for multimodal review;
+it does not relax semantic validation or prove live editorial quality.

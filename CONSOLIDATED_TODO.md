@@ -1568,3 +1568,13 @@ available at the required live paths; no provider, canonical, publication, or
 WordPress write occurred. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full details are
 in the Step 2 quality report.
+
+The hosted mutation partition exposed an expected PDF candidate-benchmark
+roster change from the visual-recall correction. The repository benchmark tool
+refreshed the exact fixture baseline with unchanged PDF hashes: Capgemini
+**12→28**, IAS **13→86**, Julius Baer **13→20**, and Global Food & Drink
+**0→3** candidates. A clean local recheck passed all four rows with matching
+signatures, zero degraded pages, and no runtime failure. This records the
+candidate-recall contract needed for multimodal review; it is not a semantic or
+live editorial-quality promotion. The retained generator coverage comparator
+and current-SHA report-quality limitations remain open.
