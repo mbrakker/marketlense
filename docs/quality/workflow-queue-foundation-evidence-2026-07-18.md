@@ -154,3 +154,41 @@ individually with the same inputs and both passed. Final coverage was `60,289 /
 final implementation SHA is recorded as a Git note immediately after the one
 commit is created, so the evidence remains bound to the exact tested tree
 without embedding an unknown self-referential SHA in a committed file.
+
+## Queue publication authority correction — 2026-11-01
+
+**Implementation commit:** `4128db48`
+**Scope:** provider-free Signal and Briefing queue/publication authority only.
+
+The existing Signal projection adapter now owns the package authorization
+metadata used by both direct and queued generation. Queued packages retain their
+queue-specific HTML/JSON paths, cover fingerprint, content checksum and
+idempotency inputs while carrying the approved candidate-group identity and
+immutable manifest SHA. Signal readiness replays that manifest through the
+existing candidate store and source/evidence projection read before automatic
+approval; missing, changed, held, overridden, or contradictory state stays
+manual. The HTML entity metadata is derived from the same eligibility decision
+as package metadata, and contradictory embedded metadata is rejected before any
+WordPress lookup or write.
+
+Briefing publication keeps source-report, distinct-publisher and factual-
+evidence minima hard. Explicit overrides remain limited to soft policy issues;
+metric-normalization telemetry is retained as a manual `semantic_authority_missing`
+outcome when no semantic verdict is present. The package checksum and Signal
+validation identity are now produced and consumed consistently across direct,
+queued, readiness, and preflight paths without changing the retained package
+schema.
+
+| Verification | Result |
+| --- | --- |
+| Signal/Briefing/analytics-store/queue/readiness/publication boundary suite | `120 passed, 9 deselected` |
+| Focused authority/readiness regression group | `42 passed` |
+| Formatting, Ruff `E9/F/I`, schema snapshot, architecture imports | passed |
+| Full-repository mypy | passed; 786 source files, 0 tracked errors |
+| Local default pytest | `8,381 passed, 2 skipped, 48 deselected`; one expected CPython 3.14 wheelhouse guard failure remains because the test requires CPython 3.12 |
+| Live providers, acquisition, PDF/report execution, WordPress I/O | not run by design |
+
+The local run is not evidence of hosted Python 3.12 or real-report quality. The
+remaining product prerequisite is a hosted full-CI run on CPython 3.12, followed
+by the already-required real-report semantic/editorial gates. E18 remains
+Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 is unstarted/not ready.
