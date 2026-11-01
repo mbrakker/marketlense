@@ -1488,3 +1488,13 @@ Drink **0→3** candidates. The follow-up local benchmark passed all four rows
 with matching signatures, zero degraded pages, and no runtime failure. This
 baseline update records deterministic candidate recall for multimodal review;
 it does not relax semantic validation or prove live editorial quality.
+
+Hosted CI run `41282490348` on `10906a99` subsequently passed the full hosted
+test job (**8,312 passed, 1 skipped in 461.98s**), both mutation partitions, and
+the refreshed PDF benchmark. The release-evidence job stopped only at the
+retained quality comparator: global, orchestrator, and service coverage passed,
+but `src/generators` remained **85.1995%** against the retained **87.1763%**
+baseline. The baseline was not lowered. The release result remains
+**PARTIAL/NO-GO**, R3 remains active, and no current-SHA provider-backed report
+run or publication write occurred. Hosted evidence is recorded in the Step 2
+quality report.

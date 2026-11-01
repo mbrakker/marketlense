@@ -8083,3 +8083,38 @@ against the refreshed baseline passed all four rows with zero warnings, zero
 degraded pages, matching counts/signatures, and no runtime failure. This is a
 candidate-recall/visual-review compatibility update; it does not establish
 semantic admission or live editorial quality.
+
+### Hosted CI terminal result — 2026-11-01 (`10906a99`, run `41282490348`)
+
+The fixture correction following the first refreshed-baseline run derives the
+warning and failure test observations from the authoritative current Global
+Food baseline, so the tests continue to exercise the existing 25% warning and
+75% failure thresholds after a legitimate baseline refresh. The focused
+release-evidence tests passed **61/61**; formatting, Ruff, and `git diff
+--check` passed.
+
+On the pushed SHA, hosted `tests` passed **8,312 tests with 1 skipped in
+461.98s**, including all static/policy/schema/documentation checks and coverage
+floor validation; the credential-gated WordPress staging REST check remained
+skipped by its existing guard. Mutation partitions 0 and 1 passed, and the
+refreshed PDF candidate benchmark passed. The release-evidence job then failed
+only at the retained historical quality comparator:
+
+| Quality slice | Current | Retained baseline | Result |
+| --- | ---: | ---: | --- |
+| Global coverage | 85.1049% | 83.3816% | Pass |
+| `src/generators` coverage | 85.1995% | 87.1763% | **Fail** |
+| `src/orchestrators` coverage | 86.2439% | 84.8022% | Pass |
+| `src/services` coverage | 84.5030% | 82.5763% | Pass |
+
+All mutation targets, docpack metrics, and candidate-extraction metrics passed
+the comparator. The historical generator baseline was not lowered or
+regenerated to manufacture a release pass; R3 remains active. The release job
+therefore correctly stopped before later release-evidence stages. No provider
+calls, current-SHA retained-report run, canonical mutation, publication, or
+WordPress write occurred. Hosted run:
+`https://github.com/mbrakker/marketlense/actions/runs/41282490348`.
+
+**Updated verdict: PARTIAL / NO-GO.** Semantic-authority tests and hosted
+pre-release gates are green, but the retained generator non-regression gate and
+current-SHA real-report evidence remain open; Step 3 must not begin.

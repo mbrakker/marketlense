@@ -1578,3 +1578,13 @@ signatures, zero degraded pages, and no runtime failure. This records the
 candidate-recall contract needed for multimodal review; it is not a semantic or
 live editorial-quality promotion. The retained generator coverage comparator
 and current-SHA report-quality limitations remain open.
+
+Hosted CI terminal evidence for `10906a99` / run `41282490348`: tests passed
+**8,312 with 1 skipped in 461.98s**, mutation partitions 0 and 1 passed, and
+the refreshed PDF candidate benchmark passed. `release_evidence` stopped at
+the retained quality comparator because `src/generators` coverage was
+**85.1995%** versus **87.1763%**; global, orchestrator, service, mutation,
+docpack, and candidate-extraction comparisons passed. No baseline or gate was
+lowered. R3 remains active; E18/Step 2 remain **Active/PARTIAL** and Step 3
+remains **unstarted/not ready**. No current-SHA provider or publication work
+was performed.
