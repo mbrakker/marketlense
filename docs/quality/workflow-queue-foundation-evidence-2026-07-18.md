@@ -186,9 +186,11 @@ schema.
 | Formatting, Ruff `E9/F/I`, schema snapshot, architecture imports | passed |
 | Full-repository mypy | passed; 786 source files, 0 tracked errors |
 | Local default pytest | `8,381 passed, 2 skipped, 48 deselected`; one expected CPython 3.14 wheelhouse guard failure remains because the test requires CPython 3.12 |
+| Hosted Python 3.12 CI / release evidence | [Run 41360189272](https://github.com/mbrakker/marketlense/actions/runs/41360189272) passed at `06fcfe6a`: `8,407 passed, 1 skipped`, `85.43%` line coverage, both mutation partitions passed across 17 targets (minimum target score `75`), release manifest/review passed with zero issues |
 | Live providers, acquisition, PDF/report execution, WordPress I/O | not run by design |
 
-The local run is not evidence of hosted Python 3.12 or real-report quality. The
-remaining product prerequisite is a hosted full-CI run on CPython 3.12, followed
-by the already-required real-report semantic/editorial gates. E18 remains
-Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 is unstarted/not ready.
+The hosted run confirms the repository gates on CPython 3.12; neither local nor
+hosted provider-free checks are evidence of real-report semantic/editorial
+quality. The remaining product prerequisite is the already-required real-report
+semantic/editorial gates. E18 remains Active/PARTIAL, Step 2 remains
+PARTIAL/NO-GO, and Step 3 is unstarted/not ready.
