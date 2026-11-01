@@ -1469,6 +1469,15 @@ source-fidelity evidence, not live repair-success evidence. E18 remains
 **unstarted/not ready**. Full metrics, insight ledger, paths, and limitations
 are recorded in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
+Hosted CI run `41321929178` for the pushed implementation SHA
+`38b0e6d7b6b3f4274cd273eaa0b8651d076c8837` passed `tests`, mutation
+partitions 0/1, and `release_evidence` with zero unwaived issues. The existing
+WordPress staging REST step was skipped by its guard; no provider-backed report
+run or publication write occurred. The release bundle is retained at
+<https://github.com/mbrakker/marketlense/actions/runs/41321929178/artifacts/13089054717>.
+This does not change E18 **Active/PARTIAL**, Step 2 **PARTIAL/NO-GO**, or Step
+3 **unstarted/not ready**.
+
 **Authority and cross-report contract correction — 2026-11-01 (working tree
 based on `8ba0663a`):** The current slice adds the missing P0/P1 enforcement
 without a new validator, LLM stage, service, or publication path. Public

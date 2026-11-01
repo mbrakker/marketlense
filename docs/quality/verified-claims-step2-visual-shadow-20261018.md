@@ -8322,4 +8322,21 @@ The deterministic authority/contract correction slice is **PASS** for the
 provider-free local gates. Overall Verified Claims Step 2 remains
 **PARTIAL / NO-GO** because current-SHA source-report editorial evidence is
 still absent. E18 remains **Active/PARTIAL** and Step 3 remains
-**unstarted/not ready**; hosted CI is still required for this commit.
+**unstarted/not ready**.
+
+### Hosted CI confirmation — 2026-11-01
+
+Commit `38b0e6d7b6b3f4274cd273eaa0b8651d076c8837` passed hosted CI run
+`41321929178`: `tests`, mutation partitions 0 and 1, and `release_evidence`
+all completed successfully. The default tests job completed at 15:44:56 UTC;
+mutation 0 completed at 15:42:57 UTC, mutation 1 at 15:42:37 UTC, and release
+evidence at 15:46:12 UTC. The existing WordPress staging REST step was skipped
+by its configured credential/variable guard. The release manifest had zero
+unwaived issues and the retained release-evidence bundle is available at
+<https://github.com/mbrakker/marketlense/actions/runs/41321929178/artifacts/13089054717>.
+
+This hosted run verifies deterministic CI, mutation, benchmark, schema, and
+release-evidence gates only. It did not run a retained real-report/provider
+editorial workflow or publish to WordPress. The overall Step 2 verdict remains
+**PARTIAL / NO-GO**; E18 remains **Active/PARTIAL** and Step 3 remains
+**unstarted/not ready**.

@@ -1521,3 +1521,10 @@ canonical artifact mutation, publication, or WordPress write was performed.
 This evidence supports the deterministic correction slice only: E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready** pending current-SHA source-report editorial evidence.
+
+Hosted CI run `41321929178` for commit `38b0e6d7` subsequently passed the
+tests, both mutation partitions, and `release_evidence` with zero unwaived
+issues. Its release-evidence bundle is retained at
+<https://github.com/mbrakker/marketlense/actions/runs/41321929178/artifacts/13089054717>.
+The staging REST step was skipped by its existing guard; no provider-backed
+report run or publication write occurred.
