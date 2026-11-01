@@ -26,6 +26,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportOutcomeStatus,
     CrossReportProjectedDataReadRequest,
     CrossReportProjectedDataReadResponse,
+    CrossReportPublishabilityResult,
     CrossReportPublishPackage,
     CrossReportPublishRequestSummary,
     CrossReportPublishResultSummary,
@@ -700,15 +701,19 @@ def _run_cross_report_analysis(
         "theme_selected",
         {"selected_theme_id": theme_selection.selected_theme.theme_id},
     )
-    validate_cross_report_publishability(
-        request.analysis_request,
-        theme_selection,
-        source_selection,
-        ctx,
-        min_source_publishers=int(
-            getattr(settings, "cross_report_analysis_min_theme_source_publishers", 2)
-        ),
-        publish_requires_validation_pass=False,
+    publishability_result: CrossReportPublishabilityResult = (
+        validate_cross_report_publishability(
+            request.analysis_request,
+            theme_selection,
+            source_selection,
+            ctx,
+            min_source_publishers=int(
+                getattr(
+                    settings, "cross_report_analysis_min_theme_source_publishers", 2
+                )
+            ),
+            publish_requires_validation_pass=False,
+        )
     )
     _log_transition(ctx, transitions, "publishability_checked")
     selected_report_ids = [
@@ -744,6 +749,18 @@ def _run_cross_report_analysis(
         ctx,
         max_evidence_items=request.max_evidence_items,
         claim_embeddings=claim_embedding_response.embeddings,
+    )
+    publishability_result = validate_cross_report_publishability(
+        request.analysis_request,
+        theme_selection,
+        source_selection,
+        ctx,
+        min_source_publishers=int(
+            getattr(settings, "cross_report_analysis_min_theme_source_publishers", 2)
+        ),
+        publish_requires_validation_pass=False,
+        evidence_input=evidence_inputs,
+        raise_on_failure=False,
     )
     _enforce_prompt_budget(
         evidence_inputs_chars=evidence_inputs.prompt_input_chars,
@@ -884,6 +901,23 @@ def _run_cross_report_analysis(
         prompt_budget_chars=evidence_inputs.prompt_input_chars,
         max_prompt_chars=request.max_prompt_chars,
     )
+    publishability_result = validate_cross_report_publishability(
+        request.analysis_request,
+        theme_selection,
+        source_selection,
+        ctx,
+        min_source_publishers=int(
+            getattr(settings, "cross_report_analysis_min_theme_source_publishers", 2)
+        ),
+        publish_requires_validation_pass=bool(
+            getattr(
+                settings, "cross_report_analysis_publish_requires_validation_pass", True
+            )
+        ),
+        validation_result=validation,
+        evidence_input=evidence_inputs,
+        raise_on_failure=False,
+    )
     _log_transition(ctx, transitions, "validated", {"status": validation.status})
     artifact_path = _planned_artifact_path(request.output_root, generated.slug)
     publish_html_path = _planned_publish_html_path(request.output_root, generated.slug)
@@ -964,6 +998,7 @@ def _run_cross_report_analysis(
         ),
         target_route=request.publish_target_route,
         briefing_card=briefing_card,
+        publishability_result=publishability_result,
     )
     _log_transition(
         ctx,
@@ -1024,6 +1059,18 @@ def _run_cross_report_analysis(
             sleep_fn=sleep_fn,
         )
     elif publication_mode == "publish_live":
+        if not publishability_result.publishable:
+            raise AppError(
+                code="cross_report_publishability_failed",
+                message="Cross-report live publication is not authorized",
+                retryable=False,
+                severity="error",
+                context={
+                    "issues": publishability_result.issues,
+                    "selected_report_ids": selected_report_ids,
+                    "selected_theme_id": publishability_result.selected_theme_id,
+                },
+            )
         if not bool(getattr(settings, "cross_report_analysis_publish_enabled", False)):
             logger.info(
                 log_event(

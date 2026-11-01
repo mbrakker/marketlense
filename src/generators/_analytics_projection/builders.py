@@ -302,11 +302,6 @@ def _build_claims(
         if not isinstance(raw, dict):
             continue
         evidence_id = _clean_text(raw.get("evidence_id"))
-        if (
-            verified_evidence_ids is not None
-            and evidence_id not in verified_evidence_ids
-        ):
-            continue
         claim = _clean_text(raw.get("claim"))
         evidence = _clean_text(raw.get("evidence"))
         if not claim:

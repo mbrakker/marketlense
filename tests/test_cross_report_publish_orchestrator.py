@@ -40,15 +40,63 @@ def _package(tmp_path) -> CrossReportPublishPackage:
         selected_theme_id="theme-ai",
         selected_report_ids=["report-a", "report-b"],
         source_metadata=[
-            {"report_id": "report-a", "publisher": "Publisher A"},
-            {"report_id": "report-b", "publisher": "Publisher B"},
+            {
+                "report_id": "report-a",
+                "publisher": "Publisher A",
+                "authority_mode": "normal",
+                "source_validation_eligible": True,
+                "verified_source_identity": "",
+                "verified_source_pdf_sha256": "",
+                "verified_fact_digest": "",
+                "content_hash": "",
+            },
+            {
+                "report_id": "report-b",
+                "publisher": "Publisher B",
+                "authority_mode": "normal",
+                "source_validation_eligible": True,
+                "verified_source_identity": "",
+                "verified_source_pdf_sha256": "",
+                "verified_fact_digest": "",
+                "content_hash": "",
+            },
         ],
         category_labels=["Retail"],
         tag_labels=["AI"],
         evidence_reference_ids=["ev-a", "ev-b"],
         raw_metric_ids=["metric-a"],
         prompt_hashes={"system": "system-hash", "user": "user-hash"},
-        machine_metadata={"analysis_id": "analysis-ai"},
+        machine_metadata={
+            "analysis_id": "analysis-ai",
+            "selected_report_ids": ["report-a", "report-b"],
+            "public_entity_metadata": {"publish_eligible": True},
+            "publishability": {
+                "publishable": True,
+                "diagnostic": False,
+                "override_applied": False,
+                "issues": [],
+                "selected_theme_id": "theme-ai",
+                "selected_report_ids": ["report-a", "report-b"],
+                "source_authority": {
+                    "report-a": {
+                        "authority_mode": "normal",
+                        "source_validation_eligible": True,
+                        "verified_source_identity": "",
+                        "verified_source_pdf_sha256": "",
+                        "verified_fact_digest": "",
+                        "content_hash": "",
+                    },
+                    "report-b": {
+                        "authority_mode": "normal",
+                        "source_validation_eligible": True,
+                        "verified_source_identity": "",
+                        "verified_source_pdf_sha256": "",
+                        "verified_fact_digest": "",
+                        "content_hash": "",
+                    },
+                },
+            },
+        },
     )
 
 
@@ -112,6 +160,71 @@ def test_publish_cross_report_package_dry_run_skips_wordpress(
     assert result.status == "dry_run"
     assert result.target_route == "wordpress:ml_briefing"
     assert result.idempotency_reused is False
+    assert calls == []
+
+
+def test_publish_cross_report_package_without_authorization_is_blocked(
+    tmp_path,
+    run_context,
+) -> None:
+    calls = []
+
+    result = publish_cross_report_package(
+        replace(_package(tmp_path), machine_metadata={"analysis_id": "analysis-ai"}),
+        _settings(tmp_path),
+        run_context,
+        dry_run=True,
+        publish_html_fn=lambda request, settings, ctx: calls.append("publish"),
+        find_post_by_file_id_fn=lambda request, ctx: calls.append("lookup"),
+    )
+
+    assert result.status == "blocked"
+    assert result.error_code == "cross_report_publish_authorization_missing"
+    assert calls == []
+
+
+def test_publish_cross_report_package_live_rejects_unauthorized_before_lookup(
+    tmp_path,
+    run_context,
+) -> None:
+    calls = []
+
+    with pytest.raises(AppError) as error_info:
+        publish_cross_report_package(
+            replace(
+                _package(tmp_path), machine_metadata={"analysis_id": "analysis-ai"}
+            ),
+            _settings(tmp_path),
+            run_context,
+            dry_run=False,
+            publish_html_fn=lambda request, settings, ctx: calls.append("publish"),
+            find_post_by_file_id_fn=lambda request, ctx: calls.append("lookup"),
+            ensure_taxonomy_terms_fn=lambda request, ctx: calls.append("taxonomy"),
+            ensure_tags_fn=lambda request, ctx: calls.append("tags"),
+        )
+
+    assert error_info.value.code == "cross_report_publish_authorization_missing"
+    assert calls == []
+
+
+def test_publish_cross_report_package_rejects_stale_source_authorization(
+    tmp_path,
+    run_context,
+) -> None:
+    source_metadata = [dict(item) for item in _package(tmp_path).source_metadata]
+    source_metadata[0]["content_hash"] = "changed-source-hash"
+    calls = []
+
+    result = publish_cross_report_package(
+        replace(_package(tmp_path), source_metadata=source_metadata),
+        _settings(tmp_path),
+        run_context,
+        dry_run=True,
+        find_post_by_file_id_fn=lambda request, ctx: calls.append("lookup"),
+    )
+
+    assert result.status == "blocked"
+    assert result.error_code == "cross_report_publish_authorization_stale"
     assert calls == []
 
 

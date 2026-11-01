@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import sqlite3
 from typing import Any, Sequence, cast
 
@@ -25,7 +26,10 @@ from src.services._analytics_store.common import (
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-from src.utils.verified_facts import verified_source_identity_matches_runtime
+from src.utils.verified_facts import (
+    expected_pdf_sha256,
+    verified_source_identity_matches_runtime,
+)
 
 logger = logging.getLogger("market_lense.analytics_store_service")
 
@@ -72,23 +76,71 @@ def _json_dict(value: Any) -> dict[str, Any]:
     return decoded if isinstance(decoded, dict) else {}
 
 
+def _strict_json_list(value: Any) -> tuple[list[Any], bool]:
+    if value is None or value == "":
+        return [], False
+    try:
+        decoded = json.loads(str(value))
+    except (TypeError, ValueError):
+        return [], False
+    return (decoded, True) if isinstance(decoded, list) else ([], False)
+
+
+def _strict_json_dict(value: Any) -> tuple[dict[str, Any], bool]:
+    if value is None or value == "":
+        return {}, False
+    try:
+        decoded = json.loads(str(value))
+    except (TypeError, ValueError):
+        return {}, False
+    return (decoded, True) if isinstance(decoded, dict) else ({}, False)
+
+
+def _valid_page_list(value: list[Any]) -> bool:
+    return all(
+        isinstance(page, int) and not isinstance(page, bool) and page > 0
+        for page in value
+    )
+
+
+def _valid_digest(value: str) -> bool:
+    return bool(re.fullmatch(r"[0-9a-fA-F]{64}", value))
+
+
 def _verified_source_eligibility(
     report_row: sqlite3.Row,
     expected_sources: dict[str, dict[str, str]],
     require_verified_source_lineage: bool = False,
 ) -> tuple[bool, str]:
     authority_mode = _row_text(report_row, "authority_mode") or "normal"
+    validation_status = _row_text(report_row, "validation_status").casefold()
+    validation_severity = _row_text(report_row, "validation_severity").casefold()
+    if validation_status != "pass":
+        return False, "source_validation_not_passed"
+    if validation_severity in {"error", "fail"}:
+        return False, "source_validation_blocked"
+    if not bool(report_row["source_validation_eligible"]):
+        return False, "source_validation_not_passed"
     if authority_mode != "verified":
         if require_verified_source_lineage:
             return False, "verified_source_lineage_missing"
         return True, ""
-    if not bool(report_row["source_validation_eligible"]):
-        return False, "source_validation_not_passed"
     source_identity = _row_text(report_row, "verified_source_identity")
     source_pdf_sha256 = _row_text(report_row, "verified_source_pdf_sha256")
     fact_digest = _row_text(report_row, "verified_fact_digest")
     if not source_identity or not source_pdf_sha256 or not fact_digest:
         return False, "verified_authority_lineage_missing"
+    try:
+        embedded_pdf_sha256 = expected_pdf_sha256(source_identity)
+    except (TypeError, ValueError):
+        embedded_pdf_sha256 = ""
+    if (
+        not embedded_pdf_sha256
+        or embedded_pdf_sha256.casefold() != source_pdf_sha256.casefold()
+    ):
+        return False, "verified_source_identity_pdf_mismatch"
+    if not _valid_digest(fact_digest):
+        return False, "verified_fact_digest_invalid"
     expected = expected_sources.get(_row_text(report_row, "report_id"))
     if expected:
         expected_identity = str(expected.get("source_identity") or "").strip()
@@ -319,9 +371,156 @@ def _source_candidate(
     )
 
 
+def _verified_row_source_reason(
+    row: sqlite3.Row,
+    *,
+    report_row: sqlite3.Row,
+) -> str:
+    if _row_text(row, "report_id") != _row_text(report_row, "report_id"):
+        return "row_report_id_mismatch"
+    source_identity = _row_text(row, "source_identity")
+    source_pdf_sha256 = _row_text(row, "source_pdf_sha256")
+    fact_digest = _row_text(row, "verified_fact_digest")
+    report_identity = _row_text(report_row, "verified_source_identity")
+    report_pdf_sha256 = _row_text(report_row, "verified_source_pdf_sha256")
+    report_fact_digest = _row_text(report_row, "verified_fact_digest")
+    if not source_identity or not source_pdf_sha256 or not fact_digest:
+        return "row_verified_binding_missing"
+    if not verified_source_identity_matches_runtime(report_identity, source_identity):
+        return "row_source_identity_mismatch"
+    if source_pdf_sha256.casefold() != report_pdf_sha256.casefold():
+        return "row_source_pdf_mismatch"
+    try:
+        embedded_pdf_sha256 = expected_pdf_sha256(source_identity)
+    except (TypeError, ValueError):
+        embedded_pdf_sha256 = ""
+    if (
+        not embedded_pdf_sha256
+        or embedded_pdf_sha256.casefold() != source_pdf_sha256.casefold()
+    ):
+        return "row_source_identity_pdf_mismatch"
+    if not _valid_digest(fact_digest):
+        return "row_verified_fact_digest_invalid"
+    if fact_digest.casefold() != report_fact_digest.casefold():
+        return "row_verified_fact_digest_mismatch"
+    return ""
+
+
+def _verified_rows_for_report(
+    report_row: sqlite3.Row,
+    *,
+    findings: list[sqlite3.Row],
+    metrics: list[sqlite3.Row],
+    excluded_counts: dict[str, int],
+) -> tuple[list[sqlite3.Row], list[sqlite3.Row], dict[str, dict[str, Any]]]:
+    bindings: dict[str, dict[str, Any]] = {}
+    valid_findings: list[sqlite3.Row] = []
+    valid_metrics: list[sqlite3.Row] = []
+
+    def exclude(reason: str) -> None:
+        excluded_counts[reason] = excluded_counts.get(reason, 0) + 1
+
+    for row in findings:
+        fact_id = _row_text(row, "verified_fact_id")
+        evidence_id = _row_text(row, "evidence_id")
+        if not fact_id:
+            exclude("row_verified_binding_missing")
+            continue
+        canonical_evidence_id = f"verified-fact:{fact_id}"
+        if evidence_id != canonical_evidence_id:
+            exclude("row_verified_evidence_id_mismatch")
+            continue
+        reason = _verified_row_source_reason(row, report_row=report_row)
+        if reason:
+            exclude(reason)
+            continue
+        pages, pages_valid = _strict_json_list(row["pages_json"])
+        spans, spans_valid = _strict_json_list(row["evidence_spans_json"])
+        _, metric_context_valid = _strict_json_dict(row["metric_context_json"])
+        if not pages_valid or not _valid_page_list(pages) or not pages:
+            exclude("row_finding_pages_invalid")
+            continue
+        if not spans_valid or any(not isinstance(span, dict) for span in spans):
+            exclude("row_finding_evidence_spans_invalid")
+            continue
+        if not metric_context_valid:
+            exclude("row_finding_metric_context_malformed")
+            continue
+        bindings[canonical_evidence_id] = {
+            "verified_fact_id": fact_id,
+            "source_identity": _row_text(row, "source_identity"),
+            "source_pdf_sha256": _row_text(row, "source_pdf_sha256"),
+            "verified_fact_digest": _row_text(row, "verified_fact_digest"),
+            "pages": pages,
+            "evidence_spans": spans,
+        }
+        valid_findings.append(row)
+
+    for row in metrics:
+        fact_id = _row_text(row, "verified_fact_id")
+        evidence_id = _row_text(row, "evidence_id")
+        if not fact_id:
+            exclude("row_verified_binding_missing")
+            continue
+        metric_context, metric_context_valid = _strict_json_dict(
+            row["metric_context_json"]
+        )
+        if not metric_context_valid:
+            exclude("row_metric_context_malformed")
+            continue
+        if not metric_context:
+            exclude("row_metric_context_missing")
+            continue
+        canonical_evidence_id = f"verified-fact:{fact_id}"
+        if evidence_id != canonical_evidence_id or evidence_id not in bindings:
+            exclude("row_metric_evidence_id_mismatch")
+            continue
+        reason = _verified_row_source_reason(row, report_row=report_row)
+        if reason:
+            exclude(reason)
+            continue
+        pages, pages_valid = _strict_json_list(row["pages_json"])
+        spans, spans_valid = _strict_json_list(row["evidence_spans_json"])
+        if not pages_valid or not _valid_page_list(pages) or not pages:
+            exclude("row_metric_pages_invalid")
+            continue
+        if not spans_valid or any(not isinstance(span, dict) for span in spans):
+            exclude("row_metric_evidence_spans_invalid")
+            continue
+        valid_metrics.append(row)
+
+    return valid_findings, valid_metrics, bindings
+
+
+def _verified_analyst_row_binding(
+    row: sqlite3.Row,
+    *,
+    bindings: dict[str, dict[str, Any]],
+    is_quote: bool,
+) -> dict[str, Any] | None:
+    evidence_id = _row_text(row, "evidence_id")
+    binding = bindings.get(evidence_id)
+    if binding is None:
+        return None
+    if is_quote:
+        page = row["page"]
+        if not isinstance(page, int) or isinstance(page, bool):
+            return None
+        return binding
+    pages, pages_valid = _strict_json_list(row["pages_json"])
+    if not pages_valid or not _valid_page_list(pages) or not pages:
+        return None
+    return binding
+
+
 def _claim_evidence(
-    row: sqlite3.Row, *, report_row: sqlite3.Row
+    row: sqlite3.Row,
+    *,
+    report_row: sqlite3.Row,
+    binding: dict[str, Any] | None = None,
+    source_validation_eligible: bool | None = None,
 ) -> CrossReportEvidenceReference:
+    resolved_binding = binding or {}
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         evidence_id=_scoped_row_id(row, "evidence_id", "claim_uid", "claim"),
@@ -336,17 +535,37 @@ def _claim_evidence(
             "evidence": _row_text(row, "evidence"),
             "pages": _json_list(row["pages_json"]),
             "source_url": _row_text(report_row, "source_url"),
+            "authority_mode": _row_text(report_row, "authority_mode") or "normal",
+            "source_validation_eligible": (
+                bool(report_row["source_validation_eligible"])
+                if source_validation_eligible is None
+                else source_validation_eligible
+            ),
         },
-        verified_fact_id="",
-        source_identity=_row_text(report_row, "verified_source_identity"),
-        source_pdf_sha256=_row_text(report_row, "verified_source_pdf_sha256"),
-        verified_fact_digest=_row_text(report_row, "verified_fact_digest"),
+        verified_fact_id=str(resolved_binding.get("verified_fact_id") or ""),
+        source_identity=str(
+            resolved_binding.get("source_identity")
+            or _row_text(report_row, "verified_source_identity")
+        ),
+        source_pdf_sha256=str(
+            resolved_binding.get("source_pdf_sha256")
+            or _row_text(report_row, "verified_source_pdf_sha256")
+        ),
+        verified_fact_digest=str(
+            resolved_binding.get("verified_fact_digest")
+            or _row_text(report_row, "verified_fact_digest")
+        ),
     )
 
 
 def _finding_evidence(
-    row: sqlite3.Row, *, report_row: sqlite3.Row
+    row: sqlite3.Row,
+    *,
+    report_row: sqlite3.Row,
+    binding: dict[str, Any] | None = None,
+    source_validation_eligible: bool | None = None,
 ) -> CrossReportEvidenceReference:
+    resolved_binding = binding or {}
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         evidence_id=_scoped_row_id(row, "evidence_id", "finding_uid", "finding"),
@@ -365,23 +584,42 @@ def _finding_evidence(
             "metric_context": _json_dict(row["metric_context_json"]),
             "evidence_spans": _json_list(row["evidence_spans_json"]),
             "authority_mode": _row_text(report_row, "authority_mode") or "normal",
-            "source_validation_eligible": bool(
-                report_row["source_validation_eligible"]
+            "source_validation_eligible": (
+                bool(report_row["source_validation_eligible"])
+                if source_validation_eligible is None
+                else source_validation_eligible
             ),
         },
-        verified_fact_id=_row_text(row, "verified_fact_id"),
-        source_identity=_row_text(row, "source_identity")
-        or _row_text(report_row, "verified_source_identity"),
-        source_pdf_sha256=_row_text(row, "source_pdf_sha256")
-        or _row_text(report_row, "verified_source_pdf_sha256"),
-        verified_fact_digest=_row_text(row, "verified_fact_digest")
-        or _row_text(report_row, "verified_fact_digest"),
+        verified_fact_id=str(
+            resolved_binding.get("verified_fact_id")
+            or _row_text(row, "verified_fact_id")
+        ),
+        source_identity=str(
+            resolved_binding.get("source_identity")
+            or _row_text(row, "source_identity")
+            or _row_text(report_row, "verified_source_identity")
+        ),
+        source_pdf_sha256=str(
+            resolved_binding.get("source_pdf_sha256")
+            or _row_text(row, "source_pdf_sha256")
+            or _row_text(report_row, "verified_source_pdf_sha256")
+        ),
+        verified_fact_digest=str(
+            resolved_binding.get("verified_fact_digest")
+            or _row_text(row, "verified_fact_digest")
+            or _row_text(report_row, "verified_fact_digest")
+        ),
     )
 
 
 def _quote_evidence(
-    row: sqlite3.Row, *, report_row: sqlite3.Row
+    row: sqlite3.Row,
+    *,
+    report_row: sqlite3.Row,
+    binding: dict[str, Any] | None = None,
+    source_validation_eligible: bool | None = None,
 ) -> CrossReportEvidenceReference:
+    resolved_binding = binding or {}
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         evidence_id=_scoped_row_id(row, "evidence_id", "quote_uid", "quote"),
@@ -398,15 +636,34 @@ def _quote_evidence(
             "page": row["page"],
             "source_url": _row_text(report_row, "source_url"),
             "quote_id": _row_text(row, "quote_id"),
+            "authority_mode": _row_text(report_row, "authority_mode") or "normal",
+            "source_validation_eligible": (
+                bool(report_row["source_validation_eligible"])
+                if source_validation_eligible is None
+                else source_validation_eligible
+            ),
         },
-        source_identity=_row_text(report_row, "verified_source_identity"),
-        source_pdf_sha256=_row_text(report_row, "verified_source_pdf_sha256"),
-        verified_fact_digest=_row_text(report_row, "verified_fact_digest"),
+        verified_fact_id=str(resolved_binding.get("verified_fact_id") or ""),
+        source_identity=str(
+            resolved_binding.get("source_identity")
+            or _row_text(report_row, "verified_source_identity")
+        ),
+        source_pdf_sha256=str(
+            resolved_binding.get("source_pdf_sha256")
+            or _row_text(report_row, "verified_source_pdf_sha256")
+        ),
+        verified_fact_digest=str(
+            resolved_binding.get("verified_fact_digest")
+            or _row_text(report_row, "verified_fact_digest")
+        ),
     )
 
 
 def _raw_metric(
-    row: sqlite3.Row, *, report_row: sqlite3.Row
+    row: sqlite3.Row,
+    *,
+    report_row: sqlite3.Row,
+    source_validation_eligible: bool | None = None,
 ) -> CrossReportRawMetricReference:
     return CrossReportRawMetricReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -426,8 +683,10 @@ def _raw_metric(
             "metric_context": _json_dict(row["metric_context_json"]),
             "evidence_spans": _json_list(row["evidence_spans_json"]),
             "authority_mode": _row_text(report_row, "authority_mode") or "normal",
-            "source_validation_eligible": bool(
-                report_row["source_validation_eligible"]
+            "source_validation_eligible": (
+                bool(report_row["source_validation_eligible"])
+                if source_validation_eligible is None
+                else source_validation_eligible
             ),
         },
         verified_fact_id=_row_text(row, "verified_fact_id"),
@@ -496,6 +755,7 @@ def read_cross_report_projected_data(
                 SELECT file_id, report_id, title, publisher, publisher_id, source_md5,
                        source_url, md5, time_period, projection_status,
                        projection_generated_at_utc, authority_mode,
+                       validation_status, validation_severity,
                        source_validation_eligible, verified_source_identity,
                        verified_source_pdf_sha256, verified_fact_digest
                 FROM reports
@@ -557,43 +817,117 @@ def read_cross_report_projected_data(
                 )
                 for report_id, row in report_rows.items()
             }
+            excluded_counts: dict[str, int] = {}
+            for eligible, reason in authority_status.values():
+                if not eligible and reason:
+                    excluded_counts[reason] = excluded_counts.get(reason, 0) + 1
             source_candidates: list[CrossReportSourceReportCandidate] = []
             evidence: list[CrossReportEvidenceReference] = []
             raw_metrics: list[CrossReportRawMetricReference] = []
             for report_id in sorted(report_rows):
                 report_row = report_rows[report_id]
+                authority_mode = _row_text(report_row, "authority_mode") or "normal"
+                report_findings = findings_by_report.get(report_id, [])
+                report_metrics = metrics_by_report.get(report_id, [])
+                report_claims = claims_by_report.get(report_id, [])
+                report_quotes = quotes_by_report.get(report_id, [])
+                bindings: dict[str, dict[str, Any]] = {}
+                if authority_mode == "verified":
+                    report_findings, report_metrics, bindings = (
+                        _verified_rows_for_report(
+                            report_row,
+                            findings=report_findings,
+                            metrics=report_metrics,
+                            excluded_counts=excluded_counts,
+                        )
+                    )
+                    bound_claims: list[sqlite3.Row] = []
+                    for row in report_claims:
+                        binding = _verified_analyst_row_binding(
+                            row, bindings=bindings, is_quote=False
+                        )
+                        if binding is None:
+                            excluded_counts["unbound_verified_claim"] = (
+                                excluded_counts.get("unbound_verified_claim", 0) + 1
+                            )
+                            continue
+                        bound_claims.append(row)
+                    report_claims = bound_claims
+                    bound_quotes: list[sqlite3.Row] = []
+                    for row in report_quotes:
+                        binding = _verified_analyst_row_binding(
+                            row, bindings=bindings, is_quote=True
+                        )
+                        if binding is None:
+                            excluded_counts["unbound_verified_quote"] = (
+                                excluded_counts.get("unbound_verified_quote", 0) + 1
+                            )
+                            continue
+                        bound_quotes.append(row)
+                    report_quotes = bound_quotes
                 source_candidates.append(
                     _source_candidate(
                         report_row,
                         tags=tags_by_report.get(report_id, []),
                         categories=categories_by_report.get(report_id, []),
-                        claims=claims_by_report.get(report_id, []),
-                        findings=findings_by_report.get(report_id, []),
-                        quotes=quotes_by_report.get(report_id, []),
-                        metrics=metrics_by_report.get(report_id, []),
+                        claims=report_claims,
+                        findings=report_findings,
+                        quotes=report_quotes,
+                        metrics=report_metrics,
                         content_hashes=content_hashes.get(report_id, {}),
                         source_validation_eligible=authority_status[report_id][0],
                     )
                 )
                 if "claim" in requested_content_classes:
                     evidence.extend(
-                        _claim_evidence(row, report_row=report_row)
-                        for row in claims_by_report.get(report_id, [])
+                        _claim_evidence(
+                            row,
+                            report_row=report_row,
+                            binding=(
+                                bindings.get(_row_text(row, "evidence_id"))
+                                if authority_mode == "verified"
+                                else None
+                            ),
+                            source_validation_eligible=authority_status[report_id][0],
+                        )
+                        for row in report_claims
                     )
                 if "finding" in requested_content_classes:
                     evidence.extend(
-                        _finding_evidence(row, report_row=report_row)
-                        for row in findings_by_report.get(report_id, [])
+                        _finding_evidence(
+                            row,
+                            report_row=report_row,
+                            binding=(
+                                bindings.get(_row_text(row, "evidence_id"))
+                                if authority_mode == "verified"
+                                else None
+                            ),
+                            source_validation_eligible=authority_status[report_id][0],
+                        )
+                        for row in report_findings
                     )
                 if "quote" in requested_content_classes:
                     evidence.extend(
-                        _quote_evidence(row, report_row=report_row)
-                        for row in quotes_by_report.get(report_id, [])
+                        _quote_evidence(
+                            row,
+                            report_row=report_row,
+                            binding=(
+                                bindings.get(_row_text(row, "evidence_id"))
+                                if authority_mode == "verified"
+                                else None
+                            ),
+                            source_validation_eligible=authority_status[report_id][0],
+                        )
+                        for row in report_quotes
                     )
                 if "metric" in requested_content_classes:
                     raw_metrics.extend(
-                        _raw_metric(row, report_row=report_row)
-                        for row in metrics_by_report.get(report_id, [])
+                        _raw_metric(
+                            row,
+                            report_row=report_row,
+                            source_validation_eligible=authority_status[report_id][0],
+                        )
+                        for row in report_metrics
                     )
             if request.evidence_ids:
                 requested_evidence_ids = set(request.evidence_ids)
@@ -625,6 +959,7 @@ def read_cross_report_projected_data(
         },
         excluded_report_counts={
             "filtered": max(len(status_rows) - len(source_candidates), 0),
+            **excluded_counts,
         },
     )
     validate_cross_report_contract(response)

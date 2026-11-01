@@ -2,11 +2,12 @@ from __future__ import annotations
 
 """Cross Report helpers for publication orchestration."""
 
-from dataclasses import asdict
 import hashlib
 import json
+from dataclasses import asdict
 from typing import Callable, cast
 from urllib.parse import urlparse
+
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportPublishPackage,
@@ -22,30 +23,28 @@ from src.contracts.publish import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
+    WordPressTagEnsureRequest,
     WordPressTagEnsureResponse,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyEnsureResponse,
     WordPressTaxonomyTerm,
-    WordPressTagEnsureRequest,
 )
 from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
     SignalPublishProjection,
 )
-from src.utils.html_utils import ensure_publish_entity_metadata_html
-from src.utils.errors import AppError
-from src.utils.slugify import slugify
-
 from src.orchestrators._publish_orchestrator.models import (
     _CROSS_REPORT_WORDPRESS_POST_TYPES,
+    _PUBLISH_ROUTES_BY_INTENT,
     _CrossReportResultFields,
     _CrossReportWordPressClassification,
-    _PUBLISH_ROUTES_BY_INTENT,
 )
-
 from src.orchestrators._publish_orchestrator.routing import (
     _publish_settings_for_post_type,
 )
+from src.utils.errors import AppError
+from src.utils.html_utils import ensure_publish_entity_metadata_html
+from src.utils.slugify import slugify
 
 
 def _cross_report_post_type_for_target_route(target_route: str) -> str:
@@ -292,6 +291,7 @@ def _signal_projection_package(
         source_artifact_id=stable_file_id,
         canonical_route_intent=projection.target_route,
     )
+    signal_publishable = projection.validation_status == "approved"
     signal_html_text = ensure_publish_entity_metadata_html(
         projection.html_text or f"<html><body>{projection.body_html}</body></html>",
         publish_entity_metadata,
@@ -332,9 +332,26 @@ def _signal_projection_package(
             "schema_version": WORDPRESS_ENTITY_SCHEMA_VERSION,
             "signal_slug": projection.slug,
             "validation_status": projection.validation_status,
+            "selected_report_ids": list(projection.source_report_ids),
+            "publishability": {
+                "publishable": signal_publishable,
+                "diagnostic": False,
+                "override_applied": False,
+                "issues": [] if signal_publishable else ["signal_not_approved"],
+                "selected_theme_id": projection.candidate_group_id or projection.slug,
+                "selected_report_ids": list(projection.source_report_ids),
+            },
             "confidence": projection.confidence,
             "uncertainty": projection.uncertainty,
-            "public_entity_metadata": asdict(publish_entity_metadata),
+            "public_entity_metadata": asdict(
+                PublishEntityMetadata(
+                    schema_version=publish_entity_metadata.schema_version,
+                    entity_type=publish_entity_metadata.entity_type,
+                    source_artifact_id=publish_entity_metadata.source_artifact_id,
+                    canonical_route_intent=publish_entity_metadata.canonical_route_intent,
+                    publish_eligible=signal_publishable,
+                )
+            ),
         },
         signal_card=signal_card,
     )

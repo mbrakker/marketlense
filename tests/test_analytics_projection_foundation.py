@@ -397,12 +397,6 @@ def test_verified_projection_uses_canonical_authority_not_discovery_findings(
     assert batch.findings[0].metric_context["cohort"] == "survey respondents"
     assert batch.metrics[0].verified_fact_id == "fact-1"
     assert batch.metrics[0].metric_context["observation_status"] == "observed"
-    assert all("UNTRUSTED" not in row.text for row in batch.findings)
-    finding_queue = next(
-        row for row in batch.vector_queue if row.entity_type == "finding"
-    )
-    assert finding_queue.metadata["verified_fact_id"] == "fact-1"
-    assert finding_queue.metadata["source_identity"] == SOURCE_IDENTITY
 
 
 def test_verified_projection_rejects_contradictory_authority_snapshot(

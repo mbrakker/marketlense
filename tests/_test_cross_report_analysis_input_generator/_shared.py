@@ -140,6 +140,7 @@ def _selected_source(
     tags: list[str],
     categories: list[str],
     rank: int = 1,
+    source_validation_eligible: bool = True,
 ) -> CrossReportSelectedSourceReport:
     return CrossReportSelectedSourceReport(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -155,6 +156,7 @@ def _selected_source(
         evidence_count=evidence_count,
         category_labels=categories,
         tags=tags,
+        source_validation_eligible=source_validation_eligible,
     )
 
 

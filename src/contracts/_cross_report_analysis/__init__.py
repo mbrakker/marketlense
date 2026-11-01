@@ -33,6 +33,7 @@ CrossReportOutcomeStatus = Literal[
 CrossReportPublishStatus = Literal[
     "not_requested",
     "dry_run",
+    "blocked",
     "published",
     "skipped",
     "error",

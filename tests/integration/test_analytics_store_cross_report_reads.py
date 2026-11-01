@@ -147,7 +147,11 @@ def _batch(
                 metric="Adoption",
                 value="42",
                 unit="percent",
-                evidence_id=f"{report_id}:finding:1",
+                evidence_id=(
+                    f"verified-fact:{verified_fact_id}"
+                    if verified_fact_id
+                    else f"{report_id}:finding:1"
+                ),
                 pages=[3],
                 lineage=lineage,
                 verified_fact_id=verified_fact_id,

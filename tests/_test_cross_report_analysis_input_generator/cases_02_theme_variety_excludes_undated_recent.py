@@ -450,6 +450,100 @@ def test_publishability_gate_allows_explicit_override_and_logs(
     assert complete["fields"]["override_applied"] is True
 
 
+def test_publishability_diagnostic_never_authorizes_publication(
+    run_context,
+) -> None:
+    request = replace(
+        _request(max_source_reports=2),
+        diagnostic=True,
+        publication_mode="publish_live",
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+
+    result = validate_cross_report_publishability(
+        request,
+        theme_selection,
+        source_selection,
+        run_context,
+        min_source_reports=2,
+        min_source_publishers=2,
+        min_evidence_items=6,
+    )
+
+    assert result.publishable is False
+    assert result.diagnostic is True
+    assert "diagnostic_mode_non_publishable" in result.issues
+
+
+def test_publishability_override_cannot_bypass_ineligible_source(
+    run_context,
+) -> None:
+    request = replace(
+        _request(max_source_reports=2),
+        override_publishability=True,
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+                source_validation_eligible=False,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+
+    with pytest.raises(Exception) as exc_info:
+        validate_cross_report_publishability(
+            request,
+            theme_selection,
+            source_selection,
+            run_context,
+            min_source_reports=2,
+            min_source_publishers=2,
+            min_evidence_items=6,
+        )
+
+    assert "verified_source_not_eligible" in exc_info.value.context["issues"]
+    assert exc_info.value.code == "cross_report_publishability_failed"
+
+
 def test_publishability_gate_checks_publication_validation_prerequisite(
     run_context,
     assert_app_error,

@@ -192,7 +192,12 @@ def _briefing_opportunity_handler(
             ctx,
         )
         candidates = sorted(
-            projected.source_candidates,
+            (
+                candidate
+                for candidate in projected.source_candidates
+                if candidate.projection_status == "projected"
+                and candidate.source_validation_eligible
+            ),
             key=lambda candidate: (-candidate.total_score, candidate.report_id),
         )[: _positive_int_attribute(payload, "max_source_reports", 6)]
         source_hashes = [

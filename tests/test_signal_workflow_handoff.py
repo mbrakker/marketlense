@@ -585,4 +585,66 @@ def test_durable_signal_queue_keeps_same_topic_group_snapshots_distinct(
     assert json.loads(
         candidate_result.result.summary["publication_hold_reason_counts"]
     ) == {"signal_semantic_review_pending": 2}
+
+
+def test_briefing_opportunity_freezes_only_source_validated_reports(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setenv("OPENAI_API_KEY", "test-openai-key")
+    config_path = _isolated_app_config(tmp_path)
+    app = load_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(config_path)), _ctx()
+    )
+    _seed_projected_signal_source(
+        app.reports_db,
+        report_id="report-briefing-valid",
+        publisher="Publisher A",
+        publisher_id="publisher-a",
+    )
+    _seed_projected_signal_source(
+        app.reports_db,
+        report_id="report-briefing-invalid",
+        publisher="Publisher B",
+        publisher_id="publisher-b",
+    )
+    with sqlite3.connect(app.reports_db) as connection:
+        connection.execute(
+            "UPDATE reports SET source_validation_eligible = 0 WHERE report_id = ?",
+            ("report-briefing-invalid",),
+        )
+        connection.commit()
+
+    result = queue_orchestrator._briefing_opportunity_handler(
+        _workflow_job(
+            queue_name="briefing_opportunity", job_type="briefing_opportunity.v1"
+        ),
+        BriefingOpportunityPayload(
+            topic="Checkout trust",
+            geography="global",
+            rolling_window="2026-W29",
+            source_hashes=[],
+            briefing_policy_version="briefing-policy.v1",
+            processing_version="briefing-processing.v1",
+            prompt_policy_version="briefing-prompt.v1",
+            attributes={
+                "config_path": str(config_path),
+                "resolve_projected_sources": True,
+                "max_source_reports": 2,
+                "minimum_distinct_reports": 2,
+                "minimum_publisher_diversity": 2,
+            },
+        ),
+        _ctx(),
+    )
+
+    assert result.result.summary == {
+        "opportunity_status": "collecting",
+        "source_count": 1,
+    }
+    with sqlite3.connect(tmp_path / "state.sqlite") as connection:
+        generation_submission = connection.execute(
+            "SELECT 1 FROM workflow_outbox WHERE queue_name = 'briefing_generation'"
+        ).fetchone()
+    assert generation_submission is None
     return

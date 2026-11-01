@@ -13,6 +13,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceAgreementResult,
     CrossReportEvidenceInputResult,
     CrossReportGeneratedAnalysisResult,
+    CrossReportPublishabilityResult,
     CrossReportPublishPackage,
     CrossReportSignalScoreResult,
     CrossReportValidationResult,
@@ -63,6 +64,12 @@ def _source_metadata(
             "category_labels": list(source.category_labels),
             "tags": list(source.tags),
             "source_url": source.source_url,
+            "authority_mode": source.authority_mode,
+            "source_validation_eligible": source.source_validation_eligible,
+            "verified_source_identity": source.verified_source_identity,
+            "verified_source_pdf_sha256": source.verified_source_pdf_sha256,
+            "verified_fact_digest": source.verified_fact_digest,
+            "content_hash": source.content_hash,
         }
         for source in generated.selected_sources
     ]
@@ -472,11 +479,18 @@ def build_cross_report_publish_package(
     publish_requires_validation_pass: bool = True,
     target_route: str = "wordpress:ml_briefing",
     briefing_card: dict[str, object] | None = None,
+    publishability_result: CrossReportPublishabilityResult | None = None,
 ) -> CrossReportPublishPackage:
     validate_cross_report_contract(generated)
     validate_cross_report_contract(validation_result)
     validate_cross_report_contract(agreement_result)
-    if publish_requires_validation_pass and not validation_result.passed:
+    if publishability_result is not None:
+        validate_cross_report_contract(publishability_result)
+    if (
+        publish_requires_validation_pass
+        and not validation_result.passed
+        and (publishability_result is None or publishability_result.publishable)
+    ):
         logger.info(
             log_event(
                 ctx,
@@ -533,12 +547,57 @@ def build_cross_report_publish_package(
             severity="error",
             context={"target_route": target_route},
         )
+    selected_report_ids = [source.report_id for source in generated.selected_sources]
+    if publishability_result is not None:
+        checked_policy = publishability_result.checked_policy_fields
+        authorized_report_ids = list(checked_policy.get("selected_report_ids") or [])
+        if authorized_report_ids != selected_report_ids:
+            raise AppError(
+                code="cross_report_publishability_snapshot_mismatch",
+                message="Publishability approval does not match selected reports",
+                retryable=False,
+                severity="error",
+                context={
+                    "approved_report_ids": authorized_report_ids,
+                    "selected_report_ids": selected_report_ids,
+                },
+            )
+        if publishability_result.selected_theme_id != generated.selected_theme.theme_id:
+            raise AppError(
+                code="cross_report_publishability_snapshot_mismatch",
+                message="Publishability approval does not match selected theme",
+                retryable=False,
+                severity="error",
+                context={
+                    "approved_theme_id": publishability_result.selected_theme_id,
+                    "selected_theme_id": generated.selected_theme.theme_id,
+                },
+            )
+        publishability_metadata: dict[str, Any] = {
+            "publishable": publishability_result.publishable,
+            "override_applied": publishability_result.override_applied,
+            "diagnostic": publishability_result.diagnostic,
+            "issues": list(publishability_result.issues),
+            "selected_theme_id": publishability_result.selected_theme_id,
+            "selected_report_ids": selected_report_ids,
+            "source_authority": dict(checked_policy.get("source_authority") or {}),
+        }
+    else:
+        publishability_metadata = {
+            "publishable": False,
+            "override_applied": False,
+            "diagnostic": False,
+            "issues": ["publishability_result_missing"],
+            "selected_theme_id": generated.selected_theme.theme_id,
+            "selected_report_ids": selected_report_ids,
+            "source_authority": {},
+        }
     publish_entity_metadata = PublishEntityMetadata(
         schema_version="1.0",
         entity_type=entity_type,
         source_artifact_id=package_id,
         canonical_route_intent=target_route,
-        publish_eligible=True,
+        publish_eligible=bool(publishability_metadata["publishable"]),
     )
     machine_metadata = {
         "schema_version": CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -550,6 +609,7 @@ def build_cross_report_publish_package(
         "canonical_artifact_path": artifact_path,
         "prompt_hashes": dict(generated.prompt_hashes),
         "validation_status": validation_result.status,
+        "publishability": publishability_metadata,
         "public_entity_metadata": asdict(publish_entity_metadata),
         "briefing_card": briefing_card or {},
     }

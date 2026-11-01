@@ -1528,3 +1528,33 @@ issues. Its release-evidence bundle is retained at
 <https://github.com/mbrakker/marketlense/actions/runs/41321929178/artifacts/13089054717>.
 The staging REST step was skipped by its existing guard; no provider-backed
 report run or publication write occurred.
+
+### Cross-report authority, eligibility, and publication safety — 2026-11-01
+
+The final deterministic correction slice adds the missing authorization and
+lineage checks at the existing projection, read, orchestration, package, and
+publisher boundaries. A cross-report package is publishable only when its
+machine publishability result is explicitly bound to the exact selected
+reports, theme, source-authority snapshots, and final bounded evidence count.
+Diagnostic mode, missing authorization, stale/ineligible sources, and failed
+validation remain non-authorizing; the publisher rejects these packages before
+settings, WordPress lookup, media, checksum/idempotency, or write work. Dry-run
+is therefore a blocked diagnostic outcome rather than a publication bypass.
+
+Normal and verified source projections now require an actual passing validation
+status and non-blocking severity. Verified reads preserve unbound claims and
+quotes for diagnostics but exclude them from canonical evidence/vector classes;
+findings and metrics require canonical fact/evidence IDs, complete metric
+context, consistent source identity/PDF/digest, and valid physical page/span
+metadata. Briefing source freezing uses the same eligibility flag, so an
+ineligible projected report cannot satisfy a frozen multi-source opportunity.
+
+Focused provider-free regressions cover these boundaries in the projection,
+cross-report read, package/publisher, and workflow-queue tests, including
+valid multi-page rows, malformed metric context, conflicting report/source
+lineage, authorization mismatch, diagnostic/override behavior, signal
+compatibility, and briefing freezing. This is deterministic contract evidence only: no
+provider call, PDF acquisition, canonical artifact mutation, publication, or
+WordPress write occurred. E18 remains **Active/PARTIAL** and Step 2 remains
+**PARTIAL/NO-GO**; current-SHA real-report quality and broader stability gates
+remain open.

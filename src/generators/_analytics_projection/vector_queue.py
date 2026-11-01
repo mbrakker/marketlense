@@ -132,6 +132,7 @@ def _build_vector_queue(
     taxonomy: list[str],
     generated_at_utc: str,
     verified_mode: bool = False,
+    verified_evidence_ids: set[str] | None = None,
 ) -> list[VectorProjectionQueueRow]:
     rows: list[VectorProjectionQueueRow] = []
     report_id = report.report_id
@@ -232,7 +233,14 @@ def _build_vector_queue(
                 report_id=report_id,
                 text_payload=_claim_text(claim),
                 metadata=metadata,
-                content_class="derived_evidence",
+                content_class=(
+                    "evidence"
+                    if verified_mode
+                    and claim.evidence_id in (verified_evidence_ids or set())
+                    else "editorial"
+                    if verified_mode
+                    else "derived_evidence"
+                ),
                 generated_at_utc=generated_at_utc,
             )
         )
@@ -278,7 +286,14 @@ def _build_vector_queue(
                 report_id=report_id,
                 text_payload=_quote_text(quote),
                 metadata=metadata,
-                content_class="evidence",
+                content_class=(
+                    "evidence"
+                    if verified_mode
+                    and quote.evidence_id in (verified_evidence_ids or set())
+                    else "editorial"
+                    if verified_mode
+                    else "evidence"
+                ),
                 generated_at_utc=generated_at_utc,
             )
         )

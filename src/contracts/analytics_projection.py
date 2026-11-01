@@ -126,7 +126,7 @@ class AnalyticsReportRow(SemanticIdContract):
         },
     )
     source_validation_eligible: bool = field(
-        default=True,
+        default=False,
         metadata={
             "doc": "Whether the stored projection may authorize cross-report use.",
             "required": False,

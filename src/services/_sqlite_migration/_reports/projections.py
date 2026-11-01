@@ -454,7 +454,7 @@ def _reports_db_032_add_verified_projection_lineage(
 
     for column_name, column_type in (
         ("authority_mode", "TEXT NOT NULL DEFAULT 'normal'"),
-        ("source_validation_eligible", "INTEGER NOT NULL DEFAULT 1"),
+        ("source_validation_eligible", "INTEGER NOT NULL DEFAULT 0"),
         ("verified_source_identity", "TEXT"),
         ("verified_source_pdf_sha256", "TEXT"),
         ("verified_fact_digest", "TEXT"),

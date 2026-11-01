@@ -40,6 +40,12 @@ from src.utils.verified_facts import (
 logger = logging.getLogger("market_lense.analytics_projection_generator")
 
 
+def _validation_allows_source(validation_status: str, validation_severity: str) -> bool:
+    return str(validation_status or "").strip().casefold() == "pass" and str(
+        validation_severity or ""
+    ).strip().casefold() not in {"error", "fail"}
+
+
 def _verified_projection_authority(
     analysis: Any,
 ) -> VerifiedAuthorityContext | None:
@@ -216,12 +222,8 @@ def build_projection(
         projection_generated_at_utc=generated_at_utc,
         source_url=_clean_text(payload.source),
         authority_mode="verified" if verified_mode else "normal",
-        source_validation_eligible=(
-            not verified_mode
-            or (
-                validation_status == "pass"
-                and validation_severity not in {"error", "fail"}
-            )
+        source_validation_eligible=_validation_allows_source(
+            validation_status, validation_severity
         ),
         verified_source_identity=authority.source_identity if authority else "",
         verified_source_pdf_sha256=authority.source_pdf_sha256 if authority else "",
@@ -276,17 +278,7 @@ def build_projection(
         artifacts=artifacts,
         generated_at_utc=generated_at_utc,
         analysis_run_id=analysis_run_id,
-        verified_evidence_ids=(
-            {
-                str(row.get("id") or "")
-                for row in authority.evidence_packs.get("findings", {}).get(
-                    "findings", []
-                )
-                if isinstance(row, dict) and row.get("id")
-            }
-            if authority
-            else None
-        ),
+        verified_evidence_ids=None,
     )
     payload_taxonomy = _clean_string_list(payload.taxonomy)
     tags = _build_tags(
@@ -323,6 +315,20 @@ def build_projection(
         taxonomy=payload_taxonomy,
         generated_at_utc=generated_at_utc,
         verified_mode=verified_mode,
+        verified_evidence_ids=(
+            {
+                str(
+                    row.get("evidence_id")
+                    or f"verified-fact:{row.get('verified_fact_id')}"
+                )
+                for row in authority.evidence_packs.get("findings", {}).get(
+                    "findings", []
+                )
+                if isinstance(row, dict) and row.get("verified_fact_id")
+            }
+            if authority
+            else None
+        ),
     )
     batch = AnalyticsProjectionBatch(
         schema_version=PROJECTION_SCHEMA_VERSION,

@@ -4423,6 +4423,7 @@
           "enum": [
             "not_requested",
             "dry_run",
+            "blocked",
             "published",
             "skipped",
             "error"

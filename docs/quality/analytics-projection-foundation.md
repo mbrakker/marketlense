@@ -152,3 +152,33 @@ provider-free regressions are in `tests/test_authority_contract_regressions.py`,
 `tests/integration/test_analytics_store_cross_report_reads.py`, and
 `tests/test_report_checkpoint_lineage_validation.py`; live report processing
 and publication were not run for this slice.
+
+## Cross-report authority and publication safety — 2026-11-01
+
+Cross-report publication now requires an explicit, machine-readable
+publishability result bound to the exact selected report IDs, selected theme,
+source authority snapshots, and final bounded evidence assembly. Diagnostic
+results, missing authorization, stale or ineligible source snapshots, and
+failed validation cannot authorize a WordPress lookup or publication step;
+dry-run packages are reported as blocked instead. The package also carries
+the same authority snapshot and `publish_eligible` contract used by the
+publisher, so a package cannot be rebound to a different source set after
+generation.
+
+Normal and verified projections both require a passing source-validation
+result. Verified rows additionally require consistent report, source identity,
+PDF SHA-256, fact digest, canonical evidence IDs, page/span provenance, and
+complete metric context. Unbound verified claims and quotes remain retained
+storage context for diagnostics but are not promoted to canonical evidence or
+the vector evidence class. Briefing source freezing filters projected source
+candidates by the same eligibility flag.
+
+The provider-free regressions cover missing and diagnostic authorization,
+stale source snapshots, normal and verified eligibility, malformed and
+unbound verified rows, cross-row provenance conflicts, complete metric
+contexts, package binding, publisher ordering, signal compatibility, and
+briefing source freezing. The focused projection/read cases are retained in
+`tests/test_analytics_projection_authority.py` and
+`tests/integration/test_analytics_store_cross_report_authority.py`. No
+provider call, PDF acquisition, canonical artifact mutation, publication, or
+WordPress write was performed.

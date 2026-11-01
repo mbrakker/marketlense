@@ -184,6 +184,7 @@ def _seed_projected_signal_source(
             time_period="2026-07",
             validation_status="pass",
             validation_severity="pass",
+            source_validation_eligible=True,
             text_density=1200.0,
             projection_generated_at_utc="2026-07-18T00:00:00Z",
         ),

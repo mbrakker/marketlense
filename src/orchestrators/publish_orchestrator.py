@@ -217,6 +217,147 @@ from src.utils.wp_auth import build_auth_header
 logger = logging.getLogger("market_lense.publish_orchestrator")
 
 
+def _cross_report_publish_authorization_error(
+    package: CrossReportPublishPackage,
+) -> AppError | None:
+    metadata = package.machine_metadata
+    if not isinstance(metadata, dict):
+        return AppError(
+            code="cross_report_publish_authorization_missing",
+            message="Cross-report package has no publication authorization metadata",
+            retryable=False,
+            severity="error",
+        )
+    authorization = metadata.get("publishability")
+    if package.target_route == "wordpress:ml_briefing":
+        if not isinstance(authorization, dict):
+            return AppError(
+                code="cross_report_publish_authorization_missing",
+                message="Cross-report Briefing package has no publishability result",
+                retryable=False,
+                severity="error",
+            )
+        if authorization.get("publishable") is not True:
+            return AppError(
+                code="cross_report_publishability_failed",
+                message="Cross-report package is not publishable",
+                retryable=False,
+                severity="error",
+                context={"issues": list(authorization.get("issues") or [])},
+            )
+        if authorization.get("diagnostic") is True:
+            return AppError(
+                code="cross_report_publish_authorization_diagnostic",
+                message="Diagnostic cross-report packages cannot be published",
+                retryable=False,
+                severity="error",
+            )
+        selected_report_ids = list(metadata.get("selected_report_ids") or [])
+        approved_report_ids = list(authorization.get("selected_report_ids") or [])
+        if selected_report_ids != package.selected_report_ids:
+            return AppError(
+                code="cross_report_publish_authorization_stale",
+                message="Package selected reports do not match its authorization",
+                retryable=False,
+                severity="error",
+            )
+        if approved_report_ids != package.selected_report_ids:
+            return AppError(
+                code="cross_report_publish_authorization_stale",
+                message="Authorization selected reports do not match the package",
+                retryable=False,
+                severity="error",
+            )
+        if (
+            str(authorization.get("selected_theme_id") or "")
+            != package.selected_theme_id
+        ):
+            return AppError(
+                code="cross_report_publish_authorization_stale",
+                message="Authorization theme does not match the package",
+                retryable=False,
+                severity="error",
+            )
+        source_authority = authorization.get("source_authority")
+        if not isinstance(source_authority, dict):
+            return AppError(
+                code="cross_report_publish_authorization_missing",
+                message="Cross-report authorization has no source authority snapshot",
+                retryable=False,
+                severity="error",
+            )
+        if set(source_authority) != set(package.selected_report_ids):
+            return AppError(
+                code="cross_report_publish_authorization_stale",
+                message="Authorization source set does not match the package",
+                retryable=False,
+                severity="error",
+            )
+        package_sources = {
+            str(item.get("report_id") or ""): item
+            for item in package.source_metadata
+            if isinstance(item, dict)
+        }
+        for report_id in package.selected_report_ids:
+            source = package_sources.get(report_id)
+            snapshot = source_authority.get(report_id)
+            if not isinstance(source, dict) or not isinstance(snapshot, dict):
+                return AppError(
+                    code="cross_report_publish_authorization_stale",
+                    message="Authorization source snapshot is incomplete",
+                    retryable=False,
+                    severity="error",
+                    context={"report_id": report_id},
+                )
+            for field in (
+                "authority_mode",
+                "source_validation_eligible",
+                "verified_source_identity",
+                "verified_source_pdf_sha256",
+                "verified_fact_digest",
+                "content_hash",
+            ):
+                if snapshot.get(field, "") != source.get(field, ""):
+                    return AppError(
+                        code="cross_report_publish_authorization_stale",
+                        message="Authorization source snapshot is stale",
+                        retryable=False,
+                        severity="error",
+                        context={"report_id": report_id, "field": field},
+                    )
+            if snapshot.get("source_validation_eligible") is not True:
+                return AppError(
+                    code="cross_report_publishability_failed",
+                    message="Authorization contains an ineligible source",
+                    retryable=False,
+                    severity="error",
+                    context={"report_id": report_id},
+                )
+    elif package.target_route == "wordpress:ml_signal":
+        if (
+            not isinstance(authorization, dict)
+            or authorization.get("publishable") is not True
+        ):
+            return AppError(
+                code="cross_report_publish_authorization_missing",
+                message="Signal package has no approved publication authorization",
+                retryable=False,
+                severity="error",
+            )
+    public_metadata = metadata.get("public_entity_metadata")
+    if (
+        not isinstance(public_metadata, dict)
+        or public_metadata.get("publish_eligible") is not True
+    ):
+        return AppError(
+            code="cross_report_publish_authorization_missing",
+            message="Cross-report package is not marked publish eligible",
+            retryable=False,
+            severity="error",
+        )
+    return None
+
+
 def _with_transaction_outcomes(
     outcome: PublishOutcome,
     *transaction_outcomes: WordPressTransactionOutcome,
@@ -937,6 +1078,34 @@ def publish_cross_report_package(
     publication_mode = "publish_dry_run" if dry_run else "publish_live"
     route_post_type = _cross_report_post_type_for_target_route(package.target_route)
     classification = _cross_report_wordpress_classification(package, route_post_type)
+    authorization_error = _cross_report_publish_authorization_error(package)
+    if authorization_error is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="cross_report_publish_blocked",
+                module=logger.name,
+                fields={
+                    "package_id": package.package_id,
+                    "publication_mode": publication_mode,
+                    "reason": authorization_error.code,
+                    "target_route": package.target_route,
+                },
+            )
+        )
+        if dry_run:
+            return CrossReportPublishResultSummary(
+                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+                publication_mode="publish_dry_run",
+                status="blocked",
+                target_route=package.target_route,
+                idempotency_reused=False,
+                **_cross_report_result_fields(classification),
+                error_code=authorization_error.code,
+                error_message=authorization_error.message,
+            )
+        raise authorization_error
     logger.info(
         log_event(
             ctx,

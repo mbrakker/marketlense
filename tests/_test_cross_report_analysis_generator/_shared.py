@@ -22,6 +22,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceAgreementResult,
     CrossReportEvidenceInputResult,
     CrossReportEvidenceReference,
+    CrossReportPublishabilityResult,
     CrossReportRawMetricReference,
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
