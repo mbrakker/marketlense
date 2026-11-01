@@ -41,6 +41,15 @@ REQUIRED_QUALITY_STAGES = (
 )
 
 
+def _global_food_baseline_median_seconds() -> float:
+    for entry in load_benchmark_baseline(
+        PDF_BENCHMARK_ROOT / PDF_CANDIDATE_BASELINE_PATH
+    ):
+        if entry.report_name == "2026_Global_Food_and_Drink_Predictions":
+            return entry.baseline_median_seconds
+    raise AssertionError("Global Food benchmark entry is required")
+
+
 def _write_manifest(path: Path, *, issues: list[dict[str, str]]) -> None:
     path.write_text(
         json.dumps(
@@ -107,7 +116,7 @@ def test_pdf_candidate_runtime_advisory_passes_manifest_and_review(
 ) -> None:
     comparison, manifest, review, markdown = _build_pdf_candidate_review(
         tmp_path,
-        observation_median_seconds=1.43865,
+        observation_median_seconds=_global_food_baseline_median_seconds() * 1.251,
     )
 
     assert comparison.passed is True
@@ -130,7 +139,7 @@ def test_pdf_candidate_strict_runtime_failure_blocks_manifest_and_review(
 ) -> None:
     comparison, manifest, review, _ = _build_pdf_candidate_review(
         tmp_path,
-        observation_median_seconds=2.1,
+        observation_median_seconds=_global_food_baseline_median_seconds() * 1.76,
         fail_on_runtime_regression=True,
     )
 

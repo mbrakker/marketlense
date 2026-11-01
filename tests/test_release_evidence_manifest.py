@@ -25,6 +25,15 @@ from scripts.quality.pdf_candidate_benchmark import (
 PDF_CANDIDATE_BASELINE_PATH = Path(DEFAULT_BASELINE_PATH)
 
 
+def _global_food_baseline_median_seconds() -> float:
+    for entry in load_benchmark_baseline(
+        PDF_BENCHMARK_ROOT / PDF_CANDIDATE_BASELINE_PATH
+    ):
+        if entry.report_name == "2026_Global_Food_and_Drink_Predictions":
+            return entry.baseline_median_seconds
+    raise AssertionError("Global Food benchmark entry is required")
+
+
 def _pdf_candidate_row(**overrides: object) -> dict[str, object]:
     row: dict[str, object] = {
         "pdf_path": "cache/benchmark/report.pdf",
@@ -406,7 +415,7 @@ def test_release_evidence_manifest_accepts_only_pdf_runtime_advisories(
     tmp_path: Path,
 ) -> None:
     observations, comparison = _pdf_candidate_evidence(
-        global_food_median_seconds=1.43865
+        global_food_median_seconds=_global_food_baseline_median_seconds() * 1.251
     )
     manifest = _pdf_candidate_manifest(
         tmp_path,
@@ -423,7 +432,9 @@ def test_release_evidence_manifest_accepts_only_pdf_runtime_advisories(
 def test_release_evidence_manifest_accepts_lenient_runtime_failure_warning(
     tmp_path: Path,
 ) -> None:
-    observations, comparison = _pdf_candidate_evidence(global_food_median_seconds=2.1)
+    observations, comparison = _pdf_candidate_evidence(
+        global_food_median_seconds=_global_food_baseline_median_seconds() * 1.76
+    )
     manifest = _pdf_candidate_manifest(
         tmp_path,
         comparison=comparison,
