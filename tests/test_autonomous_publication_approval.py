@@ -20,6 +20,7 @@ from src.contracts.publish_readiness import (
 )
 from src.contracts.workflow_queue import (
     PublicationReadinessPayload,
+    PublicationReadinessRecord,
     WordPressPublishPayload,
     WorkflowJobSubmission,
 )
@@ -33,6 +34,7 @@ from src.orchestrators._publish_orchestrator.routing import (
     report_publish_package_checksum,
 )
 from src.orchestrators._workflow_queue_handlers.publishing import (
+    _automatic_publication_evidence,
     _with_package_checksum,
 )
 from src.orchestrators.admission_preflight_orchestrator import (
@@ -41,6 +43,7 @@ from src.orchestrators.admission_preflight_orchestrator import (
 )
 from src.services.config_service import (
     build_ingest_settings,
+    load_publish_settings,
     load_settings,
     load_workflow_control_settings,
 )
@@ -159,6 +162,7 @@ def _ready_briefing(
     *,
     validation_status: str = "pass",
     issues: list[str] | None = None,
+    metric_normalization_violations: list[str] | None = None,
     override_publishability: bool = False,
 ) -> PublicationReadinessPayload:
     package_path = tmp_path / "out" / "briefing" / "publish_package.json"
@@ -168,6 +172,7 @@ def _ready_briefing(
         status=validation_status,  # type: ignore[arg-type]
         checked_evidence_ids=["evidence-1"],
         issues=list(issues or []),
+        metric_normalization_violations=list(metric_normalization_violations or []),
         passed=validation_status == "pass" and not issues,
     )
     validation_hash = hashlib.sha256(
@@ -193,15 +198,72 @@ def _ready_briefing(
             selected_theme_id="theme-1",
             selected_report_ids=["report-1", "report-2"],
             source_metadata=[
-                {"report_id": "report-1", "publisher": "Publisher A"},
-                {"report_id": "report-2", "publisher": "Publisher B"},
+                {
+                    "report_id": "report-1",
+                    "publisher": "Publisher A",
+                    "authority_mode": "normal",
+                    "source_validation_eligible": True,
+                    "verified_source_identity": "",
+                    "verified_source_pdf_sha256": "",
+                    "verified_fact_digest": "",
+                    "content_hash": "",
+                },
+                {
+                    "report_id": "report-2",
+                    "publisher": "Publisher B",
+                    "authority_mode": "normal",
+                    "source_validation_eligible": True,
+                    "verified_source_identity": "",
+                    "verified_source_pdf_sha256": "",
+                    "verified_fact_digest": "",
+                    "content_hash": "",
+                },
             ],
             category_labels=["Markets"],
             tag_labels=["Outlook"],
             evidence_reference_ids=["evidence-1"],
             raw_metric_ids=[],
             prompt_hashes={"briefing": "prompt-hash"},
-            machine_metadata={"validation_status": validation_status},
+            machine_metadata={
+                "validation_status": validation_status,
+                "selected_report_ids": ["report-1", "report-2"],
+                "metric_normalization_violations": list(
+                    validation.metric_normalization_violations
+                ),
+                "publishability": {
+                    "publishable": validation_status == "pass" and not issues,
+                    "override_applied": False,
+                    "diagnostic": False,
+                    "issues": list(issues or []),
+                    "selected_theme_id": "theme-1",
+                    "selected_report_ids": ["report-1", "report-2"],
+                    "source_authority": {
+                        "report-1": {
+                            "authority_mode": "normal",
+                            "source_validation_eligible": True,
+                            "verified_source_identity": "",
+                            "verified_source_pdf_sha256": "",
+                            "verified_fact_digest": "",
+                            "content_hash": "",
+                        },
+                        "report-2": {
+                            "authority_mode": "normal",
+                            "source_validation_eligible": True,
+                            "verified_source_identity": "",
+                            "verified_source_pdf_sha256": "",
+                            "verified_fact_digest": "",
+                            "content_hash": "",
+                        },
+                    },
+                },
+                "public_entity_metadata": {
+                    "schema_version": "1.0",
+                    "entity_type": "briefing",
+                    "source_artifact_id": "briefing-file-1",
+                    "canonical_route_intent": "wordpress:ml_briefing",
+                    "publish_eligible": validation_status == "pass" and not issues,
+                },
+            },
         )
     )
     artifact = {
@@ -217,79 +279,6 @@ def _ready_briefing(
         package_checksum=package.artifact_sha256,
         validation_reference=str(package_path),
         lineage_reference="retained:briefing-sources",
-        required_asset_status="ready",
-        attributes={
-            "config_path": str(config_path),
-            "override_publishability": override_publishability,
-        },
-    )
-
-
-def _ready_signal(
-    tmp_path: Path,
-    config_path: Path,
-    *,
-    override_publishability: bool = False,
-) -> PublicationReadinessPayload:
-    original_path = tmp_path / "out" / "signal" / "source_package.json"
-    package_path = tmp_path / "out" / "signal" / "approved_package.json"
-    original_path.parent.mkdir(parents=True)
-    validation_hash = hashlib.sha256(b"signal-validation\x1fapproved").hexdigest()
-    original = _with_package_checksum(
-        CrossReportPublishPackage(
-            schema_version="1.0",
-            package_id="signal-package-1",
-            file_id="signal-file-1",
-            target_route="wordpress:ml_signal",
-            title="Signal title",
-            slug="signal-title",
-            excerpt="Evidence-backed signal.",
-            body_html="<article>Evidence-backed signal.</article>",
-            html_text="<html><body>Evidence-backed signal.</body></html>",
-            html_path=str(original_path.with_name("publish.html")),
-            canonical_artifact_path=str(original_path),
-            artifact_sha256="",
-            validation_sha256=validation_hash,
-            selected_theme_id="signal-group-1",
-            selected_report_ids=["report-1", "report-2"],
-            source_metadata=[],
-            category_labels=["Markets"],
-            tag_labels=["Outlook"],
-            evidence_reference_ids=["evidence-1", "evidence-2"],
-            raw_metric_ids=[],
-            prompt_hashes={"signal": "prompt-hash"},
-            machine_metadata={
-                "signal_validation_status": "approved",
-                "configuration_hash": "signal-source-config",
-                "policy_hash": "signal-source-policy",
-            },
-        )
-    )
-    original_path.write_text(
-        json.dumps(asdict(original), sort_keys=True), encoding="utf-8"
-    )
-    final = _with_package_checksum(
-        replace(
-            original,
-            canonical_artifact_path=str(package_path),
-            signal_card={
-                "schema_version": "1.0",
-                "confidence": 0.82,
-                "covers": {
-                    "small": "small.webp",
-                    "medium": "medium.webp",
-                    "large": "large.webp",
-                },
-            },
-        )
-    )
-    package_path.write_text(json.dumps(asdict(final), sort_keys=True), encoding="utf-8")
-    return PublicationReadinessPayload(
-        entity_type="signal",
-        entity_package_reference=str(package_path),
-        package_checksum=final.artifact_sha256,
-        validation_reference=str(original_path),
-        lineage_reference="retained:signal-source-evidence",
         required_asset_status="ready",
         attributes={
             "config_path": str(config_path),
@@ -618,6 +607,53 @@ def test_autonomous_ready_briefing_uses_retained_validation_and_package_checksum
     assert _outbox_count(tmp_path / "state.sqlite") == 1
 
 
+def test_briefing_metric_telemetry_without_semantic_authority_stays_manual(
+    tmp_path: Path,
+) -> None:
+    config_path = _config(tmp_path, autonomous=True)
+    payload = _ready_briefing(
+        tmp_path,
+        config_path,
+        metric_normalization_violations=["same market"],
+    )
+    ctx = _ctx()
+    app = load_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(config_path)), ctx
+    )
+
+    result = _automatic_publication_evidence(
+        replace(
+            _workflow_job(
+                queue_name="publication_readiness",
+                job_type="publication_readiness.v1",
+            ),
+            report_id="briefing-1",
+        ),
+        payload,
+        PublicationReadinessRecord(
+            schema_version="1.0",
+            package_checksum=payload.package_checksum,
+            entity_type=payload.entity_type,
+            package_reference=payload.entity_package_reference,
+            validation_reference=payload.validation_reference,
+            lineage_reference=payload.lineage_reference,
+            required_asset_status="ready",
+            readiness_status="awaiting_review",
+            reason="test",
+            created_at_utc="",
+            updated_at_utc="",
+        ),
+        app,
+        load_publish_settings(
+            ConfigLoadRequest(schema_version="1.0", path=str(config_path)), ctx
+        ),
+        ctx,
+    )
+
+    assert result[0] is False
+    assert result[1] == "semantic_authority_missing"
+
+
 def test_briefing_missing_override_provenance_remains_manual(tmp_path: Path) -> None:
     config_path = _config(tmp_path, autonomous=True)
     payload = replace(
@@ -635,46 +671,6 @@ def test_briefing_missing_override_provenance_remains_manual(tmp_path: Path) -> 
 def test_briefing_override_path_remains_manual(tmp_path: Path) -> None:
     config_path = _config(tmp_path, autonomous=True)
     payload = _ready_briefing(tmp_path, config_path, override_publishability=True)
-
-    result = _run_readiness(payload)
-
-    assert result.result.summary["readiness_status"] == "awaiting_review"
-    assert _approval_rows(tmp_path / "state.sqlite") == []
-    assert _outbox_count(tmp_path / "state.sqlite") == 0
-
-
-def test_autonomous_ready_signal_requires_approved_retained_evidence(
-    tmp_path: Path,
-) -> None:
-    config_path = _config(tmp_path, autonomous=True)
-    payload = _ready_signal(tmp_path, config_path)
-
-    result = _run_readiness(payload)
-
-    approvals = _approval_rows(tmp_path / "state.sqlite")
-    assert result.result.summary["readiness_status"] == "approved"
-    assert len(approvals) == 1
-    assert approvals[0][1] == payload.package_checksum
-    assert _outbox_count(tmp_path / "state.sqlite") == 1
-
-
-def test_signal_missing_override_provenance_remains_manual(tmp_path: Path) -> None:
-    config_path = _config(tmp_path, autonomous=True)
-    payload = replace(
-        _ready_signal(tmp_path, config_path),
-        attributes={"config_path": str(config_path)},
-    )
-
-    result = _run_readiness(payload)
-
-    assert result.result.summary["readiness_status"] == "awaiting_review"
-    assert _approval_rows(tmp_path / "state.sqlite") == []
-    assert _outbox_count(tmp_path / "state.sqlite") == 0
-
-
-def test_signal_override_path_remains_manual(tmp_path: Path) -> None:
-    config_path = _config(tmp_path, autonomous=True)
-    payload = _ready_signal(tmp_path, config_path, override_publishability=True)
 
     result = _run_readiness(payload)
 

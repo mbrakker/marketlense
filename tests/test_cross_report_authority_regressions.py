@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from types import SimpleNamespace
 
 import pytest
@@ -451,6 +451,77 @@ def test_briefing_publishability_blocks_absent_final_validation(
 
     assert result.publishable is False
     assert "validation_result_required_for_publication" in result.issues
+
+
+def test_public_briefing_coverage_requirements_cannot_be_overridden(
+    run_context,
+) -> None:
+    theme_selection, source_selection, evidence_input = _briefing_selection()
+    result = validate_cross_report_publishability(
+        replace(
+            _briefing_request(),
+            override_publishability=True,
+        ),
+        theme_selection,
+        source_selection,
+        run_context,
+        min_source_reports=2,
+        min_source_publishers=2,
+        min_evidence_items=2,
+        validation_result=CrossReportValidationResult(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            status="pass",
+            checked_evidence_ids=["ev-a"],
+            passed=True,
+        ),
+        evidence_input=evidence_input,
+        raise_on_failure=False,
+    )
+
+    assert result.publishable is False
+    assert result.override_applied is False
+    assert {
+        "source_report_count_below_minimum",
+        "source_publisher_count_below_minimum",
+        "evidence_count_below_minimum",
+    }.issubset(result.issues)
+
+
+def test_soft_theme_repetition_can_still_use_explicit_override(
+    run_context,
+) -> None:
+    theme_selection, source_selection, evidence_input = _briefing_selection()
+    theme_selection = replace(
+        theme_selection,
+        selected_theme=replace(
+            theme_selection.selected_theme,
+            rejection_risks=["recent_theme_repetition"],
+        ),
+    )
+    result = validate_cross_report_publishability(
+        replace(
+            _briefing_request(),
+            override_publishability=True,
+        ),
+        theme_selection,
+        source_selection,
+        run_context,
+        min_source_reports=1,
+        min_source_publishers=1,
+        min_evidence_items=1,
+        validation_result=CrossReportValidationResult(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            status="pass",
+            checked_evidence_ids=["ev-a"],
+            passed=True,
+        ),
+        evidence_input=evidence_input,
+        raise_on_failure=False,
+    )
+
+    assert result.publishable is True
+    assert result.override_applied is True
+    assert result.issues == ["duplicate_theme_risk"]
 
 
 def test_publication_policy_changes_are_part_of_idempotency_fingerprint() -> None:

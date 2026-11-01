@@ -609,6 +609,9 @@ def build_cross_report_publish_package(
         "validation_status": validation_result.status,
         "publishability": publishability_metadata,
         "public_entity_metadata": asdict(publish_entity_metadata),
+        "metric_normalization_violations": list(
+            validation_result.metric_normalization_violations
+        ),
         "briefing_card": briefing_card or {},
     }
     body_html, html_text = build_cross_report_html_document(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from dataclasses import replace
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import pytest
@@ -27,12 +27,16 @@ from src.contracts.workflow_queue import (
     WorkflowJobSubmission,
 )
 from src.orchestrators import workflow_queue_orchestrator as queue_orchestrator
+from src.orchestrators._publish_orchestrator.cross_report import (
+    _signal_projection_package,
+)
 from src.services.config_service import load_settings
 from src.services.file_service import write_bytes
 from src.services.workflow_queue_service import (
     approve_publication_package,
 )
 from src.utils.errors import AppError
+from src.utils.html_utils import extract_publish_entity_metadata
 from tests._workflow_queue_registry_support import (
     _ctx,
     _isolated_app_config,
@@ -103,6 +107,7 @@ def test_signal_publish_adapter_does_not_borrow_deduplicated_publisher_labels(
     ]
     assert package.signal_card["evidence_count"] == 3
     assert package.machine_metadata["signal_validation_status"] == "approved"
+    assert extract_publish_entity_metadata(package.html_text).publish_eligible is False
 
     retained_path = str(tmp_path / "publish_package.json")
     persisted = queue_orchestrator._persist_queue_publish_package(
@@ -493,6 +498,72 @@ def test_single_source_signal_candidate_is_held_before_generation_queue(
     assert not [
         child for child in result.downstream if child.queue_name == "signal_generation"
     ]
+
+
+def test_queued_signal_package_reuses_shared_authorization_contract() -> None:
+    projection = SignalPublishProjection(
+        schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
+        title="Checkout trust is fragmenting",
+        slug="checkout-trust-is-fragmenting",
+        summary_html="<p>Trust signals diverged.</p>",
+        body_html="<article><p>Evidence-backed body.</p></article>",
+        evidence_ids=["evidence-a", "evidence-b"],
+        source_report_ids=["report-a", "report-b"],
+        topic_ids=["checkout"],
+        confidence=0.82,
+        uncertainty="Coverage is strongest in retail sources.",
+        validation_status="approved",
+        card_content=SignalCardContent(
+            schema_version="1.0",
+            summary="Trust signals diverged.",
+            confidence=0.82,
+            source_count=2,
+            evidence_count=2,
+            uncertainty="Coverage is strongest in retail sources.",
+            fingerprint=CoverFingerprint(
+                schema_version="1.0",
+                geometry_family="signal_lattice",
+                evidence_shape="system",
+                direction="neutral",
+                geography_scope="unknown",
+                evidence_density="balanced",
+                domain_layer="grid",
+                seed=41,
+                selection_reason="Queue adapter coverage test.",
+            ),
+        ),
+        file_id="signal-file-1",
+        candidate_group_id="signal-group-1",
+        candidate_manifest_sha256="a" * 64,
+        html_text="<html><body>Signal</body></html>",
+        topic_labels=["Checkout"],
+        tag_labels=["Trust"],
+        source_attributions=[
+            SignalSourceAttribution(report_id="report-a", publisher="Publisher A"),
+            SignalSourceAttribution(report_id="report-b", publisher="Publisher B"),
+        ],
+    )
+
+    direct = _signal_projection_package(projection, asdict(projection.card_content))
+    queued = queue_orchestrator._signal_publish_package(
+        group_id="signal-group-1",
+        package_path="out/workflow_queue/signals/publish_package.json",
+        projection=projection,
+        candidate_ids=["candidate-1"],
+    )
+
+    assert queued.validation_sha256 == direct.validation_sha256
+    assert (
+        queued.machine_metadata["publishability"]
+        == direct.machine_metadata["publishability"]
+    )
+    assert queued.machine_metadata["public_entity_metadata"]["publish_eligible"] is True
+    assert queued.machine_metadata["candidate_ids"] == ["candidate-1"]
+    assert queued.canonical_artifact_path == (
+        "out/workflow_queue/signals/publish_package.json"
+    )
+    assert queued.html_path.endswith("publish.html")
+    assert extract_publish_entity_metadata(queued.html_text).publish_eligible is True
 
 
 def test_queued_signal_rejects_changed_projected_evidence_before_publication(

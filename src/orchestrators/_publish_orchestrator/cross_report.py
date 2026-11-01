@@ -43,7 +43,10 @@ from src.orchestrators._publish_orchestrator.routing import (
     _publish_settings_for_post_type,
 )
 from src.utils.errors import AppError
-from src.utils.html_utils import ensure_publish_entity_metadata_html
+from src.utils.html_utils import (
+    ensure_publish_entity_metadata_html,
+    extract_publish_entity_metadata,
+)
 from src.utils.slugify import slugify
 
 
@@ -53,7 +56,9 @@ def _cross_report_post_type_for_target_route(target_route: str) -> str:
     if post_type is None:
         raise AppError(
             code="publish_entity_metadata_unsupported",
-            message="Cross-report package declares an unsupported WordPress target route.",
+            message=(
+                "Cross-report package declares an unsupported WordPress target route."
+            ),
             retryable=False,
             severity="error",
             context={"target_route": normalized_route},
@@ -116,12 +121,15 @@ def _publish_entity_metadata_for_route(
     *,
     source_artifact_id: str,
     canonical_route_intent: str,
+    publish_eligible: bool = True,
 ) -> PublishEntityMetadata:
     route = _PUBLISH_ROUTES_BY_INTENT.get(str(canonical_route_intent or "").strip())
     if route is None:
         raise AppError(
             code="publish_entity_metadata_unsupported",
-            message="Generated artifact declares an unsupported WordPress route intent.",
+            message=(
+                "Generated artifact declares an unsupported WordPress route intent."
+            ),
             retryable=False,
             severity="error",
             context={"canonical_route_intent": canonical_route_intent},
@@ -131,7 +139,7 @@ def _publish_entity_metadata_for_route(
         entity_type=route.entity_type,
         source_artifact_id=source_artifact_id,
         canonical_route_intent=route.canonical_route_intent,
-        publish_eligible=True,
+        publish_eligible=publish_eligible,
     )
 
 
@@ -287,10 +295,6 @@ def _signal_projection_package(
         ).encode("utf-8")
     ).hexdigest()
     stable_file_id = projection.file_id or f"signal:{projection.slug}"
-    publish_entity_metadata = _publish_entity_metadata_for_route(
-        source_artifact_id=stable_file_id,
-        canonical_route_intent=projection.target_route,
-    )
     candidate_manifest_sha256 = str(projection.candidate_manifest_sha256 or "")
     manifest_valid = len(candidate_manifest_sha256) == 64 and all(
         character in "0123456789abcdef" for character in candidate_manifest_sha256
@@ -316,10 +320,30 @@ def _signal_projection_package(
             if issue
         ]
     )
-    signal_html_text = ensure_publish_entity_metadata_html(
-        projection.html_text or f"<html><body>{projection.body_html}</body></html>",
-        publish_entity_metadata,
+    publish_entity_metadata = _publish_entity_metadata_for_route(
+        source_artifact_id=stable_file_id,
+        canonical_route_intent=projection.target_route,
+        publish_eligible=signal_publishable,
     )
+    signal_html_text = projection.html_text or (
+        f"<html><body>{projection.body_html}</body></html>"
+    )
+    embedded_metadata = extract_publish_entity_metadata(signal_html_text)
+    if embedded_metadata is not None and embedded_metadata != publish_entity_metadata:
+        raise AppError(
+            code="publish_entity_metadata_mismatch",
+            message=(
+                "Signal HTML entity metadata conflicts with its publishability decision"
+            ),
+            retryable=False,
+            severity="error",
+            context={"source_artifact_id": stable_file_id},
+        )
+    if embedded_metadata is None:
+        signal_html_text = ensure_publish_entity_metadata_html(
+            signal_html_text,
+            publish_entity_metadata,
+        )
     publisher_by_report_id = {
         attribution.report_id: attribution.publisher
         for attribution in projection.source_attributions
@@ -337,7 +361,7 @@ def _signal_projection_package(
         html_path=f"signal_posts/{projection.slug}.html",
         canonical_artifact_path=f"signal_posts/{projection.slug}.json",
         artifact_sha256=content_hash,
-        validation_sha256=content_hash,
+        validation_sha256=_signal_validation_sha256(projection.validation_status),
         selected_theme_id=projection.candidate_group_id or projection.slug,
         selected_report_ids=list(projection.source_report_ids),
         source_metadata=[
@@ -371,15 +395,15 @@ def _signal_projection_package(
             },
             "confidence": projection.confidence,
             "uncertainty": projection.uncertainty,
-            "public_entity_metadata": asdict(
-                PublishEntityMetadata(
-                    schema_version=publish_entity_metadata.schema_version,
-                    entity_type=publish_entity_metadata.entity_type,
-                    source_artifact_id=publish_entity_metadata.source_artifact_id,
-                    canonical_route_intent=publish_entity_metadata.canonical_route_intent,
-                    publish_eligible=signal_publishable,
-                )
-            ),
+            "public_entity_metadata": asdict(publish_entity_metadata),
         },
         signal_card=signal_card,
     )
+
+
+def _signal_validation_sha256(validation_status: str) -> str:
+    """Return the version-compatible validation identity used by Signals."""
+
+    return hashlib.sha256(
+        f"signal-validation\x1f{validation_status}".encode("utf-8")
+    ).hexdigest()

@@ -727,11 +727,18 @@ def validate_cross_report_publishability(
         "validation_result_required_for_publication",
     }
     authority_block = bool(authority_block_codes.intersection(issues))
+    hard_coverage_codes = {
+        "source_report_count_below_minimum",
+        "source_publisher_count_below_minimum",
+        "evidence_count_below_minimum",
+    }
+    hard_coverage_block = bool(hard_coverage_codes.intersection(issues))
     diagnostic = bool(request.diagnostic)
     override_applied = bool(
         issues
         and request.override_publishability
         and not authority_block
+        and not hard_coverage_block
         and not diagnostic
     )
     if diagnostic and "diagnostic_mode_non_publishable" not in issues:

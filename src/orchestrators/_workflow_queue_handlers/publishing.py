@@ -54,6 +54,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateExtractionRequest,
+    SignalCandidateReadRequest,
 )
 from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
@@ -114,6 +115,10 @@ from src.contracts.workflow_queue import (
 )
 from src.generators.cover_image_generator import generate_cover_images
 from src.generators.publish_readiness_generator import verify_publish_readiness
+from src.generators.signal_post_generator import build_signal_publish_projection
+from src.orchestrators._publish_orchestrator.cross_report import (
+    _signal_validation_sha256,
+)
 from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_manifest_stage,
 )
@@ -137,6 +142,7 @@ from src.orchestrators.mail_report_acquisition_orchestrator import (
     run_mail_report_acquisition,
 )
 from src.orchestrators.publish_orchestrator import (
+    _cross_report_publish_authorization_error,
     publish_cross_report_package,
     run_publish,
 )
@@ -197,6 +203,110 @@ def _publication_override_requested(payload: PublicationReadinessPayload) -> boo
 def _contract_payload_sha256(value: object) -> str:
     encoded = json.dumps(value, ensure_ascii=True, sort_keys=True, default=str)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _signal_manifest_replay_reason(
+    package: CrossReportPublishPackage,
+    app_settings: AppSettings,
+    ctx: RunContext,
+) -> str:
+    """Revalidate a Signal package against its immutable candidate manifest."""
+
+    metadata = package.machine_metadata
+    candidate_group_id = str(metadata.get("candidate_group_id") or "").strip()
+    manifest_sha256 = str(metadata.get("candidate_manifest_sha256") or "").strip()
+    if not candidate_group_id or not manifest_sha256:
+        return "signal_manifest_reference_missing"
+    candidate_ids_value = metadata.get("candidate_ids")
+    if candidate_ids_value in (None, []):
+        candidate_ids: list[str] = []
+    elif isinstance(candidate_ids_value, list) and all(
+        isinstance(value, str) and value.strip() for value in candidate_ids_value
+    ):
+        candidate_ids = list(candidate_ids_value)
+    else:
+        return "signal_manifest_candidate_ids_invalid"
+
+    signal_store_db = str(app_settings.signal_store_db or app_settings.reports_db)
+    try:
+        candidate_data = analytics_store_service.read_signal_candidates(
+            SignalCandidateReadRequest(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                db_path=signal_store_db,
+                manifest_sha256=manifest_sha256,
+                candidate_ids=candidate_ids,
+                group_ids=[candidate_group_id],
+                source_report_ids=list(package.selected_report_ids),
+                evidence_ids=list(package.evidence_reference_ids),
+                validation_statuses=["approved"],
+                limit=max(1, len(candidate_ids)),
+            ),
+            ctx,
+        )
+        if (
+            candidate_data.manifest_sha256 != manifest_sha256
+            or len(candidate_data.groups) != 1
+        ):
+            return "signal_manifest_snapshot_invalid"
+        group = candidate_data.groups[0]
+        if (
+            group.group_id != candidate_group_id
+            or group.source_report_ids != list(package.selected_report_ids)
+            or group.evidence_ids != list(package.evidence_reference_ids)
+            or (candidate_ids and group.candidate_ids != candidate_ids)
+        ):
+            return "signal_manifest_package_mismatch"
+        projected_data = analytics_store_service.read_cross_report_projected_data(
+            CrossReportProjectedDataReadRequest(
+                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+                db_path=app_settings.reports_db,
+                source_report_ids=list(group.source_report_ids),
+                evidence_ids=list(group.evidence_ids),
+                content_classes=["claim", "finding", "quote", "metric"],
+                minimum_projection_status="projected",
+            ),
+            ctx,
+        )
+        projection = build_signal_publish_projection(
+            SignalPostGenerationRequest(
+                schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
+                request_id=f"publication-preflight:{candidate_group_id}:{manifest_sha256}",
+                topic=group.topic,
+                max_source_reports=max(2, len(group.source_report_ids)),
+                max_evidence_items=max(2, len(group.evidence_ids)),
+                minimum_source_reports=2,
+                minimum_evidence_items=2,
+                target_route=package.target_route,
+                candidate_group_id=group.group_id,
+                candidate_manifest_sha256=manifest_sha256,
+                extraction_request_id=group.extraction_request_id,
+                candidate_ids=list(group.candidate_ids),
+                source_report_ids=list(group.source_report_ids),
+                evidence_ids=list(group.evidence_ids),
+                topic_ids=list(group.topic_ids),
+                source_category_ids={
+                    report_id: list(category_ids)
+                    for report_id, category_ids in group.source_category_ids.items()
+                },
+            ),
+            projected_data,
+            ctx,
+            candidate_data=candidate_data,
+        )
+    except AppError as exc:
+        if exc.retryable:
+            raise
+        return exc.code or "signal_manifest_validation_failed"
+
+    if (
+        projection.validation_status != "approved"
+        or projection.candidate_group_id != candidate_group_id
+        or projection.candidate_manifest_sha256 != manifest_sha256
+        or projection.source_report_ids != list(package.selected_report_ids)
+        or projection.evidence_ids != list(package.evidence_reference_ids)
+    ):
+        return "signal_manifest_projection_mismatch"
+    return ""
 
 
 def _automatic_publication_evidence(
@@ -330,6 +440,13 @@ def _automatic_publication_evidence(
             or _package_checksum(package) != payload.package_checksum
         ):
             return False, "cross_report_package_checksum_or_route_invalid", "", "", ""
+        if payload.entity_type == "briefing" and package.machine_metadata.get(
+            "metric_normalization_violations"
+        ):
+            return False, "semantic_authority_missing", "", "", ""
+        authorization_error = _cross_report_publish_authorization_error(package)
+        if authorization_error is not None:
+            return False, authorization_error.code, "", "", ""
         validation_response = read_bytes(
             ReadBytesRequest(schema_version="1.0", path=payload.validation_reference),
             ctx,
@@ -350,18 +467,23 @@ def _automatic_publication_evidence(
                 or not validation.passed
                 or validation.issues
                 or validation.missing_evidence_ids
-                or validation.metric_normalization_violations
                 or package.validation_sha256
                 != _contract_payload_sha256(asdict(validation))
                 or package.machine_metadata.get("validation_status") != "pass"
             ):
                 return False, "briefing_validation_not_fully_passed", "", "", ""
+            if validation.metric_normalization_violations:
+                return False, "semantic_authority_missing", "", "", ""
             source_configuration_hash = str(artifact.get("config_fingerprint") or "")
             source_policy_hash = str(artifact.get("policy_hash") or "")
         elif payload.entity_type == "signal":
             source_package = _cross_report_package_from_artifact(
                 payload.validation_reference, ctx
             )
+            if bool(package.machine_metadata.get("override_publishability")) or bool(
+                source_package.machine_metadata.get("override_publishability")
+            ):
+                return False, "operator_override_path", "", "", ""
             validation_status = str(
                 source_package.machine_metadata.get("signal_validation_status") or ""
             )
@@ -370,11 +492,43 @@ def _automatic_publication_evidence(
                 or source_package.artifact_sha256 != _package_checksum(source_package)
                 or validation_status != "approved"
                 or source_package.validation_sha256
-                != _digest("signal-validation", validation_status)
+                != _signal_validation_sha256(validation_status)
                 or package.validation_sha256
-                != _digest("signal-validation", validation_status)
+                != _signal_validation_sha256(validation_status)
             ):
                 return False, "signal_validation_not_approved", "", "", ""
+            publishability = source_package.machine_metadata.get("publishability")
+            public_entity_metadata = source_package.machine_metadata.get(
+                "public_entity_metadata"
+            )
+            if not isinstance(publishability, dict) or not publishability.get(
+                "publishable"
+            ):
+                return False, "signal_publication_not_authorized", "", "", ""
+            if not isinstance(public_entity_metadata, dict) or (
+                public_entity_metadata.get("publish_eligible") is not True
+            ):
+                return False, "signal_publication_metadata_not_authorized", "", "", ""
+            manifest_reason = _signal_manifest_replay_reason(
+                source_package, app_settings, ctx
+            )
+            if manifest_reason:
+                return False, manifest_reason, "", "", ""
+            for field_name in (
+                "candidate_group_id",
+                "candidate_manifest_sha256",
+                "candidate_ids",
+            ):
+                if package.machine_metadata.get(
+                    field_name
+                ) != source_package.machine_metadata.get(field_name):
+                    return False, "signal_package_manifest_mismatch", "", "", ""
+            if (
+                package.selected_report_ids != source_package.selected_report_ids
+                or package.evidence_reference_ids
+                != source_package.evidence_reference_ids
+            ):
+                return False, "signal_package_provenance_mismatch", "", "", ""
             source_configuration_hash = str(
                 source_package.machine_metadata.get("configuration_hash") or ""
             )

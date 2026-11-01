@@ -404,9 +404,10 @@ def test_publishability_gate_rejects_duplicate_and_metric_dependency(
     assert "metric_normalization_dependency" in exc_info.value.context["issues"]
 
 
-def test_publishability_gate_allows_explicit_override_and_logs(
+def test_publishability_gate_rejects_explicit_override_for_hard_coverage(
     run_context,
     caplog,
+    assert_app_error,
 ) -> None:
     base_request = _request(max_source_reports=1)
     request = CrossReportAnalysisRequest(
@@ -429,25 +430,30 @@ def test_publishability_gate_allows_explicit_override_and_logs(
     caplog.set_level(
         logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
     )
-    result = validate_cross_report_publishability(
-        request,
-        theme_selection,
-        source_selection,
-        run_context,
-        min_source_reports=2,
-        min_source_publishers=2,
-        min_evidence_items=6,
-    )
+    with pytest.raises(Exception) as exc_info:
+        validate_cross_report_publishability(
+            request,
+            theme_selection,
+            source_selection,
+            run_context,
+            min_source_reports=2,
+            min_source_publishers=2,
+            min_evidence_items=6,
+        )
 
-    assert result.publishable is True
-    assert result.override_applied is True
-    assert result.issues
+    assert_app_error(
+        exc_info.value,
+        code="cross_report_publishability_failed",
+        retryable=False,
+        severity="error",
+    )
+    assert "source_report_count_below_minimum" in exc_info.value.context["issues"]
     complete = [
         event
         for event in _events(caplog)
         if event["event"] == "cross_report_publishability_check_complete"
     ][0]
-    assert complete["fields"]["override_applied"] is True
+    assert complete["fields"]["override_applied"] is False
 
 
 def test_publishability_diagnostic_never_authorizes_publication(
@@ -857,7 +863,7 @@ __all__ = [
     "test_publishability_gate_passes_supported_theme_and_logs",
     "test_publishability_gate_rejects_thin_coverage",
     "test_publishability_gate_rejects_duplicate_and_metric_dependency",
-    "test_publishability_gate_allows_explicit_override_and_logs",
+    "test_publishability_gate_rejects_explicit_override_for_hard_coverage",
     "test_publishability_gate_checks_publication_validation_prerequisite",
     "test_evidence_input_assembly_filters_selected_reports_and_preserves_metric_provenance",
     "test_evidence_input_assembly_enforces_cap_before_prompt_rendering",

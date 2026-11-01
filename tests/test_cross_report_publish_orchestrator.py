@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+import json
+import logging
 from dataclasses import replace
 from types import SimpleNamespace
-
-import logging
-import json
 
 import pytest
 
@@ -12,7 +11,7 @@ from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportPublishPackage,
 )
-from src.contracts.publish import PublishOutcome
+from src.contracts.publish import PublishEntityMetadata, PublishOutcome
 from src.contracts.wordpress import (
     WordPressPostLookupResponse,
     WordPressTagEnsureResponse,
@@ -20,6 +19,7 @@ from src.contracts.wordpress import (
 )
 from src.orchestrators.publish_orchestrator import publish_cross_report_package
 from src.utils.errors import AppError
+from src.utils.html_utils import publish_entity_metadata_script
 
 
 def _package(tmp_path) -> CrossReportPublishPackage:
@@ -32,7 +32,10 @@ def _package(tmp_path) -> CrossReportPublishPackage:
         slug="ai-commerce-across-reports",
         excerpt="AI commerce is visible across selected reports.",
         body_html="<article><h1>AI Commerce Across Reports</h1></article>",
-        html_text="<html><body><article><h1>AI Commerce Across Reports</h1></article></body></html>",
+        html_text=(
+            "<html><body><article><h1>AI Commerce Across Reports</h1>"
+            "</article></body></html>"
+        ),
         html_path=str(tmp_path / "publish.html"),
         canonical_artifact_path=str(tmp_path / "analysis.json"),
         artifact_sha256="artifact-sha",
@@ -181,6 +184,38 @@ def test_publish_cross_report_package_without_authorization_is_blocked(
 
     assert result.status == "blocked"
     assert result.error_code == "cross_report_publish_authorization_missing"
+    assert calls == []
+
+
+def test_publish_cross_report_package_rejects_contradictory_embedded_metadata(
+    tmp_path,
+    run_context,
+) -> None:
+    html_text = (
+        "<html><body>"
+        + publish_entity_metadata_script(
+            PublishEntityMetadata(
+                schema_version="1.0",
+                entity_type="briefing",
+                source_artifact_id="other-package",
+                canonical_route_intent="wordpress:ml_briefing",
+                publish_eligible=True,
+            )
+        )
+        + "</body></html>"
+    )
+    calls: list[str] = []
+
+    with pytest.raises(AppError) as exc_info:
+        publish_cross_report_package(
+            replace(_package(tmp_path), html_text=html_text),
+            _settings(tmp_path),
+            run_context,
+            publish_html_fn=lambda request, settings, ctx: calls.append("publish"),
+            find_post_by_file_id_fn=lambda request, ctx: calls.append("lookup"),
+        )
+
+    assert exc_info.value.code == "publish_entity_metadata_mismatch"
     assert calls == []
 
 

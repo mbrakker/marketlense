@@ -208,6 +208,7 @@ from src.utils.errors import AppError
 from src.utils.html_utils import (
     build_publish_html_snapshot,
     ensure_publish_entity_metadata_html,
+    extract_publish_entity_metadata,
 )
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.slugify import slugify
@@ -256,6 +257,16 @@ def _cross_report_publish_authorization_error(
             return AppError(
                 code="cross_report_publish_validation_failed",
                 message="Cross-report package does not carry a passed final validation",
+                retryable=False,
+                severity="error",
+            )
+        if metadata.get("metric_normalization_violations"):
+            return AppError(
+                code="cross_report_semantic_authority_missing",
+                message=(
+                    "Cross-report package carries metric telemetry without an "
+                    "authoritative semantic verdict"
+                ),
                 retryable=False,
                 severity="error",
             )
@@ -1152,6 +1163,42 @@ def publish_cross_report_package(
             },
         )
     )
+    publish_entity_metadata = _publish_entity_metadata_for_route(
+        source_artifact_id=package.file_id,
+        canonical_route_intent=package.target_route,
+        publish_eligible=True,
+    )
+    embedded_entity_metadata = extract_publish_entity_metadata(package.html_text)
+    if (
+        embedded_entity_metadata is not None
+        and embedded_entity_metadata != publish_entity_metadata
+    ):
+        metadata_error = AppError(
+            code="publish_entity_metadata_mismatch",
+            message="Cross-report HTML metadata conflicts with package authorization",
+            retryable=False,
+            severity="error",
+            context={"package_id": package.package_id},
+        )
+        if dry_run:
+            return CrossReportPublishResultSummary(
+                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+                publication_mode="publish_dry_run",
+                status="blocked",
+                target_route=package.target_route,
+                idempotency_reused=False,
+                **_cross_report_result_fields(classification),
+                error_code=metadata_error.code,
+                error_message=metadata_error.message,
+            )
+        raise metadata_error
+    publish_html_text = (
+        package.html_text
+        if embedded_entity_metadata is not None
+        else ensure_publish_entity_metadata_html(
+            package.html_text, publish_entity_metadata
+        )
+    )
     if dry_run:
         result = CrossReportPublishResultSummary(
             schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -1273,16 +1320,13 @@ def publish_cross_report_package(
                 slug=classification.slug,
                 html_snapshot=PublishHtmlSnapshot(
                     schema_version="1.0",
-                    html_text=package.html_text,
+                    html_text=publish_html_text,
                     file_id=package.file_id,
                     title=package.title,
                     body_html=package.body_html,
                     image_sources=[],
                     preview_image_src=None,
-                    entity_metadata=_publish_entity_metadata_for_route(
-                        source_artifact_id=package.file_id,
-                        canonical_route_intent=package.target_route,
-                    ),
+                    entity_metadata=publish_entity_metadata,
                     briefing_card=package.briefing_card,
                     signal_card=package.signal_card,
                 ),

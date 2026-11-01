@@ -10,7 +10,6 @@ the queue lifecycle remains unchanged.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import uuid
 from collections.abc import Mapping, Sequence
@@ -100,6 +99,9 @@ from src.contracts.workflow_queue import (
     WorkflowStageResult,
 )
 from src.generators.cover_image_generator import generate_cover_images
+from src.orchestrators._publish_orchestrator.cross_report import (
+    _signal_projection_package,
+)
 from src.orchestrators.acquisition_ingest_handoff_orchestrator import (
     build_source_ingest_submission_from_verified_acquisition,
 )
@@ -200,6 +202,9 @@ def _signal_candidate_handler(
     minimum_source_reports = _positive_int_attribute(
         payload, "minimum_source_reports", 2
     )
+    override_publishability = _boolean_attribute(
+        payload, "override_publishability", False
+    )
     generate_signals = _boolean_attribute(payload, "generate_signals", True)
     config_path = str(payload.attributes.get("config_path", ""))
     app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
@@ -209,6 +214,7 @@ def _signal_candidate_handler(
         payload.projection_reference or payload.input_reference,
         payload.signal_selection_policy_version,
         topic,
+        str(override_publishability).casefold(),
     )
     if job.publisher_id and job.publisher_id not in publisher_filters:
         publisher_filters.append(job.publisher_id)
@@ -224,7 +230,7 @@ def _signal_candidate_handler(
         date_range_end=str(payload.attributes.get("date_range_end", "")) or None,
         max_source_reports=max_source_reports,
         diagnostic=False,
-        override_publishability=True,
+        override_publishability=override_publishability,
         publication_mode="generate_only",
     )
     outcome = run_signal_candidate_extraction(
@@ -295,7 +301,7 @@ def _signal_candidate_handler(
             "max_source_reports": max_source_reports,
             "minimum_evidence_items": minimum_evidence_items,
             "minimum_source_reports": minimum_source_reports,
-            "override_publishability": True,
+            "override_publishability": override_publishability,
             "publisher_filters": publisher_filters,
             "tag_filters": tag_filters,
         }
@@ -381,57 +387,43 @@ def _signal_publish_package(
     group_id: str,
     package_path: str,
     projection: SignalPublishProjection,
+    candidate_ids: list[str] | None = None,
+    override_publishability: bool = False,
 ) -> CrossReportPublishPackage:
     """Adapt the established Signal projection to the shared publish package."""
 
-    signal = projection
+    signal = (
+        projection
+        if projection.candidate_group_id
+        else replace(projection, candidate_group_id=group_id)
+    )
     card = signal.card_content
-    signal_card = {
-        "schema_version": card.schema_version,
-        "summary": card.summary,
-        "confidence": card.confidence,
-        "source_count": card.source_count,
-        "evidence_count": card.evidence_count,
-        "uncertainty": card.uncertainty,
-    }
-    source_report_ids = list(signal.source_report_ids)
-    publisher_by_report_id = {
-        item.report_id: item.publisher for item in signal.source_attributions
-    }
-    return CrossReportPublishPackage(
-        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        package_id=signal.file_id,
-        file_id=signal.file_id,
-        target_route="wordpress:ml_signal",
-        title=signal.title,
-        slug=signal.slug,
-        excerpt=str(card.summary),
-        body_html=signal.body_html,
-        html_text=signal.html_text,
+    package = _signal_projection_package(
+        signal,
+        {
+            "schema_version": card.schema_version,
+            "summary": card.summary,
+            "confidence": card.confidence,
+            "source_count": card.source_count,
+            "evidence_count": card.evidence_count,
+            "uncertainty": card.uncertainty,
+        },
+    )
+    metadata = dict(package.machine_metadata)
+    metadata["signal_cover_fingerprint"] = asdict(card.fingerprint)
+    metadata["signal_validation_status"] = signal.validation_status
+    metadata["candidate_ids"] = list(candidate_ids or [])
+    metadata["override_publishability"] = bool(override_publishability)
+    publishability = metadata.get("publishability")
+    if isinstance(publishability, dict):
+        publishability = dict(publishability)
+        publishability["override_applied"] = bool(override_publishability)
+        metadata["publishability"] = publishability
+    return replace(
+        package,
         html_path=str(Path(package_path).with_name("publish.html")),
         canonical_artifact_path=package_path,
-        artifact_sha256="",
-        validation_sha256=_digest("signal-validation", signal.validation_status),
-        selected_theme_id=signal.candidate_group_id or group_id,
-        selected_report_ids=source_report_ids,
-        source_metadata=[
-            {
-                "report_id": report_id,
-                "publisher": publisher_by_report_id.get(report_id, ""),
-            }
-            for report_id in source_report_ids
-        ],
-        category_labels=list(signal.topic_labels),
-        tag_labels=list(signal.tag_labels),
-        evidence_reference_ids=list(signal.evidence_ids),
-        raw_metric_ids=[],
-        prompt_hashes={},
-        machine_metadata={
-            "schema_version": WORDPRESS_ENTITY_SCHEMA_VERSION,
-            "signal_cover_fingerprint": asdict(card.fingerprint),
-            "signal_validation_status": signal.validation_status,
-        },
-        signal_card=signal_card,
+        machine_metadata=metadata,
     )
 
 
@@ -564,6 +556,10 @@ def _signal_generation_handler(
             group_id=payload.candidate_group_id,
             package_path=package_path,
             projection=projection_result.projection,
+            candidate_ids=list(payload.candidate_ids),
+            override_publishability=_boolean_attribute(
+                payload, "override_publishability", False
+            ),
         ),
         package_path,
         ctx,
@@ -583,7 +579,7 @@ def _signal_generation_handler(
             attributes={
                 "config_path": config_path,
                 "override_publishability": _boolean_attribute(
-                    payload, "override_publishability", True
+                    payload, "override_publishability", False
                 ),
             },
         ),
