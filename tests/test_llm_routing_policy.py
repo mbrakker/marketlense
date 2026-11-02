@@ -294,7 +294,7 @@ def test_public_editorial_quality_has_review_specific_output_capacity() -> None:
         require_registered_namespace=False,
     )
 
-    assert decision.policy.max_output_tokens == 16_384
+    assert decision.policy.max_output_tokens == 32_768
 
 
 @pytest.mark.parametrize(
