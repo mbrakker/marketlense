@@ -1720,3 +1720,26 @@ mutation partitions, and `release_evidence`; the WordPress staging REST step
 was skipped by its credential guard. The release bundle is artifact
 [13161665350](https://github.com/mbrakker/marketlense/actions/runs/41481984102/artifacts/13161665350).
 This confirms repository gates only; it does not close E18, Step 2, or Step 3.
+
+**Live single-report Adjust acceptance — 2026-11-02:** A fresh isolated
+provider-backed run used the exact retained PDF SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` and one
+report only. The review-specific public-editorial output budget was raised from
+16,384 to 32,768 after the 16,384 run still failed and its primary response
+used 14,893 output tokens; the 32,768 change is `bc1f0374` and hosted CI run
+[41504085301](https://github.com/mbrakker/marketlense/actions/runs/41504085301)
+passed. The first 32,768 attempt failed closed on a contradictory context-rule
+classification; an isolated retry passed that boundary, admitted 6/6 visual
+candidates, verified 6/6 facts, and preserved 6 final source-grounded insights
+on pages 9, 11, 19, 22, 27, and 37. The retry still failed the existing
+public-editorial semantic gate after a completed 13,775-token primary response
+and bounded recovery; no HTML was produced. Measured retry totals were 147
+provider calls, 1,025,625 input tokens, 179,010 output tokens, `$0.205462`,
+and 1,478.954 seconds, with one structured recovery and no automatic repair or
+publication. The PDF/page audit found no unsupported material factual claim,
+but HTML/publication readiness remains unproven. Do not increase the budget to
+65,536 without new output-exhaustion evidence; do not expand to the frozen
+five-report cohort. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full run paths,
+source audit, and baseline comparison are recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

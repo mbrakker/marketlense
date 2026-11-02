@@ -8676,3 +8676,102 @@ credential guard; no WordPress write occurred. The release-evidence bundle is
 GitHub emitted only existing action-runtime/deprecated-input warnings. This is
 hosted deterministic-gate evidence; it does not replace the missing
 post-fix provider-backed Adjust run or establish Step 2 promotion readiness.
+
+## Live single-report Adjust acceptance — 2026-11-02
+
+This addendum records the bounded provider-backed acceptance attempt required
+before expanding to the frozen five-report cohort. It used one isolated Adjust
+member only (`cohort-b638414df0b1fccea1cd`), the retained PDF
+`C:\Programing\Market lense-step2-final\out\browser_downloads\www.adjust.com\b6b998e34a7c\mobile-app-trends-2026.pdf`, and the exact expected SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`. The
+workflow ran with the existing ingestion, extraction, evidence, verified-fact,
+visual, editorial, grounding, validation, and rendering stages. No WordPress
+authentication, publication, or canonical artifact write was enabled.
+
+### Capacity decision and run ledger
+
+The previous retained failure used an 8,192-token public-editorial output cap
+and both primary reviews ended at exactly that cap. The first post-fix run
+raised the review-family-only cap to 16,384 (`bfee5cb1`); its primary review
+still failed after two bounded recovery calls. Because the primary output was
+14,893 tokens, the run supplied equivalent-capacity evidence for one further
+review-specific increase to 32,768. No prompt, schema, reasoning setting,
+retry limit, or validation rule was changed. The change and its routing test
+are in `bc1f03749670f21bd18d50142886f13adce904d2`, which passed hosted CI.
+
+| Run | SHA / root | Terminal result | Provider calls | Input tokens | Output tokens | Cost | Wall-clock | File-search calls | Structured recovery | Verified facts | Final insights | HTML |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Retained baseline, 8,192 | `f68d8e75`; `C:\ml-adjust-e2e-20261102\frozen-reliability-6oe2ci36` | `public_editorial_quality.semantic_review_unresolved` | 153 | 1,296,653 | 198,143 | `$0.230052` | 1,527.079s | 7 | 2 | 7/7 | 7 | 0 |
+| Post-fix, 16,384 | `bfee5cb1`; `C:\ml-adjust-e2e-20261102-live\frozen-reliability-7y2cfely` | same fail-closed semantic gate | 153 | 1,210,979 | 195,054 | `$0.239681` | 1,546.672s | 9 | 2 | 6/6 | 6 | 0 |
+| 32,768 first attempt | `bc1f0374`; `C:\ml-adjust-e2e-20261102-live-32768\frozen-reliability-1tqn49ek` | `context_category_fit_unknown_rule_id` | 114 | 250,646 | 57,651 | `$0.071397` | 800.610s | 7 | 0 | not reached | not reached | 0 |
+| 32,768 isolated retry | `bc1f0374`; `C:\ml-adjust-e2e-20261102-live-32768-retry\frozen-reliability-wfstjesu` | `public_editorial_quality.semantic_review_unresolved` | 147 | 1,025,625 | 179,010 | `$0.205462` | 1,478.954s | 6 | 1 | 6/6 | 6 | 0 |
+
+The 32,768 retry's public-editorial primary response completed at 13,775
+output tokens, with recovery responses of 832 and 2,926 tokens. The usage
+ledger records completed provider envelopes and valid parsing status, but the
+review payload was not accepted as a complete schema/substantive result after
+the bounded recovery sequence. The terminal code remains the existing
+fail-closed `public_editorial_quality_review_invalid_json`; raw failed
+responses and the validator's detailed intermediate payload are intentionally
+not retained. Since the response was far below 32,768, a 65,536-token increase
+is not justified by this evidence and was not attempted.
+
+The first 32,768 attempt stopped earlier because the model returned an include
+rule ID in `rejected_topic_rule_ids`; the existing context-category validator
+correctly rejected that contradictory rule classification. The clean retry
+passed that boundary and reached visual verification, grounding, and public
+editorial review. No safe deterministic reclassification is justified, so no
+production code change was made for this transient model-output failure.
+
+### Verified-fact and source audit
+
+The retry admitted **6/6** visual candidates, produced **6/6** verified facts,
+quarantined **0**, and passed the verified-facts architecture gate with the
+exact PDF hash. The verified fact digest was
+`2da6db99dc16759b4345a3519949a49f983798ce00299bcdf9cb37ced44d5aa`; every
+final insight used the canonical `verified-fact:<id>` evidence binding.
+
+The final artifact was independently checked against full, uncropped PDF pages
+and rendered page images. The six retained rows were:
+
+| Stable ID | Physical page | Source-supported final wording / metric check |
+| --- | ---: | --- |
+| `genai-maturity-and-reported-gains` | 9 | Advanced-deployment organizations reportedly achieved efficiency gains over 20%; the final wording preserves the reported qualifier and does not add a timeframe or forecast. |
+| `cross-platform-satisfaction` | 11 | Around 31% of marketers report complete satisfaction with cross-platform data unification/readability; population and approximate qualifier match. |
+| `gaming-growth-diverges-by-genre` | 19 | Casual installs/sessions were +19%/+37%; strategy installs/sessions were -1%/+57%, global YoY 2024–2025; category/value relationships match the chart. |
+| `gaming-paid-organic-overall` | 22 | Global “All” gaming paid/organic ratio rose 2.07→3.33, +61%; denominator and overall cohort remain bound. |
+| `ecommerce-install-session-divergence` | 27 | Global 2025 e-commerce installs fell 10% YoY while sessions rose 5%; period, population, and metric directions match. |
+| `finance-cpi-and-retention-moved-down` | 37 | Final public wording states day-1 retention fell 13%→12% from 2024 to 2025; the authoritative fact also retains the page's CPI binding, without adding unsupported CPI text to the final wording. |
+
+The retained artifacts contain six metric-spine entries and five key figures;
+all five visual cards remain the conservative `weak_evidence` fallback with
+empty chart-candidate linkage. This is an observed artifact limitation, not a
+factual promotion. Retained factual validation reported **0 unsupported** and
+**0 unresolved** claims. The source audit therefore found no independently
+confirmed unsupported material claim, but it does not convert the failed
+public-editorial semantic gate into a publishable result.
+
+### Acceptance outcome
+
+No final HTML or rendered final report page exists in either 32,768 run, so
+HTML completeness, internal-ID absence, publication readiness, and end-to-end
+editorial usefulness cannot be accepted. The final insight/source audit above
+is evidence for factual grounding only; it is not a post-selection replay
+claim or a substitute for the missing HTML acceptance.
+
+Focused regressions on the routing, context-category, public-review reuse,
+structured-output, recovery, and execution-policy boundaries passed **76
+tests**. Hosted CI run
+[41504085301](https://github.com/mbrakker/marketlense/actions/runs/41504085301)
+for `bc1f03749670f21bd18d50142886f13adce904d2` passed `tests`, both mutation
+partitions, and `release_evidence`. The live attempt itself remained
+unpublished and made no WordPress write.
+
+The single-report live acceptance is therefore **PARTIAL / NO-GO**. The
+32,768 configuration change is retained because it was the smallest measured
+response-capacity correction and did not weaken validation, but no further
+budget increase is justified. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 must not begin. Expansion to the frozen
+five-report cohort is **NO-GO** until the existing public-editorial review
+produces a complete accepted result and a final HTML artifact on a fresh
+provider-backed run.
