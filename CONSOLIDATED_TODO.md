@@ -1663,3 +1663,16 @@ canonical finding pages fail closed with diagnostic reasons. Focused
 provider-free tests passed; no live provider/PDF run or publication occurred.
 This is deterministic authority evidence only: E18 remains **Active/PARTIAL**,
 Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+**Final publication freshness and semantic authority correction — 2026-11-02
+(`57c32e99`):** The queued publication preflight and structured cross-report
+metric authority changes passed the full hosted CI matrix in [run
+41409138503](https://github.com/mbrakker/marketlense/actions/runs/41409138503):
+tests, both mutation partitions, and `release_evidence` were green. The
+release bundle is [artifact
+13124703789](https://github.com/mbrakker/marketlense/actions/runs/41409138503/artifacts/13124703789).
+This is repository-gate evidence only; no provider, acquisition, canonical
+publication, or WordPress write occurred. E18 remains **Active/PARTIAL**, Step
+2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready** pending
+fresh source-report quality evidence and the missing Signal semantic-review
+transition.
