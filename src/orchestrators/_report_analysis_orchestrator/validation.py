@@ -12,7 +12,7 @@ import json
 import math
 import re
 from copy import deepcopy
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 from time import perf_counter
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -170,6 +170,57 @@ _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
     "distinctness",
     "limitations",
 )
+
+
+@dataclass(frozen=True)
+class _PublicEditorialReviewReuse:
+    """Terminal semantic-review result tied to one complete input identity."""
+
+    input_identity: str
+    issues: tuple[PublicEditorialQualityIssue, ...]
+
+
+def _public_editorial_review_input_identity(
+    *,
+    source_identity: str,
+    verified_fact_digest: str,
+    relevant_input_hash: str,
+    configuration_policy_hash: str,
+    prompt_content_hash: str,
+    execution_identity: str,
+) -> str:
+    """Hash every semantic review input that can change its terminal result."""
+
+    return sha256_json(
+        {
+            "source_identity": str(source_identity or "").strip(),
+            "verified_fact_digest": str(verified_fact_digest or "").strip(),
+            "relevant_input_hash": str(relevant_input_hash or "").strip(),
+            "configuration_policy_hash": str(configuration_policy_hash or "").strip(),
+            "prompt_content_hash": str(prompt_content_hash or "").strip(),
+            "execution_identity": str(execution_identity or "").strip(),
+            "validator": _PUBLIC_EDITORIAL_REVIEW_VALIDATOR,
+            "schema": _PUBLIC_EDITORIAL_REVIEW_SCHEMA,
+            "schema_version": _PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION,
+            "output_schema_identity": _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY,
+        }
+    )
+
+
+def _capture_public_editorial_review(
+    capture: list[_PublicEditorialReviewReuse] | None,
+    *,
+    input_identity: str,
+    issues: Sequence[PublicEditorialQualityIssue],
+) -> None:
+    if capture is not None:
+        capture[:] = [
+            _PublicEditorialReviewReuse(
+                input_identity=input_identity,
+                issues=tuple(issues),
+            )
+        ]
+
 
 _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS = frozenset(
     {
@@ -563,6 +614,8 @@ def _public_editorial_semantic_review(
     openai_client: Any,
     verified_source_identity: str = "",
     verified_fact_digest: str = "",
+    semantic_review_reuse: _PublicEditorialReviewReuse | None = None,
+    semantic_review_capture: list[_PublicEditorialReviewReuse] | None = None,
 ) -> list[PublicEditorialQualityIssue]:
     """Ask the existing structured-output path to judge public semantics.
 
@@ -570,38 +623,38 @@ def _public_editorial_semantic_review(
     retry/reuse bookkeeping.  The model owns the semantic pass/fail decision.
     """
 
-    items = public_editorial_semantic_review_items(artifacts)
     report_id = str(runtime.file.file_id)
+    source_id = str(
+        verified_source_identity or getattr(runtime.ctx, "source_identity_id", "") or ""
+    ).strip()
+    items = public_editorial_semantic_review_items(artifacts)
     if not items:
         # A report with no public editorial surfaces has nothing for this
         # review to assess. Existing artifact completeness/readiness gates own
         # whether that absence is acceptable; do not turn an intentionally
         # abstained non-public family into a semantic-review failure.
+        empty_identity = _public_editorial_review_input_identity(
+            source_identity=source_id,
+            verified_fact_digest=verified_fact_digest,
+            relevant_input_hash=sha256_json(
+                {"public_items": [], "report_id": report_id}
+            ),
+            configuration_policy_hash="no_public_editorial_items",
+            prompt_content_hash="",
+            execution_identity="",
+        )
+        _capture_public_editorial_review(
+            semantic_review_capture,
+            input_identity=empty_identity,
+            issues=[],
+        )
         return []
-    source_id = str(
-        verified_source_identity or getattr(runtime.ctx, "source_identity_id", "") or ""
-    ).strip()
     report_scope = public_editorial_report_review_scope(
         artifacts,
         items,
         source_identity=source_id,
         verified_fact_digest=verified_fact_digest,
     )
-    if openai_client is None:
-        return [
-            _public_editorial_review_issue(
-                report_id=report_id,
-                item=None,
-                rule_id="public_editorial_quality.semantic_review_unresolved",
-                severity="error",
-                hard_fail_class="semantic_review_unresolved",
-                explanation=(
-                    "Independent public-editorial semantic review was not configured; "
-                    "publication cannot rely on deterministic semantic heuristics."
-                ),
-            )
-        ]
-
     review_items: list[dict[str, Any]] = []
     for item in items:
         review_item: dict[str, Any] = {
@@ -618,6 +671,41 @@ def _public_editorial_semantic_review(
                 str(value).strip() for value in verified_facts if str(value).strip()
             )
         review_items.append(review_item)
+    relevant_input_hash = sha256_json(
+        {
+            "public_items": review_items,
+            "report_scope": report_scope,
+            "validator": _PUBLIC_EDITORIAL_REVIEW_VALIDATOR,
+        }
+    )
+    if openai_client is None:
+        unresolved_issues = [
+            _public_editorial_review_issue(
+                report_id=report_id,
+                item=None,
+                rule_id="public_editorial_quality.semantic_review_unresolved",
+                severity="error",
+                hard_fail_class="semantic_review_unresolved",
+                explanation=(
+                    "Independent public-editorial semantic review was not configured; "
+                    "publication cannot rely on deterministic semantic heuristics."
+                ),
+            )
+        ]
+        no_client_identity = _public_editorial_review_input_identity(
+            source_identity=source_id,
+            verified_fact_digest=verified_fact_digest,
+            relevant_input_hash=relevant_input_hash,
+            configuration_policy_hash="semantic_review_unconfigured",
+            prompt_content_hash="",
+            execution_identity="",
+        )
+        _capture_public_editorial_review(
+            semantic_review_capture,
+            input_identity=no_client_identity,
+            issues=unresolved_issues,
+        )
+        return unresolved_issues
     prompt_bundle = prepare_prompt_bundle(
         namespace=_PUBLIC_EDITORIAL_REVIEW_NAMESPACE,
         settings=runtime.settings,
@@ -635,13 +723,6 @@ def _public_editorial_semantic_review(
         reload_if_changed=True,
     )
     output_schema = provider_output_schema(_PUBLIC_EDITORIAL_REVIEW_SCHEMA)
-    relevant_input_hash = sha256_json(
-        {
-            "public_items": review_items,
-            "report_scope": report_scope,
-            "validator": _PUBLIC_EDITORIAL_REVIEW_VALIDATOR,
-        }
-    )
     configuration_policy_hash = sha256_json(
         {
             "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
@@ -649,6 +730,38 @@ def _public_editorial_semantic_review(
             "routing_policy": asdict(prompt_bundle.routing_decision),
         }
     )
+    input_identity = _public_editorial_review_input_identity(
+        source_identity=source_id,
+        verified_fact_digest=verified_fact_digest,
+        relevant_input_hash=relevant_input_hash,
+        configuration_policy_hash=configuration_policy_hash,
+        prompt_content_hash=prompt_bundle.prompt_content_hash,
+        execution_identity=prompt_bundle.execution_identity.execution_identity,
+    )
+    if (
+        semantic_review_reuse is not None
+        and semantic_review_reuse.input_identity == input_identity
+    ):
+        reused_issues = list(semantic_review_reuse.issues)
+        _capture_public_editorial_review(
+            semantic_review_capture,
+            input_identity=input_identity,
+            issues=reused_issues,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="public_editorial_quality_semantic_review_reused",
+                module=logger.name,
+                fields={
+                    "file_id": report_id,
+                    "input_identity": input_identity,
+                    "issue_count": len(reused_issues),
+                },
+            )
+        )
+        return reused_issues
     reused_payload: dict[str, Any] | None = None
     if source_id:
         reuse = read_reusable_prompt_family(
@@ -764,7 +877,7 @@ def _public_editorial_semantic_review(
             payload = reused_payload
         _validate_public_editorial_review_payload(payload, items, ctx, report_scope)
     except AppError as exc:
-        return [
+        unresolved_issues = [
             _public_editorial_review_issue(
                 report_id=report_id,
                 item=None,
@@ -777,6 +890,12 @@ def _public_editorial_semantic_review(
                 ),
             )
         ]
+        _capture_public_editorial_review(
+            semantic_review_capture,
+            input_identity=input_identity,
+            issues=unresolved_issues,
+        )
+        return unresolved_issues
 
     if reused_payload is None and source_id and not recovery_attempted:
         materialize_prompt_family(
@@ -886,6 +1005,11 @@ def _public_editorial_semantic_review(
                 repair_target=str(report_verdict.get("repair_target") or "").strip(),
             )
         )
+    _capture_public_editorial_review(
+        semantic_review_capture,
+        input_identity=input_identity,
+        issues=issues,
+    )
     return issues
 
 
@@ -899,6 +1023,8 @@ def _evaluate_and_store_public_editorial_quality(
     openai_client=None,
     verified_source_identity: str = "",
     verified_fact_digest: str = "",
+    semantic_review_reuse: _PublicEditorialReviewReuse | None = None,
+    semantic_review_capture: list[_PublicEditorialReviewReuse] | None = None,
 ) -> tuple[ValidationReport | None, str]:
     """Persist technical checks plus the independent semantic release gate."""
     if not isinstance(artifacts, dict):
@@ -935,6 +1061,8 @@ def _evaluate_and_store_public_editorial_quality(
         openai_client=openai_client,
         verified_source_identity=canonical_source_identity,
         verified_fact_digest=canonical_fact_digest,
+        semantic_review_reuse=semantic_review_reuse,
+        semantic_review_capture=semantic_review_capture,
     )
     if semantic_issues:
         quality = replace(

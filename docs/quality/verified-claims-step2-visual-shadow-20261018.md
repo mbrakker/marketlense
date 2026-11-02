@@ -8603,3 +8603,64 @@ pre-fix run, and no post-fix provider-backed result or HTML exists. Overall
 Step 2 remains **PARTIAL / NO-GO**; E18 remains **Active/PARTIAL**; Step 3
 remains **unstarted/not ready**. The next required evidence is one genuine
 provider-backed Adjust rerun followed by independent PDF-to-editorial review.
+
+## Final pre-E2E editorial reliability corrections — 2026-11-02
+
+This addendum is based on reviewed HEAD
+`6fb964686730f1fbbf540a1bae1c231023793a98`. It is provider-free evidence only:
+no new ingestion, retained-PDF provider run, canonical artifact mutation, HTML
+generation, publication, or WordPress write was performed.
+
+### Demonstrated corrections
+
+The report-analysis orchestrator previously invoked the public-editorial
+semantic review independently for the before and after quality packs. The
+correction captures the terminal semantic result, including a fail-closed
+result, with a private identity covering the public wording/evidence and
+editorial plan, source identity, verified-fact digest, prompt/policy/execution
+identity, validator, and output-schema identity. When the complete identity is
+unchanged, the after pack reuses that result; deterministic quality checks and
+both pack materializations still run. Changed wording, evidence, source,
+fact, editorial plan, prompt, or review policy invalidates reuse. Regeneration
+reviews remain independent and are not suppressed.
+
+The semantic-response cache predicate now requires a parsed JSON object. It
+rejects missing/null/corrupt structured payloads and explicit length,
+max-output, content-filter, refusal, or incomplete responses on both cache read
+and write. Existing valid cache identity, TTL, and legacy valid structured
+entries remain compatible.
+
+### Verification evidence
+
+| Gate | Result |
+| --- | --- |
+| Focused reuse/cache regressions | **20 passed** |
+| Affected orchestration/editorial suite | **183 passed** |
+| Full CPython 3.12 pytest (no coverage) | **8,419 passed, 2 skipped, 48 deselected, 24 subtests** in **975.91s** |
+| Full CPython 3.12 pytest with coverage | **8,419 passed, 2 skipped, 48 deselected, 24 subtests** in **1,465.01s** |
+| Coverage floors | **PASS** — global 85.49%, contracts 97.98%, orchestrators 86.06%, generators 87.18%, services 84.34%, control-plane 90.60% |
+| Mutation inventory | **PASS** — 67/68 mutants killed across 17 targets; the retained taxonomy target is 3/4 (75%), matching its existing baseline |
+| Quality non-regression | **PASS** — coverage, retained mutation targets, golden docpacks, and candidate-extraction metrics all met baseline |
+| Prompt-fixture regression | **PASS** — 114,262 tokens / `$0.025080` versus 114,247 / `$0.025078` (**+15 / +$0.000002**); validation 11,630 / `$0.002076` versus 11,615 / `$0.002074` |
+| Ruff, full mypy, schema, architecture/policy and repository gates | **PASS** — full mypy reports 0 tracked errors across 786 source files |
+
+The unchanged before/after review path is now one semantic provider/cache
+evaluation rather than two while still persisting both quality packs. A
+terminal failed review remains failed and is reused as such; a changed input
+causes a fresh review. These are deterministic regression results, not proof
+of improved live editorial quality.
+
+### Limitations and status
+
+The retained Adjust run still represents the pre-fix failure: 7/7 visual
+candidates, 7/7 verified facts, 7 final insights, and no final HTML after the
+public-editorial review became unresolved. No post-fix provider-backed run was
+authorized in this slice, so live review completion, HTML readiness, provider
+call/token/cost/latency impact, and source-report editorial quality remain
+unmeasured. Chart-card handling remains conservative and unchanged.
+
+The deterministic correction is **PASS** for the demonstrated duplicate-review
+and semantic-cache defects. Overall Verified Claims Step 2 remains **PARTIAL /
+NO-GO**; E18 remains **Active/PARTIAL**; Step 3 remains **unstarted/not ready**.
+The next bounded action is a controlled provider-backed Adjust rerun with
+independent PDF-to-editorial inspection.

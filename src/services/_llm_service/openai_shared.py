@@ -533,12 +533,12 @@ def _read_semantic_response_cache(
 
 
 def _semantic_response_payload_is_cacheable(response_payload: dict[str, Any]) -> bool:
-    status = str(response_payload.get("provider_status") or "").strip().lower()
-    return "parsed_json" not in response_payload or (
-        isinstance(response_payload.get("parsed_json"), dict)
-        and status not in _INCOMPLETE_PROVIDER_STATES
-        and not str(response_payload.get("refusal") or "").strip()
-        and not str(response_payload.get("incomplete_reason") or "").strip()
+    return isinstance(response_payload.get("parsed_json"), dict) and (
+        response_payload.get("provider_status") not in _INCOMPLETE_PROVIDER_STATES
+        and response_payload.get("finish_reason")
+        not in {"length", "max_output_tokens", "content_filter"}
+        and not response_payload.get("refusal")
+        and not response_payload.get("incomplete_reason")
     )
 
 

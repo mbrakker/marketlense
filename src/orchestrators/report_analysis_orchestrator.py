@@ -95,6 +95,7 @@ from src.orchestrators._report_analysis_orchestrator.source_evidence import (
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _evaluate_and_store_public_editorial_quality,
     _merge_public_editorial_quality,
+    _PublicEditorialReviewReuse,
     _run_validation_regeneration_loop,
     _run_validation_with_fallback,
     _store_validation_snapshot,
@@ -1216,6 +1217,7 @@ def run_report_analysis(
         pack_name="validation",
         openai_client=validation_openai_client,
     )
+    semantic_review_capture: list[_PublicEditorialReviewReuse] = []
     editorial_validation, editorial_before_path = (
         _evaluate_and_store_public_editorial_quality(
             runtime=runtime,
@@ -1234,6 +1236,7 @@ def run_report_analysis(
                 if verified_authority_context is not None
                 else ""
             ),
+            semantic_review_capture=semantic_review_capture,
         )
     )
     validation_report = _merge_public_editorial_quality(
@@ -1380,6 +1383,9 @@ def run_report_analysis(
                 verified_authority_context.verified_fact_digest
                 if verified_authority_context is not None
                 else ""
+            ),
+            semantic_review_reuse=(
+                semantic_review_capture[0] if semantic_review_capture else None
             ),
         )
     )

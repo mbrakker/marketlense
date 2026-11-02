@@ -61,6 +61,56 @@ def test_invalid_semantic_cache_payload_is_not_reused(tmp_path) -> None:
     assert openai_shared._read_semantic_response_cache(spec, _ctx()) is None
 
 
+@pytest.mark.parametrize(
+    "response_payload",
+    [
+        {},
+        {"parsed_json": None},
+        {"parsed_json": {"ok": True}, "finish_reason": "length"},
+        {"parsed_json": {"ok": True}, "refusal": "blocked"},
+        {"parsed_json": {"ok": True}, "incomplete_reason": "provider_timeout"},
+    ],
+)
+def test_semantic_cache_rejects_missing_or_unusable_structured_payload(
+    response_payload,
+) -> None:
+    assert (
+        openai_shared._semantic_response_payload_is_cacheable(response_payload) is False
+    )
+
+
+def test_semantic_cache_accepts_complete_legacy_structured_payload() -> None:
+    assert (
+        openai_shared._semantic_response_payload_is_cacheable(
+            {"parsed_json": {"ok": True}, "provider_status": "completed"}
+        )
+        is True
+    )
+
+
+def test_semantic_cache_does_not_write_unparsed_response(tmp_path) -> None:
+    request = replace(
+        _chat_request(tmp_path),
+        response_cache_enabled=True,
+        response_cache_dir=str(tmp_path / "cache"),
+        response_cache_ttl_seconds=60.0,
+    )
+    spec = openai_shared._semantic_response_cache_spec(
+        request,
+        operation="openai_chat_json",
+        params={"model": request.model},
+    )
+    assert spec is not None
+
+    openai_shared._write_semantic_response_cache(
+        spec,
+        _ctx(),
+        response_payload={"provider_status": "completed"},
+    )
+
+    assert not spec.path.exists()
+
+
 def test_openai_chat_json_preserves_completion_state_and_does_not_cache_incomplete(
     external_boundary_mocks_only, tmp_path
 ) -> None:

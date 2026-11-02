@@ -1694,3 +1694,21 @@ change is +15 tokens / +$0.000002 overall. No post-fix provider run or HTML
 acceptance was performed. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Evidence update — 2026-11-02 (final pre-E2E editorial reliability
+corrections):** The before/after public-editorial semantic review now reuses a
+complete terminal result, including fail-closed failures, only when the full
+public/evidence/source/fact/editorial-plan/review-policy identity is unchanged;
+both quality packs are still materialized and changed inputs rerun. Semantic
+cache reads and writes now require a usable parsed JSON object and reject
+incomplete, refused, length-limited, or otherwise unusable responses. Focused
+regressions (20), the affected suite (183), and the full suite (8,419 passed,
+2 skipped, 48 deselected, 24 subtests) passed. Coverage floors, mutation
+(67/68; retained taxonomy baseline 75%), quality non-regression, prompt fixture,
+Ruff, mypy, schema, architecture, and repository gates passed. The prompt
+fixture delta is only +15 tokens / +$0.000002 overall. No post-fix provider
+run, HTML, or publication write occurred, so live editorial quality and
+latency/cost impact remain unmeasured. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full
+evidence is recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
