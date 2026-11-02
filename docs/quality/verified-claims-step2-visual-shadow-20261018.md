@@ -5129,6 +5129,176 @@ first-repair improvement remain unproven because the original diagnostics were
 not retained. Step 2 remains **PARTIAL/NO-GO** and Step 3 remains
 **unstarted/not ready**.
 
+### Single-report live end-to-end acceptance — Adjust — 2026-11-02
+
+This is the one fresh, isolated provider-backed run requested for the current
+HEAD `f68d8e75b19697b924ec6c075fd34dbafabdde2c`. No source, prompt, model,
+threshold, canonical artifact, or production code was changed for the run; no
+WordPress or publication write was attempted. The run was not rerun after its
+terminal result.
+
+**Input and identity.** The exact frozen Adjust source was the retained local
+PDF `mobile-app-trends-2026.pdf`, 41 pages, 3,571,623 bytes, MD5
+`b638414df0b1fccea1cd8a93eaf8f5aa`, and SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`. The
+preflight admitted the report with report ID
+`cohort-b638414df0b1fccea1cd`, source identity
+`source:8cb648b6bbd9dbae4ec1d915c38cf235`, zero provider calls, and no writes.
+The live run retained the same source identity and PDF hash, ran in isolated
+fresh state, and used workflow root
+`d5df8e7a-4713-4b2f-aed3-7771572ee340`.
+
+**Run and artifact locations.** The complete run root is
+`C:\ml-adjust-e2e-20261102\frozen-reliability-6oe2ci36`; the member root is
+`C:\ml-adjust-e2e-20261102\frozen-reliability-6oe2ci36\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-gkvz6nvh`.
+The authoritative runner result is `cohort_result.json`. The report-analysis
+artifacts are under the member's
+`output\mobile-app-trends-2026-pdf\report_analysis` directory, including
+`artifacts.json`, `evidence_fidelity.json`, `validation.json`,
+`public_editorial_quality_before.json`,
+`public_editorial_quality_after.json`, and
+`validation_claim_reuse_decisions.jsonl`. The source-page review renders are
+under `C:\ml-adjust-e2e-20261102\original_pdf_pages`.
+
+**Stage ledger.**
+
+| Stage | Observed result | Evidence |
+|---|---|---|
+| Preflight and source admission | PASS; 1/1 admitted | Exact source hash and source identity matched; no provider call in preflight |
+| Extraction, DocMap, findings, and evidence preparation | Completed | Analysis artifacts were emitted from the retained PDF; no source identity substitution was observed |
+| Visual/verified-fact admission | PASS; 7 evaluated, 7 admitted, 0 quarantined | Admission audit `coverage_complete=true`, `verified_fact_count=7`, source hash exact |
+| Candidate and final insight generation | Completed; 7 candidates and 7 final insights | Stable IDs and source-bound evidence IDs/pages were retained in `artifacts.json` |
+| Grounding and retained-claim validation | Retained factual claims: 0 unsupported, 0 unresolved | 40 claims were newly validated; no prior package was reusable; evidence-fidelity separately rejected two non-retained source-finding candidates |
+| Independent public-editorial semantic review | FAIL closed | Both primary review responses were invalid JSON; bounded structured recovery did not produce an acceptable review |
+| Final validation and readiness | FAIL / FAIL | `validation_failed`, rule `public_editorial_quality.semantic_review_unresolved` |
+| HTML and publication | Not produced / not attempted | `render_complete.json` has `rendered_html: ""`; `FinalHtml=0`; `published=false`, no WordPress post |
+
+The runner reports one workflow attempt, zero workflow retries, zero automatic
+repairs, seven file-search calls, and two structured-output recovery cycles.
+The canonical usage ledger (`llm_usage.sqlite`) contains 153 completed
+provider rows: two primary public-quality calls returned invalid JSON, and the
+bounded recovery ledger contains two repair and two regenerate calls across
+those review passes. This distinction is recorded rather than treating
+recovery rows as workflow retries. No provider call failed at the transport or
+provider-status layer.
+
+The terminal failure is not a source-fact admission failure. Both
+`public_editorial_quality_before.json` and `public_editorial_quality_after.json`
+are fail-closed with the same hard issue,
+`public_editorial_quality.semantic_review_unresolved`; recovery status is
+`abstained` and not eligible for automatic repair. The review measurements were
+still material (role diversity 5, repeated syntax 0, average insight length
+15.57 words, source-note completeness 1, action specificity 1), but they do
+not authorize readiness without a valid independent semantic-review result.
+
+**Source-grounded audit of the generated editorial artifact.** No final HTML
+was available, so HTML completeness, layout, internal-ID leakage, and public
+render quality are **not** passed or claimed. I independently rendered and
+inspected the full original PDF pages used by the final insights (PyMuPDF was
+used because Poppler was unavailable) and compared the final artifact text in
+`artifacts.json` with those pages:
+
+| Final stable ID | Page | Audit result |
+|---|---:|---|
+| `genai-maturity-outcomes` | 9 | Low/moderate maturity, the small advanced-deployment group, reported gains over 20%, and the experimentation/discipline distinction are source-supported and appropriately qualified |
+| `cross-platform-measurement-satisfaction` | 11 | Around 31% and the cross-platform measure are supported; the final wording does not add an unstated period or geography |
+| `gaming-strategy-engagement` | 19 | Global strategy sessions +57% and installs -1% from 2024 to 2025 are supported as separate metrics |
+| `ecommerce-installs-sessions-rebound` | 27 | Global e-commerce installs -10% and sessions +5% in 2025 are supported; the unsupported monthly rebound detail is not in the final wording |
+| `ecommerce-marketplace-retention` | 29 | Global day-1 retention 13.2% to 12.6% from 2024 to 2025 is supported; the day checkpoint is preserved |
+| `finance-session-duration` | 36 | Global finance-app session length 7.18 minutes and +8% in 2025 are supported |
+| `finance-paid-organic-ratio` | 38 | Global 1.13 and LATAM 3.26 paid/organic ratios and the 2024–2025 comparison are supported |
+
+The exact final claim texts audited were: “For global e-commerce apps,
+installs declined 10% year over year in 2025 while sessions increased 5%.”;
+“Most organizations report low or moderate GenAI maturity; a small group with
+advanced deployment reportedly achieved efficiency gains over 20%.”; “Around
+31% of marketers report complete satisfaction with their ability to unify and
+read data across platforms.”; “Globally, strategy-game sessions grew 57% year
+over year from 2024 to 2025, while installs declined 1%.”; “Global e-commerce
+app day-1 retention fell from 13.2% in 2024 to 12.6% in 2025.”; “Global
+finance-app session length increased 8% to 7.18 minutes in 2025.”; and “From
+2024 to 2025, finance-app paid/organic ratios increased to 1.13 globally and
+3.26 in LATAM.”
+
+The final seven retained insights therefore had no independently confirmed
+unsupported material factual claim in this artifact-level review. The separate
+evidence-fidelity result contains 39 supported and 2 unsupported findings:
+the gaming CPI/$0.56 proposition on page 22 and a December/November rebound
+misattribution on page 27. Both were rejected source-finding candidates and
+were not retained in the seven final insights. They must not be counted as
+published or retained factual errors, but they also must not be reported as
+41/41 supported findings.
+
+The seven admitted facts have exact source identity, physical page, evidence
+ID, and verified outcome. The final artifact retained those bindings and
+protected fields. `metric_spine` contains 6 rows and `key_figures` contains 5;
+the five `chart_insight_cards` are present but all are marked
+`weak_evidence` with empty candidate IDs and `crop_qa_accepted=false`. That is
+a downstream linkage limitation, not evidence that the seven source facts were
+unsupported.
+
+**Selection comparison with the accepted Adjust baseline.** The baseline was
+not rerun. The retained accepted run `8fe133005b62e27b6681d88c3d8dd2d61a9777a0`
+had 6 visual candidates/admissions, 5 final insights, 52 provider calls,
+512,814 input tokens, 116,754 output tokens, 52,648 reasoning tokens, 10,830
+cached input tokens, `$0.123682`, 946.248 seconds, 6 file-search calls, 1
+structured recovery call, zero automatic repairs, and validation/readiness
+PASS/PASS. The current run had 7 admitted verified facts and 7 final insights,
+153 calls, 1,296,653 input tokens, 198,143 output tokens, 82,295 reasoning
+tokens, 179,835 cached input tokens, `$0.230052`, 1,527.079 seconds, 7
+file-search calls, 2 structured recovery cycles, zero automatic repairs, and
+validation/readiness FAIL/FAIL.
+
+| Measurement | Baseline | Current | Change |
+|---|---:|---:|---:|
+| Provider calls | 52 | 153 | +101 (+194.23%) |
+| Input tokens | 512,814 | 1,296,653 | +783,839 (+152.85%) |
+| Cached input tokens | 10,830 | 179,835 | +169,005 (+1,560.53%) |
+| Output tokens | 116,754 | 198,143 | +81,389 (+69.71%) |
+| Reasoning tokens | 52,648 | 82,295 | +29,647 (+56.31%) |
+| Total input + output | 629,568 | 1,494,796 | +865,228 (+137.43%) |
+| Estimated cost | `$0.123682` | `$0.230052` | +`$0.106370` (+86.00%) |
+| Total wall-clock | 946.248s | 1,527.079s | +580.831s (+61.38%) |
+| File-search calls | 6 | 7 | +1 |
+| Structured recovery | 1 | 2 | +1 |
+| Automatic workflow repairs | 0 | 0 | unchanged |
+| Final validation/readiness | PASS/PASS | FAIL/FAIL | regression |
+
+The current final roster is also different: it retains
+`ecommerce-installs-sessions-rebound`, `genai-maturity-outcomes`,
+`cross-platform-measurement-satisfaction`, `gaming-strategy-engagement`,
+`ecommerce-marketplace-retention`, `finance-session-duration`, and
+`finance-paid-organic-ratio`. The baseline roster contained
+`advanced-genai-efficiency-gains`, `gaming-strategy-growth-gap`,
+`gaming-casino-slots-divergence`, `ecommerce-installs-sessions-diverge`, and
+`ecommerce-subvertical-cpi-divergence`. Because this was a single current-head
+run with no implementation change from the baseline comparison, the roster
+difference is observed provider/pipeline variability, not attributable
+selection improvement. The current run cannot be used to claim better live
+selection quality.
+
+**Verdict and correction list.** Source identity, verified-fact admission,
+physical-page provenance, protected factual bindings, and retained-claim
+factual safety are **PASS** for this run. The single-report end-to-end
+acceptance is **FAIL** because independent public-editorial semantic review
+remained invalid after bounded recovery, final validation failed, and no final
+HTML was produced. The frozen-five/Step 3 decision is **NO-GO**; overall Step 2
+remains **PARTIAL/NO-GO** and E18 remains **Active/PARTIAL**.
+
+The next corrections are prioritized, not implemented by this acceptance run:
+
+1. Diagnose the malformed independent public-editorial semantic-review output
+   and its bounded recovery result while preserving fail-closed behavior.
+2. Re-run the single-report acceptance only after that demonstrated reliability
+   defect is corrected, then independently audit the actual final HTML against
+   the source PDF.
+3. Investigate the weak chart-card lineage and current seven-versus-five
+   selection difference separately; this run does not establish that either is
+   an implementation regression.
+
+No canonical claim promotion, publication-readiness override, WordPress write,
+or Step 3 implementation occurred.
+
 #### P1 grounding recovery output budget and feedback correction — 2026-10-25
 
 Current-source inspection confirmed two independent recovery defects exposed by
