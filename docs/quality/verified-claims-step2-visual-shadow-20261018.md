@@ -8664,3 +8664,15 @@ and semantic-cache defects. Overall Verified Claims Step 2 remains **PARTIAL /
 NO-GO**; E18 remains **Active/PARTIAL**; Step 3 remains **unstarted/not ready**.
 The next bounded action is a controlled provider-backed Adjust rerun with
 independent PDF-to-editorial inspection.
+
+### Hosted CI confirmation
+
+Hosted CI run [41481984102](https://github.com/mbrakker/marketlense/actions/runs/41481984102)
+for commit `ddfbde822e5979cb293b893f263470888b5f303e` completed successfully.
+The `tests` job, mutation partitions 0 and 1, and `release_evidence` all
+passed. The WordPress staging REST step was skipped by its configured
+credential guard; no WordPress write occurred. The release-evidence bundle is
+[artifact 13161665350](https://github.com/mbrakker/marketlense/actions/runs/41481984102/artifacts/13161665350).
+GitHub emitted only existing action-runtime/deprecated-input warnings. This is
+hosted deterministic-gate evidence; it does not replace the missing
+post-fix provider-backed Adjust run or establish Step 2 promotion readiness.

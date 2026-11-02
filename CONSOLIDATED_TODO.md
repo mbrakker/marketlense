@@ -1712,3 +1712,11 @@ latency/cost impact remain unmeasured. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full
 evidence is recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+Hosted CI confirmation: run
+[41481984102](https://github.com/mbrakker/marketlense/actions/runs/41481984102)
+for commit `ddfbde822e5979cb293b893f263470888b5f303e` passed `tests`, both
+mutation partitions, and `release_evidence`; the WordPress staging REST step
+was skipped by its credential guard. The release bundle is artifact
+[13161665350](https://github.com/mbrakker/marketlense/actions/runs/41481984102/artifacts/13161665350).
+This confirms repository gates only; it does not close E18, Step 2, or Step 3.
