@@ -218,10 +218,12 @@ def _signal_manifest_replay_reason(
     if not candidate_group_id or not manifest_sha256:
         return "signal_manifest_reference_missing"
     candidate_ids_value = metadata.get("candidate_ids")
-    if candidate_ids_value in (None, []):
-        candidate_ids: list[str] = []
-    elif isinstance(candidate_ids_value, list) and all(
-        isinstance(value, str) and value.strip() for value in candidate_ids_value
+    if (
+        isinstance(candidate_ids_value, list)
+        and candidate_ids_value
+        and all(
+            isinstance(value, str) and value.strip() for value in candidate_ids_value
+        )
     ):
         candidate_ids = list(candidate_ids_value)
     else:
@@ -253,9 +255,42 @@ def _signal_manifest_replay_reason(
             group.group_id != candidate_group_id
             or group.source_report_ids != list(package.selected_report_ids)
             or group.evidence_ids != list(package.evidence_reference_ids)
-            or (candidate_ids and group.candidate_ids != candidate_ids)
+            or group.candidate_ids != candidate_ids
         ):
             return "signal_manifest_package_mismatch"
+        current_candidate_data = analytics_store_service.read_signal_candidates(
+            SignalCandidateReadRequest(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                db_path=signal_store_db,
+                candidate_ids=candidate_ids,
+                group_ids=[candidate_group_id],
+                source_report_ids=list(package.selected_report_ids),
+                evidence_ids=list(package.evidence_reference_ids),
+                limit=max(1, len(candidate_ids)),
+            ),
+            ctx,
+        )
+        if len(current_candidate_data.groups) != 1:
+            return "signal_manifest_current_group_missing"
+        current_group = current_candidate_data.groups[0]
+        current_candidate_ids = [
+            candidate.candidate_id for candidate in current_candidate_data.candidates
+        ]
+        if (
+            current_group.group_id != candidate_group_id
+            or current_group.candidate_ids != candidate_ids
+            or current_group.source_report_ids != list(package.selected_report_ids)
+            or current_group.evidence_ids != list(package.evidence_reference_ids)
+            or current_group.validation_status != "approved"
+            or current_group.publication_status != "eligible"
+            or set(current_candidate_ids) != set(candidate_ids)
+            or len(current_candidate_ids) != len(candidate_ids)
+            or any(
+                candidate.validation_status != "approved"
+                for candidate in current_candidate_data.candidates
+            )
+        ):
+            return "signal_manifest_current_group_not_eligible"
         projected_data = analytics_store_service.read_cross_report_projected_data(
             CrossReportProjectedDataReadRequest(
                 schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -306,6 +341,80 @@ def _signal_manifest_replay_reason(
         or projection.evidence_ids != list(package.evidence_reference_ids)
     ):
         return "signal_manifest_projection_mismatch"
+    return ""
+
+
+def _briefing_source_replay_reason(
+    package: CrossReportPublishPackage,
+    app_settings: AppSettings,
+    ctx: RunContext,
+) -> str:
+    """Revalidate Briefing source authority immediately before publication."""
+
+    metadata = package.machine_metadata
+    publishability = metadata.get("publishability")
+    source_authority = (
+        publishability.get("source_authority")
+        if isinstance(publishability, dict)
+        else None
+    )
+    selected_report_ids = list(package.selected_report_ids)
+    if (
+        not isinstance(source_authority, dict)
+        or not selected_report_ids
+        or set(source_authority) != set(selected_report_ids)
+    ):
+        return "cross_report_source_authority_snapshot_missing"
+    package_sources = {
+        str(source.get("report_id") or ""): source
+        for source in package.source_metadata
+        if isinstance(source, dict)
+    }
+    if set(package_sources) != set(selected_report_ids):
+        return "cross_report_source_authority_snapshot_missing"
+    try:
+        current_data = analytics_store_service.read_cross_report_projected_data(
+            CrossReportProjectedDataReadRequest(
+                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+                db_path=app_settings.reports_db,
+                source_report_ids=selected_report_ids,
+                content_classes=["claim", "finding", "quote", "metric"],
+                minimum_projection_status="projected",
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        if exc.retryable:
+            raise
+        return exc.code or "cross_report_source_replay_failed"
+    current_sources = {
+        source.report_id: source for source in current_data.source_candidates
+    }
+    if set(current_sources) != set(selected_report_ids):
+        return "cross_report_source_projection_missing"
+    for report_id in selected_report_ids:
+        current = current_sources[report_id]
+        expected = source_authority.get(report_id)
+        packaged = package_sources.get(report_id)
+        if not isinstance(expected, dict) or not isinstance(packaged, dict):
+            return "cross_report_source_authority_snapshot_missing"
+        if current.projection_status != "projected":
+            return "cross_report_source_projection_not_ready"
+        if current.source_validation_eligible is not True:
+            return "cross_report_source_not_eligible"
+        for field_name in (
+            "authority_mode",
+            "source_validation_eligible",
+            "verified_source_identity",
+            "verified_source_pdf_sha256",
+            "verified_fact_digest",
+            "content_hash",
+        ):
+            current_value = getattr(current, field_name)
+            if expected.get(field_name, "") != packaged.get(
+                field_name, ""
+            ) or current_value != expected.get(field_name, ""):
+                return "cross_report_source_authority_stale"
     return ""
 
 
@@ -440,10 +549,6 @@ def _automatic_publication_evidence(
             or _package_checksum(package) != payload.package_checksum
         ):
             return False, "cross_report_package_checksum_or_route_invalid", "", "", ""
-        if payload.entity_type == "briefing" and package.machine_metadata.get(
-            "metric_normalization_violations"
-        ):
-            return False, "semantic_authority_missing", "", "", ""
         authorization_error = _cross_report_publish_authorization_error(package)
         if authorization_error is not None:
             return False, authorization_error.code, "", "", ""
@@ -472,8 +577,6 @@ def _automatic_publication_evidence(
                 or package.machine_metadata.get("validation_status") != "pass"
             ):
                 return False, "briefing_validation_not_fully_passed", "", "", ""
-            if validation.metric_normalization_violations:
-                return False, "semantic_authority_missing", "", "", ""
             source_configuration_hash = str(artifact.get("config_fingerprint") or "")
             source_policy_hash = str(artifact.get("policy_hash") or "")
         elif payload.entity_type == "signal":
@@ -1150,6 +1253,27 @@ def _wordpress_publish_handler(
             message="Approved package checksum does not match the retained entity package",
             retryable=False,
         )
+    authorization_error = _cross_report_publish_authorization_error(package)
+    if authorization_error is not None:
+        raise authorization_error
+    if payload.entity_type == "signal":
+        manifest_reason = _signal_manifest_replay_reason(package, app, ctx)
+        if manifest_reason:
+            raise AppError(
+                code=manifest_reason,
+                message="Approved Signal package no longer matches its current candidate authority",
+                retryable=False,
+                severity="error",
+            )
+    else:
+        source_reason = _briefing_source_replay_reason(package, app, ctx)
+        if source_reason:
+            raise AppError(
+                code=source_reason,
+                message="Approved Briefing package no longer matches current projected source authority",
+                retryable=False,
+                severity="error",
+            )
     if not payload.dry_run and not bool(
         getattr(app, "cross_report_analysis_publish_enabled", False)
     ):

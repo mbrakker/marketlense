@@ -21,6 +21,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportAnalysisRequest,
     CrossReportAnalysisSection,
     CrossReportEvidenceReference,
+    CrossReportMetricComparisonAssessment,
     CrossReportGeneratedAnalysisResult,
     CrossReportOrchestratorOutcome,
     CrossReportOutcomeStatus,
@@ -80,7 +81,7 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cross_report_analysis_orchestrator")
 _IDEMPOTENCY_SCOPE = "cross_report_analysis_orchestrator.generate"
-_IDEMPOTENCY_MATERIAL_VERSION = "2.2"
+_IDEMPOTENCY_MATERIAL_VERSION = "2.3"
 
 
 def _hash_payload(payload: dict[str, Any]) -> str:
@@ -326,6 +327,22 @@ def _section_from_dict(payload: dict[str, Any]) -> CrossReportAnalysisSection:
     return CrossReportAnalysisSection(**payload)
 
 
+def _metric_comparison_assessment_from_dict(
+    payload: object,
+) -> CrossReportMetricComparisonAssessment:
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="cross_report_metric_comparison_assessment_missing",
+            message=(
+                "Retained cross-report artifacts require a structured metric "
+                "comparison assessment"
+            ),
+            retryable=False,
+            severity="error",
+        )
+    return CrossReportMetricComparisonAssessment(**payload)
+
+
 def _generated_from_dict(payload: dict[str, Any]) -> CrossReportGeneratedAnalysisResult:
     return CrossReportGeneratedAnalysisResult(
         schema_version=str(payload["schema_version"]),
@@ -347,11 +364,21 @@ def _generated_from_dict(payload: dict[str, Any]) -> CrossReportGeneratedAnalysi
         cost_summary=dict(payload["cost_summary"]),
         decision_focus=str(payload["decision_focus"]),
         executive_takeaways=[str(value) for value in payload["executive_takeaways"]],
+        metric_comparison_assessment=_metric_comparison_assessment_from_dict(
+            payload.get("metric_comparison_assessment")
+        ),
     )
 
 
 def _validation_from_dict(payload: dict[str, Any]) -> CrossReportValidationResult:
-    return CrossReportValidationResult(**payload)
+    return CrossReportValidationResult(
+        **{
+            **payload,
+            "metric_comparison_assessment": _metric_comparison_assessment_from_dict(
+                payload.get("metric_comparison_assessment")
+            ),
+        }
+    )
 
 
 def _publish_request_from_dict(

@@ -260,13 +260,80 @@ def _cross_report_publish_authorization_error(
                 retryable=False,
                 severity="error",
             )
-        if metadata.get("metric_normalization_violations"):
+        metric_assessment = metadata.get("metric_comparison_assessment")
+        if not isinstance(metric_assessment, dict):
             return AppError(
                 code="cross_report_semantic_authority_missing",
                 message=(
-                    "Cross-report package carries metric telemetry without an "
-                    "authoritative semantic verdict"
+                    "Cross-report package has no structured metric comparison authority"
                 ),
+                retryable=False,
+                severity="error",
+            )
+        metric_status = str(metric_assessment.get("status") or "").strip()
+        if metric_status not in {
+            "none",
+            "source_specific",
+            "supported_comparison",
+            "unresolved",
+        }:
+            return AppError(
+                code="cross_report_semantic_authority_invalid",
+                message="Cross-report metric comparison authority has an invalid status",
+                retryable=False,
+                severity="error",
+            )
+        metric_ids = metric_assessment.get("raw_metric_ids")
+        evidence_ids = metric_assessment.get("evidence_ids")
+        if not isinstance(metric_ids, list) or not isinstance(evidence_ids, list):
+            return AppError(
+                code="cross_report_semantic_authority_invalid",
+                message="Cross-report metric comparison authority references are invalid",
+                retryable=False,
+                severity="error",
+            )
+        if (
+            not all(isinstance(value, str) and value.strip() for value in metric_ids)
+            or not all(
+                isinstance(value, str) and value.strip() for value in evidence_ids
+            )
+            or not str(metric_assessment.get("rationale") or "").strip()
+            or metric_status == "unresolved"
+            and not str(metric_assessment.get("uncertainty") or "").strip()
+        ):
+            return AppError(
+                code="cross_report_semantic_authority_invalid",
+                message="Cross-report metric comparison authority is incomplete",
+                retryable=False,
+                severity="error",
+            )
+        if metric_status == "none" and (metric_ids or evidence_ids):
+            return AppError(
+                code="cross_report_semantic_authority_invalid",
+                message="A no-comparison assessment cannot carry metric references",
+                retryable=False,
+                severity="error",
+            )
+        if metric_status != "none" and (not metric_ids or not evidence_ids):
+            return AppError(
+                code="cross_report_semantic_authority_invalid",
+                message="A metric assessment must retain its source references",
+                retryable=False,
+                severity="error",
+            )
+        if set(metric_ids) - set(package.raw_metric_ids) or set(evidence_ids) - set(
+            package.evidence_reference_ids
+        ):
+            return AppError(
+                code="cross_report_semantic_authority_stale",
+                message="Metric comparison authority references are not in the package",
+                retryable=False,
+                severity="error",
+            )
+        if metric_status == "unresolved":
+            return AppError(
+                code="cross_report_metric_comparison_unresolved",
+                message="Cross-report metric comparison remains unresolved",
                 retryable=False,
                 severity="error",
             )

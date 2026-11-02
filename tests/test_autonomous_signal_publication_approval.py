@@ -6,6 +6,8 @@ import sqlite3
 from dataclasses import asdict, replace
 from pathlib import Path
 
+import pytest
+
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -19,10 +21,19 @@ from src.contracts.signal_candidates import (
     SignalCandidateSourceRef,
     SignalCandidateStoreRequest,
 )
-from src.contracts.workflow_queue import PublicationReadinessPayload
+from src.contracts.workflow_queue import (
+    PublicationReadinessPayload,
+    WordPressPublishPayload,
+    WorkflowJobSubmission,
+)
 from src.services import analytics_store_service
 from src.services.config_service import load_settings
-from tests._workflow_queue_registry_support import _seed_projected_signal_source
+from src.services.workflow_queue_service import approve_publication_package
+from src.orchestrators import workflow_queue_orchestrator as queue_orchestrator
+from tests._workflow_queue_registry_support import (
+    _seed_projected_signal_source,
+    _workflow_job,
+)
 from tests.test_autonomous_publication_approval import (
     _approval_rows,
     _config,
@@ -339,6 +350,58 @@ def test_signal_override_path_remains_manual(tmp_path: Path) -> None:
     assert _outbox_count(tmp_path / "state.sqlite") == 0
 
 
+def test_worker_rejects_mutable_signal_group_revocation_before_live_config(
+    tmp_path: Path,
+) -> None:
+    config_path = _config(tmp_path, autonomous=False)
+    payload = _ready_signal(tmp_path, config_path)
+    _run_readiness(payload)
+    publish_payload = WordPressPublishPayload(
+        entity_type="signal",
+        entity_package_reference=payload.entity_package_reference,
+        package_checksum=payload.package_checksum,
+        attributes={"config_path": str(config_path)},
+    )
+    approval = approve_publication_package(
+        str(tmp_path / "state.sqlite"),
+        package_checksum=payload.package_checksum,
+        actor_id="test-reviewer",
+        note="Mutable Signal group guard test.",
+        publish_submission=WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="wordpress_publish",
+            job_type="wordpress_publish.v1",
+            payload=publish_payload,
+            idempotency_key="signal-mutable-group",
+            deduplication_scope="wordpress-publish-package",
+        ),
+        ctx=_ctx(),
+    )
+    app_settings = load_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(config_path)), _ctx()
+    )
+    with sqlite3.connect(app_settings.signal_store_db) as connection:
+        connection.execute(
+            "UPDATE signal_candidate_groups SET publication_status=?, "
+            "publication_hold_reason=? WHERE group_id=?",
+            ("held", "signal_semantic_review_pending", "signal-group-1"),
+        )
+        connection.commit()
+
+    with pytest.raises(Exception) as exc_info:
+        queue_orchestrator._wordpress_publish_handler(
+            _workflow_job(
+                queue_name="wordpress_publish", job_type="wordpress_publish.v1"
+            ),
+            replace(publish_payload, approval_id=approval.approval_id),
+            _ctx(),
+        )
+
+    assert getattr(exc_info.value, "code", "") == (
+        "signal_manifest_current_group_not_eligible"
+    ), repr(exc_info.value)
+
+
 __all__ = [
     "test_autonomous_ready_signal_requires_approved_retained_evidence",
     "test_signal_approval_does_not_trust_approved_status_without_manifest_replay",
@@ -346,4 +409,5 @@ __all__ = [
     "test_signal_final_package_manifest_mismatch_stays_manual",
     "test_signal_missing_override_provenance_remains_manual",
     "test_signal_override_path_remains_manual",
+    "test_worker_rejects_mutable_signal_group_revocation_before_live_config",
 ]

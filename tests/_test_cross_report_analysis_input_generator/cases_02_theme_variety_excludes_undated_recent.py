@@ -587,6 +587,11 @@ def test_publishability_gate_checks_publication_validation_prerequisite(
         checked_evidence_ids=["evidence-a"],
         issues=["citation_missing"],
         passed=False,
+        metric_comparison_assessment=CrossReportMetricComparisonAssessment(
+            schema_version="1.0",
+            status="none",
+            rationale="No cross-source numerical comparison is asserted.",
+        ),
     )
 
     with pytest.raises(Exception) as exc_info:

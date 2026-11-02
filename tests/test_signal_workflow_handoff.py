@@ -343,7 +343,7 @@ def test_signal_publish_adapter_does_not_borrow_deduplicated_publisher_labels(
             ),
             _ctx(),
         )
-    with pytest.raises(AppError, match="remains disabled by configuration"):
+    with pytest.raises(AppError, match="not publishable"):
         queue_orchestrator._wordpress_publish_handler(
             _workflow_job(
                 queue_name="wordpress_publish", job_type="wordpress_publish.v1"

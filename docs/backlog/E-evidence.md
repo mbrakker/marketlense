@@ -1590,3 +1590,36 @@ This proves the deterministic authority correction only; it does not claim
 current-SHA real-report semantic/editorial acceptance. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+### Final publication freshness and semantic authority corrections — 2026-11-02
+
+The queued publication boundary now replays current Signal candidate/evidence
+projections and exact Briefing source reports after approval and package
+checksum validation, before any WordPress lookup or write. Source eligibility,
+content hashes, authority mode, qualified identity, PDF SHA, and verified-fact
+digest must still match the approved package. Manual approval cannot bypass the
+same hard preflight used by automatic approval. Signal extraction remains
+blocked/held with `signal_semantic_review_pending`; no reviewer transition was
+fabricated, so this slice does not satisfy the Step 3 autonomy prerequisite.
+
+The existing cross-report synthesis response now persists model-owned
+`metric_comparison_assessment` authority with exact metric/evidence IDs,
+rationale, uncertainty, and explicit comparison status. Missing, malformed, or
+unresolved assessments fail closed; lexical normalization phrases are audit
+telemetry only. Cross-report idempotency material version `2.3` invalidates
+older cached candidates. The crop-refine executor waits for running workers at
+shutdown, correcting the reproduced closed-stream logging race without reducing
+parallelism.
+
+Provider-free verification on the final local tree: focused authority tests
+`186 passed`, crop-refine selection `31 passed`, full CPython 3.12 suite
+`8,396 passed, 2 skipped`, coverage and quality non-regression passed, both
+mutation partitions passed across 17 targets, and the prompt-fixture gate
+passed. The approved prompt baseline is `114,247` tokens / `$0.025078` versus
+`113,900` / `$0.025043` before the structured authority field: `+347` tokens
+(`+0.30%`) and `$0.000035` (`+0.14%`) overall; the only changed family is
+`cross_report_analysis`, `2,468 → 2,815` tokens and `$0.000607 → $0.000642`.
+No provider, PDF, acquisition, canonical, publication, or WordPress write was
+performed. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready** pending current-
+SHA source-report quality evidence and the missing Signal semantic review.

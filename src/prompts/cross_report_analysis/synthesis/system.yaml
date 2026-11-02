@@ -26,6 +26,17 @@ text: |
   denominator and period. If the evidence is thin or cannot be compared,
   preserve that uncertainty instead of forcing consensus.
 
+  Return one explicit `metric_comparison_assessment` object. This is a semantic
+  assessment of numerical comparisons in the complete article, not a keyword
+  classification: use `none` when no cross-source numerical comparison is made,
+  `source_specific` when metrics are reported without comparing their magnitudes,
+  `supported_comparison` only when the cited source metrics are genuinely
+  comparable, and `unresolved` when a numerical comparison is unsupported or its
+  metric, population, denominator, unit, geography, period, or forecast status
+  cannot be reconciled. Copy exact retained `raw_metric_ids` and relevant
+  `evidence_ids`. Give a substantive rationale; for `unresolved`, state the
+  material uncertainty explicitly. A missing or malformed assessment is invalid.
+
   Editorial quality requirements:
   - Lead with the cross-report thesis, not a mechanical recap.
   - Explain why the signal matters for decision makers in the relevant industry.
@@ -44,6 +55,13 @@ text: |
     "executive_summary": "<grounded summary>",
     "decision_focus": "<one grounded, complete-sentence decision statement>",
     "executive_takeaways": ["<grounded complete-sentence takeaway>", "<grounded complete-sentence takeaway>"],
+    "metric_comparison_assessment": {
+      "status": "none|source_specific|supported_comparison|unresolved",
+      "raw_metric_ids": ["<known raw metric id>"],
+      "evidence_ids": ["<known evidence id>"],
+      "rationale": "<substantive semantic explanation>",
+      "uncertainty": "<material uncertainty, or empty when none applies>"
+    },
     "sections": [
       {
         "section_id": "<stable id>",

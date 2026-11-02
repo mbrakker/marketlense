@@ -17,6 +17,7 @@ from src.contracts._cross_report_analysis import (
 )
 from src.contracts._cross_report_analysis.generation import (
     CrossReportAnalysisSection,
+    CrossReportMetricComparisonAssessment,
     CrossReportGeneratedAnalysisResult,
     CrossReportValidationResult,
 )
@@ -75,6 +76,7 @@ __all__ = [
     "CrossReportRawMetricReference",
     "CrossReportSemanticPreselectionSummary",
     "CrossReportAnalysisSection",
+    "CrossReportMetricComparisonAssessment",
     "CrossReportGeneratedAnalysisResult",
     "CrossReportValidationResult",
     "CrossReportPublishRequestSummary",

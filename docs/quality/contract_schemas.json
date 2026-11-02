@@ -4057,6 +4057,9 @@
           },
           "type": "array"
         },
+        "metric_comparison_assessment": {
+          "$ref": "#/$defs/src.contracts._cross_report_analysis.generation.CrossReportMetricComparisonAssessment"
+        },
         "model": {
           "type": "string"
         },
@@ -4124,6 +4127,41 @@
       ],
       "type": "object"
     },
+    "src.contracts._cross_report_analysis.generation.CrossReportMetricComparisonAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "raw_metric_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "uncertainty": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "rationale"
+      ],
+      "type": "object"
+    },
     "src.contracts._cross_report_analysis.generation.CrossReportValidationResult": {
       "additionalProperties": false,
       "properties": {
@@ -4138,6 +4176,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "metric_comparison_assessment": {
+          "$ref": "#/$defs/src.contracts._cross_report_analysis.generation.CrossReportMetricComparisonAssessment"
         },
         "metric_normalization_violations": {
           "items": {

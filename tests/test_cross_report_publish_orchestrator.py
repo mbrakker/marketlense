@@ -73,6 +73,13 @@ def _package(tmp_path) -> CrossReportPublishPackage:
             "analysis_id": "analysis-ai",
             "validation_status": "pass",
             "selected_report_ids": ["report-a", "report-b"],
+            "metric_comparison_assessment": {
+                "status": "source_specific",
+                "raw_metric_ids": ["metric-a"],
+                "evidence_ids": ["ev-a"],
+                "rationale": "The retained metric is source-specific and not compared across publishers.",
+                "uncertainty": "",
+            },
             "public_entity_metadata": {"publish_eligible": True},
             "publishability": {
                 "publishable": True,

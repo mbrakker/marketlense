@@ -651,6 +651,10 @@ def _publishability_issues(
             issues.append("validation_result_required_for_publication")
         elif not validation_result.passed:
             issues.append("validation_not_passed")
+        elif validation_result.metric_comparison_assessment.status == "missing":
+            issues.append("metric_comparison_assessment_missing")
+        elif validation_result.metric_comparison_assessment.status == "unresolved":
+            issues.append("metric_comparison_assessment_unresolved")
     return (
         sorted(set(issues)),
         source_report_count,
@@ -725,6 +729,8 @@ def validate_cross_report_publishability(
         "verified_fact_digest_invalid",
         "validation_not_passed",
         "validation_result_required_for_publication",
+        "metric_comparison_assessment_missing",
+        "metric_comparison_assessment_unresolved",
     }
     authority_block = bool(authority_block_codes.intersection(issues))
     hard_coverage_codes = {

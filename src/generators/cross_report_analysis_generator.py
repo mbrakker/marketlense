@@ -12,6 +12,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportAnalysisSection,
     CrossReportEvidenceAgreementResult,
     CrossReportEvidenceInputResult,
+    CrossReportMetricComparisonAssessment,
     CrossReportGeneratedAnalysisResult,
     CrossReportPublishabilityResult,
     CrossReportPublishPackage,
@@ -377,6 +378,126 @@ def _metric_normalization_violations(
     return [phrase for phrase in _METRIC_NORMALIZATION_PHRASES if phrase in text]
 
 
+_METRIC_COMPARISON_STATUSES = frozenset(
+    {"none", "source_specific", "supported_comparison", "unresolved"}
+)
+
+
+def _metric_comparison_assessment_issues(
+    assessment: CrossReportMetricComparisonAssessment,
+    *,
+    known_evidence_ids: set[str],
+    raw_metrics: list[Any],
+) -> list[str]:
+    """Check the structured authority envelope without judging LLM semantics."""
+
+    issues: list[str] = []
+    if assessment.schema_version != CROSS_REPORT_ANALYSIS_SCHEMA_VERSION:
+        issues.append("schema_version_invalid")
+    status = str(assessment.status or "").strip()
+    if status not in _METRIC_COMPARISON_STATUSES:
+        issues.append("status_invalid")
+
+    raw_metric_ids = assessment.raw_metric_ids
+    evidence_ids = assessment.evidence_ids
+    if not isinstance(raw_metric_ids, list) or not all(
+        isinstance(value, str) and value.strip() for value in raw_metric_ids
+    ):
+        issues.append("raw_metric_ids_invalid")
+        raw_metric_ids = []
+    if not isinstance(evidence_ids, list) or not all(
+        isinstance(value, str) and value.strip() for value in evidence_ids
+    ):
+        issues.append("evidence_ids_invalid")
+        evidence_ids = []
+    if len(set(raw_metric_ids)) != len(raw_metric_ids):
+        issues.append("raw_metric_ids_duplicate")
+    if len(set(evidence_ids)) != len(evidence_ids):
+        issues.append("evidence_ids_duplicate")
+    unknown_metric_ids = sorted(
+        set(raw_metric_ids) - {str(metric.metric_id) for metric in raw_metrics}
+    )
+    if unknown_metric_ids:
+        issues.append("raw_metric_ids_unknown")
+    unknown_evidence_ids = sorted(set(evidence_ids) - known_evidence_ids)
+    if unknown_evidence_ids:
+        issues.append("evidence_ids_unknown")
+
+    rationale = str(assessment.rationale or "").strip()
+    if not rationale:
+        issues.append("rationale_missing")
+    if status == "unresolved" and not str(assessment.uncertainty or "").strip():
+        issues.append("uncertainty_missing")
+    if status == "none" and (raw_metric_ids or evidence_ids):
+        issues.append("none_has_references")
+    if status in _METRIC_COMPARISON_STATUSES - {"none"} and not (
+        raw_metric_ids and evidence_ids
+    ):
+        issues.append("assessment_references_missing")
+
+    metrics_by_id = {
+        str(metric.metric_id): metric
+        for metric in raw_metrics
+        if str(metric.metric_id).strip()
+    }
+    assessment_evidence_ids = set(evidence_ids)
+    for metric_id in raw_metric_ids:
+        metric = metrics_by_id.get(metric_id)
+        if (
+            metric is not None
+            and str(metric.evidence_id) not in assessment_evidence_ids
+        ):
+            issues.append(f"metric_evidence_not_retained:{metric_id}")
+    return sorted(set(issues))
+
+
+def _metric_comparison_assessment_from_payload(
+    payload: dict[str, Any],
+    *,
+    known_evidence_ids: set[str],
+    raw_metrics: list[Any],
+) -> CrossReportMetricComparisonAssessment:
+    raw_assessment = payload.get("metric_comparison_assessment")
+    if not isinstance(raw_assessment, dict):
+        raise AppError(
+            code="cross_report_metric_comparison_assessment_missing",
+            message="Cross-report synthesis omitted metric comparison authority",
+            retryable=True,
+            severity="error",
+        )
+    raw_metric_ids = raw_assessment.get("raw_metric_ids")
+    evidence_ids = raw_assessment.get("evidence_ids")
+    if not isinstance(raw_metric_ids, list) or not isinstance(evidence_ids, list):
+        raise AppError(
+            code="cross_report_metric_comparison_assessment_invalid",
+            message="Metric comparison authority references must be lists",
+            retryable=True,
+            severity="error",
+        )
+    assessment = CrossReportMetricComparisonAssessment(
+        schema_version=str(raw_assessment.get("schema_version") or "1.0"),
+        status=str(raw_assessment.get("status") or ""),
+        raw_metric_ids=list(raw_metric_ids),
+        evidence_ids=list(evidence_ids),
+        rationale=str(raw_assessment.get("rationale") or ""),
+        uncertainty=str(raw_assessment.get("uncertainty") or ""),
+    )
+    issues = _metric_comparison_assessment_issues(
+        assessment,
+        known_evidence_ids=known_evidence_ids,
+        raw_metrics=raw_metrics,
+    )
+    if issues:
+        raise AppError(
+            code="cross_report_metric_comparison_assessment_invalid",
+            message="Cross-report metric comparison authority failed structural validation",
+            retryable=True,
+            severity="error",
+            context={"issues": issues},
+        )
+    return assessment
+
+
 def validate_cross_report_generated_analysis(
     generated: CrossReportGeneratedAnalysisResult,
     ctx: RunContext,
@@ -408,6 +529,14 @@ def validate_cross_report_generated_analysis(
             issues.append(f"evidence_map_missing_evidence:{key}")
     if missing_evidence_ids:
         issues.append("unknown_evidence_ids")
+    issues.extend(
+        f"metric_comparison_assessment:{issue}"
+        for issue in _metric_comparison_assessment_issues(
+            generated.metric_comparison_assessment,
+            known_evidence_ids=known_evidence_ids,
+            raw_metrics=generated.raw_metrics,
+        )
+    )
     metric_violations = _metric_normalization_violations(generated)
     # This lexical list is retained as audit telemetry only.  Whether a
     # cross-report comparison is analytically valid is a model-owned semantic
@@ -425,6 +554,7 @@ def validate_cross_report_generated_analysis(
         metric_normalization_violations=metric_violations,
         prompt_budget_chars=prompt_budget_chars,
         passed=passed,
+        metric_comparison_assessment=generated.metric_comparison_assessment,
     )
     logger.info(
         log_event(
@@ -512,6 +642,19 @@ def build_cross_report_publish_package(
                 "validation_status": validation_result.status,
                 "issues": validation_result.issues,
             },
+        )
+    if (
+        generated.metric_comparison_assessment
+        != validation_result.metric_comparison_assessment
+    ):
+        raise AppError(
+            code="cross_report_metric_comparison_assessment_mismatch",
+            message=(
+                "Generated analysis and final validation carry different metric "
+                "comparison authority"
+            ),
+            retryable=False,
+            severity="error",
         )
 
     source_metadata = _source_metadata(generated)
@@ -611,6 +754,9 @@ def build_cross_report_publish_package(
         "public_entity_metadata": asdict(publish_entity_metadata),
         "metric_normalization_violations": list(
             validation_result.metric_normalization_violations
+        ),
+        "metric_comparison_assessment": asdict(
+            validation_result.metric_comparison_assessment
         ),
         "briefing_card": briefing_card or {},
     }
@@ -855,6 +1001,11 @@ def generate_cross_report_analysis(
     known_evidence = _known_evidence_ids(evidence_inputs)
     evidence_aliases = _known_evidence_aliases(evidence_inputs)
     known_raw_metrics = _known_raw_metric_ids(evidence_inputs)
+    metric_comparison_assessment = _metric_comparison_assessment_from_payload(
+        payload,
+        known_evidence_ids=known_evidence,
+        raw_metrics=evidence_inputs.raw_metrics,
+    )
     sections = _sections_from_payload(
         payload,
         known_evidence=known_evidence,
@@ -892,6 +1043,7 @@ def generate_cross_report_analysis(
             "total_tokens": response.total_tokens,
             "request_id": response.request_id or "",
         },
+        metric_comparison_assessment=metric_comparison_assessment,
     )
     validate_cross_report_contract(result)
     validation_result = validate_cross_report_generated_analysis(

@@ -19,6 +19,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceInputResult,
     CrossReportEvidenceReference,
     CrossReportGeneratedAnalysisResult,
+    CrossReportMetricComparisonAssessment,
     CrossReportOrchestratorOutcome,
     CrossReportProjectedDataReadRequest,
     CrossReportProjectedDataReadResponse,
@@ -212,6 +213,14 @@ def _contracts() -> list[Any]:
         evidence_id="ev-report-a-claim-1",
         source_metadata={"page": 14},
     )
+    metric_assessment = CrossReportMetricComparisonAssessment(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        status="source_specific",
+        raw_metric_ids=["metric-a-1"],
+        evidence_ids=["ev-report-a-claim-1"],
+        rationale="The retained metric is reported with its source context only.",
+        uncertainty="",
+    )
     projected_data_response = CrossReportProjectedDataReadResponse(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         source_candidates=[source_candidate],
@@ -306,6 +315,7 @@ def _contracts() -> list[Any]:
             "Trust is a recurring constraint.",
             "Transparency shapes adoption decisions.",
         ],
+        metric_comparison_assessment=metric_assessment,
     )
     validation = CrossReportValidationResult(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -316,6 +326,7 @@ def _contracts() -> list[Any]:
         metric_normalization_violations=[],
         prompt_budget_chars=1200,
         passed=True,
+        metric_comparison_assessment=generated.metric_comparison_assessment,
     )
     publish_request = CrossReportPublishRequestSummary(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -419,6 +430,7 @@ def _contracts() -> list[Any]:
         section,
         generated,
         validation,
+        metric_assessment,
         publish_request,
         publish_result,
         publish_package,

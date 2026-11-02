@@ -36,5 +36,9 @@ text: |
   - Cite provided evidence ids for every claim.
   - Use raw_metric_ids only for exact metric_id values present in Raw metric
     appendix; use an empty list when none apply.
+  - Include the required metric_comparison_assessment with exact retained raw
+    metric and evidence IDs. Do not infer comparability from a shared topic or
+    watched wording; assess metric relationships, populations, denominators,
+    units, geographies, periods, and forecast status semantically.
   - Do not infer missing provenance.
   - Do not use or request full report text.

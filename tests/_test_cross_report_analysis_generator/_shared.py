@@ -172,6 +172,37 @@ class FakeOpenAIClient:
                     "Validate AI commerce priorities against local evidence.",
                 ],
             )
+            if "metric_comparison_assessment" not in self.payload:
+                raw_metric_ids = sorted(
+                    {
+                        str(metric_id).strip()
+                        for section in self.payload.get("sections", [])
+                        if isinstance(section, dict)
+                        for metric_id in section.get("raw_metric_ids", [])
+                        if str(metric_id).strip()
+                    }
+                )
+                evidence_ids = sorted(
+                    {
+                        str(evidence_id).strip()
+                        for section in self.payload.get("sections", [])
+                        if isinstance(section, dict)
+                        for evidence_id in section.get("evidence_ids", [])
+                        if str(evidence_id).strip()
+                    }
+                )
+                self.payload["metric_comparison_assessment"] = {
+                    "status": "source_specific" if raw_metric_ids else "none",
+                    "raw_metric_ids": raw_metric_ids,
+                    "evidence_ids": evidence_ids if raw_metric_ids else [],
+                    "rationale": (
+                        "The retained metric is reported with its source context "
+                        "without comparing magnitudes across publishers."
+                        if raw_metric_ids
+                        else "No cross-source numerical comparison is made."
+                    ),
+                    "uncertainty": "",
+                }
 
     def openai_chat_json(self, request, ctx):
         self.requests.append(request)

@@ -8,9 +8,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import yaml
+import pytest
 
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cross_report_analysis import (
+    CrossReportMetricComparisonAssessment,
+    CrossReportProjectedDataReadRequest,
     CrossReportPublishPackage,
     CrossReportValidationResult,
 )
@@ -47,12 +50,14 @@ from src.services.config_service import (
     load_settings,
     load_workflow_control_settings,
 )
+from src.services import analytics_store_service
 from src.services.workflow_queue_service import (
     approve_publication_package,
     record_publication_readiness,
 )
 from src.utils.errors import AppError
 from tests.test_workflow_queue_registry import _ctx, _isolated_app_config, _workflow_job
+from tests._workflow_queue_registry_support import _seed_projected_signal_source
 
 
 def _config(
@@ -174,6 +179,14 @@ def _ready_briefing(
         issues=list(issues or []),
         metric_normalization_violations=list(metric_normalization_violations or []),
         passed=validation_status == "pass" and not issues,
+        metric_comparison_assessment=CrossReportMetricComparisonAssessment(
+            schema_version="1.0",
+            status="none",
+            raw_metric_ids=[],
+            evidence_ids=[],
+            rationale="No cross-source numerical comparison is made.",
+            uncertainty="",
+        ),
     )
     validation_hash = hashlib.sha256(
         json.dumps(
@@ -229,6 +242,9 @@ def _ready_briefing(
                 "selected_report_ids": ["report-1", "report-2"],
                 "metric_normalization_violations": list(
                     validation.metric_normalization_violations
+                ),
+                "metric_comparison_assessment": asdict(
+                    validation.metric_comparison_assessment
                 ),
                 "publishability": {
                     "publishable": validation_status == "pass" and not issues,
@@ -607,7 +623,7 @@ def test_autonomous_ready_briefing_uses_retained_validation_and_package_checksum
     assert _outbox_count(tmp_path / "state.sqlite") == 1
 
 
-def test_briefing_metric_telemetry_without_semantic_authority_stays_manual(
+def test_briefing_metric_telemetry_does_not_override_semantic_authority(
     tmp_path: Path,
 ) -> None:
     config_path = _config(tmp_path, autonomous=True)
@@ -650,8 +666,8 @@ def test_briefing_metric_telemetry_without_semantic_authority_stays_manual(
         ctx,
     )
 
-    assert result[0] is False
-    assert result[1] == "semantic_authority_missing"
+    assert result[0] is True
+    assert result[1] == "fully_ready_cross_report_package"
 
 
 def test_briefing_missing_override_provenance_remains_manual(tmp_path: Path) -> None:
@@ -759,3 +775,103 @@ def test_worker_rejects_briefing_mutation_after_checksum_bound_approval(
         assert "checksum does not match" in exc.message
     else:
         raise AssertionError("changed retained package passed its approval checksum")
+
+
+def test_worker_rejects_briefing_source_hash_replacement_before_live_config(
+    tmp_path: Path,
+) -> None:
+    config_path = _config(tmp_path, autonomous=False)
+    payload = _ready_briefing(tmp_path, config_path)
+    _run_readiness(payload)
+    app_settings = load_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(config_path)), _ctx()
+    )
+    for report_id, publisher, publisher_id in (
+        ("report-1", "Publisher A", "publisher-a"),
+        ("report-2", "Publisher B", "publisher-b"),
+    ):
+        _seed_projected_signal_source(
+            app_settings.reports_db,
+            report_id=report_id,
+            publisher=publisher,
+            publisher_id=publisher_id,
+        )
+    projected = analytics_store_service.read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version="1.0",
+            db_path=app_settings.reports_db,
+            source_report_ids=["report-1", "report-2"],
+            content_classes=["claim", "finding", "quote", "metric"],
+            minimum_projection_status="projected",
+        ),
+        _ctx(),
+    )
+    artifact_path = Path(payload.entity_package_reference)
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    raw_package = dict(artifact["publish_package"])
+    package_sources = list(raw_package["source_metadata"])
+    source_authority = dict(
+        raw_package["machine_metadata"]["publishability"]["source_authority"]
+    )
+    current_by_id = {source.report_id: source for source in projected.source_candidates}
+    for source_payload in package_sources:
+        current = current_by_id[source_payload["report_id"]]
+        for field_name in (
+            "authority_mode",
+            "source_validation_eligible",
+            "verified_source_identity",
+            "verified_source_pdf_sha256",
+            "verified_fact_digest",
+            "content_hash",
+        ):
+            source_payload[field_name] = getattr(current, field_name)
+            source_authority[source_payload["report_id"]][field_name] = getattr(
+                current, field_name
+            )
+    raw_package["source_metadata"] = package_sources
+    raw_package["machine_metadata"]["publishability"]["source_authority"] = (
+        source_authority
+    )
+    package = _with_package_checksum(CrossReportPublishPackage(**raw_package))
+    artifact["publish_package"] = asdict(package)
+    artifact_path.write_text(json.dumps(artifact, sort_keys=True), encoding="utf-8")
+    payload = replace(payload, package_checksum=package.artifact_sha256)
+    _run_readiness(payload)
+    publish_payload = WordPressPublishPayload(
+        entity_type="briefing",
+        entity_package_reference=payload.entity_package_reference,
+        package_checksum=payload.package_checksum,
+        attributes={"config_path": str(config_path)},
+    )
+    approval = approve_publication_package(
+        str(tmp_path / "state.sqlite"),
+        package_checksum=payload.package_checksum,
+        actor_id="test-reviewer",
+        note="Source freshness guard test.",
+        publish_submission=WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="wordpress_publish",
+            job_type="wordpress_publish.v1",
+            payload=publish_payload,
+            idempotency_key="briefing-source-freshness",
+            deduplication_scope="wordpress-publish-package",
+        ),
+        ctx=_ctx(),
+    )
+    with sqlite3.connect(app_settings.reports_db) as connection:
+        connection.execute(
+            "UPDATE reports SET source_md5=? WHERE report_id=?",
+            ("report-1-replaced-source-md5", "report-1"),
+        )
+        connection.commit()
+
+    with pytest.raises(AppError) as exc_info:
+        queue_orchestrator._wordpress_publish_handler(
+            _workflow_job(
+                queue_name="wordpress_publish", job_type="wordpress_publish.v1"
+            ),
+            replace(publish_payload, approval_id=approval.approval_id),
+            _ctx(),
+        )
+
+    assert exc_info.value.code == "cross_report_source_authority_stale"

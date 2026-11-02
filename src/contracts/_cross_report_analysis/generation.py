@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
 
 from src.contracts._cross_report_analysis import CrossReportValidationStatus
 from .selection import (
@@ -11,6 +11,67 @@ from .selection import (
     CrossReportSelectedTheme,
     CrossReportSignalScore,
 )
+
+
+CrossReportMetricComparisonStatus = Literal[
+    "none",
+    "source_specific",
+    "supported_comparison",
+    "unresolved",
+]
+
+
+@dataclass(frozen=True)
+class CrossReportMetricComparisonAssessment:
+    schema_version: str = field(
+        metadata={"doc": "Structured metric-comparison authority schema version."}
+    )
+    status: str = field(
+        metadata={
+            "doc": (
+                "LLM-owned metric assessment: no comparison, source-specific reporting, "
+                "supported comparison, or unresolved comparison."
+            )
+        }
+    )
+    rationale: str = field(
+        metadata={
+            "doc": "Substantive semantic rationale supplied by the synthesis model."
+        }
+    )
+    raw_metric_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Exact retained raw metric IDs considered by the assessment.",
+            "required": False,
+        },
+    )
+    evidence_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Exact retained evidence IDs supporting the assessment.",
+            "required": False,
+        },
+    )
+    uncertainty: str = field(
+        default="",
+        metadata={
+            "doc": "Material uncertainty, required when comparison authority is unresolved.",
+            "required": False,
+        },
+    )
+
+
+def _missing_metric_comparison_assessment() -> CrossReportMetricComparisonAssessment:
+    return CrossReportMetricComparisonAssessment(
+        schema_version="1.0",
+        status="missing",
+        raw_metric_ids=[],
+        evidence_ids=[],
+        rationale="",
+        uncertainty="",
+    )
+
 
 @dataclass(frozen=True)
 class CrossReportAnalysisSection:
@@ -77,6 +138,15 @@ class CrossReportGeneratedAnalysisResult:
     executive_takeaways: List[str] = field(
         metadata={"doc": "Exactly two grounded executive takeaways."}
     )
+    metric_comparison_assessment: CrossReportMetricComparisonAssessment = field(
+        default_factory=_missing_metric_comparison_assessment,
+        metadata={
+            "doc": (
+                "LLM-owned structured authority for numerical cross-report comparisons; "
+                "missing legacy values are not publishable."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -113,4 +183,10 @@ class CrossReportValidationResult:
     passed: bool = field(
         default=False,
         metadata={"doc": "True when validation status is pass and no blockers exist."},
+    )
+    metric_comparison_assessment: CrossReportMetricComparisonAssessment = field(
+        default_factory=_missing_metric_comparison_assessment,
+        metadata={
+            "doc": "Structured metric-comparison authority retained with validation.",
+        },
     )

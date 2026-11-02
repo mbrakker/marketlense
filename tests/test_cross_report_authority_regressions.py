@@ -10,6 +10,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportAnalysisRequest,
     CrossReportEvidenceInputResult,
     CrossReportEvidenceReference,
+    CrossReportMetricComparisonAssessment,
     CrossReportProjectedDataReadResponse,
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
@@ -39,6 +40,17 @@ from src.orchestrators._publish_orchestrator.cross_report import (
 from src.orchestrators.cross_report_analysis_orchestrator import _config_fingerprint
 from src.orchestrators.publish_orchestrator import publish_signal_projection
 from src.utils.errors import AppError
+
+
+def _none_metric_assessment() -> CrossReportMetricComparisonAssessment:
+    return CrossReportMetricComparisonAssessment(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        status="none",
+        raw_metric_ids=[],
+        evidence_ids=[],
+        rationale="No cross-source numerical comparison is made.",
+        uncertainty="",
+    )
 
 
 def _signal_source(
@@ -419,6 +431,7 @@ def test_briefing_validation_is_mandatory_when_legacy_flag_is_disabled(
             checked_evidence_ids=["ev-a"],
             issues=["section_missing_body:summary"],
             passed=False,
+            metric_comparison_assessment=_none_metric_assessment(),
         ),
         evidence_input=evidence_input,
         raise_on_failure=False,
@@ -473,6 +486,7 @@ def test_public_briefing_coverage_requirements_cannot_be_overridden(
             status="pass",
             checked_evidence_ids=["ev-a"],
             passed=True,
+            metric_comparison_assessment=_none_metric_assessment(),
         ),
         evidence_input=evidence_input,
         raise_on_failure=False,
@@ -514,6 +528,7 @@ def test_soft_theme_repetition_can_still_use_explicit_override(
             status="pass",
             checked_evidence_ids=["ev-a"],
             passed=True,
+            metric_comparison_assessment=_none_metric_assessment(),
         ),
         evidence_input=evidence_input,
         raise_on_failure=False,

@@ -117,6 +117,16 @@ class CountingOpenAIClient:
                 "signals": ["report-b:claim:1", "report-a:claim:1"],
             },
             "source_notes": ["Two projected reports were selected."],
+            "metric_comparison_assessment": {
+                "status": "source_specific",
+                "raw_metric_ids": ["report-a:metric:1"],
+                "evidence_ids": ["report-a:claim:1"],
+                "rationale": (
+                    "The retained metric is source-specific and is not compared "
+                    "with another publisher's magnitude."
+                ),
+                "uncertainty": "",
+            },
         }
         return OpenAIResponseResult(
             schema_version="1.0",
@@ -577,7 +587,7 @@ def test_cross_report_orchestrator_runs_pipeline_and_reuses_idempotency(
         if event["event"] == "cross_report_orchestrator_transition"
         and event["fields"]["transition"] == "idempotency_checked"
     ][0]
-    assert idempotency_event["fields"]["material_version"] == "2.2"
+    assert idempotency_event["fields"]["material_version"] == "2.3"
     assert "output_root" in idempotency_event["fields"]["material_fields"]
     assert "semantic_preselection" in idempotency_event["fields"]["material_fields"]
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
+
 __file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_cli.py")
 
 import json
@@ -64,6 +65,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportAnalysisRequest,
     CrossReportAnalysisSection,
     CrossReportEvidenceReference,
+    CrossReportMetricComparisonAssessment,
     CrossReportGeneratedAnalysisResult,
     CrossReportOrchestratorOutcome,
     CrossReportPublishRequestSummary,
@@ -89,6 +91,7 @@ from src.contracts.publish import PublishOutcome, PublishSettings
 from src.contracts.wordpress import WordPressAuthSettings
 
 from src.utils.errors import AppError
+
 
 def _cross_report_cli_outcome() -> CrossReportOrchestratorOutcome:
     request = CrossReportAnalysisRequest(
@@ -195,6 +198,14 @@ def _cross_report_cli_outcome() -> CrossReportOrchestratorOutcome:
             "AI commerce is visible in the selected report.",
             "Raw metrics remain source-specific.",
         ],
+        metric_comparison_assessment=CrossReportMetricComparisonAssessment(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            status="source_specific",
+            raw_metric_ids=["report-a:metric:1"],
+            evidence_ids=["report-a:claim:1"],
+            rationale="The retained metric is source-specific and not compared across publishers.",
+            uncertainty="",
+        ),
     )
     validation = CrossReportValidationResult(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -205,6 +216,7 @@ def _cross_report_cli_outcome() -> CrossReportOrchestratorOutcome:
         metric_normalization_violations=[],
         prompt_budget_chars=1200,
         passed=True,
+        metric_comparison_assessment=generated.metric_comparison_assessment,
     )
     publish_request = CrossReportPublishRequestSummary(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -245,9 +257,9 @@ def _cross_report_cli_outcome() -> CrossReportOrchestratorOutcome:
         state_transitions=["started", "completed"],
     )
 
+
 if __name__ == "__main__":
     unittest.main()
-
 
 
 __all__ = [
@@ -255,8 +267,15 @@ __all__ = [
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

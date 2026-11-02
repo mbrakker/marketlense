@@ -883,9 +883,9 @@ def select_refined_candidate_items(
         for future in llm_inflight.values():
             future.cancel()
         try:
-            llm_executor.shutdown(wait=False, cancel_futures=True)
+            llm_executor.shutdown(wait=True, cancel_futures=True)
         except TypeError:
-            llm_executor.shutdown(wait=False)
+            llm_executor.shutdown(wait=True)
     if crop_refine_profile and md5:
         _write_crop_refine_cache(
             settings,

@@ -20,6 +20,7 @@ from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
     CrossReportEvidenceReference,
+    CrossReportMetricComparisonAssessment,
     CrossReportProjectedDataReadResponse,
     CrossReportRawMetricReference,
     CrossReportSelectedSourceReport,

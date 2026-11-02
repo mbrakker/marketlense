@@ -173,8 +173,9 @@ WordPress lookup or write.
 
 Briefing publication keeps source-report, distinct-publisher and factual-
 evidence minima hard. Explicit overrides remain limited to soft policy issues;
-metric-normalization telemetry is retained as a manual `semantic_authority_missing`
-outcome when no semantic verdict is present. The package checksum and Signal
+in that prior implementation, metric-normalization telemetry was retained as a
+manual `semantic_authority_missing` outcome when no semantic verdict was
+present. The package checksum and Signal
 validation identity are now produced and consumed consistently across direct,
 queued, readiness, and preflight paths without changing the retained package
 schema.
@@ -186,7 +187,7 @@ schema.
 | Formatting, Ruff `E9/F/I`, schema snapshot, architecture imports | passed |
 | Full-repository mypy | passed; 786 source files, 0 tracked errors |
 | Local default pytest | `8,381 passed, 2 skipped, 48 deselected`; one expected CPython 3.14 wheelhouse guard failure remains because the test requires CPython 3.12 |
-| Hosted Python 3.12 CI / release evidence | [Run 41360189272](https://github.com/mbrakker/marketlense/actions/runs/41360189272) passed at `06fcfe6a`: `8,407 passed, 1 skipped`, `85.43%` line coverage, both mutation partitions passed across 17 targets (minimum target score `75`), release manifest/review passed with zero issues |
+| Hosted Python 3.12 CI / release evidence | [Run 41360189272](https://github.com/mbrakker/marketlense/actions/runs/41360189272) passed at `06fcfe6a`: `8,383 passed, 1 skipped`, `85.43%` line coverage, both mutation partitions passed across 17 targets (minimum target score `75`), release manifest/review passed with zero issues |
 | Live providers, acquisition, PDF/report execution, WordPress I/O | not run by design |
 
 The hosted run confirms the repository gates on CPython 3.12; neither local nor
@@ -194,3 +195,49 @@ hosted provider-free checks are evidence of real-report semantic/editorial
 quality. The remaining product prerequisite is the already-required real-report
 semantic/editorial gates. E18 remains Active/PARTIAL, Step 2 remains
 PARTIAL/NO-GO, and Step 3 is unstarted/not ready.
+
+## Final publication freshness and semantic authority corrections — 2026-11-02
+
+This provider-free correction slice closes the demonstrated final-boundary
+authority gaps without live reports, provider/model requests, acquisition,
+canonical artifact mutation, publication, or WordPress I/O. The queued
+`wordpress_publish` handler now performs the mandatory current-state replay
+after approval/package-checksum validation and before live configuration,
+WordPress lookup, idempotency readback, or write. Signal replay reuses the
+immutable manifest and current candidate/evidence projections; Briefing replay
+reloads only the exact selected report IDs and compares current source
+eligibility, content hash, authority mode, qualified identity, PDF SHA, and
+verified-fact digest against the package and approval snapshot. Manual and
+automatic approvals therefore share the same final hard checks.
+
+The existing cross-report synthesis call now retains a structured
+`metric_comparison_assessment` with model-owned statuses (`none`,
+`source_specific`, `supported_comparison`, or `unresolved`), exact retained
+metric/evidence IDs, rationale, and uncertainty. Deterministic code checks only
+the contract envelope and IDs; lexical normalization phrases remain telemetry
+only. The additive cross-report idempotency material version is `2.3`, so old
+cached artifacts cannot bypass the new authority. Missing or unresolved
+assessment data remains non-publishable. The crop-refine executor now waits for
+running workers before test/process teardown, fixing the observed closed-stream
+logging race without reducing parallelism.
+
+| Verification | Result |
+| --- | --- |
+| Focused cross-report/publication authority suite | `186 passed` |
+| Crop-refine lifecycle regression suite | `31 passed`; the full run reproduced no closed-stream logging error after the wait-on-shutdown fix |
+| Full local CPython 3.12 suite | `8,396 passed, 2 skipped` in `531.68s` |
+| Local coverage gate | global `85.49%`, generators `87.18%`, orchestrators `86.05%`, services `84.34%`, control-plane `90.60%`; all configured floors passed |
+| Local quality non-regression | passed; generators `87.1794%` is above retained `87.1763%` baseline |
+| Mutation partitions | both passed; `17` targets merged, minimum target score `75%`, critical worker `772.040s` |
+| Prompt fixture baseline/gate | regenerated through repository tooling: total `113,900 → 114,247` tokens (`+0.30%`), `$0.025043 → $0.025078` (`+$0.000035`, `+0.14%`); only `cross_report_analysis` changed, `2,468 → 2,815` tokens (`+14.06%`) and `$0.000607 → $0.000642` (`+$0.000035`, `+5.77%`) to carry structured semantic authority; gate passed with unchanged thresholds |
+| Contract, formatting, scoped Ruff, mypy, architecture, role/I/O gates | passed; mypy reports 786 source files with 0 tracked errors |
+| Hosted Python 3.12 reference evidence | [Run 41361181060](https://github.com/mbrakker/marketlense/actions/runs/41361181060) at reviewed SHA `e26d6629`: `8,383 passed, 1 skipped`, both mutation partitions, release evidence, and prompt gate passed; the post-change push run remains the final hosted check |
+| Step 3 Signal autonomy prerequisite | not satisfied: extraction deliberately stores groups as `blocked` / `held` with `signal_semantic_review_pending`; no LLM-owned approval transition was found, so no approval was fabricated |
+| Hosted crop-refine logging observation | reproduced once in the pre-fix local CPython 3.12 full suite, traced to `shutdown(wait=False)`, and not reproduced after the surgical `wait=True` lifecycle fix |
+
+This evidence proves deterministic publication freshness, structured semantic
+authority retention, cache invalidation, and provider-free replay safety only.
+It does not establish current-SHA real-report semantic/editorial acceptance.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready** pending the missing Signal semantic-review
+transition and fresh source-report quality evidence.
