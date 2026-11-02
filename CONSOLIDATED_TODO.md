@@ -1760,3 +1760,25 @@ post-fix HTML acceptance was claimed. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. See
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md` for the
 diagnostic limits and minimum next action.
+
+**Live Adjust public-editorial replay / E2E acceptance — 2026-11-02:** One
+fresh isolated provider-backed Adjust run at commit
+`85b5b5cdc2ad72a5286d16a7d00c33cd78595198` used the exact retained PDF SHA
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` and the
+canonical verified-facts workflow. Source admission passed (7/7 visual
+candidates, 7/7 verified facts, 0 quarantined), but the production
+public-editorial semantic review failed closed after the primary, model-repair,
+and regeneration attempts all returned parsed/completed output rejected by
+`public_editorial_quality_review_status_conflict` for one summary item. The
+run produced no HTML and no publication write. Measured totals: 154 provider
+calls, 1,088,825 input tokens, 201,469 output tokens, `$0.228010`, 8
+file-search calls, 1,568.163 seconds, 2 structured-output recovery calls, 0
+automatic repairs, 0 retries, and 0 operator intervention. The seven final
+insights and their full-PDF source pages were independently checked with 0
+unsupported and 0 unresolved retained factual claims, but publication
+readiness and rendered editorial quality remain unproven. This is
+**PARTIAL/NO-GO** evidence; E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, Step 3 remains **unstarted/not ready**, and the frozen-five
+decision remains **NO-GO**. Full paths, per-insight audit, baseline comparison,
+and the exact diagnostic limitation are recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

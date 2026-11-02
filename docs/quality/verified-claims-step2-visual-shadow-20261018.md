@@ -8869,3 +8869,137 @@ uses the actual public-editorial workflow) with no publication side effects,
 followed by independent inspection of the resulting HTML against the retained
 PDF. Until that produces an accepted complete review and HTML, no promotion
 claim is made.
+
+## Live Adjust public-editorial replay / E2E acceptance — 2026-11-02
+
+This is the one-report provider-backed verification requested after the
+provider-free correction pass. The target source was the exact frozen Adjust
+PDF (SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`) and the
+workflow ran from clean commit
+`85b5b5cdc2ad72a5286d16a7d00c33cd78595198`. No code, prompt, model, budget, or
+quality policy was changed during the run.
+
+No safe existing stage-only wrapper was available for invoking the production
+`_public_editorial_semantic_review` path with a complete retained package.
+The allowed fallback was therefore used once: the canonical isolated
+`run_frozen_reliability_cohort.py` workflow, restricted to
+`cohort-b638414df0b1fccea1cd`, with `--verified-facts-architecture` and no
+publication side effects. The no-provider preflight was run separately; its
+CLI validates the full manifest even when report IDs are supplied, so it is
+not included in the live metrics below.
+
+### Run identity and terminal outcome
+
+| Item | Observed result |
+| --- | --- |
+| Run directory | `C:\ml-adjust-live-85b5-e2e\frozen-reliability-6c1ajwnb` |
+| Member directory | `...\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-c_1bb8mn` |
+| Source identity | `source:8cb648b6bbd9dbae4ec1d915c38cf235` plus the exact PDF SHA above |
+| Verified-facts architecture | **PASS**; 7 evaluated, 7 admitted, 0 quarantined, 7 verified facts; digest `62cb859f0648c5a5ede70c0d651b2edd4855c64524c4d5e0821de8ff23da5317` |
+| Terminal workflow state | `failed`; `validation_failed` at `semantic_validation` |
+| Public-editorial gate | **FAIL closed**; `public_editorial_quality.semantic_review_unresolved` |
+| Final HTML | Not produced; report render ended `dead_letter` after validation failure |
+| Publication | Not ready; no WordPress authentication, write, or operator intervention |
+
+The production public-editorial semantic validator was v20 with schema v3.0.
+The persisted deterministic quality pack reports its own `v16` validator
+identity; these are separate contracts and are not being conflated.
+
+The failure was not an unparsed or truncated provider response. All three
+public-review envelopes were marked `completed` and `valid` in the usage
+ledger, but all three failed the existing status-consistency validator for
+`soft_copy:summary:87e02b46e8730ce3`:
+
+`terminal=public_editorial_quality_review_invalid_json; inner=public_editorial_quality_review_status_conflict; attempts=primary ... model_repair ... regeneration ...`
+
+The outer terminal code is a compatibility wrapper; the inner status-conflict
+code is the actionable diagnostic. The primary response and both bounded
+recovery responses were structurally parsed, so the existing two-recovery
+limit was reached without an accepted review. Raw provider responses are not
+retained by policy; the exact conflicting fields therefore cannot be asserted
+from the audit record. This is a provider-output contract failure, not grounds
+for weakening the validator or adding a third attempt.
+
+### Provider and recovery measurements
+
+| Scope | Calls | Input tokens | Output tokens | Total tokens | Cost | File-search calls | Recovery |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Complete isolated Adjust run | 154 | 1,088,825 | 201,469 | — | `$0.228010` | 8 | 2 structured-output recovery calls; 0 automatic repairs |
+| Public-editorial review only | 3 | 284,154 | 28,238 | 312,392 | `$0.042535` | 0 | primary + model repair + regeneration; all completed/valid but rejected by status conflict |
+
+The run took 1,568.163 seconds wall-clock (the recorded core-processing
+scope is partial at 452.0 seconds), with zero workflow retries and zero
+operator interventions. Validation reuse telemetry recorded one
+`prior_package_missing` event: 40 claims were newly validated, with no reused
+results and no semantic or grounding calls avoided. The current review output
+cap was 32,768; no cap increase or repair-policy change was made for this run.
+
+### Final insight and source audit
+
+The final artifact contained seven source-bound insights. Each retained
+evidence span used a `verified-fact:<id>` binding, the exact source identity,
+and its physical PDF page. Independent inspection used the original full PDF
+pages and rendered images; no cropped or synthetic page was used.
+
+| Stable fact / insight ID | Page | Source check |
+| --- | ---: | --- |
+| `ecommerce-cpi-by-app-type` | 29 | Deal-discovery CPI `$1.44` to `$2.26` matches the page narrative and the deal-discovery bars in the global 2024–2025 CPI chart. |
+| `global-install-growth` | 6 | Global installs `+10%` in 2025 versus `+8%` in 2024; the page separately labels sessions `+7%` and `+2%`, so the metrics were not swapped. |
+| `genai-maturity-and-reported-gains` | 9 | The `over 20%` efficiency-gain qualifier remains attached to the small advanced-deployment group; no unsupported population, period, or denominator was added. |
+| `multiplatform-satisfaction` | 11 | Around `31%` remains a marketer satisfaction response about unifying and reading data across platforms, with no invented timeframe or geography. |
+| `gaming-casual-growth` | 19 | Global casual-game installs `+19%` and sessions `+37%` match the narrative and the two Casual bars in the chart. |
+| `finance-growth-divergence` | 34 | Global finance-app installs `-4%` and sessions `+21%` in 2025 match the narrative and the chart’s separate series. |
+| `methodology-date-range` | 13 | The methodology panel explicitly states January 2024–January 2026 and the retained wording does not turn that date range into a performance metric. |
+
+The audit found **0 independently confirmed unsupported material factual
+claims** and **0 unresolved retained factual claims**. It does not establish
+publication readiness because the independent public-editorial gate failed and
+no final HTML exists. The artifact has six metric-spine entries and five key
+figures; CPI and methodology are not promoted into those numeric downstream
+collections. Five chart cards remain conservative `weak_evidence` fallbacks
+with empty candidate linkage, and the quotes family abstained as
+`quotes_missing`. These are observed coverage limitations, not evidence to
+be repaired by manufacturing bindings or chart facts.
+
+### Comparison with the retained 32,768 baseline
+
+The immediately preceding retained Adjust run was
+`C:\ml-adjust-e2e-20261102-live-32768-retry\frozen-reliability-wfstjesu`.
+The comparison is descriptive; it does not attribute ordinary LLM variation
+to the implementation.
+
+| Measure | Previous retained run | Current isolated run | Change |
+| --- | ---: | ---: | ---: |
+| Provider calls | 147 | 154 | +7 (+4.76%) |
+| Input tokens | 1,025,625 | 1,088,825 | +63,200 (+6.16%) |
+| Output tokens | 179,010 | 201,469 | +22,459 (+12.55%) |
+| Cost | `$0.205462` | `$0.228010` | +`$0.022548` (+10.97%) |
+| Wall-clock | 1,478.954 s | 1,568.163 s | +89.209 s (+6.03%) |
+| Visual candidates / verified facts | 6 / 6 | 7 / 7 | +1 / +1 |
+| Final insights | 6 | 7 | +1 |
+| Semantic gate | unresolved | unresolved | no acceptance improvement |
+| Final HTML | absent | absent | no change |
+
+The current run exposed a more specific status-conflict diagnostic than the
+retained run, but it did not produce an accepted review. The additional
+candidate/fact/insight counts are source-run variability and cannot be claimed
+as a code-attributable editorial improvement. No cost or latency benefit is
+claimed.
+
+### Acceptance decision
+
+This live acceptance is **PARTIAL / NO-GO**. The source-bound factual layer
+passed its admission and retained-claim checks, but the public-editorial
+semantic review failed closed after its two permitted recoveries, so HTML
+completeness, editorial usefulness in the rendered report, publication
+readiness, and absence of internal IDs in HTML remain unverified. The exact
+provider conflict is not recoverable from the redacted usage ledger; a new
+provider-backed attempt should be considered only after that boundary is
+diagnosed through existing audit-safe mechanisms. No speculative code change,
+budget increase, third recovery attempt, publication, or frozen-five run is
+justified by this result.
+
+E18 remains **Active/PARTIAL**. Verified Claims Step 2 remains
+**PARTIAL/NO-GO**. Step 3 remains **unstarted/not ready**. The frozen-five
+promotion decision is **NO-GO**.
