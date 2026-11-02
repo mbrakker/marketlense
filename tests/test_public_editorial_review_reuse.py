@@ -26,9 +26,11 @@ class _SemanticPassClient:
     def __init__(self, items: list[dict]) -> None:
         self.items = items
         self.calls = 0
+        self.requests = []
 
     def openai_chat_json(self, request, _ctx):
         self.calls += 1
+        self.requests.append(request)
         verdicts = [
             {
                 "item_id": str(item["public_item_id"]),
@@ -85,6 +87,41 @@ class _SemanticPassClient:
             parsed_json=payload,
             model=request.model,
         )
+
+
+def test_public_editorial_review_declares_allowed_repair_targets_to_model(
+    tmp_path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    artifacts = _artifacts()
+    items = public_editorial_semantic_review_items(artifacts)
+    client = _SemanticPassClient(items)
+    dependencies = _deps(
+        analysis_store_pack=lambda request, _ctx: AnalysisPackPathResponse(
+            schema_version="1.0", output_path=request.pack_name
+        )
+    )
+
+    _run_quality_review(
+        runtime=runtime,
+        dependencies=dependencies,
+        artifacts=deepcopy(artifacts),
+        client=client,
+        pack_name="public_editorial_quality_before",
+    )
+
+    assert client.requests
+    prompt = client.requests[0].user_prompt
+    marker = '"public_items"'
+    marker_index = prompt.find(marker)
+    assert marker_index >= 0
+    object_start = prompt.rfind("{", 0, marker_index)
+    review_input, _ = json.JSONDecoder().raw_decode(prompt[object_start:])
+    sent_items = review_input["public_items"]
+    sent_by_id = {str(item["item_id"]): item for item in sent_items}
+    for item in items:
+        sent = sent_by_id[str(item["public_item_id"])]
+        assert sent["allowed_repair_target"] == str(item.get("repair_target") or "")
 
 
 class _SemanticInvalidClient:
@@ -204,6 +241,17 @@ def test_public_editorial_review_reuses_terminal_failure_without_reopening_it(
     assert first.status == "fail"
     assert second.status == "fail"
     assert first.issues == second.issues
+    semantic_issue = next(
+        issue
+        for issue in first.issues
+        if issue.rule_id == "public_editorial_quality.semantic_review_unresolved"
+    )
+    assert "terminal=public_editorial_quality_review_invalid_json" in (
+        semantic_issue.message
+    )
+    assert "inner=public_editorial_quality_report_review_incomplete" in (
+        semantic_issue.message
+    )
     assert client.calls >= 1
     assert client.calls == calls_after_first
 

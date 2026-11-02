@@ -17,8 +17,12 @@ text: |
   - For every returned category, evaluate the configured include_when and exclude_when
     rules against the report context. Return semantic_rule_status as supported,
     rejected, ambiguous, or not_evaluated, and identify the applicable configured
-    rule IDs (from include_rule_ids and exclude_rule_ids) in
-    supported_topic_rule_ids and rejected_topic_rule_ids.
+    rule IDs in the matching fields: supported_topic_rule_ids may contain
+    configured include rule IDs only, and rejected_topic_rule_ids may contain
+    configured exclude rule IDs only. If an inclusion condition is not
+    satisfied, leave its include rule ID out of both lists; do not put an
+    unsatisfied inclusion rule ID in rejected_topic_rule_ids. Never invent rule
+    IDs or use a rule from a category that is not in the supplied profiles.
   - rule_evidence_sections must contain the context section labels that support the
     rule judgments. centrality_evidence_sections must identify context sections that
     establish that a selected category is central rather than incidental.

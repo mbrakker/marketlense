@@ -18,6 +18,7 @@ from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
 )
+from src.services import prompt_service
 from src.services.config_service import load_settings
 
 
@@ -217,3 +218,35 @@ def test_governed_cap_is_part_of_recovery_execution_identity():
     assert current.execution_identity.execution_identity != (
         changed.execution_identity.execution_identity
     )
+
+
+def test_public_editorial_recovery_prompt_preserves_review_contract() -> None:
+    workspace = Path(__file__).resolve().parents[1]
+    settings = load_settings(
+        ConfigLoadRequest(
+            schema_version="1.0", path=str(workspace / "src" / "config" / "app.yaml")
+        ),
+        _ctx(),
+    )
+    for mode in ("model_repair", "regeneration"):
+        bundle = recovery_prompt_bundle(
+            mode=mode,
+            artifact_family="public_editorial_quality",
+            schema_errors="public_editorial_quality_review_coverage_mismatch",
+            original_response="{}",
+            output_schema={"type": "object"},
+            source_evidence={
+                "public_items": [{"item_id": "insight:1:text"}],
+                "report_scope": {},
+            },
+            settings=settings,
+            ctx=_ctx(),
+            prompt_client=prompt_service,
+            vector_store_id=None,
+        )
+        prompt_text = " ".join(f"{bundle.system_prompt}\n{bundle.user_prompt}".split())
+        assert "exactly one verdict for every expected public item" in prompt_text
+        assert "no duplicate or foreign item IDs" in prompt_text
+        assert "allowed repair targets" in prompt_text
+        assert "one report_verdict" in prompt_text
+        assert "source-grounded reason" in prompt_text

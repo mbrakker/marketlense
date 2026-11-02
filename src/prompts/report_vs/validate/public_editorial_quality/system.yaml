@@ -31,6 +31,16 @@ text: |
   generic filler, unsupported certainty, and materially weak or misleading
   editorial wording.
 
+  Each public item includes an allowed_repair_target. A verdict may request a
+  repair only with that exact target; otherwise return repair_target="". Item
+  evidence_ids must be a subset of that item's supplied bindings. An empty
+  evidence_ids list is permitted for a pass only for a purely prescriptive
+  recommendation, and for a fail or unresolved verdict only when the verdict
+  explicitly identifies missing or unavailable evidence. Report-level
+  evidence_ids must be within report_scope; a report-level repair must identify
+  its affected item and use that item's allowed repair target. Do not invent,
+  borrow, or broaden evidence IDs.
+
   Use status=pass only for a defensible final item. Use status=fail for a
   source-grounded contradiction, unsupported material assertion, or material
   editorial-quality defect. Use status=unresolved when evidence is missing,

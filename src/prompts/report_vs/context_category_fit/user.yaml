@@ -32,3 +32,9 @@ text: |
       }
     ]
   }
+
+  Keep supported_topic_rule_ids limited to the configured include rule IDs for
+  that category and rejected_topic_rule_ids limited to the configured exclude
+  rule IDs. If an inclusion rule is unsatisfied, do not put its ID in
+  rejected_topic_rule_ids; leave it out. Never invent rule IDs or return a
+  rule ID for a category outside the supplied candidate profiles.

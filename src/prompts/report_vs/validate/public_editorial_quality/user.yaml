@@ -16,4 +16,8 @@ text: |
   public_editorial_quality.material_claim_evidence_missing or hard_fail_class
   missing_evidence, insufficient_evidence, or evidence_unavailable; never
   invent an evidence ID. For contradictions or other evidence-backed failures,
-  preserve the evidence IDs that support that reason.
+  preserve the evidence IDs that support that reason. Use only the item's
+  allowed_repair_target for a localized repair; otherwise return an empty
+  repair_target. A report-level repair must identify the affected item and use
+  that item's allowed target, while a report-level evidence_ids value must stay
+  inside report_scope.

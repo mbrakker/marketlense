@@ -192,3 +192,66 @@ def test_exhaustion_keeps_primary_context_when_later_failures_have_none() -> Non
         )
 
     assert exc_info.value.context["missing_evidence_ids"] == [primary_id]
+
+
+def test_public_review_diagnostics_retain_scalar_and_coverage_context() -> None:
+    seen_schema_errors: list[str] = []
+
+    def validate_payload(candidate: dict) -> None:
+        del candidate
+        raise AppError(
+            code="public_editorial_quality_review_coverage_mismatch",
+            message="Public editorial semantic review did not cover every public item",
+            context={
+                "item_id": "insight:fact-1:text",
+                "dimension": "analytical_depth",
+                "missing_item_ids": ["insight:fact-2:text"],
+                "unexpected_item_ids": ["insight:foreign:text"],
+                "duplicate_item_ids": ["insight:fact-1:text"],
+                "expected_item_count": 48,
+                "actual_item_count": 47,
+            },
+        )
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        del mode, original_response
+        seen_schema_errors.append(schema_errors)
+        return _response({"stage": "invalid"})
+
+    with pytest.raises(StructuredOutputFailure) as exc_info:
+        execute_structured_output(
+            _request(),
+            _ctx(),
+            call_model=call_model,
+            normalize_payload=lambda payload: payload,
+            validate_payload=validate_payload,
+            is_substantive=lambda payload: bool(payload),
+            model_pricing={},
+        )
+
+    assert len(seen_schema_errors) == 3
+    assert all(
+        "item id: insight:fact-1:text" in value for value in seen_schema_errors[1:]
+    )
+    assert all(
+        "dimension: analytical_depth" in value for value in seen_schema_errors[1:]
+    )
+    assert all("expected item count: 48" in value for value in seen_schema_errors[1:])
+    context = exc_info.value.context
+    assert context["missing_item_ids"] == ["insight:fact-2:text"]
+    assert context["unexpected_item_ids"] == ["insight:foreign:text"]
+    assert context["duplicate_item_ids"] == ["insight:fact-1:text"]
+    assert context["item_id"] == "insight:fact-1:text"
+    assert context["dimension"] == "analytical_depth"
+    assert context["expected_item_count"] == 48
+    assert context["actual_item_count"] == 47
+    assert [item["error_class"] for item in context["attempt_diagnostics"]] == [
+        "public_editorial_quality_review_coverage_mismatch",
+        "public_editorial_quality_review_coverage_mismatch",
+        "public_editorial_quality_review_coverage_mismatch",
+    ]
+    assert [item["parse_status"] for item in context["attempt_diagnostics"]] == [
+        "valid",
+        "valid",
+        "valid",
+    ]

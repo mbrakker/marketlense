@@ -1743,3 +1743,20 @@ five-report cohort. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full run paths,
 source audit, and baseline comparison are recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Evidence update — 2026-11-02 (public-editorial contract and recovery
+diagnostics):** The review producer now supplies each item's existing permitted
+repair target under an explicit model-input field, matching the validator's
+exact-target contract; the review validator identity advanced to v20. Existing
+bounded repair/regeneration prompts now state exact item coverage, evidence-ID
+scope, report-dimension coverage, and target rules. Bounded terminal diagnostics
+retain safe item/list/count/error/parse/provider context. Context-category
+prompts now separate configured include IDs from configured exclude IDs. The
+focused suite passed 180 tests, formatting/Ruff/mypy passed, and the prompt
+fixture gate passed with +409 tokens / +$0.000041 overall; no baseline or gate
+was weakened. The retained Adjust run has no raw public-review response, so
+the exact original inner validator error remains unavailable and no live
+post-fix HTML acceptance was claimed. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. See
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md` for the
+diagnostic limits and minimum next action.

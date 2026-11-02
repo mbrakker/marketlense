@@ -228,7 +228,13 @@ def execute_structured_output(
 
     if not request.allow_model_recovery:
         final_error = deterministic.error_class or initial.error_class
-        failure_context = deterministic.bounded_context or initial.bounded_context
+        failure_context = _merge_bounded_app_error_contexts(
+            initial.bounded_context,
+            deterministic.bounded_context,
+        )
+        if initial.error_class and initial.error_class != final_error:
+            failure_context["original_error_class"] = initial.error_class
+        failure_context["attempt_diagnostics"] = attempt_diagnostics[:3]
         _record_outcome(
             request,
             ctx,
@@ -489,12 +495,14 @@ class _Evaluation:
         error_detail: str = "",
         disposition: str = "",
         context: dict[str, Any] | None = None,
+        parse_status: str = "",
     ) -> None:
         self.payload = payload
         self.error_class = error_class
         self.bounded_context = context or {}
         self.error_detail = error_detail
         self.disposition = disposition
+        self.parse_status = parse_status
 
 
 def _evaluate_response(
@@ -519,6 +527,7 @@ def _evaluate_response(
             "provider_refusal",
             "provider_refusal:provider refused or filtered the response",
             context=provider_context,
+            parse_status="not_attempted",
         )
     if (
         provider_status == "incomplete"
@@ -530,6 +539,7 @@ def _evaluate_response(
             "output_truncated",
             "output_truncated:provider output reached its completion limit",
             context=provider_context,
+            parse_status="not_attempted",
         )
     if provider_status not in {"", "completed"}:
         return _Evaluation(
@@ -537,6 +547,7 @@ def _evaluate_response(
             "provider_incomplete",
             f"provider_incomplete:provider status {provider_status}",
             context=provider_context,
+            parse_status="not_attempted",
         )
     raw = str(response.text or "")
     parsed: Any = response.parsed_json
@@ -550,6 +561,7 @@ def _evaluate_response(
             error,
             f"{error}:{parse_strategy}",
             context=provider_context,
+            parse_status="empty" if error == "empty_response" else "invalid",
         )
     evaluation = _normalize_validate(
         parsed,
@@ -564,6 +576,7 @@ def _evaluate_response(
             **provider_context,
             **evaluation.bounded_context,
         }
+    evaluation.parse_status = "valid"
     return evaluation
 
 
@@ -585,8 +598,9 @@ def _evaluate_deterministic_repair(
             None,
             "deterministic_repair_invalid",
             f"{strategy}:{parse_strategy}",
+            parse_status="invalid",
         )
-    return _normalize_validate(
+    evaluation = _normalize_validate(
         parsed,
         normalize_payload,
         validate_payload,
@@ -594,6 +608,8 @@ def _evaluate_deterministic_repair(
         allow_abstention,
         is_formal_abstention,
     )
+    evaluation.parse_status = "valid"
+    return evaluation
 
 
 def _normalize_validate(
@@ -871,6 +887,20 @@ _ACTIONABLE_CONTEXT_LIST_KEYS = (
     "classification_mismatch_ids",
     "incomplete_verdict_ids",
     "unknown_item_ids",
+    "missing_item_ids",
+    "unexpected_item_ids",
+    "invalid_item_ids",
+)
+_ACTIONABLE_CONTEXT_SCALAR_KEYS = (
+    "item_id",
+    "dimension",
+    "rule_id",
+    "field",
+    "category_id",
+    "expected_item_count",
+    "actual_item_count",
+    "expected_dimension_count",
+    "actual_dimension_count",
 )
 _ARTIFACT_STRUCTURE_FIELDS = (
     "expected_root_present",
@@ -922,6 +952,7 @@ def _attempt_diagnostic(
         "mode": mode,
         "response_chars": min(len(str(response.text or "")), 999999),
         "error_class": evaluation.error_class,
+        "parse_status": evaluation.parse_status or "not_attempted",
         "disposition": evaluation.disposition or "invalid",
     }
     diagnostic.update(_provider_response_context(response))
@@ -960,6 +991,10 @@ def _app_error_feedback(error: AppError) -> str:
         and set(category) <= SAFE_ERROR_CONTEXT_TOKEN_CHARS
     ):
         detail = f"{detail}; coverage failure category: {category}"
+    for key in _ACTIONABLE_CONTEXT_SCALAR_KEYS:
+        value = _bounded_context_scalar(context.get(key))
+        if value is not None:
+            detail = f"{detail}; {key.replace('_', ' ')}: {value}"
     for key in _ACTIONABLE_CONTEXT_LIST_KEYS:
         value = context.get(key)
         if not isinstance(value, list):
@@ -981,6 +1016,10 @@ def _bounded_app_error_context(error: AppError) -> dict[str, Any]:
 
     context = error.context if isinstance(error.context, dict) else {}
     retained: dict[str, Any] = {}
+    for key in _ACTIONABLE_CONTEXT_SCALAR_KEYS:
+        value = _bounded_context_scalar(context.get(key))
+        if value is not None:
+            retained[key] = value
     for key in _ACTIONABLE_CONTEXT_LIST_KEYS:
         tokens = _bounded_context_tokens(context.get(key))
         if tokens:
@@ -1010,6 +1049,21 @@ def _bounded_app_error_context(error: AppError) -> dict[str, Any]:
     if bounded_structure:
         retained["artifact_response_structure"] = bounded_structure
     return retained
+
+
+def _bounded_context_scalar(value: object) -> str | int | None:
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return min(value, 999999)
+    if not isinstance(value, str):
+        return None
+    token = value.strip()
+    if (
+        not token
+        or len(token) > 128
+        or not set(token) <= SAFE_ERROR_CONTEXT_TOKEN_CHARS
+    ):
+        return None
+    return token
 
 
 def _bounded_context_tokens(value: object) -> list[str]:
@@ -1060,6 +1114,12 @@ def _merge_bounded_app_error_contexts(
                 if token in existing or len(existing) >= 3:
                     continue
                 existing.append(token)
+        for key in _ACTIONABLE_CONTEXT_SCALAR_KEYS:
+            if key in merged:
+                continue
+            value = _bounded_context_scalar(context.get(key))
+            if value is not None:
+                merged[key] = value
         for key in (
             "missing_claim_count",
             "missing_or_ambiguous_public_item_count",

@@ -160,6 +160,41 @@ def test_public_report_review_requires_complete_scope_verdict() -> None:
     assert raised.value.code == "public_editorial_quality_report_review_incomplete"
 
 
+def test_public_report_review_coverage_diagnostics_include_expected_and_actual_counts() -> (
+    None
+):
+    artifacts = _authority_artifacts()
+    items = public_editorial_semantic_review_items(artifacts)
+    scope = public_editorial_report_review_scope(artifacts, items)
+    payload = {
+        "verdicts": [
+            {
+                "item_id": str(item["public_item_id"]),
+                "status": "pass",
+                "classification": "factual_claim",
+                "severity": "info",
+                "rule_id": "",
+                "hard_fail_class": "",
+                "reason": "The final item remains supported by retained evidence.",
+                "evidence_ids": list(item.get("evidence_ids") or []),
+                "repair_target": "",
+            }
+            for item in items[:-1]
+        ],
+        "report_verdict": _report_review_verdict(evidence_ids=["verified-fact:fact-1"]),
+    }
+
+    with pytest.raises(AppError) as raised:
+        _validate_public_editorial_review_payload(payload, items, _ctx(), scope)
+
+    assert raised.value.code == "public_editorial_quality_review_coverage_mismatch"
+    assert raised.value.context["expected_item_count"] == len(items)
+    assert raised.value.context["actual_item_count"] == len(payload["verdicts"])
+    assert raised.value.context["missing_item_ids"] == [
+        str(items[-1]["public_item_id"])
+    ]
+
+
 def test_unlocalized_report_quality_failure_cannot_request_broad_repair() -> None:
     artifacts = _authority_artifacts()
     items = public_editorial_semantic_review_items(artifacts)

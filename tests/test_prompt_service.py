@@ -531,6 +531,27 @@ def test_grounding_prompt_uses_chart_layout_not_extraction_order_for_bindings() 
     assert "confirm label reversals visually" in prompt_text
 
 
+def test_context_category_prompt_separates_include_and_exclude_rule_ids() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/context_category_fit",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(
+        f"{prompt_set.system.text}\n{prompt_set.user.text}".split()
+    ).casefold()
+
+    assert "supported_topic_rule_ids" in prompt_text
+    assert "configured include rule ids only" in prompt_text
+    assert "rejected_topic_rule_ids" in prompt_text
+    assert "configured exclude rule ids only" in prompt_text
+    assert "do not put an unsatisfied inclusion rule id in rejected" in prompt_text
+    assert "never invent rule ids" in prompt_text
+
+
 @pytest.mark.parametrize(
     "namespace",
     [

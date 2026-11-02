@@ -161,7 +161,7 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v19"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v20"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.0"
 _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v3"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
@@ -244,6 +244,51 @@ def _substantive_public_review_reason(value: object) -> bool:
     return bool(str(value or "").strip())
 
 
+def _public_editorial_review_failure_explanation(exc: AppError) -> str:
+    """Expose bounded terminal review diagnostics without retaining model text."""
+
+    context = exc.context if isinstance(exc.context, dict) else {}
+    inner_error = str(context.get("error_class") or "").strip()
+    parts = [f"terminal={exc.code}"]
+    if inner_error and inner_error != exc.code:
+        parts.append(f"inner={inner_error}")
+    original_error = str(context.get("original_error_class") or "").strip()
+    if original_error and original_error != inner_error:
+        parts.append(f"original={original_error}")
+    attempt_diagnostics = context.get("attempt_diagnostics")
+    if isinstance(attempt_diagnostics, list):
+        attempts: list[str] = []
+        for diagnostic in attempt_diagnostics[:3]:
+            if not isinstance(diagnostic, dict):
+                continue
+            mode = str(diagnostic.get("mode") or "").strip()
+            error_class = str(diagnostic.get("error_class") or "").strip()
+            parse_status = str(diagnostic.get("parse_status") or "").strip()
+            provider_status = str(diagnostic.get("provider_status") or "").strip()
+            label = ":".join(
+                value
+                for value in (mode, error_class, parse_status, provider_status)
+                if value
+            )
+            if label:
+                attempts.append(label)
+        if attempts:
+            parts.append(f"attempts={' | '.join(attempts)}")
+    for key in (
+        "item_id",
+        "dimension",
+        "expected_item_count",
+        "actual_item_count",
+    ):
+        value = context.get(key)
+        if value not in (None, "", []):
+            parts.append(f"{key}={value}")
+    return (
+        "Independent public-editorial semantic review failed closed: "
+        + "; ".join(parts)
+    )[:1200]
+
+
 def _public_editorial_review_issue(
     *,
     report_id: str,
@@ -316,6 +361,8 @@ def _validate_public_editorial_review_payload(
         if str(item.get("public_item_id") or "").strip()
     }
     verdicts = payload["verdicts"]
+    expected_item_count = len(expected)
+    actual_item_count = len(verdicts)
     actual: dict[str, dict[str, Any]] = {}
     for verdict in verdicts:
         if not isinstance(verdict, dict):
@@ -325,16 +372,29 @@ def _validate_public_editorial_review_payload(
                     "Public editorial semantic review contains a non-object verdict"
                 ),
                 retryable=False,
+                context={
+                    "expected_item_count": expected_item_count,
+                    "actual_item_count": actual_item_count,
+                },
             )
         item_id = str(verdict.get("item_id") or "").strip()
         if item_id not in expected or item_id in actual:
+            context = {
+                "item_id": item_id,
+                "expected_item_count": expected_item_count,
+                "actual_item_count": actual_item_count,
+            }
+            if item_id not in expected and item_id:
+                context["unexpected_item_ids"] = [item_id]
+            if item_id in actual:
+                context["duplicate_item_ids"] = [item_id]
             raise AppError(
                 code="public_editorial_quality_review_coverage_mismatch",
                 message=(
                     "Public editorial semantic review has unknown or duplicate item IDs"
                 ),
                 retryable=False,
-                context={"item_id": item_id},
+                context=context,
             )
         reason = str(verdict.get("reason") or "").strip()
         if not _substantive_public_review_reason(reason):
@@ -438,6 +498,8 @@ def _validate_public_editorial_review_payload(
             context={
                 "missing_item_ids": sorted(set(expected) - set(actual)),
                 "unexpected_item_ids": sorted(set(actual) - set(expected)),
+                "expected_item_count": expected_item_count,
+                "actual_item_count": actual_item_count,
             },
         )
 
@@ -526,6 +588,12 @@ def _validate_public_editorial_review_payload(
             code="public_editorial_quality_report_review_incomplete",
             message="Report-level review did not cover every required dimension",
             retryable=False,
+            context={
+                "expected_dimension_count": len(_PUBLIC_EDITORIAL_REPORT_DIMENSIONS),
+                "actual_dimension_count": (
+                    len(dimensions) if isinstance(dimensions, dict) else 0
+                ),
+            },
         )
     dimension_statuses: list[str] = []
     for dimension_name in _PUBLIC_EDITORIAL_REPORT_DIMENSIONS:
@@ -664,6 +732,7 @@ def _public_editorial_semantic_review(
             "text": str(item.get("text") or ""),
             "evidence_ids": list(item.get("evidence_ids") or []),
             "evidence_text": str(item.get("evidence_text") or ""),
+            "allowed_repair_target": str(item.get("repair_target") or "").strip(),
         }
         verified_facts = item.get("verified_facts")
         if isinstance(verified_facts, dict) and verified_facts:
@@ -884,10 +953,7 @@ def _public_editorial_semantic_review(
                 rule_id="public_editorial_quality.semantic_review_unresolved",
                 severity="error",
                 hard_fail_class="semantic_review_unresolved",
-                explanation=(
-                    "Independent public-editorial semantic review failed closed: "
-                    f"{exc.code}"
-                ),
+                explanation=_public_editorial_review_failure_explanation(exc),
             )
         ]
         _capture_public_editorial_review(

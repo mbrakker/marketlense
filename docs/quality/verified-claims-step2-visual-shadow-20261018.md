@@ -8775,3 +8775,97 @@ budget increase is justified. E18 remains **Active/PARTIAL**, Step 2 remains
 five-report cohort is **NO-GO** until the existing public-editorial review
 produces a complete accepted result and a final HTML artifact on a fresh
 provider-backed run.
+
+## Public-editorial review contract and diagnostics correction — 2026-11-02
+
+This correction is based on reviewed HEAD
+`1d699b4daaf0aa91486d22ea018511cce492aedd`. It is a provider-free
+implementation and regression pass; it did not run a new report, mutate a
+canonical artifact, generate final HTML, publish, or write to WordPress.
+
+### Retained failure classification
+
+The retained 32,768-token Adjust retry has three relevant usage rows. The
+primary public-editorial provider envelope completed and parsed as JSON
+(13,775 output tokens); the bounded model-repair and regeneration envelopes
+also completed and parsed as JSON (832 and 2,926 output tokens). The retained
+terminal result is nevertheless `public_editorial_quality.semantic_review_unresolved`
+with the older generic inner code `public_editorial_quality_review_invalid_json`.
+The old run did not retain raw provider responses or the intermediate
+validator exception, so the exact first returned item/dimension failure cannot
+be recovered from that artifact. It is therefore not claimed as a proven
+model omission or truncation.
+
+Code inspection did confirm a deterministic producer/validator contract gap:
+the producer omitted the item's permitted repair target from the model input,
+while the validator enforced exact repair-target equality against the retained
+item. A parsed response could consequently fail the downstream contract even
+when its JSON was valid. This correction supplies that existing target under
+`allowed_repair_target`; it does not authorize new targets or deterministic
+semantic judgments.
+
+### Corrections and safeguards
+
+- Advanced the public-review validator identity from v19 to v20 so stale
+  semantic-review cache/checkpoint results cannot bypass the changed contract.
+- Supplied exact item repair targets, item-scoped evidence-ID rules, and
+  report-level affected-item/target rules to the existing review prompt.
+- Added public-review-specific requirements to the existing bounded repair and
+  regeneration prompts: exactly one verdict for every expected item, no
+  duplicate/foreign IDs, complete fields, item-bound evidence, valid targets,
+  consistent failure fields, all four report dimensions, and source-grounded
+  reasons. The existing two recovery attempts and fail-closed validator remain
+  unchanged.
+- Preserved bounded scalar/list diagnostics and now retain item IDs, missing /
+  unexpected / duplicate IDs, dimensions, expected/actual counts, parse state,
+  provider completion state, and per-attempt error classes without retaining
+  raw prompts, responses, or source prose. Parsed-but-rejected responses remain
+  distinguishable from malformed JSON.
+- Clarified context-category prompt authority: supported IDs are configured
+  include IDs only; rejected IDs are configured exclude IDs only; unsatisfied
+  includes are omitted from both fields; invented IDs remain invalid.
+- Chart cards remain conservative `weak_evidence` fallbacks with no candidate
+  linkage in the retained Adjust artifacts. No chart evidence was manufactured
+  and no chart production behavior was changed.
+
+### Provider-free verification
+
+| Check | Result |
+| --- | --- |
+| Focused public-editorial, structured-output recovery, context-category, prompt, cache, and pre-E2E regressions | **180 passed** in 14.32s |
+| Formatting gate | **PASS** |
+| Changed-file Ruff gate (CI-enforced F rules) | **PASS** |
+| Full mypy baseline gate | **PASS** — 0 tracked errors across 786 source files |
+| Prompt fixture regression | **PASS** — unchanged thresholds and pricing |
+
+The prompt fixture run measured the intentional contract text rather than a
+baseline edit:
+
+| Affected scope | Previous | Current | Delta |
+| --- | ---: | ---: | ---: |
+| `report_vs/context_category_fit` tokens / cost | 1,161 / `$0.000188` | 1,331 / `$0.000205` | +170 / +$0.000017 |
+| `report_vs/validate/public_editorial_quality` tokens / cost | 1,940 / `$0.000346` | 2,179 / `$0.000370` | +239 / +$0.000024 |
+| Report family tokens / cost | 23,144 / `$0.008600` | 23,314 / `$0.008617` | +170 / +$0.000017 |
+| Validation family tokens / cost | 11,615 / `$0.002074` | 11,854 / `$0.002098` | +239 / +$0.000024 |
+| Corpus total tokens / cost | 114,247 / `$0.025078` | 114,656 / `$0.025119` | +409 / +$0.000041 |
+
+The existing time-bounded allowlist covers these measured prompt-contract
+changes; the committed fixture baseline, thresholds, model configuration, and
+pricing were not manipulated. No additional LLM call or validator was added.
+
+### Status and next evidence
+
+The deterministic contract, recovery-instruction, diagnostics, cache
+invalidation, and strict context-ID corrections are **PASS** under the
+provider-free tests. No post-fix provider-backed public-editorial review or
+accepted final HTML exists yet. The retained source/fact and chart audit
+therefore cannot establish live recovery, editorial usefulness, latency/cost,
+or publication readiness after this correction.
+
+Overall Verified Claims Step 2 remains **PARTIAL / NO-GO**; E18 remains
+**Active/PARTIAL**; Step 3 remains **unstarted/not ready**. The minimum next
+action is one fresh isolated Adjust run (or an existing stage-only replay that
+uses the actual public-editorial workflow) with no publication side effects,
+followed by independent inspection of the resulting HTML against the retained
+PDF. Until that produces an accepted complete review and HTML, no promotion
+claim is made.
