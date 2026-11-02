@@ -32,6 +32,13 @@ PayloadValidator = Callable[[Any], object | None]
 SubstantiveCheck = Callable[[Any], bool]
 FormalAbstentionCheck = Callable[[Any], bool]
 
+_NON_RECOVERABLE_PROVIDER_ERRORS = frozenset(
+    {"provider_refusal", "provider_incomplete"}
+)
+_SKIP_DETERMINISTIC_REPAIR_ERRORS = frozenset(
+    {"output_truncated", "provider_incomplete"}
+)
+
 
 def execute_structured_output(
     request: StructuredOutputExecutionRequest,
@@ -106,6 +113,50 @@ def execute_structured_output(
         )
         return result
 
+    if initial.error_class in _NON_RECOVERABLE_PROVIDER_ERRORS:
+        _record_attempt(
+            request,
+            ctx,
+            response=primary,
+            attempt=0,
+            error_class=initial.error_class,
+            disposition="terminal_failure",
+            model_pricing=model_pricing,
+            diagnostics=initial.bounded_context,
+        )
+        result = _result(
+            None,
+            "provider_error",
+            1,
+            initial.error_class,
+            primary,
+        )
+        _record_outcome(
+            request,
+            ctx,
+            result=result,
+            repair_responses=(),
+            elapsed_repair_ms=0.0,
+            terminal="failure",
+            original_error_class=initial.error_class,
+            model_pricing=model_pricing,
+        )
+        failure_context = dict(initial.bounded_context)
+        failure_context["attempt_diagnostics"] = attempt_diagnostics[:3]
+        raise StructuredOutputFailure(
+            code=request.terminal_failure_code,
+            failure_context=failure_context,
+            message=(
+                f"{request.artifact_family} received a non-recoverable provider "
+                "completion state"
+            ),
+            artifact_family=request.artifact_family,
+            response_text="",
+            schema_errors=initial.error_detail,
+            repair_attempt=0,
+            error_class=initial.error_class,
+        )
+
     recovery_started = time.perf_counter()
     _record_attempt(
         request,
@@ -117,14 +168,22 @@ def execute_structured_output(
         model_pricing=model_pricing,
         diagnostics=initial.bounded_context,
     )
-    deterministic = _evaluate_deterministic_repair(
-        response=primary,
-        normalize_payload=normalize_payload,
-        validate_payload=validate_payload,
-        is_substantive=is_substantive,
-        allow_abstention=request.allow_abstention,
-        is_formal_abstention=is_formal_abstention,
-    )
+    if initial.error_class in _SKIP_DETERMINISTIC_REPAIR_ERRORS:
+        deterministic = _Evaluation(
+            None,
+            initial.error_class,
+            "",
+            context=initial.bounded_context,
+        )
+    else:
+        deterministic = _evaluate_deterministic_repair(
+            response=primary,
+            normalize_payload=normalize_payload,
+            validate_payload=validate_payload,
+            is_substantive=is_substantive,
+            allow_abstention=request.allow_abstention,
+            is_formal_abstention=is_formal_abstention,
+        )
     if deterministic.payload is not None:
         _record_attempt(
             request,
@@ -158,7 +217,11 @@ def execute_structured_output(
         response=primary,
         attempt=0,
         error_class=deterministic.error_class,
-        disposition="deterministic_repair_failed",
+        disposition=(
+            "deterministic_repair_skipped"
+            if initial.error_class in _SKIP_DETERMINISTIC_REPAIR_ERRORS
+            else "deterministic_repair_failed"
+        ),
         model_pricing=model_pricing,
         diagnostics=deterministic.bounded_context,
     )
@@ -221,6 +284,52 @@ def execute_structured_output(
             evaluation=repaired_evaluation,
         )
     )
+    if repaired_evaluation.error_class in _NON_RECOVERABLE_PROVIDER_ERRORS:
+        _record_attempt(
+            request,
+            ctx,
+            response=repaired,
+            attempt=1,
+            error_class=repaired_evaluation.error_class,
+            disposition="terminal_failure",
+            model_pricing=model_pricing,
+            diagnostics=repaired_evaluation.bounded_context,
+        )
+        result = _result(
+            None,
+            "provider_error",
+            2,
+            repaired_evaluation.error_class,
+            repaired,
+        )
+        _record_outcome(
+            request,
+            ctx,
+            result=result,
+            repair_responses=(repaired,),
+            elapsed_repair_ms=(time.perf_counter() - recovery_started) * 1000,
+            terminal="failure",
+            original_error_class=initial.error_class,
+            model_pricing=model_pricing,
+        )
+        failure_context = _merge_bounded_app_error_contexts(
+            initial.bounded_context,
+            repaired_evaluation.bounded_context,
+        )
+        failure_context["attempt_diagnostics"] = attempt_diagnostics[:3]
+        raise StructuredOutputFailure(
+            code=request.terminal_failure_code,
+            failure_context=failure_context,
+            message=(
+                f"{request.artifact_family} received a non-recoverable provider "
+                "completion state during recovery"
+            ),
+            artifact_family=request.artifact_family,
+            response_text="",
+            schema_errors=_join_errors(exact_errors, repaired_evaluation.error_detail),
+            repair_attempt=1,
+            error_class=repaired_evaluation.error_class,
+        )
     if repaired_evaluation.payload is not None:
         disposition = repaired_evaluation.disposition or "model_repair"
         _record_attempt(
@@ -397,6 +506,38 @@ def _evaluate_response(
     allow_abstention: bool,
     is_formal_abstention: FormalAbstentionCheck | None,
 ) -> _Evaluation:
+    provider_status = str(response.provider_status or "").strip().lower()
+    finish_reason = str(response.finish_reason or "").strip().lower()
+    provider_context = _provider_response_context(response)
+    if (
+        response.refusal
+        or provider_status == "refused"
+        or finish_reason == "content_filter"
+    ):
+        return _Evaluation(
+            None,
+            "provider_refusal",
+            "provider_refusal:provider refused or filtered the response",
+            context=provider_context,
+        )
+    if (
+        provider_status == "incomplete"
+        and str(response.incomplete_reason or "").strip().lower()
+        in {"length", "max_output_tokens"}
+    ) or finish_reason in {"length", "max_output_tokens"}:
+        return _Evaluation(
+            None,
+            "output_truncated",
+            "output_truncated:provider output reached its completion limit",
+            context=provider_context,
+        )
+    if provider_status not in {"", "completed"}:
+        return _Evaluation(
+            None,
+            "provider_incomplete",
+            f"provider_incomplete:provider status {provider_status}",
+            context=provider_context,
+        )
     raw = str(response.text or "")
     parsed: Any = response.parsed_json
     parse_strategy = "provider_parsed"
@@ -404,8 +545,13 @@ def _evaluate_response(
         parsed, parse_strategy = parse_json_from_text(raw, accepted_types=(dict, list))
     if parsed is None:
         error = "empty_response" if not raw.strip() else "invalid_json"
-        return _Evaluation(None, error, f"{error}:{parse_strategy}")
-    return _normalize_validate(
+        return _Evaluation(
+            None,
+            error,
+            f"{error}:{parse_strategy}",
+            context=provider_context,
+        )
+    evaluation = _normalize_validate(
         parsed,
         normalize_payload,
         validate_payload,
@@ -413,6 +559,12 @@ def _evaluate_response(
         allow_abstention,
         is_formal_abstention,
     )
+    if provider_context:
+        evaluation.bounded_context = {
+            **provider_context,
+            **evaluation.bounded_context,
+        }
+    return evaluation
 
 
 def _evaluate_deterministic_repair(
@@ -565,7 +717,10 @@ def _record_attempt(
         if isinstance(diagnostics, dict)
         else None
     )
-    diagnostic_fields = structure or {}
+    diagnostic_fields = {
+        **_provider_response_context(response),
+        **(structure or {}),
+    }
     logger.info(
         log_event(
             ctx,
@@ -769,6 +924,7 @@ def _attempt_diagnostic(
         "error_class": evaluation.error_class,
         "disposition": evaluation.disposition or "invalid",
     }
+    diagnostic.update(_provider_response_context(response))
     structure = _bounded_structure_value(
         evaluation.bounded_context.get("artifact_response_structure")
         if isinstance(evaluation.bounded_context, dict)
@@ -778,6 +934,17 @@ def _attempt_diagnostic(
     if structure:
         diagnostic["artifact_response_structure"] = structure
     return diagnostic
+
+
+def _provider_response_context(response: OpenAIResponseResult) -> dict[str, Any]:
+    context: dict[str, Any] = {}
+    for field_name in ("provider_status", "finish_reason", "incomplete_reason"):
+        value = str(getattr(response, field_name, "") or "").strip()
+        if value and len(value) <= 64:
+            context[field_name] = value
+    if str(getattr(response, "refusal", "") or "").strip():
+        context["refusal_present"] = True
+    return context
 
 
 def _app_error_feedback(error: AppError) -> str:
@@ -907,9 +1074,7 @@ def _merge_bounded_app_error_contexts(
                 and value >= 0
             ):
                 merged[key] = min(value, 999)
-        structure = _bounded_structure_value(
-            context.get("artifact_response_structure")
-        )
+        structure = _bounded_structure_value(context.get("artifact_response_structure"))
         if structure:
             merged["artifact_response_structure"] = structure
     return merged

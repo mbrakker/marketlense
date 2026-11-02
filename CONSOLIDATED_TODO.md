@@ -1678,3 +1678,19 @@ publication, or WordPress write occurred. E18 remains **Active/PARTIAL**, Step
 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready** pending
 fresh source-report quality evidence and the missing Signal semantic-review
 transition.
+
+**Evidence update — 2026-11-02 (Adjust public-editorial review reliability):**
+The retained Adjust run at `frozen-reliability-6oe2ci36` admitted 7/7 visual
+candidates and produced 7 verified facts and 7 final insights, but both
+independent public-editorial primaries ended at the 8,192-token cap with
+parse-invalid output. Retained metadata omits finish reasons/raw content, so
+capacity exhaustion is strongly indicated but not asserted as proven. The
+minimal correction preserves provider completion/refusal state, forbids strict
+schema fallback, raises only the public-editorial review budget to 16,384,
+classifies truncation/refusal separately, rejects unusable semantic cache
+entries, and removes only duplicated public item text from the review scope.
+Provider-free focused tests and the prompt fixture gate passed; the fixture
+change is +15 tokens / +$0.000002 overall. No post-fix provider run or HTML
+acceptance was performed. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Details:
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

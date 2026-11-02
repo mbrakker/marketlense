@@ -307,6 +307,83 @@ def test_empty_model_repair_preserves_primary_feedback_for_regeneration():
     assert "empty_response:empty" in calls[2][2]
 
 
+def test_truncated_json_skips_deterministic_repair_and_uses_bounded_model_repair():
+    calls: list[str] = []
+    truncated = OpenAIResponseResult(
+        schema_version="1.0",
+        text='{"stage":"primary"',
+        parsed_json=None,
+        model="gpt-5-mini",
+        finish_reason="length",
+        provider_status="incomplete",
+        incomplete_reason="length",
+    )
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        del original_response, schema_errors
+        calls.append(mode)
+        if mode == "primary":
+            return truncated
+        return _response({"stage": "repaired"})
+
+    result = execute_structured_output(
+        StructuredOutputExecutionRequest(
+            schema_version="1.0",
+            report_id="truncated-json-1",
+            artifact_family="doc_map",
+            schema_name="doc_map",
+            model="gpt-5-mini",
+        ),
+        _ctx(),
+        call_model=call_model,
+        normalize_payload=lambda payload: payload,
+        validate_payload=lambda payload: None,
+        is_substantive=lambda payload: bool(payload),
+        model_pricing={},
+    )
+
+    assert result.payload == {"stage": "repaired"}
+    assert result.disposition == "model_repair"
+    assert calls == ["primary", "model_repair"]
+
+
+def test_provider_refusal_fails_closed_without_format_retries():
+    calls: list[str] = []
+    refused = OpenAIResponseResult(
+        schema_version="1.0",
+        text="",
+        model="gpt-5-mini",
+        refusal="safety refusal",
+        provider_status="refused",
+        finish_reason="stop",
+    )
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        del original_response, schema_errors
+        calls.append(mode)
+        return refused
+
+    with pytest.raises(StructuredOutputFailure) as exc_info:
+        execute_structured_output(
+            StructuredOutputExecutionRequest(
+                schema_version="1.0",
+                report_id="refusal-1",
+                artifact_family="doc_map",
+                schema_name="doc_map",
+                model="gpt-5-mini",
+            ),
+            _ctx(),
+            call_model=call_model,
+            normalize_payload=lambda payload: payload,
+            validate_payload=lambda payload: None,
+            is_substantive=lambda payload: bool(payload),
+            model_pricing={},
+        )
+
+    assert calls == ["primary"]
+    assert exc_info.value.context["error_class"] == "provider_refusal"
+
+
 def test_non_empty_model_repair_remains_the_regeneration_source():
     """A substantive repair response keeps its latest response and feedback."""
 

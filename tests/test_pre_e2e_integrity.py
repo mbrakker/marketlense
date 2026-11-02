@@ -264,7 +264,9 @@ def test_report_scope_keeps_complete_facts_once_and_preserves_identity() -> None
     assert scope["verified_fact_digest"] == "digest-override"
     assert list(scope["verified_facts"]) == ["verified-fact:fact-1"]
     assert "verified_facts" not in scope["public_content"][0]
+    assert "text" not in scope["public_content"][0]
     assert scope["public_content"][0]["item_id"] == items[0]["public_item_id"]
+    assert items[0]["text"]
 
 
 @pytest.mark.parametrize(

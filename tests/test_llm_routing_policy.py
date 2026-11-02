@@ -270,6 +270,33 @@ def test_visual_claim_correction_has_budget_for_complete_structured_json() -> No
         assert decision.policy.temperature is None
 
 
+def test_public_editorial_quality_has_review_specific_output_capacity() -> None:
+    config_path = Path(__file__).resolve().parents[1] / "src" / "config" / "app.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    ingest = config["ingest"]
+    policies = execution_policies_from_config(
+        config["llm_execution_policies"],
+        model_overrides=config["openai_models"],
+        legacy_routing=config["llm_routing"],
+        default_model=ingest["openai_model"],
+        default_temperature=ingest["temperature"],
+        default_seed=ingest["seed"],
+        default_timeout_seconds=ingest["timeout_seconds"],
+    )
+
+    decision = resolve_execution_policy(
+        "report_vs/validate/public_editorial_quality",
+        policies,
+        default_model=ingest["openai_model"],
+        default_temperature=ingest["temperature"],
+        default_seed=ingest["seed"],
+        default_timeout_seconds=ingest["timeout_seconds"],
+        require_registered_namespace=False,
+    )
+
+    assert decision.policy.max_output_tokens == 16_384
+
+
 @pytest.mark.parametrize(
     ("model", "effort", "code"),
     [

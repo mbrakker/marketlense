@@ -28407,6 +28407,12 @@
           },
           "type": "array"
         },
+        "finish_reason": {
+          "type": "string"
+        },
+        "incomplete_reason": {
+          "type": "string"
+        },
         "input_tokens": {
           "anyOf": [
             {
@@ -28439,6 +28445,12 @@
               "type": "null"
             }
           ]
+        },
+        "provider_status": {
+          "type": "string"
+        },
+        "refusal": {
+          "type": "string"
         },
         "request_id": {
           "anyOf": [

@@ -67,6 +67,9 @@ from src.utils.model_resolver import effective_sampling_controls
 logger = logging.getLogger("market_lense.llm_service.openai")
 SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION = "1.0"
 SEMANTIC_RESPONSE_CACHE_SUBDIR = "semantic_responses"
+_INCOMPLETE_PROVIDER_STATES = frozenset(
+    {"incomplete", "refused", "failed", "cancelled"}
+)
 _extract_responses_file_search_call_count = (
     response_payload.extract_responses_file_search_call_count
 )
@@ -517,8 +520,26 @@ def _read_semantic_response_cache(
             fields={"reason": "missing_response"},
         )
         return None
+    if not _semantic_response_payload_is_cacheable(response_payload):
+        _log_semantic_cache_event(
+            ctx,
+            event="openai_semantic_cache_miss",
+            spec=spec,
+            fields={"reason": "response_not_cacheable"},
+        )
+        return None
     _log_semantic_cache_event(ctx, event="openai_semantic_cache_hit", spec=spec)
     return response_payload
+
+
+def _semantic_response_payload_is_cacheable(response_payload: dict[str, Any]) -> bool:
+    status = str(response_payload.get("provider_status") or "").strip().lower()
+    return "parsed_json" not in response_payload or (
+        isinstance(response_payload.get("parsed_json"), dict)
+        and status not in _INCOMPLETE_PROVIDER_STATES
+        and not str(response_payload.get("refusal") or "").strip()
+        and not str(response_payload.get("incomplete_reason") or "").strip()
+    )
 
 
 def _write_semantic_response_cache(
@@ -528,6 +549,14 @@ def _write_semantic_response_cache(
     response_payload: dict[str, Any],
 ) -> None:
     if spec is None:
+        return
+    if not _semantic_response_payload_is_cacheable(response_payload):
+        _log_semantic_cache_event(
+            ctx,
+            event="openai_semantic_cache_skip",
+            spec=spec,
+            fields={"reason": "response_not_cacheable"},
+        )
         return
     payload = {
         "schema_version": SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION,
@@ -592,6 +621,10 @@ def _openai_response_result_from_cache(payload: dict[str, Any]) -> OpenAIRespons
         file_search_results=_coerce_file_search_results(
             payload.get("file_search_results")
         ),
+        finish_reason=str(payload.get("finish_reason") or ""),
+        refusal=str(payload.get("refusal") or ""),
+        provider_status=str(payload.get("provider_status") or ""),
+        incomplete_reason=str(payload.get("incomplete_reason") or ""),
     )
 
 
@@ -793,6 +826,8 @@ class _OpenAIResponseMetadata:
     parse_strategy: str
     provider_status: str = ""
     incomplete_reason: str = ""
+    finish_reason: str = ""
+    refusal: str = ""
     reasoning_tokens: int | None = None
     file_search_call_count: int = 0
     file_search_results: list[OpenAIFileSearchResult] | None = None
@@ -826,6 +861,8 @@ def _build_response_metadata(
     recover_json_object: bool,
     provider_status: str = "",
     incomplete_reason: str = "",
+    finish_reason: str = "",
+    refusal: str = "",
     require_completed: bool = False,
     reasoning_tokens: int | None = None,
     file_search_call_count: int = 0,
@@ -835,6 +872,9 @@ def _build_response_metadata(
         text,
         recover_json_object=recover_json_object,
     )
+    normalized_status = str(provider_status or "").strip().lower()
+    if str(refusal or "").strip() or normalized_status in _INCOMPLETE_PROVIDER_STATES:
+        parsed_json = None
     if require_completed and provider_status not in {"", "completed"}:
         parsed_json = None
     resolved_total_tokens = total_tokens
@@ -854,6 +894,8 @@ def _build_response_metadata(
         parse_strategy=parse_strategy,
         provider_status=provider_status,
         incomplete_reason=incomplete_reason,
+        finish_reason=finish_reason,
+        refusal=refusal,
         reasoning_tokens=reasoning_tokens,
         file_search_call_count=max(0, int(file_search_call_count or 0)),
         file_search_results=file_search_results or [],
@@ -870,6 +912,11 @@ def _adapt_chat_completion_metadata(run: Any) -> _OpenAIResponseMetadata:
         total_tokens=run.total_tokens,
         cached_input_tokens=run.cached_input_tokens,
         recover_json_object=False,
+        provider_status=getattr(run, "provider_status", "") or "",
+        incomplete_reason=getattr(run, "incomplete_reason", "") or "",
+        finish_reason=getattr(run, "finish_reason", "") or "",
+        refusal=getattr(run, "refusal", "") or "",
+        require_completed=True,
         reasoning_tokens=getattr(run, "reasoning_tokens", None),
     )
 
@@ -892,6 +939,8 @@ def _adapt_responses_metadata(
     provider_status = str(raw_status or "").strip().lower()
     incomplete_details = field(resp, "incomplete_details")
     incomplete_reason = field(incomplete_details, "reason")
+    finish_reason = str(field(resp, "finish_reason") or "").strip()
+    refusal = str(field(resp, "refusal") or "").strip()
     return _build_response_metadata(
         text=_extract_responses_output_text(resp),
         request_id=getattr(resp, "id", None),
@@ -903,6 +952,8 @@ def _adapt_responses_metadata(
         recover_json_object=recover_json_object,
         provider_status=provider_status,
         incomplete_reason=str(incomplete_reason or "").strip(),
+        finish_reason=finish_reason,
+        refusal=refusal,
         require_completed=require_completed,
         reasoning_tokens=reasoning_tokens,
         file_search_call_count=file_search_call_count,
@@ -910,91 +961,40 @@ def _adapt_responses_metadata(
     )
 
 
+# fmt: off
 __all__ = [
-    "Any",
-    "AppError",
-    "Callable",
-    "Figure",
-    "OPENAI_CLIENT_INIT_EXCEPTIONS",
-    "OPENAI_ERROR_TYPES",
-    "OPENAI_OCR_RESPONSE_FORMAT",
-    "OPENAI_REQUEST_EXCEPTIONS",
-    "_openai_client_factory",
-    "OpenAIAnalyzeRequest",
-    "OpenAIAnalyzeResponse",
-    "OpenAIEmbeddingRequest",
-    "OpenAIEmbeddingResponse",
-    "OpenAIJSONImagePromptRequest",
-    "OpenAIJSONPromptRequest",
-    "OpenAIPdfOcrRequest",
-    "OpenAIPdfOcrResponse",
-    "OpenAIResponseRequest",
-    "OpenAIResponseResult",
-    "OpenAIUsageAccountingRequest",
-    "OpenAIVectorStoreAttachFileRequest",
-    "OpenAIVectorStoreAttachFileResponse",
-    "OpenAIVectorStoreCreateRequest",
-    "OpenAIVectorStoreCreateResponse",
-    "OpenAIVectorStoreDeleteRequest",
-    "OpenAIVectorStoreDeleteResponse",
-    "OpenAIVectorStoreFileUploadRequest",
-    "OpenAIVectorStoreFileUploadResponse",
-    "OpenAIVectorStoreStatusRequest",
-    "OpenAIVectorStoreStatusResponse",
-    "OpenAIVectorStoreUpdateMetadataRequest",
-    "OpenAIVectorStoreUpdateMetadataResponse",
-    "Path",
-    "PdfOcrPageText",
-    "Quote",
-    "REQUIRED_KEYS",
-    "ReportPayload",
-    "RunContext",
-    "SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION",
-    "SEMANTIC_RESPONSE_CACHE_SUBDIR",
-    "WriteBytesRequest",
-    "_OpenAIResponseMetadata",
+    "Any", "AppError", "Callable", "Figure",
+    "OPENAI_CLIENT_INIT_EXCEPTIONS", "OPENAI_ERROR_TYPES",
+    "OPENAI_OCR_RESPONSE_FORMAT", "OPENAI_REQUEST_EXCEPTIONS", "_openai_client_factory",
+    "OpenAIAnalyzeRequest", "OpenAIAnalyzeResponse",
+    "OpenAIEmbeddingRequest", "OpenAIEmbeddingResponse",
+    "OpenAIJSONImagePromptRequest", "OpenAIJSONPromptRequest",
+    "OpenAIPdfOcrRequest", "OpenAIPdfOcrResponse",
+    "OpenAIResponseRequest", "OpenAIResponseResult", "OpenAIUsageAccountingRequest",
+    "OpenAIVectorStoreAttachFileRequest", "OpenAIVectorStoreAttachFileResponse",
+    "OpenAIVectorStoreCreateRequest", "OpenAIVectorStoreCreateResponse",
+    "OpenAIVectorStoreDeleteRequest", "OpenAIVectorStoreDeleteResponse",
+    "OpenAIVectorStoreFileUploadRequest", "OpenAIVectorStoreFileUploadResponse",
+    "OpenAIVectorStoreStatusRequest", "OpenAIVectorStoreStatusResponse",
+    "OpenAIVectorStoreUpdateMetadataRequest", "OpenAIVectorStoreUpdateMetadataResponse",
+    "Path", "PdfOcrPageText", "Quote", "REQUIRED_KEYS", "ReportPayload", "RunContext",
+    "SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION", "SEMANTIC_RESPONSE_CACHE_SUBDIR",
+    "WriteBytesRequest", "_OpenAIResponseMetadata",
     "_RESPONSES_UNSUPPORTED_PARAM_PREFIXES",
-    "_SemanticResponseCacheSpec",
-    "_VECTOR_STORE_ATTACH_OPERATION",
-    "_VECTOR_STORE_CREATE_OPERATION",
-    "_VECTOR_STORE_DELETE_OPERATION",
-    "_VECTOR_STORE_STATUS_OPERATION",
-    "_VECTOR_STORE_UPDATE_METADATA_OPERATION",
-    "_VECTOR_STORE_UPLOAD_OPERATION",
-    "_VectorStoreOperationSpec",
-    "_adapt_chat_completion_metadata",
-    "_adapt_responses_metadata",
-    "_build_response_metadata",
-    "_bytes_to_data_url",
-    "_classify_openai_request_error",
-    "_extract_responses_output_text",
-    "_extract_responses_usage",
-    "_file_fingerprint",
-    "_image_path_to_data_url",
-    "_known_unsupported_responses_params",
-    "_ocr_response_from_cache",
-    "_openai_error_body_code",
-    "_openai_error_status_code",
-    "_openai_response_result_from_cache",
-    "_parse_json_object_from_text",
-    "_parse_response_json",
-    "_read_semantic_response_cache",
-    "_record_usage_accounting",
-    "_finalize_usage_accounting",
-    "_semantic_response_cache_spec",
-    "_sha256_payload",
-    "_sha256_text",
-    "_stable_json",
-    "_strip_json_fence",
-    "_validate_payload",
-    "_write_semantic_response_cache",
-    "asdict",
-    "dataclass",
-    "file_service",
-    "hashlib",
-    "json",
-    "log_event",
-    "logger",
-    "openai_accounting_service",
-    "openai_legacy",
+    "_SemanticResponseCacheSpec", "_VECTOR_STORE_ATTACH_OPERATION",
+    "_VECTOR_STORE_CREATE_OPERATION", "_VECTOR_STORE_DELETE_OPERATION",
+    "_VECTOR_STORE_STATUS_OPERATION", "_VECTOR_STORE_UPDATE_METADATA_OPERATION",
+    "_VECTOR_STORE_UPLOAD_OPERATION", "_VectorStoreOperationSpec",
+    "_adapt_chat_completion_metadata", "_adapt_responses_metadata",
+    "_build_response_metadata", "_bytes_to_data_url", "_classify_openai_request_error",
+    "_extract_responses_output_text", "_extract_responses_usage", "_file_fingerprint",
+    "_image_path_to_data_url", "_known_unsupported_responses_params",
+    "_ocr_response_from_cache", "_openai_error_body_code", "_openai_error_status_code",
+    "_openai_response_result_from_cache", "_parse_json_object_from_text",
+    "_parse_response_json", "_read_semantic_response_cache", "_record_usage_accounting",
+    "_finalize_usage_accounting", "_semantic_response_cache_spec", "_sha256_payload",
+    "_sha256_text", "_stable_json", "_strip_json_fence", "_validate_payload",
+    "_write_semantic_response_cache", "asdict", "dataclass", "file_service", "hashlib",
+    "json", "log_event", "logger", "openai_accounting_service", "openai_legacy",
 ]
+# fmt: on

@@ -32,6 +32,52 @@ class _ChatCompletionRun:
     cached_input_tokens: int | None
     reasoning_tokens: int | None = None
     provider_timing: ProviderCallTiming | None = None
+    finish_reason: str = ""
+    refusal: str = ""
+    provider_status: str = ""
+    incomplete_reason: str = ""
+
+
+class _LegacyClientCompatibilityError(TypeError):
+    """Signal an explicit old-client compatibility path, not a provider error."""
+
+
+def _response_value(value: Any, key: str, default: Any = None) -> Any:
+    if isinstance(value, dict):
+        return value.get(key, default)
+    return getattr(value, key, default)
+
+
+def _is_client_compatibility_type_error(exc: TypeError) -> bool:
+    message = str(exc).lower()
+    return "unexpected keyword argument" in message and any(
+        token in message for token in ("proxies", "max_retries", "timeout", "api_key")
+    )
+
+
+def _is_response_format_compatibility_type_error(exc: TypeError) -> bool:
+    return "response_format" in str(exc).lower() and (
+        "unexpected keyword argument" in str(exc).lower()
+        or "unexpected keyword" in str(exc).lower()
+    )
+
+
+def _chat_completion_state(
+    response: Any, choice: Any, message: Any
+) -> tuple[str, str, str, str]:
+    finish_reason = str(_response_value(choice, "finish_reason") or "").strip()
+    refusal = str(_response_value(message, "refusal") or "").strip()
+    normalized_finish = finish_reason.lower()
+    if refusal:
+        return finish_reason, refusal, "refused", "refusal"
+    if normalized_finish in {"length", "content_filter"}:
+        return finish_reason, refusal, "incomplete", normalized_finish
+    raw_status = str(_response_value(response, "status") or "").strip().lower()
+    if raw_status:
+        return finish_reason, refusal, raw_status, ""
+    if normalized_finish == "stop":
+        return finish_reason, refusal, "completed", ""
+    return finish_reason, refusal, "", ""
 
 
 def _chat_completion_model_kwargs(
@@ -99,19 +145,37 @@ def _legacy_chat_completion_call(
         )
         if max_output_tokens is not None:
             payload_args["max_completion_tokens"] = max_output_tokens
+        payload_args["response_format"] = response_format
         try:
-            payload_args["response_format"] = response_format
             resp, provider_timing = timed_provider_request(
                 operation="chat.completions.create",
                 call=lambda: legacy_openai.ChatCompletion.create(**payload_args),
             )
-        except TypeError:
+        except TypeError as exc:
+            if not _is_response_format_compatibility_type_error(exc):
+                raise
+            if response_format.get("type") == "json_schema":
+                raise AppError(
+                    code="openai_structured_output_unsupported",
+                    message=(
+                        "The configured OpenAI client cannot enforce the required "
+                        "strict JSON schema response format"
+                    ),
+                    cause=exc,
+                    retryable=False,
+                    context={"response_format_type": "json_schema"},
+                ) from exc
             payload_args.pop("response_format", None)
             resp, provider_timing = timed_provider_request(
                 operation="chat.completions.create",
                 call=lambda: legacy_openai.ChatCompletion.create(**payload_args),
             )
-        payload = resp["choices"][0]["message"]["content"]
+        choice = resp["choices"][0]
+        message = choice["message"]
+        payload = message.get("content") or ""
+        finish_reason, refusal, provider_status, incomplete_reason = (
+            _chat_completion_state(resp, choice, message)
+        )
         usage = resp.get("usage") or {}
         prompt_tokens_details = usage.get("prompt_tokens_details") or {}
         completion_tokens_details = usage.get("completion_tokens_details") or {}
@@ -124,6 +188,10 @@ def _legacy_chat_completion_call(
             cached_input_tokens=prompt_tokens_details.get("cached_tokens"),
             reasoning_tokens=completion_tokens_details.get("reasoning_tokens"),
             provider_timing=provider_timing,
+            finish_reason=finish_reason,
+            refusal=refusal,
+            provider_status=provider_status,
+            incomplete_reason=incomplete_reason,
         )
     finally:
         if had_timeout_attr:
@@ -157,11 +225,16 @@ def _modern_chat_completion_call(
 ) -> _ChatCompletionRun:
     client_factory = _openai_client_factory()
     if client_factory is None:
-        raise TypeError("OpenAI client not available")
+        raise _LegacyClientCompatibilityError("OpenAI client not available")
     client_kwargs: dict = {"api_key": api_key, "max_retries": 0}
     if timeout_seconds is not None:
         client_kwargs["timeout"] = timeout_seconds
-    client = client_factory(**client_kwargs)
+    try:
+        client = client_factory(**client_kwargs)
+    except TypeError as exc:
+        if _is_client_compatibility_type_error(exc):
+            raise _LegacyClientCompatibilityError(str(exc)) from exc
+        raise
     payload_args: dict[str, Any] = {
         "model": model,
         "messages": [
@@ -180,10 +253,28 @@ def _modern_chat_completion_call(
     )
     if max_output_tokens is not None:
         payload_args["max_completion_tokens"] = max_output_tokens
-    resp, provider_timing = timed_provider_request(
-        operation="chat.completions.create",
-        call=lambda: client.chat.completions.create(**payload_args),
-    )
+    try:
+        resp, provider_timing = timed_provider_request(
+            operation="chat.completions.create",
+            call=lambda: client.chat.completions.create(**payload_args),
+        )
+    except TypeError as exc:
+        if response_format.get("type") == "json_schema" and (
+            _is_response_format_compatibility_type_error(exc)
+        ):
+            raise AppError(
+                code="openai_structured_output_unsupported",
+                message=(
+                    "The configured OpenAI client cannot enforce the required "
+                    "strict JSON schema response format"
+                ),
+                cause=exc,
+                retryable=False,
+                context={"response_format_type": "json_schema"},
+            ) from exc
+        if _is_response_format_compatibility_type_error(exc):
+            raise _LegacyClientCompatibilityError(str(exc)) from exc
+        raise
     usage = getattr(resp, "usage", None)
     prompt_tokens_details = (
         getattr(usage, "prompt_tokens_details", None) if usage is not None else None
@@ -191,8 +282,13 @@ def _modern_chat_completion_call(
     completion_tokens_details = (
         getattr(usage, "completion_tokens_details", None) if usage is not None else None
     )
+    choice = resp.choices[0]
+    message = choice.message
+    finish_reason, refusal, provider_status, incomplete_reason = _chat_completion_state(
+        resp, choice, message
+    )
     return _ChatCompletionRun(
-        payload=resp.choices[0].message.content or "",
+        payload=_response_value(message, "content") or "",
         request_id=getattr(resp, "id", None),
         prompt_tokens=getattr(usage, "prompt_tokens", None)
         if usage is not None
@@ -206,6 +302,10 @@ def _modern_chat_completion_call(
         cached_input_tokens=getattr(prompt_tokens_details, "cached_tokens", None),
         reasoning_tokens=getattr(completion_tokens_details, "reasoning_tokens", None),
         provider_timing=provider_timing,
+        finish_reason=finish_reason,
+        refusal=refusal,
+        provider_status=provider_status,
+        incomplete_reason=incomplete_reason,
     )
 
 
@@ -235,7 +335,7 @@ def _run_chat_completion(
             max_output_tokens=max_output_tokens,
             response_format=response_format,
         )
-    except TypeError:
+    except _LegacyClientCompatibilityError:
         return _legacy_chat_completion_call(
             api_key=api_key,
             timeout_seconds=timeout_seconds,
@@ -615,6 +715,10 @@ def openai_chat_json(
                 "completion_tokens": metadata.output_tokens,
                 "total_tokens": metadata.total_tokens,
                 "parsed_json": metadata.parsed_json is not None,
+                "finish_reason": metadata.finish_reason,
+                "provider_status": metadata.provider_status,
+                "incomplete_reason": metadata.incomplete_reason,
+                "refusal_present": bool(metadata.refusal),
             },
         )
     )
@@ -629,6 +733,10 @@ def openai_chat_json(
         model=request.model,
         total_tokens=metadata.total_tokens,
         request_id=metadata.request_id,
+        finish_reason=metadata.finish_reason,
+        refusal=metadata.refusal,
+        provider_status=metadata.provider_status,
+        incomplete_reason=metadata.incomplete_reason,
     )
     try:
         audit_record = build_model_call_audit_record(
@@ -661,11 +769,7 @@ def openai_chat_json(
                 },
             )
         )
-    _write_semantic_response_cache(
-        cache_spec,
-        ctx,
-        response_payload=asdict(result),
-    )
+    _write_semantic_response_cache(cache_spec, ctx, response_payload=asdict(result))
     return result
 
 
@@ -873,6 +977,10 @@ def openai_chat_json_with_images(
         model=request.model,
         total_tokens=metadata.total_tokens,
         request_id=metadata.request_id,
+        finish_reason=metadata.finish_reason,
+        refusal=metadata.refusal,
+        provider_status=metadata.provider_status,
+        incomplete_reason=metadata.incomplete_reason,
     )
     _write_semantic_response_cache(
         cache_spec,

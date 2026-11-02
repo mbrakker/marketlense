@@ -8510,3 +8510,96 @@ release-evidence gates only. It did not run a retained real-report/provider
 editorial workflow or publish to WordPress. The overall Step 2 verdict remains
 **PARTIAL / NO-GO**; E18 remains **Active/PARTIAL** and Step 3 remains
 **unstarted/not ready**.
+
+## Adjust public-editorial review reliability correction — 2026-11-02
+
+This addendum starts from `6e11a0af38d3c5c8ae0c0355bebe97284fe5459e` and is
+based on the retained isolated Adjust run
+`C:\\ml-adjust-e2e-20261102\\frozen-reliability-6oe2ci36`. It does not run
+another provider-backed ingestion-to-HTML workflow, publish to WordPress, or
+claim a live post-fix quality result.
+
+### Confirmed failure boundary
+
+The exact frozen PDF SHA-256 was
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`. The
+retained run admitted **7/7** visual candidates and produced **7/7** verified
+facts, **7** final insights, **6** metric-spine entries, and **5** key figures.
+Retained unsupported and unresolved factual claims were both **0**. The
+terminal failure was `validation_failed` at
+`public_editorial_quality.semantic_review_unresolved`, with no final HTML.
+
+Both independent primary public-editorial calls used GPT-6 Luna High with
+high reasoning and an effective **8,192-token** output limit. Each recorded
+**82,439 input tokens**, exactly **8,192 output tokens**, and **8,192 reasoning
+tokens**; both were parse-invalid. The retained recovery rows and regeneration
+rows produced valid envelopes but did not yield an accepted complete public
+review. The run recorded **153 provider calls**, **1,296,653 input tokens**,
+**198,143 output tokens**, **$0.230052**, **1,527.079 seconds**, seven
+file-search calls, two structured-output recovery cycles, zero workflow retries,
+zero automatic repairs, and zero operator interventions.
+
+The retained artifacts do not contain `finish_reason`, refusal, raw provider
+content, or complete request metadata for those two primary rows. Therefore
+output-capacity exhaustion is the strongest supported explanation (exact
+provider truncation status remains unproven); the artifacts do not support a
+claim that the failure was schema coverage rather than JSON parsing. The
+before/after quality reports agree on the same fail-closed rule and explanation:
+`public_editorial_quality_review_invalid_json`.
+
+### Minimal corrections
+
+| Boundary | Correction | Safety retained |
+| --- | --- | --- |
+| Provider response state | `OpenAIResponseResult` and the modern/legacy adapters now preserve finish reason, refusal, provider status, and incomplete reason, with optional fields appended for cache/positional compatibility. | Unknown or missing provider metadata remains representable; raw responses are not logged. |
+| Strict structured output | Explicit client-compatibility fallback remains limited to supported legacy `json_object`; strict `json_schema`/`strict=true` is never silently removed and unsupported clients return a typed nonretryable error. | Public-editorial schema authority and fail-closed behavior remain intact. |
+| Review capacity | The review-family-only `max_output_tokens` is **16,384**; global budgets, reasoning effort, prompts' factual checks, schemas, and retry limits were not changed. | The existing two correction/two verification maximum remains bounded. |
+| Recovery | Explicit truncation skips punctuation-only repair and uses the existing bounded model-repair path; refusals and provider-incomplete states fail closed without blind format retries. | Original failure classifications remain in diagnostics and later claims can continue. |
+| Cache | Incomplete, refused, malformed, or otherwise unusable semantic responses are rejected on read and skipped on write; valid cache identity and legacy valid entries remain compatible. | No invalid response can be reused as a successful semantic result. |
+| Review input | Redundant public item text was removed from `report_scope.public_content`; full wording remains in top-level `public_items`, with plan, evidence, canonical facts, and whole-report context preserved. | No public surface or authoritative factual context was dropped. |
+
+### Provider-free measurements and limits
+
+On the retained Adjust `artifacts.json`, the public-review scope was **621,148
+JSON characters** before the duplicate-text removal and **614,030** after it:
+**7,118 characters (1.15%)** removed. The repeated item text accounted for
+**5,878 characters**; no evidence, verified fact, stable ID, page, span, metric
+binding, editorial-plan entry, or report-level context was removed. The exact
+final insight IDs and physical pages remained: gaming strategy/page 19,
+cross-platform measurement/page 11, GenAI outcomes/page 9, e-commerce
+installs/sessions/page 27, e-commerce marketplace retention/page 29, finance
+session duration/page 36, and finance paid/organic ratio/page 38. All retained
+source identities included the expected PDF hash.
+
+The retained five chart cards remain `weak_evidence`, have empty candidate IDs,
+and report `No chart candidate was linked to the metric evidence`; all three
+card/figure linkage measurements are 0.0. This is consistent with the existing
+conservative fallback because no accepted chart candidate was present in the
+retained artifact. No deterministic candidate-to-card defect was demonstrated
+by this review failure, so chart acceptance and provenance were not forced or
+speculatively refactored.
+
+The focused provider-free regressions cover completed strict JSON, length
+truncation, refusal/content filtering, strict-schema compatibility, invalid
+semantic cache entries, bounded structured recovery, retained failure causes,
+review-scope duplication, and the review-specific output budget. These tests
+demonstrate engineering correctness only. A fresh live run is still required
+to determine whether 16,384 tokens is sufficient and whether editorial review
+now reaches HTML.
+
+The prompt-fixture gate remains green without a baseline change: **114,262
+tokens / $0.025080** versus **114,247 / $0.025078** (**+15 tokens / +$0.000002**)
+overall, and **11,630 / $0.002076** versus **11,615 / $0.002074** for the
+validation family. The small increase is from the intentional public-editorial
+instruction clarification; thresholds, pricing, model configuration, fixtures,
+schemas, and factual checks were preserved.
+
+### Verdict
+
+The deterministic reliability correction is **PASS** for the demonstrated
+provider-state, strict-schema, bounded-recovery, cache, and input-duplication
+defects under provider-free tests. The retained Adjust result remains a failed
+pre-fix run, and no post-fix provider-backed result or HTML exists. Overall
+Step 2 remains **PARTIAL / NO-GO**; E18 remains **Active/PARTIAL**; Step 3
+remains **unstarted/not ready**. The next required evidence is one genuine
+provider-backed Adjust rerun followed by independent PDF-to-editorial review.

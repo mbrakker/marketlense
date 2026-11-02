@@ -47,7 +47,8 @@ text: |
   same topic.
 
   The report_verdict must assess all four report-level dimensions using the
-  supplied editorial plan and final public_content: material_coverage,
+  supplied editorial plan, the complete wording in public_items, and the
+  public_content identity/evidence index: material_coverage,
   analytical_depth, distinctness, and limitations. Material coverage means
   important admitted source findings are not silently omitted. Analytical
   depth means the final report adds defensible interpretation and commercially

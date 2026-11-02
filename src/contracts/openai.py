@@ -135,7 +135,10 @@ class OpenAIUsageAccountingRequest:
     emit_cost_ledger: bool = field(
         default=True,
         metadata={
-            "doc": "Whether to append this event to the JSON cost ledger and refresh daily rollups."
+            "doc": (
+                "Whether to append this event to the JSON cost ledger and refresh "
+                "daily rollups."
+            )
         },
     )
     request_id: Optional[str] = field(
@@ -155,7 +158,10 @@ class OpenAIUsageAccountingRequest:
     reservation_operation: str = field(
         default="",
         metadata={
-            "doc": "Provider operation used to release the matching in-flight spend reservation."
+            "doc": (
+                "Provider operation used to release the matching in-flight spend "
+                "reservation."
+            )
         },
     )
     total_tokens: Optional[int] = field(
@@ -335,7 +341,10 @@ class OpenAIUsageAccountingResponse:
     pricing_status: str = field(
         default="missing",
         metadata={
-            "doc": "Pricing resolution result: matched, alias_matched, missing, or invalid."
+            "doc": (
+                "Pricing resolution result: matched, alias_matched, missing, or "
+                "invalid."
+            )
         },
     )
     pricing_key: str = field(
@@ -626,7 +635,10 @@ class OpenAIResponseRequest:
     structured_output_schema: Dict[str, Any] = field(
         default_factory=dict,
         metadata={
-            "doc": "Optional provider JSON Schema used when the selected endpoint supports constrained output."
+            "doc": (
+                "Optional provider JSON Schema used when the selected endpoint "
+                "supports constrained output."
+            )
         },
     )
     structured_output_schema_identity: str = field(
@@ -695,6 +707,36 @@ class OpenAIResponseResult:
         default_factory=list,
         metadata={
             "doc": "Source excerpts returned by completed File Search output items."
+        },
+    )
+    finish_reason: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Provider completion reason, such as stop, length, or content_filter, "
+                "when reported."
+            )
+        },
+    )
+    refusal: str = field(
+        default="",
+        metadata={
+            "doc": "Provider refusal marker or bounded refusal text, if reported."
+        },
+    )
+    provider_status: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Provider completion status, including incomplete or refused states, "
+                "when reported."
+            )
+        },
+    )
+    incomplete_reason: str = field(
+        default="",
+        metadata={
+            "doc": "Provider-supplied reason for an incomplete response, if known."
         },
     )
 
@@ -868,7 +910,10 @@ class OpenAIJSONPromptRequest:
     structured_output_schema: Dict[str, Any] = field(
         default_factory=dict,
         metadata={
-            "doc": "Optional provider JSON Schema used when the selected endpoint supports constrained output."
+            "doc": (
+                "Optional provider JSON Schema used when the selected endpoint "
+                "supports constrained output."
+            )
         },
     )
     structured_output_schema_identity: str = field(

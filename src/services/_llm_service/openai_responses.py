@@ -511,6 +511,10 @@ def openai_respond_with_vector_store(
         total_tokens=metadata.total_tokens,
         request_id=metadata.request_id,
         file_search_results=list(metadata.file_search_results or []),
+        finish_reason=metadata.finish_reason,
+        refusal=metadata.refusal,
+        provider_status=metadata.provider_status,
+        incomplete_reason=metadata.incomplete_reason,
     )
     _write_semantic_response_cache(
         cache_spec,

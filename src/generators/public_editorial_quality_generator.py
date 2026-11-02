@@ -1107,7 +1107,8 @@ def public_editorial_report_review_scope(
     Item projections remain the authority for atomic source-fidelity checks.
     This companion projection gives the same call enough context to assess
     omissions, repetition, analytical depth, and report usefulness without
-    repeating the complete fact snapshot on every item.
+    repeating the complete fact snapshot or atomic public text on every item.
+    The complete text remains in the top-level public-item batch.
     """
 
     safe_artifacts = artifacts if isinstance(artifacts, dict) else {}
@@ -1151,7 +1152,6 @@ def public_editorial_report_review_scope(
                 "item_id": item_id,
                 "artifact": str(item.get("artifact") or ""),
                 "field": str(item.get("field") or ""),
-                "text": str(item.get("text") or ""),
                 "evidence_ids": evidence_ids,
             }
         )
