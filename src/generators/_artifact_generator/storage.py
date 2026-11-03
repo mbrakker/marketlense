@@ -2455,6 +2455,43 @@ def finalize_regeneration_candidate_artifacts(
                     ]
                 )
             )
+        # Verified span rebinding is part of the authoritative source-root
+        # normalization. Reconcile projections once more after that step so
+        # metric_spine and its dependents consume canonical spans rather than
+        # discovery-era spans captured during the first rebuild.
+        verified_derived_roots = {
+            root
+            for root in rebuilt_roots
+            if root in CANONICAL_DERIVED_ARTIFACT_ROOTS and root in candidate_artifacts
+        }
+        if verified_derived_roots:
+            try:
+                reconciled = build_canonical_regeneration_derived_artifacts(
+                    artifacts=candidate_artifacts,
+                    evidence_packs=evidence_packs,
+                    roots=verified_derived_roots,
+                )
+            except AppError as exc:
+                raise AppError(
+                    code="regeneration_deterministic_projection_failed",
+                    message="Verified derived projection reconciliation failed",
+                    retryable=False,
+                    context={
+                        "projection": "verified_derived_reconciliation",
+                        "cause_code": exc.code,
+                    },
+                    cause=exc,
+                ) from exc
+            for root, value in reconciled.items():
+                candidate_artifacts[root] = value
+            if "family_status" in reconciled:
+                candidate_artifacts["family_status"] = (
+                    _preserve_unchanged_summary_status(
+                        rebuilt=candidate_artifacts.get("family_status"),
+                        promoted_baseline=promoted_baseline,
+                        candidate_artifacts=candidate_artifacts,
+                    )
+                )
 
     changed_paths = artifact_diff_paths(promoted_baseline, candidate_artifacts)
     verified_roots = set(rebuilt_roots)

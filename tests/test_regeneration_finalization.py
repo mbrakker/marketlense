@@ -213,6 +213,95 @@ def test_verified_finalization_rebinds_canonical_fact_spans() -> None:
     }
 
 
+def test_verified_finalization_rebuilds_metric_spine_after_span_rebinding() -> None:
+    evidence_id = "verified-fact:f1"
+    statement = "The source reports 61% adoption among video users."
+    stale_span = {
+        "evidence_id": evidence_id,
+        "source_pack": "findings",
+        "page": 7,
+        "text": "Legacy discovery excerpt.",
+    }
+    canonical_span = {
+        "evidence_id": evidence_id,
+        "source_pack": "verified_facts",
+        "page": 7,
+        "text": statement,
+    }
+    fact = {
+        "fact_id": "f1",
+        "statement": statement,
+        "metric": {
+            "label": "Video-user adoption",
+            "value": "61%",
+            "unit": "%",
+            "timeframe": "2026",
+            "segment": "Video users",
+            "geography": "Global",
+        },
+    }
+    evidence_packs = {
+        "findings": {
+            "family_status": {
+                "status": "generated",
+                "policy_action": "keep",
+                "source": "verified_facts",
+            },
+            "findings": [
+                {
+                    "id": evidence_id,
+                    "text": statement,
+                    "evidence": statement,
+                    "pages": [7],
+                }
+            ],
+        }
+    }
+    insight = {
+        "id": "f1",
+        "text": statement,
+        "so_what": "The result is commercially relevant.",
+        "evidence": "Legacy discovery excerpt.",
+        "evidence_id": evidence_id,
+        "evidence_spans": [stale_span],
+        "pages": [7],
+        "metric": deepcopy(fact["metric"]),
+    }
+    baseline = {
+        "summary": {},
+        "editorial_plan": {},
+        "insights_candidates": [deepcopy(insight)],
+        "insights_final": [deepcopy(insight)],
+        "quotes_final": [],
+        "verified_facts": [fact],
+    }
+    baseline["metric_spine"] = derive_metric_spine_from_insights(
+        baseline["insights_final"],
+        verified_mode=True,
+        verified_facts=baseline["verified_facts"],
+    )
+    candidate = deepcopy(baseline)
+    candidate["insights_final"][0]["so_what"] = (
+        "The result may shape video investment decisions."
+    )
+
+    finalize_regeneration_candidate_artifacts(
+        promoted_baseline=baseline,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        atomic_source_patch={"insights_final": deepcopy(candidate["insights_final"])},
+        verified_mode=True,
+    )
+
+    expected = build_canonical_regeneration_derived_artifacts(
+        artifacts=candidate,
+        evidence_packs=evidence_packs,
+        roots={"metric_spine"},
+    )
+    assert candidate["metric_spine"] == expected["metric_spine"]
+    assert candidate["metric_spine"][0]["evidence_spans"] == [canonical_span]
+
+
 def test_verified_finalization_preserves_summary_for_executive_repair() -> None:
     evidence_id = "verified-fact:f1"
     baseline_summary = {
@@ -261,7 +350,7 @@ def test_verified_finalization_preserves_summary_for_executive_repair() -> None:
                         "evidence": "Canonical summary evidence.",
                         "pages": [7],
                     }
-                ]
+                ],
             }
         },
         atomic_source_patch={"summary": deepcopy(candidate["summary"])},
@@ -271,9 +360,10 @@ def test_verified_finalization_preserves_summary_for_executive_repair() -> None:
     )
 
     assert candidate["summary"]["executive_summary"] == "Repaired summary."
-    assert candidate["summary"]["claim_evidence_map"] == baseline_summary[
-        "claim_evidence_map"
-    ]
+    assert (
+        candidate["summary"]["claim_evidence_map"]
+        == baseline_summary["claim_evidence_map"]
+    )
 
 
 def test_verified_finalization_rebinds_changed_summary_claim_map() -> None:
@@ -315,7 +405,7 @@ def test_verified_finalization_rebinds_changed_summary_claim_map() -> None:
                         "evidence": "Canonical summary evidence.",
                         "pages": [7],
                     }
-                ]
+                ],
             }
         },
         atomic_source_patch={"summary": deepcopy(candidate["summary"])},
