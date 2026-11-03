@@ -9484,3 +9484,132 @@ the one post-CI isolated provider-backed Adjust run are still required. Until
 that run produces HTML and the final HTML is independently checked against PDF
 pages 11, 19, 21, 29, and 35, this correction is **PARTIAL / NO-GO** for
 Step 2 promotion. No WordPress or publication write is permitted.
+
+## Post-CI isolated Adjust acceptance — 2026-11-03
+
+Hosted CI completed successfully before this attempt: workflow `41646173342`
+(`https://github.com/mbrakker/marketlense/actions/runs/41646173342`) passed
+`ci_start`, `tests`, both mutation partitions, and `release_evidence`. The
+attempt below is the one and only fresh provider-backed run after that CI result;
+it used commit `53971638484ef09cf00d486cf8087f04b1da260c`, a new isolated state,
+cache, and output root, the unchanged frozen Adjust PDF, and the WordPress queue
+disabled.
+
+Source and artifacts:
+
+- PDF SHA-256:
+  `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`
+- Cohort result:
+  `C:\ml-cross-contract-live-1103-public-copy-53971638\frozen-reliability-90z_l3zl\cohort_result.json`
+- Attempt root:
+  `C:\ml-cross-contract-live-1103-public-copy-53971638\frozen-reliability-90z_l3zl\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-52mv5d_j`
+- Artifacts:
+  `...\output\mobile-app-trends-2026-pdf\report_analysis\artifacts.json`
+- Public-quality pack:
+  `...\output\mobile-app-trends-2026-pdf\report_analysis\public_editorial_quality_before.json`
+- Terminal validation:
+  `...\output\mobile-app-trends-2026-pdf\report_analysis\validation.json`
+- Full-page PDF review renders:
+  `C:\ml-cross-contract-live-1103-public-copy-53971638\pdf_full_pages\page-{11,19,21,29,35}.png`
+
+### Terminal outcome and measured usage
+
+| Measure | Current run | Previous retained baseline | Change |
+| --- | ---: | ---: | ---: |
+| Visual candidates evaluated / admitted / quarantined | 7 / 7 / 0 | 7 / 7 / 0 | unchanged |
+| Verified facts / final insights | 7 / 7 | 7 / 7 | unchanged |
+| Unsupported / unresolved retained factual claims | 0 / 0 | 0 / 0 | unchanged |
+| Provider calls | 159 | 152 | +7 (+4.6%) |
+| Input / output tokens | 1,217,027 / 216,421 | 1,033,800 / 185,087 | +183,227 / +31,334 (+17.7% / +16.9%) |
+| Cached input tokens (usage ledger) | 21,568 | not retained in baseline summary | measured only in current run |
+| Estimated cost | `$0.242970` | `$0.209313` | +`$0.033657` (+16.1%) |
+| File-search calls | 6 | 6 | unchanged |
+| Wall-clock | 1,824.185 seconds | 1,669.032 seconds | +155.153 seconds (+9.3%) |
+| Structured-output recovery calls / automatic repairs | 3 / 0 | 0 / 0 | +3 / unchanged |
+| Workflow attempts / retries / operator intervention | 1 / 0 / 0 | 1 / 0 / 0 | unchanged |
+| Validation / publication readiness | `fail` / `fail` | `fail` / `fail` | unchanged |
+| Terminal failure | `regeneration_target_item_unchanged` | `regeneration_target_item_unchanged` | unchanged |
+
+The usage ledger records model `gpt-6-luna`; its execution metadata records
+`reasoning_effort=medium`, so this run is not evidence of a GPT-6 High execution.
+The isolated application cache started empty. The ledger recorded 105 calls with
+cache enabled, 12 provider-cache hits, and 42 calls with caching disabled. The
+three structured recovery calls were bounded grounding recovery events; there
+were no automatic editorial repairs and no operator intervention. WordPress
+publication was not attempted (`published=false`, no post ID, and the publish
+queue was disabled).
+
+The new copy contract itself is present in the live artifacts: all seven
+`insights_final` rows have source-bound `metric_public_copy`; six derived
+`metric_spine` rows and five `key_figures` rows carry the corresponding copy.
+The 31% copy is the natural sentence `Only around 31% of marketers report
+complete satisfaction with their ability to unify and read data across
+platforms.`; it does not contain diagnostic `label=`/`value=` serialization.
+The protected metric objects, verified-fact IDs, source identity, PDF SHA, and
+physical pages remain intact. The universal claim ledger still contains its
+structured diagnostic projection by design; no HTML was produced to assert its
+reader-facing absence.
+
+### Public/editorial outcome
+
+The run failed before final HTML emission. The retained public-quality pack has
+three hard errors:
+
+1. `insight-ai-maturity-efficiency.so_what` says disciplined execution itself
+   is the gap, while the source describes a gap between experimentation and
+   disciplined execution. This is a semantic interpretation error, not a
+   protected-fact binding failure.
+2. `linkedin_post` says casino and slots sessions declined while installs
+   increased but omits the material 2024–2025 comparison boundary. The issue
+   is repair-eligible, but no successful repair was committed in this run.
+3. The report-level review found a repeated strategy subset in the claim ledger
+   and missing source-limit qualifications for the satisfaction and GenAI
+   findings (including unstated timeframe, geography, denominator, sample size,
+   and measurement method). It has no single safe atomic repair target and
+   abstained.
+
+The previous malformed 31% concatenation was not present in the live
+`insights_final`, `metric_spine`, or `key_figures` artifacts. This is evidence
+that the new field survives the generation and derived-artifact path, but not
+evidence of accepted public HTML because `regeneration_target_item_unchanged`
+stopped the run. The page-19 final insight text remains source-grounded for
+strategy, casino, and slots, but its new metric copy names only the strategy
+pair; the independent review therefore treats broader coverage as unresolved,
+not as an improvement claim.
+
+### Independent PDF audit
+
+Full original pages were rendered and inspected, without cropping:
+
+- Page 11 visibly states “only around 31% of marketers” report complete
+  satisfaction with cross-platform data unification/readability; it gives no
+  survey timeframe or geography.
+- Page 19 visibly labels the chart as global 2024–2025 YoY and supports
+  hyper-casual `+4%` installs/`+31%` sessions, strategy `-1%`/`+57%`, casino
+  `+22%`/`-5%`, and slots `+46%`/`-5%`, with the legend distinguishing installs
+  from sessions.
+- Page 21 visibly supports global gaming CPI `$0.56` in 2025, up 30%, and
+  separately shows slots `$4.47`, idle RPG `$3.19`, and strategy `$1.03`.
+- Page 29 visibly supports global e-commerce CPI `$1.00` to `$0.98`, deal
+  discovery `$1.44` to `$2.26`, marketplace/classifieds `$0.99` to `$0.88`,
+  shopping `$0.93` to `$0.91`, and the regional bonus figures.
+- Page 35 visibly supports finance install/session growth of global `-4%`/`+21%`,
+  APAC `+5%`/`+50%`, Europe `+15%`/`+19%`, LATAM `+76%`/`+57%`, MENA
+  `+42%`/`+10%`, and North America `+5%`/`+17%`. The missing regional finance
+  coverage is therefore a real omission, not a source-binding ambiguity.
+
+No independently confirmed unsupported material claim was promoted in the
+verified-fact layer. Because the workflow produced no HTML, internal-ID
+exclusion, final rendered completeness, visible metric-copy use, and
+publication readiness remain unverified.
+
+### Decision
+
+**PARTIAL / NO-GO.** The implementation is pushed and hosted CI is green, but
+the one permitted live run failed with the exact terminal blocker
+`regeneration_target_item_unchanged`; it also exposed the three editorial
+quality errors above. The live result shows source-faithful metric-copy
+generation and derived propagation, but no accepted HTML and no evidence that
+the remaining implication, qualification, or coverage defects are repaired.
+Per the task constraint, no stochastic live rerun was attempted. Step 2
+remains **PARTIAL/NO-GO** and Step 3 remains **unstarted/not ready**.
