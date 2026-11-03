@@ -694,6 +694,7 @@ def metric_claim_text(
             "denominator",
             "timeframe",
             "observation_status",
+            "forecast_status",
         )
     ]
     if source_statement:
@@ -716,6 +717,7 @@ def metric_claim_text(
                     "cohort",
                     "denominator",
                     "observation_status",
+                    "forecast_status",
                 )
                 if str(observation.get(key) or "").strip()
             )

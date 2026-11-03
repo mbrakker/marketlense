@@ -229,16 +229,13 @@ def test_semantic_review_projection_includes_all_public_surface_fields() -> None
     }
 
     assert {
-        "key_figures:key_figures:1:label",
-        "key_figures:key_figures:1:value",
-        "metric_spine:metric_spine:1:label",
-        "metric_spine:metric_spine:1:value",
-        "chart_insight_cards:chart_insight_cards:1:caption",
+        "key_figures:key_figures:1",
+        "metric_spine:metric_spine:1",
+        "chart_insight_cards:chart_insight_cards:candidate-1",
     } <= item_ids
+    assert "quotes_final:quotes:quote-1" in item_ids
     assert "key_figures:key_figures:1:why_it_matters" not in item_ids
-    assert "quotes_final:quotes:quote-1" not in item_ids
     assert "chart_insight_cards:chart_insight_cards:1:title" not in item_ids
-    assert "chart_insight_cards:chart_insight_cards:1:public_takeaway" in item_ids
 
     quality = evaluate_public_editorial_quality(
         report_id="public-surface-projection", artifacts=artifacts
@@ -330,15 +327,15 @@ def test_semantic_review_projection_matches_rendered_material_surfaces() -> None
     item_ids = {str(item["public_item_id"]) for item in items}
     item_text = {str(item["text"]) for item in items}
 
-    assert "chart_insight_cards:chart_insight_cards:1:title" not in item_ids
-    assert "chart_insight_cards:chart_insight_cards:2:title" in item_ids
-    assert "chart_insight_cards:chart_insight_cards:2:so_what" in item_ids
-    assert "chart_insight_cards:chart_insight_cards:2:now_what" in item_ids
+    assert "chart_insight_cards:chart_insight_cards:candidate-weak" not in item_ids
+    assert "chart_insight_cards:chart_insight_cards:candidate-accepted" in item_ids
     assert "Weak evidence should not render." not in item_text
-    assert "Adoption" in item_text
-    assert "Buyer adoption is commercially material." in item_text
-    assert "Plan around buyer adoption." in item_text
-    assert "Buyer adoption reached 42%." in item_text
+    assert any("Adoption" in value for value in item_text)
+    assert any(
+        "Buyer adoption is commercially material." in value for value in item_text
+    )
+    assert any("Plan around buyer adoption." in value for value in item_text)
+    assert any("Buyer adoption reached 42%." in value for value in item_text)
 
 
 def test_verified_signal_review_and_renderer_omit_unbound_topic_copy(tmp_path) -> None:
@@ -369,7 +366,9 @@ def test_verified_signal_review_and_renderer_omit_unbound_topic_copy(tmp_path) -
 
     items = public_editorial_semantic_review_items(artifacts)
     item_text = {str(item["text"]) for item in items}
-    assert "Bound summary." in item_text
+    assert any(
+        "Bound topic" in value and "Bound summary." in value for value in item_text
+    )
     assert "Unbound summary." not in item_text
 
     response = render_report(

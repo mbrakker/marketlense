@@ -73,6 +73,7 @@ from src.generators.artifact_normalization import (
 from src.generators.artifact_prompt_provenance import (
     ARTIFACT_PROMPT_VALIDATOR_VERSION,
 )
+from src.generators.claim_validation_generator import metric_claim_text
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
@@ -1087,10 +1088,11 @@ def build_universal_claim_ledger(
     for item in metric_spine:
         if not isinstance(item, dict):
             continue
-        label = _s(item.get("label")).strip()
-        value = _s(item.get("value")).strip()
-        unit = _s(item.get("unit")).strip()
-        claim_text = " ".join(part for part in (label, value, unit) if part)
+        claim_text = metric_claim_text(
+            item,
+            include_observations=True,
+            label_fields=True,
+        )
         _append(
             artifact_section="metric_spine",
             local_id=_s(item.get("metric_id")).strip() or str(len(ledger) + 1),
@@ -1228,6 +1230,9 @@ def _derive_metric_spine_from_insights(
             "missing_context_notes": missing_context_notes,
             "evidence_id": evidence_id,
         }
+        forecast_status = _s(metric.get("forecast_status")).strip()
+        if forecast_status:
+            item["forecast_status"] = forecast_status
         if isinstance(insight.get("evidence_ids"), list) and evidence_ids:
             item["evidence_ids"] = evidence_ids
         if verified_mode and isinstance(metric.get("observations"), list):
@@ -1586,6 +1591,11 @@ def build_key_figures(
                 "cohort": _s(metric.get("cohort")).strip(),
                 "denominator": _s(metric.get("denominator")).strip(),
                 "observation_status": _s(metric.get("observation_status")).strip(),
+                **(
+                    {"forecast_status": _s(metric.get("forecast_status")).strip()}
+                    if _s(metric.get("forecast_status")).strip()
+                    else {}
+                ),
                 **(
                     {"observations": deepcopy(metric["observations"])}
                     if verified_mode and isinstance(metric.get("observations"), list)
@@ -2951,11 +2961,10 @@ def build_executive_advisory_artifacts(
                     if isinstance(item, dict) and _s(item.get("evidence_id")).strip()
                 }
             ),
-            "confidence_note": (
-                "Metric spine available"
-                if metric_spine
-                else "Evidence-linked insights available"
-            ),
+            # Availability is metadata, not a source-backed confidence
+            # assessment.  Keep the optional field for schema compatibility,
+            # but do not expose deterministic boilerplate as public advice.
+            "confidence_note": "",
         },
         "recommendations": {
             "schema_version": "1.0",

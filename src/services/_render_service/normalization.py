@@ -625,8 +625,8 @@ def _coerce_advisory_items(
 
 def _coerce_public_metric_spine(
     artifacts: dict[str, Any], *, limit: int = 4
-) -> list[dict[str, str]]:
-    metrics: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
+    metrics: list[dict[str, Any]] = []
     verified_mode = verified_facts_mode(artifacts)
     allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
     for raw_item in _coerce_list(artifacts.get("metric_spine")):
@@ -650,17 +650,25 @@ def _coerce_public_metric_spine(
         context = ", ".join(
             part
             for part in (
+                _s(item.get("subject")),
                 _s(item.get("segment")),
+                _s(item.get("cohort")),
+                _s(item.get("denominator")),
                 _s(item.get("geography")),
                 _s(item.get("timeframe")),
+                _s(item.get("observation_status")),
+                _s(item.get("forecast_status")),
             )
             if part
         )
         metrics.append(
             {
+                "metric_id": _s(item.get("metric_id")),
                 "label": label,
                 "value": metric_value,
                 "context": context,
+                "evidence_id": evidence_id,
+                "evidence_ids": [evidence_id] if evidence_id else [],
                 "confidence_label": _public_label_from_token(item.get("confidence"))
                 or "Source-backed",
             }
@@ -672,8 +680,8 @@ def _coerce_public_metric_spine(
 
 def _coerce_public_claim_support(
     artifacts: dict[str, Any], *, limit: int = 4
-) -> list[dict[str, str]]:
-    claims: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
+    claims: list[dict[str, Any]] = []
     verified_mode = verified_facts_mode(artifacts)
     allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
     for raw_item in _coerce_list(artifacts.get("claim_ledgers")):
@@ -690,10 +698,17 @@ def _coerce_public_claim_support(
         confidence = _public_label_from_token(item.get("confidence"))
         risk = _public_label_from_token(item.get("risk"))
         labels = [label for label in (support_type, confidence, risk) if label]
+        canonical_claim_id = _s(item.get("canonical_claim_id")) or _s(
+            item.get("claim_id")
+        )
         claims.append(
             {
+                "canonical_claim_id": canonical_claim_id,
+                "claim_id": canonical_claim_id,
+                "artifact_section": _s(item.get("artifact_section")),
                 "claim": claim_text,
                 "support_label": " · ".join(labels) if labels else "Source-backed",
+                "evidence_ids": sorted(evidence_ids),
             }
         )
         if len(claims) >= limit:
@@ -715,6 +730,12 @@ def _coerce_public_advisory(artifacts: dict[str, Any]) -> dict[str, Any]:
     decision_supported = not verified_mode or bool(
         decision_evidence_ids.intersection(allowed_evidence_ids)
     )
+    confidence_note = _sanitize_public_prose(decision_brief.get("confidence_note"))
+    if confidence_note.casefold() in {
+        "metric spine available",
+        "evidence-linked insights available",
+    }:
+        confidence_note = ""
     decision = {
         "available": status == "generated" and decision_supported,
         "strategic_context": _sanitize_public_prose(
@@ -735,9 +756,7 @@ def _coerce_public_advisory(artifacts: dict[str, Any]) -> dict[str, Any]:
         "watchouts": _coerce_text_items(decision_brief.get("watchouts"), limit=4)
         if decision_supported
         else [],
-        "confidence_note": _sanitize_public_prose(decision_brief.get("confidence_note"))
-        if decision_supported
-        else "",
+        "confidence_note": confidence_note if decision_supported else "",
     }
     recommendations = _coerce_advisory_items(
         advisory.get("recommendations"),
@@ -771,7 +790,7 @@ def _coerce_public_topics_covered(
         or _coerce_list(artifacts.get("toc_topics_expanded"))
         or _coerce_list(artifacts.get("toc_entries"))
     )
-    for raw_item in raw_topics:
+    for index, raw_item in enumerate(raw_topics, start=1):
         item = _coerce_dict(raw_item)
         evidence_ids = {
             _s(value)
@@ -798,6 +817,9 @@ def _coerce_public_topics_covered(
         ]
         topics.append(
             {
+                "topic_id": _s(item.get("id"))
+                or _s(item.get("topic_id"))
+                or str(index),
                 "topic": title,
                 "summary": (
                     "Covered by the source report."
@@ -820,6 +842,7 @@ def _coerce_public_topics_covered(
                     ][:4]
                 ),
                 "source_label": f"Pages {', '.join(pages)}" if pages else "",
+                "evidence_ids": sorted(evidence_ids),
             }
         )
         if len(topics) >= limit:
@@ -831,8 +854,8 @@ def _coerce_public_key_figures(
     artifacts: dict[str, Any],
     *,
     limit: int = 6,
-) -> list[dict[str, str]]:
-    figures: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
+    figures: list[dict[str, Any]] = []
     verified_mode = verified_facts_mode(artifacts)
     allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
     raw_figures = _coerce_list(artifacts.get("key_figures")) or _coerce_list(
@@ -868,15 +891,24 @@ def _coerce_public_key_figures(
                         part
                         for part in (
                             _s(item.get("context")),
+                            _s(item.get("subject")),
                             _s(item.get("cohort")),
                             _s(item.get("denominator")),
                             _s(item.get("segment")),
                             _s(item.get("geography")),
                             _s(item.get("timeframe")),
+                            _s(item.get("observation_status")),
+                            _s(item.get("forecast_status")),
                         )
                         if part
                     )
                 ),
+                "figure_id": _s(item.get("figure_id"))
+                or _s(item.get("key_figure_id"))
+                or _s(item.get("id")),
+                "metric_id": _s(item.get("metric_id")) or _s(item.get("insight_id")),
+                "evidence_id": evidence_id,
+                "evidence_ids": [evidence_id] if evidence_id else [],
                 "confidence_label": _public_label_from_token(item.get("confidence"))
                 or "Source-backed",
             }
@@ -890,8 +922,8 @@ def _coerce_public_chart_insight_cards(
     artifacts: dict[str, Any],
     *,
     limit: int = 4,
-) -> list[dict[str, str]]:
-    cards: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
+    cards: list[dict[str, Any]] = []
     verified_mode = verified_facts_mode(artifacts)
     allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
     for raw_item in _coerce_list(artifacts.get("chart_insight_cards")):
@@ -935,6 +967,9 @@ def _coerce_public_chart_insight_cards(
             continue
         cards.append(
             {
+                "candidate_id": candidate_id,
+                "insight_id": insight_id,
+                "evidence_id": evidence_id,
                 "title": title,
                 "insight": takeaway,
                 "so_what": _sanitize_public_prose(item.get("so_what")),

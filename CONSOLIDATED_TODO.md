@@ -511,6 +511,24 @@ review remain open. Step 2 remains **PARTIAL/NO-GO** and Step 3 remains
 unstarted; no status is closed from this checkpoint alone. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
+**Evidence update — 2026-11-03 (public repair/render contract correction):**
+The retained Adjust public-review failure is now reproduced provider-free at
+the correct boundary. Derived claim-ledger, metric-spine, key-figure, summary,
+quote, and uniquely sourceable advisory findings route only to existing
+supported producer paths; an explicit unmappable `executive_advisory` issue
+returns a fail-closed skip instead of crashing or broadening repair. Verified
+semantic review now consumes the renderer's bounded, evidence-eligible public
+rows as complete metric/figure cards, while full retained-claim validation
+remains separate. Metric-ledger context and optional forecast status are
+preserved when authoritative data supplies them, and deterministic advisory
+confidence boilerplate is removed. The focused pre-E2E suite passed 51 tests,
+the broader affected regression set passed 370 tests, contract schemas and
+changed-file Ruff/mypy passed. No live run has yet exercised the corrected
+provider path; E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO** pending one post-CI isolated Adjust run, and Step 3 remains
+**unstarted/not ready**. Details are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
 **Evidence update — 2026-10-31 semantic authority migration (implementation
 based on `e7f4fd1a`):** Active semantic gates now use existing LLM stages for
 material grounding, public-editorial quality, report qualification, category

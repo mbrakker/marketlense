@@ -9209,3 +9209,91 @@ readiness was produced. E18 remains **Active/PARTIAL**. Verified Claims Step 2
 remains **PARTIAL/NO-GO**, the frozen-five promotion decision remains
 **NO-GO**, and Step 3 remains **unstarted/not ready**. No WordPress write,
 publication mutation, or second live provider run occurred.
+
+## Public editorial repair and render contract correction — 2026-11-03
+
+This addendum records the provider-free correction of the remaining public
+editorial repair boundary. The implementation was based on the retained
+Adjust failure at `953900bc`; no new provider call or publication write was
+used for this diagnosis.
+
+### Confirmed root causes and corrections
+
+- `executive_advisory` and `claim_ledgers` are derived projections, but the
+  public semantic-review projection exposed them as regeneration roots. The
+  verified projection now carries a hidden, deterministic `repair_field` only
+  when existing lineage identifies one supported producer: metric IDs route to
+  `insights_final[item=<id>].metric.value`; key figures route through their
+  originating insight; summary/quote claims use their canonical section and
+  ID; and advisory text routes only on an exact unique insight field. An
+  unmappable derived issue remains blocking and now returns a `skip` plan
+  rather than raising `regeneration_repair_target_unsupported` or triggering a
+  broad unrelated rewrite. `executive_advisory` was not added to the planner's
+  supported targets.
+- Verified semantic review now reuses the existing renderer normalization and
+  eligibility boundaries: the public limits are four metric-spine rows, six
+  key-figure rows, four claim-support rows, and four accepted chart cards.
+  Metric and figure cards are reviewed as one combined visible claim, while
+  distinct visible placements remain separate review items. The non-rendered
+  compact TLDR, weak/unbound optional cards, and advisory implications already
+  suppressed by the renderer are not presented as public review blockers.
+  Full retained-claim validation remains separate and unchanged.
+- Universal metric-ledger claims now reuse `metric_claim_text()` so existing
+  timeframe, geography, segment, cohort, denominator, observation status,
+  forecast status, and observation context are retained when present. Public
+  metric/key-figure normalization exposes the same available context and
+  stable evidence lineage without filling missing fields.
+- Advisory production now leaves the optional `confidence_note` empty. The
+  presentation boundary also suppresses the two historical availability
+  strings so a stale derived artifact cannot reintroduce deterministic
+  confidence boilerplate. Renderer-level duplicate suppression remains in
+  force; no distinct insight is removed.
+- The public semantic-review/cache identity advanced from `v21` to `v22`, and
+  the public quality contract validator advanced from `v16` to `v17` so old
+  projection batches cannot be reused. GPT-6 Luna High, the 32,768-token cap,
+  schemas, recovery bounds, and semantic authority are unchanged.
+
+### Provider-free retained Adjust replay
+
+The retained artifact was replayed through the current projection and planner
+without provider calls. The resulting public review inventory contained 47
+items: 18 final-insight placements, 10 summary placements, 8 expert-comment
+placements, 3 LinkedIn placements, 4 claim-support cards, 2 metric-spine cards,
+1 key-figure card, and 1 decision-brief placement. The old raw claim rows that
+were outside the renderer's four-card limit no longer create false public
+review blockers; they remain available to the separate retained-claim checks.
+
+The live artifact's two eligible metric cards retained their full available
+context, including subject/segment/cohort/denominator/geography/timeframe and
+observed/reporting qualifiers. The one eligible key-figure card retained its
+available context and source evidence. No evidence ID, source identity,
+protected metric value, page, or span was changed. A metric review issue was
+resolved to the existing path
+`insights_final[item=genai-maturity-and-reported-efficiency].metric.value`.
+An explicit replay of the former `claim:12` / `executive_advisory` issue now
+returned `mode=skip`, one unmappable blocking issue, and
+`broad_retry_allowed=false`; it did not crash and did not broaden repair.
+
+### Focused verification
+
+| Check | Result |
+| --- | --- |
+| Public pre-E2E/projection/lineage regressions | **51 passed** |
+| Authority, rendering, regeneration, storage, and artifact regressions | **370 passed** |
+| Contract schema snapshot gate | **PASS** |
+| Changed-file Ruff (E/F/I) | **PASS** |
+| Changed-source mypy | **PASS** — 8 files |
+| Full-source mypy | **PARTIAL** — one pre-existing error in `src/services/mailbox_acquisition_service.py:2028` (`anchor.parent` may be `None`); no changed-file errors |
+
+The retained failed run did not produce HTML. Its retained vector-store text
+contains U+FFFD replacement characters around the contents/methodology
+extraction, but the original PDF is not present in that retained run root.
+The first decoding boundary therefore cannot be reproduced safely from the
+available artifacts; no broad text substitution was made. Weak chart cards
+remain omitted by the existing renderer eligibility gate.
+
+The deterministic correction is **PASS / provider-free**. Step 2 remains
+**PARTIAL / NO-GO** until one fresh isolated provider-backed Adjust run after
+hosted CI is green produces final HTML and independent PDF-grounded editorial
+acceptance. Step 3 remains **unstarted / not ready**. No live quality
+improvement or publication readiness is claimed from this replay alone.

@@ -39,6 +39,11 @@ from src.generators.validation.verified_facts import (
 )
 from src.services.render_service import (
     _build_signal_cards,
+    _coerce_public_chart_insight_cards,
+    _coerce_public_claim_support,
+    _coerce_public_key_figures,
+    _coerce_public_metric_spine,
+    _coerce_public_topics_covered,
     _coerce_topic_briefs,
     _is_public_chart_insight_card,
     _sanitize_public_prose,
@@ -1008,6 +1013,9 @@ def public_editorial_semantic_review_items(
     decision is made here.
     """
 
+    if verified_facts_mode(artifacts):
+        return _verified_public_semantic_review_items(artifacts)
+
     items: list[dict[str, Any]] = []
     seen: set[str] = set()
     seen_text: set[str] = set()
@@ -1326,6 +1334,414 @@ def public_editorial_semantic_review_items(
     return items
 
 
+def _verified_public_semantic_review_items(
+    artifacts: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Project the verified review batch from the same rows the HTML uses.
+
+    Verified review must see visible cards, not every intermediate artifact
+    that happens to be retained.  Derived cards keep an internal source path
+    for the planner; that path is never sent as public copy to the model.
+    """
+
+    items: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+
+    def add(item: dict[str, Any]) -> None:
+        item_id = str(item.get("public_item_id") or "").strip()
+        if (
+            not item_id
+            or item_id in seen_ids
+            or not str(item.get("text") or "").strip()
+        ):
+            return
+        seen_ids.add(item_id)
+        _annotate_verified_item(item, artifacts)
+        items.append(item)
+
+    def display_text(*values: object) -> str:
+        return " ".join(
+            value
+            for value in (_sanitize_public_prose(value) for value in values)
+            if value
+        )
+
+    def unique_insight_source(
+        identity: str, *, field: str = "text"
+    ) -> tuple[str, str] | None:
+        safe_identity = str(identity or "").strip()
+        if not safe_identity:
+            return None
+        for root in ("insights_final", "insights_candidates"):
+            matches = [
+                insight
+                for insight in _dict_items(artifacts.get(root))
+                if safe_identity
+                in {
+                    str(insight.get("id") or "").strip(),
+                    str(insight.get("insight_id") or "").strip(),
+                }
+            ]
+            if len(matches) != 1:
+                continue
+            if not _has_scalar_path(matches[0], field):
+                return None
+            return "insights_bundle", f"insights:{safe_identity}.{field}"
+        return None
+
+    def unique_text_source(text: str) -> tuple[str, str] | None:
+        normalized = " ".join(str(text or "").split()).casefold()
+        if not normalized:
+            return None
+        matches: list[tuple[str, str]] = []
+        for insight in _dict_items(artifacts.get("insights_final")):
+            identity = insight_entity_id(insight)
+            if not identity:
+                continue
+            for field in ("text", "so_what", "now_what"):
+                value = " ".join(str(insight.get(field) or "").split()).casefold()
+                if value and value == normalized:
+                    matches.append(("insights_bundle", f"insights:{identity}.{field}"))
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
+    def claim_source(claim: Mapping[str, Any]) -> tuple[str, str] | None:
+        section = str(claim.get("artifact_section") or "").strip()
+        canonical_id = str(
+            claim.get("canonical_claim_id") or claim.get("claim_id") or ""
+        ).strip()
+        local_id = canonical_id.rsplit(":", 1)[-1] if canonical_id else ""
+        if section == "metric_spine" and local_id:
+            return unique_insight_source(local_id, field="metric.value")
+        if section == "insights_final" and local_id:
+            return unique_insight_source(local_id, field="text")
+        if section == "quotes_final" and local_id:
+            matches = [
+                quote
+                for quote in _dict_items(artifacts.get("quotes_final"))
+                if str(quote.get("id") or "").strip() == local_id
+            ]
+            if not matches and local_id.isdigit():
+                index = int(local_id) - 1
+                quotes = _dict_items(artifacts.get("quotes_final"))
+                if 0 <= index < len(quotes):
+                    matches = [quotes[index]]
+            if len(matches) == 1 and _has_scalar_path(matches[0], "text"):
+                quote_identity = str(matches[0].get("id") or local_id).strip()
+                return "quotes", f"quotes:{quote_identity}.text"
+        if section == "summary.claim_evidence_map" and local_id:
+            summary_claims = (
+                artifacts.get("summary", {}).get("claim_evidence_map")
+                if isinstance(artifacts.get("summary"), Mapping)
+                else []
+            )
+            if isinstance(summary_claims, list):
+                if local_id.isdigit() and 0 < int(local_id) <= len(summary_claims):
+                    return "summary", f"summary.claim_evidence_map:{local_id}.claim"
+                if any(
+                    isinstance(entry, Mapping)
+                    and local_id
+                    in {
+                        str(entry.get("id") or "").strip(),
+                        str(entry.get("claim_id") or "").strip(),
+                    }
+                    for entry in summary_claims
+                ):
+                    return "summary", f"summary.claim_evidence_map:{local_id}.claim"
+        if section.startswith("executive_advisory."):
+            return unique_text_source(str(claim.get("claim_text") or ""))
+        return None
+
+    def advisory_source(text: str, field: str) -> tuple[str, str] | None:
+        direct = unique_text_source(text)
+        if direct:
+            return direct
+        # Advisory fields are derived from insight implications.  Resolve
+        # only the exact, unique source field; topic or evidence similarity is
+        # insufficient to authorize a repair.
+        source_field = {
+            "decision_implications": "so_what",
+            "priority_moves": "now_what",
+            "watchouts": "text",
+        }.get(field)
+        if not source_field:
+            return None
+        matches: list[tuple[str, str]] = []
+        normalized = " ".join(str(text or "").split()).casefold()
+        for insight in _dict_items(artifacts.get("insights_final")):
+            identity = insight_entity_id(insight)
+            value = " ".join(str(insight.get(source_field) or "").split()).casefold()
+            if identity and value and value == normalized:
+                matches.append(
+                    ("insights_bundle", f"insights:{identity}.{source_field}")
+                )
+        return matches[0] if len(matches) == 1 else None
+
+    # Summary and downstream copy use the existing evidence-aware producer.
+    # card_tldr_compact is intentionally excluded: verified HTML renders tldr,
+    # not that intermediate compact presentation field.
+    for item in _public_text_items(artifacts):
+        if str(item.get("field") or "") == "card_tldr_compact":
+            continue
+        add(item)
+
+    for insight in _dict_items(artifacts.get("insights_final")):
+        identity = insight_entity_id(insight)
+        if not identity:
+            continue
+        evidence_ids = _public_evidence_ids(insight)
+        evidence_text = str(
+            insight.get("evidence") or insight.get("source_excerpt") or ""
+        ).strip()
+        for field in ("text", "so_what", "now_what"):
+            value = _sanitize_public_prose(insight.get(field))
+            if not value:
+                continue
+            field_name = (
+                f"insights:{identity}"
+                if field == "text"
+                else f"insights:{identity}.{field}"
+            )
+            add(
+                _item(
+                    "insights_final",
+                    field_name,
+                    value,
+                    evidence_ids,
+                    "insights_bundle",
+                    evidence_text=evidence_text,
+                )
+            )
+
+    summary = artifacts.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    for index, claim in enumerate(summary.get("claim_evidence_map") or [], start=1):
+        if not isinstance(claim, Mapping):
+            continue
+        value = _sanitize_public_prose(claim.get("claim"))
+        if not value:
+            continue
+        evidence_ids = _surface_evidence_ids(claim)
+        if not any(
+            fact_for_evidence_id(_verified_fact_index(artifacts), evidence_id)
+            is not None
+            for evidence_id in evidence_ids
+        ):
+            continue
+        add(
+            _item(
+                "summary",
+                f"summary.claim_evidence_map:{index}.claim",
+                value,
+                evidence_ids,
+                "summary",
+                evidence_text=str(
+                    claim.get("evidence") or claim.get("source_excerpt") or ""
+                ).strip(),
+            )
+        )
+
+    for index, topic in enumerate(_coerce_public_topics_covered(artifacts), start=1):
+        evidence_ids = list(topic.get("evidence_ids") or [])
+        text = display_text(
+            topic.get("topic"),
+            topic.get("summary"),
+            " ".join(str(value) for value in topic.get("subtopics") or []),
+            topic.get("source_label"),
+        )
+        if not text:
+            continue
+        topic_id = str(topic.get("topic_id") or index).strip()
+        add(
+            _item(
+                "topics_covered",
+                f"topics_covered:{topic_id}",
+                text,
+                evidence_ids,
+                "topics",
+                repair_field=f"topics_covered:{topic_id}",
+            )
+        )
+
+    for index, figure in enumerate(_coerce_public_key_figures(artifacts), start=1):
+        figure_id = str(figure.get("figure_id") or index).strip()
+        source = unique_insight_source(
+            str(figure.get("metric_id") or figure_id), field="metric.value"
+        )
+        target, repair_field = source or ("", "")
+        add(
+            _item(
+                "key_figures",
+                f"key_figures:{figure_id}",
+                display_text(
+                    f"{figure.get('label')}: {figure.get('value')}",
+                    figure.get("context"),
+                    figure.get("confidence_label"),
+                ),
+                list(figure.get("evidence_ids") or []),
+                target,
+                repair_field=f"key_figures:{figure_id}.figure"
+                if target
+                else repair_field,
+            )
+        )
+
+    for index, metric in enumerate(_coerce_public_metric_spine(artifacts), start=1):
+        metric_id = str(metric.get("metric_id") or index).strip()
+        source = unique_insight_source(metric_id, field="metric.value")
+        target, repair_field = source or ("", "")
+        add(
+            _item(
+                "metric_spine",
+                f"metric_spine:{metric_id}",
+                display_text(
+                    f"{metric.get('label')}: {metric.get('value')}",
+                    metric.get("context"),
+                    metric.get("confidence_label"),
+                ),
+                list(metric.get("evidence_ids") or []),
+                target,
+                repair_field=repair_field,
+            )
+        )
+
+    for index, card in enumerate(
+        _coerce_public_chart_insight_cards(artifacts), start=1
+    ):
+        card_id = str(card.get("candidate_id") or index).strip()
+        source = unique_insight_source(str(card.get("insight_id") or ""))
+        target, repair_field = source or ("", "")
+        add(
+            _item(
+                "chart_insight_cards",
+                f"chart_insight_cards:{card_id}",
+                display_text(
+                    card.get("title"),
+                    card.get("insight"),
+                    card.get("so_what"),
+                    card.get("now_what"),
+                    card.get("limitation"),
+                ),
+                [str(card.get("evidence_id") or "").strip()],
+                target,
+                repair_field=repair_field,
+            )
+        )
+
+    # Match the renderer's advisory de-duplication: implications and moves
+    # copied verbatim from findings are not rendered a second time.
+    advisory = artifacts.get("executive_advisory")
+    advisory = advisory if isinstance(advisory, Mapping) else {}
+    decision = advisory.get("decision_brief")
+    decision = decision if isinstance(decision, Mapping) else {}
+    decision_evidence_ids = _surface_evidence_ids(decision)
+    fact_index = _verified_fact_index(artifacts)
+    decision_supported = str(
+        decision.get("status") or ""
+    ).strip().casefold() == "generated" and any(
+        fact_for_evidence_id(fact_index, evidence_id) is not None
+        for evidence_id in decision_evidence_ids
+    )
+    insight_so_what = {
+        " ".join(str(insight.get("so_what") or "").split()).casefold()
+        for insight in _dict_items(artifacts.get("insights_final"))
+        if str(insight.get("so_what") or "").strip()
+    }
+    insight_now_what = {
+        " ".join(str(insight.get("now_what") or "").split()).casefold()
+        for insight in _dict_items(artifacts.get("insights_final"))
+        if str(insight.get("now_what") or "").strip()
+    }
+    if decision_supported:
+        for field in ("strategic_context", "confidence_note"):
+            value = _sanitize_public_prose(decision.get(field))
+            if value.casefold() in {
+                "metric spine available",
+                "evidence-linked insights available",
+            }:
+                value = ""
+            if not value:
+                continue
+            source = advisory_source(value, field)
+            target, repair_field = source or ("", "")
+            add(
+                _item(
+                    "executive_advisory",
+                    f"decision_brief.{field}",
+                    value,
+                    decision_evidence_ids,
+                    target,
+                    evidence_text=str(
+                        decision.get("evidence") or decision.get("source_excerpt") or ""
+                    ).strip(),
+                    repair_field=repair_field,
+                )
+            )
+        for field in ("decision_implications", "priority_moves", "watchouts"):
+            for index, raw_value in enumerate(decision.get(field) or [], start=1):
+                value = _sanitize_public_prose(raw_value)
+                normalized = " ".join(value.split()).casefold()
+                if (
+                    not value
+                    or (
+                        field == "decision_implications"
+                        and normalized in insight_so_what
+                    )
+                    or (field == "priority_moves" and normalized in insight_now_what)
+                ):
+                    continue
+                source = advisory_source(value, field)
+                target, repair_field = source or ("", "")
+                add(
+                    _item(
+                        "executive_advisory",
+                        f"decision_brief.{field}:{index}",
+                        value,
+                        decision_evidence_ids,
+                        target,
+                        repair_field=repair_field,
+                    )
+                )
+
+    for index, claim in enumerate(_coerce_public_claim_support(artifacts), start=1):
+        source = claim_source(claim)
+        target, repair_field = source or ("", "")
+        add(
+            _item(
+                "claim_ledgers",
+                f"claim:{index}",
+                str(claim.get("claim") or "").strip(),
+                list(claim.get("evidence_ids") or []),
+                target,
+                repair_field=repair_field,
+            )
+        )
+
+    # Quotes are already a final public family; unlike derived cards, their
+    # text is the authoritative producer output and routes to quotes_final.
+    for index, quote in enumerate(_dict_items(artifacts.get("quotes_final")), start=1):
+        value = _sanitize_public_prose(quote.get("text"))
+        if not value:
+            continue
+        quote_id = str(quote.get("id") or index).strip()
+        add(
+            _item(
+                "quotes_final",
+                f"quotes:{quote_id}",
+                value,
+                _public_evidence_ids(quote),
+                "quotes",
+                evidence_text=str(
+                    quote.get("evidence") or quote.get("source_excerpt") or ""
+                ).strip(),
+                repair_field=f"quotes:{quote_id}.text",
+            )
+        )
+
+    return items
+
+
 def public_editorial_report_review_scope(
     artifacts: dict[str, Any],
     items: list[dict[str, Any]],
@@ -1509,7 +1925,7 @@ def _issue(
         rule_id=rule_id,
         severity="error" if rule_id in BLOCKING_RULE_IDS else "warning",
         affected_artifact=str(item["artifact"]),
-        affected_field=str(item["field"]),
+        affected_field=str(item.get("repair_field") or item["field"]),
         evidence_ids=evidence_ids,
         explanation=explanation,
         repair_eligible=eligible,
@@ -1635,6 +2051,7 @@ def _item(
     *,
     evidence_status: str = "",
     evidence_text: str = "",
+    repair_field: str = "",
 ) -> dict[str, Any]:
     return {
         "artifact": artifact,
@@ -1644,6 +2061,7 @@ def _item(
         "repair_target": repair_target,
         "evidence_status": evidence_status,
         "evidence_text": evidence_text,
+        "repair_field": repair_field,
         "public_item_id": _public_item_id(artifact, field),
     }
 
@@ -1912,6 +2330,15 @@ def _dict_items(value: object) -> list[dict[str, Any]]:
         if isinstance(value, list)
         else []
     )
+
+
+def _has_scalar_path(value: Mapping[str, Any], path: str) -> bool:
+    current: Any = value
+    for segment in str(path or "").split("."):
+        if not isinstance(current, Mapping) or segment not in current:
+            return False
+        current = current[segment]
+    return not isinstance(current, (dict, list))
 
 
 def _string_list(value: object) -> list[str]:

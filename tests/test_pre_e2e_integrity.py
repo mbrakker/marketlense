@@ -35,6 +35,14 @@ from tests._test_pre_e2e_integrity.cases_01_public_surfaces_and_status import (
     test_verified_render_does_not_fallback_to_legacy_public_content,
     test_verified_signal_review_and_renderer_omit_unbound_topic_copy,
 )
+from tests._test_pre_e2e_integrity.cases_04_public_repair_and_render_contract import (
+    test_derived_metric_claim_context_and_advisory,
+    test_public_advisory_implications_route_to_unique_insight_leaves,
+    test_public_derived_claim_routes_to_supported_insight_source,
+    test_public_renderer_retains_complete_metric_context_and_status,
+    test_public_review_uses_render_limits_and_one_complete_metric_card,
+    test_unsupported_derived_public_target_fails_closed_without_planner_crash,
+)
 from tests._test_report_render_generator._split_support_cases_01_render_output_and_cards import (  # noqa: E501
     _analysis,
     _deps,

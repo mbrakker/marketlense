@@ -161,7 +161,7 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v21"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v22"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.0"
 _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v3"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
@@ -316,7 +316,9 @@ def _public_editorial_review_issue(
         rule_id=rule_id,
         severity=severity,
         affected_artifact=str(safe_item.get("artifact") or "public_report"),
-        affected_field=str(safe_item.get("field") or "public_items"),
+        affected_field=str(
+            safe_item.get("repair_field") or safe_item.get("field") or "public_items"
+        ),
         evidence_ids=retained_evidence_ids,
         explanation=explanation,
         repair_eligible=eligible,

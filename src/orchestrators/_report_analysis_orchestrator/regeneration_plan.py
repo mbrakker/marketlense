@@ -1605,6 +1605,11 @@ def _build_regeneration_plan(
                 grouped.setdefault(target_key, []).append(normalized)
         else:
             unmappable.append(normalized)
+            if normalized.rule_id.startswith("public_editorial_quality."):
+                # Public derived artifacts are not regeneration roots.  An
+                # unmappable issue must remain a terminal blocker, rather
+                # than falling through to a broad rewrite of unrelated copy.
+                public_editorial_abstention = True
     authoritative_metric_issues = [
         insight_issue
         for insight_issue in grouped.get("insights_bundle", [])
@@ -1872,6 +1877,13 @@ def _target_keys_for_issue(issue: RegenerationIssue) -> List[str]:
                 return ["topics"]
             return []
         if explicit_target not in SUPPORTED_TARGETS:
+            if (
+                str(issue.rule_id or "")
+                .strip()
+                .lower()
+                .startswith("public_editorial_quality.")
+            ):
+                return []
             raise AppError(
                 code="regeneration_repair_target_unsupported",
                 message=(
