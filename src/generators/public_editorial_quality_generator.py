@@ -1088,9 +1088,11 @@ def public_editorial_semantic_review_items(
     items: list[dict[str, Any]] = []
     seen: set[str] = set()
     seen_text: set[str] = set()
+    retained_evidence_text = _retained_public_evidence_text_by_id(artifacts)
     deduplicate_text = verified_facts_mode(artifacts)
 
     for item in _public_text_items(artifacts):
+        _attach_retained_evidence_text(item, retained_evidence_text)
         item_id = str(item.get("public_item_id") or "").strip()
         normalized_text = " ".join(str(item.get("text") or "").split()).casefold()
         if (
@@ -1108,6 +1110,7 @@ def public_editorial_semantic_review_items(
             items.append(item)
 
     def add_item(item: dict[str, Any]) -> None:
+        _attach_retained_evidence_text(item, retained_evidence_text)
         item_id = str(item.get("public_item_id") or "").strip()
         normalized_text = " ".join(str(item.get("text") or "").split()).casefold()
         if (
@@ -1416,12 +1419,14 @@ def _verified_public_semantic_review_items(
     items: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
     seen_text_by_id: dict[str, str] = {}
+    retained_evidence_text = _retained_public_evidence_text_by_id(artifacts)
 
     def add(item: dict[str, Any]) -> None:
         item_id = str(item.get("public_item_id") or "").strip()
         text = str(item.get("text") or "").strip()
         if not item_id or not text:
             return
+        _attach_retained_evidence_text(item, retained_evidence_text)
         normalized_text = " ".join(text.split()).casefold()
         if item_id in seen_ids:
             if seen_text_by_id.get(item_id) != normalized_text:
@@ -2440,6 +2445,67 @@ def _public_evidence_ids(item: Mapping[str, Any]) -> list[str]:
         *_string_list(item.get("evidence_ids")),
     ]
     return list(dict.fromkeys(value for value in values if value))
+
+
+def _retained_public_evidence_text_by_id(
+    artifacts: Mapping[str, Any],
+) -> dict[str, str]:
+    """Index source text already retained on public artifact projections.
+
+    Derived public surfaces often retain only an evidence ID.  Resolve those
+    IDs from final insight/summary/quote spans so the semantic reviewer sees
+    the same source context without borrowing by topic or wording.
+    """
+
+    text_by_id: dict[str, list[str]] = {}
+
+    def add(evidence_id: object, text: object) -> None:
+        normalized_id = str(evidence_id or "").strip()
+        normalized_text = " ".join(str(text or "").split()).strip()
+        if not normalized_id or not normalized_text:
+            return
+        values = text_by_id.setdefault(normalized_id, [])
+        if normalized_text not in values:
+            values.append(normalized_text)
+
+    def add_record(record: Mapping[str, Any]) -> None:
+        for raw_span in record.get("evidence_spans") or []:
+            if isinstance(raw_span, Mapping):
+                add(raw_span.get("evidence_id"), raw_span.get("text"))
+        record_text = record.get("evidence") or record.get("source_excerpt")
+        for evidence_id in _public_evidence_ids(record):
+            add(evidence_id, record_text)
+
+    for insight in _dict_items(artifacts.get("insights_final")):
+        add_record(insight)
+    summary = artifacts.get("summary")
+    if isinstance(summary, Mapping):
+        for claim in summary.get("claim_evidence_map") or []:
+            if isinstance(claim, Mapping):
+                add_record(claim)
+    for quote in _dict_items(artifacts.get("quotes_final")):
+        add_record(quote)
+    for card in _dict_items(artifacts.get("chart_insight_cards")):
+        add_record(card)
+
+    return {
+        evidence_id: "; ".join(texts)
+        for evidence_id, texts in text_by_id.items()
+    }
+
+
+def _attach_retained_evidence_text(
+    item: dict[str, Any], evidence_text_by_id: Mapping[str, str]
+) -> None:
+    if str(item.get("evidence_text") or "").strip():
+        return
+    evidence_text = "; ".join(
+        evidence_text_by_id[evidence_id]
+        for evidence_id in _public_evidence_ids(item)
+        if evidence_id in evidence_text_by_id
+    )
+    if evidence_text:
+        item["evidence_text"] = evidence_text
 
 
 def _surface_evidence_ids(item: Mapping[str, Any]) -> list[str]:

@@ -282,6 +282,36 @@ def test_public_review_keeps_one_identity_per_surface_with_all_evidence() -> Non
     )
 
 
+def test_public_review_resolves_derived_item_text_by_exact_evidence_id() -> None:
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "insight-1",
+                "text": "The retained finding is source-backed.",
+                "evidence_id": "finding-1",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "finding-1",
+                        "text": "The source-backed finding is 42%.",
+                    }
+                ],
+            }
+        ],
+        "key_figures": [
+            {"label": "Supported metric", "figure": "42%", "evidence_id": "finding-1"},
+            {"label": "Unbound metric", "figure": "17%", "evidence_id": "finding-2"},
+        ],
+    }
+
+    items = public_editorial_semantic_review_items(artifacts)
+    key_figures = [item for item in items if item["artifact"] == "key_figures"]
+
+    supported = next(item for item in key_figures if item["text"] == "42%")
+    unbound = next(item for item in key_figures if item["text"] == "17%")
+    assert supported["evidence_text"] == "The source-backed finding is 42%."
+    assert unbound["evidence_text"] == ""
+
+
 def test_every_material_claim_reaches_grounding_compatibility_boundary() -> None:
     assert (
         _claim_kind("Retailers should rebalance marketplace spending.") == "descriptive"
