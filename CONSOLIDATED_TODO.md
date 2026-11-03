@@ -511,6 +511,27 @@ review remain open. Step 2 remains **PARTIAL/NO-GO** and Step 3 remains
 unstarted; no status is closed from this checkpoint alone. Details:
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
+**Fresh live Adjust acceptance after public-repair correction — 2026-11-03:**
+Hosted CI was green on `4515f36b` (`41602367146`); exactly one new isolated
+provider-backed run used the frozen PDF SHA
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` with no
+WordPress target. Visual admission passed 7/7 with 0 quarantined, verified
+facts were 7, final insights were 7, and unsupported/unresolved retained
+factual claims were 0/0. The prior unsupported `executive_advisory` target
+did not recur. The run instead failed closed with
+`regeneration_target_item_unchanged` after one bounded regeneration call: the
+public reviewer rejected a weak gaming implication, a malformed derived
+31%-metric display, and an unscoped report-level coverage/distinctness gap.
+Measured totals were 152 provider calls, 1,033,800 input tokens, 185,087
+output tokens, `$0.209313`, 6 file-search calls, and 1,669.032 seconds; there
+were 0 structured recoveries, 0 automatic repairs, 0 retries, and 0 operator
+interventions. No HTML or publication write was produced. This is
+**PARTIAL/NO-GO** evidence; the exact artifacts and PDF source audit are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. Per the single-run acceptance rule, no stochastic
+rerun was started.
+
 **Evidence update — 2026-11-03 (public repair/render contract correction):**
 The retained Adjust public-review failure is now reproduced provider-free at
 the correct boundary. Derived claim-ledger, metric-spine, key-figure, summary,

@@ -9297,3 +9297,113 @@ The deterministic correction is **PASS / provider-free**. Step 2 remains
 hosted CI is green produces final HTML and independent PDF-grounded editorial
 acceptance. Step 3 remains **unstarted / not ready**. No live quality
 improvement or publication readiness is claimed from this replay alone.
+
+## Fresh live Adjust acceptance after hosted CI — 2026-11-03
+
+Hosted CI was green before this run: workflow `41602367146`
+(`https://github.com/mbrakker/marketlense/actions/runs/41602367146`) passed
+`tests`, both mutation partitions, `release_evidence`, and the CI start job.
+The implementation revision was `4515f36b0c3f888b40c0124a640cdaf6957e4510`.
+
+Exactly one fresh isolated provider-backed Adjust run was executed with the
+verified-facts architecture, no WordPress target, and no publication write.
+The source artifact was the frozen PDF with SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` and
+MD5 `b638414df0b1fccea1cd8a93eaf8f5aa`.
+
+Run artifacts:
+
+- Cohort result:
+  `C:\ml-cross-contract-live-1103-public-contract\frozen-reliability-wht6hvw1\cohort_result.json`
+- Attempt:
+  `C:\ml-cross-contract-live-1103-public-contract\frozen-reliability-wht6hvw1\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-gg3hrfmn`
+- Artifacts:
+  `...\output\mobile-app-trends-2026-pdf\report_analysis\artifacts.json`
+- Public-quality pack:
+  `...\output\mobile-app-trends-2026-pdf\report_analysis\public_editorial_quality_before.json`
+- Terminal validation:
+  `...\output\mobile-app-trends-2026-pdf\report_analysis\validation.json`
+
+### Terminal outcome and measured usage
+
+| Measure | Result |
+| --- | ---: |
+| Visual candidates evaluated / admitted / quarantined | 7 / 7 / 0 |
+| Verified facts | 7 |
+| Final insights | 7 |
+| Unsupported / unresolved retained factual claims | 0 / 0 |
+| Public review inventory in retained quality pack | 51 items |
+| Provider calls | 152 |
+| Input / output tokens | 1,033,800 / 185,087 |
+| Estimated cost | `$0.209313` |
+| File-search calls | 6 |
+| Wall-clock | 1,669.032 seconds |
+| Structured-output recovery / automatic repair calls | 0 / 0 |
+| Workflow attempts / retries / operator intervention | 1 / 0 / 0 |
+| Validation / publication readiness | `fail` / `fail` |
+| Terminal failure | `regeneration_target_item_unchanged` |
+
+The run was source-admitted and factually bounded, but it produced no final
+HTML. The prior `regeneration_repair_target_unsupported` defect did not recur:
+the public projection and planner accepted supported upstream targets, and the
+former unsupported derived-target case now remains an explicit unmappable,
+fail-closed issue. The new terminal failure came after one bounded
+`report_vs/artifacts/regenerate/insights_final` call returned valid output that
+did not change the declared insight field. No second live run was started.
+
+### Actual public-quality blockers
+
+The retained public-quality pack has three blocking issues:
+
+1. The hyper-casual insight's `so_what` says only that install and session
+   growth differ, so the model correctly rejected it as a restatement without
+   meaningful implication. Its source fact remains valid on PDF page 19.
+2. The derived metric-spine card for
+   `cross-platform-data-satisfaction` was rendered as
+   `around 31% percent of marketers` followed by repeated population and
+   status fragments. The underlying ~31% fact and binding are correct, but
+   this presentation is not analyst-quality. The planner mapped the issue to
+   the authoritative insight metric path; that path is not the actual derived
+   display field, so the unchanged repair correctly failed closed.
+3. The report-level coverage review found that the public wording omitted the
+   admitted MENA/APAC finance figures and the slots/idle-RPG/strategy CPI
+   values, while repeating several claims. It also identified that the source
+   gives no survey timeframe or geography for the ~31% statement. This issue
+   has no single safe source leaf and remains intentionally unmappable.
+
+These are editorial/render completeness blockers, not unsupported-fact
+promotions. The model's factual verdicts for the retained claims remained
+source-consistent. The generated public inventory and the full source-backed
+artifact were inspected directly; no HTML exists to inspect for internal IDs,
+rendered completeness, or publication readiness.
+
+### Independent source check
+
+The original PDF was independently checked at the physical pages referenced by
+the verified facts: page 11 supports the ~31% marketer satisfaction statement;
+page 19 supports hyper-casual `4%` installs / `31%` sessions and the other
+subvertical relationships; page 21 supports global gaming CPI `$0.56` and the
+`$4.47` / `$3.19` / `$1.03` category values; page 27 supports global
+e-commerce installs `-10%` and sessions `+5%`; page 29 supports the global and
+subvertical e-commerce CPI values; and page 35 supports LATAM `+76%` / `+57%`,
+MENA `+42%` / `+10%`, and APAC `+5%` / `+50%`. No independently confirmed
+unsupported material factual claim was found in the admitted verified-fact
+layer. Because the run stopped before HTML, this source check does not imply
+public-render acceptance.
+
+The PDF text extraction also contains replacement characters around some
+methodology/content text. With no reproducible first-boundary corruption in
+the live HTML (because HTML was not produced), no speculative decoding change
+was made. Weak or unbound chart cards remained excluded by the existing
+renderer gate.
+
+### Decision
+
+This run is **PARTIAL / NO-GO**. The public repair/render contract correction
+passed provider-free regression and removed the former unsupported-target
+crash, but the fresh live run exposed a remaining malformed derived metric
+display, an analytically weak insight implication, and an unscoped coverage
+gap. No final HTML, publication mutation, or WordPress write occurred. Step 2
+remains **PARTIAL/NO-GO** and Step 3 remains **unstarted/not ready**. Per the
+acceptance instruction, the exact new blocker is retained rather than hidden
+behind a stochastic rerun.
