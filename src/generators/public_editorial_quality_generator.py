@@ -2488,10 +2488,7 @@ def _retained_public_evidence_text_by_id(
     for card in _dict_items(artifacts.get("chart_insight_cards")):
         add_record(card)
 
-    return {
-        evidence_id: "; ".join(texts)
-        for evidence_id, texts in text_by_id.items()
-    }
+    return {evidence_id: "; ".join(texts) for evidence_id, texts in text_by_id.items()}
 
 
 def _attach_retained_evidence_text(
