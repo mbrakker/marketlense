@@ -1633,6 +1633,11 @@ def build_key_figures(
                     and _artifact_evidence_ids(metric)
                     else {}
                 ),
+                **(
+                    {"evidence_spans": deepcopy(metric["evidence_spans"])}
+                    if verified_mode and isinstance(metric.get("evidence_spans"), list)
+                    else {}
+                ),
                 "related_chart_candidate": _related_chart_candidate_id(
                     evidence_packs=evidence_packs,
                     evidence_id=evidence_id,
@@ -2022,6 +2027,17 @@ def build_chart_insight_cards(
                 **(
                     {"evidence_ids": evidence_ids}
                     if isinstance(figure.get("evidence_ids"), list) and evidence_ids
+                    else {}
+                ),
+                **(
+                    {"evidence_spans": deepcopy(figure["evidence_spans"])}
+                    if isinstance(figure.get("evidence_spans"), list)
+                    and any(
+                        _s(span.get("source_pack")).strip().casefold()
+                        == "verified_facts"
+                        for span in figure["evidence_spans"]
+                        if isinstance(span, dict)
+                    )
                     else {}
                 ),
                 "source_page": (chart or {}).get("source_page")

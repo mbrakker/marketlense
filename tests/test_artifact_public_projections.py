@@ -1,4 +1,8 @@
-from src.generators._artifact_generator.storage import build_key_figures
+from src.generators._artifact_generator.storage import (
+    build_chart_insight_cards,
+    build_key_figures,
+)
+from src.utils.verified_facts import validate_verified_artifact_bindings
 
 
 def test_key_figure_support_reuses_its_linked_retained_insight_text() -> None:
@@ -71,34 +75,76 @@ def test_key_figure_does_not_add_an_inferred_unit_to_a_source_display() -> None:
 
 
 def test_key_figure_preserves_multi_fact_binding_from_metric_spine() -> None:
+    evidence_spans = [
+        {
+            "evidence_id": "verified-fact:fact-na",
+            "source_pack": "verified_facts",
+            "page": 4,
+            "text": "North America: 128.",
+        },
+        {
+            "evidence_id": "verified-fact:fact-apac",
+            "source_pack": "verified_facts",
+            "page": 5,
+            "text": "APAC: 131.",
+        },
+    ]
     figures = build_key_figures(
         metric_spine=[
             {
                 "metric_id": "regional-comparison",
-                "evidence_id": "fact-na",
-                "evidence_ids": ["fact-na", "fact-apac"],
+                "evidence_id": "verified-fact:fact-na",
+                "evidence_ids": [
+                    "verified-fact:fact-na",
+                    "verified-fact:fact-apac",
+                ],
                 "label": "Regional attention-index comparison",
                 "value": "128 versus 131",
                 "unit": "index",
                 "confidence": "high",
+                "evidence_spans": evidence_spans,
             }
         ],
         evidence_packs={
             "findings": {
                 "findings": [
-                    {"id": "fact-na", "text": "North America: 128."},
-                    {"id": "fact-apac", "text": "APAC: 131."},
+                    {
+                        "id": "verified-fact:fact-na",
+                        "text": "North America: 128.",
+                    },
+                    {"id": "verified-fact:fact-apac", "text": "APAC: 131."},
                 ]
             }
         },
         insights_final=[
             {
                 "id": "regional-comparison",
-                "evidence_id": "fact-na",
-                "evidence_ids": ["fact-na", "fact-apac"],
+                "evidence_id": "verified-fact:fact-na",
+                "evidence_ids": [
+                    "verified-fact:fact-na",
+                    "verified-fact:fact-apac",
+                ],
                 "evidence": "North America: 128. APAC: 131.",
             }
         ],
+        verified_mode=True,
     )
 
-    assert figures[0]["evidence_ids"] == ["fact-na", "fact-apac"]
+    assert figures[0]["evidence_ids"] == [
+        "verified-fact:fact-na",
+        "verified-fact:fact-apac",
+    ]
+    assert figures[0]["evidence_spans"] == evidence_spans
+    cards = build_chart_insight_cards(
+        key_figures=figures,
+        evidence_packs={"findings": {"findings": []}},
+        insights_final=[],
+    )
+    assert cards[0]["evidence_spans"] == evidence_spans
+    validate_verified_artifact_bindings(
+        {"key_figures": figures, "chart_insight_cards": cards},
+        {
+            "fact-na": {"supporting_physical_pages": [4]},
+            "fact-apac": {"supporting_physical_pages": [5]},
+        },
+    )
