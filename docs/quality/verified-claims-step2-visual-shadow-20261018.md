@@ -9079,3 +9079,133 @@ Until that single run produces terminal artifacts, this section provides no
 live claim about provider variability, editorial acceptance, cost, latency, or
 publication readiness. Step 2 therefore remains **PARTIAL / NO-GO** and Step 3
 remains **unstarted / not ready**.
+
+## Live single-report Adjust acceptance after cross-stage correction — 2026-11-03
+
+One fresh provider-backed Adjust run was executed after hosted CI passed, using
+the exact frozen PDF SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`, the
+verified-facts architecture, and no WordPress/publication target. The run used
+commit `def2c1de105cd06e75dac810e90df125a4ab5b81` from a clean detached
+worktree at `C:\ml-cross-contract-live-worktree-1103` because the primary
+implementation worktree intentionally retained the unrelated dirty
+`Wordpress/dist/marketlense.zip`. A preflight invocation from that dirty
+worktree stopped before provider execution with the runner's clean-SHA
+precondition; it is not counted as a provider run. No provider-backed retry was
+made after the isolated run below.
+
+Run artifacts:
+
+- Cohort root:
+  `C:\ml-cross-contract-live-1103-final\frozen-reliability-q19pm_xk`
+- Report run:
+  `C:\ml-cross-contract-live-1103-final\frozen-reliability-q19pm_xk\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-zhx4nnup`
+- Final artifact:
+  `...\output\mobile-app-trends-2026-pdf\report_analysis\artifacts.json`
+- Terminal validation:
+  `...\output\mobile-app-trends-2026-pdf\report_analysis\validation.json`
+- Retained-claim validation:
+  `...\output\mobile-app-trends-2026-pdf\report_analysis\validation_retained_claim_validation_candidate.json`
+- Public-quality snapshot:
+  `...\output\mobile-app-trends-2026-pdf\report_analysis\public_editorial_quality_before.json`
+
+### Terminal outcomes and measurements
+
+| Outcome or measure | Result |
+| --- | ---: |
+| Visual candidates evaluated / admitted / quarantined | 6 / 6 / 0 |
+| Verified facts | 6; architecture admission passed |
+| Final source-bound insights | 6 |
+| Unsupported retained factual claims | 0 |
+| Unresolved retained factual claims | 0 |
+| Terminal validation / publication readiness | `fail` / `fail` |
+| Provider calls | 148 |
+| Input / output tokens | 996,045 / 185,296 |
+| Estimated cost | `$0.208144` |
+| File-search calls | 7 |
+| Wall-clock | 1,312.148 seconds |
+| Structured-output recovery calls / automatic repairs | 0 / 0 |
+| Workflow attempts / retries / operator intervention | 1 / 0 / 0 |
+
+The run was isolated (`isolated_fresh_state=true`). Validation reuse recorded
+`prior_package_missing`; 40 claims were newly validated, with no reused
+results and no calls avoided. These figures come from the terminal cohort
+summary and canonical usage ledger, not from estimates made after the run.
+
+### Source and editorial audit
+
+The verified-fact source identity was
+`source:8cb648b6bbd9dbae4ec1d915c38cf235` combined with the exact PDF hash
+above. The six final insight bindings were independently checked against the
+original full PDF pages:
+
+| Stable fact / insight | Physical page(s) | Result |
+| --- | ---: | --- |
+| `ecommerce-installs-sessions-diverge` | 27 | Global e-commerce installs `-10%` and sessions `+5%`, YoY 2024–2025, matched the chart and narrative. |
+| `ecommerce-cpi-subvertical-divergence` | 29 | Global CPI and the named subvertical values matched their labels and 2024–2025 comparison. |
+| `gaming-subvertical-growth-patterns` | 19 | Strategy installs `-1%` and sessions `+57%` matched the correctly mapped series. |
+| `finance-global-latam-growth` | 34–35 | Global 2025 figures and LATAM `+76%` installs / `+57%` sessions retained their distinct periods and populations. |
+| `genai-maturity-and-reported-efficiency` | 9 | The `over 20%` efficiency result remained qualified to the small advanced-GenAI group and was reported, not asserted as universal. |
+| `cross-platform-measurement-satisfaction` | 11 | Around `31%` remained a marketer complete-satisfaction measure about unifying and reading data across platforms. |
+
+No unsupported material factual claim was independently confirmed in these
+retained insights, and every verified fact retained its canonical evidence ID,
+source identity, physical page, and protected metric structure. However, the
+run did not reach final HTML. Therefore rendered completeness, absence of
+internal IDs in the final HTML, and publication-ready editorial usefulness
+cannot be claimed from this run.
+
+### Remaining live blocker
+
+The terminal failure was typed as
+`regeneration_repair_target_unsupported` at
+`public_editorial_quality.semantic_review`, first observed for `claim:12`.
+The persisted public-quality evidence contains 12 blocking issues: four
+claim-ledger fragments omitted material geography/timeframe/cohort or
+attribution context; five key-figure values omitted protected metric context;
+one metric-spine value was an isolated percentage; the decision-brief
+confidence note was generic; and the compact summary TL;DR repeated the
+summary finding. These are appropriate fail-closed public-quality findings,
+not unsupported-fact promotions.
+
+The actionable cross-stage defect is that the public-review projection assigns
+`executive_advisory` as the repair target for claim-ledger/advisory findings,
+while the existing regeneration planner's supported target contract does not
+include `executive_advisory`. The planner therefore dead-letters the report
+before a targeted repair can be attempted. This is a deterministic integration
+gap demonstrated by the live run, not a reason to weaken public semantic
+validation or add another LLM stage. It was not changed or provider-rerun in
+this acceptance pass because the requested live budget was limited to one
+fresh isolated run.
+
+### Comparison with the immediately preceding retained Adjust run
+
+The previous retained run was the 32,768-budget run recorded above. The
+comparison is descriptive and does not attribute ordinary model variability to
+the code change.
+
+| Measure | Previous retained run | Current run | Change |
+| --- | ---: | ---: | ---: |
+| Provider calls | 154 | 148 | -6 (-3.90%) |
+| Input tokens | 1,088,825 | 996,045 | -92,780 (-8.52%) |
+| Output tokens | 201,469 | 185,296 | -16,173 (-8.03%) |
+| Cost | `$0.228010` | `$0.208144` | -`$0.019866` (-8.71%) |
+| Wall-clock | 1,568.163 s | 1,312.148 s | -256.015 s (-16.33%) |
+| Visual candidates / verified facts | 7 / 7 | 6 / 6 | -1 / -1 |
+| Final insights | 7 | 6 | -1 |
+| HTML / publication readiness | absent / fail | absent / fail | no acceptance improvement |
+
+The lower cost and latency occurred with a different model-selected candidate
+count and are not claimed as an optimization benefit. The source-fact layer
+remained intact, but the public-output stage did not complete.
+
+### Acceptance decision
+
+This live acceptance is **PARTIAL / NO-GO**. Cross-stage source identity,
+visual admission, verified-fact bindings, factual safeguards, and final insight
+provenance passed for the six retained insights. The public-editorial repair
+boundary failed closed on an unsupported target, so no HTML or publication
+readiness was produced. E18 remains **Active/PARTIAL**. Verified Claims Step 2
+remains **PARTIAL/NO-GO**, the frozen-five promotion decision remains
+**NO-GO**, and Step 3 remains **unstarted/not ready**. No WordPress write,
+publication mutation, or second live provider run occurred.

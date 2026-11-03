@@ -1798,3 +1798,25 @@ isolated provider-backed Adjust acceptance is still required; no live or
 publication result is claimed from this checkpoint. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+**Live single-report Adjust acceptance — 2026-11-03:** Hosted CI passed on
+`def2c1de105cd06e75dac810e90df125a4ab5b81`; one fresh isolated provider-backed
+run then used the exact frozen PDF SHA
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` with no
+WordPress target. Visual admission passed 6/6, verified-fact admission passed
+6/6, and six final insights retained canonical evidence IDs, physical pages,
+and protected metric fields. Unsupported and unresolved retained factual claims
+were both 0. The run nevertheless terminated with
+`regeneration_repair_target_unsupported` during public-editorial semantic
+review: the public projection assigned `executive_advisory` to a repair issue,
+but the existing regeneration planner does not support that target. The
+public-quality evidence contained 12 fail-closed issues concerning incomplete
+metric context, a generic confidence note, and one repeated summary surface;
+no HTML or publication write occurred. Measured totals were 148 provider
+calls, 996,045 input tokens, 185,296 output tokens, `$0.208144`, 7 file-search
+calls, 1,312.148 seconds, 0 structured recoveries, 0 automatic repairs, 0
+retries, and 0 operator interventions. This is **PARTIAL/NO-GO** evidence;
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**. Full run paths, source audit, and comparison
+are recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
