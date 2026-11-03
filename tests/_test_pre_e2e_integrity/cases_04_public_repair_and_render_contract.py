@@ -5,6 +5,7 @@ from copy import deepcopy
 from src.contracts.validation import ValidationIssue
 from src.generators._artifact_generator.storage import (
     build_executive_advisory_artifacts,
+    build_key_figures,
     build_universal_claim_ledger,
 )
 from src.generators.public_editorial_quality_generator import (
@@ -163,6 +164,7 @@ def test_public_renderer_retains_complete_metric_context_and_status() -> None:
 def test_derived_metric_claim_context_and_advisory() -> None:
     artifacts = _public_contract_artifacts()
     metric = artifacts["metric_spine"][0]
+    metric["observations"] = ["ignored observation", {"value": "42%"}]
     advisory = build_executive_advisory_artifacts(
         summary=artifacts["summary"],
         insights_final=artifacts["insights_final"],
@@ -192,6 +194,13 @@ def test_derived_metric_claim_context_and_advisory() -> None:
     ):
         assert value in metric_claim["claim_text"]
     assert advisory["decision_brief"]["confidence_note"] == ""
+    figures = build_key_figures(
+        metric_spine=[],
+        evidence_packs={},
+        insights_final=artifacts["insights_final"],
+        verified_mode=True,
+    )
+    assert figures[0]["forecast_status"] == "not a forecast"
 
 
 def test_public_derived_claim_routes_to_supported_insight_source() -> None:
@@ -288,3 +297,196 @@ def test_unsupported_derived_public_target_fails_closed_without_planner_crash() 
     assert plan.mode == "skip"
     assert plan.targets == []
     assert plan.unmappable_issues
+
+
+def test_verified_projection_covers_rendered_families_and_ambiguous_sources() -> None:
+    artifacts = _public_contract_artifacts()
+    evidence_id = "verified-fact:fact-1"
+    artifacts["topics_covered"] = [
+        {
+            "id": "topic-1",
+            "title": "Adoption",
+            "summary": "The report covers adoption.",
+            "subtopics": ["Buyer segments"],
+            "pages": [4],
+            "evidence_ids": [evidence_id],
+        },
+        {"title": "", "evidence_ids": [evidence_id]},
+    ]
+    artifacts["chart_insight_cards"] = [
+        {
+            "candidate_id": "chart-1",
+            "insight_id": "insight-1",
+            "evidence_id": evidence_id,
+            "source_page": 4,
+            "caption": "Adoption by buyer segment",
+            "public_takeaway": "Buyer adoption reached 42%.",
+            "so_what": "Buyer adoption is commercially material.",
+            "now_what": "Plan around buyer adoption.",
+            "crop_qa_accepted": True,
+        },
+        {"candidate_id": "chart-weak", "evidence_id": evidence_id},
+    ]
+    artifacts["quotes_final"] = [
+        {"id": "quote-1", "text": "A source-backed quote.", "evidence_id": evidence_id},
+        {"id": "quote-empty", "text": "", "evidence_id": evidence_id},
+    ]
+    artifacts["summary"]["claim_evidence_map"] = [
+        {"claim": "A grounded summary claim.", "evidence_ids": [evidence_id]},
+        {"claim": "Unbound summary claim.", "evidence_ids": []},
+        {"claim": "", "evidence_ids": [evidence_id]},
+        "ignored non-mapping summary entry",
+    ]
+    artifacts["summary"]["card_tldr_compact"] = "Hidden compact summary copy."
+    artifacts["claim_ledgers"] = [
+        {
+            "canonical_claim_id": "report:insights_final:insight-1",
+            "artifact_section": "insights_final",
+            "claim_text": "Repeated public finding.",
+            "evidence_ids": [evidence_id],
+        },
+        {
+            "canonical_claim_id": "report:quotes_final:1",
+            "artifact_section": "quotes_final",
+            "claim_text": "A source-backed quote.",
+            "evidence_ids": [evidence_id],
+        },
+        {
+            "canonical_claim_id": "report:summary.claim_evidence_map:summary-1",
+            "artifact_section": "summary.claim_evidence_map",
+            "claim_text": "A grounded summary claim.",
+            "evidence_ids": [evidence_id],
+        },
+        {
+            "canonical_claim_id": "report:executive_advisory:1",
+            "artifact_section": "executive_advisory.decision_brief",
+            "claim_text": "Buyer adoption is commercially material.",
+            "evidence_ids": [evidence_id],
+        },
+    ]
+    artifacts["insights_candidates"] = [
+        {
+            "id": "candidate-only",
+            "text": "Candidate-only finding.",
+            "metric": {"value": "7"},
+            "evidence_id": evidence_id,
+        }
+    ]
+    artifacts["metric_spine"] = [
+        {
+            "metric_id": "candidate-only",
+            "label": "Candidate metric",
+            "value": "7",
+            "unit": "%",
+            "evidence_id": evidence_id,
+        },
+        {
+            "metric_id": "insight-2",
+            "label": "Unbound metric",
+            "value": "8",
+            "unit": "%",
+            "evidence_id": evidence_id,
+        },
+    ]
+    artifacts["summary"]["claim_evidence_map"][0]["id"] = "summary-1"
+    artifacts["insights_final"].append(
+        {"text": "Missing identity should not authorize a repair."}
+    )
+    artifacts["executive_advisory"]["decision_brief"].update(
+        {
+            "evidence_ids": [evidence_id],
+            "strategic_context": "Repeated public finding.",
+            "confidence_note": "Second source-backed finding.",
+            "decision_implications": [
+                "Buyer adoption is commercially material.",
+                "A second implication.",
+            ],
+            "priority_moves": [
+                "Plan around buyer adoption.",
+                "A second move.",
+            ],
+        }
+    )
+    artifacts["insights_final"].append(
+        {
+            "id": "insight-2",
+            "text": "Second source-backed finding.",
+            "so_what": "A second implication.",
+            "now_what": "A second move.",
+            "evidence_id": evidence_id,
+            "evidence": "The source supports a second finding.",
+        }
+    )
+    artifacts["insights_final"].append(
+        {
+            "id": "insight-ambiguous",
+            "text": "Ambiguous advisory source.",
+            "so_what": "Ambiguous advisory source.",
+            "now_what": "Use the buyer cohort.",
+            "evidence_id": evidence_id,
+            "evidence": "The source supports an ambiguous advisory source.",
+        }
+    )
+    artifacts["executive_advisory"]["decision_brief"]["watchouts"] = [
+        "Ambiguous advisory source."
+    ]
+
+    items = public_editorial_semantic_review_items(artifacts)
+    by_artifact = {}
+    for item in items:
+        by_artifact.setdefault(item["artifact"], []).append(item)
+
+    assert by_artifact["topics_covered"]
+    assert by_artifact["chart_insight_cards"][0]["repair_target"] == ("insights_bundle")
+    assert by_artifact["quotes_final"][0]["repair_target"] == "quotes"
+    assert any(
+        item["repair_field"] == "summary.claim_evidence_map:summary-1.claim"
+        for item in by_artifact["claim_ledgers"]
+    )
+    assert any(
+        item["repair_field"] == "insights:insight-1.text"
+        for item in by_artifact["claim_ledgers"]
+    )
+    assert any(
+        item["repair_field"] == "insights:candidate-only.metric.value"
+        for item in by_artifact["metric_spine"]
+    )
+    assert not any(
+        item["text"] in {"Metric spine available", "Evidence-linked insights available"}
+        for item in by_artifact["executive_advisory"]
+    )
+
+    artifacts["claim_ledgers"] = [
+        {
+            "canonical_claim_id": "report:summary.claim_evidence_map:1",
+            "artifact_section": "summary.claim_evidence_map",
+            "claim_text": "A grounded summary claim.",
+            "evidence_ids": [evidence_id],
+        }
+    ]
+    numeric_summary_items = public_editorial_semantic_review_items(artifacts)
+    numeric_summary_claim = next(
+        item for item in numeric_summary_items if item["artifact"] == "claim_ledgers"
+    )
+    assert numeric_summary_claim["repair_field"] == "summary.claim_evidence_map:1.claim"
+
+    duplicate = deepcopy(artifacts["insights_final"][0])
+    artifacts["insights_final"].append(duplicate)
+    duplicate_items = public_editorial_semantic_review_items(artifacts)
+    duplicate_ids = [str(item["public_item_id"]) for item in duplicate_items]
+    assert len(duplicate_ids) == len(set(duplicate_ids))
+
+    invalid_binding = _public_contract_artifacts()
+    invalid_binding["chart_insight_cards"] = [
+        {
+            "candidate_id": "wrong-page",
+            "insight_id": "insight-1",
+            "evidence_id": evidence_id,
+            "source_page": 3,
+            "caption": "Adoption by buyer segment",
+            "public_takeaway": "Buyer adoption reached 42%.",
+            "crop_qa_accepted": True,
+        }
+    ]
+    invalid_items = public_editorial_semantic_review_items(invalid_binding)
+    assert not any(item["artifact"] == "executive_advisory" for item in invalid_items)

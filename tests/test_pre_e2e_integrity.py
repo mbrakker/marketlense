@@ -42,6 +42,7 @@ from tests._test_pre_e2e_integrity.cases_04_public_repair_and_render_contract im
     test_public_renderer_retains_complete_metric_context_and_status,
     test_public_review_uses_render_limits_and_one_complete_metric_card,
     test_unsupported_derived_public_target_fails_closed_without_planner_crash,
+    test_verified_projection_covers_rendered_families_and_ambiguous_sources,
 )
 from tests._test_report_render_generator._split_support_cases_01_render_output_and_cards import (  # noqa: E501
     _analysis,
