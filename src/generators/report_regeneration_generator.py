@@ -5820,6 +5820,11 @@ def _regenerate_one_final_insight(
                     },
                 )
             )
+            _replace_rejected_claim_decision(
+                execution,
+                proposed_decision=executed_decision,
+                strategy="required_text_empty",
+            )
             execution.state.prompt_namespaces.append(namespace)
             return True
         raise AppError(

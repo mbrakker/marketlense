@@ -1366,6 +1366,12 @@ def run_report_analysis(
             repair_disposition="not_required",
         )
 
+    abstained_noop_regeneration = bool(
+        regeneration_attempts
+        and not regeneration_attempts[-1].regenerated_sections
+        and regeneration_attempts[-1].promotion_outcome == "rolled_back"
+        and regeneration_attempts[-1].repair_delta.repair_action == "ABSTAIN"
+    )
     editorial_after_validation, editorial_after_path = (
         _evaluate_and_store_public_editorial_quality(
             runtime=runtime,
@@ -1392,7 +1398,11 @@ def run_report_analysis(
     validation_report = _merge_public_editorial_quality(
         validation_report,
         editorial_after_validation,
-        replace_existing=True,
+        # An unchanged ABSTAIN is not a repaired candidate. Preserve the
+        # original failure instead of letting the final review turn a no-op
+        # into a false success. Actual candidate mutations retain the normal
+        # stale-editorial-review replacement behavior.
+        replace_existing=not abstained_noop_regeneration,
     )
     final_validation_path = _store_validation_snapshot(
         runtime=runtime,

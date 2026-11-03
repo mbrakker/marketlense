@@ -3,6 +3,102 @@ from __future__ import annotations
 from ._split_support_cases_02_allows_abstained_quote_family import *  # noqa: F401,F403
 
 
+def test_abstained_insight_no_op_skips_candidate_validation_and_promotion(
+    tmp_path,
+) -> None:
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(
+            _runtime(tmp_path).settings, validation_regeneration_max_attempts=1
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    original = _artifacts()
+    validation_calls: list[str] = []
+
+    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
+        del req, settings, ctx, report_name, md5
+        validation_calls.append(pack_name)
+        if pack_name != "validation":
+            raise AssertionError("an abstained no-op must not run candidate validation")
+        return ValidationReport(
+            schema_version="1.1",
+            status="fail",
+            severity="error",
+            issues=[
+                ValidationIssue(
+                    schema_version="1.0",
+                    message="The insight still needs a repair.",
+                    severity="error",
+                    affected_section="insights:insight-1.text",
+                    rule_id="public_editorial_quality.insight_text",
+                    repair_target="insights_bundle",
+                    entity_id="insight:insight-1:text",
+                    evidence_ids=["f1"],
+                )
+            ],
+        )
+
+    def _regenerate(request):
+        del request
+        return ArtifactRegenerationResponse(
+            updated_artifacts=deepcopy(original),
+            regenerated_sections=[],
+            prompt_namespaces=["report_vs/artifacts/regenerate/insights_final"],
+            candidate_artifacts_path=str(
+                tmp_path / "out" / "artifacts_regen_candidate_1.json"
+            ),
+            repair_action="ABSTAIN",
+            repair_strategy="current_evidence:required_text_empty",
+            selected_evidence_ids=[],
+            repair_decisions=[
+                RepairDecision(
+                    diagnosed_failure_class="public_editorial_quality.insight_text",
+                    repair_action="ABSTAIN",
+                    repair_strategy="current_evidence:required_text_empty",
+                    evidence_ids_used=[],
+                )
+            ],
+        )
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title"}},
+            "findings": {
+                "findings": [
+                    {"id": f"f{index}", "text": f"Evidence {index}", "pages": [index]}
+                    for index in range(1, 6)
+                ]
+            },
+            "quote_candidates": {"quote_candidates": [{"id": "q1", "page": 1}]},
+        },
+        generate_artifacts=lambda **kwargs: original,
+        run_validation=_run_validation,
+        regenerate_artifacts=_regenerate,
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert validation_calls == ["validation"], validation_calls
+    assert state.regeneration_attempts[0].promotion_outcome == "rolled_back"
+    assert state.artifacts_payload == original
+    assert state.validation_report is not None
+    assert state.validation_report.status == "fail"
+
+
 def test_scope_rejection_runs_deterministic_validation_without_provider_calls(
     tmp_path,
 ) -> None:

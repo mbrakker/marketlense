@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+import pytest
+
 from src.contracts.validation import ValidationIssue
 from src.generators._artifact_generator.storage import (
     build_executive_advisory_artifacts,
@@ -18,6 +20,7 @@ from src.services._render_service.normalization import (
     _coerce_public_key_figures,
     _coerce_public_metric_spine,
 )
+from src.utils.errors import AppError
 from tests.test_verified_facts_validation_authority import _authority_artifacts
 
 
@@ -484,6 +487,13 @@ def test_verified_projection_covers_rendered_families_and_ambiguous_sources() ->
     duplicate_items = public_editorial_semantic_review_items(artifacts)
     duplicate_ids = [str(item["public_item_id"]) for item in duplicate_items]
     assert len(duplicate_ids) == len(set(duplicate_ids))
+
+    conflicting_duplicate = deepcopy(artifacts["insights_final"][0])
+    conflicting_duplicate["text"] = "A different visible proposition."
+    artifacts["insights_final"].append(conflicting_duplicate)
+    with pytest.raises(AppError) as raised:
+        public_editorial_semantic_review_items(artifacts)
+    assert raised.value.code == "public_editorial_review_identity_conflict"
 
     invalid_binding = _public_contract_artifacts()
     invalid_binding["chart_insight_cards"] = [

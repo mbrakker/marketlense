@@ -1899,3 +1899,20 @@ overall Step 2 remains **PARTIAL**, and Step 3 remains **unstarted/not ready**.
 Full artifact paths, before/after resource comparison and the source audit are
 recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Evidence update — 2026-11-03 (editorial coverage and repair reliability):**
+The retained Adjust page-21 gaming-CPI omission was traced to missing
+authoritative finding extraction, not a shortlist-cap failure: the retained
+findings pack has no gaming-CPI finding, while evidence fidelity correctly
+rejects the unsupported CPI proposal. No pool widening or keyword relevance
+scoring was added. Technical validation status is now fail-closed through
+final editorial reconciliation, failed candidate status is preserved without
+diagnostics, empty final-insight rewrites produce typed `ABSTAIN` and skip
+unneeded candidate revalidation, unchanged ABSTAINs cannot become final PASS,
+and duplicate public review IDs with distinct visible text fail closed.
+Focused affected tests (300), changed-file Ruff, full-repository mypy, and the
+provider-free 15-case/39-variant replay passed or completed with its documented
+missing-local-artifact limitation; no provider or publication write occurred.
+The latest live Adjust baseline remains unchanged evidence rather than a live
+improvement claim. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

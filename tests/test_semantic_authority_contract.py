@@ -24,7 +24,9 @@ from src.generators.claim_validation_generator import (
 from src.generators.public_editorial_quality_generator import (
     public_editorial_semantic_review_items,
 )
+from src.generators.validation.regeneration_candidate import CandidateIntegrityResult
 from src.orchestrators._report_analysis_orchestrator.validation import (
+    _candidate_validation_report,
     _merge_public_editorial_quality,
     _validate_public_editorial_review_payload,
 )
@@ -509,3 +511,62 @@ def test_final_public_editorial_pass_clears_only_stale_editorial_failure() -> No
     assert merged.status == "pass"
     assert merged.severity == "pass"
     assert merged.issues == []
+
+
+def test_final_editorial_pass_cannot_clear_technical_fail_without_diagnostics() -> None:
+    validation = ValidationReport(
+        schema_version="1.1",
+        status="fail",
+        severity="pass",
+        issues=[],
+    )
+
+    merged = _merge_public_editorial_quality(
+        validation,
+        ValidationReport(
+            schema_version="1.1", status="pass", severity="pass", issues=[]
+        ),
+        replace_existing=True,
+    )
+
+    assert merged.status == "fail"
+
+
+def test_final_editorial_pass_cannot_clear_technical_warning_diagnostic() -> None:
+    validation = ValidationReport(
+        schema_version="1.1",
+        status="fail",
+        severity="warning",
+        issues=[
+            ValidationIssue(
+                message="technical validation stopped without an error diagnostic",
+                severity="warning",
+                affected_section="grounding",
+                rule_id="grounding",
+            )
+        ],
+    )
+
+    merged = _merge_public_editorial_quality(
+        validation,
+        ValidationReport(
+            schema_version="1.1", status="pass", severity="pass", issues=[]
+        ),
+        replace_existing=True,
+    )
+
+    assert merged.status == "fail"
+
+
+def test_candidate_validation_preserves_failed_status_without_error_issue() -> None:
+    report = _candidate_validation_report(
+        ValidationReport(
+            schema_version="1.1",
+            status="fail",
+            severity="warning",
+            issues=[],
+        ),
+        CandidateIntegrityResult(issues=[], evidence_lineage=[]),
+    )
+
+    assert report.status == "fail"

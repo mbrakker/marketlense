@@ -8486,6 +8486,66 @@ fresh frozen-five/ten-report results, call/token/cost/latency behavior, or
 publication readiness. No provider call, PDF acquisition, canonical artifact
 mutation, WordPress write, or publication write occurred.
 
+## Editorial coverage and repair reliability closure — 2026-11-03
+
+This checkpoint addresses the remaining deterministic coverage/recovery
+defects without claiming a new provider-backed selection result.
+
+### Adjust page-21 coverage root cause
+
+The retained Adjust artifacts do not support a shortlist-cap diagnosis for the
+page-21 gaming CPI omission. `findings.json` contains 32 findings, but the
+only page-21 gaming finding is `gaming-overall-retention`; no gaming-CPI
+finding was extracted into the authoritative findings pack. The evidence-
+fidelity pack separately contains an unsupported proposed claim,
+`Global gaming-app CPI reached $0.56 in 2025, up 30%`, whose evidence discusses
+gaming session lengths/sessions per user rather than CPI or 30% growth. It was
+correctly rejected. The retained candidate-generation audit reports model
+output 10, target 7, opportunity count 7, selected 7, and `fallback_invoked`
+false. Therefore widening the candidate pool would not recover the missing
+source finding and would risk admitting the rejected claim. The confirmed
+limitation is upstream source finding extraction/authoritative binding, not
+shortlisting; no keyword relevance score or report-specific patch was added.
+
+### Implemented reliability corrections
+
+| Defect | Minimal correction | Result |
+| --- | --- | --- |
+| Failed technical validation could become PASS during final editorial reconciliation | `_merge_public_editorial_quality()` now preserves non-pass technical status, including missing diagnostics and warning-only diagnostics; only a genuinely editorial-only stale failure can be replaced by a passing final review. | Fail-closed status is retained. |
+| Candidate validation derived status only from issue severity | `_candidate_validation_report()` now preserves an incoming failed status even when the issue list is empty or non-error. | Candidate promotion cannot occur from a diagnostic-free failure. |
+| Empty final-insight rewrite returned success without a change | `_regenerate_one_final_insight()` records the existing typed ABSTAIN decision for an empty required text result. The regeneration loop treats an unchanged ABSTAIN as rejected, skips candidate provider/editorial revalidation, and rolls back. | No-op repair is not reported as successful. |
+| Final reconciliation could clear an unchanged ABSTAIN | The final merge preserves the original failure for a rolled-back, unchanged ABSTAIN; real mutations retain the existing stale-editorial-review replacement path. | No false success from a no-op. |
+| Distinct visible placements shared a stable public review ID | Verified semantic review projection now fails closed for duplicate `public_item_id` values with distinct public text, while exact-text duplicates retain existing dedupe. | No silent review-item loss. |
+
+No new LLM stage, service, validator framework, schema, provider call, or
+publication side effect was introduced. The latest successful provider-backed
+Adjust baseline remains the isolated run recorded above (7/7 admitted, 7
+verified facts, 7 final insights, validation/public-quality/readiness pass,
+HTML produced). This correction was verified provider-free; it must not be
+presented as a live model-selection improvement.
+
+### Verification and limitations
+
+The exact provider-free Step 2 replay was executed with the repository's
+retained reference corpus: 15 cases / 39 variants, with no fabricated fixture
+substitution, provider calls, or publication writes. The replay reports its
+expected limitation: source PDFs and retained report artifacts are not present
+under the default repository `out/` paths, so it checks retained-input
+coverage only and does not claim live source verification.
+
+The focused affected suite passed **300 tests in 29.74 s**. Changed-file Ruff
+and full-repository mypy passed (`0` tracked errors across 786 source files).
+The default-interpreter full suite previously passed 8,464 tests with 2
+skips/48 deselected and had one unrelated failure because CPython 3.14 was
+used for a wheelhouse test that requires CPython 3.12; the supported
+interpreter version of that test passed. Hosted CI and the supported full
+quality gate remain the release evidence for this commit.
+
+The page-21 gaming CPI finding, optional signal cards, quotes, stochastic
+selection breadth, and live repair quality remain unresolved limitations. E18
+remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO** for broader
+effectiveness, and Step 3 remains **unstarted/not ready**.
+
 ### Verdict
 
 The deterministic authority/contract correction slice is **PASS** for the

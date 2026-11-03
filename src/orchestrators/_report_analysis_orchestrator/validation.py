@@ -1254,48 +1254,75 @@ def _merge_public_editorial_quality(
 ) -> ValidationReport:
     if editorial_validation is None:
         return validation
+    all_existing_issues = list(validation.issues)
     existing_issues = (
         [
             issue
-            for issue in validation.issues
+            for issue in all_existing_issues
             if not str(issue.rule_id or "").startswith("public_editorial_quality.")
         ]
         if replace_existing
-        else list(validation.issues)
+        else all_existing_issues
     )
-    base_status = validation.status
-    base_severity = validation.severity
+    validation_status = str(validation.status or "").strip().casefold()
+    validation_failed = validation_status not in {"pass", "passed"}
+    editorial_issue_prefix = "public_editorial_quality."
+    existing_issues_are_editorial_only = bool(all_existing_issues) and all(
+        str(issue.rule_id or "").startswith(editorial_issue_prefix)
+        for issue in all_existing_issues
+    )
+    technical_failure = validation_failed and not (
+        replace_existing and existing_issues_are_editorial_only
+    )
+    base_status = "fail" if technical_failure else "pass"
+    base_severity = str(validation.severity or "").strip().casefold()
     if replace_existing:
-        base_status = (
-            "fail"
-            if any(
-                str(issue.severity or "").casefold() == "error"
-                for issue in existing_issues
-            )
-            else "pass"
-        )
-        base_severity = (
-            "error"
-            if base_status == "fail"
-            else "warning"
-            if any(
-                str(issue.severity or "").casefold() == "warning"
-                for issue in existing_issues
-            )
-            else "pass"
-        )
+        if any(
+            str(issue.severity or "").strip().casefold() == "error"
+            for issue in existing_issues
+        ):
+            base_status = "fail"
+        if any(
+            str(issue.severity or "").strip().casefold() == "error"
+            for issue in existing_issues
+        ):
+            base_severity = "error"
+        elif any(
+            str(issue.severity or "").strip().casefold() == "warning"
+            for issue in existing_issues
+        ):
+            base_severity = "warning"
+        elif technical_failure and base_severity not in {"error", "warning", "info"}:
+            # A failed technical validation without a usable diagnostic must
+            # remain visibly blocking instead of becoming a diagnostic-free
+            # pass during editorial-status reconciliation.
+            base_severity = "error"
+        elif not technical_failure:
+            base_severity = "pass"
+    elif base_severity not in {"error", "warning", "info"}:
+        base_severity = "error" if technical_failure else "pass"
+    editorial_status = str(editorial_validation.status or "").strip().casefold()
+    editorial_failed = editorial_status not in {"pass", "passed"}
     return ValidationReport(
         schema_version=validation.schema_version,
-        status=(
-            "fail"
-            if base_status == "fail" or editorial_validation.status == "fail"
-            else "pass"
-        ),
+        status="fail" if base_status == "fail" or editorial_failed else "pass",
         issues=existing_issues + list(editorial_validation.issues),
         severity=(
             "error"
-            if (base_severity == "error" or editorial_validation.severity == "error")
-            else base_severity
+            if (
+                base_severity == "error"
+                or str(editorial_validation.severity or "").strip().casefold()
+                == "error"
+            )
+            else (
+                "warning"
+                if (
+                    base_severity == "warning"
+                    or str(editorial_validation.severity or "").strip().casefold()
+                    == "warning"
+                )
+                else base_severity
+            )
         ),
         source_path=validation.source_path,
     )
@@ -1590,16 +1617,33 @@ def _candidate_validation_report(
         ) > severity_rank.get(str(existing.severity or "").strip().lower(), -1):
             issues_by_fingerprint[fingerprint] = item
     issues = list(issues_by_fingerprint.values())
-    severity = (
+    issue_severity = (
         "error"
         if any(item.severity == "error" for item in issues)
         else (
             "warning" if any(item.severity == "warning" for item in issues) else "pass"
         )
     )
+    validation_failed = str(validation.status or "").strip().casefold() not in {
+        "pass",
+        "passed",
+    }
+    severity = issue_severity
+    if issue_severity == "pass" and validation_failed:
+        supplied_severity = str(validation.severity or "").strip().casefold()
+        severity = (
+            supplied_severity
+            if supplied_severity
+            in {
+                "error",
+                "warning",
+                "info",
+            }
+            else "error"
+        )
     return ValidationReport(
         schema_version=validation.schema_version,
-        status="fail" if severity == "error" else "pass",
+        status="fail" if validation_failed or severity == "error" else "pass",
         issues=issues,
         severity=severity,
         source_path=validation.source_path,
@@ -3557,6 +3601,17 @@ def _run_validation_regeneration_loop(
         repair_decisions = tuple(
             getattr(regeneration_response, "repair_decisions", []) or []
         )
+        (
+            executed_action,
+            executed_strategy,
+            executed_evidence_ids,
+            _has_execution_decisions,
+        ) = _executed_repair_metadata(regeneration_response)
+        abstained_noop_candidate = (
+            executed_action == "ABSTAIN"
+            and not regeneration_response.regenerated_sections
+            and not deterministic_mutation_paths
+        )
         verified_mutation_paths = _verified_deterministic_mutation_paths(
             paths=deterministic_mutation_paths,
             before=artifacts_before,
@@ -3698,6 +3753,7 @@ def _run_validation_regeneration_loop(
                 for issue in scope_validation.issues
             )
             or payload_completeness_issue is not None
+            or abstained_noop_candidate
         )
         claim_reuse_eligible = bool(
             candidate_enforced
@@ -3709,46 +3765,56 @@ def _run_validation_regeneration_loop(
             )
             and payload_completeness_issue is None
         )
-        candidate_provider_validation = _run_validation_with_fallback(
-            runtime=runtime,
-            mode_ctx=attempt_ctx,
-            dependencies=dependencies,
-            validation_req=ValidationRequest(
-                schema_version="1.1",
-                report_id=ReportId(runtime.file.file_id),
-                report=regenerated_payload,
-                artifacts=candidate_artifacts,
-                evidence_packs=evidence_packs,
-                vector_store_id=vector_store_id,
-                source_id=validation_source_identity,
-                prior_claim_validation_package=(
-                    promoted_claim_validation_package if claim_reuse_eligible else None
+        if abstained_noop_candidate:
+            # An abstained repair with no declared mutation is not a new
+            # candidate. Keep the failed promoted validation and advance the
+            # bounded repair ladder without spending another validation call.
+            candidate_provider_validation = current_validation_report
+        else:
+            candidate_provider_validation = _run_validation_with_fallback(
+                runtime=runtime,
+                mode_ctx=attempt_ctx,
+                dependencies=dependencies,
+                validation_req=ValidationRequest(
+                    schema_version="1.1",
+                    report_id=ReportId(runtime.file.file_id),
+                    report=regenerated_payload,
+                    artifacts=candidate_artifacts,
+                    evidence_packs=evidence_packs,
+                    vector_store_id=vector_store_id,
+                    source_id=validation_source_identity,
+                    prior_claim_validation_package=(
+                        promoted_claim_validation_package
+                        if claim_reuse_eligible
+                        else None
+                    ),
+                    prior_claim_validation_artifact_hash=(
+                        sha256_json(working_artifacts) if claim_reuse_eligible else ""
+                    ),
+                    validation_mode=(
+                        "verified_facts"
+                        if verified_source_identity
+                        else (
+                            "inline_deterministic"
+                            if deterministic_candidate_rejection
+                            else "full"
+                        )
+                    ),
+                    deterministic_grounding_passed=candidate_result.passed,
+                    publisher_name=runtime.publisher_name,
+                    report_name=runtime.source_report_name or runtime.report_title,
+                    source_url=runtime.source_url,
+                    source_text=source_text,
+                    source_pages=list(source_pages),
+                    source_title_resolution=source_title_resolution,
                 ),
-                prior_claim_validation_artifact_hash=(
-                    sha256_json(working_artifacts) if claim_reuse_eligible else ""
+                pack_name=validation_pack_name,
+                openai_client=(
+                    None
+                    if deterministic_candidate_rejection
+                    else validation_openai_client
                 ),
-                validation_mode=(
-                    "verified_facts"
-                    if verified_source_identity
-                    else (
-                        "inline_deterministic"
-                        if deterministic_candidate_rejection
-                        else "full"
-                    )
-                ),
-                deterministic_grounding_passed=candidate_result.passed,
-                publisher_name=runtime.publisher_name,
-                report_name=runtime.source_report_name or runtime.report_title,
-                source_url=runtime.source_url,
-                source_text=source_text,
-                source_pages=list(source_pages),
-                source_title_resolution=source_title_resolution,
-            ),
-            pack_name=validation_pack_name,
-            openai_client=(
-                None if deterministic_candidate_rejection else validation_openai_client
-            ),
-        )
+            )
         semantic_grounding_validation_status = (
             "not_evaluated_due_to_deterministic_failure"
             if deterministic_candidate_rejection
@@ -3761,21 +3827,27 @@ def _run_validation_regeneration_loop(
             candidate_validation_report,
             scope_validation,
         )
-        editorial_validation, editorial_path = (
-            _evaluate_and_store_public_editorial_quality(
-                runtime=runtime,
-                dependencies=dependencies,
-                artifacts=candidate_artifacts,
-                pack_name=f"public_editorial_quality_regen_attempt_{attempt_index}",
-                ctx=attempt_ctx,
-                openai_client=validation_openai_client,
-                verified_source_identity=verified_source_identity,
-                verified_fact_digest=verified_fact_digest,
+        if abstained_noop_candidate:
+            editorial_validation = None
+            editorial_path = ""
+        else:
+            editorial_validation, editorial_path = (
+                _evaluate_and_store_public_editorial_quality(
+                    runtime=runtime,
+                    dependencies=dependencies,
+                    artifacts=candidate_artifacts,
+                    pack_name=(
+                        f"public_editorial_quality_regen_attempt_{attempt_index}"
+                    ),
+                    ctx=attempt_ctx,
+                    openai_client=validation_openai_client,
+                    verified_source_identity=verified_source_identity,
+                    verified_fact_digest=verified_fact_digest,
+                )
             )
-        )
-        candidate_validation_report = _merge_public_editorial_quality(
-            candidate_validation_report, editorial_validation
-        )
+            candidate_validation_report = _merge_public_editorial_quality(
+                candidate_validation_report, editorial_validation
+            )
         if payload_completeness_issue is not None:
             candidate_validation_report = replace(
                 candidate_validation_report,
@@ -3841,12 +3913,6 @@ def _run_validation_regeneration_loop(
                 for item in candidate_result.issues
             )
         )
-        (
-            executed_action,
-            executed_strategy,
-            executed_evidence_ids,
-            _has_execution_decisions,
-        ) = _executed_repair_metadata(regeneration_response)
         repair_delta = replace(
             repair_delta,
             mutation_scope_result="fail" if scope_failed else "pass",
@@ -3884,9 +3950,10 @@ def _run_validation_regeneration_loop(
                     target.allowed_paths,
                 )
             )
-        evidence_paths[f"public_editorial_quality_regen_attempt_{attempt_index}"] = (
-            editorial_path
-        )
+        if editorial_path:
+            evidence_paths[
+                f"public_editorial_quality_regen_attempt_{attempt_index}"
+            ] = editorial_path
         validation_snapshot_path = _store_validation_snapshot(
             runtime=runtime,
             dependencies=dependencies,

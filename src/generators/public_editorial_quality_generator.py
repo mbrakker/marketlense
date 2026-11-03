@@ -1415,16 +1415,31 @@ def _verified_public_semantic_review_items(
 
     items: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
+    seen_text_by_id: dict[str, str] = {}
 
     def add(item: dict[str, Any]) -> None:
         item_id = str(item.get("public_item_id") or "").strip()
-        if (
-            not item_id
-            or item_id in seen_ids
-            or not str(item.get("text") or "").strip()
-        ):
+        text = str(item.get("text") or "").strip()
+        if not item_id or not text:
+            return
+        normalized_text = " ".join(text.split()).casefold()
+        if item_id in seen_ids:
+            if seen_text_by_id.get(item_id) != normalized_text:
+                raise AppError(
+                    code="public_editorial_review_identity_conflict",
+                    message=(
+                        "Distinct visible public text resolved to the same stable "
+                        "review identity."
+                    ),
+                    retryable=False,
+                    context={
+                        "public_item_id": item_id,
+                        "reason": "duplicate_public_item_id_with_distinct_text",
+                    },
+                )
             return
         seen_ids.add(item_id)
+        seen_text_by_id[item_id] = normalized_text
         _annotate_verified_item(item, artifacts)
         items.append(item)
 

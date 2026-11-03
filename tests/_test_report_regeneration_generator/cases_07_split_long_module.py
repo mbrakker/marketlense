@@ -10,6 +10,73 @@ __file__ = str(
 from ._split_support_test_report_regeneration_generator import *  # noqa: F401,F403
 
 
+def test_empty_final_insight_rewrite_abstains_instead_of_reporting_success(
+    tmp_path,
+):
+    current = _current_artifacts()
+    issue = RegenerationIssue(
+        rule_id="public_editorial_quality.so_what",
+        affected_section="insights:insight-1.text",
+        message="The retained insight needs a substantive wording repair.",
+        severity="error",
+        entity_id="insight:insight-1:text",
+        evidence_ids=["f1"],
+    )
+    target = RegenerationTarget(
+        target_section="insights_bundle",
+        regenerate_steps=["insights_final"],
+        prompt_namespaces=["report_vs/artifacts/regenerate/insights_final"],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        allowed_paths=["insights_final[item=insight-1].text"],
+        issues=[issue],
+    )
+
+    class _EmptyFinalInsightClient(_FakeOpenAIClient):
+        def _legacy_chat_json(self, req, ctx):
+            result = super()._legacy_chat_json(req, ctx)
+            if "system::report_vs/artifacts/regenerate/insights_final" not in (
+                req.system_prompt
+            ):
+                return result
+            payload = deepcopy(result.parsed_json)
+            payload["insights_final"][0]["text"] = ""
+            return OpenAIResponseResult(
+                schema_version=result.schema_version,
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id=result.request_id,
+            )
+
+    client = _EmptyFinalInsightClient()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[target],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.repair_action == "ABSTAIN"
+    assert response.repair_decisions[-1].repair_action == "ABSTAIN"
+    assert response.updated_artifacts["insights_final"] == current["insights_final"]
+
+
 def test_summary_repair_rebuilds_key_figures_from_final_atomic_artifacts(tmp_path):
     current = _current_artifacts()
     evidence_packs = _evidence_packs()
