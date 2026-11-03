@@ -286,15 +286,6 @@ def test_fit_report_categories_from_context_returns_selected_categories(
                     "why_not_fit": "",
                     "evidence_sections": ["key_findings"],
                 },
-                {
-                    "category_id": "consumer_behavior",
-                    "label": "Consumer Behavior & Insights",
-                    "fit_score": 0.11,
-                    "decision": "reject",
-                    "why_fit": "",
-                    "why_not_fit": "The report is not mainly about shoppers or audiences.",
-                    "evidence_sections": [],
-                },
             ],
         }
     )
@@ -507,17 +498,8 @@ def test_semantic_reclassification_is_limited_to_declared_candidates() -> None:
         openai_client=RecordingOpenAIClient(
             {
                 "schema_version": "1.0",
-                "selected_category_ids": ["technology", "ai_automation"],
+                "selected_category_ids": ["ai_automation"],
                 "category_fits": [
-                    {
-                        "category_id": "technology",
-                        "label": "Technology & Innovation",
-                        "fit_score": 0.98,
-                        "decision": "primary",
-                        "why_fit": "Technology is central.",
-                        "why_not_fit": "",
-                        "evidence_sections": ["Overview"],
-                    },
                     {
                         "category_id": "ai_automation",
                         "label": "AI & Automation",
@@ -913,7 +895,7 @@ def test_high_confidence_model_rejection_is_not_deterministically_promoted() -> 
         openai_client=RecordingOpenAIClient(
             {
                 "schema_version": "1.0",
-                "selected_category_ids": ["technology"],
+                "selected_category_ids": [],
                 "category_fits": [
                     {
                         "category_id": "technology",

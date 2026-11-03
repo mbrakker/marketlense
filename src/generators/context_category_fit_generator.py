@@ -245,22 +245,39 @@ def fit_report_categories_from_context(
                 model_name=prompt_bundle.resolved_model,
                 model_policy_namespace="report_vs",
                 routing_policy_version=prompt_bundle.execution_policy.policy_hash,
-                validator_version="context_category_fit:2.0",
+                validator_version="context_category_fit:2.1",
                 relevant_input_hash=relevant_input_hash,
                 configuration_policy_hash=configuration_policy_hash,
             ),
             ctx,
         )
         if reuse.reusable:
-            validate_schema(
-                SchemaValidateRequest(
-                    schema_version="1.0",
-                    payload=reuse.output_payload,
-                    schema_name="context_category_fit",
-                ),
-                ctx,
-            )
-            reused_payload = dict(reuse.output_payload)
+            try:
+                validate_schema(
+                    SchemaValidateRequest(
+                        schema_version="1.0",
+                        payload=reuse.output_payload,
+                        schema_name="context_category_fit",
+                    ),
+                    ctx,
+                )
+                _validate_category_fit_payload(
+                    reuse.output_payload,
+                    category_profiles=category_profiles,
+                    context=request.context,
+                )
+            except AppError as exc:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="context_category_fit_reuse_rejected",
+                        module=logger.name,
+                        fields={"code": exc.code},
+                    )
+                )
+            else:
+                reused_payload = dict(reuse.output_payload)
     recovery_attempted = False
 
     def call_model(mode: str, original_response: str, schema_errors: str):
@@ -321,13 +338,11 @@ def fit_report_categories_from_context(
             ctx,
             call_model=call_model,
             normalize_payload=lambda payload: _normalize_fit_payload(dict(payload)),
-            validate_payload=lambda payload: validate_schema(
-                SchemaValidateRequest(
-                    schema_version="1.0",
-                    payload=payload,
-                    schema_name="context_category_fit",
-                ),
-                ctx,
+            validate_payload=lambda payload: _validate_category_fit_response(
+                payload,
+                category_profiles=category_profiles,
+                context=request.context,
+                ctx=ctx,
             ),
             is_substantive=lambda payload: bool(
                 isinstance(payload, dict) and payload.get("category_fits")
@@ -382,7 +397,7 @@ def fit_report_categories_from_context(
                 routing_policy_version=prompt_bundle.execution_policy.policy_hash,
                 relevant_input_hash=("" if recovery_attempted else relevant_input_hash),
                 configuration_policy_hash=configuration_policy_hash,
-                validator_version="context_category_fit:2.0",
+                validator_version="context_category_fit:2.1",
                 validation_status="pass",
             ),
             ctx,
@@ -441,11 +456,15 @@ def _normalize_fit_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "category_fits": [],
     }
     for category_id in payload.get("selected_category_ids") or []:
-        text = str(category_id or "").strip()
-        if text:
-            normalized["selected_category_ids"].append(text)
+        if isinstance(category_id, str):
+            text = category_id.strip()
+            if text:
+                normalized["selected_category_ids"].append(text)
+        else:
+            normalized["selected_category_ids"].append(category_id)
     for item in payload.get("category_fits") or []:
         if not isinstance(item, dict):
+            normalized["category_fits"].append(item)
             continue
         normalized["category_fits"].append(
             {
@@ -473,6 +492,202 @@ def _normalize_fit_payload(payload: dict[str, Any]) -> dict[str, Any]:
             }
         )
     return normalized
+
+
+def _validate_category_fit_response(
+    payload: object,
+    *,
+    category_profiles: list[dict[str, Any]],
+    context: ReportCategoryContext,
+    ctx,
+) -> None:
+    validate_schema(
+        SchemaValidateRequest(
+            schema_version="1.0",
+            payload=payload,
+            schema_name="context_category_fit",
+        ),
+        ctx,
+    )
+    _validate_category_fit_payload(
+        payload,
+        category_profiles=category_profiles,
+        context=context,
+    )
+
+
+def _validate_category_fit_payload(
+    payload: object,
+    *,
+    category_profiles: list[dict[str, Any]],
+    context: ReportCategoryContext,
+) -> None:
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="context_category_fit_payload_invalid",
+            message="Category-fit output must be an object",
+            retryable=False,
+        )
+    profile_by_id = {str(item["id"]): item for item in category_profiles}
+    selected_ids = payload.get("selected_category_ids") or []
+    if len(selected_ids) != len(set(selected_ids)):
+        raise AppError(
+            code="context_category_fit_selection_conflict",
+            message="Category-fit output repeats a selected category",
+            retryable=False,
+        )
+    unknown_selected = [
+        str(value)
+        for value in selected_ids
+        if not isinstance(value, str) or value not in profile_by_id
+    ]
+    if unknown_selected:
+        raise AppError(
+            code="context_category_fit_unknown_category_id",
+            message="Category-fit output selected an undeclared category",
+            retryable=False,
+            context={"category_ids": unknown_selected},
+        )
+
+    evidence = _context_evidence(context)
+    seen_category_ids: set[str] = set()
+    validated_candidates: list[CategoryFitCandidate] = []
+    fits = payload.get("category_fits") or []
+    for raw_item in fits:
+        if not isinstance(raw_item, dict):
+            raise AppError(
+                code="context_category_fit_payload_invalid",
+                message="Category-fit output contains a malformed candidate",
+                retryable=False,
+            )
+        category_id = str(raw_item.get("category_id") or "").strip()
+        if category_id not in profile_by_id:
+            raise AppError(
+                code="context_category_fit_unknown_category_id",
+                message="Category-fit output returned an undeclared category",
+                retryable=False,
+                context={"category_id": category_id},
+            )
+        if category_id in seen_category_ids:
+            raise AppError(
+                code="context_category_fit_duplicate_category_id",
+                message="Category-fit output repeats a category candidate",
+                retryable=False,
+                context={"category_id": category_id},
+            )
+        seen_category_ids.add(category_id)
+        candidate = _candidate_from_payload_item(raw_item, category_id)
+        validated_candidate = _apply_topic_semantics(
+            candidate=candidate,
+            profile=profile_by_id[category_id],
+            evidence=evidence,
+            high_confidence_fit_threshold=0.0,
+        )
+        validated_candidates.append(validated_candidate)
+        if category_id in selected_ids and (
+            validated_candidate.decision == "reject"
+            or validated_candidate.semantic_rule_status == "ambiguous"
+        ):
+            raise AppError(
+                code="context_category_fit_selection_conflict",
+                message=(
+                    "Category-fit output selected a rejected or ambiguous category"
+                ),
+                retryable=False,
+                context={"category_id": category_id},
+            )
+    missing_selected = sorted(set(selected_ids) - seen_category_ids)
+    if missing_selected:
+        raise AppError(
+            code="context_category_fit_selection_conflict",
+            message="Category-fit output selected a category without a fit",
+            retryable=False,
+            context={"category_ids": missing_selected},
+        )
+    sorted_candidates = sorted(
+        validated_candidates,
+        key=lambda item: (
+            0
+            if item.decision == "primary"
+            else 1
+            if item.decision == "secondary"
+            else 2,
+            -item.fit_score,
+            item.category_id,
+        ),
+    )
+    expected_selected = set(_selected_category_ids(sorted_candidates))
+    if set(selected_ids) != expected_selected:
+        raise AppError(
+            code="context_category_fit_selection_conflict",
+            message=(
+                "Category-fit output selected categories inconsistently with "
+                "the declared fit decisions"
+            ),
+            retryable=False,
+            context={
+                "selected_category_ids": list(selected_ids),
+                "decision_category_ids": sorted(expected_selected),
+            },
+        )
+
+
+def _candidate_from_payload_item(
+    item: dict[str, Any], category_id: str
+) -> CategoryFitCandidate:
+    raw_fit_score = item.get("fit_score")
+    try:
+        fit_score = 0.0 if raw_fit_score is None else float(raw_fit_score)
+    except (TypeError, ValueError):
+        fit_score = 0.0
+    return CategoryFitCandidate(
+        schema_version="1.0",
+        category_id=category_id,
+        label=str(item.get("label") or "").strip(),
+        fit_score=max(0.0, min(1.0, fit_score)),
+        decision=str(item.get("decision") or "").strip().lower(),
+        why_fit=str(item.get("why_fit") or "").strip(),
+        why_not_fit=str(item.get("why_not_fit") or "").strip(),
+        evidence_sections=[
+            str(value or "").strip()
+            for value in item.get("evidence_sections") or []
+            if str(value or "").strip()
+        ],
+        semantic_rule_status=str(item.get("semantic_rule_status") or "not_evaluated")
+        .strip()
+        .casefold(),
+        supported_topic_rules=[
+            str(value or "").strip()
+            for value in item.get("supported_topic_rules") or []
+            if str(value or "").strip()
+        ],
+        supported_topic_rule_ids=[
+            str(value or "").strip()
+            for value in item.get("supported_topic_rule_ids") or []
+            if str(value or "").strip()
+        ],
+        rejected_topic_rules=[
+            str(value or "").strip()
+            for value in item.get("rejected_topic_rules") or []
+            if str(value or "").strip()
+        ],
+        rejected_topic_rule_ids=[
+            str(value or "").strip()
+            for value in item.get("rejected_topic_rule_ids") or []
+            if str(value or "").strip()
+        ],
+        rule_evidence_sections=[
+            str(value or "").strip()
+            for value in item.get("rule_evidence_sections") or []
+            if str(value or "").strip()
+        ],
+        centrality_evidence_sections=[
+            str(value or "").strip()
+            for value in item.get("centrality_evidence_sections") or []
+            if str(value or "").strip()
+        ],
+        remediation_signal=str(item.get("remediation_signal") or "").strip(),
+    )
 
 
 @dataclass(frozen=True)

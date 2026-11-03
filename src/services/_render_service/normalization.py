@@ -11,7 +11,10 @@ from PIL import Image
 
 from src.utils.coercion import stripped_string_value as _s
 from src.utils.public_metric_display import normalize_public_metric_display
-from src.utils.verified_facts import VERIFIED_FACT_EVIDENCE_PREFIX
+from src.utils.verified_facts import (
+    VERIFIED_FACT_EVIDENCE_PREFIX,
+    verified_facts_mode,
+)
 
 logger = logging.getLogger("market_lense.render_service")
 TEMPLATES_DIR = Path(__file__).resolve().parents[3] / "templates"
@@ -98,6 +101,53 @@ def _coerce_dict(value: object) -> dict[str, Any]:
 
 def _coerce_list(value: object) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+_NON_PUBLIC_CHART_CARD_STATUSES = frozenset(
+    {
+        "weak",
+        "weak_evidence",
+        "limited",
+        "abstained",
+        "text_only",
+        "not_applicable",
+        "omitted",
+        "unavailable",
+    }
+)
+
+
+def _verified_bound_evidence_ids(artifacts: dict[str, Any]) -> set[str]:
+    if not verified_facts_mode(artifacts):
+        return set()
+    fact_values = _coerce_list(artifacts.get("verified_facts"))
+    return {
+        f"{VERIFIED_FACT_EVIDENCE_PREFIX}{_s(_coerce_dict(item).get('fact_id'))}"
+        for item in fact_values
+        if _s(_coerce_dict(item).get("fact_id"))
+    }
+
+
+def _is_public_chart_insight_card(item: object) -> bool:
+    """Match the renderer's accepted chart-card projection predicate."""
+
+    card = _coerce_dict(item)
+    status = _s(card.get("status")).casefold()
+    return (
+        status not in _NON_PUBLIC_CHART_CARD_STATUSES
+        and card.get("crop_qa_accepted") is True
+        and bool(_s(card.get("candidate_id")))
+        and bool(_s(card.get("evidence_id")))
+        and bool(_s(card.get("source_page")))
+        and bool(_s(card.get("insight_id")))
+        and bool(
+            _pick_first_text(
+                _sanitize_public_prose(card.get("caption")),
+                _sanitize_public_prose(card.get("retained_caption")),
+            )
+        )
+        and bool(_sanitize_public_prose(card.get("public_takeaway")))
+    )
 
 
 def _coerce_positive_int(value: object) -> int | None:
@@ -577,8 +627,13 @@ def _coerce_public_metric_spine(
     artifacts: dict[str, Any], *, limit: int = 4
 ) -> list[dict[str, str]]:
     metrics: list[dict[str, str]] = []
+    verified_mode = verified_facts_mode(artifacts)
+    allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
     for raw_item in _coerce_list(artifacts.get("metric_spine")):
         item = _coerce_dict(raw_item)
+        evidence_id = _s(item.get("evidence_id"))
+        if verified_mode and evidence_id not in allowed_evidence_ids:
+            continue
         label = _s(item.get("label"))
         value = _s(item.get("value"))
         unit = _s(item.get("unit"))
@@ -619,8 +674,15 @@ def _coerce_public_claim_support(
     artifacts: dict[str, Any], *, limit: int = 4
 ) -> list[dict[str, str]]:
     claims: list[dict[str, str]] = []
+    verified_mode = verified_facts_mode(artifacts)
+    allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
     for raw_item in _coerce_list(artifacts.get("claim_ledgers")):
         item = _coerce_dict(raw_item)
+        evidence_ids = {
+            _s(value) for value in _coerce_list(item.get("evidence_ids")) if _s(value)
+        }
+        if verified_mode and not evidence_ids.intersection(allowed_evidence_ids):
+            continue
         claim_text = _sanitize_public_prose(item.get("claim_text"))
         if not claim_text:
             continue
@@ -643,21 +705,39 @@ def _coerce_public_advisory(artifacts: dict[str, Any]) -> dict[str, Any]:
     advisory = _coerce_dict(artifacts.get("executive_advisory"))
     decision_brief = _coerce_dict(advisory.get("decision_brief"))
     status = _s(decision_brief.get("status")).casefold()
+    verified_mode = verified_facts_mode(artifacts)
+    allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
+    decision_evidence_ids = {
+        _s(value)
+        for value in _coerce_list(decision_brief.get("evidence_links"))
+        if _s(value)
+    }
+    decision_supported = not verified_mode or bool(
+        decision_evidence_ids.intersection(allowed_evidence_ids)
+    )
     decision = {
-        "available": status == "generated",
+        "available": status == "generated" and decision_supported,
         "strategic_context": _sanitize_public_prose(
             decision_brief.get("strategic_context")
-        ),
+        )
+        if decision_supported
+        else "",
         "decision_implications": _coerce_text_items(
             decision_brief.get("decision_implications"), limit=4
-        ),
+        )
+        if decision_supported
+        else [],
         "priority_moves": _coerce_text_items(
             decision_brief.get("priority_moves"), limit=4
-        ),
-        "watchouts": _coerce_text_items(decision_brief.get("watchouts"), limit=4),
-        "confidence_note": _sanitize_public_prose(
-            decision_brief.get("confidence_note")
-        ),
+        )
+        if decision_supported
+        else [],
+        "watchouts": _coerce_text_items(decision_brief.get("watchouts"), limit=4)
+        if decision_supported
+        else [],
+        "confidence_note": _sanitize_public_prose(decision_brief.get("confidence_note"))
+        if decision_supported
+        else "",
     }
     recommendations = _coerce_advisory_items(
         advisory.get("recommendations"),
@@ -684,6 +764,8 @@ def _coerce_public_topics_covered(
     limit: int = 6,
 ) -> list[dict[str, Any]]:
     topics: list[dict[str, Any]] = []
+    verified_mode = verified_facts_mode(artifacts)
+    allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
     raw_topics = (
         _coerce_list(artifacts.get("topics_covered"))
         or _coerce_list(artifacts.get("toc_topics_expanded"))
@@ -691,6 +773,15 @@ def _coerce_public_topics_covered(
     )
     for raw_item in raw_topics:
         item = _coerce_dict(raw_item)
+        evidence_ids = {
+            _s(value)
+            for value in (
+                [_s(item.get("evidence_id"))] + _coerce_list(item.get("evidence_ids"))
+            )
+            if _s(value)
+        }
+        if verified_mode and not evidence_ids.intersection(allowed_evidence_ids):
+            continue
         title = _sanitize_public_prose(
             _pick_first_text(
                 item.get("topic"),
@@ -742,11 +833,16 @@ def _coerce_public_key_figures(
     limit: int = 6,
 ) -> list[dict[str, str]]:
     figures: list[dict[str, str]] = []
+    verified_mode = verified_facts_mode(artifacts)
+    allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
     raw_figures = _coerce_list(artifacts.get("key_figures")) or _coerce_list(
         artifacts.get("metric_spine")
     )
     for raw_item in raw_figures:
         item = _coerce_dict(raw_item)
+        evidence_id = _s(item.get("evidence_id"))
+        if verified_mode and evidence_id not in allowed_evidence_ids:
+            continue
         value = _pick_first_text(item.get("value"), item.get("figure"))
         label = _pick_first_text(
             item.get("label"), item.get("metric"), item.get("name")
@@ -796,22 +892,16 @@ def _coerce_public_chart_insight_cards(
     limit: int = 4,
 ) -> list[dict[str, str]]:
     cards: list[dict[str, str]] = []
+    verified_mode = verified_facts_mode(artifacts)
+    allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
     for raw_item in _coerce_list(artifacts.get("chart_insight_cards")):
         item = _coerce_dict(raw_item)
-        status = _s(item.get("status")).casefold()
-        if status in {
-            "weak",
-            "weak_evidence",
-            "limited",
-            "abstained",
-            "text_only",
-            "not_applicable",
-            "omitted",
-            "unavailable",
-        }:
+        if not _is_public_chart_insight_card(item):
             continue
         candidate_id = _s(item.get("candidate_id"))
         evidence_id = _s(item.get("evidence_id"))
+        if verified_mode and evidence_id not in allowed_evidence_ids:
+            continue
         source_page = _s(item.get("source_page"))
         insight_id = _s(item.get("insight_id"))
         caption = _pick_first_text(
@@ -905,7 +995,12 @@ def _coerce_insights(
 
 
 def _coerce_quotes(
-    raw_quotes: object, data: dict[str, Any], publisher: str, *, report_title: str
+    raw_quotes: object,
+    data: dict[str, Any],
+    publisher: str,
+    *,
+    report_title: str,
+    allow_legacy_fallback: bool = True,
 ) -> list[dict[str, str]]:
     quotes: list[dict[str, str]] = []
     for raw_item in _coerce_list(raw_quotes):
@@ -938,6 +1033,8 @@ def _coerce_quotes(
         )
     if quotes:
         return quotes
+    if not allow_legacy_fallback:
+        return []
     legacy_quote = _coerce_dict(data.get("quote"))
     legacy_text = _sanitize_public_prose(legacy_quote.get("text"))
     if legacy_text:
@@ -1462,6 +1559,7 @@ __all__ = [
     "_coerce_public_topics_covered",
     "_coerce_public_key_figures",
     "_coerce_public_chart_insight_cards",
+    "_is_public_chart_insight_card",
     "_coerce_insights",
     "_coerce_quotes",
     "_display_quote_author",

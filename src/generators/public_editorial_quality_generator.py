@@ -37,7 +37,12 @@ from src.generators.validation.verified_facts import (
     validated_verified_facts,
     verified_facts_mode,
 )
-from src.services.render_service import _sanitize_public_prose
+from src.services.render_service import (
+    _build_signal_cards,
+    _coerce_topic_briefs,
+    _is_public_chart_insight_card,
+    _sanitize_public_prose,
+)
 from src.utils.editorial_identity import insight_entity_id
 from src.utils.errors import AppError
 from src.utils.numeric_display import incomplete_source_numeric_displays
@@ -1003,13 +1008,43 @@ def public_editorial_semantic_review_items(
     decision is made here.
     """
 
-    items: list[dict[str, Any]] = list(_public_text_items(artifacts))
-    seen = {str(item.get("public_item_id") or "") for item in items}
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    seen_text: set[str] = set()
+    deduplicate_text = verified_facts_mode(artifacts)
+
+    for item in _public_text_items(artifacts):
+        item_id = str(item.get("public_item_id") or "").strip()
+        normalized_text = " ".join(str(item.get("text") or "").split()).casefold()
+        if (
+            item_id
+            and item_id not in seen
+            and (
+                not deduplicate_text
+                or not normalized_text
+                or normalized_text not in seen_text
+            )
+        ):
+            seen.add(item_id)
+            if normalized_text:
+                seen_text.add(normalized_text)
+            items.append(item)
 
     def add_item(item: dict[str, Any]) -> None:
         item_id = str(item.get("public_item_id") or "").strip()
-        if item_id and item_id not in seen:
+        normalized_text = " ".join(str(item.get("text") or "").split()).casefold()
+        if (
+            item_id
+            and item_id not in seen
+            and (
+                not deduplicate_text
+                or not normalized_text
+                or normalized_text not in seen_text
+            )
+        ):
             seen.add(item_id)
+            if normalized_text:
+                seen_text.add(normalized_text)
             items.append(item)
 
     for insight in _dict_items(artifacts.get("insights_final")):
@@ -1036,21 +1071,55 @@ def public_editorial_semantic_review_items(
                 _annotate_verified_item(item, artifacts)
                 add_item(item)
 
-    for index, figure in enumerate(_dict_items(artifacts.get("key_figures")), start=1):
-        evidence_ids = _public_evidence_ids(figure)
-        evidence_text = str(
-            figure.get("evidence") or figure.get("source_excerpt") or ""
-        ).strip()
-        for field_name in ("label", "figure", "why_it_matters"):
-            value = _sanitize_public_prose(figure.get(field_name))
-            if value:
+    for artifact_name, raw_figures in (
+        ("key_figures", artifacts.get("key_figures")),
+        ("metric_spine", artifacts.get("metric_spine")),
+    ):
+        for index, figure in enumerate(_dict_items(raw_figures), start=1):
+            evidence_ids = _public_evidence_ids(figure)
+            if verified_facts_mode(artifacts) and not any(
+                fact_for_evidence_id(_verified_fact_index(artifacts), evidence_id)
+                is not None
+                for evidence_id in evidence_ids
+            ):
+                continue
+            value = _sanitize_public_prose(figure.get("value") or figure.get("figure"))
+            label = _sanitize_public_prose(
+                figure.get("label") or figure.get("metric") or figure.get("name")
+            )
+            context_fields = (
+                (
+                    "context",
+                    "cohort",
+                    "denominator",
+                    "segment",
+                    "geography",
+                    "timeframe",
+                )
+                if artifact_name == "key_figures"
+                else ("segment", "geography", "timeframe")
+            )
+            context = ", ".join(
+                str(figure.get(field_name) or "").strip()
+                for field_name in context_fields
+                if str(figure.get(field_name) or "").strip()
+            )
+            for field_name, text in (
+                ("value", value),
+                ("label", label),
+                ("context", context),
+            ):
+                if not text:
+                    continue
                 item = _item(
-                    "key_figures",
-                    f"key_figures:{index}.{field_name}",
-                    value,
+                    artifact_name,
+                    f"{artifact_name}:{index}.{field_name}",
+                    text,
                     evidence_ids,
                     "insights_bundle",
-                    evidence_text=evidence_text,
+                    evidence_text=str(
+                        figure.get("evidence") or figure.get("source_excerpt") or ""
+                    ).strip(),
                 )
                 _annotate_verified_item(item, artifacts)
                 add_item(item)
@@ -1074,11 +1143,31 @@ def public_editorial_semantic_review_items(
     for index, card in enumerate(
         _dict_items(artifacts.get("chart_insight_cards")), start=1
     ):
+        if not _is_public_chart_insight_card(card):
+            continue
         evidence_ids = _public_evidence_ids(card)
+        if verified_facts_mode(artifacts) and not any(
+            fact_for_evidence_id(_verified_fact_index(artifacts), evidence_id)
+            is not None
+            for evidence_id in evidence_ids
+        ):
+            continue
         evidence_text = str(
             card.get("evidence") or card.get("source_excerpt") or ""
         ).strip()
-        for field_name in ("title", "caption", "public_takeaway"):
+        limitation = _sanitize_public_prose(
+            card.get("limitation")
+            or card.get("avoid_reason")
+            or card.get("avoid_reason_if_weak")
+            or card.get("diagnostic")
+        )
+        for field_name in (
+            "title",
+            "caption",
+            "public_takeaway",
+            "so_what",
+            "now_what",
+        ):
             value = _sanitize_public_prose(card.get(field_name))
             if value:
                 item = _item(
@@ -1091,6 +1180,148 @@ def public_editorial_semantic_review_items(
                 )
                 _annotate_verified_item(item, artifacts)
                 add_item(item)
+        if limitation:
+            item = _item(
+                "chart_insight_cards",
+                f"chart_insight_cards:{index}.limitation",
+                limitation,
+                evidence_ids,
+                "insights_bundle",
+                evidence_text=evidence_text,
+            )
+            _annotate_verified_item(item, artifacts)
+            add_item(item)
+
+    verified_index = _verified_fact_index(artifacts)
+
+    def has_verified_binding(evidence_ids: list[str]) -> bool:
+        return not verified_facts_mode(artifacts) or any(
+            fact_for_evidence_id(verified_index, evidence_id) is not None
+            for evidence_id in evidence_ids
+        )
+
+    advisory = artifacts.get("executive_advisory")
+    advisory_payload = advisory if isinstance(advisory, Mapping) else {}
+    decision_brief = advisory_payload.get("decision_brief")
+    decision_payload = decision_brief if isinstance(decision_brief, Mapping) else {}
+    decision_evidence_ids = _surface_evidence_ids(decision_payload)
+    if str(
+        decision_payload.get("status") or ""
+    ).strip().casefold() == "generated" and has_verified_binding(decision_evidence_ids):
+        for field_name in (
+            "strategic_context",
+            "confidence_note",
+        ):
+            value = _sanitize_public_prose(decision_payload.get(field_name))
+            if value:
+                item = _item(
+                    "executive_advisory",
+                    f"decision_brief.{field_name}",
+                    value,
+                    decision_evidence_ids,
+                    "executive_advisory",
+                    evidence_text=str(
+                        decision_payload.get("evidence")
+                        or decision_payload.get("source_excerpt")
+                        or ""
+                    ).strip(),
+                )
+                _annotate_verified_item(item, artifacts)
+                add_item(item)
+        for field_name in ("decision_implications", "priority_moves", "watchouts"):
+            for index, raw_value in enumerate(
+                decision_payload.get(field_name) or [], start=1
+            ):
+                value = _sanitize_public_prose(raw_value)
+                if not value:
+                    continue
+                item = _item(
+                    "executive_advisory",
+                    f"decision_brief.{field_name}:{index}",
+                    value,
+                    decision_evidence_ids,
+                    "executive_advisory",
+                )
+                _annotate_verified_item(item, artifacts)
+                add_item(item)
+
+    for index, claim in enumerate(_dict_items(artifacts.get("claim_ledgers")), start=1):
+        value = _sanitize_public_prose(claim.get("claim_text"))
+        evidence_ids = _surface_evidence_ids(claim)
+        if not value or not has_verified_binding(evidence_ids):
+            continue
+        item = _item(
+            "claim_ledgers",
+            f"claim:{index}",
+            value,
+            evidence_ids,
+            "executive_advisory",
+            evidence_text=str(
+                claim.get("evidence") or claim.get("source_excerpt") or ""
+            ).strip(),
+        )
+        _annotate_verified_item(item, artifacts)
+        add_item(item)
+
+    raw_topics = artifacts.get("toc_topics")
+    topics = [
+        str(value).strip()
+        for value in (raw_topics if isinstance(raw_topics, list) else [])
+        if str(value).strip()
+    ]
+    if not topics:
+        topics = [
+            str(item.get("title") or item.get("display_title") or "").strip()
+            for item in _dict_items(artifacts.get("toc_entries"))
+            if str(item.get("title") or item.get("display_title") or "").strip()
+        ]
+    topic_briefs = _coerce_topic_briefs(artifacts)
+    raw_tags = artifacts.get("taxonomy")
+    tags = raw_tags if isinstance(raw_tags, list) else []
+    topic_evidence_by_title: dict[str, list[str]] = {}
+    for raw_group in (
+        artifacts.get("topics_covered"),
+        artifacts.get("toc_topics_expanded"),
+        artifacts.get("toc_entries"),
+    ):
+        for raw_item in _dict_items(raw_group):
+            title = str(
+                raw_item.get("topic")
+                or raw_item.get("title")
+                or raw_item.get("display_title")
+                or ""
+            ).strip()
+            if title:
+                evidence_ids = topic_evidence_by_title.setdefault(title.casefold(), [])
+                for evidence_id in _surface_evidence_ids(raw_item):
+                    if evidence_id not in evidence_ids:
+                        evidence_ids.append(evidence_id)
+    for index, signal in enumerate(
+        _build_signal_cards(
+            topics=topics,
+            topic_briefs=topic_briefs,
+            tags=tags,
+            prefer_key_points=bool(artifacts.get("topics_covered")),
+        ),
+        start=1,
+    ):
+        text = _sanitize_public_prose(signal.get("signal") or signal.get("summary"))
+        if not text:
+            continue
+        evidence_ids = topic_evidence_by_title.get(
+            str(signal.get("title") or "").casefold(), []
+        )
+        if not has_verified_binding(evidence_ids):
+            continue
+        item = _item(
+            "signal_cards",
+            f"signal:{index}",
+            text,
+            evidence_ids,
+            "insights_bundle",
+        )
+        _annotate_verified_item(item, artifacts)
+        add_item(item)
 
     return items
 
@@ -1700,6 +1931,18 @@ def _public_evidence_ids(item: Mapping[str, Any]) -> list[str]:
         *_string_list(item.get("evidence_id")),
         *_string_list(item.get("evidence_ids")),
     ]
+    return list(dict.fromkeys(value for value in values if value))
+
+
+def _surface_evidence_ids(item: Mapping[str, Any]) -> list[str]:
+    """Collect the existing source bindings for a rendered advisory surface."""
+
+    values = _public_evidence_ids(item)
+    values.extend(
+        str(value).strip()
+        for value in _string_list(item.get("evidence_links"))
+        if str(value).strip()
+    )
     return list(dict.fromkeys(value for value in values if value))
 
 

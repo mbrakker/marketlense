@@ -1,3 +1,4 @@
+# ruff: noqa: F401
 from __future__ import annotations
 
 from copy import deepcopy
@@ -24,6 +25,16 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
 )
 from src.utils.errors import AppError
 from src.utils.verified_facts import build_verified_authority_context
+from tests._test_pre_e2e_integrity.cases_01_public_surfaces_and_status import (
+    _report_review_verdict,
+    _valid_report_review_payload,
+    test_public_item_status_contract_is_fail_closed,
+    test_public_report_status_contract_is_fail_closed,
+    test_semantic_review_projection_includes_all_public_surface_fields,
+    test_semantic_review_projection_matches_rendered_material_surfaces,
+    test_verified_render_does_not_fallback_to_legacy_public_content,
+    test_verified_signal_review_and_renderer_omit_unbound_topic_copy,
+)
 from tests._test_report_render_generator._split_support_cases_01_render_output_and_cards import (  # noqa: E501
     _analysis,
     _deps,
@@ -65,70 +76,6 @@ def test_public_review_reason_validation_is_structural_not_word_count() -> None:
     assert _substantive_public_review_reason("   ") is False
 
 
-def _report_review_verdict(
-    *,
-    status: str = "pass",
-    evidence_ids: list[str] | None = None,
-    affected_item_id: str = "",
-    repair_target: str = "",
-    coverage_status: str = "pass",
-) -> dict:
-    return {
-        "status": status,
-        "severity": "info" if status == "pass" else "error",
-        "rule_id": (
-            "" if status == "pass" else "public_editorial_quality.report_acceptance"
-        ),
-        "hard_fail_class": "" if status == "pass" else "report_editorial_acceptance",
-        "reason": "The final report is assessed against its retained source context.",
-        "evidence_ids": list(evidence_ids or []),
-        "repair_target": repair_target,
-        "affected_item_id": affected_item_id,
-        "dimensions": {
-            "material_coverage": {
-                "status": coverage_status,
-                "reason": "The admitted findings are or are not materially covered.",
-            },
-            "analytical_depth": {
-                "status": "pass",
-                "reason": "The report contains defensible interpretation.",
-            },
-            "distinctness": {
-                "status": "pass",
-                "reason": "The selected items remain distinct and coherent.",
-            },
-            "limitations": {
-                "status": "pass",
-                "reason": "Material boundaries and uncertainty are represented.",
-            },
-        },
-    }
-
-
-def _valid_report_review_payload() -> tuple[list[dict], dict, dict]:
-    artifacts = _authority_artifacts()
-    items = public_editorial_semantic_review_items(artifacts)
-    scope = public_editorial_report_review_scope(artifacts, items)
-    payload = {
-        "verdicts": [
-            {
-                "item_id": str(item["public_item_id"]),
-                "status": "pass",
-                "classification": "factual_claim",
-                "severity": "info",
-                "rule_id": "",
-                "hard_fail_class": "",
-                "reason": "The item remains supported by its retained source context.",
-                "evidence_ids": list(item.get("evidence_ids") or []),
-                "repair_target": "",
-            }
-            for item in items
-        ],
-        "report_verdict": _report_review_verdict(evidence_ids=["verified-fact:fact-1"]),
-    }
-    return items, scope, payload
-
-
 def test_public_report_review_requires_complete_scope_verdict() -> None:
     artifacts = _authority_artifacts()
     items = public_editorial_semantic_review_items(artifacts)
@@ -160,9 +107,7 @@ def test_public_report_review_requires_complete_scope_verdict() -> None:
     assert raised.value.code == "public_editorial_quality_report_review_incomplete"
 
 
-def test_public_report_review_coverage_diagnostics_include_expected_and_actual_counts() -> (
-    None
-):
+def test_public_report_review_coverage_diagnostics_show_counts() -> None:
     artifacts = _authority_artifacts()
     items = public_editorial_semantic_review_items(artifacts)
     scope = public_editorial_report_review_scope(artifacts, items)
@@ -744,53 +689,6 @@ def test_verified_public_quality_fails_closed_without_canonical_binding() -> Non
         issue.rule_id == "public_editorial_quality.material_claim_evidence_missing"
         for issue in report.issues
     )
-
-
-def test_semantic_review_projection_includes_all_public_surface_fields() -> None:
-    artifacts = _authority_artifacts()
-    evidence_id = "verified-fact:fact-1"
-    evidence = artifacts["verified_facts"][0]["statement"]
-    artifacts["key_figures"] = [
-        {
-            "label": "Adoption",
-            "figure": "42%",
-            "why_it_matters": "Buyer adoption is commercially material.",
-            "evidence_id": evidence_id,
-            "evidence": evidence,
-        }
-    ]
-    artifacts["quotes_final"] = [
-        {"id": "quote-1", "text": evidence, "evidence_id": evidence_id}
-    ]
-    artifacts["chart_insight_cards"] = [
-        {
-            "title": "Adoption",
-            "caption": "42% among buyers in 2026.",
-            "public_takeaway": "Buyer adoption is commercially material.",
-            "evidence_id": evidence_id,
-            "evidence": evidence,
-        }
-    ]
-
-    item_ids = {
-        str(item["public_item_id"])
-        for item in public_editorial_semantic_review_items(artifacts)
-    }
-
-    assert {
-        "key_figures:key_figures:1:label",
-        "key_figures:key_figures:1:figure",
-        "key_figures:key_figures:1:why_it_matters",
-        "quotes_final:quotes:quote-1",
-        "chart_insight_cards:chart_insight_cards:1:title",
-        "chart_insight_cards:chart_insight_cards:1:caption",
-        "chart_insight_cards:chart_insight_cards:1:public_takeaway",
-    } <= item_ids
-
-    quality = evaluate_public_editorial_quality(
-        report_id="public-surface-projection", artifacts=artifacts
-    )
-    assert quality.status == "pass"
 
 
 def test_metadata_quality_reconciles_html_meta_and_json_ld_identity() -> None:

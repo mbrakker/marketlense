@@ -9,8 +9,26 @@ text: |
   IDs, and include every schema field. Item evidence IDs must stay within that
   item's supplied bindings. Use only the supplied allowed repair targets; set
   repair_target to an empty string when no localized repair is justified.
+  For an item pass, use severity info or warning and leave rule_id,
+  hard_fail_class, and repair_target empty; factual or interpretive passes
+  retain evidence. For an item fail or unresolved, use severity error, a
+  substantive reason, and rule_id or hard_fail_class; use an empty evidence
+  list only with an explicit missing-evidence classification. A repair target
+  must exactly match the item's allowed target. The report pass contract is
+  severity info or warning, all four dimensions pass, and empty failure and
+  repair fields. A report fail or unresolved uses severity error and identifies
+  a nonpassing dimension and a failure classification. Report repair is only
+  allowed for a named affected item with that item's exact allowed target.
   Return one report_verdict covering all four report dimensions, with status,
   severity, rule, failure and repair fields consistent with one another and a
   substantive source-grounded reason. A report-level repair must name the
   affected item and use that item's allowed repair target.
+  {% endif %}
+  {% if artifact_family == "category_fit" %}
+  This is a category-fit recovery. Keep category IDs within the supplied
+  profiles, include every selected ID in category_fits, and select only fits
+  whose decision is primary or secondary. Keep configured include rule IDs in
+  supported_topic_rule_ids only and configured exclude rule IDs in
+  rejected_topic_rule_ids only. Evidence-section references must be supplied
+  context labels; do not invent IDs or references.
   {% endif %}

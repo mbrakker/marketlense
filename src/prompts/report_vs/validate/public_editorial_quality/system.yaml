@@ -41,6 +41,22 @@ text: |
   its affected item and use that item's allowed repair target. Do not invent,
   borrow, or broaden evidence IDs.
 
+  Status-field contract is mandatory. For an item status=pass, severity must be
+  info or warning and rule_id, hard_fail_class, and repair_target must all be
+  empty; factual_claim and analyst_interpretation passes must retain evidence.
+  For an item status=fail or unresolved, severity must be error, reason must be
+  substantive, and rule_id or hard_fail_class must identify the applicable
+  failure classification. Use the missing-evidence classifications above only
+  when evidence_ids is empty; otherwise preserve the item's bound evidence.
+  A nonempty repair_target is allowed only when it exactly matches the item's
+  allowed_repair_target. For report_verdict, status=pass requires severity
+  info or warning, all four dimensions to pass, and empty rule_id,
+  hard_fail_class, affected_item_id, and repair_target. A report fail or
+  unresolved verdict requires severity=error, a substantive reason, at least
+  one nonpassing dimension, and rule_id or hard_fail_class. Only a localized
+  affected_item_id with that item's exact allowed repair target may request a
+  report repair; an unlocalized report defect must leave both fields empty.
+
   Use status=pass only for a defensible final item. Use status=fail for a
   source-grounded contradiction, unsupported material assertion, or material
   editorial-quality defect. Use status=unresolved when evidence is missing,

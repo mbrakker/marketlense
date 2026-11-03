@@ -16,6 +16,10 @@ from src.contracts.context_category_fit import (
     ReportCategoryContext,
 )
 from src.contracts.openai import OpenAIResponseResult
+from src.contracts.prompt_family_materialization import (
+    PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    PromptFamilyReuseResponse,
+)
 from src.contracts.prompts import (
     PromptDependency,
     PromptDependencyManifest,
@@ -24,6 +28,7 @@ from src.contracts.prompts import (
 )
 from src.contracts.run_context import RunContext
 from src.generators.context_category_fit_generator import (
+    _rule_id,
     fit_report_categories_from_context,
 )
 from src.services.category_mapping_service import (
@@ -59,7 +64,11 @@ class _RecordingPromptClient:
         )
 
     def render_prompt(self, request, ctx):
-        return SimpleNamespace(text=request.template.text.format(**request.variables))
+        try:
+            text = request.template.text.format(**request.variables)
+        except KeyError:
+            text = request.template.text
+        return SimpleNamespace(text=text)
 
 
 class _RecordingOpenAIClient:
@@ -80,9 +89,31 @@ class _RecordingOpenAIClient:
         )
 
 
+class _SequenceOpenAIClient:
+    def __init__(self, payloads: list[dict]) -> None:
+        self.payloads = payloads
+        self.requests = []
+
+    def openai_chat_json(self, request, ctx):
+        self.requests.append((request, ctx))
+        payload = self.payloads[min(len(self.requests) - 1, len(self.payloads) - 1)]
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=json.dumps(payload),
+            parsed_json=payload,
+            input_tokens=100,
+            output_tokens=50,
+            tool_calls=0,
+            model=request.model,
+            total_tokens=150,
+            request_id=f"req-{len(self.requests)}",
+        )
+
+
 def _settings() -> SimpleNamespace:
     return SimpleNamespace(
         openai_model="gpt-5-mini",
+        temperature=1.0,
         openai_models={},
         openai_api_key="test-key",
         openai_seed=None,
@@ -99,6 +130,8 @@ def _settings() -> SimpleNamespace:
                 "max_output_tokens": 800,
             }
         },
+        reports_db="unused.sqlite",
+        output_dir="./out",
     )
 
 
@@ -196,7 +229,11 @@ def test_retained_category_fit_regression_cases(recorded_case: dict) -> None:
         openai_client=_RecordingOpenAIClient(
             {
                 "schema_version": "1.0",
-                "selected_category_ids": [],
+                "selected_category_ids": (
+                    [candidate["category_id"]]
+                    if recorded_case["expected"]["selected"]
+                    else []
+                ),
                 "category_fits": [candidate],
             }
         ),
@@ -272,7 +309,7 @@ def test_model_rejection_is_not_overridden_by_central_context_text() -> None:
         openai_client=_RecordingOpenAIClient(
             {
                 "schema_version": "1.0",
-                "selected_category_ids": ["technology"],
+                "selected_category_ids": [],
                 "category_fits": [
                     {
                         "category_id": "technology",
@@ -293,6 +330,204 @@ def test_model_rejection_is_not_overridden_by_central_context_text() -> None:
     assert response.categories == []
     assert response.fits[0].decision == "reject"
     assert response.fits[0].semantic_rule_status == "not_evaluated"
+
+
+def test_topic_rule_conflict_reaches_bounded_model_recovery() -> None:
+    """Post-coercion topic validation must not bypass structured recovery."""
+
+    mappings = _explicit_exclusion_mappings()
+    rule = mappings.categories[0].include_when[0]
+    include_rule_id = _rule_id("technology", "include", 0, rule)
+
+    def mapping_client(request, ctx):
+        del request, ctx
+        return CategoryMappingLoadResponse(schema_version="1.0", mappings=mappings)
+
+    context = ReportCategoryContext(
+        schema_version="1.0",
+        report_id="file-recovery",
+        title="Enterprise technology shifts",
+        publisher="Publisher",
+        region="Global",
+        time_period="2026",
+        overview="Technology shifts are the central subject.",
+        key_findings=["Technology operating models are changing."],
+    )
+    invalid = {
+        "schema_version": "1.0",
+        "selected_category_ids": ["technology"],
+        "category_fits": [
+            {
+                "category_id": "technology",
+                "label": "Technology & Innovation",
+                "fit_score": 0.9,
+                "decision": "primary",
+                "why_fit": "Technology is central.",
+                "why_not_fit": "",
+                "evidence_sections": ["overview"],
+                "rejected_topic_rule_ids": [include_rule_id],
+            }
+        ],
+    }
+    corrected = {
+        **invalid,
+        "category_fits": [
+            {
+                **invalid["category_fits"][0],
+                "supported_topic_rule_ids": [include_rule_id],
+                "rejected_topic_rule_ids": [],
+            }
+        ],
+    }
+    client = _SequenceOpenAIClient([invalid, corrected])
+
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=context,
+            settings=_settings(),
+            category_mapping_path="unused",
+            candidate_category_ids=["technology"],
+        ),
+        _ctx(),
+        openai_client=client,
+        prompt_client=_RecordingPromptClient(),
+        mapping_client=mapping_client,
+    )
+
+    assert len(client.requests) == 2
+    assert response.categories == ["technology"]
+    assert response.fits[0].supported_topic_rule_ids == [include_rule_id]
+
+
+def test_invalid_cached_category_fit_cannot_bypass_binding_validation() -> None:
+    mappings = _explicit_exclusion_mappings()
+    context = ReportCategoryContext(
+        schema_version="1.0",
+        report_id="file-cache-recovery",
+        title="Enterprise technology shifts",
+        publisher="Publisher",
+        region="Global",
+        time_period="2026",
+        overview="Technology shifts are the central subject.",
+        key_findings=["Technology operating models are changing."],
+    )
+    invalid_cached = {
+        "schema_version": "1.0",
+        "selected_category_ids": ["technology"],
+        "category_fits": [
+            {
+                "category_id": "technology",
+                "label": "Technology & Innovation",
+                "fit_score": 0.9,
+                "decision": "reject",
+                "why_fit": "",
+                "why_not_fit": "The category is not selected.",
+                "evidence_sections": ["overview"],
+            }
+        ],
+    }
+
+    def mapping_client(request, ctx):
+        del request, ctx
+        return CategoryMappingLoadResponse(schema_version="1.0", mappings=mappings)
+
+    def reuse_reader(request, ctx):
+        del request, ctx
+        return PromptFamilyReuseResponse(
+            schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+            reusable=True,
+            reason="retained",
+            output_payload=invalid_cached,
+        )
+
+    client = _SequenceOpenAIClient(
+        [
+            {
+                "schema_version": "1.0",
+                "selected_category_ids": ["technology"],
+                "category_fits": [
+                    {
+                        "category_id": "technology",
+                        "label": "Technology & Innovation",
+                        "fit_score": 0.9,
+                        "decision": "primary",
+                        "why_fit": "Technology is central.",
+                        "why_not_fit": "",
+                        "evidence_sections": ["overview"],
+                    }
+                ],
+            }
+        ]
+    )
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=context,
+            settings=_settings(),
+            category_mapping_path="unused",
+            source_id="md5:file-cache-recovery",
+        ),
+        _ctx(),
+        openai_client=client,
+        prompt_client=_RecordingPromptClient(),
+        mapping_client=mapping_client,
+        prompt_family_reuse_reader=reuse_reader,
+        prompt_family_materializer=lambda *_args: None,
+    )
+
+    assert len(client.requests) == 1
+    assert response.categories == ["technology"]
+
+
+def test_category_fit_selected_ids_must_match_declared_decisions() -> None:
+    mappings = _explicit_exclusion_mappings()
+    context = ReportCategoryContext(
+        schema_version="1.0",
+        report_id="file-selection-contract",
+        title="Enterprise technology shifts",
+        publisher="Publisher",
+        region="Global",
+        time_period="2026",
+        overview="Technology shifts are the central subject.",
+        key_findings=["Technology operating models are changing."],
+    )
+    invalid = {
+        "schema_version": "1.0",
+        "selected_category_ids": [],
+        "category_fits": [
+            {
+                "category_id": "technology",
+                "label": "Technology & Innovation",
+                "fit_score": 0.9,
+                "decision": "primary",
+                "why_fit": "Technology is central.",
+                "why_not_fit": "",
+                "evidence_sections": ["overview"],
+            }
+        ],
+    }
+    corrected = {**invalid, "selected_category_ids": ["technology"]}
+
+    client = _SequenceOpenAIClient([invalid, corrected])
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=context,
+            settings=_settings(),
+            category_mapping_path="unused",
+            candidate_category_ids=["technology"],
+        ),
+        _ctx(),
+        openai_client=client,
+        prompt_client=_RecordingPromptClient(),
+        mapping_client=lambda request, ctx: CategoryMappingLoadResponse(
+            schema_version="1.0", mappings=mappings
+        ),
+    )
+
+    assert len(client.requests) == 2
+    assert response.categories == ["technology"]
 
 
 def test_fit_report_categories_retains_five_evidence_backed_categories() -> None:

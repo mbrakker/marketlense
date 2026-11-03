@@ -161,7 +161,7 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v20"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v21"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.0"
 _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v3"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
@@ -425,14 +425,33 @@ def _validate_public_editorial_review_payload(
                     "or repair fields"
                 ),
                 retryable=False,
-                context={"item_id": item_id},
+                context={
+                    "item_id": item_id,
+                    "status_conflict_type": "item_pass_contains_failure_fields",
+                },
             )
         if status in {"fail", "unresolved"} and severity != "error":
             raise AppError(
                 code="public_editorial_quality_review_status_conflict",
                 message="A failing public semantic verdict must be an error",
                 retryable=False,
-                context={"item_id": item_id},
+                context={
+                    "item_id": item_id,
+                    "status_conflict_type": "item_failure_severity_not_error",
+                },
+            )
+        if status in {"fail", "unresolved"} and not (rule_id or hard_fail_class):
+            raise AppError(
+                code="public_editorial_quality_review_status_conflict",
+                message=(
+                    "A failing public semantic verdict must identify a failure "
+                    "classification"
+                ),
+                retryable=False,
+                context={
+                    "item_id": item_id,
+                    "status_conflict_type": "item_failure_classification_missing",
+                },
             )
         if (
             status == "pass"
@@ -528,12 +547,14 @@ def _validate_public_editorial_review_payload(
             code="public_editorial_quality_report_review_status_conflict",
             message="A passing report verdict cannot contain failure or repair fields",
             retryable=False,
+            context={"status_conflict_type": "report_pass_contains_failure_fields"},
         )
     if report_status in {"fail", "unresolved"} and report_severity != "error":
         raise AppError(
             code="public_editorial_quality_report_review_status_conflict",
             message="A failing report verdict must be an error",
             retryable=False,
+            context={"status_conflict_type": "report_failure_severity_not_error"},
         )
     report_evidence_ids = [
         str(value).strip()
@@ -622,6 +643,7 @@ def _validate_public_editorial_review_payload(
             code="public_editorial_quality_report_review_status_conflict",
             message="A passing report verdict must pass every required dimension",
             retryable=False,
+            context={"status_conflict_type": "report_pass_has_nonpassing_dimension"},
         )
     if report_status in {"fail", "unresolved"} and all(
         status == "pass" for status in dimension_statuses
@@ -630,6 +652,7 @@ def _validate_public_editorial_review_payload(
             code="public_editorial_quality_report_review_status_conflict",
             message="A failed report verdict must identify a failed dimension",
             retryable=False,
+            context={"status_conflict_type": "report_failure_has_no_failed_dimension"},
         )
     affected_item_id = str(report_verdict.get("affected_item_id") or "").strip()
     if affected_item_id and affected_item_id not in expected:
@@ -672,6 +695,15 @@ def _validate_public_editorial_review_payload(
                 retryable=False,
                 context={"item_id": affected_item_id},
             )
+    if report_status in {"fail", "unresolved"} and not (
+        report_rule_id or report_hard_fail_class
+    ):
+        raise AppError(
+            code="public_editorial_quality_report_review_status_conflict",
+            message=("A failing report verdict must identify a failure classification"),
+            retryable=False,
+            context={"status_conflict_type": "report_failure_classification_missing"},
+        )
 
 
 def _public_editorial_semantic_review(

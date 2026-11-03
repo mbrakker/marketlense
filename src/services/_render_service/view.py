@@ -10,12 +10,13 @@ from urllib.parse import urlsplit
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from src.contracts.report_assets import RenderRequest
 from src.contracts.pdf_utils import CropPublicationProofRequest
+from src.contracts.report_assets import RenderRequest
 from src.contracts.run_context import RunContext
 from src.services.pdf_service import verify_crop_publication_proof
 from src.utils.logging import log_event
 from src.utils.time_period import normalize_time_period
+from src.utils.verified_facts import verified_facts_mode
 
 from .normalization import (
     _build_core_signal,
@@ -283,6 +284,7 @@ def _build_render_view(
     data = request.data
     out_dir = Path(request.out_dir)
     artifacts = _coerce_dict(data.get("artifacts"))
+    verified_mode = verified_facts_mode(artifacts)
     summary = _coerce_dict(artifacts.get("summary"))
     source_status = _coerce_dict(artifacts.get("source_status"))
     evidence_packs = _coerce_dict(data.get("evidence_packs"))
@@ -329,7 +331,9 @@ def _build_render_view(
     if _same_temporal_value(public_dates["data_period"], fieldwork_dates):
         public_dates["data_period"] = ""
     tldr_text = _sanitize_public_prose(
-        _pick_first_text(summary.get("tldr"), data.get("tldr"))
+        _pick_first_text(summary.get("tldr"))
+        if verified_mode
+        else _pick_first_text(summary.get("tldr"), data.get("tldr"))
     )
     compact_tldr = _sanitize_public_prose(summary.get("card_tldr_compact"))
     not_available = bool(
@@ -340,7 +344,9 @@ def _build_render_view(
     if not tldr_text and not_available:
         tldr_text = "Not available from text."
     executive_summary = _sanitize_public_prose(
-        _pick_first_text(summary.get("executive_summary"), data.get("commentary"))
+        _pick_first_text(summary.get("executive_summary"))
+        if verified_mode
+        else _pick_first_text(summary.get("executive_summary"), data.get("commentary"))
     )
     source_url = _public_http_url(data.get("source"))
     source_download_href = _public_http_url(data.get("_source_download_href"))
@@ -356,17 +362,18 @@ def _build_render_view(
         for chapter in _coerce_chapters(artifacts, doc_map):
             if chapter["title"]:
                 topics.append(chapter["title"])
-    insights = _coerce_insights(
+    insight_source = (
         artifacts.get("insights_final")
-        if _coerce_list(artifacts.get("insights_final"))
-        else data.get("insights"),
-        report_title=report_title,
+        if verified_mode or _coerce_list(artifacts.get("insights_final"))
+        else data.get("insights")
     )
+    insights = _coerce_insights(insight_source, report_title=report_title)
     quotes = _coerce_quotes(
         artifacts.get("quotes_final"),
         data,
         publisher,
         report_title=report_title,
+        allow_legacy_fallback=not verified_mode,
     )
     topic_briefs = _coerce_topic_briefs(artifacts)
     snapshot_categories = _coerce_list(data.get("categories_display")) or _coerce_list(
@@ -415,6 +422,50 @@ def _build_render_view(
         tags=snapshot_tags,
         prefer_key_points=bool(topics_covered),
     )
+    if verified_mode:
+        topic_sources = [
+            item
+            for raw_group in (
+                artifacts.get("topics_covered"),
+                artifacts.get("toc_topics_expanded"),
+                artifacts.get("toc_entries"),
+            )
+            for item in _coerce_list(raw_group)
+            if isinstance(item, dict)
+        ]
+        bound_topic_titles = {
+            str(
+                item.get("topic")
+                or item.get("title")
+                or item.get("display_title")
+                or ""
+            )
+            .strip()
+            .casefold()
+            for item in topic_sources
+            if str(
+                item.get("topic")
+                or item.get("title")
+                or item.get("display_title")
+                or ""
+            ).strip()
+            and any(
+                str(value).strip().startswith("verified-fact:")
+                for raw_values in (
+                    item.get("evidence_id"),
+                    item.get("evidence_ids"),
+                )
+                for value in (
+                    raw_values if isinstance(raw_values, list) else [raw_values]
+                )
+                if str(value).strip()
+            )
+        }
+        signal_cards = [
+            card
+            for card in signal_cards
+            if str(card.get("title") or "").strip().casefold() in bound_topic_titles
+        ]
     core_signal = _build_core_signal(
         tldr_text=tldr_text,
         executive_summary=executive_summary,
@@ -538,7 +589,9 @@ def _build_render_view(
         "chapters": chapters,
         "insights": insights,
         "quotes": quotes,
-        "commentary": _sanitize_public_prose(data.get("commentary")),
+        "commentary": ""
+        if verified_mode
+        else _sanitize_public_prose(data.get("commentary")),
         "expert_comment": _sanitize_public_prose(artifacts.get("expert_comment")),
         "linkedin_post": _sanitize_linkedin_post(artifacts.get("linkedin_post")),
         "figures": {

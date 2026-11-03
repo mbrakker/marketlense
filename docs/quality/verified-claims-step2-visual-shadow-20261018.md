@@ -9003,3 +9003,79 @@ justified by this result.
 E18 remains **Active/PARTIAL**. Verified Claims Step 2 remains
 **PARTIAL/NO-GO**. Step 3 remains **unstarted/not ready**. The frozen-five
 promotion decision is **NO-GO**.
+
+## Cross-stage contracts and public-output coverage correction — 2026-11-03
+
+This correction was developed from reviewed HEAD `0409dc4647dfff9f98e3d444d3cb6e961a27cd3c`
+on `codex/fix-retained-insight-evidence-validation`. It addresses the
+cross-stage failures reproduced in the provider-free category-fit, public
+editorial, and verified-render regressions. No canonical artifact, readiness
+approval, publication, WordPress write, or provider call was made during this
+correction pass.
+
+### Root causes and bounded fixes
+
+- **Public-editorial P0:** the validator already enforced the status contract,
+  but the public-review and structured-recovery prompts did not state all of
+  its pass/fail/unresolved field combinations. The validator now retains a
+  typed `status_conflict_type` discriminator without raw model text, advances
+  its cache identity to `public-editorial-quality:v21`, and the system/recovery
+  prompts state the existing item and report contracts. Negative semantic
+  judgments remain blocking.
+- **Category-fit P1:** topic-semantic normalization and selected/decision
+  consistency ran after the structured-output service's schema callback, so a
+  schema-valid response could fail outside bounded recovery; cache reuse also
+  performed only schema validation. The same existing deterministic checks now
+  run in the validator callback and on reuse, malformed normalized values are
+  preserved for rejection, and the category-fit validator identity advances
+  from `2.0` to `2.1`. Recovery remains bounded by the existing policy.
+- **Public review/render P1:** the review inventory omitted reader-visible
+  metric-spine, accepted-chart, advisory, claim-support, and bound topic-signal
+  fields, while including weak/non-rendered chart cards. Topic evidence could
+  also be overwritten by later navigation records. The review now projects the
+  renderer's material fields through the existing evidence bindings, filters
+  weak or unbound optional surfaces, and deduplicates identical verified text;
+  accepted chart cards use the renderer's eligibility predicate. The verified
+  renderer uses the same binding boundary and no longer falls back to legacy
+  `data.insights`, `data.quote`, `data.tldr`, or `data.commentary`.
+- **Methodology-date-range P2:** the retained Adjust date-range observation was
+  checked against physical PDF page 13 and is source-valid. No blacklist,
+  threshold reduction, or special-case production change was justified.
+
+### Provider-free verification before live acceptance
+
+| Check | Result |
+| --- | --- |
+| Category-fit and cache/recovery regressions | **23 passed** |
+| Public-editorial status, projection, renderer, and pre-E2E regressions | **61 passed** |
+| Full supported CPython 3.12 suite with coverage | **8,440 passed, 2 skipped, 48 deselected, 24 subtests** in 1,548.99s |
+| Coverage floors | **PASS** — global 85.50%, contracts 97.98%, generators 87.20%, orchestrators 86.07%, services 84.34%, control-plane 90.60% |
+| Mutation gate | **PASS** — 67/68 killed; the single taxonomy survivor matches its retained baseline |
+| Quality regression comparator | **PASS** — coverage, mutation, docpacks, and candidate-extraction baselines unchanged |
+| Prompt fixture regression | **PASS** — 115,051 tokens / `$0.025158` versus 114,247 / `$0.025078` (+804 / +$0.000080); report +285 tokens / +$0.000028, validation +519 / +$0.000052; thresholds and pricing unchanged |
+
+The prompt increase is the measured status/category contract and public-surface
+authority text. It was not produced by a new LLM stage or by editing the
+fixture counts, pricing, or thresholds.
+
+The retained Adjust artifact was also rendered provider-free to
+`C:\ml-cross-contract-html-replay\mobile-app-trends-2026-pdf.html`. Its
+existing seven findings and physical-page bindings remained intact; the full
+PDF audit confirmed the retained CPI, installs, GenAI maturity/efficiency,
+satisfaction, casual-gaming, finance, and methodology observations. The HTML
+contained no internal evidence identifiers or quality placeholders. Unbound
+topic signals, weak chart cards, and abstained quotes were omitted fail-closed;
+this is correct safety behavior but leaves optional public coverage unproven.
+The inherited methodology label rendered with mojibake in one metric card;
+that encoding limitation predates this correction and is not silently repaired.
+
+### Live acceptance status
+
+One isolated provider-backed Adjust acceptance remains required after the
+correction. It must use the exact frozen PDF SHA
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`, the
+verified-facts workflow, no WordPress target, and independent HTML/PDF review.
+Until that single run produces terminal artifacts, this section provides no
+live claim about provider variability, editorial acceptance, cost, latency, or
+publication readiness. Step 2 therefore remains **PARTIAL / NO-GO** and Step 3
+remains **unstarted / not ready**.

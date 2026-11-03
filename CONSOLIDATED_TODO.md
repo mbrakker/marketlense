@@ -1782,3 +1782,19 @@ readiness and rendered editorial quality remain unproven. This is
 decision remains **NO-GO**. Full paths, per-insight audit, baseline comparison,
 and the exact diagnostic limitation are recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Evidence update — 2026-11-03 (cross-stage contracts and public-output
+coverage):** The public-editorial status contract is now explicit in the
+existing validator/recovery prompts with cache identity `v21`; category-fit
+semantic and selected/decision checks run at the structured-output boundary
+and invalidate reuse through validator identity `2.1`; verified public review
+and rendering share material-surface eligibility and no longer fall back to
+legacy public fields. Provider-free verification passed the focused contract
+suite, the supported CPython 3.12 full suite (8,440 passed, 2 skipped, 48
+deselected, 24 subtests), coverage floors, 67/68 mutation gate, quality
+regression comparator, and prompt fixture gate. The prompt corpus delta is
+804 tokens / `$0.000080` and remains within existing thresholds. One fresh
+isolated provider-backed Adjust acceptance is still required; no live or
+publication result is claimed from this checkpoint. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.

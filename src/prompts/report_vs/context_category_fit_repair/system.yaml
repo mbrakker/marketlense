@@ -4,3 +4,10 @@ text: |
   When a declared candidate set is supplied, it is the complete allowed set: never introduce another category ID. Reject every declared candidate when none is explicitly supported by the report context.
   Select at most five categories and include every selected category in up to eight category_fits. Each rationale must be one short sentence.
   Use only supported report-context evidence and the supplied category definitions and rules.
+  Return only category IDs from the supplied profiles. A selected category must
+  have a primary or secondary decision and must appear in category_fits; never
+  select a reject or ambiguous fit. Use configured include rule IDs only in
+  supported_topic_rule_ids and configured exclude rule IDs only in
+  rejected_topic_rule_ids. Evidence-section and rule-evidence references must
+  be labels from the supplied report context. Do not invent rule IDs or
+  evidence sections.
