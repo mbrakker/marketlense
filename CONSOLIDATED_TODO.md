@@ -1877,3 +1877,25 @@ E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready**. Full run paths, source audit, and comparison
 are recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Live single-report Adjust acceptance — 2026-11-03 (commit
+`2f72700948f0ceb105b83eb82e5ef96c4fc5c90d`):** Hosted CI workflow
+`41679969027` passed, then one isolated provider-backed run used the exact
+frozen PDF SHA
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` with
+WordPress disabled. Visual admission was 7/7 with 0 quarantined, verified
+facts/final insights were 7/7, unsupported/unresolved retained factual claims
+were 0/0, and validation, public editorial quality and publication readiness
+all passed. The run produced HTML and ended in queue state `awaiting_review`,
+with 153 provider calls, 1,132,247 input tokens, 189,734 output tokens,
+19,716 cached input tokens, `$0.221315`, 6 file-search calls, 1,551.242
+seconds, 1 structured recovery, 0 automatic repairs, 0 retries and 0
+operator intervention. The original PDF pages 6, 11, 19, 21, 29, 34 and 35
+were independently checked; no unsupported material claim was found. The
+run still omitted optional signal cards and quotes, and did not select the
+page-21 gaming-CPI finding, so broader editorial coverage remains a measured
+limitation. E18 is **Active/PARTIAL**; the isolated acceptance is **PASS**,
+overall Step 2 remains **PARTIAL**, and Step 3 remains **unstarted/not ready**.
+Full artifact paths, before/after resource comparison and the source audit are
+recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

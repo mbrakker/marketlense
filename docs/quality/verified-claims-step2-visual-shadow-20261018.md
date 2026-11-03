@@ -9683,3 +9683,122 @@ Hosted CI and the one fresh isolated provider-backed Adjust run remain
 required. Until that run produces and passes an independently inspected HTML
 artifact, the implementation remains **PARTIAL / NO-GO** for Step 2
 promotion; Step 3 remains unstarted.
+
+## Single-report live Adjust acceptance — 2026-11-03
+
+Hosted CI passed for commit `2f72700948f0ceb105b83eb82e5ef96c4fc5c90d` in
+[workflow 41679969027](https://github.com/mbrakker/marketlense/actions/runs/41679969027).
+One fresh, isolated provider-backed Adjust run then used the unchanged frozen
+PDF SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` with
+WordPress disabled and no publication write. The run ended in the normal
+queue state `awaiting_review`; its validation and publication-readiness gates
+passed and its HTML artifact was produced.
+
+### Run identity and terminal result
+
+| Measure | Result |
+| --- | --- |
+| Cohort/report | `cohort-b638414df0b1fccea1cd` / Adjust |
+| Source identity | `source:8cb648b6bbd9dbae4ec1d915c38cf235` |
+| Visual candidates | 7 evaluated, 7 admitted, 0 quarantined |
+| Verified facts / final insights | 7 / 7 |
+| Unsupported / unresolved retained factual claims | 0 / 0 |
+| Validation / publication readiness | `pass` / `pass` |
+| Public editorial quality | `pass`, 0 issues, 0 hard failures |
+| Structured-output recovery / automatic repairs | 1 / 0 |
+| Retries / operator intervention | 0 / 0 |
+| Provider calls / file-search calls | 153 / 6 |
+| Model / tokens | `gpt-6-luna`; input 1,132,247; output 189,734; cached input 19,716; reasoning 70,375 |
+| Estimated cost / wall-clock | `$0.221315` / 1,551.242 s (core 1,548.0 s) |
+| WordPress | disabled; published `false` |
+
+Artifacts are retained at:
+
+- Run root: `C:\ml-adjust-live-2f727009-1103\frozen-reliability-0fxrrova`
+- Cohort result: `C:\ml-adjust-live-2f727009-1103\frozen-reliability-0fxrrova\cohort_result.json`
+- Report attempt: `C:\ml-adjust-live-2f727009-1103\frozen-reliability-0fxrrova\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-rx770xep`
+- Artifacts: `C:\ml-adjust-live-2f727009-1103\frozen-reliability-0fxrrova\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-rx770xep\output\mobile-app-trends-2026-pdf\report_analysis\artifacts.json`
+- Validation: `C:\ml-adjust-live-2f727009-1103\frozen-reliability-0fxrrova\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-rx770xep\output\mobile-app-trends-2026-pdf\report_analysis\validation.json`
+- Public-quality report: `C:\ml-adjust-live-2f727009-1103\frozen-reliability-0fxrrova\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-rx770xep\output\mobile-app-trends-2026-pdf\report_analysis\public_editorial_quality_before.json`
+- HTML: `C:\ml-adjust-live-2f727009-1103\frozen-reliability-0fxrrova\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-rx770xep\output\mobile-app-trends-2026-pdf.html`
+
+### Comparison with the retained pre-fix Adjust run
+
+The comparison run was commit `53971638`, which terminated at
+`regeneration_target_item_unchanged` and produced no HTML. The current run
+improved the terminal outcome and public gates, but the resource deltas are
+not attributed solely to code because provider/cache behavior and model
+selection are stochastic.
+
+| Measure | Previous | Current | Change |
+| --- | ---: | ---: | ---: |
+| Visual admission | 7/7/0 | 7/7/0 | unchanged |
+| Verified facts / final insights | 7 / 7 | 7 / 7 | unchanged |
+| Unsupported / unresolved claims | 0 / 0 | 0 / 0 | unchanged |
+| Provider calls | 159 | 153 | -6 (-3.8%) |
+| Input tokens | 1,217,027 | 1,132,247 | -84,780 (-7.0%) |
+| Output tokens | 216,421 | 189,734 | -26,687 (-12.3%) |
+| Cached input tokens | 21,568 | 19,716 | -1,852 (-8.6%) |
+| Reasoning tokens | 90,448 | 70,375 | -20,073 (-22.2%) |
+| Estimated cost | `$0.242970` | `$0.221315` | -`$0.021655` (-8.9%) |
+| File-search calls | 6 | 6 | unchanged |
+| Wall-clock | 1,824.185 s | 1,551.242 s | -272.943 s (-15.0%) |
+| Structured recovery | 3 | 1 | -2 |
+| Automatic repairs | 0 | 0 | unchanged |
+| HTML/readiness | absent / failed | present / pass | corrected terminal outcome |
+
+The implementation-attributable evidence is the no-op repair rejection and
+the shared verified review/render projections. The live run did not exercise
+an automatic repair, so changed-repair acceptance remains regression-test
+evidence rather than live evidence.
+
+### Independent source and public-output audit
+
+The original PDF was checked using full pages, without cropping, including
+pages 6, 11, 19, 21, 29, 34 and 35. The retained final claims and their
+authoritative source bindings were:
+
+| Stable insight | Page(s) | Independent result |
+| --- | ---: | --- |
+| `global-app-growth-2025` | 6 | Adjust text supports 2025 installs +10% and sessions +7%, versus +8% and +2% in 2024. |
+| `finance-global-install-session-divergence` | 34 | Finance installs -4% and sessions +21% in 2025 are supported; the final copy preserves the opposing measures. |
+| `finance-latam-growth` | 35 | LATAM +76% installs and +57% sessions for 2024–2025 are supported; no denominator or sample size was invented. |
+| `gaming-strategy-session-growth` | 19 | Strategy sessions +57% and installs -1% from 2024 to 2025 are supported by the text/chart relationship. |
+| `ecommerce-cpi-subvertical-divergence` | 29 | Deal-discovery CPI `$1.44` to `$2.26` is supported; the final public copy does not substitute the broader e-commerce CPI. |
+| `ecommerce-retention-2025` | 29 | Day 1 `13.2%` to `12.6%` and Day 7 `6.3%` to `6.0%` are supported and remain checkpoint-specific. |
+| `cross-platform-data-satisfaction` | 11 | “Around 31%” is supported; the source supplies no survey period, geography, denominator or methodology, and the public wording adds none. |
+
+Page 21 supports gaming CPI of `$0.56` in 2025, up 30%, and the separate
+slots/idle-RPG/strategy values. That finding was not selected into this run's
+seven final insights; it is an omission/selection limitation, not a factual
+promotion. Likewise, the current selection differs from the prior run's
+casino/slots, AI-maturity, gaming-CPI and paid/organic findings. This is
+reported as provider selection variability and remaining breadth risk, not as
+an improvement claim.
+
+The produced HTML contains no `verified-fact:` tokens, evidence IDs or private
+source paths in reader-facing surfaces. The required non-visible
+`marketbearing-build` traceability comment still contains source/build
+provenance, as required by the existing readiness contract; this is not
+reader-facing evidence text. The visible report contains seven final insight
+claims, a metric spine and claim-support surfaces, and no unsupported numeric
+or material qualitative assertion was found in the independent review.
+
+Two optional surfaces remain deliberately fail-closed: all twelve
+`topics_covered` rows were `toc_only`, so the rendered signal section says no
+report signals were extracted, and the quotes family abstained with the
+existing `quotes_missing` warning. These do not invalidate the accepted
+claims, but they mean this single run does not prove complete report-level
+coverage or quote availability.
+
+### Verdict
+
+**PASS for the isolated single-report Adjust E2E acceptance.** The no-op
+failure no longer blocks HTML generation, the final output passed validation,
+public-editorial quality and publication-readiness gates, and the independent
+PDF review found zero unsupported or unresolved material claims. **PARTIAL for
+broader Step 2 effectiveness:** material source findings can still be omitted
+by stochastic selection, and optional signal/quote surfaces were absent in
+this run. Step 3 remains **unstarted** and must not be inferred ready from
+this one-report result alone.
