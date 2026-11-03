@@ -660,6 +660,67 @@ def generate_artifacts(
     family_state_lock = Lock()
     final_selection_coverage: Dict[str, Any] = {}
 
+    def semantic_theme_coverage_insights_json(
+        final_insights: List[Dict[str, Any]],
+        *,
+        authoritative_facts: Sequence[Dict[str, Any]] | None = None,
+    ) -> str:
+        """Expose final copy with the authoritative metric to coverage."""
+
+        fact_by_evidence_id = {
+            f"verified-fact:{_s(fact.get('fact_id')).strip()}": fact
+            for fact in authoritative_facts or []
+            if isinstance(fact, dict) and _s(fact.get("fact_id")).strip()
+        }
+        verified_mode = authoritative_facts is not None
+        rendered_insights = []
+        for insight in final_insights:
+            item = {
+                key: insight[key]
+                for key in (
+                    "id",
+                    "text",
+                    "so_what",
+                    "now_what",
+                    "evidence_id",
+                    "evidence_ids",
+                    "metric",
+                    "metric_public_copy",
+                    "coverage_role",
+                    "report_type_lens",
+                )
+                if key in insight
+            }
+            raw_evidence_ids = insight.get("evidence_ids")
+            additional_evidence_ids = (
+                raw_evidence_ids if isinstance(raw_evidence_ids, list) else []
+            )
+            evidence_ids = [
+                _s(insight.get("evidence_id")).strip(),
+                *[
+                    _s(value).strip()
+                    for value in additional_evidence_ids
+                    if _s(value).strip()
+                ],
+            ]
+            authority = next(
+                (
+                    fact_by_evidence_id[evidence_id]
+                    for evidence_id in dict.fromkeys(evidence_ids)
+                    if evidence_id in fact_by_evidence_id
+                ),
+                None,
+            )
+            if authority is not None:
+                item["metric"] = deepcopy(authority.get("metric") or {})
+                item["verified_fact_id"] = _s(authority.get("fact_id")).strip()
+                item["verified_proposition"] = _s(authority.get("statement")).strip()
+            elif verified_mode:
+                item.pop("metric", None)
+            rendered_insights.append(item)
+
+        return _dump_json(rendered_insights)
+
     def update_family_reuse(namespace: str, **fields: object) -> None:
         with family_state_lock:
             family_reuse[namespace].update(fields)
@@ -2250,17 +2311,8 @@ def generate_artifacts(
     semantic_theme_coverage: Dict[str, Any] = {}
     semantic_theme_repair: Dict[str, Any] = {}
     theme_bindings = editorial_plan_theme_bindings(editorial_plan)
-    theme_evidence_keys = {
-        evidence_key
-        for binding in theme_bindings
-        for evidence_key in binding["coverage_keys"]
-    }
     relevant_verified_facts = [
-        fact
-        for fact in visual_authority_verified_facts
-        if isinstance(fact, dict)
-        and normalize_text(f"verified-fact:{_s(fact.get('fact_id')).strip()}")
-        in theme_evidence_keys
+        fact for fact in visual_authority_verified_facts if isinstance(fact, dict)
     ]
     if (
         visual_authority_admitter is not None
@@ -2269,22 +2321,9 @@ def generate_artifacts(
     ):
         theme_coverage_variables = {
             "editorial_plan_json": editorial_plan_json,
-            "insights_final_json": _dump_json(
-                [
-                    {
-                        key: insight[key]
-                        for key in (
-                            "id",
-                            "text",
-                            "so_what",
-                            "now_what",
-                            "evidence_id",
-                            "evidence_ids",
-                        )
-                        if key in insight
-                    }
-                    for insight in insights_final
-                ]
+            "insights_final_json": semantic_theme_coverage_insights_json(
+                insights_final,
+                authoritative_facts=visual_authority_verified_facts,
             ),
             "verified_facts_json": _dump_json(relevant_verified_facts),
         }
@@ -2396,22 +2435,11 @@ def generate_artifacts(
             validate_verified_final_insight_count(
                 insights_final, stage="semantic_repair"
             )
-            theme_coverage_variables["insights_final_json"] = _dump_json(
-                [
-                    {
-                        key: insight[key]
-                        for key in (
-                            "id",
-                            "text",
-                            "so_what",
-                            "now_what",
-                            "evidence_id",
-                            "evidence_ids",
-                        )
-                        if key in insight
-                    }
-                    for insight in insights_final
-                ]
+            theme_coverage_variables["insights_final_json"] = (
+                semantic_theme_coverage_insights_json(
+                    insights_final,
+                    authoritative_facts=visual_authority_verified_facts,
+                )
             )
             semantic_theme_coverage_result = resolve_or_render_family(
                 namespace="report_vs/artifacts/editorial_theme_coverage",
@@ -2451,22 +2479,11 @@ def generate_artifacts(
                 validate_verified_final_insight_count(
                     insights_final, stage="central_candidate_fallback"
                 )
-                theme_coverage_variables["insights_final_json"] = _dump_json(
-                    [
-                        {
-                            key: insight[key]
-                            for key in (
-                                "id",
-                                "text",
-                                "so_what",
-                                "now_what",
-                                "evidence_id",
-                                "evidence_ids",
-                            )
-                            if key in insight
-                        }
-                        for insight in insights_final
-                    ]
+                theme_coverage_variables["insights_final_json"] = (
+                    semantic_theme_coverage_insights_json(
+                        insights_final,
+                        authoritative_facts=visual_authority_verified_facts,
+                    )
                 )
                 semantic_theme_coverage_result = resolve_or_render_family(
                     namespace="report_vs/artifacts/editorial_theme_coverage",

@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -219,6 +220,30 @@ def test_changed_paths_are_derived_from_authorized_patch_operations() -> None:
     )
     assert patched["insights_final"][0]["text"] == "A source-backed replacement."
     assert patched["insights_final"][0]["so_what"] == "Original implication."
+
+
+def test_model_repair_rejects_a_patch_that_has_no_effect() -> None:
+    artifacts = _insight_artifacts()
+    issue = _insight_issue("text")
+    path = "insights_final[item=insight-1].text"
+    target = _target([path], [issue])
+    payload = _decision_payload(
+        target=target,
+        artifacts=artifacts,
+        patches=[(path, artifacts["insights_final"][0]["text"])],
+        evidence_ids=["retained-evidence"],
+    )
+
+    with pytest.raises(AppError) as error:
+        _validated_repair_decision(
+            payload,
+            execution=_execution(target),
+            current_artifacts=artifacts,
+            grounding_package={"evidence_ids": ["retained-evidence"]},
+        )
+
+    assert error.value.context["reason"] == "patch_has_no_effect"
+    assert _provider_rejection_reason(error.value) == "patch_has_no_effect"
 
 
 def test_model_writable_path_preflight_fails_before_provider_for_non_string_leaf() -> (

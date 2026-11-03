@@ -39,10 +39,8 @@ from src.generators.validation.verified_facts import (
 )
 from src.services.render_service import (
     _build_signal_cards,
+    _coerce_public_advisory,
     _coerce_public_chart_insight_cards,
-    _coerce_public_claim_support,
-    _coerce_public_key_figures,
-    _coerce_public_metric_spine,
     _coerce_public_topics_covered,
     _coerce_topic_briefs,
     _is_public_chart_insight_card,
@@ -724,7 +722,76 @@ def _key_figure_issues(
             evidence_text_by_id[evidence_id] = evidence_text
 
     issues: list[PublicEditorialQualityIssue] = []
+    verified_mode = verified_facts_mode(artifacts)
+    verified_index = _verified_fact_index(artifacts)
+    missing_metric_copy_sources: set[tuple[str, str]] = set()
+
+    def check_missing_metric_copy(
+        *, section: str, index: int, metric: Mapping[str, Any]
+    ) -> None:
+        if not verified_mode or _sanitize_public_prose(
+            metric.get("metric_public_copy")
+        ):
+            return
+        evidence_id = str(metric.get("evidence_id") or "").strip()
+        fact = fact_for_evidence_id(verified_index, evidence_id)
+        if not evidence_id or fact is None:
+            return
+        metric_id = str(
+            metric.get("metric_id")
+            or metric.get("insight_id")
+            or metric.get("figure_id")
+            or metric.get("key_figure_id")
+            or ""
+        ).strip()
+        source_key = (evidence_id, metric_id)
+        if source_key in missing_metric_copy_sources:
+            return
+        missing_metric_copy_sources.add(source_key)
+        matches = [
+            insight
+            for insight in _dict_items(artifacts.get("insights_final"))
+            if metric_id
+            and metric_id
+            in {
+                str(insight.get("id") or "").strip(),
+                str(insight.get("insight_id") or "").strip(),
+            }
+        ]
+        repair_target = "insights_bundle" if len(matches) == 1 else ""
+        repair_field = (
+            f"insights:{metric_id}.metric_public_copy" if len(matches) == 1 else ""
+        )
+        evidence_text = canonical_evidence_map(
+            {str(fact.get("fact_id") or ""): fact}
+        ).get(evidence_id, "")
+        item = _item(
+            artifact=section,
+            field=f"{section}:{index}.metric_public_copy",
+            text=_sanitize_public_prose(
+                metric.get("label")
+                or metric.get("metric")
+                or metric.get("name")
+                or metric.get("figure")
+                or "verified metric"
+            ),
+            evidence_ids=[evidence_id],
+            repair_target=repair_target,
+            evidence_text=evidence_text,
+            repair_field=repair_field,
+        )
+        _annotate_verified_item(item, artifacts)
+        issues.append(
+            _issue(
+                report_id,
+                "public_editorial_quality.material_claim_evidence_missing",
+                item,
+                "verified metric projection has no authoritative metric_public_copy",
+            )
+        )
+
     for index, figure in enumerate(_dict_items(artifacts.get("key_figures")), start=1):
+        check_missing_metric_copy(section="key_figures", index=index, metric=figure)
         evidence_id = str(figure.get("evidence_id") or "").strip()
         evidence_text = evidence_text_by_id.get(evidence_id, "")
         fact = fact_for_evidence_id(_verified_fact_index(artifacts), evidence_id)
@@ -763,6 +830,8 @@ def _key_figure_issues(
                     if issue.rule_id not in excluded_rule_ids
                 ]
             issues.extend(field_issues)
+    for index, metric in enumerate(_dict_items(artifacts.get("metric_spine")), start=1):
+        check_missing_metric_copy(section="metric_spine", index=index, metric=metric)
     return issues
 
 
@@ -1516,7 +1585,9 @@ def _verified_public_semantic_review_items(
 
     summary = artifacts.get("summary")
     summary = summary if isinstance(summary, dict) else {}
-    for index, claim in enumerate(summary.get("claim_evidence_map") or [], start=1):
+    for index, claim in enumerate(
+        (summary.get("claim_evidence_map") or [])[:3], start=1
+    ):
         if not isinstance(claim, Mapping):
             continue
         value = _sanitize_public_prose(claim.get("claim"))
@@ -1564,7 +1635,8 @@ def _verified_public_semantic_review_items(
             )
         )
 
-    for index, figure in enumerate(_coerce_public_key_figures(artifacts), start=1):
+    public_advisory = _coerce_public_advisory(artifacts)
+    for index, figure in enumerate(public_advisory.get("key_figures") or [], start=1):
         figure_id = str(figure.get("figure_id") or index).strip()
         source = unique_insight_source(
             str(figure.get("metric_id") or figure_id), field="metric_public_copy"
@@ -1583,7 +1655,7 @@ def _verified_public_semantic_review_items(
             )
         )
 
-    for index, metric in enumerate(_coerce_public_metric_spine(artifacts), start=1):
+    for index, metric in enumerate(public_advisory.get("metric_spine") or [], start=1):
         metric_id = str(metric.get("metric_id") or index).strip()
         source = unique_insight_source(metric_id, field="metric_public_copy")
         target, repair_field = source or ("", "")
@@ -1696,7 +1768,7 @@ def _verified_public_semantic_review_items(
                     )
                 )
 
-    for index, claim in enumerate(_coerce_public_claim_support(artifacts), start=1):
+    for index, claim in enumerate(public_advisory.get("claim_support") or [], start=1):
         source = claim_source(claim)
         target, repair_field = source or ("", "")
         add(
@@ -1712,7 +1784,9 @@ def _verified_public_semantic_review_items(
 
     # Quotes are already a final public family; unlike derived cards, their
     # text is the authoritative producer output and routes to quotes_final.
-    for index, quote in enumerate(_dict_items(artifacts.get("quotes_final")), start=1):
+    for index, quote in enumerate(
+        _dict_items(artifacts.get("quotes_final"))[:6], start=1
+    ):
         value = _sanitize_public_prose(quote.get("text"))
         if not value:
             continue

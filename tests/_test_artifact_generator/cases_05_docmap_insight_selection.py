@@ -582,6 +582,7 @@ def test_generate_artifacts_retains_broad_doc_map_theme_coverage(tmp_path):
         _insight(f"f{index}", score=1 - (index / 100), coverage_role=f"role-{index}")
         for index in range(1, 7)
     ]
+    prompt_client = CapturingPromptClient()
     payload = generate_artifacts(
         report_id="broad-doc-map",
         report_name="Broad DocMap",
@@ -594,7 +595,7 @@ def test_generate_artifacts_retains_broad_doc_map_theme_coverage(tmp_path):
                 candidates, plan_evidence_ids=[f"f{index}" for index in range(1, 7)]
             )
         ),
-        prompt_client=CapturingPromptClient(),
+        prompt_client=prompt_client,
         analysis_store=FakeAnalysisStore(),
     )
 

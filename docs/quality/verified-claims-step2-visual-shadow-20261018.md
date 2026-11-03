@@ -9613,3 +9613,73 @@ generation and derived propagation, but no accepted HTML and no evidence that
 the remaining implication, qualification, or coverage defects are repaired.
 Per the task constraint, no stochastic live rerun was attempted. Step 2
 remains **PARTIAL/NO-GO** and Step 3 remains **unstarted/not ready**.
+
+## Remaining editorial E2E and public-output corrections — 2026-11-03
+
+This checkpoint addresses the retained Adjust failure and the latent
+cross-stage public-output gaps without adding a validator, provider stage, or
+publication path. The implementation is on top of the retained branch HEAD
+and preserves the unrelated working-tree ZIP modification.
+
+### Root causes and targeted corrections
+
+| Observed defect | Earliest responsible boundary | Correction | Evidence |
+| --- | --- | --- | --- |
+| A repair response could apply a syntactically valid patch that changed no artifact value. The retained live audit only records `regeneration_target_item_unchanged`; it does not preserve the exact attempted field. | Atomic repair decision validation, after patch application and protected-field checks | Reject an unchanged candidate with the existing typed provider-rejection path as `patch_has_no_effect`; retain the existing bounded recovery/ABSTAIN handling. | Direct decision regression plus the existing targeted regeneration contract. The old audit cannot identify the exact leaf. |
+| Verified review inspected public rows different from those rendered: unbound/legacy topic sources and over-broad summary/derived lists could be reviewed while the renderer suppressed or replaced them. | Shared verified public-surface projection | Reuse the existing verified topic, metric-spine, key-figure and claim-support projections for review and rendering; cap review inputs to the visible summary rows and bounded quote rows. Normal mode is unchanged. | Verified review/render parity regressions and provider-free retained replay. |
+| Verified public metric sentences could repeat in metric spine, key figures and claim support. | Verified public advisory normalization | Deduplicate only exact normalized text with the same evidence-ID set, retaining metric spine as the canonical visible placement. Distinct wording or evidence remains distinct; normal mode is unchanged. | Exact-deduplication regression and public-quality missing-copy regression. |
+| Verified summary claim maps could retain a legacy primary evidence ID even when a secondary ID was the authoritative verified binding. | Verified claim-map normalization | Select the first intersecting verified evidence ID rather than the first supplied ID; unbound rows remain omitted. | Secondary-binding regression in `test_pre_e2e_integrity.py`. |
+| Final insight copy could lose complete admitted metric context before semantic theme coverage, so material subrelationships were not visible to the coverage review. | Final-insight-to-coverage handoff | Merge the complete authoritative metric and verified proposition into coverage input by stable verified-fact identity; pass the complete admitted-fact roster, not only plan-linked IDs. Final-only metric fields are not trusted in verified mode. | Unknown nested metric-field regression and focused verified-authority suite. |
+| Source-grounded interpretation could reverse a gap/relationship, and bounded LinkedIn comparisons could lose their period/category boundary. | Existing final-insight and LinkedIn prompt contracts | Add narrowly scoped instructions to preserve direction, both sides, period, population, category and qualification. No schema or model-routing change. | Prompt assertions and fixture regression. |
+
+The previous retained run's three public-quality failures remain the live
+quality targets: the AI-maturity gap interpretation, the unscoped casino/slots
+comparison, and the report-level strategy/qualification coverage. These are
+not declared repaired by provider-free replay alone.
+
+### Provider-free retained Adjust replay
+
+The retained artifacts were replayed through the current deterministic public
+quality, verified review-input, advisory-normalization and render-view paths.
+No provider call, publication write, or final artifact mutation occurred.
+
+| Check | Result |
+| --- | --- |
+| Retained terminal state | Historical `regeneration_target_item_unchanged`; exact attempted leaf unavailable from the retained audit |
+| Deterministic public-quality evaluation | `pass`; no deterministic issues |
+| Public review items | 45: summary 8, expert comment 6, LinkedIn 4, final insights 21, metric spine 1, advisory 1, claim ledger 4 |
+| Rendered visible surfaces | summary claim map 5, signal cards 0, key figures 0, metric spine 1, claim support 4, visible insights 7, quotes 0 |
+| Verified topic cards | 0; all retained `topics_covered` rows were `toc_only` with no bound verified evidence |
+| Composite metric display | Omitted by the existing fail-closed public metric-display contract; no speculative numeric enrichment was added |
+| Source-bound metric copy | Retained satisfaction copy remains natural source-backed prose and is carried into the metric spine; diagnostic `label=`/`value=` serialization is absent |
+
+The replay confirms that the old no-op terminal is now rejected at the
+existing repair boundary and that review/render projections use the same
+verified eligibility rules. It does not prove live model correction, complete
+topic coverage, composite-metric display, HTML completeness, or publication
+readiness. The retained artifacts contain no source-bound topic-card evidence
+from which to reconstruct those surfaces safely.
+
+### Local verification before the permitted live run
+
+The focused cross-stage suite passed **796 tests** and the grounding/prompt
+suite passed **299 tests**. The added secondary-binding regression and the
+render/public-advisory subset passed **111 tests** after the final projection
+correction. Changed-file Ruff and source mypy passed. The prompt fixture gate
+also passed without baseline or threshold manipulation:
+
+| Prompt corpus scope | Current | Committed baseline | Change |
+| --- | ---: | ---: | ---: |
+| Total tokens | 115,762 | 115,513 | +249 (+0.22%) |
+| Estimated cost | `$0.025229` | `$0.025204` | +`$0.000025` (+0.10%) |
+| Validation family | 12,134 | 12,134 | 0 |
+| Publishing family | 47,201 | 46,952 | +249 |
+
+The small increase is attributable to the added complete-fact coverage and
+public-output contract wording. Existing fixture model configuration, pricing,
+thresholds, schemas and all factual safeguards are unchanged.
+
+Hosted CI and the one fresh isolated provider-backed Adjust run remain
+required. Until that run produces and passes an independently inspected HTML
+artifact, the implementation remains **PARTIAL / NO-GO** for Step 2
+promotion; Step 3 remains unstarted.

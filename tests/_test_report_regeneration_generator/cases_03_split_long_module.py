@@ -229,6 +229,10 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
                                 entity_id="insight:insight-1:metric.value",
                             )
                         ],
+                        # Keep this fixture's provider patch on the reported
+                        # leaf.  The no-op validator must not treat the
+                        # unrelated optional unit leaf as a successful repair.
+                        allowed_paths=["insights_final[item=insight-1].metric.value"],
                     )
                 ],
                 unmappable_issues=[],

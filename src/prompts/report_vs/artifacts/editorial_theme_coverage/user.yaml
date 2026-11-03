@@ -5,7 +5,7 @@ text: |
   Final insights to assess:
   {{ insights_final_json }}
 
-  Relevant canonical visually verified facts:
+  Complete canonical visually verified fact roster:
   {{ verified_facts_json }}
 
   Return exactly this JSON object:
@@ -24,4 +24,11 @@ text: |
   `covered` means the final prose develops the theme's intended proposition;
   `partial` means it is materially related but incomplete; `uncovered` means
   the final roster does not substantively address it. A shared fact or source
-  page is not enough. Do not rewrite the insights or add evidence.
+  page is not enough. Inspect each supplied metric object and
+  metric_public_copy when present: a theme is partial when the final wording
+  drops a material value relationship, segment, timeframe, qualifier, or
+  subrelationship from the admitted fact. Use the complete fact roster to
+  notice material admitted propositions or subrelationships that are not
+  substantively treated by any planned theme, and mark the nearest affected
+  theme partial or uncovered with a concise explanation. Do not rewrite the
+  insights or add evidence.

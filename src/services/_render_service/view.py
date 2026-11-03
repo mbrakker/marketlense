@@ -50,6 +50,7 @@ from .normalization import (
     _sanitize_public_prose,
     _split_summary_bullets,
     _unwrap_doc_map,
+    _verified_bound_evidence_ids,
 )
 
 logger = logging.getLogger("market_lense.render_service")
@@ -412,60 +413,33 @@ def _build_render_view(
     advisory = _coerce_public_advisory(artifacts)
     _suppress_repeated_insight_advisory_items(advisory, insights)
     topics_covered = _coerce_public_topics_covered(artifacts)
-    key_figures = _coerce_public_key_figures(artifacts)
+    key_figures = advisory.pop("key_figures", _coerce_public_key_figures(artifacts))
     chart_insight_cards = _coerce_public_chart_insight_cards(artifacts)
     # The Findings section already renders these insights; Signals should use
     # distinct topic copy instead of repeating the same claims a second time.
-    signal_cards = _build_signal_cards(
-        topics=topics,
-        topic_briefs=topic_briefs,
-        tags=snapshot_tags,
-        prefer_key_points=bool(topics_covered),
-    )
     if verified_mode:
-        topic_sources = [
-            item
-            for raw_group in (
-                artifacts.get("topics_covered"),
-                artifacts.get("toc_topics_expanded"),
-                artifacts.get("toc_entries"),
-            )
-            for item in _coerce_list(raw_group)
-            if isinstance(item, dict)
-        ]
-        bound_topic_titles = {
-            str(
-                item.get("topic")
-                or item.get("title")
-                or item.get("display_title")
-                or ""
-            )
-            .strip()
-            .casefold()
-            for item in topic_sources
-            if str(
-                item.get("topic")
-                or item.get("title")
-                or item.get("display_title")
-                or ""
-            ).strip()
-            and any(
-                str(value).strip().startswith("verified-fact:")
-                for raw_values in (
-                    item.get("evidence_id"),
-                    item.get("evidence_ids"),
-                )
-                for value in (
-                    raw_values if isinstance(raw_values, list) else [raw_values]
-                )
-                if str(value).strip()
-            )
-        }
         signal_cards = [
-            card
-            for card in signal_cards
-            if str(card.get("title") or "").strip().casefold() in bound_topic_titles
+            {
+                "title": topic["topic"],
+                "summary": " ".join(
+                    value
+                    for value in (
+                        topic.get("summary"),
+                        " ".join(topic.get("subtopics") or []),
+                    )
+                    if value
+                ),
+                "source_label": topic.get("source_label", ""),
+            }
+            for topic in topics_covered
         ]
+    else:
+        signal_cards = _build_signal_cards(
+            topics=topics,
+            topic_briefs=topic_briefs,
+            tags=snapshot_tags,
+            prefer_key_points=bool(topics_covered),
+        )
     core_signal = _build_core_signal(
         tldr_text=tldr_text,
         executive_summary=executive_summary,
@@ -550,7 +524,13 @@ def _build_render_view(
             "tldr_bullets": _split_summary_bullets(tldr_text, max_items=4),
             "executive_summary": executive_summary,
             "executive_bullets": _split_summary_bullets(executive_summary, max_items=6),
-            "claim_map": _coerce_claim_map(summary, report_title=report_title),
+            "claim_map": _coerce_claim_map(
+                summary,
+                report_title=report_title,
+                verified_evidence_ids=(
+                    _verified_bound_evidence_ids(artifacts) if verified_mode else None
+                ),
+            ),
         },
         "advisory": advisory,
         "public_intelligence": {

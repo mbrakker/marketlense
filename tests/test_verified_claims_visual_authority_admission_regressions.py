@@ -377,6 +377,10 @@ def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
 
     def admit(shortlisted):
         assert 1 <= len(shortlisted) <= 8
+        shortlisted[0]["metric"]["methodology"] = {
+            "population": "retained survey respondents",
+            "qualifier": "reported result",
+        }
         return _verified_admission(shortlisted, digest="e" * 64)
 
     responses = _generation_responses(
@@ -434,3 +438,12 @@ def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
     assert {
         fact["fact_id"] for fact in prompt_evidence["verified_facts"]["verified_facts"]
     } == {item["id"] for item in prompt_candidates}
+
+    coverage_vars = prompt_client.variables_for_namespace(
+        "report_vs/artifacts/editorial_theme_coverage"
+    )
+    coverage_insights = json.loads(coverage_vars["insights_final_json"])
+    assert coverage_insights[0]["metric"]["methodology"] == {
+        "population": "retained survey respondents",
+        "qualifier": "reported result",
+    }

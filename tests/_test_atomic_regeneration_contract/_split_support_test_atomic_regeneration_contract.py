@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -10,7 +11,9 @@ __file__ = str(
 import hashlib
 from copy import deepcopy
 from types import SimpleNamespace
+
 import pytest
+
 from src.contracts.regeneration import RegenerationIssue, RegenerationTarget
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
@@ -21,6 +24,7 @@ from src.contracts.soft_copy_claim_provenance import (
 from src.contracts.validation import ValidationIssue
 from src.generators.report_regeneration_generator import (
     _apply_repair_decision_patch,
+    _provider_rejection_reason,
     _read_repair_path,
     _render_regeneration_model,
     _required_repair_protected_fields,

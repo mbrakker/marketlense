@@ -547,7 +547,10 @@ def _build_report_identity_items(
 
 
 def _coerce_claim_map(
-    summary: dict[str, Any], *, report_title: str
+    summary: dict[str, Any],
+    *,
+    report_title: str,
+    verified_evidence_ids: set[str] | None = None,
 ) -> list[dict[str, str]]:
     items: list[dict[str, str]] = []
     for raw_item in _coerce_list(summary.get("claim_evidence_map")):
@@ -556,6 +559,30 @@ def _coerce_claim_map(
         if not claim:
             continue
         evidence_id = _s(item.get("evidence_id"))
+        if verified_evidence_ids is not None:
+            evidence_ids = list(
+                dict.fromkeys(
+                    value
+                    for value in (
+                        evidence_id,
+                        *[
+                            _s(value)
+                            for value in _coerce_list(item.get("evidence_ids"))
+                        ],
+                    )
+                    if value
+                )
+            )
+            if not set(evidence_ids).intersection(verified_evidence_ids):
+                continue
+            evidence_id = next(
+                (
+                    candidate_id
+                    for candidate_id in evidence_ids
+                    if candidate_id in verified_evidence_ids
+                ),
+                "",
+            )
         citation_line = _build_citation_micro_line(
             report_title=report_title,
             evidence_id=evidence_id,
@@ -807,13 +834,87 @@ def _coerce_public_advisory(artifacts: dict[str, Any]) -> dict[str, Any]:
         text_keys=("risk", "text"),
         limit=4,
     )
+    key_figures = _coerce_public_key_figures(artifacts)
+    metric_spine = _coerce_public_metric_spine(artifacts)
+    claim_support = _coerce_public_claim_support(artifacts)
+    key_figures, metric_spine, claim_support = _deduplicate_public_metric_surfaces(
+        key_figures=key_figures,
+        metric_spine=metric_spine,
+        claim_support=claim_support,
+        verified_mode=verified_mode,
+    )
     return {
         "decision": decision,
         "recommendations": recommendations,
         "risks": risks,
-        "metric_spine": _coerce_public_metric_spine(artifacts),
-        "claim_support": _coerce_public_claim_support(artifacts),
+        "metric_spine": metric_spine,
+        "claim_support": claim_support,
+        "key_figures": key_figures,
     }
+
+
+def _deduplicate_public_metric_surfaces(
+    *,
+    key_figures: list[dict[str, Any]],
+    metric_spine: list[dict[str, Any]],
+    claim_support: list[dict[str, Any]],
+    verified_mode: bool,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Keep one exact public placement for a verified metric sentence.
+
+    The metric spine is the canonical reader-facing placement.  Key figures
+    and the claim ledger remain authoritative retained structures, but an
+    identical sentence with the same evidence binding is not shown or sent to
+    the semantic reviewer a second time.  No semantic similarity is used.
+    """
+
+    if not verified_mode:
+        return key_figures, metric_spine, claim_support
+
+    def identity(
+        item: dict[str, Any], text_key: str
+    ) -> tuple[str, tuple[str, ...]] | None:
+        text = " ".join(_s(item.get(text_key)).split()).casefold()
+        evidence_ids = tuple(
+            sorted(
+                {
+                    _s(value)
+                    for value in _coerce_list(item.get("evidence_ids"))
+                    if _s(value)
+                }
+            )
+        )
+        if not text or not evidence_ids:
+            return None
+        return text, evidence_ids
+
+    seen: set[tuple[str, tuple[str, ...]]] = set()
+    retained_metric_spine: list[dict[str, Any]] = []
+    for item in metric_spine:
+        key = identity(item, "public_copy")
+        if key is not None:
+            seen.add(key)
+        retained_metric_spine.append(item)
+
+    retained_key_figures: list[dict[str, Any]] = []
+    for item in key_figures:
+        key = identity(item, "public_copy")
+        if key is not None and key in seen:
+            continue
+        if key is not None:
+            seen.add(key)
+        retained_key_figures.append(item)
+
+    retained_claim_support: list[dict[str, Any]] = []
+    for item in claim_support:
+        key = identity(item, "claim")
+        if key is not None and key in seen:
+            continue
+        if key is not None:
+            seen.add(key)
+        retained_claim_support.append(item)
+
+    return retained_key_figures, retained_metric_spine, retained_claim_support
 
 
 def _coerce_public_topics_covered(

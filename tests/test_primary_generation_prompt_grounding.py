@@ -33,9 +33,16 @@ MANDATORY_PRESSURE_PATTERNS = (
     ("why this matters", r"\bexplain why (?:the selected angle|this) matters\b"),
 )
 IAS_UNSUPPORTED_CLAIM_GUARDS = {
-    "descriptive comparisons": "a descriptive comparison, change, or forecast does not establish a value ranking",
-    "source certainty": "keep source frequency, likelihood, modality, and certainty qualifiers",
-    "recommendation attribution": "recommendations may be conditional marketlense advice tied to linked evidence",
+    "descriptive comparisons": (
+        "a descriptive comparison, change, or forecast does not establish "
+        "a value ranking"
+    ),
+    "source certainty": (
+        "keep source frequency, likelihood, modality, and certainty qualifiers"
+    ),
+    "recommendation attribution": (
+        "recommendations may be conditional marketlense advice tied to linked evidence"
+    ),
     "unsupported facts": "never invent facts, metrics, risks, or timelines",
 }
 IAS_LINKEDIN_CLAIM_GUARDS = (
@@ -299,6 +306,7 @@ def test_linkedin_prompt_names_each_metric_instead_of_using_ordinal_references()
         in normalised
     )
     assert "do not call values the first or second figure" in normalised
+    assert "preserve the complete boundary of every source comparison" in normalised
 
 
 def test_survey_copy_preserves_measured_construct_and_respondent_scope() -> None:
@@ -394,6 +402,10 @@ def test_final_insight_prompt_cannot_add_unbound_scope_or_period() -> None:
     normalised = _normalise_whitespace(prompt_set.user.text).lower()
 
     assert "do not add a timeframe, population, geography, or qualifier" in (normalised)
+    assert (
+        "preserve that direction and both sides in the editorial interpretation"
+        in normalised
+    )
 
 
 def test_doc_map_prompt_keeps_multi_measure_values_with_explicit_labels() -> None:

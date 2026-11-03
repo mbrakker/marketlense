@@ -16,6 +16,7 @@ from src.generators.artifact_normalization import (
     select_artifact_insights,
 )
 from src.generators.public_editorial_quality_generator import (
+    evaluate_public_editorial_quality,
     public_editorial_semantic_review_items,
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
@@ -156,6 +157,37 @@ def test_verified_public_surfaces_omit_metric_without_validated_copy() -> None:
     assert not any(
         item["artifact"] in {"metric_spine", "key_figures"}
         for item in public_editorial_semantic_review_items(artifacts)
+    )
+
+
+def test_verified_metric_public_copy_is_not_repeated_across_public_surfaces() -> None:
+    artifacts = _artifacts_with_metric_copy()
+
+    items = [
+        item
+        for item in public_editorial_semantic_review_items(artifacts)
+        if item["text"] == "42% of surveyed buyers"
+    ]
+
+    assert len(items) == 1
+    assert items[0]["artifact"] == "metric_spine"
+
+
+def test_verified_metric_without_public_copy_blocks_before_publication() -> None:
+    artifacts = _artifacts_with_metric_copy(None)
+
+    quality = evaluate_public_editorial_quality(
+        report_id="metric-copy-missing", artifacts=artifacts
+    )
+
+    issues = [
+        issue
+        for issue in quality.issues
+        if issue.rule_id == "public_editorial_quality.material_claim_evidence_missing"
+    ]
+    assert issues
+    assert any(
+        issue.affected_field == "insights:fact-1.metric_public_copy" for issue in issues
     )
 
 

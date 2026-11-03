@@ -790,6 +790,22 @@ and Step 3 remains **unstarted/not ready**. Required next tests and evidence
 are recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
 
+**Evidence update — 2026-11-03 (remaining editorial E2E/public-output gaps):**
+The retained no-op repair terminal is now rejected at the existing atomic
+repair boundary; verified review and rendering share the same visible topic
+and metric projections; exact verified metric-copy duplicates are suppressed;
+complete admitted verified facts reach theme coverage; and the verified claim
+map selects a bound secondary evidence ID when the legacy primary is stale.
+Provider-free retained Adjust replay passed the deterministic quality path and
+focused cross-stage regressions (796 affected tests, 299 grounding/prompt
+tests, 111 final projection tests, Ruff, and mypy). The prompt fixture delta
+is +249 tokens / +$0.000025 and remains within unchanged gates. The retained
+run still has no source-bound topic cards, composite metric display remains
+fail-closed, and live HTML/publication readiness is not yet demonstrated. E18
+remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready** pending the required single post-CI isolated Adjust
+run. No new backlog item was created.
+
 **Verified-fact snapshot and selection separation — 2026-10-24:** The current
 branch now preserves the full eligible verified-mode candidate roster through
 visual evaluation, binds request/results to a deterministic roster digest, and

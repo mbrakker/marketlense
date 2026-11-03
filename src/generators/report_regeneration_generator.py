@@ -2900,6 +2900,7 @@ _EXPECTED_PROVIDER_REJECTION_REASONS = frozenset(
         "patch_target_unresolved_or_ambiguous",
         "patch_target_not_atomic",
         "patch_value_over_broad",
+        "patch_has_no_effect",
     }
 )
 
@@ -3207,6 +3208,8 @@ def _validated_repair_decision(
         before=current_artifacts, after=candidate, paths=required_protected
     ):
         raise _repair_decision_error(execution, "protected_field_changed")
+    if candidate == current_artifacts:
+        raise _repair_decision_error(execution, "patch_has_no_effect")
     return decision
 
 

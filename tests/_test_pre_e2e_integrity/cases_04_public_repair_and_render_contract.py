@@ -137,7 +137,7 @@ def test_public_review_uses_render_limits_and_one_complete_metric_card() -> None
 
     assert len(by_artifact["metric_spine"]) == 4
     assert len(by_artifact["key_figures"]) == 6
-    assert len(by_artifact["claim_ledgers"]) == 4
+    assert len(by_artifact["claim_ledgers"]) == 1
     assert all(
         "label" in item["text"] or "Metric" in item["text"]
         for item in by_artifact["metric_spine"]

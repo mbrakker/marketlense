@@ -6,6 +6,7 @@ from dataclasses import asdict, replace
 
 import pytest
 
+from src.contracts.report_assets import RenderRequest
 from src.generators.public_editorial_quality_generator import (
     _metric_label_relationship_explanation,
     _preferred_metric_relationship_evidence,
@@ -23,6 +24,7 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
     _substantive_public_review_reason,
     _validate_public_editorial_review_payload,
 )
+from src.services._render_service.view import _build_render_view
 from src.utils.errors import AppError
 from src.utils.verified_facts import build_verified_authority_context
 from tests._test_pre_e2e_integrity.cases_01_public_surfaces_and_status import (
@@ -53,6 +55,110 @@ from tests._test_report_render_generator._split_support_cases_01_render_output_a
 )
 from tests._test_validation_generator._shared import _ctx
 from tests.test_verified_facts_validation_authority import _authority_artifacts
+
+
+def test_verified_review_and_renderer_share_visible_topic_projection(tmp_path) -> None:
+    artifacts = _authority_artifacts()
+    evidence_id = "verified-fact:fact-1"
+    artifacts.update(
+        {
+            "toc_topics": ["Adoption"],
+            "toc_topics_expanded": [
+                {"title": "Adoption", "summary": "Unreviewed TOC copy."}
+            ],
+            "topics_covered": [
+                {
+                    "topic": "Adoption",
+                    "status": "source_backed",
+                    "evidence_id": evidence_id,
+                    "why_it_matters": "Reviewed source-backed topic copy.",
+                    "subtopics": ["A supported subrelationship."],
+                    "pages": [4],
+                }
+            ],
+        }
+    )
+
+    request = RenderRequest(
+        schema_version="1.0",
+        data={"title": "Projection parity", "artifacts": artifacts},
+        doc_name="projection-parity.pdf",
+        file_id="projection-parity",
+        out_dir=str(tmp_path),
+    )
+    view = _build_render_view(request, {})
+    review_items = public_editorial_semantic_review_items(artifacts)
+    review_topic = next(
+        item for item in review_items if item["artifact"] == "topics_covered"
+    )
+    rendered_topic = view["signal_cards"][0]
+    rendered_text = " ".join(
+        value
+        for value in (
+            rendered_topic.get("title"),
+            rendered_topic.get("summary"),
+            rendered_topic.get("source_label"),
+        )
+        if value
+    )
+
+    assert "Unreviewed TOC copy." not in rendered_text
+    assert "Reviewed source-backed topic copy." in rendered_text
+    assert "Reviewed source-backed topic copy." in review_topic["text"]
+    assert "A supported subrelationship." in review_topic["text"]
+
+
+def test_verified_summary_review_matches_the_three_visible_claim_rows() -> None:
+    artifacts = _authority_artifacts()
+    evidence_id = "verified-fact:fact-1"
+    artifacts["summary"] = {
+        "claim_evidence_map": [
+            {"claim": f"Visible claim {index}.", "evidence_id": evidence_id}
+            for index in range(1, 6)
+        ]
+    }
+
+    items = public_editorial_semantic_review_items(artifacts)
+    summary_items = [item for item in items if item["artifact"] == "summary"]
+
+    assert [item["text"] for item in summary_items] == [
+        "Visible claim 1.",
+        "Visible claim 2.",
+        "Visible claim 3.",
+    ]
+
+
+def test_verified_claim_map_uses_bound_secondary_evidence_id() -> None:
+    artifacts = _authority_artifacts()
+    artifacts["summary"] = {
+        "claim_evidence_map": [
+            {
+                "claim": "A claim with a secondary authoritative binding.",
+                "evidence_id": "legacy-unbound-id",
+                "evidence_ids": ["verified-fact:fact-1"],
+            }
+        ]
+    }
+
+    view = _build_render_view(
+        RenderRequest(
+            schema_version="1.0",
+            data={"title": "Bound claim map", "artifacts": artifacts},
+            doc_name="bound-claim-map.pdf",
+            file_id="bound-claim-map",
+            out_dir="",
+        ),
+        {},
+    )
+
+    assert view["summary"]["claim_map"] == [
+        {
+            "claim": "A claim with a secondary authoritative binding.",
+            "evidence_id": "verified-fact:fact-1",
+            "evidence": "",
+            "citation_line": "Bound claim map",
+        }
+    ]
 
 
 def test_public_review_explicit_empty_evidence_does_not_borrow_item_binding() -> None:
