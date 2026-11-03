@@ -1916,3 +1916,17 @@ missing-local-artifact limitation; no provider or publication write occurred.
 The latest live Adjust baseline remains unchanged evidence rather than a live
 improvement claim. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+**Evidence update — 2026-11-04 (verified projection and coverage replay):**
+The exact Adjust replay confirmed page-21 gaming CPI is present in the PDF but
+absent from the retained findings pack, so the omission is upstream finding
+extraction and remains fail-closed. A deterministic multi-fact projection bug
+that dropped per-fact spans from verified key figures and chart cards was fixed
+and covered by regression tests. The corrected replay passed the verified-fact
+snapshot but failed closed at editorial validation on an unsupported broad
+“all-app CPI” phrase and omitted admitted findings (e-commerce retention,
+hyper-casual gaming and LATAM finance). No unsupported evidence was promoted;
+no HTML or WordPress write occurred. Hosted CI `41739013186` passed all jobs.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**. Full measurements and artifact paths are in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

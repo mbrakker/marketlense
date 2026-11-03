@@ -9862,3 +9862,91 @@ broader Step 2 effectiveness:** material source findings can still be omitted
 by stochastic selection, and optional signal/quote surfaces were absent in
 this run. Step 3 remains **unstarted** and must not be inferred ready from
 this one-report result alone.
+
+## Coverage and projection follow-up — 2026-11-04
+
+This follow-up covers the bounded opportunity-pool change (`fe20442c`,
+selection cache version `evidence_backed_shortlisting:28`), the verified
+projection correction (`abfcc4f2`), and the test-contract follow-up
+(`ab40dcf4`). The final branch state is
+`ab40dcf4fd16ae04ee0a434e8a4679349eedb85e`.
+
+### Adjust page-21 investigation
+
+The exact frozen Adjust PDF SHA was
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`.
+Full-page inspection confirms that page 21 contains gaming CPI of `$0.56` in
+2025, up 30%, plus the slots, idle-RPG and strategy values. The retained
+authoritative findings pack contains the family-game retention finding but no
+gaming-CPI finding. Candidate generation therefore had no eligible gaming-CPI
+proposition to shortlist; this is an upstream finding-extraction omission, not
+a shortlist-cap failure. No unsupported finding, page-specific patch or
+keyword business-relevance score was introduced.
+
+### Projection regression and correction
+
+The first fresh provider-backed replay at `cf4cc640` failed closed at
+`verified_fact_snapshot_invalid`: `key_figures[1]` retained multi-fact evidence
+IDs but dropped the required per-fact spans. It made 147 provider calls, used
+898,640 input and 127,859 output tokens, cost `$0.171184`, and ran for
+1,379.625 seconds; it produced no HTML and made no publication write.
+
+The root cause was deterministic public projection: `build_key_figures()` and
+the downstream chart-card projection copied verified evidence IDs but not
+`evidence_spans`. `abfcc4f2` preserves those spans in verified mode and adds a
+regression that validates the complete multi-fact binding. Normal-mode
+projection is unchanged. The follow-up test-only commit `ab40dcf4` updates
+stale assertions for the intentional 10–12 opportunity pool and does not
+alter production behavior.
+
+### Corrected live replay
+
+The fresh isolated replay at production commit `abfcc4f2` reused no final
+artifact and disabled WordPress. The source identity and PDF hash matched the
+expected frozen source. It reached 10 verified facts and 10 candidates, then
+selected 6 final insights. The terminal outcome was `validation_failed`, with
+no HTML and no WordPress write:
+
+| Measure | Result |
+| --- | ---: |
+| Provider calls | 170 |
+| File-search calls | 7 |
+| Input / output tokens | 1,126,200 / 212,674 |
+| Estimated cost | `$0.229790` |
+| Wall-clock | 1,503.187 s |
+| Automatic repairs | 3 targeted; all rolled back/ABSTAINed |
+| Operator intervention | 0 |
+| Verified-facts snapshot | pass; 10 facts, correct source SHA |
+
+The failure was factual and editorial rather than a provenance bypass:
+
+1. The final key figure said “global all-app CPI”, but page 29 supports global
+   e-commerce apps and the All-versus-Deal-discovery comparison, not that
+   broader wording. Grounding correctly rejected it.
+2. The public-quality gate found admitted findings omitted from the final
+   report: e-commerce retention, hyper-casual gaming, and LATAM finance
+   growth. It also reported repeated surfaces and missing limitations for the
+   AI-efficiency and satisfaction findings.
+
+The repair audit shows unchanged evidence IDs, pages and spans; no repair
+promoted unsupported evidence. The run therefore demonstrates that exact
+source-backed opportunities now reach verified admission and that the strict
+projection failure is fixed, but it does not demonstrate improved live final
+selection coverage. The page-21 gaming-CPI omission remains a source-finding
+limitation. The original PDF pages 9, 19, 21, 29, 34 and 35 were independently
+reviewed; no unsupported claim was promoted.
+
+### Verification and status
+
+The focused regression suite passed (292 affected tests before the test-only
+follow-up, plus 41 contract-follow-up tests). Editorial-quality tests passed
+(76), render/public-prose tests passed (44), the public quality gate passed,
+formatting passed, Ruff passed, and full mypy reported zero tracked errors.
+Hosted workflow `41739013186` passed all jobs, including tests, both mutation
+partitions and `release_evidence`.
+
+The evidence verdict is **PASS for the deterministic verified-projection
+correction and CI**, but **PARTIAL/NO-GO for broader Step 2 editorial
+acceptance**. The live run correctly failed closed, produced no HTML, and
+leaves final selection coverage and wording reliability unresolved. Step 3 is
+not ready and remains unstarted.
