@@ -1471,7 +1471,12 @@ def generate_artifacts(
     final_insight_target_count = max(
         REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(editorial_plan["themes"])
     )
-    candidate_pool_target = min(8, max(6, final_insight_target_count))
+    # Keep more eligible opportunities available to the final editorial
+    # selection than the published roster requires.  The final model still
+    # receives the existing target count; this bound only prevents a valid
+    # source-backed alternative from being discarded before visual admission
+    # or final selection can consider it.
+    candidate_pool_target = min(12, max(10, final_insight_target_count))
     raw_findings = safe_evidence.get("findings")
     raw_finding_entries = (
         raw_findings.get("findings") if isinstance(raw_findings, dict) else raw_findings

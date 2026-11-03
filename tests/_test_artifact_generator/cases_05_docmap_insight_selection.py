@@ -255,7 +255,15 @@ def test_generate_artifacts_repairs_a_clustered_broad_plan_with_early_middle_and
         theme["evidence_ids"][0] for theme in payload["editorial_plan"]["themes"]
     ] == ["f1", "f2", "f3", "f4", "f5"]
     candidate_ids = [item["evidence_id"] for item in payload["insights_candidates"]]
-    assert set(candidate_ids) == {"f1", "f2", "f3", "f4", "f5", "f6"}, candidate_ids
+    assert set(candidate_ids) == {
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
+        "f6",
+        "f7",
+    }, candidate_ids
     insight_ids = [item["evidence_id"] for item in payload["insights_final"]]
     assert set(insight_ids) == {"f1", "f2", "f3", "f4", "f5"}, insight_ids
     assert len(payload["insights_final"]) == 5, payload["insights_final"]
@@ -379,7 +387,7 @@ def test_generate_artifacts_supplements_full_model_pool_for_uncovered_themes(
     selected_ids = {item["evidence_id"] for item in payload["insights_candidates"]}
     assert audit["fallback_invoked"] is True
     assert audit["fallback_candidate_count"] >= 2
-    assert audit["selected_candidate_count"] <= 8
+    assert audit["selected_candidate_count"] <= 10
     assert {"f7", "f8"}.issubset(selected_ids)
 
 
@@ -481,6 +489,33 @@ def test_generate_artifacts_keeps_eight_model_candidates_without_fallback(tmp_pa
     assert audit["model_output_count"] == 8
     assert audit["fallback_invoked"] is False
     assert audit["selected_candidate_source"] == "model"
+
+
+def test_generate_artifacts_keeps_bounded_opportunities_above_final_target(tmp_path):
+    candidates = [
+        _insight(f"f{index}", score=1 - index / 100) for index in range(1, 13)
+    ]
+    responses = _generation_responses(
+        candidates, plan_evidence_ids=[f"f{index}" for index in range(1, 7)]
+    )
+    responses["insights_final"] = {"insights_final": candidates[:6]}
+
+    payload = generate_artifacts(
+        report_id="bounded-opportunity-pool",
+        report_name="Bounded opportunity pool",
+        doc_map=_doc_map(12),
+        evidence_packs=_generation_evidence(12),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    audit = payload["_cache"]["candidate_generation"]
+    assert audit["candidate_pool_target"] == 10
+    assert audit["selected_candidate_count"] == 10
+    assert len(payload["insights_final"]) == 6
 
 
 def _generation_evidence(section_count: int) -> dict[str, object]:
