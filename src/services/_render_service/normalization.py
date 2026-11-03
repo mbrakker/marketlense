@@ -634,6 +634,12 @@ def _coerce_public_metric_spine(
         evidence_id = _s(item.get("evidence_id"))
         if verified_mode and evidence_id not in allowed_evidence_ids:
             continue
+        public_copy = _sanitize_public_prose(item.get("metric_public_copy"))
+        if verified_mode and not public_copy:
+            # A verified metric may remain in the audit spine, but it is not a
+            # reader-facing claim until its final editorial sentence has been
+            # independently reviewed.
+            continue
         label = _s(item.get("label"))
         value = _s(item.get("value"))
         unit = _s(item.get("unit"))
@@ -666,6 +672,7 @@ def _coerce_public_metric_spine(
                 "metric_id": _s(item.get("metric_id")),
                 "label": label,
                 "value": metric_value,
+                "public_copy": public_copy,
                 "context": context,
                 "evidence_id": evidence_id,
                 "evidence_ids": [evidence_id] if evidence_id else [],
@@ -701,6 +708,38 @@ def _coerce_public_claim_support(
         canonical_claim_id = _s(item.get("canonical_claim_id")) or _s(
             item.get("claim_id")
         )
+        if _s(item.get("artifact_section")) == "metric_spine":
+            metric_id = canonical_claim_id.rsplit(":", 1)[-1]
+            source_matches = [
+                insight
+                for insight in _coerce_list(artifacts.get("insights_final"))
+                if isinstance(insight, dict)
+                and _s(insight.get("id") or insight.get("insight_id")) == metric_id
+            ]
+            source_copy = (
+                _sanitize_public_prose(source_matches[0].get("metric_public_copy"))
+                if len(source_matches) == 1
+                else ""
+            )
+            if not source_copy:
+                spine_matches = [
+                    metric
+                    for metric in _coerce_list(artifacts.get("metric_spine"))
+                    if isinstance(metric, dict)
+                    and _s(metric.get("metric_id")) == metric_id
+                    and _s(metric.get("evidence_id")) in evidence_ids
+                ]
+                source_copy = (
+                    _sanitize_public_prose(spine_matches[0].get("metric_public_copy"))
+                    if len(spine_matches) == 1
+                    else ""
+                )
+            if source_copy:
+                claim_text = source_copy
+            elif verified_mode:
+                # Do not expose the universal ledger's diagnostic field
+                # serialization when the authoritative final copy is absent.
+                continue
         claims.append(
             {
                 "canonical_claim_id": canonical_claim_id,
@@ -866,6 +905,9 @@ def _coerce_public_key_figures(
         evidence_id = _s(item.get("evidence_id"))
         if verified_mode and evidence_id not in allowed_evidence_ids:
             continue
+        public_copy = _sanitize_public_prose(item.get("metric_public_copy"))
+        if verified_mode and not public_copy:
+            continue
         value = _pick_first_text(item.get("value"), item.get("figure"))
         label = _pick_first_text(
             item.get("label"), item.get("metric"), item.get("name")
@@ -885,6 +927,7 @@ def _coerce_public_key_figures(
         figures.append(
             {
                 "value": display_value,
+                "public_copy": public_copy,
                 "label": label,
                 "context": ", ".join(
                     dict.fromkeys(

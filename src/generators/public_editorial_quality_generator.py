@@ -1413,7 +1413,7 @@ def _verified_public_semantic_review_items(
         ).strip()
         local_id = canonical_id.rsplit(":", 1)[-1] if canonical_id else ""
         if section == "metric_spine" and local_id:
-            return unique_insight_source(local_id, field="metric.value")
+            return unique_insight_source(local_id, field="metric_public_copy")
         if section == "insights_final" and local_id:
             return unique_insight_source(local_id, field="text")
         if section == "quotes_final" and local_id:
@@ -1567,42 +1567,34 @@ def _verified_public_semantic_review_items(
     for index, figure in enumerate(_coerce_public_key_figures(artifacts), start=1):
         figure_id = str(figure.get("figure_id") or index).strip()
         source = unique_insight_source(
-            str(figure.get("metric_id") or figure_id), field="metric.value"
+            str(figure.get("metric_id") or figure_id), field="metric_public_copy"
         )
         target, repair_field = source or ("", "")
         add(
             _item(
                 "key_figures",
                 f"key_figures:{figure_id}",
-                display_text(
-                    f"{figure.get('label')}: {figure.get('value')}",
-                    figure.get("context"),
-                    figure.get("confidence_label"),
-                ),
+                str(figure.get("public_copy") or "").strip(),
                 list(figure.get("evidence_ids") or []),
                 target,
-                repair_field=f"key_figures:{figure_id}.figure"
+                repair_field=repair_field
                 if target
-                else repair_field,
+                else f"key_figures:{figure_id}.figure",
             )
         )
 
     for index, metric in enumerate(_coerce_public_metric_spine(artifacts), start=1):
         metric_id = str(metric.get("metric_id") or index).strip()
-        source = unique_insight_source(metric_id, field="metric.value")
+        source = unique_insight_source(metric_id, field="metric_public_copy")
         target, repair_field = source or ("", "")
         add(
             _item(
                 "metric_spine",
                 f"metric_spine:{metric_id}",
-                display_text(
-                    f"{metric.get('label')}: {metric.get('value')}",
-                    metric.get("context"),
-                    metric.get("confidence_label"),
-                ),
+                str(metric.get("public_copy") or "").strip(),
                 list(metric.get("evidence_ids") or []),
                 target,
-                repair_field=repair_field,
+                repair_field=repair_field or f"metric_spine:{metric_id}.public_copy",
             )
         )
 

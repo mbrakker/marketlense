@@ -983,7 +983,17 @@ def _insight_issue_fields(issue: RegenerationIssue) -> List[str]:
         return []
     if field.startswith("metric."):
         return [field]
-    return [field] if field in {"text", "so_what", "now_what"} else []
+    return (
+        [field]
+        if field
+        in {
+            "text",
+            "so_what",
+            "now_what",
+            "metric_public_copy",
+        }
+        else []
+    )
 
 
 def _issue_insight_identity(issue: RegenerationIssue, artifacts: Dict[str, Any]) -> str:
@@ -1093,6 +1103,13 @@ def _key_figure_source_fields(issue: object) -> List[str]:
         str(getattr(issue, "entity_id", "") or ""),
         str(getattr(issue, "affected_section", "") or ""),
     )
+    if not field:
+        match = re.match(
+            r"^insights:[^.:]+\.(.+)$",
+            str(getattr(issue, "affected_section", "") or "").strip(),
+        )
+        if match:
+            field = match.group(1).strip()
     violation = str(getattr(issue, "violation_type", "") or "").strip().lower()
     rule_id = str(getattr(issue, "rule_id", "") or "").strip().lower()
     message = str(getattr(issue, "message", "") or "").strip().lower()
@@ -1107,6 +1124,8 @@ def _key_figure_source_fields(issue: object) -> List[str]:
         return ["metric.value"]
     if field == "label":
         return ["metric.label"]
+    if field == "metric_public_copy":
+        return ["metric_public_copy"]
     if field == "why_it_matters":
         return ["text"]
     return []

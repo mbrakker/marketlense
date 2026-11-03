@@ -1230,6 +1230,13 @@ def _derive_metric_spine_from_insights(
             "missing_context_notes": missing_context_notes,
             "evidence_id": evidence_id,
         }
+        metric_public_copy = _s(insight.get("metric_public_copy")).strip()
+        if metric_public_copy:
+            # This is editable final-stage wording, not a replacement for the
+            # structured metric or its evidence binding.  Keep it alongside
+            # the deterministic projection so the public renderer can use the
+            # validated sentence without reconstructing prose from fields.
+            item["metric_public_copy"] = metric_public_copy
         forecast_status = _s(metric.get("forecast_status")).strip()
         if forecast_status:
             item["forecast_status"] = forecast_status
@@ -1584,6 +1591,11 @@ def build_key_figures(
                 "figure": figure,
                 "label": label,
                 "unit": unit,
+                **(
+                    {"metric_public_copy": _s(metric.get("metric_public_copy")).strip()}
+                    if _s(metric.get("metric_public_copy")).strip()
+                    else {}
+                ),
                 "segment": _s(metric.get("segment")).strip(),
                 "geography": _s(metric.get("geography")).strip(),
                 "timeframe": _s(metric.get("timeframe")).strip(),

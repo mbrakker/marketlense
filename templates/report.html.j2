@@ -173,8 +173,8 @@
             <dl class="key-figure-list">
               {% for figure in view.public_intelligence.key_figures %}
               <div>
-                <dt>{{ figure.value }}</dt>
-                <dd>{{ figure.label }}{% if figure.context %}<small>{{ figure.context }}</small>{% endif %}{% if figure.confidence_label %}<small>{{ figure.confidence_label }}</small>{% endif %}</dd>
+                <dt>{% if figure.public_copy %}{{ figure.public_copy }}{% else %}{{ figure.value }}{% endif %}</dt>
+                {% if not figure.public_copy %}<dd>{{ figure.label }}{% if figure.context %}<small>{{ figure.context }}</small>{% endif %}{% if figure.confidence_label %}<small>{{ figure.confidence_label }}</small>{% endif %}</dd>{% endif %}
               </div>
               {% endfor %}
             </dl>
@@ -241,10 +241,14 @@
             <div class="metric-spine-grid">
               {% for metric in view.advisory.metric_spine %}
               <article class="metric-spine-card">
+                {% if metric.public_copy %}
+                <p>{{ metric.public_copy }}</p>
+                {% else %}
                 <strong>{{ metric.value }}</strong>
                 <span>{{ metric.label }}</span>
                 {% if metric.context %}<small>{{ metric.context }}</small>{% endif %}
                 {% if metric.confidence_label %}<small>{{ metric.confidence_label }}</small>{% endif %}
+                {% endif %}
               </article>
               {% endfor %}
             </div>

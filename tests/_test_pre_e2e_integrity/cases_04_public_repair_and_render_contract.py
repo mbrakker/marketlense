@@ -51,6 +51,7 @@ def _public_contract_artifacts() -> dict:
                     "text": "Repeated public finding.",
                     "so_what": "Buyer adoption is commercially material.",
                     "now_what": "Plan around buyer adoption.",
+                    "metric_public_copy": "42% of surveyed buyers adopted the product.",
                     "metric": deepcopy(metric),
                     "evidence_id": evidence_id,
                     "evidence": fact["statement"],
@@ -69,6 +70,9 @@ def _public_contract_artifacts() -> dict:
                     "denominator": "respondents",
                     "observation_status": "observed",
                     "forecast_status": "not a forecast",
+                    "metric_public_copy": (
+                        f"Metric {index} is {index}% for surveyed buyers."
+                    ),
                     "evidence_id": evidence_id,
                 }
                 for index in range(1, 7)
@@ -85,6 +89,9 @@ def _public_contract_artifacts() -> dict:
                     "timeframe": "2026",
                     "observation_status": "observed",
                     "forecast_status": "not a forecast",
+                    "metric_public_copy": (
+                        f"Figure {index} is {index}% for surveyed buyers."
+                    ),
                     "evidence_id": evidence_id,
                 }
                 for index in range(1, 8)
@@ -212,7 +219,7 @@ def test_public_derived_claim_routes_to_supported_insight_source() -> None:
     )
 
     assert item["repair_target"] == "insights_bundle"
-    assert item["repair_field"] == "insights:insight-1.metric.value"
+    assert item["repair_field"] == "insights:insight-1.metric_public_copy"
 
     issue = ValidationIssue(
         schema_version="1.0",
@@ -230,7 +237,7 @@ def test_public_derived_claim_routes_to_supported_insight_source() -> None:
 
     assert plan.mode == "targeted"
     assert plan.targets[0].allowed_paths == [
-        "insights_final[item=insight-1].metric.value"
+        "insights_final[item=insight-1].metric_public_copy"
     ]
 
 
@@ -368,6 +375,7 @@ def test_verified_projection_covers_rendered_families_and_ambiguous_sources() ->
         {
             "id": "candidate-only",
             "text": "Candidate-only finding.",
+            "metric_public_copy": "7% for the candidate-only cohort.",
             "metric": {"value": "7"},
             "evidence_id": evidence_id,
         }
@@ -378,6 +386,7 @@ def test_verified_projection_covers_rendered_families_and_ambiguous_sources() ->
             "label": "Candidate metric",
             "value": "7",
             "unit": "%",
+            "metric_public_copy": "7% for the candidate-only cohort.",
             "evidence_id": evidence_id,
         },
         {
@@ -448,7 +457,7 @@ def test_verified_projection_covers_rendered_families_and_ambiguous_sources() ->
         for item in by_artifact["claim_ledgers"]
     )
     assert any(
-        item["repair_field"] == "insights:candidate-only.metric.value"
+        item["repair_field"] == "insights:candidate-only.metric_public_copy"
         for item in by_artifact["metric_spine"]
     )
     assert not any(

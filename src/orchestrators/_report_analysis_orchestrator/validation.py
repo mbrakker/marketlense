@@ -161,7 +161,7 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v22"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v23"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.0"
 _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v3"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (

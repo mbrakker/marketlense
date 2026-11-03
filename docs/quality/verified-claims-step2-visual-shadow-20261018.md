@@ -9407,3 +9407,80 @@ gap. No final HTML, publication mutation, or WordPress write occurred. Step 2
 remains **PARTIAL/NO-GO** and Step 3 remains **unstarted/not ready**. Per the
 acceptance instruction, the exact new blocker is retained rather than hidden
 behind a stochastic rerun.
+
+## LLM-owned public metric copy correction — 2026-11-03
+
+The retained Adjust failure above identified a deterministic public-output
+contract defect: the verified renderer reconstructed reader prose from
+`label`, `value`, unit, scope, confidence, and the diagnostic claim ledger.
+That produced the malformed `around 31% percent of marketers` output and made
+the visible derived metric appear to be the repair target. The final
+`insights_final` call did not have an editable, reader-facing metric sentence
+that could be reviewed and repaired independently.
+
+The smallest correction keeps the existing final-insight call, evidence
+bindings, and public semantic-review call. It adds optional
+`metric_public_copy` to the existing final-insight, metric-spine, and key-figure
+contracts. `insights_final` now asks GPT-6 Luna High for one concise,
+source-faithful sentence when the complete metric tuple is available; the
+bounded repair prompt gives the same leaf an exact, atomic repair contract.
+Protected metric fields, evidence IDs, pages, spans, and source identity are
+still restored from the authoritative candidate and are never replaced by the
+copy. The selection identity advanced to
+`evidence_backed_shortlisting:27`; public semantic-review cache identity
+advanced from `v22` to `v23`.
+
+Derived metric-spine and key-figure projections now carry the validated copy
+alongside their structured fields. In verified mode, a missing copy is omitted
+from reader-facing metric surfaces rather than serialized from the universal
+claim ledger. The ledger remains an audit/diagnostic projection; it is not
+rendered as public metric prose. Visible metric review items use the copy and
+route wording defects to
+`insights_final[item=<stable_id>].metric_public_copy`; implication defects
+remain on `so_what`/`now_what`, and factual defects remain on protected metric
+authority. No new provider call, validator, service, or regeneration root was
+introduced.
+
+### Provider-free regressions
+
+The retained-authority replay and focused contract tests demonstrate that a
+supported copy survives final normalization, selection, metric-spine and
+key-figure derivation; missing verified copy is omitted; diagnostic
+`label=`/`value=` serialization is not exposed; the natural copy is rendered;
+and a semantic review issue resolves to the exact final-copy leaf. The repair
+prompt explicitly preserves protected fields and fails closed when a complete
+source-backed sentence cannot be stated. These tests do not claim live model
+quality improvement; the previous live Adjust run remains the baseline to be
+replayed after hosted CI.
+
+### Prompt fixture baseline refresh
+
+The committed baseline was regenerated with the repository tooling and current
+pricing/configuration. No threshold, fixture, model, or pricing value was
+changed to manufacture a pass.
+
+| Scope | Previous baseline | New baseline | Change |
+| --- | ---: | ---: | ---: |
+| Total input tokens | 80,111 | 81,377 | +1,266 (+1.58%) |
+| Total output tokens | 34,136 | 34,136 | 0 |
+| Total tokens | 114,247 | 115,513 | +1,266 (+1.11%) |
+| Estimated corpus cost | `$0.025078` | `$0.025204` | +`$0.000126` (+0.50%) |
+
+The affected families were publishing (+462 input tokens, +`$0.000046`),
+validation (+519, +`$0.000052`), and report (+285, +`$0.000028`). The largest
+namespace changes were `insights_final` (+293),
+`validate/public_editorial_quality` (+519),
+`regenerate/insights_final` (+140), and schema-bearing context/selection
+prompts (+29 to +170). The increase is the intentional contract and
+source-scope text needed for LLM-owned metric copy, complete semantic review,
+and bounded copy repair. The unchanged prompt regression gate passed with all
+regression thresholds intact.
+
+### Current verification status
+
+Focused tests, changed-file Ruff, changed-source mypy, contract-schema
+snapshot validation, and the prompt fixture gate pass locally. Hosted CI and
+the one post-CI isolated provider-backed Adjust run are still required. Until
+that run produces HTML and the final HTML is independently checked against PDF
+pages 11, 19, 21, 29, and 35, this correction is **PARTIAL / NO-GO** for
+Step 2 promotion. No WordPress or publication write is permitted.

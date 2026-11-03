@@ -90,6 +90,7 @@
           "schema_version": { "type": "string" },
           "metric_id": { "type": "string" },
           "label": { "type": "string" },
+          "metric_public_copy": { "type": "string" },
           "value": { "type": "string" },
           "source_display_value": { "type": "string" },
           "numeric_metadata": {
@@ -205,6 +206,7 @@
           "figure_id": { "type": "string" },
           "figure": { "type": "string" },
           "label": { "type": "string" },
+          "metric_public_copy": { "type": "string" },
           "unit": { "type": "string" },
           "segment": { "type": "string" },
           "geography": { "type": "string" },
@@ -392,6 +394,10 @@
         "properties": {
           "id": { "type": "string" },
           "text": { "type": "string" },
+          "metric_public_copy": {
+            "type": "string",
+            "description": "Optional concise, source-faithful public wording for the primary metric."
+          },
           "evidence_id": { "type": "string" },
           "evidence_ids": {
             "type": "array",
@@ -474,6 +480,10 @@
         "properties": {
           "id": { "type": "string" },
           "text": { "type": "string" },
+          "metric_public_copy": {
+            "type": "string",
+            "description": "Optional concise, source-faithful public wording for the primary metric."
+          },
           "evidence_id": { "type": "string" },
           "evidence_ids": {
             "type": "array",

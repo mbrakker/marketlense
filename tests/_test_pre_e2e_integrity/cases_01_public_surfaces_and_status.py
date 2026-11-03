@@ -191,6 +191,7 @@ def test_semantic_review_projection_includes_all_public_surface_fields() -> None
         {
             "label": "Adoption",
             "figure": "42%",
+            "metric_public_copy": "42% of surveyed buyers adopted the product.",
             "why_it_matters": "Buyer adoption is commercially material.",
             "evidence_id": evidence_id,
             "evidence": evidence,
@@ -201,6 +202,7 @@ def test_semantic_review_projection_includes_all_public_surface_fields() -> None
             "label": "Retention",
             "value": "77",
             "unit": "%",
+            "metric_public_copy": "Retention reached 77% in the surveyed cohort.",
             "evidence_id": evidence_id,
             "evidence": evidence,
         }
