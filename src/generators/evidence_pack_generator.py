@@ -101,7 +101,11 @@ _OPTIONAL_EVIDENCE_PACKS = {
 # made ineligible before coverage-aware fallback selection runs.
 _MAX_FINDINGS_RETRIEVAL_TARGETS = 16
 _MAX_FINDINGS_FALLBACK_TARGETS = 2
-_MAX_FINDINGS_TARGET_KEY_POINTS = 3
+# DocMap permits up to four distinct key points per section.  Keep all of
+# them in the bounded source context so a late chart or metric cannot be
+# hidden from the primary findings pass merely because an earlier point scored
+# higher.
+_MAX_FINDINGS_TARGET_KEY_POINTS = 4
 _MAX_FINDINGS_TARGET_SOURCE_PAGES = 12
 _MAX_FINDINGS_TARGET_SOURCE_PAGE_CHARS = 5000
 _MAX_FINDINGS_TARGET_SOURCE_CHARS = 32000
@@ -1166,10 +1170,18 @@ def generate_evidence_packs(
     findings_prompt_user_variables: Dict[str, str] = {}
     findings_retrieval_targets: list[dict[str, object]] = []
     if any(strategy.pack_name == "findings" for strategy in parallel_strategies):
+        findings_retrieval_targets = _findings_retrieval_targets(results["doc_map"])
         findings_prompt_user_variables = _findings_prompt_user_variables(
             results["doc_map"], source_text
         )
-        findings_retrieval_targets = _findings_retrieval_targets(results["doc_map"])
+        findings_prompt_user_variables[
+            "findings_target_source_pages_json"
+        ] = json.dumps(
+            _findings_target_source_pages(
+                findings_retrieval_targets, validated_source_spans
+            ),
+            ensure_ascii=False,
+        )
         logger.info(
             log_event(
                 step_ctx,

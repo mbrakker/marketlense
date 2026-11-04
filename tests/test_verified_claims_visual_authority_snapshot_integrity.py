@@ -165,7 +165,7 @@ def test_verified_visual_evaluation_sees_full_candidate_roster_before_editorial_
     responses["editorial_theme_coverage"] = _theme_coverage_response(
         candidates,
         [f"f{i}" for i in range(1, 6)],
-        covered_evidence_ids={"f1", "f2"},
+        covered_evidence_ids={f"f{i}" for i in range(1, 6)},
     )
     payload = generate_artifacts(
         report_id="visual-authority-roster-separation",
@@ -310,7 +310,7 @@ def test_verified_generation_fills_omitted_theme_from_admitted_candidate(tmp_pat
     }
 
 
-def test_verified_final_selection_may_omit_an_optional_theme(tmp_path):
+def test_verified_final_selection_repairs_a_noncentral_theme_omission(tmp_path):
     candidates = [
         _insight("f1", score=0.99),
         _insight("f2", score=0.98),
@@ -334,44 +334,62 @@ def test_verified_final_selection_may_omit_an_optional_theme(tmp_path):
             ],
         }
     }
-    responses["insights_final"] = {
-        "insights_final": [
-            {
-                **deepcopy(candidates[0]),
-                "evidence_id": "verified-fact:insight-f1-0.99",
-                "evidence_spans": [],
-            },
-            {
-                **deepcopy(candidates[2]),
-                "evidence_id": "verified-fact:insight-f3-0.97",
-                "evidence_spans": [],
-            },
-            {
-                **deepcopy(candidates[3]),
-                "evidence_id": "verified-fact:insight-f4-0.96",
-                "evidence_spans": [],
-            },
-            {
-                **deepcopy(candidates[4]),
-                "evidence_id": "verified-fact:insight-f5-0.95",
-                "evidence_spans": [],
-            },
-            {
-                **deepcopy(candidates[5]),
-                "evidence_id": "verified-fact:insight-f6-0.94",
-                "evidence_spans": [],
-            },
-        ]
-    }
+    initial_final = [
+        {
+            **deepcopy(candidates[0]),
+            "evidence_id": "verified-fact:insight-f1-0.99",
+            "evidence_spans": [],
+        },
+        {
+            **deepcopy(candidates[2]),
+            "evidence_id": "verified-fact:insight-f3-0.97",
+            "evidence_spans": [],
+        },
+        {
+            **deepcopy(candidates[3]),
+            "evidence_id": "verified-fact:insight-f4-0.96",
+            "evidence_spans": [],
+        },
+        {
+            **deepcopy(candidates[4]),
+            "evidence_id": "verified-fact:insight-f5-0.95",
+            "evidence_spans": [],
+        },
+        {
+            **deepcopy(candidates[5]),
+            "evidence_id": "verified-fact:insight-f6-0.94",
+            "evidence_spans": [],
+        },
+    ]
+    repaired_final = [
+        {
+            **deepcopy(candidates[index]),
+            "evidence_id": f"verified-fact:insight-f{index + 1}-0.{99 - index}",
+            "evidence_spans": [],
+        }
+        for index in (0, 1, 2, 3, 4)
+    ]
+    responses["insights_final"] = [
+        {"insights_final": initial_final},
+        {"insights_final": repaired_final},
+    ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         "verified-fact:insight-f1-0.99"
     )
-    responses["editorial_theme_coverage"] = _theme_coverage_response(
-        candidates,
-        ["f1", "f2", "f3"],
-        covered_evidence_ids={"f1", "f3"},
-        theme_names=["Central", "Optional", "Supported"],
-    )
+    responses["editorial_theme_coverage"] = [
+        _theme_coverage_response(
+            candidates,
+            ["f1", "f2", "f3"],
+            covered_evidence_ids={"f1", "f3"},
+            theme_names=["Central", "Optional", "Supported"],
+        ),
+        _theme_coverage_response(
+            candidates,
+            ["f1", "f2", "f3"],
+            covered_evidence_ids={"f1", "f2", "f3"},
+            theme_names=["Central", "Optional", "Supported"],
+        ),
+    ]
 
     payload = generate_artifacts(
         report_id="verified-optional-theme-omission",
@@ -386,16 +404,18 @@ def test_verified_final_selection_may_omit_an_optional_theme(tmp_path):
         visual_authority_admitter=admit,
     )
 
-    assert [item["id"] for item in payload["insights_final"]] == [
+    assert {item["id"] for item in payload["insights_final"]} == {
         "insight-f1-0.99",
+        "insight-f2-0.98",
         "insight-f3-0.97",
         "insight-f4-0.96",
         "insight-f5-0.95",
-        "insight-f6-0.94",
-    ]
-    assert payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
+    }
+    coverage = payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
         "final_selected_theme_coverage"
-    ]["omitted_themes"] == ["Optional"]
+    ]
+    assert coverage["omitted_themes"] == []
+    assert coverage["semantic_repair"]["omitted_themes"] == ["Optional"]
 
 
 def test_verified_generation_semantically_assesses_shared_theme_evidence(tmp_path):

@@ -12,6 +12,13 @@ text: |
 
   {{ doc_map_sections_json }}
 
+  When bounded source-page excerpts are supplied below, inspect them during the
+  primary pass for every material, distinct proposition on those pages,
+  including chart or table metrics that the DocMap key points did not name.
+  Treat the excerpts as retrieved source context, not as permission to infer
+  unsupported relationships; every retained finding still needs a direct
+  evidence span and physical page binding.
+
   {{ findings_target_source_pages_json }}
 
   Deterministic retained-source label/value pairs bind periods and override

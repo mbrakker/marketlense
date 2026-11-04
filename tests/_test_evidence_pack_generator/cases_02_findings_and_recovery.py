@@ -58,7 +58,7 @@ def test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains
         "measurement-methods",
         "investment-outlook",
     ]
-    assert prompt_client.findings_variables["findings_target_source_pages_json"] == ""
+    assert prompt_client.findings_variables["findings_target_source_pages_json"] == "[]"
     assert packs["findings"]["findings"] == [
         {
             "id": "finding-1",

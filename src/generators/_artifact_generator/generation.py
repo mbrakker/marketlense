@@ -2349,17 +2349,27 @@ def generate_artifacts(
                 final_insights=insights_final,
             )
         except AppError as error:
-            omitted_central_themes = error.context.get("omitted_central_themes")
+            omitted_themes = error.context.get("omitted_themes")
+            if not isinstance(omitted_themes, list) or not omitted_themes:
+                omitted_themes = error.context.get("omitted_central_themes")
             if (
                 error.code != "artifact_final_insight_coverage_invalid"
-                or not isinstance(omitted_central_themes, list)
-                or not omitted_central_themes
+                or not isinstance(omitted_themes, list)
+                or not omitted_themes
             ):
                 raise
+            omitted_central_themes = error.context.get("omitted_central_themes")
+            if not isinstance(omitted_central_themes, list):
+                omitted_central_themes = []
             semantic_theme_repair = {
                 "attempted": True,
                 "status": "in_progress",
                 "reason_code": error.code,
+                "omitted_themes": [
+                    _s(theme).strip()
+                    for theme in omitted_themes
+                    if _s(theme).strip()
+                ],
                 "omitted_central_themes": [
                     _s(theme).strip()
                     for theme in omitted_central_themes
@@ -2370,6 +2380,7 @@ def generate_artifacts(
                 "failure": {
                     "code": error.code,
                     "message": error.message,
+                    "omitted_themes": semantic_theme_repair["omitted_themes"],
                     "omitted_central_themes": semantic_theme_repair[
                         "omitted_central_themes"
                     ],
@@ -2422,17 +2433,26 @@ def generate_artifacts(
                     editorial_plan=editorial_plan,
                     require_final_candidate_lineage=False,
                     verified_mode=True,
-                    max_count=len(insights_final),
+                    max_count=final_insight_target_count,
                 )
-                if len(reconciled_insights) != len(insights_final):
+                expected_reconciled_count = min(
+                    max(len(repaired_insights), len(insights_final)),
+                    final_insight_target_count,
+                )
+                if len(reconciled_insights) != expected_reconciled_count:
                     raise AppError(
                         code="artifact_final_insight_coverage_repair_invalid",
-                        message="Semantic theme repair changed the final insight count",
+                        message=(
+                            "Semantic theme repair changed the final insight count "
+                            "outside the admitted target"
+                        ),
                         retryable=False,
                         context={
                             "before_count": len(insights_final),
                             "after_count": len(repaired_insights),
                             "reconciled_count": len(reconciled_insights),
+                            "expected_count": expected_reconciled_count,
+                            "target_count": final_insight_target_count,
                         },
                     ) from error
                 repaired_insights = reconciled_insights
@@ -2463,7 +2483,11 @@ def generate_artifacts(
                     final_insights=insights_final,
                 )
             except AppError as coverage_error:
-                fallback_themes = coverage_error.context.get("omitted_central_themes")
+                fallback_themes = coverage_error.context.get("omitted_themes")
+                if not isinstance(fallback_themes, list) or not fallback_themes:
+                    fallback_themes = coverage_error.context.get(
+                        "omitted_central_themes"
+                    )
                 if (
                     coverage_error.code != "artifact_final_insight_coverage_invalid"
                     or not isinstance(fallback_themes, list)

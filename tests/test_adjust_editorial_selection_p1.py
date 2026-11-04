@@ -149,6 +149,52 @@ def test_semantic_theme_coverage_fails_closed_for_uncovered_central_theme() -> N
         )
 
 
+def test_semantic_theme_coverage_fails_closed_for_noncentral_omission() -> None:
+    plan = {
+        "report_thesis": "The report defines two distinct decisions.",
+        "themes": [
+            {"theme": "Primary adoption", "priority": 1, "evidence_ids": ["f1"]},
+            {
+                "theme": "Implementation readiness",
+                "priority": 2,
+                "evidence_ids": ["f2"],
+            },
+        ],
+    }
+
+    with pytest.raises(AppError, match="planned theme") as exc_info:
+        validate_substantive_editorial_theme_coverage(
+            payload={
+                "theme_coverage": [
+                    {
+                        "theme": "Primary adoption",
+                        "status": "covered",
+                        "supporting_insight_ids": ["insight-1"],
+                        "explanation": "The final insight states the adoption result.",
+                    },
+                    {
+                        "theme": "Implementation readiness",
+                        "status": "partial",
+                        "supporting_insight_ids": ["insight-1"],
+                        "explanation": "The final roster omits the readiness result.",
+                    },
+                ]
+            },
+            editorial_plan=plan,
+            final_insights=[
+                {
+                    "id": "insight-1",
+                    "text": "Adoption increased.",
+                    "evidence_id": "f1",
+                }
+            ],
+        )
+
+    assert exc_info.value.context["omitted_themes"] == [
+        "Implementation readiness"
+    ]
+
+
 def test_semantic_theme_coverage_accepts_valid_distinct_supporting_ids() -> None:
     plan = {
         "report_thesis": "The report defines two distinct decisions.",

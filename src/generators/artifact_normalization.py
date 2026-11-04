@@ -1825,6 +1825,11 @@ def validate_substantive_editorial_theme_coverage(
         if isinstance(binding.get("priority"), int)
     ]
     central_priority = min(priorities) if priorities else None
+    omitted_themes = [
+        theme
+        for theme in expected_themes
+        if assessments[normalize_for_lookup(theme)]["status"] != "covered"
+    ]
     omitted_central_themes: list[str] = []
     for binding in bindings:
         if binding.get("priority") != central_priority:
@@ -1832,18 +1837,26 @@ def validate_substantive_editorial_theme_coverage(
         assessment = assessments[normalize_for_lookup(binding["theme"])]
         if assessment["status"] != "covered":
             omitted_central_themes.append(assessment["theme"])
-    if omitted_central_themes:
+    if omitted_themes:
+        if omitted_central_themes:
+            message = "Semantic theme coverage omitted a supported central theme"
+        else:
+            message = "Semantic theme coverage omitted planned themes"
         raise AppError(
             code="artifact_final_insight_coverage_invalid",
-            message="Semantic theme coverage omitted a supported central theme",
+            message=message,
             retryable=False,
-            context={"omitted_central_themes": omitted_central_themes},
+            context={
+                "omitted_themes": omitted_themes,
+                "omitted_central_themes": omitted_central_themes,
+            },
         )
     return {
         "assessment_source": "independent_semantic_coverage",
         "theme_assessments": [
             assessments[normalize_for_lookup(theme)] for theme in expected_themes
         ],
+        "omitted_themes": [],
         "omitted_central_themes": [],
     }
 

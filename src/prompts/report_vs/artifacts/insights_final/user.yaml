@@ -15,7 +15,7 @@ text: |
   - Editorial plan JSON: {{ editorial_plan_json }}
   {% if semantic_theme_coverage_feedback_json|default("") %}
   - Independent semantic theme-coverage feedback JSON: {{ semantic_theme_coverage_feedback_json }}
-  Revise the current final insights to address the supported central-theme failure in that feedback. For every omitted central theme, make at least one final insight substantively develop the full intended proposition, including its material sub-clauses, using only the supplied canonical fact(s); a generic mention or narrow restatement is insufficient. Keep the exact stable IDs and authoritative evidence bindings; change only the editorial wording or select another admitted candidate when it better develops the intended theme. If the theme is supported by multiple supplied facts, an exact primary-first `evidence_ids` array may combine those facts. Do not add facts, metrics, evidence IDs, or insights outside the supplied candidate set.
+  Revise the current final insights to address the supported planned-theme failure in that feedback. For every omitted planned theme, make at least one final insight substantively develop the full intended proposition, including its material sub-clauses, using only the supplied canonical fact(s); a generic mention or narrow restatement is insufficient. Keep the exact stable IDs and authoritative evidence bindings; change only the editorial wording or select another admitted candidate when it better develops the intended theme. If the theme is supported by multiple supplied facts, an exact primary-first `evidence_ids` array may combine those facts. Do not add facts, metrics, evidence IDs, or insights outside the supplied candidate set.
   {% endif %}
 
   Source-of-truth final insight schema:
@@ -48,6 +48,9 @@ text: |
   preserve that direction and both sides in the editorial interpretation; do
   not recast a condition, comparison, or outcome as the gap or cause itself.
   Preserve source scope exactly: per-group values are not across-group values.
+  When a metric has a parent cohort or category plus an "All" series, preserve
+  both the parent scope and the series label; never turn the series label into
+  a broader population.
   Do not add a timeframe, population, geography, or qualifier that is absent
   from the selected candidate's evidence and protected metric binding. Keep
   scoped words such as "some", "certain", "at launch", "among", and "after";
