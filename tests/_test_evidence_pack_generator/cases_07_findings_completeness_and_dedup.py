@@ -449,3 +449,59 @@ def test_findings_retrieval_targets_keep_late_substantive_sections_eligible():
     targets = _findings_retrieval_targets({"sections": sections})
 
     assert "strategy" in {target["id"] for target in targets}
+
+
+def test_findings_retrieval_target_keeps_fourth_metric_and_source_page():
+    from src.generators.evidence_pack_generator import (
+        _findings_retrieval_targets,
+        _findings_target_source_pages,
+    )
+
+    key_points = [
+        "Global gaming installs fell 3% while sessions rose 1% in 2025.",
+        "Hyper-casual sessions rose 31% while installs rose 4% in 2025.",
+        "Gaming day-1 retention was 27% in 2025.",
+        "Gaming CPI rose globally to $0.56 in 2025, up 30%.",
+    ]
+    targets = _findings_retrieval_targets(
+        {
+            "sections": [
+                {
+                    "id": "gaming",
+                    "title": "Finding and keeping users",
+                    "summary": "Commercial gaming app outcomes.",
+                    "key_points": key_points,
+                    "pages": [21],
+                }
+            ]
+        }
+    )
+
+    assert len(targets) == 1
+    assert len(targets[0]["key_points"]) == len(key_points)
+    assert set(targets[0]["key_points"]) == set(key_points)
+
+    excerpts = _findings_target_source_pages(
+        targets,
+        [
+            {
+                "id": "pdf:p21",
+                "page": 21,
+                "text": (
+                    "Gaming CPI rose globally to $0.56 in 2025, up 30%. "
+                    "Hyper-casual sessions rose 31% while installs rose 4%."
+                ),
+            }
+        ],
+    )
+
+    assert excerpts == [
+        {
+            "page": 21,
+            "text": (
+                "Gaming CPI rose globally to $0.56 in 2025, up 30%. "
+                "Hyper-casual sessions rose 31% while installs rose 4%."
+            ),
+            "source_span_ids": ["pdf:p21"],
+        }
+    ]
