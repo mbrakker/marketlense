@@ -9950,3 +9950,109 @@ correction and CI**, but **PARTIAL/NO-GO for broader Step 2 editorial
 acceptance**. The live run correctly failed closed, produced no HTML, and
 leaves final selection coverage and wording reliability unresolved. Step 3 is
 not ready and remains unstarted.
+
+## E2E editorial-quality correction replay — 2026-11-04
+
+This is the one fresh provider-backed Adjust run required after the source-
+context and planned-theme corrections. It used commit `8efbb03a0409058d989523ab5b2c4912b2dae4b9`, the frozen PDF
+`C:\ml\out\browser_downloads\www.adjust.com\b6b998e34a7c\mobile-app-trends-2026.pdf`, and WordPress disabled. The PDF SHA-256 was independently rechecked as
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`.
+
+### Provider-free verification and hosted CI
+
+The corrected focused suite passed **282 tests**. Changed-file Ruff,
+repository formatting, and the repository mypy gate passed. The prompt fixture
+gate passed without threshold or baseline manipulation: current total tokens
+were 115,908 versus 115,513 baseline (**+395, +0.34%**) and estimated cost was
+`$0.025243` versus `$0.025204` (**+$0.000039, +0.15%**); the validation family
+was unchanged. Hosted workflow
+[41785780616](https://github.com/mbrakker/marketlense/actions/runs/41785780616)
+passed tests, both mutation partitions, `release_evidence`, and the prompt
+fixture gate. No new provider run was started after the result below.
+
+### Live terminal result
+
+| Measure | Result |
+| --- | ---: |
+| Run root | `C:\ml-e2e-editorial-fix-live-8efbb03a-20261104\frozen-reliability-wh8h9nf_` |
+| Report attempt | `...\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-wvfd3heq` |
+| Admission | admitted; one isolated report |
+| Terminal state | `failed` |
+| Terminal code | `artifact_final_insight_coverage_invalid` |
+| Terminal message | `Semantic theme coverage omitted planned themes` |
+| Provider calls | 144 |
+| Input / output tokens | 630,023 / 107,020 |
+| Estimated cost | `$0.128900` |
+| Wall-clock | 1,153.899 s |
+| File-search calls | 5 |
+| Structured recovery / automatic repairs | 0 / 0 |
+| Operator intervention / WordPress writes | 0 / 0 |
+| HTML / publication readiness | not produced / fail |
+
+The ledger records ten visual-claim correction calls and ten corresponding
+verification calls for the ten retained claim identities. It also records one
+`insights_candidates` call, two `insights_final` calls (primary and semantic
+repair), and three independent theme-coverage calls (primary, semantic repair,
+and bounded source-candidate fallback). Because the workflow failed before
+final artifact persistence, there is no authoritative final candidate count,
+final insight roster, HTML, or terminal verified-facts artifact to report; the
+cohort result records
+`verified_facts_architecture_evidence=FileNotFoundError`.
+Those counts are intentionally not inferred from provider-call counts.
+
+### Provenance and root-cause lineage
+
+The source-finding correction was exercised successfully in the live run:
+
+| Stage | Observed result |
+| --- | --- |
+| Original PDF page 21 | Full-page text states: “Gaming CPI rose globally to $0.56 in 2025, up 30%.” |
+| DocMap | Gaming section now includes the CPI proposition in its third key point and retains pages 17–24. |
+| Findings | 45 findings were materialized, including `gaming-global-cpi`, page `21`, and direct evidence text for `$0.56` and `30%`. |
+| Evidence fidelity | `gaming-global-cpi` binds to `source:page:21`; status `supported`, semantic outcome `entailed`, and the pack totals report 0 unsupported / 0 unresolved findings. |
+| Step 1 / final selection | Not available as a terminal artifact because the later coverage failure aborted persistence. |
+| Public projection / HTML | Not reached; no “global all-app CPI” wording was promoted and no unsupported claim can be credited as verified. |
+
+This separates the fixed upstream omission from the remaining downstream
+blocker. The earlier live failure’s overbroad “global all-app CPI” wording and
+omitted e-commerce-retention, hyper-casual, and LATAM-finance findings are not
+repeatedly treated as fixed: the current run stopped before a final public
+projection could test them. The source page 21 and page 29 full-page text were
+reviewed directly; no crop or topic-only inference was used.
+
+The new failure is a real coverage-contract defect exposed by the correction:
+the independent semantic coverage boundary now evaluates all planned themes,
+but the bounded final-insight repair/fallback path did not produce a roster
+that the model assessed as substantively covering every planned theme. The
+workflow correctly failed closed as non-retryable. The retained audit exposes
+the terminal message and repair stages, but does not retain the raw semantic
+coverage response or a final artifact, so the exact model-selected omitted
+theme list is not reconstructible from this run. No speculative post-failure
+change or second paid replay was made.
+
+The three targeted repairs recorded for the previous `abfcc4f2` run remain
+unchanged evidence: both candidate attempts were rolled back/ABSTAINed, their
+source bindings and evidence lineage passed mutation checks, and no repair
+promoted an unsupported fact. The current run performed no automatic repair.
+
+### Resource comparison (not a quality improvement claim)
+
+Against the previous failed Adjust replay (`abfcc4f2`: 170 calls, 1,126,200
+input, 212,674 output, `$0.229790`, 1,503.187 s, 7 file-search calls), this
+run used 26 fewer calls, 496,177 fewer input tokens, 105,654 fewer output
+tokens, `$0.100890` less estimated cost, 349.288 fewer seconds, and two fewer
+file-search calls. Against the prior successful replay (`2f727009`: 153 calls,
+1,132,247 input, 189,734 output, `$0.221315`, 1,551.242 s, 6 file-search
+calls), the run also used fewer resources. These deltas are not attributable
+to quality improvement: the current run terminated earlier and produced no
+accepted final article.
+
+### Verdict
+
+**PARTIAL / NO-GO.** The live run demonstrates the page-21 retrieval and
+source-binding correction, and all provider-free and hosted gates are green.
+It does not satisfy E2E acceptance because planned-theme coverage still fails
+closed before final artifact persistence; there is no final HTML to inspect,
+no live proof of the corrected CPI scope in public copy, and no evidence that
+the missing admitted findings, repetition, or limitations are resolved. Step 2
+remains broader **PARTIAL**, E18 remains active, and Step 3 must not begin.

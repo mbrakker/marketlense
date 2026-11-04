@@ -1930,3 +1930,19 @@ no HTML or WordPress write occurred. Hosted CI `41739013186` passed all jobs.
 E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready**. Full measurements and artifact paths are in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Evidence update — 2026-11-04 (editorial coverage correction replay):** The
+source-context correction was exercised in the one fresh isolated Adjust run
+at commit `8efbb03a0409058d989523ab5b2c4912b2dae4b9`: the exact frozen PDF
+now yields 45 authoritative findings including `gaming-global-cpi` bound to
+`source:page:21`, and evidence fidelity reports 0 unsupported / 0 unresolved
+findings. Provider-free verification passed 282 focused tests, Ruff, mypy,
+formatting, and the prompt fixture gate; hosted CI `41785780616` passed all
+release gates. The live run made 144 provider calls and reached final-insight
+semantic coverage, but failed closed with
+`artifact_final_insight_coverage_invalid` because planned-theme coverage was
+still omitted after the bounded selection/repair/fallback path. It produced no
+final artifact, HTML, or WordPress write; no live public-copy improvement is
+claimed. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and
+Step 3 remains **unstarted/not ready**. Full measurements and retained paths
+are recorded in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
