@@ -1174,13 +1174,13 @@ def generate_evidence_packs(
         findings_prompt_user_variables = _findings_prompt_user_variables(
             results["doc_map"], source_text
         )
-        findings_prompt_user_variables[
-            "findings_target_source_pages_json"
-        ] = json.dumps(
-            _findings_target_source_pages(
-                findings_retrieval_targets, validated_source_spans
-            ),
-            ensure_ascii=False,
+        findings_prompt_user_variables["findings_target_source_pages_json"] = (
+            json.dumps(
+                _findings_target_source_pages(
+                    findings_retrieval_targets, validated_source_spans
+                ),
+                ensure_ascii=False,
+            )
         )
         logger.info(
             log_event(

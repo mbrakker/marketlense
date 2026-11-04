@@ -190,9 +190,7 @@ def test_semantic_theme_coverage_fails_closed_for_noncentral_omission() -> None:
             ],
         )
 
-    assert exc_info.value.context["omitted_themes"] == [
-        "Implementation readiness"
-    ]
+    assert exc_info.value.context["omitted_themes"] == ["Implementation readiness"]
 
 
 def test_semantic_theme_coverage_accepts_valid_distinct_supporting_ids() -> None:

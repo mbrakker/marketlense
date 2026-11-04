@@ -2366,9 +2366,7 @@ def generate_artifacts(
                 "status": "in_progress",
                 "reason_code": error.code,
                 "omitted_themes": [
-                    _s(theme).strip()
-                    for theme in omitted_themes
-                    if _s(theme).strip()
+                    _s(theme).strip() for theme in omitted_themes if _s(theme).strip()
                 ],
                 "omitted_central_themes": [
                     _s(theme).strip()
