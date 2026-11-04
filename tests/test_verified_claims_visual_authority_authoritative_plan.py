@@ -194,7 +194,9 @@ def test_verified_authoritative_plan_is_generated_from_admitted_facts(tmp_path):
             {
                 "theme": theme,
                 "status": "covered",
-                "supporting_insight_ids": [candidates[index]["id"]],
+                "supporting_insight_ids": [
+                    candidates[0 if index == 1 else index]["id"]
+                ],
                 "explanation": "The final wording develops the verified proposition.",
             }
             for index, (theme, _evidence_ids) in enumerate(theme_specs)
@@ -275,3 +277,80 @@ def test_verified_authoritative_plan_rejects_unknown_fact_ids(tmp_path):
 
     assert error.value.code == "artifact_structured_output_invalid"
     assert error.value.context["artifact_family"] == "editorial_plan"
+
+
+@pytest.mark.parametrize(
+    ("discovery_theme_count", "verified_theme_count"),
+    [(5, 7), (7, 5)],
+    ids=["discovery-five-verified-seven", "discovery-seven-verified-five"],
+)
+def test_verified_final_target_count_uses_authoritative_plan(
+    tmp_path, discovery_theme_count: int, verified_theme_count: int
+) -> None:
+    candidates = [_insight(f"f{i}", score=1.0 - i / 100) for i in range(1, 8)]
+    admission = _verified_admission(candidates, digest="t" * 64)
+
+    def plan_response(theme_count: int) -> dict[str, object]:
+        return {
+            "editorial_plan": {
+                "report_thesis": "Verified findings define the report decisions.",
+                "themes": [
+                    {
+                        "theme": f"Verified proposition {i}",
+                        "priority": i,
+                        "evidence_ids": [f"f{i}"],
+                    }
+                    for i in range(1, theme_count + 1)
+                ],
+            }
+        }
+
+    responses = _generation_responses(
+        candidates,
+        plan_evidence_ids=[f"f{i}" for i in range(1, discovery_theme_count + 1)],
+    )
+    responses["editorial_plan"] = [
+        plan_response(discovery_theme_count),
+        plan_response(verified_theme_count),
+    ]
+    responses["insights_final"] = {
+        "insights_final": deepcopy(admission.admitted_candidates)
+    }
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        f"verified-fact:{candidates[0]['id']}"
+    )
+    responses["editorial_theme_coverage"] = {
+        "theme_coverage": [
+            {
+                "theme": f"Verified proposition {i}",
+                "status": "covered",
+                "supporting_insight_ids": [candidates[i - 1]["id"]],
+                "explanation": "The final wording develops the verified proposition.",
+            }
+            for i in range(1, verified_theme_count + 1)
+        ]
+    }
+    prompt_client = CapturingPromptClient()
+
+    generate_artifacts(
+        report_id=f"verified-authoritative-target-{discovery_theme_count}-{verified_theme_count}",
+        report_name="Verified authoritative target",
+        doc_map=_doc_map(7),
+        evidence_packs=_generation_evidence(7),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=lambda _shortlisted: admission,
+    )
+
+    final_calls = [
+        call
+        for call in prompt_client.render_calls
+        if call["path"] == "report_vs/artifacts/insights_final/system"
+    ]
+    assert len(final_calls) == 1
+    assert final_calls[0]["variables"]["final_insight_target_count"] == (
+        verified_theme_count
+    )

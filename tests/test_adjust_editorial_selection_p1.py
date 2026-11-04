@@ -144,7 +144,7 @@ def test_semantic_theme_coverage_fails_closed_for_uncovered_central_theme() -> N
                     "id": "insight-1",
                     "text": "Adoption increased.",
                     "evidence_id": "f1",
-                }
+                },
             ],
         )
 
@@ -175,7 +175,7 @@ def test_semantic_theme_coverage_fails_closed_for_noncentral_omission() -> None:
                     {
                         "theme": "Implementation readiness",
                         "status": "partial",
-                        "supporting_insight_ids": ["insight-1"],
+                        "supporting_insight_ids": ["insight-2"],
                         "explanation": "The final roster omits the readiness result.",
                     },
                 ]
@@ -186,7 +186,12 @@ def test_semantic_theme_coverage_fails_closed_for_noncentral_omission() -> None:
                     "id": "insight-1",
                     "text": "Adoption increased.",
                     "evidence_id": "f1",
-                }
+                },
+                {
+                    "id": "insight-2",
+                    "text": "Readiness remains incomplete.",
+                    "evidence_id": "f2",
+                },
             ],
         )
 
@@ -241,6 +246,76 @@ def test_semantic_theme_coverage_accepts_valid_distinct_supporting_ids() -> None
         "covered",
         "covered",
     ]
+
+
+def test_semantic_theme_coverage_rejects_supporting_insight_bound_to_other_fact() -> (
+    None
+):
+    plan = {
+        "report_thesis": "The report defines two distinct decisions.",
+        "themes": [
+            {"theme": "Primary adoption", "priority": 1, "evidence_ids": ["f1"]},
+        ],
+    }
+
+    with pytest.raises(AppError, match="evidence-linked") as exc_info:
+        validate_substantive_editorial_theme_coverage(
+            payload={
+                "theme_coverage": [
+                    {
+                        "theme": "Primary adoption",
+                        "status": "covered",
+                        "supporting_insight_ids": ["insight-1"],
+                        "explanation": "The final wording claims to develop adoption.",
+                    }
+                ]
+            },
+            editorial_plan=plan,
+            final_insights=[
+                {
+                    "id": "insight-1",
+                    "text": "Implementation readiness improved.",
+                    "evidence_id": "f2",
+                }
+            ],
+        )
+
+    assert exc_info.value.context["theme"] == "Primary adoption"
+    assert exc_info.value.context["supporting_insight_ids"] == ["insight-1"]
+
+
+def test_semantic_theme_coverage_accepts_supporting_insight_with_matching_fact() -> (
+    None
+):
+    plan = {
+        "report_thesis": "The report defines one decision.",
+        "themes": [
+            {"theme": "Primary adoption", "priority": 1, "evidence_ids": ["f1"]},
+        ],
+    }
+
+    result = validate_substantive_editorial_theme_coverage(
+        payload={
+            "theme_coverage": [
+                {
+                    "theme": "Primary adoption",
+                    "status": "covered",
+                    "supporting_insight_ids": ["insight-1"],
+                    "explanation": "The final wording develops the adoption decision.",
+                }
+            ]
+        },
+        editorial_plan=plan,
+        final_insights=[
+            {
+                "id": "insight-1",
+                "text": "Adoption increased.",
+                "evidence_id": "f1",
+            }
+        ],
+    )
+
+    assert result["theme_assessments"][0]["supporting_insight_ids"] == ["insight-1"]
 
 
 def test_verified_plan_maps_section_refs_only_through_original_findings():

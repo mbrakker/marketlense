@@ -60,11 +60,18 @@ def test_verified_semantic_recovery_replaces_selected_fact_with_admitted_alterna
         }
         for candidate in candidates[:5]
     ]
+    repaired_final = [
+        *narrow_final[:4],
+        {
+            **deepcopy(candidates[5]),
+            "evidence_id": f"verified-fact:{candidates[5]['id']}",
+        },
+    ]
     responses = _generation_responses(candidates, plan_evidence_ids=["f2", "f1"])
     responses["editorial_plan"] = [discovery_plan, verified_plan]
     responses["insights_final"] = [
         {"insights_final": narrow_final},
-        {"insights_final": narrow_final},
+        {"insights_final": repaired_final},
     ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         "verified-fact:insight-f1-0.99"
@@ -86,7 +93,6 @@ def test_verified_semantic_recovery_replaces_selected_fact_with_admitted_alterna
         ]
     }
     responses["editorial_theme_coverage"] = [
-        failed_coverage,
         failed_coverage,
         {
             "theme_coverage": [

@@ -394,7 +394,7 @@ def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
                 "evidence_id": f"verified-fact:{candidate['id']}",
                 "evidence_spans": [],
             }
-            for candidate in candidates[:5]
+            for candidate in candidates[:7]
         ]
     }
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
@@ -405,7 +405,7 @@ def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
             {
                 "theme": f"Theme {index}",
                 "status": "covered",
-                "supporting_insight_ids": [str(candidates[0]["id"])],
+                "supporting_insight_ids": [str(candidates[index - 1]["id"])],
                 "explanation": (
                     f"The retained final proposition develops Theme {index}."
                 ),

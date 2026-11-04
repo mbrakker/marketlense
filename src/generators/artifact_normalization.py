@@ -31,7 +31,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:3.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:28"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:29"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -1713,6 +1713,7 @@ def validate_substantive_editorial_theme_coverage(
     payload: Any,
     editorial_plan: Dict[str, Any],
     final_insights: List[Dict[str, Any]],
+    candidate_insights: List[Dict[str, Any]] | None = None,
 ) -> Dict[str, Any]:
     """Validate the independent semantic assessment of final theme coverage.
 
@@ -1730,8 +1731,21 @@ def validate_substantive_editorial_theme_coverage(
     expected_by_key = {
         normalize_for_lookup(theme): theme for theme in expected_themes if theme
     }
+    authoritative_candidates = (
+        candidate_insights if candidate_insights is not None else final_insights
+    )
+    candidate_facts = _candidate_factual_fields(authoritative_candidates)
     final_ids = {
         _s(insight.get("id")).strip()
+        for insight in final_insights
+        if isinstance(insight, dict) and _s(insight.get("id")).strip()
+    }
+    final_facts = {
+        _s(insight.get("id")).strip(): (
+            candidate_facts.get(_s(insight.get("id")).strip())
+            if candidate_insights is not None
+            else insight
+        )
         for insight in final_insights
         if isinstance(insight, dict) and _s(insight.get("id")).strip()
     }
@@ -1792,6 +1806,40 @@ def validate_substantive_editorial_theme_coverage(
                 retryable=False,
                 context={"theme": theme},
             )
+        if status in {"covered", "partial"}:
+            theme_binding = next(
+                binding
+                for binding in bindings
+                if normalize_for_lookup(binding["theme"]) == theme_key
+            )
+            theme_evidence_keys = {
+                _fallback_evidence_key(evidence_id)
+                for evidence_id in theme_binding["coverage_keys"]
+                if _fallback_evidence_key(evidence_id)
+            }
+            supporting_evidence_keys = {
+                _fallback_evidence_key(evidence_id)
+                for insight_id in supporting_ids
+                for evidence_id in _ordered_item_evidence_ids(
+                    final_facts.get(insight_id)
+                )
+                if _fallback_evidence_key(evidence_id)
+            }
+            if not theme_evidence_keys.intersection(supporting_evidence_keys):
+                raise AppError(
+                    code="artifact_final_insight_coverage_invalid",
+                    message=(
+                        "Semantic theme coverage supporting insights are not "
+                        "evidence-linked to the planned theme"
+                    ),
+                    retryable=False,
+                    context={
+                        "theme": theme,
+                        "supporting_insight_ids": supporting_ids,
+                        "theme_evidence_ids": sorted(theme_evidence_keys),
+                        "supporting_evidence_ids": sorted(supporting_evidence_keys),
+                    },
+                )
         if status == "uncovered" and supporting_ids:
             raise AppError(
                 code="artifact_final_insight_coverage_invalid",

@@ -227,11 +227,18 @@ def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         "verified-fact:insight-f1-0.99"
     )
-    responses["editorial_theme_coverage"] = _theme_coverage_response(
-        candidates,
-        ["f1", "f2"],
-        covered_evidence_ids={"f1", "f2"},
-    )
+    responses["editorial_theme_coverage"] = [
+        _theme_coverage_response(
+            candidates,
+            ["f1", "f2"],
+            covered_evidence_ids={"f2"},
+        ),
+        _theme_coverage_response(
+            candidates,
+            ["f1", "f2"],
+            covered_evidence_ids={"f1", "f2"},
+        ),
+    ]
     openai_client = FakeOpenAI(responses)
 
     payload = generate_artifacts(
@@ -250,9 +257,9 @@ def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
     final_requests = [
         request for request in openai_client.requests if request[2] == "insights_final"
     ]
-    assert len(final_requests) == 1
+    assert len(final_requests) == 2
     assert {item["id"] for item in payload["insights_final"]} == {
-        candidate["id"] for candidate in candidates
+        candidate["id"] for candidate in candidates[:5]
     }
     assert (
         payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
@@ -262,7 +269,7 @@ def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
     )
 
 
-def test_verified_generation_fills_omitted_theme_from_admitted_candidate(tmp_path):
+def test_verified_generation_fails_closed_without_authored_theme_repair(tmp_path):
     candidates = [
         _insight("f1", score=0.99, text="The first decision signal is material."),
         _insight("f2", score=0.98, text="The second decision signal is material."),
@@ -284,30 +291,40 @@ def test_verified_generation_fills_omitted_theme_from_admitted_candidate(tmp_pat
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         f"verified-fact:{candidates[1]['id']}"
     )
-    responses["editorial_theme_coverage"] = _theme_coverage_response(
+    failed_coverage = _theme_coverage_response(
         candidates,
         ["f1", "f2"],
-        covered_evidence_ids={"f1", "f2"},
+        covered_evidence_ids={"f2"},
     )
+    responses["editorial_theme_coverage"] = [failed_coverage, failed_coverage]
+    openai_client = FakeOpenAI(responses)
 
-    payload = generate_artifacts(
-        report_id="verified-omitted-theme",
-        report_name="Verified omitted theme",
-        doc_map=_doc_map(6),
-        evidence_packs=_generation_evidence(6),
-        settings=_settings(tmp_path),
-        ctx=_ctx(),
-        openai_client=FakeOpenAI(responses),
-        prompt_client=CapturingPromptClient(),
-        analysis_store=FakeAnalysisStore(),
-        visual_authority_admitter=lambda shortlisted: _verified_admission(
-            shortlisted, digest="f" * 64
-        ),
+    with pytest.raises(AppError) as error:
+        generate_artifacts(
+            report_id="verified-omitted-theme",
+            report_name="Verified omitted theme",
+            doc_map=_doc_map(6),
+            evidence_packs=_generation_evidence(6),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            openai_client=openai_client,
+            prompt_client=CapturingPromptClient(),
+            analysis_store=FakeAnalysisStore(),
+            visual_authority_admitter=lambda shortlisted: _verified_admission(
+                shortlisted, digest="f" * 64
+            ),
+        )
+
+    assert error.value.code == "artifact_final_insight_coverage_invalid"
+    assert error.value.context["semantic_theme_repair"]["status"] == (
+        "blocked_incomplete_roster"
     )
-
-    assert {item["evidence_id"] for item in payload["insights_final"]} == {
-        f"verified-fact:{candidate['id']}" for candidate in candidates
-    }
+    diagnostics = error.value.context["coverage_diagnostics"]
+    assert diagnostics["terminal_classification"] == "semantic_theme_repair_exhausted"
+    assert diagnostics["planned_themes"][0]["fact_ids"]
+    assert diagnostics["final_roster_count"] == 5
+    assert diagnostics["theme_verdicts"][0]["status"] == "uncovered"
+    assert len([r for r in openai_client.requests if r[2] == "insights_final"]) == 2
 
 
 def test_verified_final_selection_repairs_a_noncentral_theme_omission(tmp_path):
@@ -449,7 +466,7 @@ def test_verified_generation_semantically_assesses_shared_theme_evidence(tmp_pat
             {
                 "theme": "Theme 2",
                 "status": "covered",
-                "supporting_insight_ids": [candidates[1]["id"]],
+                "supporting_insight_ids": [candidates[0]["id"]],
                 "explanation": (
                     "The second final proposition develops the second decision theme."
                 ),
@@ -677,7 +694,7 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
     )
 
 
-def test_verified_theme_repair_reconciles_count_from_admitted_candidates(tmp_path):
+def test_verified_theme_repair_does_not_backfill_a_short_authored_roster(tmp_path):
     candidates = [
         _insight("f1", score=0.99, text="The first decision signal is material."),
         _insight("f2", score=0.98, text="The second decision signal is material."),
@@ -738,33 +755,23 @@ def test_verified_theme_repair_reconciles_count_from_admitted_candidates(tmp_pat
         },
     ]
 
-    payload = generate_artifacts(
-        report_id="verified-semantic-theme-repair-count-reconciliation",
-        report_name="Verified semantic theme repair count reconciliation",
-        doc_map=_doc_map(5),
-        evidence_packs=_generation_evidence(5),
-        settings=_settings(tmp_path),
-        ctx=_ctx(),
-        openai_client=FakeOpenAI(responses),
-        prompt_client=CapturingPromptClient(),
-        analysis_store=FakeAnalysisStore(),
-        visual_authority_admitter=lambda shortlisted: _verified_admission(
-            shortlisted, digest="c" * 64
-        ),
-    )
-
-    assert len(payload["insights_final"]) == 5
-    assert {item["id"] for item in payload["insights_final"]} == {
-        candidate["id"] for candidate in candidates
-    }
-    assert (
-        next(
-            item["text"]
-            for item in payload["insights_final"]
-            if item["id"] == candidates[1]["id"]
+    with pytest.raises(AppError, match="minimum meaningful insight count") as error:
+        generate_artifacts(
+            report_id="verified-semantic-theme-repair-count-reconciliation",
+            report_name="Verified semantic theme repair count reconciliation",
+            doc_map=_doc_map(5),
+            evidence_packs=_generation_evidence(5),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            openai_client=FakeOpenAI(responses),
+            prompt_client=CapturingPromptClient(),
+            analysis_store=FakeAnalysisStore(),
+            visual_authority_admitter=lambda shortlisted: _verified_admission(
+                shortlisted, digest="c" * 64
+            ),
         )
-        == "The second decision signal governs the response."
-    )
+
+    assert error.value.context["selected_count"] == 4
 
 
 def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion(
@@ -843,7 +850,7 @@ def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion
     )
 
 
-def test_verified_generation_falls_back_to_source_bound_candidate_after_semantic_repair(
+def test_verified_generation_fails_closed_without_source_bound_editorial_fallback(
     tmp_path,
 ):
     candidates = [
@@ -895,52 +902,32 @@ def test_verified_generation_falls_back_to_source_bound_candidate_after_semantic
             },
         ]
     }
-    successful_fallback = {
-        "theme_coverage": [
-            {
-                "theme": "Theme 1",
-                "status": "covered",
-                "supporting_insight_ids": [candidates[1]["id"]],
-                "explanation": "The source-bound candidate develops the central theme.",
-            },
-            {
-                "theme": "Theme 2",
-                "status": "covered",
-                "supporting_insight_ids": [candidates[0]["id"]],
-                "explanation": "The second theme is developed.",
-            },
-        ]
-    }
-    responses["editorial_theme_coverage"] = [
-        failed_coverage,
-        failed_coverage,
-        successful_fallback,
-    ]
+    responses["editorial_theme_coverage"] = [failed_coverage, failed_coverage]
     openai_client = FakeOpenAI(responses)
 
-    payload = generate_artifacts(
-        report_id="verified-semantic-theme-source-fallback",
-        report_name="Verified semantic theme source fallback",
-        doc_map=_doc_map(5),
-        evidence_packs=_generation_evidence(5),
-        settings=_settings(tmp_path),
-        ctx=_ctx(),
-        openai_client=openai_client,
-        prompt_client=CapturingPromptClient(),
-        analysis_store=FakeAnalysisStore(),
-        visual_authority_admitter=lambda shortlisted: _verified_admission(
-            shortlisted, digest="y" * 64
-        ),
-    )
+    with pytest.raises(AppError, match="omitted a supported central theme") as error:
+        generate_artifacts(
+            report_id="verified-semantic-theme-source-fallback",
+            report_name="Verified semantic theme source fallback",
+            doc_map=_doc_map(5),
+            evidence_packs=_generation_evidence(5),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            openai_client=openai_client,
+            prompt_client=CapturingPromptClient(),
+            analysis_store=FakeAnalysisStore(),
+            visual_authority_admitter=lambda shortlisted: _verified_admission(
+                shortlisted, digest="y" * 64
+            ),
+        )
 
-    final_f2 = next(
-        item for item in payload["insights_final"] if item["id"] == candidates[1]["id"]
+    assert error.value.context["semantic_theme_repair"]["status"] == (
+        "blocked_incomplete_roster"
     )
-    assert final_f2["text"] == "The second decision signal is material."
-    repair = payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
-        "final_selected_theme_coverage"
-    ]["semantic_repair"]
-    assert repair["fallback"]["status"] == "source_bound_candidate"
+    assert (
+        len([r for r in openai_client.requests if r[2] == "editorial_theme_coverage"])
+        == 2
+    )
 
 
 def test_verified_generation_materializes_downstream_insights_from_snapshot(

@@ -731,143 +731,20 @@ def generate_artifacts(
 
     def final_insights_for_coverage(
         final_insights: List[Dict[str, Any]],
-        *,
-        replace_central_themes: set[str] | None = None,
     ) -> List[Dict[str, Any]]:
         if visual_authority_admitter is None:
             return final_insights
-        restored_finals = select_artifact_insights(
+        # Verified final prose must come from the final-insights model.  The
+        # admitted candidates are used only as the authoritative factual
+        # lineage for restoration; inserting a candidate projection here
+        # would silently publish an un-authored fallback.
+        return select_artifact_insights(
             final_insights=final_insights,
             candidate_insights=insights_candidates,
             editorial_plan=editorial_plan,
             require_final_candidate_lineage=True,
             verified_mode=True,
         )
-        coverage = final_insight_editorial_coverage(
-            final_insights=restored_finals,
-            candidate_insights=insights_candidates,
-            editorial_plan=editorial_plan,
-        )
-        omitted_central_themes = {
-            normalize_text(theme)
-            for theme in coverage["omitted_central_themes"]
-            if normalize_text(theme)
-        }
-        requested_replacements = {
-            normalize_text(theme)
-            for theme in replace_central_themes or set()
-            if normalize_text(theme)
-        }
-        omitted_central_themes.update(requested_replacements)
-        if not omitted_central_themes:
-            return restored_finals
-
-        central_evidence_keys = {
-            normalize_text(evidence_id)
-            for binding in editorial_plan_theme_bindings(editorial_plan)
-            if normalize_text(binding["theme"]) in omitted_central_themes
-            for evidence_id in binding["coverage_keys"]
-            if normalize_text(evidence_id)
-        }
-        central_candidates = []
-        for candidate in insights_candidates:
-            if not isinstance(candidate, dict):
-                continue
-            evidence_ids = [candidate.get("evidence_id")]
-            raw_evidence_ids = candidate.get("evidence_ids")
-            if isinstance(raw_evidence_ids, list):
-                evidence_ids.extend(raw_evidence_ids)
-            if any(
-                normalize_text(evidence_id) in central_evidence_keys
-                for evidence_id in evidence_ids
-                if normalize_text(evidence_id)
-            ):
-                central_candidates.append(candidate)
-        if not central_candidates:
-            return restored_finals
-
-        final_ids = {
-            _s(insight.get("id")).strip()
-            for insight in restored_finals
-            if isinstance(insight, dict) and _s(insight.get("id")).strip()
-        }
-        # Only supplement omitted central themes.  Lower-priority omissions
-        # remain valid editorial choices when the final roster already passes
-        # the central-theme gate.  During an explicit replacement, prefer an
-        # admitted alternative that is not already selected; otherwise the
-        # selector can spend the bounded replacement slot on the existing
-        # stable ID and leave the semantically incomplete roster unchanged.
-        candidate_pool = central_candidates
-        if replace_central_themes:
-            unselected_central_candidates = [
-                candidate
-                for candidate in central_candidates
-                if _s(candidate.get("id")).strip() not in final_ids
-            ]
-            if unselected_central_candidates:
-                candidate_pool = unselected_central_candidates
-        additions = select_artifact_insights(
-            final_insights=[],
-            candidate_insights=candidate_pool,
-            editorial_plan=editorial_plan,
-            require_final_candidate_lineage=False,
-            verified_mode=True,
-            max_count=len(omitted_central_themes),
-        )
-        if replace_central_themes:
-            # Apply same-ID source-bound wording repairs as well as genuine
-            # alternative-ID replacements.  Do not return early after the
-            # latter or a same-ID authoritative correction can be discarded.
-            replacement_by_id = {
-                _s(insight.get("id")).strip(): insight
-                for insight in additions
-                if isinstance(insight, dict) and _s(insight.get("id")).strip()
-            }
-            replaced = [
-                replacement_by_id.get(_s(insight.get("id")).strip(), insight)
-                if isinstance(insight, dict)
-                and _s(insight.get("id")).strip() in replacement_by_id
-                else insight
-                for insight in restored_finals
-            ]
-            replacements = [
-                insight
-                for insight in additions
-                if isinstance(insight, dict)
-                and _s(insight.get("id")).strip()
-                and _s(insight.get("id")).strip() not in final_ids
-            ]
-            if replacements:
-                # Keep the roster size stable while allowing a source-bound
-                # admitted alternative to replace a selected but less useful
-                # insight. Prefer the tail so earlier plan-ordered themes are
-                # preserved; never append an extra unassessed item here.
-                if len(replacements) <= len(replaced):
-                    replace_start = len(replaced) - len(replacements)
-                    replaced[replace_start:] = replacements
-                if len(replaced) == len(
-                    {
-                        _s(insight.get("id")).strip()
-                        for insight in replaced
-                        if isinstance(insight, dict) and _s(insight.get("id")).strip()
-                    }
-                ) and len(replacements) <= len(restored_finals):
-                    return replaced
-            if replaced != restored_finals:
-                return replaced
-        final_ids = {
-            _s(insight.get("id")).strip()
-            for insight in restored_finals
-            if isinstance(insight, dict) and _s(insight.get("id")).strip()
-        }
-        return [
-            *restored_finals,
-            *[
-                insight
-                for insight in additions
-                if _s(insight.get("id")).strip() not in final_ids
-            ],
-        ]
 
     def render_task(task: ArtifactRenderTask) -> Dict[str, Any]:
         payload_validator = None
@@ -897,15 +774,6 @@ def generate_artifacts(
                         final_insights=payload.get("insights_final") or [],
                         candidate_insights=insights_candidates,
                     )
-                    if visual_authority_admitter is not None:
-                        validate_final_insight_editorial_coverage(
-                            final_insights=final_insights_for_coverage(
-                                payload.get("insights_final") or []
-                            ),
-                            candidate_insights=insights_candidates,
-                            editorial_plan=editorial_plan,
-                            coverage_diagnostics=final_selection_coverage,
-                        )
 
         elif task.step_name == "summary":
 
@@ -2068,6 +1936,13 @@ def generate_artifacts(
             editorial_plan_coverage
         )
         editorial_plan_json = _dump_json(editorial_plan)
+        # The verified-fact plan is authoritative for the final editorial
+        # roster.  Discovery determines only how many independent alternatives
+        # we retain for admission; it must not freeze the final target before
+        # the verified plan has been accepted.
+        final_insight_target_count = max(
+            REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(editorial_plan["themes"])
+        )
         base_vars = artifact_base_variables(active_doc_map, active_evidence)
         base_vars.pop("canonical_evidence_ids_json", None)
         base_vars.pop("candidate_allowed_evidence_ids_json", None)
@@ -2258,15 +2133,6 @@ def generate_artifacts(
             final_insights=payload.get("insights_final") or [],
             candidate_insights=insights_candidates,
         )
-        if visual_authority_admitter is not None:
-            validate_final_insight_editorial_coverage(
-                final_insights=final_insights_for_coverage(
-                    payload.get("insights_final") or []
-                ),
-                candidate_insights=insights_candidates,
-                editorial_plan=editorial_plan,
-                coverage_diagnostics=final_selection_coverage,
-            )
 
     insights_final_result: Dict[str, Any]
     if dependency_dag_enabled:
@@ -2315,6 +2181,99 @@ def generate_artifacts(
         validate_verified_final_insight_count(insights_final, stage="initial_selection")
     semantic_theme_coverage: Dict[str, Any] = {}
     semantic_theme_repair: Dict[str, Any] = {}
+
+    def semantic_coverage_diagnostics(
+        final_insights: List[Dict[str, Any]],
+        *,
+        assessment: Any = None,
+        stage: str,
+        terminal_classification: str,
+        roster_change: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Build bounded, ID-only diagnostics for a coverage terminal outcome."""
+
+        eligible_by_id = {
+            _s(candidate.get("id")).strip(): candidate
+            for candidate in eligible_final_insight_candidates(insights_candidates)
+            if _s(candidate.get("id")).strip()
+        }
+
+        def evidence_ids(item: Dict[str, Any]) -> List[str]:
+            values = [_s(item.get("evidence_id")).strip()]
+            raw_values = item.get("evidence_ids")
+            if isinstance(raw_values, list):
+                values.extend(_s(value).strip() for value in raw_values)
+            return list(dict.fromkeys(value for value in values if value))
+
+        roster = []
+        for insight in final_insights:
+            if not isinstance(insight, dict):
+                continue
+            insight_id = _s(insight.get("id")).strip()
+            if not insight_id:
+                continue
+            authoritative = eligible_by_id.get(insight_id, insight)
+            fact_id = _s(authoritative.get("verified_fact_id")).strip()
+            verified_fact = authoritative.get("verified_fact")
+            if not fact_id and isinstance(verified_fact, dict):
+                fact_id = _s(verified_fact.get("fact_id")).strip()
+            roster.append(
+                {
+                    "id": insight_id,
+                    "bound_fact_id": fact_id,
+                    "bound_evidence_ids": evidence_ids(authoritative),
+                }
+            )
+
+        planned_themes = [
+            {
+                "theme": _s(binding.get("theme")).strip(),
+                "priority": binding.get("priority"),
+                "fact_ids": sorted(
+                    _s(value).strip()
+                    for value in binding.get("coverage_keys", set())
+                    if _s(value).strip()
+                ),
+            }
+            for binding in editorial_plan_theme_bindings(editorial_plan)
+        ]
+        model_assessments = []
+        raw_assessments = (
+            assessment.get("theme_coverage") if isinstance(assessment, dict) else []
+        )
+        if isinstance(raw_assessments, list):
+            for item in raw_assessments:
+                if not isinstance(item, dict):
+                    continue
+                model_assessments.append(
+                    {
+                        "theme": _s(item.get("theme")).strip(),
+                        "status": _s(item.get("status")).strip(),
+                        "supporting_insight_ids": [
+                            _s(value).strip()
+                            for value in item.get("supporting_insight_ids", [])
+                            if _s(value).strip()
+                        ],
+                        "reason": _s(item.get("explanation")).strip()[:240],
+                    }
+                )
+        selection = final_insight_editorial_coverage(
+            final_insights=final_insights,
+            candidate_insights=insights_candidates,
+            editorial_plan=editorial_plan,
+        )
+        return {
+            "stage": stage,
+            "terminal_classification": terminal_classification,
+            "target_count": final_insight_target_count,
+            "planned_themes": planned_themes,
+            "final_roster_count": len(roster),
+            "final_roster": roster,
+            "theme_verdicts": model_assessments,
+            "missing_themes": selection["omitted_themes"],
+            "substitutions": deepcopy(roster_change or {}),
+        }
+
     theme_bindings = editorial_plan_theme_bindings(editorial_plan)
     relevant_verified_facts = [
         fact for fact in visual_authority_verified_facts if isinstance(fact, dict)
@@ -2347,8 +2306,15 @@ def generate_artifacts(
                 payload=semantic_theme_coverage_result,
                 editorial_plan=editorial_plan,
                 final_insights=insights_final,
+                candidate_insights=insights_candidates,
             )
         except AppError as error:
+            error.context["coverage_diagnostics"] = semantic_coverage_diagnostics(
+                insights_final,
+                assessment=semantic_theme_coverage_result,
+                stage="initial_selection",
+                terminal_classification="semantic_theme_repair_requested",
+            )
             omitted_themes = error.context.get("omitted_themes")
             if not isinstance(omitted_themes, list) or not omitted_themes:
                 omitted_themes = error.context.get("omitted_central_themes")
@@ -2384,6 +2350,7 @@ def generate_artifacts(
                     ],
                 },
                 "assessment": semantic_theme_coverage_result,
+                "selection_diagnostics": error.context["coverage_diagnostics"],
                 "supported_verified_facts": relevant_verified_facts,
                 "eligible_admitted_candidate_alternatives": [
                     {
@@ -2424,36 +2391,22 @@ def generate_artifacts(
                 prefix="insight",
                 verified_mode=True,
             )
-            if len(repaired_insights) != len(insights_final):
-                reconciled_insights = select_artifact_insights(
-                    final_insights=repaired_insights,
-                    candidate_insights=insights_candidates,
-                    editorial_plan=editorial_plan,
-                    require_final_candidate_lineage=False,
-                    verified_mode=True,
-                    max_count=final_insight_target_count,
-                )
-                expected_reconciled_count = min(
-                    max(len(repaired_insights), len(insights_final)),
-                    final_insight_target_count,
-                )
-                if len(reconciled_insights) != expected_reconciled_count:
-                    raise AppError(
-                        code="artifact_final_insight_coverage_repair_invalid",
-                        message=(
-                            "Semantic theme repair changed the final insight count "
-                            "outside the admitted target"
-                        ),
-                        retryable=False,
-                        context={
-                            "before_count": len(insights_final),
-                            "after_count": len(repaired_insights),
-                            "reconciled_count": len(reconciled_insights),
-                            "expected_count": expected_reconciled_count,
-                            "target_count": final_insight_target_count,
-                        },
-                    ) from error
-                repaired_insights = reconciled_insights
+            before_ids = {
+                _s(insight.get("id")).strip()
+                for insight in insights_final
+                if isinstance(insight, dict) and _s(insight.get("id")).strip()
+            }
+            after_ids = {
+                _s(insight.get("id")).strip()
+                for insight in repaired_insights
+                if isinstance(insight, dict) and _s(insight.get("id")).strip()
+            }
+            semantic_theme_repair["roster_change"] = {
+                "before_count": len(insights_final),
+                "after_count": len(repaired_insights),
+                "added_ids": sorted(after_ids - before_ids),
+                "displaced_ids": sorted(before_ids - after_ids),
+            }
             insights_final = final_insights_for_coverage(repaired_insights)
             validate_verified_final_insight_count(
                 insights_final, stage="semantic_repair"
@@ -2479,74 +2432,45 @@ def generate_artifacts(
                     payload=semantic_theme_coverage_result,
                     editorial_plan=editorial_plan,
                     final_insights=insights_final,
+                    candidate_insights=insights_candidates,
                 )
             except AppError as coverage_error:
-                fallback_themes = coverage_error.context.get("omitted_themes")
-                if not isinstance(fallback_themes, list) or not fallback_themes:
-                    fallback_themes = coverage_error.context.get(
-                        "omitted_central_themes"
-                    )
-                if (
-                    coverage_error.code != "artifact_final_insight_coverage_invalid"
-                    or not isinstance(fallback_themes, list)
-                    or not fallback_themes
-                ):
-                    raise
-                fallback_insights = final_insights_for_coverage(
-                    insights_final,
-                    replace_central_themes={
-                        _s(theme).strip()
-                        for theme in fallback_themes
-                        if _s(theme).strip()
-                    },
+                semantic_theme_repair["status"] = "blocked_incomplete_roster"
+                semantic_theme_repair["terminal_classification"] = (
+                    "semantic_theme_repair_exhausted"
                 )
-                if fallback_insights == insights_final:
-                    raise
-                insights_final = fallback_insights
-                validate_verified_final_insight_count(
-                    insights_final, stage="central_candidate_fallback"
-                )
-                theme_coverage_variables["insights_final_json"] = (
-                    semantic_theme_coverage_insights_json(
+                coverage_error.context["coverage_diagnostics"] = (
+                    semantic_coverage_diagnostics(
                         insights_final,
-                        authoritative_facts=visual_authority_verified_facts,
+                        assessment=semantic_theme_coverage_result,
+                        stage="semantic_repair",
+                        terminal_classification=("semantic_theme_repair_exhausted"),
+                        roster_change=semantic_theme_repair.get("roster_change"),
                     )
                 )
-                semantic_theme_coverage_result = resolve_or_render_family(
-                    namespace="report_vs/artifacts/editorial_theme_coverage",
-                    variables=theme_coverage_variables,
-                    ctx=child_context(
-                        ctx,
-                        task_id=(
-                            f"{ctx.task_id}:semantic_repair:"
-                            "central_candidate_fallback:editorial_theme_coverage"
-                        ),
-                    ),
-                    response_contract_name="editorial_theme_coverage_output",
-                    response_contract_identity_version="v1",
+                coverage_error.context["semantic_theme_repair"] = deepcopy(
+                    semantic_theme_repair
                 )
-                semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
-                    payload=semantic_theme_coverage_result,
-                    editorial_plan=editorial_plan,
-                    final_insights=insights_final,
-                )
-                semantic_theme_repair["fallback"] = {
-                    "status": "source_bound_candidate",
-                    "omitted_central_themes": [
-                        _s(theme).strip()
-                        for theme in fallback_themes
-                        if _s(theme).strip()
-                    ],
-                }
+                raise coverage_error
             semantic_theme_repair["status"] = "succeeded"
     if visual_authority_admitter is not None:
         final_selection_coverage.clear()
-        validate_final_insight_editorial_coverage(
-            final_insights=insights_final,
-            candidate_insights=insights_candidates,
-            editorial_plan=editorial_plan,
-            coverage_diagnostics=final_selection_coverage,
-        )
+        try:
+            validate_final_insight_editorial_coverage(
+                final_insights=insights_final,
+                candidate_insights=insights_candidates,
+                editorial_plan=editorial_plan,
+                coverage_diagnostics=final_selection_coverage,
+            )
+        except AppError as error:
+            error.context["coverage_diagnostics"] = semantic_coverage_diagnostics(
+                insights_final,
+                assessment=semantic_theme_coverage,
+                stage="final_selection",
+                terminal_classification="final_editorial_coverage_invalid",
+                roster_change=semantic_theme_repair.get("roster_change"),
+            )
+            raise
         if semantic_theme_coverage:
             final_selection_coverage["semantic_assessment"] = semantic_theme_coverage
         if semantic_theme_repair:
