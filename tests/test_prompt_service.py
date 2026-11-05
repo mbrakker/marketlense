@@ -233,6 +233,12 @@ def test_editorial_plan_and_findings_prompts_require_representative_counterbalan
     )
     assert "counterbalancing" in editorial_plan_prompt.user.text
     assert "executive-summary" in editorial_plan_prompt.user.text
+    assert "assign each materially distinct fact to a theme's evidence_ids" in (
+        editorial_plan_prompt.user.text
+    )
+    assert "do not leave a distinct admitted fact unrepresented" in (
+        editorial_plan_prompt.user.text
+    )
     assert "counterbalancing" in findings_prompt.user.text
     findings_text = " ".join(findings_prompt.user.text.split()).casefold()
     assert (
@@ -257,6 +263,25 @@ def test_editorial_plan_prompt_retains_substantive_central_forecasts() -> None:
     assert "page position" in prompt_text
     assert "promotional" in prompt_text
     assert "forecast" in prompt_text
+
+
+def test_final_insight_prompt_requires_theme_complete_rosters() -> None:
+    insights_final_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/insights_final",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    prompt_text = " ".join(insights_final_prompt.user.text.split()).casefold()
+    assert "at least one selected insight substantively developing each planned" in (
+        prompt_text
+    )
+    assert "treat the omitted-theme list as a hard acceptance checklist" in (
+        prompt_text
+    )
 
 
 def test_findings_prompt_retains_substantive_central_forecasts() -> None:
