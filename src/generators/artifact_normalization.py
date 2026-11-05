@@ -1460,7 +1460,14 @@ def normalize_artifact_insights(
         # normalization preserves the structured input for its verdict.
         for field_name in INSIGHT_TEXT_FIELDS:
             value = _normalize_insight_text_field(field_name, item.get(field_name))
-            if value:
+            if value or (
+                verified_mode
+                and field_name == "metric_public_copy"
+                and _has_displayable_verified_metric(
+                    metric=metric,
+                    evidence_id=evidence_id,
+                )
+            ):
                 insight[field_name] = value
         for field_name in INSIGHT_SCORE_FIELDS:
             score_value = item.get(field_name)
@@ -1468,6 +1475,18 @@ def normalize_artifact_insights(
                 insight[field_name] = float(score_value)
         normalized.append(insight)
     return normalized
+
+
+def _has_displayable_verified_metric(
+    *, metric: Dict[str, Any], evidence_id: str
+) -> bool:
+    """Keep a writable copy leaf only for a source-bound displayable metric."""
+
+    return bool(
+        _s(metric.get("label")).strip()
+        and _s(metric.get("value")).strip()
+        and _s(evidence_id).strip()
+    )
 
 
 def select_artifact_insights(

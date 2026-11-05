@@ -525,7 +525,7 @@ def test_public_validator_to_plan_to_claim_repair_preserves_sibling_provenance(
     assert (
         repaired["text_hash"] == hashlib.sha256(b"Repaired middle claim.").hexdigest()
     )
-    assert repaired["evidence_ids"] == ["f1"]
+    assert repaired["evidence_ids"] == ["f2"]
 
 
 def test_summary_claim_repair_skips_warning_outside_planned_paths(tmp_path) -> None:

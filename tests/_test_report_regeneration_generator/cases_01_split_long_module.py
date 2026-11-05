@@ -8,6 +8,12 @@ __file__ = str(
     / "test_report_regeneration_generator.py"
 )
 
+from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
+    _insight_issue_fields,
+    _key_figure_source_fields,
+    _normalize_regeneration_issue,
+)
+
 from ._split_support_test_report_regeneration_generator import *  # noqa: F401,F403
 
 
@@ -81,6 +87,86 @@ def test_grounding_package_quarantines_failed_evidence_and_uses_replacements() -
     assert package["quarantined_evidence_ids"] == ["failed-evidence"]
     assert package["evidence_ids"] == ["approved-evidence"]
     assert "failed-evidence" not in json.dumps(package["relevant_evidence"])
+
+
+def test_public_editorial_copy_issue_keeps_authoritative_evidence() -> None:
+    issue = ValidationIssue(
+        rule_id="public_editorial_quality.semantic_review",
+        affected_section="insights:insight-1.metric_public_copy",
+        message="The public metric wording broadens the retained population.",
+        severity="error",
+        repair_target="insights_bundle",
+        entity_id="metric_spine:metric_spine:insight-1",
+        evidence_ids=["verified-fact:fact-1"],
+        violation_type="semantic_review_unresolved",
+    )
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "insight-1",
+                "evidence_id": "verified-fact:fact-1",
+                "pages": [4],
+            }
+        ]
+    }
+
+    normalized = _normalize_regeneration_issue(issue, artifacts)
+
+    assert normalized.evidence_ids == ["verified-fact:fact-1"]
+    assert normalized.excluded_evidence_ids == []
+
+
+def test_public_editorial_item_keeps_exact_multi_fact_evidence_scope() -> None:
+    issue = ValidationIssue(
+        rule_id="public_editorial_quality.semantic_review",
+        affected_section="insights:insight-1.metric_public_copy",
+        message="The composite copy needs a source-grounded rewrite.",
+        severity="error",
+        repair_target="insights_bundle",
+        entity_id="metric_spine:metric_spine:insight-1",
+        evidence_ids=["verified-fact:fact-1", "verified-fact:fact-2"],
+        violation_type="semantic_review_unresolved",
+    )
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "insight-1",
+                "evidence_id": "verified-fact:fact-1",
+                "pages": [4],
+            }
+        ]
+    }
+
+    normalized = _normalize_regeneration_issue(issue, artifacts)
+
+    assert normalized.evidence_ids == [
+        "verified-fact:fact-1",
+        "verified-fact:fact-2",
+    ]
+
+
+def test_public_metric_copy_routes_to_exact_leaf_before_metric_relationship() -> None:
+    issue = RegenerationIssue(
+        rule_id="public_editorial_quality.metric_label_relationship",
+        affected_section="insights:insight-1.metric_public_copy",
+        message="The metric copy needs a source-grounded rewrite.",
+        severity="error",
+        entity_id="insight:insight-1:metric_public_copy",
+    )
+
+    assert _insight_issue_fields(issue) == ["metric_public_copy"]
+
+
+def test_derived_metric_copy_routes_to_source_insight_leaf() -> None:
+    issue = RegenerationIssue(
+        rule_id="public_editorial_quality.metric_label_relationship",
+        affected_section="key_figures:1.metric_public_copy",
+        message="The projected metric copy needs a source-grounded rewrite.",
+        severity="error",
+        entity_id="key_figure:insight-1:metric_public_copy",
+    )
+
+    assert _key_figure_source_fields(issue) == ["metric_public_copy"]
 
 
 def test_alternative_rebind_keeps_non_quarantined_current_evidence() -> None:

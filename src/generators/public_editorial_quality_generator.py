@@ -359,6 +359,7 @@ def validation_issues_from_public_editorial_quality(
             severity=issue.severity,
             affected_section=issue.affected_field,
             rule_id=issue.rule_id,
+            violation_type=issue.hard_fail_class,
             repair_target=issue.repair_target if issue.repair_eligible else "",
             entity_id=issue.public_item_id,
             evidence_ids=list(issue.evidence_ids),

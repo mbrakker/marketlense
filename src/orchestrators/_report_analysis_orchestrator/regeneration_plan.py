@@ -362,9 +362,10 @@ def _normalize_regeneration_issue(
     derived_evidence_ids, pages = _issue_grounding(
         issue.affected_section, artifacts, issue.entity_id
     )
+    rule_id = str(issue.rule_id or "").strip().lower()
     evidence_ids = (
         list(issue.evidence_ids)
-        if str(issue.rule_id or "").strip().lower().startswith("retained_claim.")
+        if rule_id.startswith(("retained_claim.", "public_editorial_quality."))
         else derived_evidence_ids or list(issue.evidence_ids)
     )
     excluded_evidence_ids = (
@@ -456,10 +457,15 @@ def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
             str(issue.severity or "").strip().lower() == "error"
             and rule_id == "retained_claim.evidence_reference_completeness"
         )
+    if rule_id.startswith("public_editorial_quality."):
+        # Public-editorial findings describe a defect in a retained projection
+        # (wording, metric scope, or analytical quality), not a rejection of
+        # the source binding itself.  Keep the authoritative evidence available
+        # so the scoped repair can correct the public leaf.  Binding rejection
+        # remains owned by the grounding/retained-claim validators above.
+        return False
     return str(issue.severity or "").strip().lower() == "error" and (
-        rule_id == "grounding"
-        or rule_id in {"numbers", "metrics"}
-        or rule_id.startswith("public_editorial_quality.")
+        rule_id == "grounding" or rule_id in {"numbers", "metrics"}
     )
 
 
@@ -976,6 +982,10 @@ def _insight_issue_fields(issue: RegenerationIssue) -> List[str]:
         return _key_figure_source_fields(issue)
     field = _insight_issue_field(issue.entity_id, issue.affected_section)
     rule_id = str(issue.rule_id or "").strip().lower()
+    if field == "metric_public_copy":
+        # The public copy leaf is an editorial repair target.  Do not let a
+        # related metric-label rule widen it into protected value fields.
+        return [field]
     mapped_metric_fields = _INSIGHT_METRIC_FAILURE_FIELDS.get(rule_id)
     if mapped_metric_fields and field.startswith("metric"):
         return list(mapped_metric_fields)
@@ -1118,6 +1128,10 @@ def _key_figure_source_fields(issue: object) -> List[str]:
         or "evidence_retrieval_failure" in message
     ):
         return ["evidence_id"]
+    if field == "metric_public_copy":
+        # Route an exact public-copy defect to its source insight leaf before
+        # applying any protected metric relationship mapping.
+        return [field]
     if rule_id == "public_editorial_quality.metric_label_relationship":
         return ["metric.label", "metric.value"]
     if field in {"figure", "value"}:

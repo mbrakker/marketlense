@@ -3,6 +3,10 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 
+from src.contracts.public_editorial_quality import (
+    PublicEditorialQualityIssue,
+    PublicEditorialQualityReport,
+)
 from src.contracts.report_assets import RenderRequest
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue
@@ -18,6 +22,7 @@ from src.generators.artifact_normalization import (
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     public_editorial_semantic_review_items,
+    validation_issues_from_public_editorial_quality,
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
@@ -87,6 +92,20 @@ def test_metric_public_copy_survives_final_normalization_and_derived_artifacts()
     )
     assert spine[0]["metric_public_copy"] == "42% of surveyed buyers"
     assert figures[0]["metric_public_copy"] == "42% of surveyed buyers"
+
+
+def test_verified_displayable_metric_retains_empty_writable_copy_leaf() -> None:
+    raw = {
+        "id": "fact-1",
+        "text": "The final finding.",
+        "evidence_id": "verified-fact:fact-1",
+        "evidence": "Adoption reached 42% among buyers in 2026.",
+        "metric": deepcopy(_authority_artifacts()["insights_final"][0]["metric"]),
+    }
+
+    final = normalize_artifact_insights([raw], prefix="insight", verified_mode=True)
+
+    assert final[0]["metric_public_copy"] == ""
 
 
 def test_matching_final_selection_preserves_editorial_metric_copy() -> None:
@@ -236,6 +255,62 @@ def test_metric_copy_quality_failure_routes_to_exact_final_leaf() -> None:
     assert plan.targets[0].allowed_paths == [
         "insights_final[item=fact-1].metric_public_copy"
     ]
+
+
+def test_missing_verified_metric_copy_is_an_exact_writable_repair_target() -> None:
+    artifacts = _artifacts_with_metric_copy()
+    source = deepcopy(artifacts["insights_final"][0])
+    source.pop("metric_public_copy")
+    artifacts["insights_final"] = normalize_artifact_insights(
+        [source], prefix="insight", verified_mode=True
+    )
+    issue = ValidationIssue(
+        message=(
+            "[public_editorial_quality.material_claim_evidence_missing] copy missing"
+        ),
+        severity="error",
+        affected_section="insights:fact-1.metric_public_copy",
+        rule_id="public_editorial_quality.material_claim_evidence_missing",
+        repair_target="insights_bundle",
+        entity_id="metric_spine:metric_spine:fact-1",
+        evidence_ids=["verified-fact:fact-1"],
+        violation_type="unsupported_factual_claim",
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue], artifacts=artifacts, broad_retry_available=False
+    )
+
+    assert plan.targets[0].allowed_paths == [
+        "insights_final[item=fact-1].metric_public_copy"
+    ]
+
+
+def test_public_quality_conversion_preserves_hard_fail_subtype() -> None:
+    report = PublicEditorialQualityReport(
+        report_id="report-1",
+        status="fail",
+        publishable=False,
+        issues=[
+            PublicEditorialQualityIssue(
+                report_id="report-1",
+                rule_id="public_editorial_quality.semantic_review",
+                severity="error",
+                affected_artifact="metric_spine",
+                affected_field="insights:fact-1.metric_public_copy",
+                evidence_ids=["verified-fact:fact-1"],
+                repair_eligible=True,
+                repair_target="insights_bundle",
+                public_item_id="metric_spine:metric_spine:fact-1",
+                hard_fail_class="semantic_review_unresolved",
+            )
+        ],
+    )
+
+    issues = validation_issues_from_public_editorial_quality(report)
+
+    assert len(issues) == 1
+    assert issues[0].violation_type == "semantic_review_unresolved"
 
 
 def test_rendered_verified_metric_uses_natural_copy(tmp_path: Path) -> None:

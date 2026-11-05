@@ -5831,7 +5831,23 @@ def _regenerate_one_final_insight(
             code="regeneration_target_item_unchanged",
             message="Atomic insight regeneration did not change its declared field.",
             retryable=False,
-            context={"report_id": execution.runtime.request.report_id},
+            context={
+                "report_id": execution.runtime.request.report_id,
+                "target_id": insight_id,
+                "allowed_paths": sorted(execution.target.allowed_paths),
+                "attempted_paths": sorted(mutable_paths),
+                "evidence_ids": sorted(
+                    {
+                        _s(value).strip()
+                        for issue in execution.target.issues
+                        for value in issue.evidence_ids
+                        if _s(value).strip()
+                    }
+                ),
+                "pre_hash": sha256_json(original),
+                "post_hash": sha256_json(repaired),
+                "rejection_category": "target_item_unchanged_after_restoration",
+            },
         )
     execution.state.insights_final[index] = repaired
     execution.state.regenerated_sections.append("insights_final")
