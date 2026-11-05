@@ -1964,3 +1964,22 @@ Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**;
 do not expand to the frozen-five cohort until an accepted Adjust HTML exists.
 Full evidence is recorded in
 `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Evidence update — 2026-11-05 (editorial regeneration handover correction):**
+The follow-up isolated Adjust run at final commit `b346f123` used the exact
+frozen PDF SHA and passed the full hosted CI workflow. It admitted 10/10
+verified facts, selected seven material themes with zero omissions, produced
+seven final insights, and completed validation, public editorial quality, and
+publication readiness with zero unsupported or unresolved retained factual
+claims. The previously failing planned-theme coverage path was exercised and
+the bounded semantic coverage repair succeeded without changing stable final
+IDs; the GenAI small-group qualifier remained source-consistent. Measured
+totals were 169 provider calls, 1,221,126 input tokens, 224,368 output tokens,
+21,568 cached input tokens, `$0.249857`, 1,812.369 seconds, 7 file-search
+calls, 3 structured-output recoveries, 0 automatic repairs, and 0 workflow
+retries. HTML was generated, no WordPress write occurred, and the independent
+PDF review found no material factual error. This closes the targeted Adjust
+regeneration blocker, but broader Step 2 remains **PARTIAL/NO-GO** pending the
+frozen-five/live-effectiveness scope; E18 remains **Active/PARTIAL** and Step 3
+remains **unstarted/not ready**. Full evidence and artifact paths are recorded
+in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.

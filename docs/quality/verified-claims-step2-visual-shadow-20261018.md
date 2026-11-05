@@ -10162,3 +10162,125 @@ provider-free contract evidence. E18 remains **Active/PARTIAL**, Step 2 remains
 material blockers are final-plan coverage completeness and successful
 transactional repair of a substantive editorial wording defect; no further
 provider retry was made for this checkpoint.
+
+## Verified editorial regeneration and theme coverage — 2026-11-05
+
+This entry records the remediation of the failed Adjust regeneration run above.
+The final implementation state is commit
+`b346f1235fa2e27348db59425e0424df70958acd`; hosted CI workflow
+[41993003205](https://github.com/mbrakker/marketlense/actions/runs/41993003205)
+passed `ci_start`, the full test/coverage job, both mutation partitions, and
+`release_evidence`. The correction stayed within the existing editorial-plan
+and final-insight prompt namespaces. It strengthened the existing requirement
+to represent every materially distinct admitted fact and made every planned
+theme a hard final-roster coverage requirement. It did not add a validator,
+service, LLM stage, deterministic business-relevance scorer, or post-selection
+fact backfill.
+
+### Before/after live evidence
+
+The first fresh run from `0b82c8b49f22d91e302725742fad925fb4379075` was a real
+failure, not an unexplained empty checkpoint. It admitted the source-backed
+candidate pool but terminated at `artifact_generation` with
+`artifact_final_insight_coverage_invalid` / `Semantic theme coverage omitted
+planned themes`, after the bounded final-selection repair still failed its
+coverage check. It produced no final `artifacts.json`, HTML, validation pass,
+or WordPress write. The retained audit did not preserve the raw provider
+responses or exact omitted-theme names, so this ledger does not infer them.
+
+The targeted correction was then verified in a new isolated worktree and fresh
+application state. The corrected run used the exact frozen PDF SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`, the
+source identity recorded in the artifacts, and WordPress disabled. Its
+terminal state is the expected shadow-review state `awaiting_review`, with
+validation and publication readiness both `pass`.
+
+| Measure | Pre-fix run (`0b82c8b4`) | Corrected run (`b346f123`) |
+| --- | ---: | ---: |
+| Visual/verified facts admitted | 10/10 (no quarantine) | 10/10 (no quarantine) |
+| Planned themes / final selected themes | coverage invalid / no terminal artifact | 7 / 7, omitted themes 0 |
+| Final insights persisted | none | 7 |
+| Validation / publication readiness | fail / fail | pass / pass |
+| Provider calls | 145 | 169 |
+| Input / output tokens | 721,591 / 136,351 | 1,221,126 / 224,368 |
+| Ledger cached input tokens | 1,196 | 21,568 |
+| Estimated cost | `$0.155223` | `$0.249857` |
+| Wall-clock | 1,458.482 s | 1,812.369 s |
+| File-search calls | 6 | 7 |
+| Structured-output recoveries | 2 | 3 |
+| Automatic repairs / workflow retries | 0 / 0 | 0 / 0 |
+| WordPress writes | 0 | 0 |
+
+The corrected run costs `$0.094634` more (+60.95%) and takes 353.887 seconds
+longer (+24.27%) than the failed pre-fix run because it completes the full
+editorial, grounding, rendering, and readiness path. This is a resource
+regression relative to a failed run, not a claim of efficiency improvement.
+Against the earlier `db1d317b` selection/recovery run (163 calls,
+`$0.250594`, 1,705.877 seconds, no HTML), the corrected run is six calls
+more, `$0.000737` cheaper, and 106.492 seconds slower; the meaningful change
+is that it now completes with an inspectable HTML artifact and passing gates.
+
+### Selection, evidence handover, and source audit
+
+The admitted verified-fact set contained ten stable facts. The final seven
+insights retained the following stable primary identities and canonical source
+pages; composite entries retain the additional fact bindings shown rather than
+silently dropping them:
+
+| Final insight | Canonical source pages | Retained material evidence |
+| --- | ---: | --- |
+| `insight-001` | 3 | More than 112.1 billion app downloads in 2025; no invented geography or category split. |
+| `insight-002` | 11, 40 | Around 31% marketer satisfaction finding plus the qualitative touchpoint/long-term-value outlook. |
+| `insight-003` | 9 | Most organizations low/moderate GenAI maturity; a small advanced-deployment group reportedly achieved over 20% efficiency gains. |
+| `insight-004` | 19, 40 | Global strategy-game sessions +57% and installs −1% YoY, with the retention/reach outlook. |
+| `insight-005` | 27, 28, 40 | Global e-commerce installs −10%, sessions +5%, average session length 10.04 to 9.6 minutes, and the AI-personalization/agents outlook. |
+| `insight-006` | 34, 35, 40 | Global finance installs −4% and sessions +21%; LATAM +76% installs and +57% sessions; finance-app outlook. |
+| `insight-008` | 37 | Global finance CPI $1.51 to $1.13; payment CPI separately +29% to $1.44 with its unspecified geography/years preserved. |
+
+The two admitted facts not used as standalone final IDs (`insight-007` LATAM
+finance growth and `insight-009` e-commerce session length) remain in the
+authoritative `evidence_ids` of `insight-006` and `insight-005`, respectively.
+The qualitative `conclusion-vertical-trends` fact is similarly retained in
+the composite evidence bindings. The final coverage record reports seven
+supported themes, seven selected themes, and zero omitted or omitted-central
+themes. The bounded semantic coverage repair was exercised: its initial
+coverage feedback named five omitted themes, then the repair succeeded without
+adding or displacing a stable final ID.
+
+The original PDF was independently checked at physical pages 3, 9, 11, 19,
+27, 28, 34, 35, 37, and 40. The checked text confirms the download threshold,
+31% population and subject, GenAI population qualifier, strategy-game legend
+mapping, e-commerce install/session and session-length relationships, global
+and LATAM finance relationships, CPI scopes, and the qualitative conclusion.
+The required PDF hash and source identity are present in every verified fact.
+
+The final HTML is at
+`C:\ml-e2e-editorial-regeneration-live-b346f123-20261105\frozen-reliability-reijifz2\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mckv372o\output\mobile-app-trends-2026-pdf.html`.
+The authoritative artifact is at
+`C:\ml-e2e-editorial-regeneration-live-b346f123-20261105\frozen-reliability-reijifz2\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-mckv372o\output\mobile-app-trends-2026-pdf\report_analysis\artifacts.json`.
+Validation, retained-claim validation, public-quality before/after, and
+readiness artifacts are in the same `report_analysis` directory. Public
+quality passed before and after with zero issues; source-note completeness and
+action specificity were 1.0, repeated syntax was 0, and average insight
+length was 39.14 words. The rendered HTML contains no `verified-fact`, stable
+candidate, or other internal evidence identifiers, and no WordPress markers.
+The only validation warning is the pre-existing abstention of the optional
+`quotes` family; it is not a material factual or readiness failure.
+
+### Verdict and remaining scope
+
+**Targeted Adjust regeneration acceptance: PASS.** The same class of failure
+that previously stopped before HTML now produces a complete, source-bound
+seven-insight HTML artifact with zero unsupported or unresolved retained
+factual claims, passing public editorial quality, validation, and publication
+readiness. The public population-broadening defect did not recur: the GenAI
+wording preserves “a small group with advanced deployment” and the source
+qualifiers remain in the canonical metric/evidence handover.
+
+**Overall Step 2: PARTIAL / NO-GO for broader promotion.** This is one
+corrected Adjust report, not the frozen-five cohort or a fresh generation
+effectiveness study. Normal Luna variability and the additional bounded
+coverage call cannot be separated completely from the prompt correction by
+this single run. E18 remains **Active/PARTIAL** and Step 3 remains
+**unstarted/not ready**. No Step 3 implementation or publication write was
+performed.
