@@ -10056,3 +10056,104 @@ closed before final artifact persistence; there is no final HTML to inspect,
 no live proof of the corrected CPI scope in public copy, and no evidence that
 the missing admitted findings, repetition, or limitations are resolved. Step 2
 remains broader **PARTIAL**, E18 remains active, and Step 3 must not begin.
+
+## Verified editorial selection/recovery — 2026-11-05
+
+This is the one fresh provider-backed Adjust run required for the selection and
+recovery correction at commit `db1d317b5a3a4eeabae9faab4e92bbedc95c0141`.
+It used an isolated worktree and fresh application state, the exact frozen PDF
+SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`, and
+WordPress was disabled. No final artifact was reused; normal provider-side
+caching was allowed. The required live run was not retried after its terminal
+failure.
+
+### Deterministic correction and provider-free evidence
+
+The implementation bumps the evidence-backed shortlist cache identity from
+`:28` to `:29`, recomputes the final target after the authoritative verified
+editorial plan, keeps an independent 10-item admitted candidate pool, requires
+an authored source-bound roster, removes raw verified-fact projection and
+post-repair deterministic backfill, and fails closed when semantic coverage is
+incomplete. Final theme coverage now also requires the selected insight's
+canonical evidence ID to support the planned theme. Bounded terminal
+diagnostics retain only plan theme names/priorities/fact IDs, final roster and
+bound IDs, per-theme verdict/support/reason, missing themes, substitutions and
+terminal classification; raw prompts, responses and source extracts are not
+added to standard audit output.
+
+The focused regression set passed **69 tests**; the verified-authority suite
+passed **67**, and the artifact/generator/evidence suite passed **246**.
+Repository-native Ruff, formatting, mypy (786 files, zero errors), architecture,
+forbidden-patching, bounded-logging and prompt-fixture gates passed. The full
+provider-free suite completed with **8,473 passed, 2 skipped and 1 failure**:
+the existing native-wheelhouse test requires CPython 3.12, while this local
+interpreter is CPython 3.14.2. Hosted workflow
+[41936819813](https://github.com/mbrakker/marketlense/actions/runs/41936819813)
+passed tests, both mutation partitions and `release_evidence` at the
+implementation commit.
+
+### Live selection and terminal evidence
+
+The run admitted all **10/10** verified facts and visual candidates, with
+**0 quarantined** and the expected source identity and PDF hash. The retained
+candidate pool contained these stable IDs:
+`insight-01`, `insight-02`, `insight-03`, `insight-04`, `insight-05`,
+`gaming-strategy-growth`, `ecommerce-session-length`, `finance-latam-growth`,
+`conclusion-vertical-trends`, and `gaming-download-ranking`. The authoritative
+plan authored five themes bound to `insight-01` through `insight-05`; the
+retained final roster therefore contained those five IDs and did not use raw
+fact projections as public prose.
+
+The final public-quality gate correctly rejected the result for two reasons:
+
+1. `insight-01.metric_public_copy` changed the source's “small group of
+   organizations with advanced deployment” into “advanced GenAI deployers”,
+   which broadens the population while retaining the number.
+2. The complete admitted fact map contained two material findings absent from
+   the public roster: the conclusion-level vertical trends
+   (`conclusion-vertical-trends`) and the worldwide 2025 gaming-download
+   ranking (`gaming-download-ranking`, Block Blast! first and ROBLOX second).
+
+The existing transactional regeneration attempted to repair the failed
+editorial bundle but returned no declared change and terminated with
+`regeneration_target_item_unchanged`. The workflow consequently failed
+closed; there was no HTML, no publication-readiness pass, no WordPress write,
+and no unsupported or unresolved retained factual claim was promoted. This is
+an actual downstream quality failure, not a selection checkpoint omission.
+
+### Live resource ledger and artifact paths
+
+| Measure | Result |
+| --- | ---: |
+| Provider calls | 163 |
+| File-search calls | 6 |
+| Input / output tokens | 1,300,462 / 214,310 |
+| Ledger cached input tokens | 17,864 |
+| Estimated cost | `$0.250594` |
+| Wall-clock | 1,705.877 s |
+| Structured-output recoveries | 2 |
+| Automatic repairs | 0 |
+| Workflow retries / operator intervention | 0 / 0 |
+| Validation / publication readiness | fail / fail |
+
+The retained evidence is available in the [cohort result](C:/ml-e2e-selection-recovery-live-db1d317b-20261105/frozen-reliability-2vcyvzd3/cohort_result.json),
+[artifact checkpoint](C:/ml-e2e-selection-recovery-live-db1d317b-20261105/frozen-reliability-2vcyvzd3/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-b5pli5ly/output/mobile-app-trends-2026-pdf/report_analysis/artifacts.json),
+[validation result](C:/ml-e2e-selection-recovery-live-db1d317b-20261105/frozen-reliability-2vcyvzd3/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-b5pli5ly/output/mobile-app-trends-2026-pdf/report_analysis/validation.json),
+and [workflow database](C:/ml-e2e-selection-recovery-live-db1d317b-20261105/frozen-reliability-2vcyvzd3/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-b5pli5ly/state/workflow.sqlite).
+The source PDF used for the run is [mobile-app-trends-2026.pdf](C:/Programing/Market%20lense/out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf).
+
+### Verdict
+
+**PARTIAL / NO-GO for live editorial acceptance.** The deterministic selection
+and recovery safeguards are implemented and regression-tested, and the live
+run proves that verified-fact admission and candidate retention completed with
+the expected provenance. It does not prove acceptable final editorial quality:
+the plan/roster omitted material admitted findings, one protected population
+qualifier was broadened, and transactional repair failed closed without an
+HTML artifact. The implementation shows no live improvement claim beyond the
+provider-free contract evidence. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. The remaining
+material blockers are final-plan coverage completeness and successful
+transactional repair of a substantive editorial wording defect; no further
+provider retry was made for this checkpoint.

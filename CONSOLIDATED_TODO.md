@@ -1946,3 +1946,21 @@ final artifact, HTML, or WordPress write; no live public-copy improvement is
 claimed. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and
 Step 3 remains **unstarted/not ready**. Full measurements and retained paths
 are recorded in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+**Evidence update — 2026-11-05 (verified editorial selection/recovery):**
+Commit `db1d317b` implements the bounded authored-roster, authoritative-plan
+target recomputation, evidence-linked theme coverage and fail-closed recovery
+diagnostics. Provider-free focused tests and hosted workflow `41936819813`
+passed. The one required isolated Adjust run admitted 10/10 verified facts and
+10/10 candidates with 0 quarantined, but failed closed at
+`regeneration_target_item_unchanged`: the public-quality review found a
+broadened small-group qualifier in `insight-01` and material omissions for
+`conclusion-vertical-trends` and `gaming-download-ranking`. It produced no
+HTML or WordPress write. Measured live totals were 163 provider calls,
+1,300,462 input tokens, 214,310 output tokens, 17,864 ledger cached input
+tokens, `$0.250594`, 1,705.877 seconds, 6 file-search calls, 2 structured
+recoveries, 0 automatic repairs, and 0 retries. E18 remains **Active/PARTIAL**,
+Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**;
+do not expand to the frozen-five cohort until an accepted Adjust HTML exists.
+Full evidence is recorded in
+`docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
