@@ -1,0 +1,44 @@
+{
+  "configuration_hash": "e50763d4a9df1b132fe130958d2fd03a782386224b62130d71fd6a48b1e2497a",
+  "decision_set_hash": "e79b54fd1e44ad58c677a65576517964ec1b12347d25bdeb05cf27d26a2a4b84",
+  "decisions": [
+    {
+      "budget_decision": "allow",
+      "configuration_hash": "e50763d4a9df1b132fe130958d2fd03a782386224b62130d71fd6a48b1e2497a",
+      "decision_hash": "32fb050af79fe6b0f2398fee153c95c5e80271baf02c2dc70784062c81de5f99",
+      "duplicate_identity_match": "",
+      "estimated_cost_usd": 0.008249,
+      "estimated_provider_calls": 1,
+      "estimated_provider_tokens": 16952,
+      "evidence_potential": "sufficient",
+      "file_id": "cohort-cbb6e7df67412186b8bc",
+      "media_type": "application/pdf",
+      "model_policy_covered": true,
+      "near_duplicate_title_match": "",
+      "outcome": "admitted",
+      "page_count": 140,
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "preflight_version": "2.0",
+      "publisher_id": "Activate",
+      "report_title": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f",
+      "required_artifact_families": [
+        "doc_map"
+      ],
+      "runtime_dependencies_ready": true,
+      "runtime_preflight_hash": "2f5adc07ceb76992d6a7c4cf6d7d2003e389079174b6f3cefb47f114025c04da",
+      "sample_char_count": 2273,
+      "sample_text_density": 757.666667,
+      "schema_version": "1.0",
+      "size_bytes": 6203358,
+      "source_artifact_exists": true,
+      "source_artifact_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "source_identity_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b",
+      "source_url": "https://cdn.sanity.io/files/bw8wgpyt/production/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "source_url_classification": "drive_artifact_nonpublic",
+      "structure_readable": true
+    }
+  ],
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "run_id": "a85aa794-c4d4-4bed-a19d-baa617b43606",
+  "schema_version": "1.0"
+}

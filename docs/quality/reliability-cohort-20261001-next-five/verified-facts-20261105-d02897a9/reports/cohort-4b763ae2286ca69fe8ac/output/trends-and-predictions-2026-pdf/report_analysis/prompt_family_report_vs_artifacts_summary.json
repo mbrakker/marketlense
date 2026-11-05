@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "claim_provenance": [
+      {
+        "claim": "Chartbeat aggregate data show Google traffic from organic search to more than 2,500 sites fell 33% globally from November 2024 to November 2025.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ]
+      },
+      {
+        "claim": "Google organic-search traffic to more than 2,500 sites fell 33% globally from November 2024 to November 2025.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ]
+      },
+      {
+        "claim": "For Q5, the 268 respondents’ average slider score was −43% on a slider ranging from +100% to −100%, indicating an expectation of declining search-engine traffic over the next three years.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:search-traffic-outlook"
+        ]
+      },
+      {
+        "claim": "Among the 264 Q13 respondents, the reported net differences between proportions saying each area was more versus less important for newsroom focus in the era of AI were +91 for original investigations/on-the-ground reporting, +82 for contextual analysis (explanation, framing), and −42 for service journalism.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:content-focus-shift"
+        ]
+      },
+      {
+        "claim": "Among Q11 respondents (base 265), 44% chose promising and 42% limited as the adjective closest to describing the impact of newsroom AI initiatives so far.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:newsroom-ai-initiative-assessments"
+        ]
+      },
+      {
+        "claim": "Among publisher respondents (base 272), 69% expect possible licensing deals with AI companies around news-content IP to bring at least some income to their company in about three years: 49% expect a minor source and 20% a significant source.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:ai-licensing-income-expectations"
+        ]
+      }
+    ],
+    "generation_attempt": 1,
+    "producing_prompt_identity": {
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+      "execution_identity_manifest": {
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+        "model": "gpt-6-luna",
+        "output_contract_schema_version": "artifact_json:1.0",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "provider_retry_count": 0,
+          "timeout_seconds": 600.0
+        },
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "provider": "openai",
+        "reasoning_effort": "medium",
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary",
+          "max_input_tokens": 48000,
+          "policy_source": "report_vs/artifacts/summary",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "tier": "routine_structured"
+        },
+        "schema_version": "1.0",
+        "seed": null,
+        "temperature": null,
+        "validator_version": "artifacts_schema:3.1"
+      },
+      "family_schema_version": "1.0",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "model_provider": "openai",
+      "namespace": "report_vs/artifacts/summary",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+      "prompt_dependency_manifest": {
+        "composition_version": "2.0",
+        "included_partials": [
+          {
+            "kind": "partial",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "schema_version": "1.0",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "source": "user:0"
+          }
+        ],
+        "namespace": "report_vs/artifacts/summary",
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "schema_snippets": [
+          {
+            "kind": "schema_snippet",
+            "path": "schemas/artifacts.schema.json",
+            "schema_version": "1.0",
+            "sha256": "6e2a4ad3db5c4d518c096af2f180210e058e2cea70742a7d8e2b378b6a225272",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "schema_version": "1.0",
+        "system_root": {
+          "kind": "system_root",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "schema_version": "1.0",
+          "sha256": "a04cd94fb80ef9d2ad6f6c7f06f44213f839df93d304489fcce88300d4d6fd0b",
+          "source": ""
+        },
+        "user_root": {
+          "kind": "user_root",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "schema_version": "1.0",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "source": ""
+        }
+      },
+      "regeneration_reason": "materialization_missing",
+      "relevant_input_hash": "3a6ea97c2745e59521df4090592ab5b831a09c8dbeeb955d004f65feebb5e9f2",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "schema_version": "1.0",
+      "validator_version": "artifacts_schema:3.1"
+    },
+    "public_output": {
+      "card_tldr_compact": "Google organic-search traffic to more than 2,500 sites fell 33% globally from November 2024 to November 2025.",
+      "claim_evidence_map": [
+        {
+          "claim": "Google organic-search traffic to more than 2,500 sites fell 33% globally from November 2024 to November 2025.",
+          "evidence": "Aggregate data sourced from Chartbeat for the report show that Google traffic from organic search to more than 2,500 sites fell by 33% globally between November 2024 and November 2025.",
+          "evidence_id": "verified-fact:search-referrals-global",
+          "evidence_spans": [],
+          "pages": [
+            12
+          ]
+        },
+        {
+          "claim": "For Q5, the 268 respondents’ average slider score was −43% on a slider ranging from +100% to −100%, indicating an expectation of declining search-engine traffic over the next three years.",
+          "evidence": "For Q5, 268 respondents had an average slider score of −43% on a slider ranging from +100% to −100%, indicating an expectation that search-engine traffic would decline over the next three years, not an observed change.",
+          "evidence_id": "verified-fact:search-traffic-outlook",
+          "evidence_spans": [],
+          "pages": [
+            12
+          ]
+        },
+        {
+          "claim": "Among the 264 Q13 respondents, the reported net differences between proportions saying each area was more versus less important for newsroom focus in the era of AI were +91 for original investigations/on-the-ground reporting, +82 for contextual analysis (explanation, framing), and −42 for service journalism.",
+          "evidence": "Among the 264 Q13 respondents, reported net differences between proportions saying each area was more versus less important for newsroom focus in the era of AI were +91 for original investigations/on-the-ground reporting, +82 for contextual analysis (explanation, framing), and −42 for service journalism.",
+          "evidence_id": "verified-fact:content-focus-shift",
+          "evidence_spans": [],
+          "pages": [
+            17
+          ]
+        },
+        {
+          "claim": "Among Q11 respondents (base 265), 44% chose promising and 42% limited as the adjective closest to describing the impact of newsroom AI initiatives so far.",
+          "evidence": "Among respondents answering Q11 (base 265), 44% chose promising and 42% limited as the adjective closest to describing the impact of newsroom AI initiatives so far.",
+          "evidence_id": "verified-fact:newsroom-ai-initiative-assessments",
+          "evidence_spans": [],
+          "pages": [
+            33
+          ]
+        },
+        {
+          "claim": "Among publisher respondents (base 272), 69% expect possible licensing deals with AI companies around news-content IP to bring at least some income to their company in about three years: 49% expect a minor source and 20% a significant source.",
+          "evidence": "Among publisher respondents (base 272), 69% expect possible licensing deals with AI companies around news-content IP to bring at least some income to their company in about three years, comprising 49% expecting a minor source and 20% a significant source.",
+          "evidence_id": "verified-fact:ai-licensing-income-expectations",
+          "evidence_spans": [],
+          "pages": [
+            15
+          ]
+        }
+      ],
+      "executive_summary": "Chartbeat aggregate data show Google traffic from organic search to more than 2,500 sites fell 33% globally from November 2024 to November 2025. For Q5, the 268 respondents’ average slider score was −43% on a slider ranging from +100% to −100%, indicating an expectation of declining search-engine traffic over the next three years. Among the 264 Q13 respondents, the reported net differences between proportions saying each area was more versus less important for newsroom focus in the era of AI were +91 for original investigations/on-the-ground reporting, +82 for contextual analysis (explanation, framing), and −42 for service journalism. Among Q11 respondents (base 265), 44% chose promising and 42% limited as the adjective closest to describing the impact of newsroom AI initiatives so far. Among publisher respondents (base 272), 69% expect possible licensing deals with AI companies around news-content IP to bring at least some income to their company in about three years: 49% expect a minor source and 20% a significant source.",
+      "tldr": "Chartbeat aggregate data show Google traffic from organic search to more than 2,500 sites fell 33% globally from November 2024 to November 2025."
+    },
+    "schema_version": "1.0"
+  }
+}

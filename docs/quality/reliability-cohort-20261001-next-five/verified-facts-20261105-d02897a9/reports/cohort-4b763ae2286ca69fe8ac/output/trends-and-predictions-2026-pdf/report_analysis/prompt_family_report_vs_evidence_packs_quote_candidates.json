@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/quote_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "quote_candidates": [
+      {
+        "id": "quote-001",
+        "text": "“The article as we know it is gone.” — Gard Steiro, Editor-in-Chief at Norway’s VG",
+        "source": "Trends_and_Predictions_2026.pdf",
+        "page": 42
+      },
+      {
+        "id": "quote-002",
+        "text": "“I think it is an incredible time to be in News and journalism and the public are seeking out trustworthy news and information.” — Justin Stevens, Director of News, ABC, Australia",
+        "source": "Trends_and_Predictions_2026.pdf",
+        "page": 10
+      },
+      {
+        "id": "quote-003",
+        "text": "Publishers expect traffic from search engines to decline by more than 40% over the next three years – not quite ‘Google Zero’ but a substantial impact none the less.",
+        "source": "Trends_and_Predictions_2026.pdf",
+        "page": 6
+      },
+      {
+        "id": "quote-004",
+        "text": "The fear is that human-generated, verified content will soon be drowned out by machine-made ‘AI slop’.",
+        "source": "Trends_and_Predictions_2026.pdf",
+        "page": 29
+      },
+      {
+        "id": "quote-005",
+        "text": "It’s a delicate balancing act but one that – if they can pull it off – holds out the promise of greater efficiency and more relevant and engaging journalism.",
+        "source": "Trends_and_Predictions_2026.pdf",
+        "page": 5
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "quote_candidates",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

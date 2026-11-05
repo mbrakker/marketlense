@@ -1,0 +1,307 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "coverage_role": "strategic_risk",
+      "decision_relevance_score": 0.92,
+      "evidence": "“Seventy four percent of consumers say they would switch brands if they found a lower regular price elsewhere.”",
+      "evidence_id": "switch-lower-regular-price",
+      "evidence_ids": [
+        "switch-lower-regular-price"
+      ],
+      "evidence_spans": [],
+      "id": "regular-price-switching",
+      "metric": {
+        "cohort": "Consumers",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "",
+        "label": "Consumers saying they would switch brands for a lower regular price elsewhere",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Consumers",
+        "subject": "Consumers who say they would switch brands if they found a lower regular price elsewhere",
+        "timeframe": "",
+        "trend": "",
+        "unit": "percent",
+        "value": "74%"
+      },
+      "metric_public_copy": "74% say they would switch brands for a lower regular price elsewhere.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.7,
+      "now_what": "MarketLense: If regular-price competition is a concern in a category, review how its prices compare with alternatives consumers can find elsewhere.",
+      "pages": [
+        4
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.91,
+      "so_what": "Regular-price differences are a stated switching consideration for consumers.",
+      "text": "74% of consumers say they would switch brands if they found a lower regular price elsewhere."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.85,
+      "evidence": "“54% say they are making fewer impulse purchases, down from 71% last year.”",
+      "evidence_id": "impulse-purchase-decline",
+      "evidence_ids": [
+        "impulse-purchase-decline"
+      ],
+      "evidence_spans": [],
+      "id": "impulse-purchase-shift",
+      "metric": {
+        "cohort": "Consumers",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "",
+        "label": "Consumers saying they are making fewer impulse purchases",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Consumers",
+        "subject": "Consumers saying they are making fewer impulse purchases",
+        "timeframe": "Current finding vs. last year",
+        "trend": "Down",
+        "unit": "percent",
+        "value": "54%, down from 71% last year"
+      },
+      "metric_public_copy": "54% say they are making fewer impulse purchases, down from 71% last year.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.82,
+      "now_what": "MarketLense: If a category depends on impulse buying, assess whether its merchandising and promotion plans account for more deliberate purchasing.",
+      "pages": [
+        5,
+        21
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.89,
+      "so_what": "The reported change is relevant to decisions that depend on unplanned purchases.",
+      "text": "54% of consumers say they are making fewer impulse purchases, down from 71% last year."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.83,
+      "evidence": "“Around half (49%) are buying smaller quantities.”",
+      "evidence_id": "smaller-quantity-shopping",
+      "evidence_ids": [
+        "smaller-quantity-shopping"
+      ],
+      "evidence_spans": [],
+      "id": "smaller-quantity-shopping",
+      "metric": {
+        "cohort": "Consumers",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "",
+        "label": "Consumers buying smaller quantities as prices rise",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Consumers",
+        "subject": "Consumers buying smaller quantities as prices rise",
+        "timeframe": "",
+        "trend": "",
+        "unit": "percent",
+        "value": "49%"
+      },
+      "metric_public_copy": "49% report buying smaller quantities as prices rise.",
+      "metric_strength_score": 0.87,
+      "novelty_score": 0.75,
+      "now_what": "MarketLense: If pack-size choices are under review, assess whether current sizes and price points fit the purchasing patterns in the relevant category.",
+      "pages": [
+        21
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.84,
+      "so_what": "Quantity choice is one reported way consumers are adjusting purchases as prices rise.",
+      "text": "As prices rise, 49% of consumers report buying smaller quantities."
+    },
+    {
+      "coverage_role": "market_context",
+      "decision_relevance_score": 0.9,
+      "evidence": "“Today, 25% of quick commerce spending comes from mid to low-affluent consumers in Tier 2 and Tier 3 towns. These customers are willing to pay a little extra for faster delivery, signaling that convenience and immediacy are becoming universal expectations.”",
+      "evidence_id": "quote-3",
+      "evidence_ids": [
+        "quote-3"
+      ],
+      "evidence_spans": [],
+      "id": "india-quick-commerce-spending-share",
+      "metric": {
+        "cohort": "Mid- to low-affluent consumers in Tier 2 and Tier 3 towns",
+        "confidence": "",
+        "denominator": "Quick-commerce spending",
+        "geography": "India",
+        "label": "India quick-commerce spending from mid- to low-affluent consumers in Tier 2 and Tier 3 towns",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Mid- to low-affluent consumers in Tier 2 and Tier 3 towns",
+        "subject": "Quick-commerce spending from mid- to low-affluent consumers in Tier 2 and Tier 3 towns",
+        "timeframe": "Today (as stated in the interviewee quote)",
+        "trend": "",
+        "unit": "percent of quick-commerce spending",
+        "value": "25%"
+      },
+      "metric_public_copy": "25% of quick-commerce spending comes from mid- to low-affluent consumers in Tier 2 and Tier 3 towns.",
+      "metric_strength_score": 0.84,
+      "novelty_score": 0.94,
+      "now_what": "MarketLense: If evaluating quick-commerce in India, assess whether delivery-speed and price propositions fit the specific towns and consumer segment discussed.",
+      "pages": [
+        12
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.9,
+      "so_what": "The interviewee’s account connects a defined Indian consumer segment with quick-commerce spending and willingness to pay a little extra for faster delivery.",
+      "text": "An interviewee quoted in the report says that today, 25% of quick-commerce spending in India comes from mid- to low-affluent consumers in Tier 2 and Tier 3 towns. The interviewee says these customers are willing to pay a little extra for faster delivery."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.92,
+      "evidence": "“Almost half of consumers (52%) use virtual assistants that automate re-ordering or meal planning at least once a week.” The executive summary states: “Seventy six percent want the ability to set clear rules for when an assistant acts.”",
+      "evidence_id": "weekly-virtual-assistant-use",
+      "evidence_ids": [
+        "weekly-virtual-assistant-use",
+        "assistant-control-rules"
+      ],
+      "evidence_spans": [],
+      "id": "assistant-use-and-control",
+      "metric": {
+        "cohort": "Consumers",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "",
+        "label": "Consumers using virtual assistants for automated reordering or meal planning at least weekly",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Consumers",
+        "subject": "Consumers using virtual assistants that automate reordering or meal planning",
+        "timeframe": "At least once a week",
+        "trend": "",
+        "unit": "percent",
+        "value": "52%"
+      },
+      "metric_public_copy": "52% use virtual assistants for automated reordering or meal planning at least weekly.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.85,
+      "now_what": "MarketLense: If developing assistant journeys, assess which actions users will delegate and which rules they want to configure.",
+      "pages": [
+        5,
+        33
+      ],
+      "report_type_lens": "technology_shift",
+      "score": 0.9,
+      "so_what": "The findings provide separate inputs for assistant-use and action-control decisions.",
+      "text": "52% of consumers use virtual assistants that automate reordering or meal planning at least once a week. Separately, 76% want the ability to set clear rules for when an assistant acts."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.85,
+      "evidence": "Figure 20 reports 63% agreeing: “I want Gen AI to provide hyper-personalized content and product/service recommendations based on my individual preferences.”",
+      "evidence_id": "genai-hyperpersonalization",
+      "evidence_ids": [
+        "genai-hyperpersonalization"
+      ],
+      "evidence_spans": [],
+      "id": "hyperpersonalized-genai-content",
+      "metric": {
+        "cohort": "Consumers",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "",
+        "label": "Consumers wanting preference-based hyper-personalized generative AI content and recommendations",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Consumers",
+        "subject": "Consumers wanting generative AI to provide hyper-personalized content and product or service recommendations based on preferences",
+        "timeframe": "",
+        "trend": "",
+        "unit": "percent",
+        "value": "63%"
+      },
+      "metric_public_copy": "63% want generative AI to provide recommendations based on their preferences.",
+      "metric_strength_score": 0.87,
+      "novelty_score": 0.82,
+      "now_what": "MarketLense: If testing generative AI personalization, define which preference signals to use and how to present the resulting content and recommendations.",
+      "pages": [
+        41
+      ],
+      "report_type_lens": "technology_shift",
+      "score": 0.86,
+      "so_what": "Preference-based personalization is a stated consumer preference for generative AI content and recommendations.",
+      "text": "63% of consumers want generative AI to provide hyper-personalized content and product or service recommendations based on their preferences."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.91,
+      "evidence": "Figure 23 reports customer-support figures of 54% for November 2024 and 74% for October 2025 for consumers who said human interaction increases loyalty.",
+      "evidence_id": "human-interaction-loyalty-support",
+      "evidence_ids": [
+        "human-interaction-loyalty-support"
+      ],
+      "evidence_spans": [],
+      "id": "human-support-loyalty-comparison",
+      "metric": {
+        "cohort": "Consumers",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "",
+        "label": "Consumers saying human interaction during in-store customer support increases loyalty",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Consumers; in-store customer support",
+        "subject": "Consumers saying human interaction during in-store customer support increases loyalty",
+        "timeframe": "November 2024 to October 2025",
+        "trend": "Up",
+        "unit": "percent",
+        "value": "54% in November 2024; 74% in October 2025"
+      },
+      "metric_public_copy": "54% in November 2024; 74% in October 2025.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.85,
+      "now_what": "MarketLense: If planning in-store support, assess where human interaction should remain part of the service experience.",
+      "pages": [
+        45
+      ],
+      "report_type_lens": "operations",
+      "score": 0.9,
+      "so_what": "The reported measure concerns human interaction during in-store customer support, specifically.",
+      "text": "The share of consumers who said human interaction during in-store customer support increases loyalty was 54% in November 2024 and 74% in October 2025."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.9,
+      "evidence": "Figure 23 reports purchase-stage figures of 40% for November 2024 and 66% for October 2025 for consumers who said human interaction increases loyalty.",
+      "evidence_id": "human-interaction-loyalty-purchase",
+      "evidence_ids": [
+        "human-interaction-loyalty-purchase"
+      ],
+      "evidence_spans": [],
+      "id": "human-purchase-stage-loyalty-comparison",
+      "metric": {
+        "cohort": "Consumers",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "",
+        "label": "Consumers saying human interaction during the in-store purchase stage increases loyalty",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Consumers; in-store purchase stage",
+        "subject": "Consumers saying human interaction during the in-store purchase stage increases loyalty",
+        "timeframe": "November 2024 to October 2025",
+        "trend": "Up",
+        "unit": "percent",
+        "value": "40% in November 2024; 66% in October 2025"
+      },
+      "metric_public_copy": "40% in November 2024; 66% in October 2025.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.85,
+      "now_what": "MarketLense: If designing the in-store purchase experience, assess which moments benefit from human interaction.",
+      "pages": [
+        45
+      ],
+      "report_type_lens": "operations",
+      "score": 0.89,
+      "so_what": "The reported measure concerns human interaction during the in-store purchase stage, separately from customer support.",
+      "text": "The share of consumers who said human interaction during the in-store purchase stage increases loyalty was 40% in November 2024 and 66% in October 2025."
+    }
+  ]
+}

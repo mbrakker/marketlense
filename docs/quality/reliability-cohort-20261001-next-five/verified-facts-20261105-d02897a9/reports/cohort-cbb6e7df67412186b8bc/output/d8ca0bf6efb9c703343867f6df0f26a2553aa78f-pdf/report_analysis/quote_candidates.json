@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "quote_candidates": [
+    {
+      "id": "quote-001",
+      "text": "We forecast that over the next four years, global Internet and media revenues will grow by approximately $300 billion, continuing to outpace GDP growth",
+      "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "page": 5
+    },
+    {
+      "id": "quote-002",
+      "text": "Access will lead revenue growth for tech and media companies",
+      "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "page": 6
+    },
+    {
+      "id": "quote-003",
+      "text": "The digital premium video market is becoming more fragmented by the day — every player wants to be in everything",
+      "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "page": 66
+    },
+    {
+      "id": "quote-004",
+      "text": "The future winners in television and video streaming will look quite familiar to consumers",
+      "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "page": 65
+    },
+    {
+      "id": "quote-005",
+      "text": "Activate research indicates that half of the news reading population could subscribe to a news publication, up from 27% today",
+      "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "page": 106
+    },
+    {
+      "id": "quote-006",
+      "text": "Sales of high-end devices will continue but we forecast that the cost of accessing a digital assistant will head to zero",
+      "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "page": 27
+    },
+    {
+      "id": "quote-007",
+      "text": "For many categories, consumers will increasingly gravitate towards private labels, as platforms and retailers will favor discovery of their own products",
+      "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "page": 117
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "quote_candidates",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

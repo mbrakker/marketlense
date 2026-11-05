@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/limitations",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "limitations": [
+      "The report says GenAI maturity varies: most organizations report low or moderate maturity, while efficiency gains over 20% are reported only for a small group with advanced deployment.",
+      "The report describes finance apps’ shift toward paid acquisition as likely linked to falling costs, rather than establishing the cause.",
+      "For some gaming categories, sessions fell despite install growth; the report says churn may need to be addressed."
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "limitations",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

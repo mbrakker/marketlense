@@ -1,0 +1,244 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "claim_provenance": [
+      {
+        "claim": "Survey results show private-equity dealmakers are significantly more likely than corporates to expect M&A pipeline activity to increase relative to 2025.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook"
+        ]
+      },
+      {
+        "claim": "Compared with corporates, private-equity dealmakers are significantly more likely to expect M&A pipeline activity to increase versus 2025.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook"
+        ]
+      },
+      {
+        "claim": "Across displayed size bands for estimated total deal value of the next M&A transaction, the below-US$1B bands total 81% for corporate estimates and 94% for private-equity estimates.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:ma-anticipated-deal-size"
+        ]
+      },
+      {
+        "claim": "For deal types under consideration, carve-out acquisitions are displayed at 21% for Corporate and 55% for Private equity, with a displayed +34 percentage-point difference.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:ma-carveout-deal-interest"
+        ]
+      },
+      {
+        "claim": "The report says organizations are sharpening portfolio focus to concentrate capital, capabilities, and management attention where they believe they can build durable advantage in a more complex global environment.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:five-drivers-strategic-focus"
+        ]
+      },
+      {
+        "claim": "In its deal-execution discussion, the report argues that AI expands analysis by making new categories of analysis worth doing, rather than merely accelerating existing analysis.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:ma-ai-expands-analysis-scope"
+        ]
+      }
+    ],
+    "generation_attempt": 1,
+    "producing_prompt_identity": {
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+      "execution_identity_manifest": {
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+        "model": "gpt-6-luna",
+        "output_contract_schema_version": "artifact_json:1.0",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "provider_retry_count": 0,
+          "timeout_seconds": 600.0
+        },
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "provider": "openai",
+        "reasoning_effort": "medium",
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary",
+          "max_input_tokens": 48000,
+          "policy_source": "report_vs/artifacts/summary",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "tier": "routine_structured"
+        },
+        "schema_version": "1.0",
+        "seed": null,
+        "temperature": null,
+        "validator_version": "artifacts_schema:3.1"
+      },
+      "family_schema_version": "1.0",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "model_provider": "openai",
+      "namespace": "report_vs/artifacts/summary",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+      "prompt_dependency_manifest": {
+        "composition_version": "2.0",
+        "included_partials": [
+          {
+            "kind": "partial",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "schema_version": "1.0",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "source": "user:0"
+          }
+        ],
+        "namespace": "report_vs/artifacts/summary",
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "schema_snippets": [
+          {
+            "kind": "schema_snippet",
+            "path": "schemas/artifacts.schema.json",
+            "schema_version": "1.0",
+            "sha256": "6e2a4ad3db5c4d518c096af2f180210e058e2cea70742a7d8e2b378b6a225272",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "schema_version": "1.0",
+        "system_root": {
+          "kind": "system_root",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "schema_version": "1.0",
+          "sha256": "a04cd94fb80ef9d2ad6f6c7f06f44213f839df93d304489fcce88300d4d6fd0b",
+          "source": ""
+        },
+        "user_root": {
+          "kind": "user_root",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "schema_version": "1.0",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "source": ""
+        }
+      },
+      "regeneration_reason": "materialization_missing",
+      "relevant_input_hash": "f22bf2bb6a5659623580e9e2dc06daffb8fc6f05cbf8096bc3cb016ada06ad5a",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "schema_version": "1.0",
+      "validator_version": "artifacts_schema:3.1"
+    },
+    "public_output": {
+      "card_tldr_compact": "Compared with corporates, private-equity dealmakers are significantly more likely to expect M&A pipeline activity to increase versus 2025.",
+      "claim_evidence_map": [
+        {
+          "claim": "Compared with corporates, private-equity dealmakers are significantly more likely to expect M&A pipeline activity to increase versus 2025.",
+          "evidence": "Survey results show private-equity dealmakers are significantly more likely to expect an increase in M&A pipeline activity relative to 2025; the comparison is framed as an expectation, not realized activity.",
+          "evidence_id": "verified-fact:ma-buyer-pipeline-outlook",
+          "evidence_spans": [
+            {
+              "end_offset": 0,
+              "evidence_id": "verified-fact:ma-buyer-pipeline-outlook",
+              "page": 15,
+              "section_id": "diverging-risk-appetites",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The page’s narrative explicitly identifies the survey population as private-equity dealmakers and says they are significantly more likely to expect an increase in M&A pipeline activity relative to 2025. The following paragraph contrasts corporates’ more measured outlook and says fewer anticipate a material acceleration in deal volume. Both assertions are framed as expectations; the page does not claim these outcomes have been realized."
+            }
+          ],
+          "pages": [
+            15
+          ]
+        },
+        {
+          "claim": "Across displayed size bands for estimated total deal value of the next M&A transaction, the below-US$1B bands total 81% for corporate estimates and 94% for private-equity estimates.",
+          "evidence": "The below-US$1B totals are sums of displayed size bands for estimates of the next M&A transaction: 81% for corporate estimates and 94% for private-equity estimates.",
+          "evidence_id": "verified-fact:ma-anticipated-deal-size",
+          "evidence_spans": [
+            {
+              "end_offset": 0,
+              "evidence_id": "verified-fact:ma-anticipated-deal-size",
+              "page": 16,
+              "section_id": "diverging-risk-appetites",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The three displayed bands below US$1B sum to 81% for corporate (20% + 32% + 29%) and 94% for private equity (11% + 50% + 33%). The figures are estimates for the next transaction, not observed completed transactions."
+            }
+          ],
+          "pages": [
+            16
+          ]
+        },
+        {
+          "claim": "For deal types under consideration, carve-out acquisitions are displayed at 21% for Corporate and 55% for Private equity, with a displayed +34 percentage-point difference.",
+          "evidence": "The chart shows carve-out acquisitions under consideration at 21% for Corporate and 55% for Private equity, with a displayed difference of +34 percentage points.",
+          "evidence_id": "verified-fact:ma-carveout-deal-interest",
+          "evidence_spans": [
+            {
+              "end_offset": 0,
+              "evidence_id": "verified-fact:ma-carveout-deal-interest",
+              "page": 17,
+              "section_id": "diverging-risk-appetites",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The chart title identifies the subject as deal types under consideration and its columns are headed Corporate and Private equity. On the exact “Carve-out acquisitions” row, the displayed values are 21% and 55%, respectively, and the adjacent displayed difference is +34 pts."
+            }
+          ],
+          "pages": [
+            17
+          ]
+        },
+        {
+          "claim": "The report says organizations are sharpening portfolio focus to concentrate capital, capabilities, and management attention where they believe they can build durable advantage in a more complex global environment.",
+          "evidence": "The report describes organizations sharpening portfolio focus to concentrate capital, capabilities, and management attention where they believe they can build durable advantage in a more complex global environment.",
+          "evidence_id": "verified-fact:five-drivers-strategic-focus",
+          "evidence_spans": [
+            {
+              "end_offset": 0,
+              "evidence_id": "verified-fact:five-drivers-strategic-focus",
+              "page": 9,
+              "section_id": "strategic-focus",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The page describes organizations sharpening portfolio focus to concentrate capital, capabilities, and management attention where they believe they can build durable advantage in a more complex global environment."
+            }
+          ],
+          "pages": [
+            9
+          ]
+        },
+        {
+          "claim": "In its deal-execution discussion, the report argues that AI expands analysis by making new categories of analysis worth doing, rather than merely accelerating existing analysis.",
+          "evidence": "The deal-execution discussion argues that AI expands analysis: new categories become worth doing, rather than only making existing analysis faster.",
+          "evidence_id": "verified-fact:ma-ai-expands-analysis-scope",
+          "evidence_spans": [
+            {
+              "end_offset": 0,
+              "evidence_id": "verified-fact:ma-ai-expands-analysis-scope",
+              "page": 26,
+              "section_id": "ai-driven-deal-execution",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The deal-execution discussion explicitly contrasts expansion with acceleration: it says the significant effect is not that existing analysis gets faster, but that entirely new categories become worth doing."
+            }
+          ],
+          "pages": [
+            26
+          ]
+        }
+      ],
+      "executive_summary": "Survey results show private-equity dealmakers are significantly more likely than corporates to expect M&A pipeline activity to increase relative to 2025. Across displayed size bands for estimated total deal value of the next M&A transaction, the below-US$1B bands total 81% for corporate estimates and 94% for private-equity estimates. For deal types under consideration, carve-out acquisitions are displayed at 21% for Corporate and 55% for Private equity, with a displayed +34 percentage-point difference. The report says organizations are sharpening portfolio focus to concentrate capital, capabilities, and management attention where they believe they can build durable advantage in a more complex global environment. In its deal-execution discussion, the report argues that AI expands analysis by making new categories of analysis worth doing, rather than merely accelerating existing analysis.",
+      "tldr": "Survey results show private-equity dealmakers are significantly more likely than corporates to expect M&A pipeline activity to increase relative to 2025."
+    },
+    "schema_version": "1.0"
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0",
+  "selected_category_ids": [],
+  "category_fits": [
+    {
+      "category_id": "ai_automation",
+      "label": "AI & Automation",
+      "fit_score": 0.58,
+      "decision": "reject",
+      "why_fit": "AI is a major thread: the report examines AI-generated answers, licensing, newsroom adoption, and AI-assisted publishing examples.",
+      "why_not_fit": "The report's broader subject is journalism and publisher trends, including political pressure, traffic, content strategy, and business models; AI is not the sole organizing topic.",
+      "evidence_sections": [
+        "Executive Summary",
+        "2. Answer Engines and the Implications for Access",
+        "3. Content Strategies Shift towards Distinctiveness"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "AI is only one enabler inside a broader media, technology, or vertical-market report."
+      ],
+      "rejected_topic_rule_ids": [
+        "ai_automation:exclude:1e73dca27527e17c"
+      ],
+      "rule_evidence_sections": [
+        "Executive Summary",
+        "3. Content Strategies Shift towards Distinctiveness"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_all_rejected_abstained"
+    },
+    {
+      "category_id": "search_performance",
+      "label": "Search & Performance Marketing",
+      "fit_score": 0.46,
+      "decision": "reject",
+      "why_fit": "Search referrals and forecasts are substantial topics, including the expected 43% traffic decline and discussion of answer-engine optimization.",
+      "why_not_fit": "Search is treated as a major access and distribution issue for journalism, not as search marketing or performance optimization; discovery changes are discussed largely in relation to AI answer engines and platforms.",
+      "evidence_sections": [
+        "Executive Summary",
+        "2. Answer Engines and the Implications for Access"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Discovery change is mainly about AI agents or platforms rather than search performance itself."
+      ],
+      "rejected_topic_rule_ids": [
+        "search_performance:exclude:f2b76ec84c380802"
+      ],
+      "rule_evidence_sections": [
+        "2. Answer Engines and the Implications for Access"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_all_rejected_abstained"
+    },
+    {
+      "category_id": "social_video_creator",
+      "label": "Social, Short Video & Creator",
+      "fit_score": 0.39,
+      "decision": "reject",
+      "why_fit": "The Executive Summary identifies personality-led news and competition from creators among the forces affecting journalism.",
+      "why_not_fit": "The report covers a wider set of journalism and publisher pressures; creator and social-platform dynamics are not established as a standalone central subject in the supplied sections.",
+      "evidence_sections": [
+        "Executive Summary"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Creators or social platforms are only one activation tactic inside a broader report."
+      ],
+      "rejected_topic_rule_ids": [
+        "social_video_creator:exclude:f0cf93ee4c5c1480"
+      ],
+      "rule_evidence_sections": [
+        "Executive Summary"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_all_rejected_abstained"
+    },
+    {
+      "category_id": "business_performance",
+      "label": "Business Performance & Growth",
+      "fit_score": 0.34,
+      "decision": "reject",
+      "why_fit": "The report includes publisher business prospects, possible AI-licensing income, and differing financial performance among some publishers.",
+      "why_not_fit": "Commercial figures are evidence within a report about journalism and publishing trends, rather than the report's primary lens or a general business-performance benchmark.",
+      "evidence_sections": [
+        "Executive Summary",
+        "1. Pressures on Journalism Mount",
+        "2. Answer Engines and the Implications for Access"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Performance numbers are only the output metric inside a more domain-specific report."
+      ],
+      "rejected_topic_rule_ids": [
+        "business_performance:exclude:1aa1141407d69c39"
+      ],
+      "rule_evidence_sections": [
+        "Executive Summary",
+        "1. Pressures on Journalism Mount",
+        "2. Answer Engines and the Implications for Access"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_all_rejected_abstained"
+    },
+    {
+      "category_id": "technology",
+      "label": "Technology & Innovation",
+      "fit_score": 0.3,
+      "decision": "reject",
+      "why_fit": "The report discusses generative AI, answer-engine interfaces, and content-detection and provenance technologies as forces affecting publishers.",
+      "why_not_fit": "Technology is discussed through its effects on journalism and publisher operations, rather than as a report about technology platforms or infrastructure; the AI-specific subject also does not make this a broader technology report.",
+      "evidence_sections": [
+        "Executive Summary",
+        "2. Answer Engines and the Implications for Access"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Technology is only a supporting capability inside a category-specific commerce, media, or healthcare report."
+      ],
+      "rejected_topic_rule_ids": [
+        "technology:exclude:bcb4675ddd1f92ce"
+      ],
+      "rule_evidence_sections": [
+        "Executive Summary",
+        "2. Answer Engines and the Implications for Access"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_all_rejected_abstained"
+    }
+  ]
+}

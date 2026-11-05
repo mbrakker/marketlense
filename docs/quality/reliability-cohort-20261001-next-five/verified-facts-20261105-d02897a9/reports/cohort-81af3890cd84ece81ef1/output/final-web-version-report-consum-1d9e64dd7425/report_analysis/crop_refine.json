@@ -1,0 +1,160 @@
+{
+  "schema_version": "1.0",
+  "_cache": {
+    "schema_version": "1.0",
+    "key": "0b29a3967465188be487d4dd325b39e249ae797702b7b6be5b06b33bdb0448c3",
+    "md5": "81af3890cd84ece81ef16e1aabda8027",
+    "model": "gpt-6-luna",
+    "temperature": null,
+    "reasoning_effort": "low",
+    "seed": null,
+    "mode": "adaptive",
+    "prompt_system_sha256": "e44deabb4806c9edb05abd9327c83928adf3430f5894a2d52b7ecd356f64a410",
+    "prompt_user_sha256": "b7270ca58326e41ede53a92c23768f2f517a2dfbfcb03de5547e2d1c1a1ef280"
+  },
+  "results": [
+    {
+      "entry_key": "1293ffe6bdc9880092070ea550b52f7e6bedf85e69b77dfc306c46a2b31eccca",
+      "candidate_id": "chart-21-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        55.0,
+        82.0,
+        545.0,
+        414.0
+      ],
+      "reason": "model_accepted",
+      "page": 21
+    },
+    {
+      "entry_key": "1ff8ef397f4571aa2a11780add363d598cbd27fb16523c24969531b26c8cbb53",
+      "candidate_id": "chart-26-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        296.0,
+        80.0,
+        776.0,
+        386.0
+      ],
+      "reason": "model_accepted",
+      "page": 26
+    },
+    {
+      "entry_key": "391d6c1426a3f883fca83b071d4760b71d380c632d7c08d6502b8c0f72c6190c",
+      "candidate_id": "chart-38-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        505.0,
+        156.0,
+        1230.0,
+        637.0
+      ],
+      "reason": "model_accepted",
+      "page": 38
+    },
+    {
+      "entry_key": "4bead97d48055e2b5a1de41dd3bc2e11e6f9131b9258db4deb2664ae5b101d60",
+      "candidate_id": "chart-4-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        0.0,
+        162.04,
+        811.57,
+        473.39
+      ],
+      "reason": "model_rejected",
+      "page": 4
+    },
+    {
+      "entry_key": "5254b6ed97a454a570683f9577af765585ae228399bdfa49b215df730344ecf0",
+      "candidate_id": "chart-36-1",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        297.0,
+        112.0,
+        545.0,
+        414.0
+      ],
+      "reason": "model_accepted",
+      "page": 36
+    },
+    {
+      "entry_key": "856c1b6ef8b19aa72551712799500e7e3d53181091ba2a46eae0e9e4bc97501b",
+      "candidate_id": "chart-62-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        0.0,
+        28.488985061645508,
+        841.8900146484375,
+        473.385986328125
+      ],
+      "reason": "model_rejected",
+      "page": 62
+    },
+    {
+      "entry_key": "aec544d95ff05d4717db348aa24222beaf07458a4190a80fd69ce74e5fe32bf8",
+      "candidate_id": "chart-12-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        0.0,
+        65.76207733154297,
+        813.2517858886719,
+        424.2151794433594
+      ],
+      "reason": "model_rejected",
+      "page": 12
+    },
+    {
+      "entry_key": "b1f3c7c39e2af6b784b913ba6259fe7fa8c398194d44723788764d3a6cba05bc",
+      "candidate_id": "table-64-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        38.0,
+        84.0,
+        419.0,
+        316.0
+      ],
+      "reason": "model_accepted",
+      "page": 64
+    },
+    {
+      "entry_key": "b6752a33bb08d3aa4726555e7b6d1956b13c3096b8ba9be8aaa3519bc93a15cc",
+      "candidate_id": "chart-57-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        0.0,
+        108.99696350097656,
+        435.45646728515624,
+        386.79508349609375
+      ],
+      "reason": "model_rejected",
+      "page": 57
+    },
+    {
+      "entry_key": "ba573f383b35614e53b0c3511a8b7b92dbab88b66f2d85cc7fc3e86bba0b773a",
+      "candidate_id": "table-12-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        479.0,
+        126.0,
+        1227.0,
+        626.0
+      ],
+      "reason": "model_accepted",
+      "page": 12
+    },
+    {
+      "entry_key": "dfee9b1188343b1b3efd88a34bfb08c179eab0ebc42328986acc8ca2396360f2",
+      "candidate_id": "chart-23-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        313.0,
+        110.0,
+        775.0,
+        414.0
+      ],
+      "reason": "model_accepted",
+      "page": 23
+    }
+  ]
+}

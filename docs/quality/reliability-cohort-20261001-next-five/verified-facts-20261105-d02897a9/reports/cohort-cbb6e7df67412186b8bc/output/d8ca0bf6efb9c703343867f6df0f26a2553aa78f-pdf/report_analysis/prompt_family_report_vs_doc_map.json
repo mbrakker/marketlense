@@ -1,0 +1,364 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/doc_map",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "doc_map_v1",
+    "doc_id": "cohort-cbb6e7df67412186b8bc",
+    "title": "Activate Technology & Media Outlook 2018",
+    "summary": "Activate’s outlook surveys major technology, media, and consumer trends shaping the year ahead. It combines consumer research, market analysis, and forecasts across media attention and spending, smart speakers and reality computing, online video, premium video, sports, news, eCommerce, and podcasts; its opening letter describes analysis based on proprietary research and large-scale U.S. population surveys.",
+    "publisher": "Activate",
+    "provenance_roles": {
+      "publication_name": "Activate Technology & Media Outlook 2018",
+      "publisher_name": "Activate",
+      "author_names": [
+        "Michael J. Wolf",
+        "Seref Turkmenoglu",
+        "William Bird",
+        "Anthony Aguila",
+        "Sri Narasimhan",
+        "Samuel Studnia",
+        "Edward Doueihi",
+        "Ellis Bowen",
+        "David Howard",
+        "Allison Flanders",
+        "Christopher Meyer",
+        "Caci Massaro",
+        "Rohun Reddy",
+        "Lauren Libby",
+        "Mark Manley",
+        "Marlee Melendy",
+        "Frank Noto",
+        "Denise Shea",
+        "Al Rotches"
+      ],
+      "author_kind": "person",
+      "data_provider_names": [
+        "Tubular Labs",
+        "Bridge Ratings",
+        "Edison Research",
+        "comScore"
+      ],
+      "source_organization_names": [],
+      "report_owner_name": "",
+      "evidence": [
+        {
+          "role": "publication_name",
+          "name": "Activate Technology & Media Outlook 2018",
+          "source_excerpt": "Activate Technology & Media Outlook 2018"
+        },
+        {
+          "role": "publisher_name",
+          "name": "Activate",
+          "source_excerpt": "Welcome to Activate’s Tech and Media Outlook 2018"
+        },
+        {
+          "role": "author_names",
+          "name": "Listed contributors",
+          "source_excerpt": "CREATED BY Michael J. Wolf"
+        },
+        {
+          "role": "data_provider_names",
+          "name": "Tubular Labs",
+          "source_excerpt": "Sources: Activate analysis, Tubular Labs"
+        },
+        {
+          "role": "data_provider_names",
+          "name": "Bridge Ratings; Edison Research",
+          "source_excerpt": "Sources: Activate analysis, Bridge Ratings, Edison Research"
+        },
+        {
+          "role": "data_provider_names",
+          "name": "comScore",
+          "source_excerpt": "Top news sites are selected from comScore’s Top 100 digital news properties"
+        }
+      ]
+    },
+    "sections": [
+      {
+        "id": "section-1",
+        "title": "$300 Billion in Tech and Media Growth Dollars",
+        "summary": "The opening outlook quantifies forecast growth in global consumer Internet and media revenues. It compares the projected growth rate with global GDP and breaks out expected sources of revenue growth.",
+        "key_points": [
+          "The chart “Consumer Internet and Media Revenues, Global, 2017E–2021E” forecasts growth from $1.7 trillion in 2017E to $2.0 trillion in 2021E, or $302 billion; the displayed CAGR is 4.1% versus approximately 3% for global GDP (p. 4).",
+          "The following segment chart presents revenue growth by paid content, advertising, and Internet access, with 2017E–2021E comparisons (p. 5)."
+        ],
+        "pages": [
+          3,
+          4,
+          5,
+          6
+        ],
+        "references": []
+      },
+      {
+        "id": "section-2",
+        "title": "There are 31 Hours in a Day",
+        "summary": "This section examines how consumers allocate attention across technology and media activities, framing the total as a day that can exceed 24 hours when media use overlaps. It considers the implications of that attention landscape for media and technology businesses.",
+        "key_points": [
+          "The section frames combined media attention as extending beyond a conventional 24-hour day.",
+          "The report’s introduction identifies consumer time allocation as one of the outlook’s forecast topics."
+        ],
+        "pages": [
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "references": []
+      },
+      {
+        "id": "section-3",
+        "title": "Super Users: A Lot More Time, a Lot More Money",
+        "summary": "The section compares high-attention consumers with other users, showing that the most engaged groups account for disproportionately large shares of media time and spending. It includes separate video and audio comparisons.",
+        "key_points": [
+          "In “Video Time and Spend Relative to Share of Users,” U.S., 2017, the top 25% of users—those with 4.5+ hours of daily video attention—account for 61% of video time and 34% of consumer spend (p. 14).",
+          "In “Audio Time and Spend Relative to Share of Users,” U.S., 2017, the top 25%—those with 3+ hours of daily audio attention—account for 64% of audio time and 47% of consumer spend (p. 16)."
+        ],
+        "pages": [
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ],
+        "references": []
+      },
+      {
+        "id": "section-4",
+        "title": "Smart Speaker Battles are about the Great Digital Assistant Wars",
+        "summary": "The section treats smart speakers as an entry point in a broader competition to own digital assistants and their conversational interface. It describes the strategic stakes for technology companies, the falling cost of access, and the early uses of smart speakers.",
+        "key_points": [
+          "The report describes dedicated smart speakers as a “trojan horse” for bringing AI and digital assistants into the home; it expects assistant access to become ubiquitous across devices (p. 22).",
+          "The chart “Entry Price Points for Digital Assistant-Enabled Devices,” U.S., 2014–2017, shows the access price moving from $180 in 2014 to free in 2017 (p. 26).",
+          "Smart-speaker owners primarily use the devices for music and a limited set of portal functions, including questions, weather, alarms, news, directions, and time checks (p. 29)."
+        ],
+        "pages": [
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32
+        ],
+        "references": []
+      },
+      {
+        "id": "section-5",
+        "title": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform",
+        "summary": "The report traces virtual and augmented reality from primarily entertainment uses toward a broader computing platform integrating digital and physical environments. It presents adoption and spending forecasts, along with possible consumer and enterprise applications.",
+        "key_points": [
+          "The chart “Consumer and Enterprise Spend on VR/AR,” Global, 2016–2021E, forecasts a $71 billion Reality Computing business in 2021 (p. 37).",
+          "The report forecasts that consumer VR will not reach scaled global adoption by 2021, citing limited applications beyond gaming, limited social use, and restricted movement (p. 41).",
+          "It argues that AR-enabled smartphones can bring the technology to large audiences, while enterprise applications include workflow support and worker collaboration (pp. 42–46)."
+        ],
+        "pages": [
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48
+        ],
+        "references": []
+      },
+      {
+        "id": "section-6",
+        "title": "Big Influencers and Media Brands will Rule Web Video",
+        "summary": "This section examines the concentration of web-video views among top creators and the roles of influencers and media companies across YouTube and Facebook. It also considers the content categories and creators that attract audiences.",
+        "key_points": [
+          "In “Share of Top YouTube and Facebook Creators vs. Share of Views by Platform,” Global, Q2 2017, creators with 50M+ total views comprise 24% of the selected YouTube creators and account for 71% of views; on Facebook, they comprise 26% and account for 77% of views (p. 52).",
+          "Among top creators with over 50M views in Q2 2017, influencers account for 83% of YouTube views and media companies 17%; on Facebook, the split is 52% influencers and 48% media companies (p. 53).",
+          "The report identifies TV shows, artists, and TV networks among leading U.S. media-company creators on YouTube (p. 55)."
+        ],
+        "pages": [
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61
+        ],
+        "references": []
+      },
+      {
+        "id": "section-7",
+        "title": "Premium Video: The Chase for Television Viewers and Television Dollars",
+        "summary": "The section examines competition among traditional television, virtual pay TV, subscription video, and other viewing options for audiences and revenue. It emphasizes the continuing appeal of live and linear programming, particularly sports, as viewing and distribution choices change.",
+        "key_points": [
+          "In “Cord-Cutter Substitution by Viewer Type,” U.S., 2017, broadcast is presented as more attractive than virtual pay TV for cord-cutters who still want low-cost live or linear programming such as sports (p. 69).",
+          "The companion chart “OTA Broadcast-Only Homes,” U.S., 2012–2017E, shows households increasing from 11.2 million in 2012 to 15.8 million in 2017E, a 41% rise (p. 69)."
+        ],
+        "pages": [
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          76,
+          77,
+          78,
+          79
+        ],
+        "references": []
+      },
+      {
+        "id": "section-8",
+        "title": "Sports is the Ultimate Moat",
+        "summary": "The report considers sports a durable source of audiences and value for live television, while examining fan segments, viewing platforms, emerging sports, and competition for content rights. It distinguishes highly engaged fans from those who watch mainly for social reasons.",
+        "key_points": [
+          "In the U.S., 2017, 90% of sports viewers say they watch specifically for sports content, while 10% watch only as a social activity (p. 81).",
+          "In the U.S., 2017, Super Fans make up 27% of fans but account for 61% of sports-viewing hours; Social Fans make up 10% of fans and 6% of hours (p. 83).",
+          "In the U.S., 2017, 62% of eSports viewers are ages 18–34, compared with 30% of traditional sports viewers (p. 89).",
+          "The report forecasts that traditional sports revenue in the U.S. will rise from $65.1 billion in 2017E to $74.6 billion in 2021E, with sports-rights revenue growing at a 4.8% CAGR (p. 85)."
+        ],
+        "pages": [
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92
+        ],
+        "references": []
+      },
+      {
+        "id": "section-9",
+        "title": "News Brands will Beat Fake News (Spread by Fake Friends)",
+        "summary": "This section weighs social platforms’ growing role in news discovery against the durability and trust of established news brands. It also addresses publishers’ relationships with platforms, distribution choices, and differences among news consumers.",
+        "key_points": [
+          "In “Sources of News Discovery,” U.S., 2017, social media is cited by 40% of adults and direct visits by 38%; among active news readers searching for news, direct visits lead at 49% versus 33% for social media (p. 97).",
+          "In “Perceived Trustworthiness by News Source,” selected countries, 2017, news media scores higher than social media in all five shown countries: Canada 51% vs. 24%, Ireland 47% vs. 28%, United Kingdom 41% vs. 18%, Australia 40% vs. 27%, and United States 38% vs. 20% (p. 100).",
+          "The report argues that social platforms need relationships with credible news brands to remain reliable news sources (p. 100)."
+        ],
+        "pages": [
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101,
+          102,
+          103,
+          104,
+          105,
+          106,
+          107,
+          108,
+          109,
+          110
+        ],
+        "references": []
+      },
+      {
+        "id": "section-10",
+        "title": "eCommerce: More than Two Trillion Dollars To Go",
+        "summary": "The section surveys the remaining opportunity in eCommerce, comparing categories by online-sales share and projected adoption. It discusses how consumer preferences and the need for first-hand experience can affect the pace of online adoption across categories.",
+        "key_points": [
+          "The category analysis plots 2016 eCommerce sales share against projected speed of adoption, distinguishing faster- and slower-adopting categories (pp. 118–119).",
+          "The report identifies products requiring first-hand experience, such as food freshness or used-car condition, as examples associated with delayed eCommerce adoption (p. 118)."
+        ],
+        "pages": [
+          111,
+          112,
+          113,
+          114,
+          115,
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          122,
+          123
+        ],
+        "references": []
+      },
+      {
+        "id": "section-11",
+        "title": "In an Era of Voice Control, Look to Podcasting to Engage Users",
+        "summary": "The final major section examines podcast audience and advertising growth, discovery barriers, listening contexts, and the relationship between podcasts and smart speakers. It also describes podcasts as a source of audience engagement and potential programming development.",
+        "key_points": [
+          "In “Podcast Ad Revenue and Listeners,” U.S., 2014–2021E, the report forecasts podcast advertising revenue rising from $237 million in 2017E to $642 million in 2021E, while listening among the 12+ population is charted over the same period (p. 135).",
+          "Among U.S. podcast non-listeners in 2017, 34% identify knowing which apps to use as a factor that would lead them to listen; among listeners, 31% identify recommendations as a factor that would increase consumption (p. 128).",
+          "The report says smart-speaker owners are about 1.6 times more likely to listen to podcasts than non-owners, and notes that connected cars and smart speakers may spur listening (p. 126).",
+          "Fan-produced podcasts can extend engagement with entertainment franchises; the report gives the example of “Star Wars Minute,” which it says receives 100,000+ weekly downloads (p. 129)."
+        ],
+        "pages": [
+          124,
+          125,
+          126,
+          127,
+          128,
+          129,
+          130,
+          131,
+          132,
+          133,
+          134,
+          135,
+          136
+        ],
+        "references": []
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "doc_map",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 1.0,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

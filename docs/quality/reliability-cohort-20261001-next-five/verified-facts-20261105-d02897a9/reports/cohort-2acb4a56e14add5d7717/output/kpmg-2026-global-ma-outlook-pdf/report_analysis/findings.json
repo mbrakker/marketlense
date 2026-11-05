@@ -1,0 +1,202 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "risk-pe-pipeline-outlook",
+      "text": "The report says private equity dealmakers are significantly more likely than corporate dealmakers to expect M&A pipeline activity to increase relative to 2025; corporates are described as having a more measured outlook, with fewer anticipating a material acceleration in deal volume.",
+      "evidence": "Survey results show private equity dealmakers are significantly more likely to expect an increase in M&A pipeline activity relative to 2025. By contrast, corporates are approaching the year with a more measured outlook. While many expect to remain active, fewer anticipate a material acceleration in deal volume",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "diverging-risk-appetites",
+      "section_title": "Diverging risk appetites between buyers"
+    },
+    {
+      "id": "risk-deal-size-under-1b",
+      "text": "The report says the majority of anticipated transactions fall below the US$1B threshold, describing the expected rebound as led by mid-sized deals rather than megadeals.",
+      "evidence": "Survey results indicate that the majority of anticipated transactions fall below the US$1B threshold, pointing to a rebound led by mid-sized, execution-intensive deals rather than megadeals.",
+      "confidence": "high",
+      "pages": [
+        16
+      ],
+      "section_id": "diverging-risk-appetites",
+      "section_title": "Diverging risk appetites between buyers"
+    },
+    {
+      "id": "risk-geographic-divergence",
+      "text": "The report describes private equity optimism as strongest in the US, while dealmakers outside the US—particularly corporates—face greater uncertainty related to growth, regulation and geopolitical exposure.",
+      "evidence": "Private equity optimism is strongest in the US, where capital availability and transaction infrastructure remain comparatively supportive, despite broader global volatility. Outside the US, dealmakers, particularly corporates, face greater uncertainty related to growth, regulation and geopolitical exposure.",
+      "confidence": "high",
+      "pages": [
+        16
+      ],
+      "section_id": "diverging-risk-appetites",
+      "section_title": "Diverging risk appetites between buyers"
+    },
+    {
+      "id": "deal-types-full-business",
+      "text": "For “Types of deals under consideration — corporate vs. private equity,” acquisition of a full business is listed at 62% for corporate respondents and 69% for private equity respondents.",
+      "evidence": "Types of deals under consideration — corporate vs. private equity\n\nCorporate        Private equity\n\nAcquisition of a full business                     62%              69%",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "diverging-risk-appetites",
+      "section_title": "Diverging risk appetites between buyers"
+    },
+    {
+      "id": "deal-types-carveout",
+      "text": "For “Types of deals under consideration — corporate vs. private equity,” carve-out acquisitions are listed at 21% for corporate respondents and 55% for private equity respondents, a displayed difference of +34 pts.",
+      "evidence": "Types of deals under consideration — corporate vs. private equity\n\nCorporate        Private equity\n\nCarve-out acquisitions                         21%              55%      +34 pts",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "diverging-risk-appetites",
+      "section_title": "Diverging risk appetites between buyers"
+    },
+    {
+      "id": "deal-types-minority-majority",
+      "text": "For “Types of deals under consideration — corporate vs. private equity,” minority-to-majority investments are listed at 18% for corporate respondents and 50% for private equity respondents, a displayed difference of +32 pts.",
+      "evidence": "Types of deals under consideration — corporate vs. private equity\n\nCorporate        Private equity\n\nMinority-to-majority investment                   18%              50%      +32 pts",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "diverging-risk-appetites",
+      "section_title": "Diverging risk appetites between buyers"
+    },
+    {
+      "id": "ai-agent-human-decision",
+      "text": "The report describes an AI agent performing multi-step diligence on customer concentration—including modeling risk, benchmarking, drafting diligence material and flagging anomalies—while the human reviews and decides.",
+      "evidence": "An agent tasked with diligence on a target’s customer concentration does not merely summarize revenue data. It ingests raw data, segments by customer, models concentration risk under multiple scenarios, compares against sector benchmarks, drafts the relevant section of the diligence report and flags anomalies for the deal team’s attention. The human reviews and decides; the agent executes.",
+      "confidence": "high",
+      "pages": [
+        26
+      ],
+      "section_id": "ai-driven-deal-execution",
+      "section_title": "AI-driven transformation of deal execution"
+    },
+    {
+      "id": "ai-analysis-expansion",
+      "text": "The report argues that AI’s consequential effect is making categories of analysis that were previously uneconomical viable, rather than only speeding up existing analysis.",
+      "evidence": "Among the the most significant effects is not that existing analysis gets faster. It is that entirely new categories of analysis become worth doing. Work that was previously uneconomical at traditional analyst-day rates becomes viable at a fraction of prior cost.",
+      "confidence": "high",
+      "pages": [
+        26
+      ],
+      "section_id": "ai-driven-deal-execution",
+      "section_title": "AI-driven transformation of deal execution"
+    },
+    {
+      "id": "ai-deployment-series",
+      "text": "The chart “Where organizations are deploying agentic AI across M&A processes” displays 56% for due diligence & valuation, 53% for deal sourcing & strategy, 45% for post-merger acquisition, 40% for deal execution, 39% for regulatory compliance & risk monitoring, and 31% for stakeholder comms & change management.",
+      "evidence": "Where organizations are deploying agentic AI across M&A processes\n\n56%\n53%\n45%\n40%\n39%\n31%\n\nDue diligence & valuation      Deal sourcing & strategy      Post-merger acquisition      Deal execution      Regulatory compliance & risk monitoring      Stakeholder comms & change management",
+      "confidence": "medium",
+      "pages": [
+        27
+      ],
+      "section_id": "ai-driven-deal-execution",
+      "section_title": "AI-driven transformation of deal execution"
+    },
+    {
+      "id": "ai-early-execution-readiness",
+      "text": "The report says AI is making execution readiness and execution gaps visible before close, and that identifying risks and dependencies during diligence and pre-close planning reduces tolerance for execution failures.",
+      "evidence": "Beyond efficiency gains, a growing number of organizations are finding that AI is making execution readiness visible before close, which means execution gaps are visible as well. When risks, dependencies and value-creation levers are surfaced during diligence and pre-close planning rather than discovered post-close, tolerance for execution failures declines.",
+      "confidence": "high",
+      "pages": [
+        28
+      ],
+      "section_id": "ai-driven-deal-execution",
+      "section_title": "AI-driven transformation of deal execution"
+    },
+    {
+      "id": "ai-market-repricing",
+      "text": "The report states that in early 2026 software and knowledge-services stocks lost nearly $1 trillion in market value over a matter of weeks, and says the change reflected the multiple assigned to future cash flows rather than collapsing revenues.",
+      "evidence": "In early 2026, software and knowledge-services stocks experienced one of the most significant sector-specific repricings in recent years. Nearly $1 trillion in market value declined over a matter of weeks. This shift was not driven by collapsing revenues. Many affected companies reported stable or growing earnings. What changed was the multiple the market was willing to assign to future cash flows.",
+      "confidence": "high",
+      "pages": [
+        28
+      ],
+      "section_id": "ai-driven-deal-execution",
+      "section_title": "AI-driven transformation of deal execution"
+    },
+    {
+      "id": "five-drivers-strategic-focus",
+      "text": "Organizations are sharpening portfolio focus to concentrate capital, capabilities and management attention where they believe they can build durable advantage in a more complex global environment.",
+      "evidence": "Organizations are sharpening portfolio focus to concentrate capital, capabilities and management attention where they believe they can build durable advantage in a more complex global environment.",
+      "confidence": "high",
+      "pages": [
+        9
+      ],
+      "section_id": "five-drivers",
+      "section_title": "5 drivers shaping the 2026 M&A environment"
+    },
+    {
+      "id": "five-drivers-diverging-risk-appetites",
+      "text": "Private equity firms and corporate acquirers are approaching deal volume, structure and timing differently, reshaping competition for assets and influencing how transactions are executed.",
+      "evidence": "Private equity firms and corporate acquirers are approaching deal volume, structure and timing differently, reshaping competition for assets and influencing how transactions are executed.",
+      "confidence": "high",
+      "pages": [
+        9
+      ],
+      "section_id": "five-drivers",
+      "section_title": "5 drivers shaping the 2026 M&A environment"
+    },
+    {
+      "id": "five-drivers-portfolio-simplification",
+      "text": "Carve-outs, separations and staged ownership structures are increasingly being used to accelerate growth, unlock value and enable more focused operating models.",
+      "evidence": "Carve-outs, separations and staged ownership structures are increasingly being used to accelerate growth, unlock value and enable more focused operating models.",
+      "confidence": "high",
+      "pages": [
+        9
+      ],
+      "section_id": "five-drivers",
+      "section_title": "5 drivers shaping the 2026 M&A environment"
+    },
+    {
+      "id": "ai-new-categories-of-analysis",
+      "text": "AI makes previously uneconomical analysis viable, making entirely new categories of analysis worth doing.",
+      "evidence": "Among the the most significant effects is not that existing analysis gets faster. It is that entirely new categories of analysis become worth doing. Work that was previously uneconomical at traditional analyst-day rates becomes viable at a fraction of prior cost.",
+      "confidence": "high",
+      "pages": [
+        26
+      ],
+      "section_id": "ai-driven-deal-execution",
+      "section_title": "AI-driven transformation of deal execution"
+    },
+    {
+      "id": "ai-agent-customer-concentration-diligence",
+      "text": "An AI agent tasked with customer-concentration diligence can model risk under multiple scenarios, compare it with sector benchmarks, draft the relevant diligence-report section and flag anomalies, while the human reviews and decides and the agent executes.",
+      "evidence": "An agent tasked with diligence on a target’s customer concentration does not merely summarize revenue data. It ingests raw data, segments by customer, models concentration risk under multiple scenarios, compares against sector benchmarks, drafts the relevant section of the diligence report and flags anomalies for the deal team’s attention. The human reviews and decides; the agent executes.",
+      "confidence": "high",
+      "pages": [
+        26
+      ],
+      "section_id": "ai-driven-deal-execution",
+      "section_title": "AI-driven transformation of deal execution"
+    },
+    {
+      "id": "ai-contract-review-and-integration-monitoring",
+      "text": "Examples of AI-enabled work include clause-by-clause comparison across hundreds of agreements and continuous tracking of separation dependencies, TSA milestones and performance indicators.",
+      "evidence": "Exhaustive contract review \nClause-by-clause comparison across hundreds of \nagreements, identifying non-standard terms, \ndeviation patterns and hidden liabilities that would \nbe impractical to surface through traditional \nsampling\n\nContinuous integration risk monitoring \nReal-time tracking of separation dependencies, \nTSA milestones and performance indicators, \nreplacing point-in-time assessments with \npersistent surveillance.",
+      "confidence": "high",
+      "pages": [
+        26
+      ],
+      "section_id": "ai-driven-deal-execution",
+      "section_title": "AI-driven transformation of deal execution"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

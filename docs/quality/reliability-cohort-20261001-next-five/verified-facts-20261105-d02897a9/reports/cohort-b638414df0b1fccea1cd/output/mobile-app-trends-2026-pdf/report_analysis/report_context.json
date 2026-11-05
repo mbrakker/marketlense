@@ -1,0 +1,89 @@
+{
+  "report_id": "cohort-b638414df0b1fccea1cd",
+  "title": "2026 edition REPORT",
+  "publisher": "",
+  "region": "Global",
+  "time_period": "2024 to 2025",
+  "overview": "Mobile app trends: 2026 edition A global benchmark of mobile app performance, combining industry context and 2026 marketing themes with performance analyses of gaming, e-commerce/shopping, and finance apps. The report uses aggregated, anonymized data from apps tracked by Adjust from January 2024 to January 2026, alongside some third-party industry estimates. A global benchmark of mobile app performance, covering overall industry trends and gaming, e-commerce/shopping, and finance apps, with regional analysis including APAC, Europe, LATAM, MENA, and North America. Performance trends are reported for January 2024–December 2025, including year-over-year comparisons for 2024 and 2025.",
+  "methods": [
+    "Uses Adjust data to report app installs and sessions globally, with monthly trends from January 2024 to December 2025 and year-over-year comparisons for 2024–2025. The excerpts do not specify the app sample frame or a validation method."
+  ],
+  "key_findings": [
+    "There were more than 112.1 billion app downloads in 2025.",
+    "Global consumer spending on apps rose to $167 billion in 2025.",
+    "Mobile technologies and services are projected to generate 8.4% of global GDP by 2030.",
+    "Eight of the top 10 mobile games in 2025 each generated more than $1 billion in player spending.",
+    "The global mobile-gamer population reached nearly 3 billion in 2025, representing more than 80% of the global gaming population.",
+    "Gaming app installs in MENA grew 2% year over year in 2025."
+  ],
+  "limitations": [
+    "The report says GenAI maturity varies: most organizations report low or moderate maturity, while efficiency gains over 20% are reported only for a small group with advanced deployment.",
+    "The report describes finance apps’ shift toward paid acquisition as likely linked to falling costs, rather than establishing the cause.",
+    "For some gaming categories, sessions fell despite install growth; the report says churn may need to be addressed."
+  ],
+  "sections": [
+    {
+      "section_label": "Introduction: Evolution and opportunity in the mobile app industry",
+      "source_pack": "doc_map",
+      "summary": "Introduces the growth outlook for mobile apps and the measurement and marketing challenges created by fragmented channels, evolving user behavior, and AI. It frames the report as a benchmark for gaming, e-commerce, and finance.",
+      "key_points": [
+        "The report cites more than 112.1 billion app downloads in 2025, an estimated 5.8 billion unique smartphone users, and consumer spending of $167 billion, up 10.6% year over year.",
+        "It describes experimentation with AI, automation, and channel diversification as key features of 2025, while emphasizing the need for actionable data and cross-channel attribution.",
+        "In the chart “App install and session growth January 2024 - December 2025 (Global),” installs rose 10% and sessions 7% in 2025, compared with growth of 8% and 2%, respectively, in 2024; February 20..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "AI transforms from strategic tool to core infrastructure in 2026",
+      "source_pack": "doc_map",
+      "summary": "Describes AI being integrated into marketing and measurement workflows through data-analysis assistants, predictive audience segmentation, and practical generative-AI use. It notes that organizational maturity remains uneven.",
+      "key_points": [
+        "AI assistants can query multi-channel data in natural language and surface analysis, reports, and visualizations in real time.",
+        "Audience segments are shifting from manually maintained static lists to dynamic groups based on behavior, intent, and likelihood to convert.",
+        "Generative AI is being used to test creative variants, model user journeys, and tailor in-app messaging; most organizations report low or moderate maturity, while a small advanced group reportedly..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Mobile-first approach evolves into multi-platform strategy",
+      "source_pack": "doc_map",
+      "summary": "Argues that customer journeys now move across mobile web, desktop, apps, and other channels, making cross-platform measurement and deep linking important for attribution and conversion.",
+      "key_points": [
+        "Only around 31% of marketers report complete satisfaction with their ability to unify and read data across platforms.",
+        "Cross-platform measurement connects activity such as a mobile-web session to an in-app conversion, revealing channel contributions beyond last-click credit.",
+        "The report recommends integrated measurement, high-quality deep linking, user segmentation, retargeting, and web-to-app solutions to reduce journey barriers."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Key takeaways & methodology",
+      "source_pack": "doc_map",
+      "summary": "Summarizes selected year-over-year findings across the three app verticals and explains the report’s dataset, coverage, regions, and date range.",
+      "key_points": [
+        "The takeaways report global e-commerce app sessions increased 5%; LATAM finance installs and sessions rose 76% and 57%; and gaming retention remained flat, with day 1 at 27% and day 30 at 5%.",
+        "The methodology covers e-commerce/shopping, finance/fintech, and gaming across global, APAC, Europe, LATAM, MENA, and North America.",
+        "The dataset combines Adjust’s top 5,000 apps with the total set of apps tracked by Adjust, with data sources covering 45 countries and approximately 250 countries under the ISO 3166-1 standard."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Gaming apps",
+      "source_pack": "doc_map",
+      "summary": "Opens the report’s first vertical chapter, introducing the gaming-app benchmark before the dedicated “Finding and keeping users” analysis begins on page 17.",
+      "key_points": [],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Finding and keeping users",
+      "source_pack": "doc_map",
+      "summary": "Analyzes gaming acquisition, sessions, retention, install costs, and partner networks across regions and subverticals for 2024–2025. The results show growth and retention patterns diverging by game type.",
+      "key_points": [
+        "In “Gaming app install and session growth percentages YoY 2024 - 2025 (Global),” casual games grew 19% in installs and 37% in sessions; hyper casual grew 4% and 31%; strategy sessions rose 57% desp...",
+        "For “Gaming app retention rates 2024 - 2025 (Global),” all games remained at 27% day 1, 13% day 7, 8% day 14, and 5% day 30 retention; hyper casual retention was 27%, 8%, 6%, and 2% at those same d...",
+        "Regional install/session growth was mixed: MENA recorded +2%/+7%, Europe -7%/+3%, LATAM -9%/+0.4%, and North America -5%/-2% in 2025."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

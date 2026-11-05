@@ -1,0 +1,251 @@
+{
+  "schema_version": "1.0",
+  "_cache": {
+    "schema_version": "1.0",
+    "key": "34ea740761f9817e16b349721ffffd4e93b081a6388c941b406f8096317c0117",
+    "md5": "cbb6e7df67412186b8bc094a424ac890",
+    "model": "gpt-6-luna",
+    "temperature": null,
+    "reasoning_effort": "low",
+    "seed": null,
+    "mode": "adaptive",
+    "prompt_system_sha256": "e44deabb4806c9edb05abd9327c83928adf3430f5894a2d52b7ecd356f64a410",
+    "prompt_user_sha256": "b7270ca58326e41ede53a92c23768f2f517a2dfbfcb03de5547e2d1c1a1ef280"
+  },
+  "results": [
+    {
+      "entry_key": "0d605898e840427041a4c5c650c2ab8ff8178aa3c204d78dc9689398777961e3",
+      "candidate_id": "table-57-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        48.0,
+        59.0,
+        923.0,
+        753.0
+      ],
+      "reason": "model_accepted",
+      "page": 57
+    },
+    {
+      "entry_key": "2001390891e3b60efce6767d14608958a4a19ef8493c3cf732e29af7efc9ecd9",
+      "candidate_id": "table-118-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        89.3,
+        204.4,
+        897.1,
+        679.7
+      ],
+      "reason": "model_rejected",
+      "page": 118
+    },
+    {
+      "entry_key": "3501bd52ab204662c77b0e2b31f20af7702f43f57060f9ba4d9623b8366b1236",
+      "candidate_id": "chart-123-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        60.0,
+        980.0,
+        750.0
+      ],
+      "reason": "model_accepted",
+      "page": 123
+    },
+    {
+      "entry_key": "486cb337c06eb269d76a38c1d26738a60108a4cb82feeab0eaef2a1c8169fecf",
+      "candidate_id": "table-108-1",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        245.0,
+        460.0,
+        944.0,
+        695.0
+      ],
+      "reason": "model_rejected",
+      "page": 108
+    },
+    {
+      "entry_key": "583a20e6cdc62bd381f7b4a39f57b5771051a155e3868a2defc53079946f2308",
+      "candidate_id": "chart-11-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        88.0,
+        88.0,
+        1464.0,
+        1150.0
+      ],
+      "reason": "model_accepted",
+      "page": 11
+    },
+    {
+      "entry_key": "5f201ad0bed526e3a2e7d2feb41387586f522418ed6506ab54b7cb2c2ce2fe6f",
+      "candidate_id": "chart-106-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        58.0,
+        59.0,
+        952.0,
+        752.0
+      ],
+      "reason": "model_rejected",
+      "page": 106
+    },
+    {
+      "entry_key": "7491e952aa0148be3697118fa682cdb0b7b3dc1b4d694755547e5eab7f4cfd39",
+      "candidate_id": "table-75-1",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        656.0,
+        299.0,
+        974.0,
+        645.0
+      ],
+      "reason": "model_rejected",
+      "page": 75
+    },
+    {
+      "entry_key": "77e264d5f048ddeefdd2622b38090eaa31bc75822e93e4a5f16cea82dbbdb8b9",
+      "candidate_id": "table-47-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        61.0,
+        178.0,
+        966.0,
+        752.0
+      ],
+      "reason": "model_accepted",
+      "page": 47
+    },
+    {
+      "entry_key": "78e1b6b4bf0e9cca904ff991d8fe763fa9dcb891a474eed984b1e4ba07534589",
+      "candidate_id": "table-106-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        59.0,
+        952.0,
+        752.0
+      ],
+      "reason": "model_accepted",
+      "page": 106
+    },
+    {
+      "entry_key": "80d9e739bd149b9f35cc670315cab709c0954962c5cffaad6da3e2abcdf9c965",
+      "candidate_id": "chart-122-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        57.0,
+        59.0,
+        952.0,
+        750.0
+      ],
+      "reason": "model_accepted",
+      "page": 122
+    },
+    {
+      "entry_key": "ac8e20bf444e8f30d5882b849f17b3f821d4120433bd097eab3547b7babd015e",
+      "candidate_id": "table-95-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        58.86289978027344,
+        444.2077941894531,
+        902.9376220703125,
+        463.9548034667969
+      ],
+      "reason": "invalid_geometry",
+      "page": 95
+    },
+    {
+      "entry_key": "c26733d2fdc2883a526d912e50922846959abf052bf880ede8d022b5445f4c4a",
+      "candidate_id": "table-119-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        90.0,
+        270.0,
+        930.0,
+        1149.0
+      ],
+      "reason": "model_accepted",
+      "page": 119
+    },
+    {
+      "entry_key": "cf735c9bf8df7df8da5f4370130242204aeadb5fa8793960d88d291bdd00a5aa",
+      "candidate_id": "table-99-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        52.0,
+        177.0,
+        716.0,
+        752.0
+      ],
+      "reason": "model_accepted",
+      "page": 99
+    },
+    {
+      "entry_key": "d16940916d09cc877b0dc0cd6c50a05571920967631be83be4caccc3274dc1ee",
+      "candidate_id": "chart-37-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        88.0,
+        270.0,
+        1455.0,
+        1150.0
+      ],
+      "reason": "model_accepted",
+      "page": 37
+    },
+    {
+      "entry_key": "d8249f7080834237fd45797fa700e6bd52c084785928dd29928e9e5f90ac8f0b",
+      "candidate_id": "table-77-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        55.77539825439453,
+        476.52783203125,
+        940.572998046875,
+        679.9459228515625
+      ],
+      "reason": "invalid_geometry",
+      "page": 77
+    },
+    {
+      "entry_key": "ed043e77c8a62f623ae0b64558bc980ba29085f2e37ed6d4d671720bdf35a4c6",
+      "candidate_id": "table-54-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        0.0,
+        174.0,
+        948.0,
+        752.0
+      ],
+      "reason": "model_rejected",
+      "page": 54
+    },
+    {
+      "entry_key": "f0cd239919a915d01e4c633c0dd47fcd6eadf0f08e86596c6bf58974e7656817",
+      "candidate_id": "table-86-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        65.2,
+        180.9,
+        805.5,
+        660.0
+      ],
+      "reason": "model_rejected",
+      "page": 86
+    },
+    {
+      "entry_key": "f5cb760e60ed24df47fb5a8d518e02951076b086ef53bae10c8eeb86f8a776aa",
+      "candidate_id": "chart-120-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        60.0,
+        990.0,
+        748.0
+      ],
+      "reason": "model_accepted",
+      "page": 120
+    }
+  ]
+}

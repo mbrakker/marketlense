@@ -1,0 +1,877 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-81af3890cd84ece81ef1\\ias-first-attempt-m4dv7o30\\output\\final-web-version-report-consum-1d9e64dd7425\\report_analysis\\validation_regen_attempt_3.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_removed_insight_reintroduced] Deliberately removed insight ID reappeared in the candidate.",
+      "severity": "error",
+      "affected_section": "insights_candidates:careful-spending-promotions",
+      "rule_id": "regeneration_removed_insight_reintroduced",
+      "repair_target": "insights_bundle",
+      "entity_id": "careful-spending-promotions",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_removed_insight_reintroduced] Deliberately removed insight ID reappeared in the candidate.",
+      "severity": "error",
+      "affected_section": "insights_final:careful-spending-promotions",
+      "rule_id": "regeneration_removed_insight_reintroduced",
+      "repair_target": "insights_bundle",
+      "entity_id": "careful-spending-promotions",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Validation execution failed (model_client_required).",
+      "severity": "error",
+      "affected_section": "validation",
+      "rule_id": "validation_execution",
+      "violation_type": "model_client_required",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.cohort",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.confidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.denominator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.forecast_status",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.geography",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.label",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.observation_status",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.observations",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.sample_size",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.segment",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.subject",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.timeframe",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.trend",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.unit",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].metric.value",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].source_identity",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].verified_fact",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=careful-spending-promotions].verified_fact_id",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=human-support-loyalty-comparison].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=human-support-loyalty-comparison].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=human-support-loyalty-comparison].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=hyperpersonalized-genai-content].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=hyperpersonalized-genai-content].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=hyperpersonalized-genai-content].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=regular-price-switching].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=regular-price-switching].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=regular-price-switching].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=smaller-quantity-shopping].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=smaller-quantity-shopping].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=smaller-quantity-shopping].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=switch-uncommunicated-reduction].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=switch-uncommunicated-reduction].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=switch-uncommunicated-reduction].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].coverage_role",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].decision_relevance_score",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.cohort",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.confidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.denominator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.forecast_status",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.geography",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.label",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.observation_status",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.observations",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.sample_size",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.segment",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.subject",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.timeframe",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.trend",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.unit",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric.value",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric_public_copy",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].metric_strength_score",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].novelty_score",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].now_what",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].report_type_lens",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].score",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=careful-spending-promotions].so_what",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=human-purchase-stage-loyalty-comparison]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=regular-price-switching].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=regular-price-switching].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=regular-price-switching].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=smaller-quantity-shopping]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=switch-uncommunicated-reduction]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_claim_evidence_missing] verified metric projection has no authoritative metric_public_copy",
+      "severity": "error",
+      "affected_section": "insights:human-purchase-stage-loyalty-comparison.metric_public_copy",
+      "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "violation_type": "unsupported_factual_claim",
+      "repair_target": "insights_bundle",
+      "entity_id": "key_figures:key_figures:5:metric_public_copy",
+      "evidence_ids": [
+        "verified-fact:human-purchase-stage-loyalty-comparison"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_claim_evidence_missing] verified metric projection has no authoritative metric_public_copy",
+      "severity": "error",
+      "affected_section": "insights:smaller-quantity-shopping.metric_public_copy",
+      "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "violation_type": "unsupported_factual_claim",
+      "repair_target": "insights_bundle",
+      "entity_id": "key_figures:key_figures:3:metric_public_copy",
+      "evidence_ids": [
+        "verified-fact:smaller-quantity-shopping"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_claim_evidence_missing] verified metric projection has no authoritative metric_public_copy",
+      "severity": "error",
+      "affected_section": "insights:switch-uncommunicated-reduction.metric_public_copy",
+      "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "violation_type": "unsupported_factual_claim",
+      "repair_target": "insights_bundle",
+      "entity_id": "key_figures:key_figures:2:metric_public_copy",
+      "evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The linked fact supports the customer-support values only. It does not establish the separate purchase-stage values of 40% and 66% asserted in this item.",
+      "severity": "error",
+      "affected_section": "insights:human-support-loyalty-comparison",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:human-support-loyalty-comparison:text",
+      "evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The recommendation’s separate decision point for pack-size or quality changes relies on a premise not established by this item’s lower-price-only binding.",
+      "severity": "error",
+      "affected_section": "insights:regular-price-switching.now_what",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:regular-price-switching:now_what",
+      "evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The linked fact establishes only the lower-price switching intention; the assertion that the findings cover distinct switching conditions requires the unbound pack-size/quality finding.",
+      "severity": "error",
+      "affected_section": "insights:regular-price-switching.so_what",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:regular-price-switching:so_what",
+      "evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The item’s applicable fact establishes 74% for the lower-regular-price condition. It does not bind the separate 71% pack-size/quality condition, so including that second finding here is unsupported by this item’s source binding.",
+      "severity": "error",
+      "affected_section": "insights:regular-price-switching",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:regular-price-switching:text",
+      "evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.report_material_coverage_missing] The editorial plan includes two material findings that are absent from the complete public-item batch: Priyanka Bhargav’s India quick-commerce spending and faster-delivery statement, and the 52% weekly virtual-assistant use / 76% desire for clear action rules. Primary analysis also repeats the 71% switching finding without a new analytical role. In addition, the 49% smaller-quantity statement is presented without noting that its measurement period is unspecified, a material source limitation identified in the plan and verified fact. Dimensions: material_coverage: The planned India quick-commerce finding and assistant-use/control finding have no corresponding public item.; distinctness: The 71% pack-size/quality switching finding appears in two primary-analysis items, with no new analytical contribution in the standalone repetition.; limitations: The report does not disclose that the measurement period for the 49% smaller-quantity finding is unspecified, which can make the statement read as a current measure.",
+      "severity": "error",
+      "affected_section": "public_items",
+      "rule_id": "public_editorial_quality.report_material_coverage_missing",
+      "violation_type": "editorial_quality",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share",
+        "verified-fact:assistant-use-and-control",
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction",
+        "verified-fact:smaller-quantity-shopping"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,510 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/validate/public_editorial_quality",
+  "family_schema_version": "3.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "verdicts": [
+      {
+        "item_id": "soft_copy:summary:02c1ea47a3a28f67",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The 74% and 71% figures are assigned to their respective stated hypothetical switching conditions, without presenting them as observed behavior.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:670ffc34e7744153",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The current-period 54% and last-year 71% self-reported impulse-purchase figures and the report’s characterization match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:impulse-purchase-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:8b483b274b59c5a7",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The October 2025 survey size, purchase-decision metric, promotion categories, and percentages match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:careful-spending-promotions"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:face1a23c651a289",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Both survey dates, sample sizes, customer-support stage, and reported loyalty percentages match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:f08e00ec9b475fe1",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is clearly MarketLense-authored advice to assess the supported customer-support experience; it does not present the recommendation as a source finding.",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:3167c39f8f82766f",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It distinguishes the two linked stated intentions and correctly clarifies that neither measures observed switching.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:f057fa755054e4e3",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The October 2025 survey size, metric, examples, and three promotion percentages match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:careful-spending-promotions"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:9e9662cea1793aef",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The interpretation appropriately distinguishes hypothetical switching intentions from reported promotion-effectiveness assessments; the linked facts measure different things.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction",
+          "verified-fact:careful-spending-promotions"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:bb5f7980b0aafd9c",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is attributed to MarketLense and recommends treating the three linked value-strategy questions separately, without claiming the source made that recommendation.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction",
+          "verified-fact:careful-spending-promotions"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:f6a27ba95538eb27",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The two linked facts describe separate hypothetical switching conditions, as stated.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:608c7fe219ffb274",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Both linked facts describe stated intentions rather than observed switching behavior.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:9a14c1890fc408a0",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "MarketLense’s recommendation distinguishes the two linked switching conditions and does not falsely attribute the advice to the source.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:regular-price-switching:text",
+        "status": "fail",
+        "classification": "factual_claim",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_unsupported",
+        "hard_fail_class": "",
+        "reason": "The item’s applicable fact establishes 74% for the lower-regular-price condition. It does not bind the separate 71% pack-size/quality condition, so including that second finding here is unsupported by this item’s source binding.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "repair_target": "insights_bundle"
+      },
+      {
+        "item_id": "insight:regular-price-switching:so_what",
+        "status": "fail",
+        "classification": "analyst_interpretation",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_unsupported",
+        "hard_fail_class": "",
+        "reason": "The linked fact establishes only the lower-price switching intention; the assertion that the findings cover distinct switching conditions requires the unbound pack-size/quality finding.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "repair_target": "insights_bundle"
+      },
+      {
+        "item_id": "insight:regular-price-switching:now_what",
+        "status": "fail",
+        "classification": "prescriptive_recommendation",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_unsupported",
+        "hard_fail_class": "",
+        "reason": "The recommendation’s separate decision point for pack-size or quality changes relies on a premise not established by this item’s lower-price-only binding.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "repair_target": "insights_bundle"
+      },
+      {
+        "item_id": "insight:smaller-quantity-shopping:text",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The 49% figure, rising-price context, and interpretation of smaller quantities as consumption control rather than complete avoidance match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:smaller-quantity-shopping"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:careful-spending-promotions:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The survey date, sample size, promotion-effectiveness metric, categories, and percentages match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:careful-spending-promotions"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:hyperpersonalized-genai-content:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The stated preference, survey dates, percentages, and sample sizes match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:hyperpersonalized-genai-content"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:hyperpersonalized-genai-content:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked measure is agreement with a stated preference; distinguishing it from adoption or a purchase plan is a defensible boundary on what the measure shows.",
+        "evidence_ids": [
+          "verified-fact:hyperpersonalized-genai-content"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:hyperpersonalized-genai-content:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is MarketLense-authored advice to test the linked stated preference, not a claim that consumers have adopted or purchased such recommendations.",
+        "evidence_ids": [
+          "verified-fact:hyperpersonalized-genai-content"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:human-support-loyalty-comparison:text",
+        "status": "fail",
+        "classification": "factual_claim",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_unsupported",
+        "hard_fail_class": "",
+        "reason": "The linked fact supports the customer-support values only. It does not establish the separate purchase-stage values of 40% and 66% asserted in this item.",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ],
+        "repair_target": "insights_bundle"
+      },
+      {
+        "item_id": "insight:human-support-loyalty-comparison:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked source context explicitly distinguishes the purchase-stage row from the customer-support row and says the purchase-stage values differ.",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:human-support-loyalty-comparison:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Assessing the two in-store stages separately is a MarketLense recommendation consistent with the linked source context’s distinction between their reported measures.",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:switch-uncommunicated-reduction:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The 71% figure and its pack-size or product-quality reduction condition match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:human-purchase-stage-loyalty-comparison:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The purchase-stage metric, dates, percentages, percentage-point change, and survey sample sizes match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:human-purchase-stage-loyalty-comparison"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:1:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The stated lower-regular-price switching intention and 74% value match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:2:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The stated pack-size or quality condition and 71% value match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:3:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The self-reported impulse-purchase figures, comparison, period labels, and report characterization match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:impulse-purchase-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "metric_spine:metric_spine:regular-price-switching",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The 74% figure and lower-regular-price stated-intention condition match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:strategic_context",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The two switching percentages are assigned to the conditions established by their respective linked facts.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:watchouts:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The item accurately reports both linked stated intentions and explicitly distinguishes them from observed switching behavior.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The 74% lower-regular-price switching intention matches the linked fact.",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:2",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The 71% pack-size or quality reduction switching intention matches the linked fact.",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:3",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The impulse-purchase figures, comparison, time labels, and report characterization match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:impulse-purchase-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:4",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The survey date, sample size, promotion categories, metric, and percentages match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:careful-spending-promotions"
+        ],
+        "repair_target": ""
+      }
+    ],
+    "report_verdict": {
+      "status": "fail",
+      "severity": "error",
+      "rule_id": "public_editorial_quality.report_material_coverage_missing",
+      "hard_fail_class": "editorial_quality",
+      "reason": "The editorial plan includes two material findings that are absent from the complete public-item batch: Priyanka Bhargav’s India quick-commerce spending and faster-delivery statement, and the 52% weekly virtual-assistant use / 76% desire for clear action rules. Primary analysis also repeats the 71% switching finding without a new analytical role. In addition, the 49% smaller-quantity statement is presented without noting that its measurement period is unspecified, a material source limitation identified in the plan and verified fact.",
+      "evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share",
+        "verified-fact:assistant-use-and-control",
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction",
+        "verified-fact:smaller-quantity-shopping"
+      ],
+      "repair_target": "",
+      "affected_item_id": "",
+      "dimensions": {
+        "material_coverage": {
+          "status": "fail",
+          "reason": "The planned India quick-commerce finding and assistant-use/control finding have no corresponding public item."
+        },
+        "analytical_depth": {
+          "status": "pass",
+          "reason": "The report includes defensible interpretation and commercially directed implications, including consumption control, testing stated Gen AI preferences, and assessing in-store stages separately."
+        },
+        "distinctness": {
+          "status": "fail",
+          "reason": "The 71% pack-size/quality switching finding appears in two primary-analysis items, with no new analytical contribution in the standalone repetition."
+        },
+        "limitations": {
+          "status": "fail",
+          "reason": "The report does not disclose that the measurement period for the 49% smaller-quantity finding is unspecified, which can make the statement read as a current measure."
+        }
+      }
+    }
+  }
+}

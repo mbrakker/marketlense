@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "methods": [
+    "Global consumer survey of 12,000 consumers aged 18 and over across 12 countries: Australia, Canada, France, Germany, India, Italy, Japan, the Netherlands, Spain, Sweden, the UK, and the US. The report identifies October 2025 as the current survey period.",
+    "In-depth interviews with executives from the consumer products and retail industries."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "methods",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

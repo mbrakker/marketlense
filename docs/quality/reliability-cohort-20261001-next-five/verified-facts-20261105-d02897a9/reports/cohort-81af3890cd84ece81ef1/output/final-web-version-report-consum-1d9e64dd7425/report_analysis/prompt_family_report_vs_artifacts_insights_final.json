@@ -1,0 +1,368 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_final",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "coverage_role": "strategic_risk",
+      "decision_relevance_score": 0.95,
+      "evidence": "The page reports that 74% of consumers say they would switch brands if they found a lower regular price elsewhere. Separately, the page reports that 71% of consumers would switch brands if pack sizes or product quality were reduced without clear communication.",
+      "evidence_id": "verified-fact:regular-price-switching",
+      "evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:regular-price-switching",
+          "page": 4,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "In the “Fairness and quality define value” section, the page says: “Seventy four percent of consumers say they would switch brands if they found a lower regular price elsewhere.” The nearby 71 percent figure refers instead to switching if pack sizes or product quality were reduced without clear communication, so it is not the value supporting this claim. The 74 percent statement gives no survey period, geography, sample size, or denominator."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:switch-uncommunicated-reduction",
+          "page": 4,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The executive-summary paragraph and adjacent 71% callout pair the value with consumers’ stated willingness to switch brands if pack sizes or product quality were reduced without clear communication. This directly supports the corrected claim; the page does not state the measurement period, geography, sample size, or precise denominator."
+        }
+      ],
+      "id": "regular-price-switching",
+      "metric": {
+        "cohort": "Consumers",
+        "confidence": "Not stated",
+        "denominator": "Not stated",
+        "geography": "Not stated",
+        "label": "Consumers saying they would switch brands if they found a lower regular price elsewhere",
+        "observation_status": "Reported stated intention, not observed switching behavior",
+        "sample_size": "Not stated",
+        "segment": "Consumers",
+        "subject": "Consumer-reported hypothetical brand-switching intention",
+        "timeframe": "Not stated",
+        "trend": "Stated willingness to switch under the specified price condition",
+        "unit": "percent",
+        "value": "74"
+      },
+      "metric_public_copy": "74% of consumers say they would switch brands if they found a lower regular price elsewhere.",
+      "metric_strength_score": 0.86,
+      "novelty_score": 0.78,
+      "now_what": "Assess price positioning and communication about pack-size or quality changes as separate decision points.",
+      "pages": [
+        4
+      ],
+      "report_type_lens": "brand_strategy",
+      "score": 0.9,
+      "so_what": "The findings capture distinct stated switching conditions, not evidence of actual brand switching.",
+      "text": "The page reports that 74% of consumers say they would switch brands if they found a lower regular price elsewhere. Separately, it reports that 71% would switch if pack sizes or product quality were reduced without clear communication. Both are hypothetical stated intentions, not observed switching behavior."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.91,
+      "evidence": "The report says 54% of consumers are making fewer impulse purchases, down from 71% last year, and characterizes this as easing impulse restraint and a modest rebound of “intentional indulgence” alongside persistent deal-seeking. Separately, as prices rise, around half of consumers (49%) are buying smaller quantities, which the report characterizes as consumption control rather than complete avoidance.",
+      "evidence_id": "verified-fact:impulse-purchase-shift",
+      "evidence_ids": [
+        "verified-fact:impulse-purchase-shift",
+        "verified-fact:smaller-quantity-shopping"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:impulse-purchase-shift",
+          "page": 5,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The page directly states that 54% say they are making fewer impulse purchases, down from 71% last year, and calls this easing impulse restraint and a modest rebound of “intentional indulgence” alongside persistent deal-seeking. This supports the corrected claim's metric, comparison, and qualitative characterization; survey dates, geography, sample size, and detailed denominator are not specified."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:smaller-quantity-shopping",
+          "page": 21,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "Under “Strategic saving,” the page directly connects rising prices with consumers reducing quantity, gives the figure as around half (49%) buying smaller quantities, and explicitly characterizes this as consumption control rather than complete avoidance. The page does not specify the figure’s geography, measurement period, sample size, or denominator."
+        }
+      ],
+      "id": "impulse-purchase-shift",
+      "metric": {
+        "cohort": "Consumers",
+        "confidence": "Not stated",
+        "denominator": "Consumer population; denominator details are not stated",
+        "geography": "Not stated",
+        "label": "Consumers saying they are making fewer impulse purchases",
+        "observation_status": "Self-reported",
+        "sample_size": "Not stated",
+        "segment": "Consumers",
+        "subject": "Impulse purchase restraint",
+        "timeframe": "Current report period compared with last year; exact survey dates are not stated",
+        "trend": "Down from 71% last year",
+        "unit": "percent of consumers",
+        "value": "54, down from 71 last year"
+      },
+      "metric_public_copy": "In self-reports, 54% of consumers in the current report period said they were making fewer impulse purchases, down from 71% last year.",
+      "metric_strength_score": 0.84,
+      "novelty_score": 0.81,
+      "now_what": "Track impulse purchasing and quantity changes as separate value signals.",
+      "pages": [
+        5,
+        21
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.89,
+      "so_what": "The report distinguishes easing impulse restraint from smaller-quantity buying as prices rise.",
+      "text": "54% of consumers say they are making fewer impulse purchases in the current report period, down from 71% last year; the report calls this easing impulse restraint and a modest rebound of “intentional indulgence” alongside persistent deal-seeking. Separately, as prices rise, around half of consumers (49%) are buying smaller quantities, which the report characterizes as consumption control rather than complete avoidance."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.96,
+      "evidence": "Figure 9 supports the promotion-effectiveness ratings for driving purchase decisions: money-off (e.g., $5 off $25) 75%, percent-off (e.g., 20% off) 74%, and buy-one-get-one-free 73%. The source line states October 2025 and N = 12,000 consumers.",
+      "evidence_id": "verified-fact:careful-spending-promotions",
+      "evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:careful-spending-promotions",
+          "page": 24,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "Figure 9 directly supports the claim: the chart’s question concerns promotion effectiveness in driving purchase decisions, and the adjacent category labels pair money-off (e.g., $5 off $25) with 75%, % off (e.g., 20% off) with 74%, and BOGOF with 73%. The source line states October 2025 and N = 12,000 consumers. No geography is specified."
+        }
+      ],
+      "id": "careful-spending-promotions",
+      "metric": {
+        "cohort": "Consumers surveyed by Capgemini Research Institute",
+        "confidence": "No uncertainty interval reported",
+        "denominator": "Consumers; item-level denominator is not separately stated",
+        "geography": "Not specified",
+        "label": "Money-off offer effectiveness for driving purchase decisions",
+        "observation_status": "Observed survey results",
+        "sample_size": "N = 12,000 consumers",
+        "segment": "Consumers",
+        "subject": "Consumer-reported promotion effectiveness for driving purchase decisions",
+        "timeframe": "October 2025",
+        "trend": "Money-off ranks highest, followed by percent-off and buy-one-get-one-free",
+        "unit": "percent of consumers",
+        "value": "75"
+      },
+      "metric_public_copy": "In an October 2025 survey of 12,000 consumers, 75% rated money-off offers (e.g., $5 off $25) most effective for driving purchase decisions.",
+      "metric_strength_score": 0.96,
+      "novelty_score": 0.82,
+      "now_what": "Use the reported ratings as an input when evaluating formats for purchase-decision objectives.",
+      "pages": [
+        24
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.95,
+      "so_what": "The survey compares how consumers rated promotion formats for driving purchase decisions.",
+      "text": "In an October 2025 survey of 12,000 consumers, money-off offers (e.g., $5 off $25) were rated most effective for driving purchase decisions (75%), followed by percent-off offers (e.g., 20% off) (74%) and buy-one-get-one-free offers (73%)."
+    },
+    {
+      "coverage_role": "market_context",
+      "decision_relevance_score": 0.84,
+      "evidence": "Priyanka Bhargav says that today 25% of quick-commerce spending in India comes from mid- to low-affluent consumers in Tier 2 and Tier 3 towns, and that these customers are willing to pay a little extra for faster delivery.",
+      "evidence_id": "verified-fact:india-quick-commerce-spending-share",
+      "evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:india-quick-commerce-spending-share",
+          "page": 12,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The visible quote on physical page 12 names Priyanka Bhargav and her Flipkart title. It states that today 25% of quick-commerce spending comes from mid- to low-affluent consumers in Tier 2 and Tier 3 towns, and that these customers are willing to pay a little extra for faster delivery. The preceding quote text says quick commerce is democratizing speed across India, supporting the claim’s India context. The page gives no measurement method or further definition of the spending denominator."
+        }
+      ],
+      "id": "india-quick-commerce-spending-share",
+      "metric": {
+        "cohort": "Mid- to low-affluent consumers in Tier 2 and Tier 3 towns",
+        "confidence": "Not stated",
+        "denominator": "Quick-commerce spending; the denominator is not further defined",
+        "geography": "India",
+        "label": "Share of quick-commerce spending from mid- to low-affluent consumers in Tier 2 and Tier 3 towns",
+        "observation_status": "Presented as a current statement attributed to Priyanka Bhargav; measurement method is not stated",
+        "sample_size": "Not stated",
+        "segment": "Mid- to low-affluent consumers in Tier 2 and Tier 3 towns",
+        "subject": "Quick-commerce spending",
+        "timeframe": "Today",
+        "trend": "Not stated",
+        "unit": "percent",
+        "value": "25"
+      },
+      "metric_public_copy": "Priyanka Bhargav says that today 25% of quick-commerce spending in India comes from mid- to low-affluent consumers in Tier 2 and Tier 3 towns.",
+      "metric_strength_score": 0.78,
+      "novelty_score": 0.9,
+      "now_what": "For quick-commerce planning in the named towns, consider testing faster-delivery propositions with this cohort.",
+      "pages": [
+        12
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.82,
+      "so_what": "Bhargav’s statement is specific to the named consumer cohort and quick-commerce spending in India.",
+      "text": "Priyanka Bhargav, Head of Insights and Brand Strategy at Flipkart, says that today 25% of quick-commerce spending in India comes from mid- to low-affluent consumers in Tier 2 and Tier 3 towns. She adds that these customers are willing to pay a little extra for faster delivery."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.89,
+      "evidence": "The page reports that 52% of consumers use virtual assistants that automate re-ordering or meal planning at least once a week, and that 76% want the ability to set clear rules for when an assistant acts.",
+      "evidence_id": "verified-fact:assistant-use-and-control",
+      "evidence_ids": [
+        "verified-fact:assistant-use-and-control"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:assistant-use-and-control",
+          "page": 5,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The text states, “Almost half of consumers (52%) use virtual assistants that automate re-ordering or meal planning at least once a week,” followed by “Seventy six percent want the ability to set clear rules for when an assistant acts.” The adjacent wording directly supports both percentages and their respective populations and descriptions."
+        }
+      ],
+      "id": "assistant-use-and-control",
+      "metric": {
+        "cohort": "Consumers",
+        "confidence": "Not stated",
+        "denominator": "Consumers; denominator details not stated",
+        "geography": "Not stated",
+        "label": "Consumers using virtual assistants that automate re-ordering or meal planning at least once a week",
+        "observation_status": "Reported findings",
+        "sample_size": "Not stated",
+        "segment": "Consumers",
+        "subject": "Consumer use of virtual assistants and desired control over assistant actions",
+        "timeframe": "At least once a week",
+        "trend": "Not stated",
+        "unit": "percent of consumers",
+        "value": "52"
+      },
+      "metric_public_copy": "52% of consumers use virtual assistants that automate re-ordering or meal planning at least once a week.",
+      "metric_strength_score": 0.84,
+      "novelty_score": 0.83,
+      "now_what": "If developing assistant-led re-ordering or meal planning, consider how users can set clear rules for when an assistant acts.",
+      "pages": [
+        5
+      ],
+      "report_type_lens": "technology_shift",
+      "score": 0.87,
+      "so_what": "The page reports assistant use and desire for clear action rules as separate consumer findings.",
+      "text": "52% of consumers use virtual assistants that automate re-ordering or meal planning at least once a week. Separately, 76% want the ability to set clear rules for when an assistant acts."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.87,
+      "evidence": "Consumers surveyed agreed with the stated desire for Gen AI to provide hyper-personalized content and product/service recommendations based on individual preferences: 58% in November 2024 and 63% in October 2025. Each survey had N=12,000 consumers.",
+      "evidence_id": "verified-fact:hyperpersonalized-genai-content",
+      "evidence_ids": [
+        "verified-fact:hyperpersonalized-genai-content"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:hyperpersonalized-genai-content",
+          "page": 41,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "Figure 20’s exact statement is “I want Gen AI to provide hyper-personalized content and product/service recommendations based on my individual preferences.” Its adjacent bars are labeled 58% and 63%; the legend maps these respectively to November 2024 and October 2025. The source note states N=12,000 consumers for each survey, supporting the comparison among surveyed consumers."
+        }
+      ],
+      "id": "hyperpersonalized-genai-content",
+      "metric": {
+        "cohort": "Consumers surveyed",
+        "confidence": "No confidence interval or other uncertainty measure reported",
+        "denominator": "Consumers surveyed in each survey",
+        "geography": "Not specified",
+        "label": "Consumers agreeing with a desire for Gen AI to provide hyper-personalized content and product/service recommendations based on individual preferences",
+        "observation_status": "Observed survey responses",
+        "sample_size": "N=12,000 consumers in each survey",
+        "segment": "Consumers surveyed",
+        "subject": "Agreement with a statement expressing a desire for Gen AI to provide hyper-personalized content and product/service recommendations",
+        "timeframe": "November 2024 and October 2025",
+        "trend": "Increased 5 percentage points from November 2024 to October 2025",
+        "unit": "percent of consumers",
+        "value": "58 in November 2024; 63 in October 2025"
+      },
+      "metric_public_copy": "Among consumers surveyed, 58% in November 2024 and 63% in October 2025 agreed with “I want Gen AI to provide hyper-personalized content and product/service recommendations based on my individual preferences”; each survey had N=12,000 consumers.",
+      "metric_strength_score": 0.94,
+      "novelty_score": 0.88,
+      "now_what": "If shaping Gen AI recommendations, use this stated preference as an input to test with consumers.",
+      "pages": [
+        41
+      ],
+      "report_type_lens": "technology_shift",
+      "score": 0.86,
+      "so_what": "The comparison measures agreement with a stated preference, not adoption or a purchase plan.",
+      "text": "Among consumers surveyed, agreement with “I want Gen AI to provide hyper-personalized content and product/service recommendations based on my individual preferences” was 58% in November 2024 and 63% in October 2025. Each survey had N=12,000 consumers."
+    },
+    {
+      "coverage_role": "proof_point",
+      "decision_relevance_score": 0.93,
+      "evidence": "In consumer surveys, 54% in November 2024 and 74% in October 2025 said human interaction increases loyalty at the customer-support stage of in-store shopping; each survey had N = 12,000 consumers. At the in-store purchase stage, the figures were 40% in November 2024 and 66% in October 2025, an increase of 26 percentage points; each wave had N=12,000 consumers.",
+      "evidence_id": "verified-fact:human-support-loyalty-comparison",
+      "evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison",
+        "verified-fact:human-purchase-stage-loyalty-comparison"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:human-support-loyalty-comparison",
+          "page": 45,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "Figure 23 identifies the measure as consumers saying human interaction increases loyalty during in-store shopping. For the specifically labeled Customer support row, the November 2024 legend category is 54% and the October 2025 category is 74%; the separate Purchase stage row has different values. The source note gives N = 12,000 consumers for October 2025 and N = 12,000 consumers for November 2024, supporting the stated sample size in each survey."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:human-purchase-stage-loyalty-comparison",
+          "page": 45,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart labels the category “Purchase stage” and shows 40% for November 2024 and 66% for October 2025, with the dates mapped by the legend. Its caption defines the measure as consumers who said human interaction increases loyalty during in-store shopping, and the source note states N=12,000 consumers for each wave. These figures support the claimed 26-percentage-point increase."
+        }
+      ],
+      "id": "human-support-loyalty-comparison",
+      "metric": {
+        "cohort": "Consumers surveyed",
+        "confidence": "Not stated",
+        "denominator": "Consumers; the source does not specify a more detailed denominator",
+        "geography": "Not specified",
+        "label": "Consumers who said human interaction increases loyalty at the customer-support stage of in-store shopping",
+        "observation_status": "Reported survey results",
+        "sample_size": "N = 12,000 consumers in each survey",
+        "segment": "Customer support stage of in-store shopping",
+        "subject": "Consumers' reported view of human interaction and loyalty",
+        "timeframe": "November 2024 and October 2025",
+        "trend": "Increased by 20 percentage points between the two reported surveys",
+        "unit": "percent",
+        "value": "54 in November 2024; 74 in October 2025"
+      },
+      "metric_public_copy": "In surveys of consumers, 54% in November 2024 and 74% in October 2025 said human interaction increases loyalty at the customer-support stage of in-store shopping; each survey had N = 12,000 consumers.",
+      "metric_strength_score": 0.96,
+      "novelty_score": 0.86,
+      "now_what": "When prioritizing in-store service design, assess customer-support and purchase-stage experiences separately.",
+      "pages": [
+        45
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.93,
+      "so_what": "The reported loyalty measure differs between the customer-support and purchase stages.",
+      "text": "At the in-store customer-support stage, the share of consumers saying human interaction increases loyalty was 54% in November 2024 and 74% in October 2025, an increase of 20 percentage points; each survey had N = 12,000 consumers. At the in-store purchase stage, 40% in November 2024 and 66% in October 2025 said the same, an increase of 26 percentage points; each wave had N=12,000 consumers."
+    }
+  ]
+}

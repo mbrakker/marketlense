@@ -1,0 +1,197 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-81af3890cd84ece81ef1\\ias-first-attempt-m4dv7o30\\output\\final-web-version-report-consum-1d9e64dd7425\\report_analysis\\validation_regen_candidate_2.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Validation execution failed (model_client_required).",
+      "severity": "error",
+      "affected_section": "validation",
+      "rule_id": "validation_execution",
+      "violation_type": "model_client_required",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=impulse-purchase-shift].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=impulse-purchase-shift].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=impulse-purchase-shift].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=impulse-purchase-shift].pages[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=regular-price-switching].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=regular-price-switching].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=regular-price-switching].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The bound fact supports customer-support figures, not the added purchase-stage figures of 40% and 66%.",
+      "severity": "error",
+      "affected_section": "insights:human-support-loyalty-comparison",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:human-support-loyalty-comparison:text",
+      "evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The bound impulse-purchase finding does not support the additional 49% smaller-quantity claim.",
+      "severity": "error",
+      "affected_section": "insights:impulse-purchase-shift",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:impulse-purchase-shift:text",
+      "evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The account reports the attributed 25% figure but omits that the source states no measurement method and does not further define the spending denominator.",
+      "severity": "error",
+      "affected_section": "insights:india-quick-commerce-spending-share",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:india-quick-commerce-spending-share:text",
+      "evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The item says there are distinct switching conditions, but its bound evidence supports only the lower-regular-price condition.",
+      "severity": "error",
+      "affected_section": "insights:regular-price-switching.so_what",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:regular-price-switching:so_what",
+      "evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The item is bound only to the 74% lower-regular-price finding, which does not support the additional 71% pack-size or quality-reduction statement.",
+      "severity": "error",
+      "affected_section": "insights:regular-price-switching",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:regular-price-switching:text",
+      "evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_limitation_omitted] The report's India quick-commerce insight states the attributed 25% spending figure without disclosing that the source gives no measurement method and does not further define the spending denominator; readers therefore cannot assess the figure's basis. The omission is localized to the primary insight and can be repaired there. Dimensions: limitations: The primary India quick-commerce insight omits the source's material qualification that the method is unstated and the spending denominator is not further defined.",
+      "severity": "error",
+      "affected_section": "insights:india-quick-commerce-spending-share",
+      "rule_id": "public_editorial_quality.material_limitation_omitted",
+      "violation_type": "report_editorial_acceptance",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:india-quick-commerce-spending-share:text",
+      "evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,274 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "coverage_role": "strategic_risk",
+      "decision_relevance_score": 0.96,
+      "evidence": "Publishers expect traffic from search engines to almost halve (-43%) over the next three years. The chart reports an average score of -43%.",
+      "evidence_id": "search-traffic-outlook",
+      "evidence_ids": [
+        "search-traffic-outlook"
+      ],
+      "evidence_spans": [],
+      "id": "search-traffic-outlook",
+      "metric": {
+        "cohort": "Publishers",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "",
+        "label": "Expected search-engine traffic change",
+        "observation_status": "forecast",
+        "sample_size": "",
+        "segment": "",
+        "subject": "Traffic from search engines",
+        "timeframe": "Next three years",
+        "trend": "expected decline",
+        "unit": "percent",
+        "value": "−43%"
+      },
+      "metric_public_copy": "Publishers’ average expected search-engine traffic change: −43% over the next three years.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.78,
+      "now_what": "Keep the forecast horizon and expected status attached when using this figure.",
+      "pages": [
+        12
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.94,
+      "so_what": "This is a publisher forecast of a 43% decline, not a report of an already-observed future outcome.",
+      "text": "Publishers’ average expectation is that traffic from search engines will fall 43% over the next three years."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.92,
+      "evidence": "Chartbeat data show that Google traffic from organic search to over 2,500 sites was down by a third (33%) globally between Nov 2024 and Nov 2025.",
+      "evidence_id": "search-referrals-global",
+      "evidence_ids": [
+        "search-referrals-global"
+      ],
+      "evidence_spans": [],
+      "id": "search-referrals-global",
+      "metric": {
+        "cohort": "Over 2,500 sites",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "Global",
+        "label": "Global Google organic-search traffic change",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "",
+        "subject": "Google traffic from organic search",
+        "timeframe": "November 2024 to November 2025",
+        "trend": "down",
+        "unit": "percent",
+        "value": "33% decrease"
+      },
+      "metric_public_copy": "Global Google organic-search traffic: 33% decrease, November 2024 to November 2025.",
+      "metric_strength_score": 0.93,
+      "novelty_score": 0.77,
+      "now_what": "Retain the dates, global scope, and organic-search measure when comparing this result with other referral data.",
+      "pages": [
+        12
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.9,
+      "so_what": "The finding is a global observed change in Google organic-search traffic over the stated dates.",
+      "text": "From November 2024 to November 2025, Google traffic from organic search to over 2,500 sites was down 33% globally."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.93,
+      "evidence": "Original investigations/on the ground reporting +91; net difference between the proportion saying each is more or less important to focus on in the era of AI. Base = 264. | Contextual analysis (explanation, framing) +82; net difference between the proportion saying each is more or less important to focus on in the era of AI. Base = 264. | Service journalism −42; net difference between the proportion saying each is more or less important to focus on in the era of AI. Base = 264.",
+      "evidence_id": "content-focus-reporting",
+      "evidence_ids": [
+        "content-focus-reporting",
+        "content-focus-contextual-analysis",
+        "content-focus-service-journalism"
+      ],
+      "evidence_spans": [],
+      "id": "content-focus-shift",
+      "metric": {
+        "cohort": "Respondents",
+        "confidence": "high",
+        "denominator": "Base = 264",
+        "geography": "",
+        "label": "Net focus difference for original investigations/on-the-ground reporting",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "",
+        "subject": "Focus on original investigations/on-the-ground reporting",
+        "timeframe": "",
+        "trend": "more focus than less focus",
+        "unit": "net difference",
+        "value": "+91"
+      },
+      "metric_public_copy": "Original investigations/on-the-ground reporting: +91 net difference in focus plans.",
+      "metric_strength_score": 0.91,
+      "novelty_score": 0.87,
+      "now_what": "Read these as net differences between more- and less-focus responses, not as shares of all respondents.",
+      "pages": [
+        17
+      ],
+      "report_type_lens": "brand_strategy",
+      "score": 0.91,
+      "so_what": "The chart records positive net focus differences for original reporting and contextual analysis, and a negative net difference for service journalism.",
+      "text": "In the era of AI, respondents’ net difference between more and less focus was +91 for original investigations/on-the-ground reporting and +82 for contextual analysis, while service journalism was −42 (base = 264)."
+    },
+    {
+      "coverage_role": "investment_signal",
+      "decision_relevance_score": 0.9,
+      "evidence": "Minor source of income 49%. The question asks how significant possible licensing-deal income will be in about three years. Base = 272. | Significant source of income 20%. The question asks how significant possible licensing-deal income will be in about three years. Base = 272. | We won't be getting any income 20%. The question asks how significant possible licensing-deal income will be in about three years. Base = 272.",
+      "evidence_id": "ai-platform-income-minor",
+      "evidence_ids": [
+        "ai-platform-income-minor",
+        "ai-platform-income-significant",
+        "ai-platform-income-none"
+      ],
+      "evidence_spans": [],
+      "id": "ai-licensing-income-expectations",
+      "metric": {
+        "cohort": "Publisher respondents",
+        "confidence": "high",
+        "denominator": "Base = 272",
+        "geography": "",
+        "label": "Expected minor contribution from possible AI licensing deals",
+        "observation_status": "forecast",
+        "sample_size": "",
+        "segment": "",
+        "subject": "Income from possible news-content licensing deals with AI companies",
+        "timeframe": "About three years",
+        "trend": "",
+        "unit": "percent",
+        "value": "49%"
+      },
+      "metric_public_copy": "49% expected a minor contribution from possible AI licensing deals in about three years.",
+      "metric_strength_score": 0.91,
+      "novelty_score": 0.87,
+      "now_what": "Keep these as expectations about possible licensing deals, not realized income.",
+      "pages": [
+        15
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.87,
+      "so_what": "Respondents’ expectations included a minor contribution most often; significant income and no income each received 20%.",
+      "text": "For possible news-content licensing deals with AI companies in about three years, 49% of publisher respondents expected a minor contribution, 20% expected significant income, and 20% expected no income (base = 272)."
+    },
+    {
+      "coverage_role": "strategic_risk",
+      "decision_relevance_score": 0.9,
+      "evidence": "Taking time and attention away: 24% very concerned and 46% somewhat concerned; 70% somewhat or very concerned. Base = 263. | Losing talent: 10% very concerned and 29% somewhat concerned; 39% somewhat or very concerned. Base = 263.",
+      "evidence_id": "creator-concern-attention",
+      "evidence_ids": [
+        "creator-concern-attention",
+        "creator-concern-talent"
+      ],
+      "evidence_spans": [],
+      "id": "creator-audience-vs-talent-concern",
+      "metric": {
+        "cohort": "Respondents",
+        "confidence": "high",
+        "denominator": "Base = 263",
+        "geography": "",
+        "label": "Concern about creators taking time and attention from publisher content",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "",
+        "subject": "Creators taking time and attention away from publisher content",
+        "timeframe": "",
+        "trend": "somewhat or very concerned",
+        "unit": "percent",
+        "value": "70%"
+      },
+      "metric_public_copy": "70% were somewhat or very concerned about creators taking time and attention from publisher content.",
+      "metric_strength_score": 0.91,
+      "novelty_score": 0.83,
+      "now_what": "Keep attention displacement and talent loss as separate concern measures.",
+      "pages": [
+        24
+      ],
+      "report_type_lens": "creative_culture",
+      "score": 0.88,
+      "so_what": "Concern about audience attention was more common than concern about losing talent in these responses.",
+      "text": "Among respondents (base = 263), 70% were somewhat or very concerned that creators were taking time and attention away from publisher content, compared with 39% concerned about losing talent to creators."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.87,
+      "evidence": "Promising 44% in the chart on adjectives describing the impact of current newsroom AI initiatives. Base = 265. | Limited 42% in the chart on adjectives describing the impact of current newsroom AI initiatives. Base = 265. | Transformational 13% in the chart on adjectives describing the impact of current newsroom AI initiatives. Base = 265.",
+      "evidence_id": "newsroom-ai-initiatives-promising",
+      "evidence_ids": [
+        "newsroom-ai-initiatives-promising",
+        "newsroom-ai-initiatives-limited",
+        "newsroom-ai-initiatives-transformational"
+      ],
+      "evidence_spans": [],
+      "id": "newsroom-ai-initiative-assessments",
+      "metric": {
+        "cohort": "Respondents",
+        "confidence": "high",
+        "denominator": "Base = 265",
+        "geography": "",
+        "label": "Respondents describing current newsroom AI initiatives as promising",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "",
+        "subject": "Impact of newsroom AI initiatives",
+        "timeframe": "Current initiatives",
+        "trend": "",
+        "unit": "percent",
+        "value": "44%"
+      },
+      "metric_public_copy": "44% described current newsroom AI initiatives as promising.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.8,
+      "now_what": "Keep these labels tied to respondents’ descriptions of current initiatives.",
+      "pages": [
+        33
+      ],
+      "report_type_lens": "operations",
+      "score": 0.85,
+      "so_what": "The reported descriptions include both promising and limited assessments; 13% described the impact as transformational.",
+      "text": "Among respondents (base = 265), 44% described the impact of current newsroom AI initiatives as promising, 42% as limited, and 13% as transformational."
+    },
+    {
+      "coverage_role": "investment_signal",
+      "decision_relevance_score": 0.91,
+      "evidence": "Funding from platforms (including AI platforms) 37% + 17pp in last two years (driven by new AI revenues). Q16. Which of the following digital revenue streams are likely to be important or very important for your company in 2026? – choose all that apply. Base = Respondents from commercial publishers (excluding publicly funded publicly broadcasters) = 259.",
+      "evidence_id": "chapter-8-platform-funding",
+      "evidence_ids": [
+        "chapter-8-platform-funding"
+      ],
+      "evidence_spans": [],
+      "id": "platform-funding-revenue-expectation",
+      "metric": {
+        "cohort": "Commercial-publisher respondents",
+        "confidence": "high",
+        "denominator": "Base = 259",
+        "geography": "",
+        "label": "Platform funding selected as a likely important 2026 revenue stream",
+        "observation_status": "forecast",
+        "sample_size": "",
+        "segment": "Commercial publishers excluding publicly funded publicly broadcasters",
+        "subject": "Funding from platforms, including AI platforms",
+        "timeframe": "2026",
+        "trend": "+17 percentage points in last two years",
+        "unit": "percent",
+        "value": "37%"
+      },
+      "metric_public_copy": "37% selected platform funding, including AI platforms, as likely important or very important in 2026.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.87,
+      "now_what": "Keep the 2026 likelihood measure distinct from the two-year change note.",
+      "pages": [
+        38
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.86,
+      "so_what": "This is a respondent assessment of likely importance for 2026; the chart separately notes a 17 percentage-point rise over the last two years.",
+      "text": "Among commercial-publisher respondents excluding publicly funded publicly broadcasters (base = 259), 37% selected funding from platforms, including AI platforms, as likely important or very important in 2026; the chart notes this was up 17 percentage points in the last two years."
+    }
+  ]
+}

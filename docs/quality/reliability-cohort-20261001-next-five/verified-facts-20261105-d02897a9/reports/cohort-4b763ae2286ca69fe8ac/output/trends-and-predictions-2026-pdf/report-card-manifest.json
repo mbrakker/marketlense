@@ -1,0 +1,61 @@
+{
+  "cover_style_hash": "53f88fd295429bfde3086bfd1e2e654dad9dcfcd415cc3c3bb601703fb8649e5",
+  "covered_period": "2026",
+  "covers": {
+    "large": {
+      "content_sha256": "a49eee9d3d68b6962a23aab1b52fb175b6b4f09b51ac1cde56509234cf9f6a61",
+      "height": 1600,
+      "output_path": "assets/report-card-large.png",
+      "schema_version": "1.0",
+      "size": "large",
+      "width": 1200
+    },
+    "medium": {
+      "content_sha256": "e5045bbce86d3664b750fc56b0ff6593d685313cf3e00039534558fbf4e1f0ef",
+      "height": 1500,
+      "output_path": "assets/report-card-medium.png",
+      "schema_version": "1.0",
+      "size": "medium",
+      "width": 1200
+    },
+    "schema_version": "1.0",
+    "small": {
+      "content_sha256": "e7fccfbd9856161ab03d69cfe67314d368ee675ec061801a8da47e954f120926",
+      "height": 900,
+      "output_path": "assets/report-card-small.png",
+      "schema_version": "1.0",
+      "size": "small",
+      "width": 1600
+    }
+  },
+  "fingerprint": {
+    "direction": "falling",
+    "domain_layer": "grid",
+    "evidence_density": "metric_rich",
+    "evidence_shape": "trend",
+    "geography_scope": "unknown",
+    "geometry_family": "descending_trajectory",
+    "schema_version": "1.0",
+    "seed": 1677039006,
+    "selection_reason": "The evidence is metric-rich and led by a documented global search-traffic decline, alongside survey measures of priorities, assessments, and expectations."
+  },
+  "geography_label": "",
+  "geography_scope": "unknown",
+  "key_insights": [
+    "Chartbeat aggregate data sourced for the report show Google traffic from organic search to more than 2,500 sites fell 33% globally between November 2024 and November 2025. Separately, the average slider score among Q5 respondents (base 268; slider range +100% to \u2212100%) was \u221243% for expected search-engine traffic change over the next three years, an expectation rather than an observed change.",
+    "Among the 264 Q13 respondents, the reported net difference between proportions saying areas were more versus less important for newsroom focus in the era of AI was +91 for original investigations/on-the-ground reporting, +82 for contextual analysis (explanation, framing), and \u221242 for service journalism."
+  ],
+  "published_date": "",
+  "publisher": "Reuters Institute",
+  "schema_version": "1.0",
+  "source_identity_status": "resolved",
+  "source_metadata_hash": "26d7a47b028b4a772e56ca737780a7b373a7d074d98a4b829243ba4b914d12d4",
+  "source_note": "Source: Reuters Institute \u2014 Trends and Predictions 2026",
+  "source_publication_date_status": "unknown",
+  "source_title": "Trends and Predictions 2026",
+  "source_url": "https://reutersinstitute.politics.ox.ac.uk/journalism-media-and-technology-trends-and-predictions",
+  "title": "JANUARY 2026",
+  "title_scale": "short",
+  "tldr_compact": "Google organic-search traffic to more than 2,500 sites fell 33% globally from November 2024 to November 2025.",
+  "tldr_standard": "Chartbeat aggregate data show Google traffic from organic search to more than 2,500 sites fell 33% globally from November 2024 to November 2025."
+}

@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "internet_and_media",
+      "generative_ai",
+      "technology",
+      "business_performance",
+      "trust"
+    ],
+    "primary_tags": [
+      "internet_and_media",
+      "generative_ai",
+      "technology"
+    ],
+    "secondary_tags": [
+      "business_performance",
+      "trust"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "internet_and_media",
+        "tier": "primary",
+        "section_label": "Executive Summary",
+        "evidence": "Examines journalism, news publishing, audience reach, and changes in traffic and distribution."
+      },
+      {
+        "tag": "generative_ai",
+        "tier": "primary",
+        "section_label": "Latest Tales of AI in the Newsroom",
+        "evidence": "Covers generative AI in news gathering, newsroom automation, packaging, and distribution."
+      },
+      {
+        "tag": "technology",
+        "tier": "primary",
+        "section_label": "What’s Next in Technology?",
+        "evidence": "Surveys technology trends and predictions affecting journalism and news organisations."
+      },
+      {
+        "tag": "business_performance",
+        "tier": "secondary",
+        "section_label": "Changing Business Models and Barriers to Innovation",
+        "evidence": "Discusses publisher revenue, subscriptions, licensing, and business prospects."
+      },
+      {
+        "tag": "trust",
+        "tier": "secondary",
+        "section_label": "AI Slop, Deep-Fakes, and Misinformation",
+        "evidence": "Addresses misinformation, synthetic media, verification, and digital provenance."
+      }
+    ],
+    "region": "",
+    "time_period": "2026",
+    "not_found_reason": null
+  }
+}

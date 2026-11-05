@@ -1,0 +1,2961 @@
+{
+  "schema_version": "1.4",
+  "artifact_hash": "d5045da75c83d588db5c19481075b7561f592bcbaec4b3243a52d5ca4cc951e6",
+  "package_hash": "b99fbb0e5884bf5601f6979befaf99484a606d7711e57f1ed1a59733497bf32f",
+  "results": [
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:risk-pe-pipeline-outlook",
+        "source_family": "evidence_pack:findings",
+        "text": "The report says private equity dealmakers are significantly more likely than corporate dealmakers to expect M&A pipeline activity to increase relative to 2025; corporates are described as having a more measured outlook, with fewer anticipating a material acceleration in deal volume.",
+        "text_hash": "a8719c91676984514b4c6411e74b5b9d57a9c35be57e7c87f73be767c60e9d30",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:15",
+            "source_pack": "source_pdf",
+            "page": 15,
+            "text_hash": "4b773ecf7e7717a4a6e9b2aa9adef0248b5a34f246a1b4d77814dbee497dc62d"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly states that private equity dealmakers are significantly more likely to expect M&A pipeline activity to increase relative to 2025, while corporates have a more measured outlook and fewer expect material acceleration."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly states that private equity dealmakers are significantly more likely to expect M&A pipeline activity to increase relative to 2025, while corporates have a more measured outlook and fewer expect material acceleration.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:risk-deal-size-under-1b",
+        "source_family": "evidence_pack:findings",
+        "text": "The report says the majority of anticipated transactions fall below the US$1B threshold, describing the expected rebound as led by mid-sized deals rather than megadeals.",
+        "text_hash": "0ede159b117f53047052295053081decf966c7ef1169c7e16e5fe64de77150db",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:16",
+            "source_pack": "source_pdf",
+            "page": 16,
+            "text_hash": "b4976aafd720248f15873de8c1bd75c5dfb74986ca4dee45a8a36056ccf6a394"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence states most anticipated transactions fall below US$1B and describes the rebound as led by mid-sized deals rather than megadeals."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "1000000000.0",
+            "evidence_value": "0.0, 1.0, 1000000000.0, 10000000000.0, 11.0, 13.0, 16.0, 20.0, 2026000000.0, 250000000.0, 29.0, 3.0, 32.0, 33.0, 4.0, 5.0, 50.0, 500000000.0, 5000000000.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count",
+            "evidence_value": "count, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "global, us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence states most anticipated transactions fall below US$1B and describes the rebound as led by mid-sized deals rather than megadeals.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:risk-geographic-divergence",
+        "source_family": "evidence_pack:findings",
+        "text": "The report describes private equity optimism as strongest in the US, while dealmakers outside the US—particularly corporates—face greater uncertainty related to growth, regulation and geopolitical exposure.",
+        "text_hash": "19a27f9e21ecbc42211bc9188ceb3c98045121edc9fd1ffb5694679f1771bd42",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:16",
+            "source_pack": "source_pdf",
+            "page": 16,
+            "text_hash": "b4976aafd720248f15873de8c1bd75c5dfb74986ca4dee45a8a36056ccf6a394"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence says private equity optimism is strongest in the US and dealmakers outside the US, particularly corporates, face greater growth, regulatory and geopolitical uncertainty."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "global, us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence says private equity optimism is strongest in the US and dealmakers outside the US, particularly corporates, face greater growth, regulatory and geopolitical uncertainty.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:deal-types-full-business",
+        "source_family": "evidence_pack:findings",
+        "text": "For “Types of deals under consideration — corporate vs. private equity,” acquisition of a full business is listed at 62% for corporate respondents and 69% for private equity respondents.",
+        "text_hash": "9224342f003848507bf4ec56e9c0d424964419ead28c5a14dbfee9d35911ab46",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:17",
+            "source_pack": "source_pdf",
+            "page": 17,
+            "text_hash": "a5571867ec3d87161ae22cab3d1d38a152237fa60bc2e2910f548cfa254f2d51"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence lists full-business acquisitions at 62% for corporate and 69% for private equity respondents."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "62.0, 69.0",
+            "evidence_value": "10.0, 11.0, 12.0, 14.0, 15.0, 17.0, 18.0, 2026000000.0, 21.0, 23.0, 29.0, 3.0, 32.0, 33.0, 34.0, 4.0, 46.0, 49.0, 5.0, 50.0, 55.0, 6.0, 62.0, 69.0, 7.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "private equity",
+            "evidence_value": "private equity as risk appetites diverge",
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence lists full-business acquisitions at 62% for corporate and 69% for private equity respondents.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:deal-types-carveout",
+        "source_family": "evidence_pack:findings",
+        "text": "For “Types of deals under consideration — corporate vs. private equity,” carve-out acquisitions are listed at 21% for corporate respondents and 55% for private equity respondents, a displayed difference of +34 pts.",
+        "text_hash": "0d5715fcd1968d4560b8ee2835424e23d256f8bcf12e8269093c1d197582d2dc",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:17",
+            "source_pack": "source_pdf",
+            "page": 17,
+            "text_hash": "a5571867ec3d87161ae22cab3d1d38a152237fa60bc2e2910f548cfa254f2d51"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence lists carve-out acquisitions at 21% and 55%, with a displayed difference of +34 pts."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "21.0, 34.0, 55.0",
+            "evidence_value": "10.0, 11.0, 12.0, 14.0, 15.0, 17.0, 18.0, 2026000000.0, 21.0, 23.0, 29.0, 3.0, 32.0, 33.0, 34.0, 4.0, 46.0, 49.0, 5.0, 50.0, 55.0, 6.0, 62.0, 69.0, 7.0",
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, percent",
+            "evidence_value": "count, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "private equity",
+            "evidence_value": "private equity as risk appetites diverge",
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence lists carve-out acquisitions at 21% and 55%, with a displayed difference of +34 pts.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:deal-types-minority-majority",
+        "source_family": "evidence_pack:findings",
+        "text": "For “Types of deals under consideration — corporate vs. private equity,” minority-to-majority investments are listed at 18% for corporate respondents and 50% for private equity respondents, a displayed difference of +32 pts.",
+        "text_hash": "85849585447574b1731c0054451605e9b1ec46b5cc5db8ba8905c14b1e9e1ae5",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:17",
+            "source_pack": "source_pdf",
+            "page": 17,
+            "text_hash": "a5571867ec3d87161ae22cab3d1d38a152237fa60bc2e2910f548cfa254f2d51"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence lists minority-to-majority investments at 18% and 50%, with a displayed difference of +32 pts."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 32.0, 50.0",
+            "evidence_value": "10.0, 11.0, 12.0, 14.0, 15.0, 17.0, 18.0, 2026000000.0, 21.0, 23.0, 29.0, 3.0, 32.0, 33.0, 34.0, 4.0, 46.0, 49.0, 5.0, 50.0, 55.0, 6.0, 62.0, 69.0, 7.0",
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, percent",
+            "evidence_value": "count, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "private equity",
+            "evidence_value": "private equity as risk appetites diverge",
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence lists minority-to-majority investments at 18% and 50%, with a displayed difference of +32 pts.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:ai-agent-human-decision",
+        "source_family": "evidence_pack:findings",
+        "text": "The report describes an AI agent performing multi-step diligence on customer concentration—including modeling risk, benchmarking, drafting diligence material and flagging anomalies—while the human reviews and decides.",
+        "text_hash": "f07c9037162e3a74465a19a0106f47dbd47ebf317ea3ce6b25e574bf3d9671de",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:26",
+            "source_pack": "source_pdf",
+            "page": 26,
+            "text_hash": "a64bd1642834993419c82c17fed78ac39b9afab75a157b35ab3c27dc50a60f27"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence describes the agent performing multi-step customer-concentration diligence and the human reviewing and deciding."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence describes the agent performing multi-step customer-concentration diligence and the human reviewing and deciding.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:ai-analysis-expansion",
+        "source_family": "evidence_pack:findings",
+        "text": "The report argues that AI’s consequential effect is making categories of analysis that were previously uneconomical viable, rather than only speeding up existing analysis.",
+        "text_hash": "638dce216bedb8dd4f6fae384b89197997c26242c53a4c02ac14a7cf76cf6cd7",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:26",
+            "source_pack": "source_pdf",
+            "page": 26,
+            "text_hash": "a64bd1642834993419c82c17fed78ac39b9afab75a157b35ab3c27dc50a60f27"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence says AI makes previously uneconomical analysis viable and distinguishes this from merely speeding up existing analysis."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence says AI makes previously uneconomical analysis viable and distinguishes this from merely speeding up existing analysis.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:ai-deployment-series",
+        "source_family": "evidence_pack:findings",
+        "text": "The chart “Where organizations are deploying agentic AI across M&A processes” displays 56% for due diligence & valuation, 53% for deal sourcing & strategy, 45% for post-merger acquisition, 40% for deal execution, 39% for regulatory compliance & risk monitoring, and 31% for stakeholder comms & change management.",
+        "text_hash": "afc6f25631c36b5c8429f8212bdf08f8a5b9ae840b1045e27a9b1acd12f03dd0",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:27",
+            "source_pack": "source_pdf",
+            "page": 27,
+            "text_hash": "a2d9d2195f43950da5479259e710fe85601e3ed82f5d459bc26c0019c2824755"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly shows all six percentages and their corresponding M&A process categories."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "31.0, 39.0, 40.0, 45.0, 53.0, 56.0",
+            "evidence_value": "18.0, 2026000000.0, 27.0, 31.0, 39.0, 40.0, 45.0, 5.0, 53.0, 56.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, time, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly shows all six percentages and their corresponding M&A process categories.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:ai-early-execution-readiness",
+        "source_family": "evidence_pack:findings",
+        "text": "The report says AI is making execution readiness and execution gaps visible before close, and that identifying risks and dependencies during diligence and pre-close planning reduces tolerance for execution failures.",
+        "text_hash": "afba3b72ded39dec6121dc03bc82c2fdfbd6ad38ef8cbbb46f0169f1182e45a7",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:28",
+            "source_pack": "source_pdf",
+            "page": 28,
+            "text_hash": "04200ada2daea97a4e2e18ca931482fe645ade8f7229d706abc7c8acb5a5446a"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly says AI makes execution readiness and gaps visible before close, and that surfacing risks and dependencies during diligence and pre-close planning lowers tolerance for execution failures."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly says AI makes execution readiness and gaps visible before close, and that surfacing risks and dependencies during diligence and pre-close planning lowers tolerance for execution failures.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:ai-market-repricing",
+        "source_family": "evidence_pack:findings",
+        "text": "The report states that in early 2026 software and knowledge-services stocks lost nearly $1 trillion in market value over a matter of weeks, and says the change reflected the multiple assigned to future cash flows rather than collapsing revenues.",
+        "text_hash": "2684202f4072fc34ae069a7261afd4e58f122929ced4bd6a09d8a0f02154991c",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:28",
+            "source_pack": "source_pdf",
+            "page": 28,
+            "text_hash": "04200ada2daea97a4e2e18ca931482fe645ade8f7229d706abc7c8acb5a5446a"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly states that nearly $1 trillion in market value declined over weeks in early 2026 and attributes the shift to changed multiples for future cash flows, not collapsing revenues."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "1000000000000.0",
+            "evidence_value": "1000000000000.0, 2026000000.0, 28.0, 5.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency",
+            "evidence_value": "count, currency",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "down",
+            "evidence_value": "down, up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly states that nearly $1 trillion in market value declined over weeks in early 2026 and attributes the shift to changed multiples for future cash flows, not collapsing revenues.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:five-drivers-strategic-focus",
+        "source_family": "evidence_pack:findings",
+        "text": "Organizations are sharpening portfolio focus to concentrate capital, capabilities and management attention where they believe they can build durable advantage in a more complex global environment.",
+        "text_hash": "bc51cbad5ed7deeba020ddacaac363613f0753dbdb89d6dfe7f63143e5378bda",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:9",
+            "source_pack": "source_pdf",
+            "page": 9,
+            "text_hash": "b22189ad4f3af45501087a92e49e2ad7c7d9e390b12ec24e5cf557bec8212dfd"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly supports the statement about sharpening portfolio focus and concentrating capital, capabilities and management attention."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly supports the statement about sharpening portfolio focus and concentrating capital, capabilities and management attention.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:five-drivers-diverging-risk-appetites",
+        "source_family": "evidence_pack:findings",
+        "text": "Private equity firms and corporate acquirers are approaching deal volume, structure and timing differently, reshaping competition for assets and influencing how transactions are executed.",
+        "text_hash": "6240bced74c491f5d9d1c5de74ca1837392efb7e1f26f19c40c15ca3b65f8c0a",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:9",
+            "source_pack": "source_pdf",
+            "page": 9,
+            "text_hash": "b22189ad4f3af45501087a92e49e2ad7c7d9e390b12ec24e5cf557bec8212dfd"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly supports the statement about differing deal volume, structure and timing among private equity firms and corporate acquirers."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly supports the statement about differing deal volume, structure and timing among private equity firms and corporate acquirers.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:five-drivers-portfolio-simplification",
+        "source_family": "evidence_pack:findings",
+        "text": "Carve-outs, separations and staged ownership structures are increasingly being used to accelerate growth, unlock value and enable more focused operating models.",
+        "text_hash": "3e1ec4873481b5d6ac413cc8089b919c3a3f1b124606a65727d3a977e6f878c9",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:9",
+            "source_pack": "source_pdf",
+            "page": 9,
+            "text_hash": "b22189ad4f3af45501087a92e49e2ad7c7d9e390b12ec24e5cf557bec8212dfd"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly supports the statement about carve-outs, separations and staged ownership being used to unlock value and focus operating models."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly supports the statement about carve-outs, separations and staged ownership being used to unlock value and focus operating models.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:ai-new-categories-of-analysis",
+        "source_family": "evidence_pack:findings",
+        "text": "AI makes previously uneconomical analysis viable, making entirely new categories of analysis worth doing.",
+        "text_hash": "670bff6a85b8318f273d732bf64d2085883742e74cf116f66a3839cd4a927e0e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:26",
+            "source_pack": "source_pdf",
+            "page": 26,
+            "text_hash": "a64bd1642834993419c82c17fed78ac39b9afab75a157b35ab3c27dc50a60f27"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence explicitly says entirely new categories of analysis become worth doing."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence explicitly says entirely new categories of analysis become worth doing.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:ai-agent-customer-concentration-diligence",
+        "source_family": "evidence_pack:findings",
+        "text": "An AI agent tasked with customer-concentration diligence can model risk under multiple scenarios, compare it with sector benchmarks, draft the relevant diligence-report section and flag anomalies, while the human reviews and decides and the agent executes.",
+        "text_hash": "a975ff454fd33dc922d20492d1cfbe657fcc340e1018e524762e8ac0a17ad1dd",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:26",
+            "source_pack": "source_pdf",
+            "page": 26,
+            "text_hash": "a64bd1642834993419c82c17fed78ac39b9afab75a157b35ab3c27dc50a60f27"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence lists the agent’s risk modeling, benchmarking, report drafting, and anomaly flagging, with the human reviewing and deciding."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence lists the agent’s risk modeling, benchmarking, report drafting, and anomaly flagging, with the human reviewing and deciding.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:ai-contract-review-and-integration-monitoring",
+        "source_family": "evidence_pack:findings",
+        "text": "Examples of AI-enabled work include clause-by-clause comparison across hundreds of agreements and continuous tracking of separation dependencies, TSA milestones and performance indicators.",
+        "text_hash": "a3ebde6fe96db2d2a5f271a9fec8996a85c186c1d530e33eda5efa1605074904",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:26",
+            "source_pack": "source_pdf",
+            "page": 26,
+            "text_hash": "a64bd1642834993419c82c17fed78ac39b9afab75a157b35ab3c27dc50a60f27"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence describes clause-by-clause comparison across hundreds of agreements and continuous tracking of integration dependencies, TSA milestones, and performance indicators."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence describes clause-by-clause comparison across hundreds of agreements and continuous tracking of integration dependencies, TSA milestones, and performance indicators.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-001",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Execution capability has become the defining factor in M&A outcomes.",
+        "text_hash": "f91bc497881607cba17aef133a0904acae14d66a2d8cb209c9a8b7e7850e410f",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:2",
+            "source_pack": "source_pdf",
+            "page": 2,
+            "text_hash": "2376f77c2e40735a93a4b1a48de2a4d507e2b397760ddf48836840f070a792e1"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence states this sentence verbatim."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence states this sentence verbatim.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-002",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Over successive deal cycles, evidence has shown that M&A outcomes are shaped as much by execution capability as by strategic intent.",
+        "text_hash": "caa95250e88b76f2f8204b5c5b617c1701868af3452782d8da0e2590dcf2731c",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:2",
+            "source_pack": "source_pdf",
+            "page": 2,
+            "text_hash": "2376f77c2e40735a93a4b1a48de2a4d507e2b397760ddf48836840f070a792e1"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence states this sentence verbatim."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence states this sentence verbatim.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-003",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "As deal complexity rises, execution risk has become a primary determinant of value creation, particularly for transactions involving separation, transformation and ongoing portfolio reshaping.",
+        "text_hash": "fed474353992345e11acfd90f7654c6375f39e264843aa5d306f4d999150564a",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:31",
+            "source_pack": "source_pdf",
+            "page": 31,
+            "text_hash": "215006a100078c678041a7c8457d982828e9fd22eeb8ba9c930b5d53fe3b7b4f"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text appears verbatim in the evidence snippet."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text appears verbatim in the evidence snippet.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-004",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "The AI itself is rarely the bottleneck. The more complex challenge is codifying the unwritten rules, institutional shortcuts and tacit knowledge that experienced practitioners carry in their heads.",
+        "text_hash": "1f54a5d0e42404be78676285e7fbf5e4a4e5c03dee286622374f39fed3bcb5f6",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:27",
+            "source_pack": "source_pdf",
+            "page": 27,
+            "text_hash": "a2d9d2195f43950da5479259e710fe85601e3ed82f5d459bc26c0019c2824755"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly states that AI is rarely the bottleneck and identifies codifying unwritten rules, shortcuts, and tacit knowledge as the challenge."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly states that AI is rarely the bottleneck and identifies codifying unwritten rules, shortcuts, and tacit knowledge as the challenge.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-005",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Organizations that capture the most value will likely be those that make their deal processes legible to machines — not just automate them.",
+        "text_hash": "62413a02861405f67d957a6b1383bdbe7fa74472ddafef05b3c19ce0d26e430e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:27",
+            "source_pack": "source_pdf",
+            "page": 27,
+            "text_hash": "a2d9d2195f43950da5479259e710fe85601e3ed82f5d459bc26c0019c2824755"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly supports making deal processes legible to machines, rather than merely automating them."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly supports making deal processes legible to machines, rather than merely automating them.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-006",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "AI is now automating significant portions of read, write and increasingly verify. What remains decisively human is think: the application of judgment, context and experience.",
+        "text_hash": "cfae4b1ec2afad5ab8e2904e0b23602f26086a91b453fd0bb149609d4fde21e2",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:24",
+            "source_pack": "source_pdf",
+            "page": 24,
+            "text_hash": "505b73b5642bc3c6b026e9e9bf99ed5f87b7ae35f96bb1f194476e5df7c16709"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text appears verbatim in the evidence snippet."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text appears verbatim in the evidence snippet.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    }
+  ],
+  "readiness_status": "awaiting_review",
+  "unsupported_factual_count": 0,
+  "unresolved_factual_count": 0,
+  "deterministic_pass_count": 0,
+  "semantic_validation_count": 23,
+  "semantic_execution_identities": [
+    "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+  ],
+  "validation_identity": null,
+  "lineage": null
+}

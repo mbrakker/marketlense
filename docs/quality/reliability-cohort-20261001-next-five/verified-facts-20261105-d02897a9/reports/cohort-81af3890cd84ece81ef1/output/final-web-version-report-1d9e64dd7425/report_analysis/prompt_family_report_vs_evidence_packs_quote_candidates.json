@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/quote_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "quote_candidates": [
+      {
+        "id": "quote-1",
+        "text": "Inflation and tariffs have shifted consumers to value-seeking behavior. They actively compare prices across platforms, look for discounts and loyalty benefits, and trade down to private labels or affordable brands. We also see smaller pack sizes gaining traction and multi-brand baskets becoming common. Loyalty is now conditional, driven by better deals, faster delivery, and personalized rewards.",
+        "source": "Final-Web-Version-Report-Consumer-Trends-2026.pdf — Neha Donald, Senior Director of Global Strategy, Transformation and Innovation, PepsiCo",
+        "page": 16
+      },
+      {
+        "id": "quote-2",
+        "text": "Affordability cannot come at the expense of efficacy. Consumers expect both, they actively compare products, scrutinize ingredient lists, and demand transparency before making decisions. In short, today’s definition of value means delivering quality and trust at every price point.",
+        "source": "Final-Web-Version-Report-Consumer-Trends-2026.pdf — Edwin Taborda, Global Chief Consumer & Market Intelligence Officer, L'Oreal Consumer Products Division",
+        "page": 29
+      },
+      {
+        "id": "quote-3",
+        "text": "Quick commerce is no longer a metro phenomenon, it’s democratizing speed across India. Today, 25% of quick commerce spending comes from mid to low-affluent consumers in Tier 2 and Tier 3 towns. These customers are willing to pay a little extra for faster delivery, signaling that convenience and immediacy are becoming universal expectations.",
+        "source": "Final-Web-Version-Report-Consumer-Trends-2026.pdf — Priyanka Bhargav, Head of Insights and Brand Strategy, Flipkart",
+        "page": 12
+      },
+      {
+        "id": "quote-4",
+        "text": "Pricing remains one of the biggest challenges for FMCG. Beyond rising commodity and supply-chain costs, brands must also navigate retailer margin pressure, increased price transparency, and highly price-sensitive consumers. While some cost increases have to be passed on, this only works where shoppers continue to perceive strong brand value and clear product efficacy.",
+        "source": "Final-Web-Version-Report-Consumer-Trends-2026.pdf — Alex Owens, former VP, Global Head of PDC’s, Analytics, Shopping Insight & Executive Sponsor of Unilever’s LGBTQI+ Network",
+        "page": 24
+      },
+      {
+        "id": "quote-5",
+        "text": "Your core brand promise should remain the same, but the way you deliver it must adapt. Ten years ago, a TV commercial might have been enough. Today, social media dominates, and the challenge is to stay authentic while evolving your channel mix.",
+        "source": "Final-Web-Version-Report-Consumer-Trends-2026.pdf — Nikos Bartzoulianos, Group Chief Marketing Officer, Electrolux (2024–2025)",
+        "page": 49
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "quote_candidates",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

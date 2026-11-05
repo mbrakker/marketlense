@@ -1,0 +1,158 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/context_category_fit",
+  "family_schema_version": "2.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "selected_category_ids": [
+      "business_performance"
+    ],
+    "category_fits": [
+      {
+        "category_id": "business_performance",
+        "label": "Business Performance & Growth",
+        "fit_score": 0.78,
+        "decision": "primary",
+        "why_fit": "The report is presented as a global mobile-app performance benchmark, repeatedly reporting installs, sessions, retention, and consumer spending with year-over-year and regional comparisons across gaming, e-commerce, and finance.",
+        "why_not_fit": "It benchmarks app outcomes rather than profitability, margins, or unit economics, and the app verticals remain important parts of the report.",
+        "evidence_sections": [
+          "Introduction: Evolution and opportunity in the mobile app industry",
+          "Key takeaways & methodology",
+          "Finding and keeping users"
+        ],
+        "semantic_rule_status": "supported",
+        "supported_topic_rules": [
+          "Evidence repeatedly emphasizes growth, revenue, margin, productivity, performance ranking, or strategic business levers.",
+          "The report is meant to guide business performance decisions, not just describe category trends."
+        ],
+        "supported_topic_rule_ids": [
+          "business_performance:include:3fe298416b703617",
+          "business_performance:include:ec3517286d7b97e7"
+        ],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [
+          "Introduction: Evolution and opportunity in the mobile app industry",
+          "Key takeaways & methodology",
+          "Finding and keeping users"
+        ],
+        "centrality_evidence_sections": [
+          "Introduction: Evolution and opportunity in the mobile app industry",
+          "Key takeaways & methodology",
+          "Finding and keeping users"
+        ],
+        "remediation_signal": "No dedicated mobile-app category is available in the supplied profiles; this is the closest fit because performance benchmarking is the report's organizing lens."
+      },
+      {
+        "category_id": "measurement_attribution",
+        "label": "Measurement & Attribution",
+        "fit_score": 0.43,
+        "decision": "reject",
+        "why_fit": "The introduction discusses cross-channel attribution and the report uses Adjust data to compare app installs and sessions over time.",
+        "why_not_fit": "The report primarily presents performance results; it does not center on attribution design, incrementality, causal evaluation, or measurement governance.",
+        "evidence_sections": [
+          "Introduction: Evolution and opportunity in the mobile app industry",
+          "Mobile-first approach evolves into multi-platform strategy",
+          "Key takeaways & methodology"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Reject when metrics are only supporting evidence inside a domain report."
+        ],
+        "rejected_topic_rule_ids": [
+          "measurement_attribution:exclude:f41d528d822930b7"
+        ],
+        "rule_evidence_sections": [
+          "Key takeaways & methodology",
+          "Mobile-first approach evolves into multi-platform strategy"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": "Attribution is discussed as a measurement challenge and recommendation, not the report's main subject."
+      },
+      {
+        "category_id": "ai_automation",
+        "label": "AI & Automation",
+        "fit_score": 0.36,
+        "decision": "reject",
+        "why_fit": "One section discusses AI assistants, predictive audience segmentation, generative AI, and automation in marketing workflows.",
+        "why_not_fit": "The report's central purpose is mobile-app performance benchmarking; AI is a forward-looking supporting theme, and the context notes uneven organizational maturity.",
+        "evidence_sections": [
+          "AI transforms from strategic tool to core infrastructure in 2026",
+          "Introduction: Evolution and opportunity in the mobile app industry"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Reject when AI is only one enabler inside a broader media, technology, or vertical-market report."
+        ],
+        "rejected_topic_rule_ids": [
+          "ai_automation:exclude:1e73dca27527e17c"
+        ],
+        "rule_evidence_sections": [
+          "AI transforms from strategic tool to core infrastructure in 2026",
+          "Key takeaways & methodology"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": "AI is a secondary marketing theme, not the report's central topic."
+      },
+      {
+        "category_id": "advertising_media",
+        "label": "Advertising Strategy & Media",
+        "fit_score": 0.32,
+        "decision": "reject",
+        "why_fit": "The introduction references channel diversification, marketing themes, and cross-channel attribution, while the gaming analysis includes acquisition and install-cost patterns.",
+        "why_not_fit": "The report does not primarily analyze media planning, advertising investment, or media effectiveness; its core content is app installs, sessions, retention, and spending.",
+        "evidence_sections": [
+          "Introduction: Evolution and opportunity in the mobile app industry",
+          "Finding and keeping users"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Reject when media appears only as one route inside a broader consumer or business trends report."
+        ],
+        "rejected_topic_rule_ids": [
+          "advertising_media:exclude:dd740214afbdc03d"
+        ],
+        "rule_evidence_sections": [
+          "Introduction: Evolution and opportunity in the mobile app industry",
+          "Finding and keeping users"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": "Marketing and acquisition topics are included, but advertising strategy is not the report's organizing subject."
+      },
+      {
+        "category_id": "omni_channel",
+        "label": "Omni-Channel Marketing",
+        "fit_score": 0.29,
+        "decision": "reject",
+        "why_fit": "A section describes customer journeys across mobile web, desktop, apps, and other channels, and recommends cross-platform measurement and deep linking.",
+        "why_not_fit": "This is a supporting discussion within a report focused on mobile-app benchmarks, not a report centered on coordinated marketing planning and activation across channels.",
+        "evidence_sections": [
+          "Mobile-first approach evolves into multi-platform strategy",
+          "Introduction: Evolution and opportunity in the mobile app industry"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Reject when one media channel or commerce platform is clearly the dominant focus."
+        ],
+        "rejected_topic_rule_ids": [
+          "omni_channel:exclude:dd52da0f2e02f0f1"
+        ],
+        "rule_evidence_sections": [
+          "Mobile-first approach evolves into multi-platform strategy",
+          "Key takeaways & methodology"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": "Cross-platform journeys are a section-level recommendation rather than the report's main focus."
+      }
+    ]
+  }
+}

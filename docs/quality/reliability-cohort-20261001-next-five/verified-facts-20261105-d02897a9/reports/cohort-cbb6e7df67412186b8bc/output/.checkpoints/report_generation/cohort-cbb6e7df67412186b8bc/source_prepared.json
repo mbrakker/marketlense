@@ -1,0 +1,245 @@
+{
+  "artifact_refs": {
+    "analysis_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+    "contents_image": "",
+    "source_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf"
+  },
+  "completed_at_utc": "2026-11-05T20:07:14.031916+00:00",
+  "file_id": "cohort-cbb6e7df67412186b8bc",
+  "payload": {
+    "artifact_integrity": {
+      "files": {
+        "analysis_pdf": {
+          "md5": "cbb6e7df67412186b8bc094a424ac890",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 6203358
+        },
+        "source_pdf": {
+          "md5": "cbb6e7df67412186b8bc094a424ac890",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 6203358
+        }
+      },
+      "schema_version": "1.0"
+    },
+    "artifact_lineage": {
+      "analysis_pdf": "art_cffde239f5095eb69bcd330153ce6239da0bf01dd5a9da2dce1750732061a18f",
+      "source_pdf": "art_74ac6ab26893e2b250f6aacec8f3194b723f48004aa792c42f9e49d6e2f57beb"
+    },
+    "artifact_registry": {
+      "refs": [
+        {
+          "artifact_id": "source_pdf",
+          "content_hash": "cbb6e7df67412186b8bc094a424ac890",
+          "created_at_utc": "2026-11-05T20:07:13.967940+00:00",
+          "kind": "source_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+          "producer_step": "source_prepared",
+          "required": true,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "analysis_pdf",
+          "content_hash": "cbb6e7df67412186b8bc094a424ac890",
+          "created_at_utc": "2026-11-05T20:07:13.967940+00:00",
+          "kind": "analysis_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+          "producer_step": "source_prepared",
+          "required": true,
+          "schema_version": "1.0"
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    "prompt_family_materializations": {},
+    "schema_version": "1.0",
+    "source": {
+      "analysis_pdf_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "contents_heading": "",
+      "contents_image": "",
+      "contents_page_number": 0,
+      "info_response": {
+        "metadata": {
+          "CreationDate": "D:20231016194447Z",
+          "Creator": "Keynote",
+          "ModDate": "D:20231016124626-07'00'",
+          "Producer": "macOS Version 12.6.8 (Build 21G725) Quartz PDFContext",
+          "Title": "Activate Technology & Media Outlook 2018"
+        },
+        "page_count": 140,
+        "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "schema_version": "1.0"
+      },
+      "ocr_fallback_used": false,
+      "ocr_pdf_path": "",
+      "payload": {
+        "_contents_image": "",
+        "_evidence_packs": {},
+        "_figure_assets": [],
+        "_figure_gallery": [],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "",
+        "_text_char_count": 3753,
+        "_text_density": 750.6,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "",
+        "contents_page_number": 0,
+        "figure": {
+          "evidence": "",
+          "schema_version": "1.0",
+          "title": ""
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "October 17, 2017",
+        "tldr": "Not available from text"
+      },
+      "schema_version": "1.0",
+      "text_response": {
+        "char_count": 3753,
+        "pages": [
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 1,
+            "text": "www.activate.com\nOctober 17, 2017\nACTIVATE TECH & MEDIA OUTLOOK 2018"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 2,
+            "text": "www.activate.com  1\nWelcome to Activate\u2019s Tech and Media Outlook 2018 \n2018 will be a pivotal year for technology and media businesses; these are the major forces that \nwill create growth opportunities and reshape companies in the year ahead. \n  \nEach year, as part of the Wall Street Journal D.Live Conference, we take a deep dive into some of \nthe major consumer trends, technology innovations, and industry dynamics that will predict what \nis going to happen next and what it will mean. \n  \nWe are excited to share our third annual Outlook, and hope you will enjoy it for many of its \nsurprising and unexpected insights. From the trajectory of smart speakers, to the future of reality \ncomputing (AR/VR), to the global eCommerce business, we\u2019ve uncovered key insights and likely \ntrends. There is also an extensive evaluation of the creators who drive billions of web video views, \na hard look at the news business, and a view into the likely price wars ahead in streaming video. \nForecasts include how consumers will spend their tech and media time, the next wave of internet \nand media revenues, and the rise of Super Users \u2013 who will be critical to acquire and retain. \n  \nOn each slide you will \ufb01nd extensive analysis, drawing on proprietary industry research and large-\nscale surveys representing the U.S. population. \n  \nWe know you\u2019ll \ufb01nd the results both provocative and useful, and look forward to a lively \ndiscussion. \n  \nLet\u2019s see where tech and media are headed! \nThe Activate Team "
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 3,
+            "text": "www.activate.com\n  2\nThe Most Important Insights for Tech and Media in 2018\n$300 Billion in Tech and Media Growth Dollars 3\nThere are 31 Hours in a Day 7\nSuper Users: A Lot More Time, a Lot More Money 12\nSmart Speaker Battles are about the Great Digital Assistant Wars 18\nReality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform 33\nBig Influencers and Media Brands will Rule Web Video 49\nPremium Video: The Chase for Television Viewers and Television Dollars 62\nSports is the Ultimate Moat 80\nNews Brands will Beat Fake News (Spread by Fake Friends) 93\neCommerce: More than Two Trillion Dollars To Go 111\nIn an Era of Voice Control, Look to Podcasting to Engage Users 124\nPAGE"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 4,
+            "text": "www.activate.com\n  3\nThe Most Important Insights for Tech and Media in 2018\n$300 Billion in Tech and Media Growth Dollars 3\nThere are 31 Hours in a Day 7\nSuper Users: A Lot More Time, a Lot More Money 12\nSmart Speaker Battles are about the Great Digital Assistant Wars 18\nReality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform 33\nBig Influencers and Media Brands will Rule Web Video 49\nPremium Video: The Chase for Television Viewers and Television Dollars 62\nSports is the Ultimate Moat 80\nNews Brands will Beat Fake News (Spread by Fake Friends) 93\neCommerce: More than Two Trillion Dollars To Go 111\nIn an Era of Voice Control, Look to Podcasting to Engage Users 124\nPAGE"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 5,
+            "text": "CONSUMER\n1. Consumer Internet and Media Revenues include radio, recorded music, magazine publishing, newspaper publishing, video \ngames, filmed entertainment, book publishing, TV subscription and licensing fees, Internet access, digital advertising, and \ntraditional advertising on these platforms. \nSources: Activate analysis, eMarketer, GroupM, IBISWorld, IFPI, International Monetary Fund, NewZoo, \nPricewaterhouseCoopers, RBC, World Bank, ZenithOptimedia\nWe forecast that over the next four years, global Internet and media \nrevenues will grow by approximately $300 billion, continuing to \noutpace GDP growth\n 4\nCONSUMER INTERNET AND MEDIA REVENUES1, GLOBAL, 2017E-2021E, USD\n2017E 2021E\n$1.7T\n$2.0T$302B\nGROWTH \nDOLLARS\nCAGR 4.1%\nGlobal GDP CAGR: ~3%\nFORECAST\nACTIVATE"
+          }
+        ],
+        "pages_extracted": 5,
+        "schema_version": "1.0",
+        "text": "www.activate.com\nOctober 17, 2017\nACTIVATE TECH & MEDIA OUTLOOK 2018\n\nwww.activate.com  1\nWelcome to Activate\u2019s Tech and Media Outlook 2018 \n2018 will be a pivotal year for technology and media businesses; these are the major forces that \nwill create growth opportunities and reshape companies in the year ahead. \n  \nEach year, as part of the Wall Street Journal D.Live Conference, we take a deep dive into some of \nthe major consumer trends, technology innovations, and industry dynamics that will predict what \nis going to happen next and what it will mean. \n  \nWe are excited to share our third annual Outlook, and hope you will enjoy it for many of its \nsurprising and unexpected insights. From the trajectory of smart speakers, to the future of reality \ncomputing (AR/VR), to the global eCommerce business, we\u2019ve uncovered key insights and likely \ntrends. There is also an extensive evaluation of the creators who drive billions of web video views, \na hard look at the news business, and a view into the likely price wars ahead in streaming video. \nForecasts include how consumers will spend their tech and media time, the next wave of internet \nand media revenues, and the rise of Super Users \u2013 who will be critical to acquire and retain. \n  \nOn each slide you will \ufb01nd extensive analysis, drawing on proprietary industry research and large-\nscale surveys representing the U.S. population. \n  \nWe know you\u2019ll \ufb01nd the results both provocative and useful, and look forward to a lively \ndiscussion. \n  \nLet\u2019s see where tech and media are headed! \nThe Activate Team \n\nwww.activate.com\n  2\nThe Most Important Insights for Tech and Media in 2018\n$300 Billion in Tech and Media Growth Dollars 3\nThere are 31 Hours in a Day 7\nSuper Users: A Lot More Time, a Lot More Money 12\nSmart Speaker Battles are about the Great Digital Assistant Wars 18\nReality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform 33\nBig Influencers and Media Brands will Rule Web Video 49\nPremium Video: The Chase for Television Viewers and Television Dollars 62\nSports is the Ultimate Moat 80\nNews Brands will Beat Fake News (Spread by Fake Friends) 93\neCommerce: More than Two Trillion Dollars To Go 111\nIn an Era of Voice Control, Look to Podcasting to Engage Users 124\nPAGE\n\nwww.activate.com\n  3\nThe Most Important Insights for Tech and Media in 2018\n$300 Billion in Tech and Media Growth Dollars 3\nThere are 31 Hours in a Day 7\nSuper Users: A Lot More Time, a Lot More Money 12\nSmart Speaker Battles are about the Great Digital Assistant Wars 18\nReality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform 33\nBig Influencers and Media Brands will Rule Web Video 49\nPremium Video: The Chase for Television Viewers and Television Dollars 62\nSports is the Ultimate Moat 80\nNews Brands will Beat Fake News (Spread by Fake Friends) 93\neCommerce: More than Two Trillion Dollars To Go 111\nIn an Era of Voice Control, Look to Podcasting to Engage Users 124\nPAGE\n\nCONSUMER\n1. Consumer Internet and Media Revenues include radio, recorded music, magazine publishing, newspaper publishing, video \ngames, filmed entertainment, book publishing, TV subscription and licensing fees, Internet access, digital advertising, and \ntraditional advertising on these platforms. \nSources: Activate analysis, eMarketer, GroupM, IBISWorld, IFPI, International Monetary Fund, NewZoo, \nPricewaterhouseCoopers, RBC, World Bank, ZenithOptimedia\nWe forecast that over the next four years, global Internet and media \nrevenues will grow by approximately $300 billion, continuing to \noutpace GDP growth\n 4\nCONSUMER INTERNET AND MEDIA REVENUES1, GLOBAL, 2017E-2021E, USD\n2017E 2021E\n$1.7T\n$2.0T$302B\nGROWTH \nDOLLARS\nCAGR 4.1%\nGlobal GDP CAGR: ~3%\nFORECAST\nACTIVATE",
+        "text_density": 750.6
+      },
+      "text_status": {
+        "char_count": 3753,
+        "density_threshold": 250.0,
+        "low_confidence_pages": [],
+        "native_confidence_score": 1.0,
+        "native_confidence_threshold": 0.55,
+        "native_density_confidence_score": 1.0,
+        "native_page_confidence_threshold": 0.35,
+        "native_sample_confidence_score": 1.0,
+        "native_text_density": 750.6,
+        "native_text_not_available": false,
+        "not_available": false,
+        "ocr_policy": "native_first_selective",
+        "ocr_recommendation_reason": "",
+        "ocr_recommended": false,
+        "pages_sampled": 5,
+        "reason": "",
+        "schema_version": "1.0",
+        "text_density": 750.6
+      },
+      "text_validation_pages": [
+        11,
+        50,
+        85
+      ],
+      "text_validation_reason": "",
+      "text_validation_status": "pass",
+      "title_resolution": {
+        "candidate_source": "cover_title_page",
+        "candidates": [
+          {
+            "evidence": "page:1",
+            "page_number": 1,
+            "schema_version": "1.0",
+            "score": 1128.0,
+            "source": "cover_title_page",
+            "value": "October 17, 2017"
+          },
+          {
+            "evidence": "page:3",
+            "page_number": 3,
+            "schema_version": "1.0",
+            "score": 845.0,
+            "source": "repeated_header_title",
+            "value": "The Most Important Insights for Tech and Media in 2018"
+          },
+          {
+            "evidence": "document_metadata",
+            "page_number": 0,
+            "schema_version": "1.0",
+            "score": 335.0,
+            "source": "document_metadata",
+            "value": "Activate Technology & Media Outlook 2018"
+          }
+        ],
+        "confidence": "high",
+        "edition": "2017",
+        "evidence": [
+          "page:1"
+        ],
+        "explicit_source_title": "October 17, 2017",
+        "issues": [],
+        "publisher_candidate": "Activate",
+        "schema_version": "1.0",
+        "title": "October 17, 2017"
+      }
+    }
+  },
+  "pipeline_name": "report_generation",
+  "report_slug": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf",
+  "schema_version": "1.0",
+  "source_run_id": "a85aa794-c4d4-4bed-a19d-baa617b43606",
+  "source_task_id": "workflow_job:1f4da0c4-d89f-4ea6-80a4-07d011173b81",
+  "stage_name": "source_prepared",
+  "stage_status": "completed"
+}

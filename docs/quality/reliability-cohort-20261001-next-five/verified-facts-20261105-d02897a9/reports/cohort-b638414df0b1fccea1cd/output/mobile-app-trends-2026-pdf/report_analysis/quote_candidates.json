@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "quote_candidates": [
+    {
+      "id": "q1",
+      "text": "In 2026, sustainable app growth will depend on capturing user journeys across web, app, and other connected environments. It’s no longer sufficient to view users in device silos when we know that conversion is influenced by multiple touchpoints.",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 14
+    },
+    {
+      "id": "q2",
+      "text": "With user acquisition costs at a premium, the focus has moved from adding partners to identifying which channels deliver users with the highest proven or predicted lifetime value (pLTV).",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 23
+    },
+    {
+      "id": "q3",
+      "text": "Data is still the foundation, but the bar for quality has been raised.",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 40
+    },
+    {
+      "id": "q4",
+      "text": "In 2026, the playbook of chasing one channel at a time or pursuing isolated metrics doesn't work anymore.",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 40
+    },
+    {
+      "id": "q5",
+      "text": "The next phase of growth is architectural, not because of any single tool, but because of how these capabilities work together.",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 40
+    },
+    {
+      "id": "q6",
+      "text": "Teams that build this kind of foundation—integrated, adaptable, and accountable—will be best positioned to navigate the complexity of 2026 and help define what success looks like in a multi-platform world.",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 40
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "quote_candidates",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "methods": [
+    "The report’s findings are based on a global survey of corporate respondents."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "methods",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

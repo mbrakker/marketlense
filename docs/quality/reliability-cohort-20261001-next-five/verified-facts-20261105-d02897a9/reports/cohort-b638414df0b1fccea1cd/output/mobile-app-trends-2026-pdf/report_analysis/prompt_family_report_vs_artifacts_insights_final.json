@@ -1,0 +1,378 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_final",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "coverage_role": "market_context",
+      "decision_relevance_score": 0.85,
+      "evidence": "The report states more than 112.1 billion app downloads in 2025, and consumer spending rose 10.6% year over year to $167 billion. Separately, it projects mobile technologies and services to generate 8.4% of global GDP by 2030. The source does not explicitly specify a geography for downloads or the spending figure.",
+      "evidence_id": "verified-fact:mobile-market-downloads-2025",
+      "evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025",
+        "verified-fact:mobile-app-consumer-spending-2025",
+        "verified-fact:intro-mobile-gdp-forecast"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:mobile-market-downloads-2025",
+          "page": 3,
+          "section_id": "introduction",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The introduction directly reports more than 112.1 billion app downloads in 2025. It describes the downloads as having occurred, not as a forecast. The following global qualifier belongs to the separate estimate of unique smartphone users, so the verified statement does not infer a geography for downloads."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:mobile-app-consumer-spending-2025",
+          "page": 3,
+          "section_id": "introduction",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The page’s introduction states that in 2025 consumer spending “rose 10.6% YoY to $167 billion.” The stated year, increase, year-over-year comparison, and endpoint match the claim. The report context is the mobile app industry; no specific geography is attached to this spending figure in the sentence."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:intro-mobile-gdp-forecast",
+          "page": 3,
+          "section_id": "introduction",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The introductory paragraph says mobile technologies and services are “set to generate 8.4% of global GDP by 2030.” The wording supports the corrected claim as a projection for the global GDP share, not as an observed outcome."
+        }
+      ],
+      "id": "mobile-market-downloads-2025",
+      "metric": {
+        "cohort": "Not stated",
+        "confidence": "Not stated",
+        "denominator": "Global GDP for the projection; otherwise not stated",
+        "geography": "Not specified for downloads or spending; global for GDP projection",
+        "label": "Mobile-app market scale and outlook",
+        "observation_status": "2025 figures reported; 2030 figure forecast",
+        "sample_size": "Not stated",
+        "segment": "Mobile apps; mobile technologies and services",
+        "subject": "App downloads, consumer spending, and mobile technologies' GDP contribution",
+        "timeframe": "2025; projection by 2030",
+        "trend": "Spending rose year over year; GDP contribution is projected",
+        "unit": "downloads; USD; percent",
+        "value": "More than 112.1 billion downloads; consumer spending $167 billion, up 10.6%; projected GDP share 8.4%"
+      },
+      "metric_public_copy": "In 2025, consumer spending in the mobile-app market rose 10.6% year over year to $167 billion.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.7,
+      "now_what": "Use these as market context while distinguishing reported outcomes from the 2030 projection.",
+      "pages": [
+        3
+      ],
+      "report_type_lens": "market_size",
+      "score": 0.9,
+      "so_what": "The report pairs reported 2025 activity and spending with a separate longer-term economic projection.",
+      "text": "The report records more than 112.1 billion app downloads in 2025 and mobile-app-market consumer spending up 10.6% year over year to $167 billion; separately, mobile technologies and services are projected to generate 8.4% of global GDP by 2030."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.9,
+      "evidence": "The report reports global e-commerce installs down 10% year over year and sessions up 5% in 2025, and global finance installs down 4% and sessions up 21%. The underlying denominator and sample size are not stated.",
+      "evidence_id": "verified-fact:global-ecommerce-finance-install-session-divergence",
+      "evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:global-ecommerce-finance-install-session-divergence",
+          "page": 27,
+          "section_id": "e-commerce-shopping-apps",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The page’s narrative explicitly reports that global e-commerce app installs fell 10% YoY in 2025 while sessions increased 5%. Its accompanying chart is titled “E-commerce app install and session growth” and identifies the geography as Global, supporting both metric labels, directions, values, period, and geography."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:global-ecommerce-finance-install-session-divergence",
+          "page": 34,
+          "section_id": "finance-apps",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The page’s narrative explicitly reports that finance app installs dropped 4% YoY in 2025 while sessions rose 21%. The accompanying chart title specifies finance app install and session growth and identifies the population as Global, supporting the finance figures and their geography."
+        }
+      ],
+      "id": "global-ecommerce-finance-install-session-divergence",
+      "metric": {
+        "cohort": "Global e-commerce apps; global finance apps",
+        "confidence": "Not stated",
+        "denominator": "Year-over-year comparison; underlying denominator not stated",
+        "geography": "Global",
+        "label": "Year-over-year change in app installs and sessions",
+        "observation_status": "Reported as observed",
+        "sample_size": "Not stated",
+        "segment": "E-commerce apps and finance apps",
+        "subject": "App installs and sessions",
+        "timeframe": "2025 year over year",
+        "trend": "Installs declined while sessions increased in both categories",
+        "unit": "percent",
+        "value": "E-commerce installs: -10%; e-commerce sessions: +5%; finance installs: -4%; finance sessions: +21%"
+      },
+      "metric_public_copy": "In 2025, global e-commerce installs fell 10% while sessions rose 5%; global finance installs fell 4% while sessions rose 21%, year over year.",
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.8,
+      "now_what": "Track installs and sessions as separate measures when assessing category performance.",
+      "pages": [
+        27,
+        34
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.9,
+      "so_what": "Install and session trends diverged in both categories, so acquisition volume alone does not describe reported usage.",
+      "text": "In 2025, global e-commerce app installs fell 10% year over year while sessions rose 5%; global finance app installs fell 4% year over year while sessions rose 21%."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.88,
+      "evidence": "The chart identifies global gaming app install and session growth by subvertical for 2024–2025. Its legend distinguishes installs from sessions, and the values support the subvertical-specific directions and figures stated here.",
+      "evidence_id": "verified-fact:gaming-subvertical-growth-divergence",
+      "evidence_ids": [
+        "verified-fact:gaming-subvertical-growth-divergence"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:gaming-subvertical-growth-divergence",
+          "page": 19,
+          "section_id": "gaming-apps",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart title specifies gaming app install and session growth by subvertical, YoY 2024–2025, Global. Its legend labels green bars as Installs and purple bars as Sessions. The values adjacent to Casual’s bars are 19% and 37%; Strategy’s are -1% and 57%; Casino’s are 22% and -5%; and Slots’ are 46% and -5%, respectively. Thus the corrected claim assigns the values to the right metrics and subverticals, including the declines."
+        }
+      ],
+      "id": "gaming-subvertical-growth-divergence",
+      "metric": {
+        "cohort": "Casual, Strategy, Casino, and Slots subverticals",
+        "confidence": "Not stated",
+        "denominator": "Corresponding 2024 value for each metric",
+        "geography": "Global",
+        "label": "Gaming app install and session growth by subvertical",
+        "observation_status": "Reported historical year-over-year growth; not identified as a forecast",
+        "sample_size": "Not stated",
+        "segment": "Gaming subverticals",
+        "subject": "Gaming app installs and sessions",
+        "timeframe": "Year over year, 2024–2025",
+        "trend": "Varies by subvertical and metric",
+        "unit": "percent growth",
+        "value": "Casual: installs 19%, sessions 37%; Strategy: installs -1%, sessions 57%; Casino: installs 22%, sessions -5%; Slots: installs 46%, sessions -5%"
+      },
+      "metric_public_copy": "Global gaming installs/sessions were Casual +19%/+37%, Strategy -1%/+57%, Casino +22%/-5%, and Slots +46%/-5% year over year, 2024–2025.",
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.85,
+      "now_what": "Compare installs and sessions at the subvertical level rather than relying on a single gaming-wide growth rate.",
+      "pages": [
+        19
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.88,
+      "so_what": "Aggregate gaming results can obscure differences between subverticals and between acquisition and engagement.",
+      "text": "Globally, gaming app install and session growth varied by subvertical year over year from 2024 to 2025: Casual installs grew 19% and sessions 37%; Strategy installs declined 1% while sessions grew 57%; Casino installs grew 22% while sessions declined 5%; and Slots installs grew 46% while sessions declined 5%."
+    },
+    {
+      "coverage_role": "strategic_risk",
+      "decision_relevance_score": 0.9,
+      "evidence": "The page reports minimal change in global all-games retention from 2024 to 2025, with day 1 retention at 27% and day 30 at 5%. Separately, it reports global gaming app CPI at $0.56 in 2025, up 30%.",
+      "evidence_id": "verified-fact:gaming-retention-and-cpi",
+      "evidence_ids": [
+        "verified-fact:gaming-retention-and-cpi"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:gaming-retention-and-cpi",
+          "page": 21,
+          "section_id": "gaming-finding-keeping-users",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The retention chart is titled “Gaming app retention rates 2024 - 2025 (Global)” and distinguishes All from Hyper casual in its legend. The adjacent narrative states minimal change from 2024 to 2025 and gives all-games day 1 retention as 27% and day 30 as 5%. The same page's global gaming CPI chart is titled “Gaming app CPI 2024 - 2025 (Global),” and its narrative reports CPI at $0.56 in 2025, up 30%."
+        }
+      ],
+      "id": "gaming-retention-and-cpi",
+      "metric": {
+        "cohort": "All games for retention; overall gaming app CPI",
+        "confidence": "Not stated",
+        "denominator": "Not stated",
+        "geography": "Global",
+        "label": "Gaming app retention rates and CPI",
+        "observation_status": "Reported historical results; not identified as forecasts",
+        "sample_size": "Not stated",
+        "segment": "All games for retention; gaming apps overall for CPI",
+        "subject": "Gaming app retention and CPI",
+        "timeframe": "Retention: 2024–2025; CPI: 2025 compared with 2024",
+        "trend": "Retention showed minimal change; CPI increased 30%",
+        "unit": "percent; USD per install",
+        "value": "Day 1 retention 27%; day 30 retention 5%; 2025 CPI $0.56, up 30%"
+      },
+      "metric_public_copy": "Global gaming app CPI was $0.56 in 2025, up 30%; all-games day 1 and day 30 retention were 27% and 5%.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.78,
+      "now_what": "Assess retention and CPI together when evaluating gaming acquisition efficiency.",
+      "pages": [
+        21
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.86,
+      "so_what": "The report presents nearly unchanged all-games retention alongside rising gaming acquisition cost as distinct engagement and cost signals.",
+      "text": "Globally, all-games gaming app retention showed minimal change from 2024 to 2025: day 1 retention was 27% and day 30 retention was 5%. Global gaming app CPI rose to $0.56 in 2025, up 30%."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.88,
+      "evidence": "The global e-commerce CPI chart identifies the All and Deal discovery categories and the 2024 and 2025 values. The report states that overall e-commerce CPI moved from $1.00 to $0.98, while deal discovery moved from $1.44 to $2.26.",
+      "evidence_id": "verified-fact:ecommerce-cpi-subvertical-divergence",
+      "evidence_ids": [
+        "verified-fact:ecommerce-cpi-subvertical-divergence"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:ecommerce-cpi-subvertical-divergence",
+          "page": 29,
+          "section_id": "e-commerce-finding-keeping-users",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The CPI chart is titled “E-commerce app CPI 2024–2025 (Global),” with categories “All” and “Deal discovery” and a legend identifying 2024 and 2025. The accompanying narrative explicitly reports that global e-commerce app CPI moved from $1 to $0.98 and deal discovery CPI from $1.44 to $2.26. The values therefore belong to the named categories and years, supporting the overall decline and deal-discovery increase."
+        }
+      ],
+      "id": "ecommerce-cpi-subvertical-divergence",
+      "metric": {
+        "cohort": "Global e-commerce apps; deal discovery is a category within the CPI chart",
+        "confidence": "Values stated in the page narrative and shown in the CPI chart",
+        "denominator": "Per install",
+        "geography": "Global",
+        "label": "Cost per install (CPI)",
+        "observation_status": "Reported historical values",
+        "sample_size": "Not stated",
+        "segment": "All e-commerce apps and deal discovery",
+        "subject": "E-commerce app CPI",
+        "timeframe": "2024 to 2025",
+        "trend": "Declined for all global e-commerce apps; increased for deal discovery",
+        "unit": "USD per install",
+        "value": "All global e-commerce apps: $1.00 to $0.98; deal discovery: $1.44 to $2.26"
+      },
+      "metric_public_copy": "Global e-commerce CPI was $0.98 in 2025, down from $1.00; deal discovery CPI was $2.26, up from $1.44.",
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.82,
+      "now_what": "Review CPI by e-commerce subcategory when evaluating acquisition costs and budget allocation.",
+      "pages": [
+        29
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.84,
+      "so_what": "Deal discovery CPI moved in the opposite direction from the all-e-commerce figure.",
+      "text": "Global e-commerce app CPI declined from $1.00 in 2024 to $0.98 in 2025, while deal discovery CPI increased from $1.44 to $2.26 over the same period."
+    },
+    {
+      "coverage_role": "proof_point",
+      "decision_relevance_score": 0.9,
+      "evidence": "The report gives LATAM finance-app install and session growth as 76% and 57% year over year for 2024–2025. Finance-app session length increased globally 8% to 7.18 minutes in 2025; North America was the highest region at 8.43 minutes, LATAM rose to 5.87 minutes, and APAC, Europe, and MENA declined by the stated values from 2024 to 2025.",
+      "evidence_id": "verified-fact:finance-latam-growth",
+      "evidence_ids": [
+        "verified-fact:finance-latam-growth",
+        "verified-fact:finance-session-length-pattern"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:finance-latam-growth",
+          "page": 35,
+          "section_id": "finance-finding-keeping-users",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart title specifies finance app install and session growth percentages YoY for 2024–2025. At the LATAM category, the blue bar mapped by the legend to Installs is labeled 76%, while the green bar mapped to Sessions is 57%. The adjacent text independently gives the same LATAM values and identifies them as YoY growth."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:finance-session-length-pattern",
+          "page": 36,
+          "section_id": "finance-finding-keeping-users",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The page is headed “Finance app session lengths 2024 - 2025”; its 2024/2025 legend and regional labels identify the comparison. The adjacent text explicitly reports the global increase to 7.18 minutes (up 8%), North America at 8.43 minutes, LATAM advancing to 5.87 minutes, and declines in APAC (7.07 to 6.94), Europe (5.77 to 5.62), and MENA (6.61 to 6.39). These are finance-app session-length figures, not the separate Day 0 session-per-user chart on the right."
+        }
+      ],
+      "id": "finance-latam-growth",
+      "metric": {
+        "cohort": "Finance apps by region",
+        "confidence": "Not stated",
+        "denominator": "Not stated",
+        "geography": "LATAM; Global; North America; APAC; Europe; MENA",
+        "label": "Finance app install, session, and session-length indicators",
+        "observation_status": "Reported historical comparisons",
+        "sample_size": "Not stated",
+        "segment": "Finance apps",
+        "subject": "Finance app installs, sessions, and session length",
+        "timeframe": "2024–2025; global session length and regional 2025 values reported for 2025",
+        "trend": "LATAM installs and sessions grew; global session length increased; APAC, Europe, and MENA session lengths declined",
+        "unit": "percent growth; minutes per session",
+        "value": "LATAM installs +76%, sessions +57%; global session length 7.18 minutes, up 8%; North America 8.43; LATAM 5.87; APAC 7.07 to 6.94; Europe 5.77 to 5.62; MENA 6.61 to 6.39"
+      },
+      "metric_public_copy": "LATAM finance installs grew 76% and sessions 57% YoY; global session length reached 7.18 minutes in 2025, up 8%.",
+      "metric_strength_score": 0.92,
+      "novelty_score": 0.86,
+      "now_what": "Compare finance performance by region and metric rather than treating a single regional result as representative.",
+      "pages": [
+        35,
+        36
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.87,
+      "so_what": "Finance indicators vary by both region and measure; strong LATAM growth coexists with differing regional session-length patterns.",
+      "text": "Finance indicators varied by region and measure: in 2024–2025, LATAM finance-app installs grew 76% and sessions 57%; finance-app session length increased globally 8% to 7.18 minutes in 2025. North America had the highest regional session length at 8.43 minutes, while LATAM rose to 5.87 minutes and session length declined in APAC from 7.07 to 6.94 minutes, Europe from 5.77 to 5.62 minutes, and MENA from 6.61 to 6.39 minutes."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.92,
+      "evidence": "The report recommends linking cross-channel attribution to removing blind spots and exposing trends, AI insights to faster and more effective analysis, and next-generation solutions to campaign optimization and confident budget allocation based on aggregated data. It characterizes the data foundation as integrated, adaptable, and accountable; this is a qualitative recommendation, not a measured outcome.",
+      "evidence_id": "verified-fact:measurement-recommendation",
+      "evidence_ids": [
+        "verified-fact:measurement-recommendation"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:measurement-recommendation",
+          "page": 40,
+          "section_id": "conclusion",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The page’s recommendation for app marketers explicitly links cross-channel attribution with removing blind spots and exposing trends, AI insights with faster and more effective analysis, and next-generation solutions with campaign optimization and confident budget allocation based on aggregated data. Its separate description of the foundation as integrated, adaptable, and accountable supports characterizing these capabilities together as that kind of foundation."
+        }
+      ],
+      "id": "measurement-recommendation",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "",
+        "subject": "",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": ""
+      },
+      "metric_public_copy": "",
+      "metric_strength_score": 0.7,
+      "novelty_score": 0.74,
+      "now_what": "Consider an integrated measurement foundation that supports attribution, AI-assisted analysis, optimization, and budget decisions.",
+      "pages": [
+        40
+      ],
+      "report_type_lens": "operations",
+      "score": 0.82,
+      "so_what": "The recommendation connects measurement capabilities to trend visibility, analysis, campaign optimization, and budget allocation.",
+      "text": "The report recommends an integrated, adaptable, and accountable data foundation for app marketers, combining cross-channel attribution to remove blind spots and expose trends, AI insights for faster and more effective analysis, and next-generation solutions for campaign optimization and confident budget allocation based on aggregated data. This is a recommendation, not a measured outcome."
+    }
+  ]
+}

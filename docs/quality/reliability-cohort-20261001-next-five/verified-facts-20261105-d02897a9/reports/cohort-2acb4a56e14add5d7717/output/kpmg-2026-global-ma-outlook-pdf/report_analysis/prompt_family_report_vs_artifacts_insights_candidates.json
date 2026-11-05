@@ -1,0 +1,304 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.95,
+      "evidence": "“Private equity dealmakers are significantly more likely to expect an increase in M&A pipeline activity relative to 2025. By contrast, corporates are approaching the year with a more measured outlook. While many expect to remain active, fewer anticipate a material acceleration in deal volume”",
+      "evidence_id": "risk-pe-pipeline-outlook",
+      "evidence_ids": [
+        "risk-pe-pipeline-outlook"
+      ],
+      "evidence_spans": [],
+      "id": "ma-buyer-pipeline-outlook",
+      "metric": {
+        "cohort": "Private equity dealmakers and corporate dealmakers",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "Expected M&A pipeline activity",
+        "observation_status": "forecast",
+        "sample_size": "",
+        "segment": "Private equity dealmakers vs. corporate dealmakers",
+        "subject": "M&A pipeline activity",
+        "timeframe": "Relative to 2025",
+        "trend": "Increase relative to 2025",
+        "unit": "expectation comparison",
+        "value": "PE dealmakers significantly more likely than corporate dealmakers to expect an increase"
+      },
+      "metric_public_copy": "PE dealmakers are significantly more likely than corporate dealmakers to expect M&A pipeline activity to increase relative to 2025.",
+      "metric_strength_score": 0.8,
+      "novelty_score": 0.78,
+      "now_what": "If planning outreach or a sale process, test demand separately with private equity and corporate buyer groups rather than relying on one blended pipeline assumption.",
+      "pages": [
+        15
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.92,
+      "so_what": "Buyer expectations are not uniform, so a blended pipeline assumption could conceal different outlooks by buyer type.",
+      "text": "Private equity dealmakers are significantly more likely than corporate dealmakers to expect M&A pipeline activity to increase relative to 2025; corporates have a more measured outlook, with fewer anticipating a material acceleration in deal volume."
+    },
+    {
+      "coverage_role": "investment_signal",
+      "decision_relevance_score": 0.91,
+      "evidence": "“The majority of anticipated transactions fall below the US$1B threshold, pointing to a rebound led by mid-sized, execution-intensive deals rather than megadeals.”",
+      "evidence_id": "risk-deal-size-under-1b",
+      "evidence_ids": [
+        "risk-deal-size-under-1b"
+      ],
+      "evidence_spans": [],
+      "id": "ma-anticipated-deal-size",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "Anticipated transaction-size threshold",
+        "observation_status": "forecast",
+        "sample_size": "",
+        "segment": "",
+        "subject": "Anticipated transactions",
+        "timeframe": "",
+        "trend": "Expected rebound described as led by mid-sized deals rather than megadeals",
+        "unit": "US dollars",
+        "value": "Majority below US$1B"
+      },
+      "metric_public_copy": "The majority of anticipated transactions fall below the US$1B threshold.",
+      "metric_strength_score": 0.82,
+      "novelty_score": 0.73,
+      "now_what": "When building an M&A scenario set, consider testing a mid-sized-deal case alongside any megadeal case.",
+      "pages": [
+        16
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.88,
+      "so_what": "The described deal mix gives decision-makers a reason to assess mid-sized transactions separately from megadeal scenarios.",
+      "text": "Survey results indicate that the majority of anticipated transactions fall below the US$1B threshold, with the expected rebound described as led by mid-sized deals rather than megadeals."
+    },
+    {
+      "coverage_role": "strategic_risk",
+      "decision_relevance_score": 0.9,
+      "evidence": "“Private equity optimism is strongest in the US, where capital availability and transaction infrastructure remain comparatively supportive, despite broader global volatility. Outside the US, dealmakers, particularly corporates, face greater uncertainty related to growth, regulation and geopolitical exposure.”",
+      "evidence_id": "risk-geographic-divergence",
+      "evidence_ids": [
+        "risk-geographic-divergence"
+      ],
+      "evidence_spans": [],
+      "id": "ma-geographic-buyer-outlook",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "US; outside the US",
+        "label": "Geographic buyer outlook",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Private equity dealmakers; dealmakers outside the US, particularly corporates",
+        "subject": "Buyer optimism and uncertainty",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": "Private equity optimism strongest in the US; greater uncertainty outside the US, particularly for corporates"
+      },
+      "metric_public_copy": "Private equity optimism is described as strongest in the US; outside the US, particularly corporate dealmakers face greater uncertainty.",
+      "metric_strength_score": 0.55,
+      "novelty_score": 0.81,
+      "now_what": "If sizing a cross-border pipeline, segment the assessment by US versus non-US exposure and buyer type.",
+      "pages": [
+        16
+      ],
+      "report_type_lens": "risk_regulation",
+      "score": 0.86,
+      "so_what": "A single global appetite assumption may obscure differences in outlook and uncertainty across regions and buyer types.",
+      "text": "The report describes private equity optimism as strongest in the US, while dealmakers outside the US, particularly corporates, face greater uncertainty related to growth, regulation and geopolitical exposure."
+    },
+    {
+      "coverage_role": "proof_point",
+      "decision_relevance_score": 0.94,
+      "evidence": "“Types of deals under consideration — corporate vs. private equity. Carve-out acquisitions: 21% (Corporate), 55% (Private equity), +34 pts.”",
+      "evidence_id": "deal-types-carveout",
+      "evidence_ids": [
+        "deal-types-carveout"
+      ],
+      "evidence_spans": [],
+      "id": "ma-carveout-deal-interest",
+      "metric": {
+        "cohort": "Corporate respondents and private equity respondents",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "Carve-out acquisitions under consideration",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Corporate respondents vs. private equity respondents",
+        "subject": "Carve-out acquisitions under consideration",
+        "timeframe": "",
+        "trend": "Displayed difference: +34 pts",
+        "unit": "percent",
+        "value": "21% for corporate respondents vs. 55% for private equity respondents"
+      },
+      "metric_public_copy": "Carve-out acquisitions under consideration: 21% for corporate respondents and 55% for private equity respondents (+34 pts).",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.86,
+      "now_what": "If evaluating a carve-out process, compare outreach and process assumptions separately for corporate and private equity buyers.",
+      "pages": [
+        17
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.91,
+      "so_what": "Buyer type is a useful cut for assessing stated interest in carve-outs rather than assuming uniform interest across groups.",
+      "text": "For deal types under consideration, carve-out acquisitions are listed at 21% for corporate respondents and 55% for private equity respondents, with a displayed difference of +34 pts."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.9,
+      "evidence": "“It is that entirely new categories of analysis become worth doing. Work that was previously uneconomical at traditional analyst-day rates becomes viable at a fraction of prior cost.”",
+      "evidence_id": "ai-analysis-expansion",
+      "evidence_ids": [
+        "ai-analysis-expansion"
+      ],
+      "evidence_spans": [],
+      "id": "ma-ai-expands-analysis-scope",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "AI-enabled analytical scope",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "",
+        "subject": "Categories of analysis",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": "Previously uneconomical analysis becomes viable at a fraction of prior cost"
+      },
+      "metric_public_copy": "AI can make analysis previously uneconomical at traditional analyst-day rates viable at a fraction of prior cost.",
+      "metric_strength_score": 0.48,
+      "novelty_score": 0.91,
+      "now_what": "If reviewing deal workflows, identify analyses previously set aside as uneconomical and assess whether they merit a new cost and feasibility review.",
+      "pages": [
+        26
+      ],
+      "report_type_lens": "technology_shift",
+      "score": 0.88,
+      "so_what": "The report frames AI as expanding the analysis that may be worth doing, not merely accelerating existing work.",
+      "text": "The report argues that AI’s effect is not only faster existing analysis: work previously uneconomical at traditional analyst-day rates becomes viable at a fraction of prior cost."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.9,
+      "evidence": "“It ingests raw data, segments by customer, models concentration risk under multiple scenarios, compares against sector benchmarks, drafts the relevant section of the diligence report and flags anomalies for the deal team’s attention. The human reviews and decides; the agent executes.”",
+      "evidence_id": "ai-agent-human-decision",
+      "evidence_ids": [
+        "ai-agent-human-decision"
+      ],
+      "evidence_spans": [],
+      "id": "ma-ai-agent-human-review",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "Customer-concentration diligence workflow",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "",
+        "subject": "Customer-concentration diligence",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": "Agent executes analysis; human reviews and decides"
+      },
+      "metric_public_copy": "For customer-concentration diligence, the agent executes analysis while the human reviews and decides.",
+      "metric_strength_score": 0.45,
+      "novelty_score": 0.87,
+      "now_what": "If piloting a similar workflow, define the human review and decision point alongside the tasks assigned to the agent.",
+      "pages": [
+        26
+      ],
+      "report_type_lens": "operations",
+      "score": 0.87,
+      "so_what": "The described workflow separates analytical execution from human review and decision-making.",
+      "text": "In a customer-concentration diligence example, an agent models risk under multiple scenarios, compares it with sector benchmarks, drafts diligence material and flags anomalies, while the human reviews and decides."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.92,
+      "evidence": "“A growing number of organizations are finding that AI is making execution readiness visible before close, which means execution gaps are visible as well. When risks, dependencies and value-creation levers are surfaced during diligence and pre-close planning rather than discovered post-close, tolerance for execution failures declines.”",
+      "evidence_id": "ai-early-execution-readiness",
+      "evidence_ids": [
+        "ai-early-execution-readiness"
+      ],
+      "evidence_spans": [],
+      "id": "ma-ai-preclose-readiness",
+      "metric": {
+        "cohort": "Organizations",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "AI-enabled execution-readiness visibility",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "A growing number of organizations",
+        "subject": "Execution readiness and gaps",
+        "timeframe": "Before close",
+        "trend": "",
+        "unit": "",
+        "value": "Execution readiness and gaps visible before close"
+      },
+      "metric_public_copy": "A growing number of organizations are finding that AI makes execution readiness and gaps visible before close.",
+      "metric_strength_score": 0.48,
+      "novelty_score": 0.84,
+      "now_what": "If assessing a transaction, consider bringing execution risks and dependencies into diligence and pre-close planning discussions.",
+      "pages": [
+        28
+      ],
+      "report_type_lens": "operations",
+      "score": 0.88,
+      "so_what": "The report links earlier visibility of execution risks and dependencies with lower tolerance for execution failures.",
+      "text": "A growing number of organizations are finding that AI makes execution readiness and gaps visible before close; the report says surfacing risks, dependencies and value-creation levers during diligence and pre-close planning reduces tolerance for execution failures."
+    },
+    {
+      "coverage_role": "counter_signal",
+      "decision_relevance_score": 0.88,
+      "evidence": "“In early 2026, software and knowledge-services stocks experienced one of the most significant sector-specific repricings in recent years. Nearly $1 trillion in market value declined over a matter of weeks. This shift was not driven by collapsing revenues. Many affected companies reported stable or growing earnings. What changed was the multiple the market was willing to assign to future cash flows.”",
+      "evidence_id": "ai-market-repricing",
+      "evidence_ids": [
+        "ai-market-repricing"
+      ],
+      "evidence_spans": [],
+      "id": "ma-software-valuation-repricing",
+      "metric": {
+        "cohort": "Software and knowledge-services stocks",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "Market-value decline in software and knowledge-services stocks",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "Software and knowledge-services stocks",
+        "subject": "Market value",
+        "timeframe": "Early 2026, over a matter of weeks",
+        "trend": "Decline",
+        "unit": "dollars",
+        "value": "Nearly $1 trillion"
+      },
+      "metric_public_copy": "Software and knowledge-services stocks lost nearly $1 trillion in market value over a matter of weeks in early 2026.",
+      "metric_strength_score": 0.85,
+      "novelty_score": 0.9,
+      "now_what": "If assessing software or knowledge-services assets, stress-test future-cash-flow multiples separately from revenue assumptions.",
+      "pages": [
+        28
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.86,
+      "so_what": "The report distinguishes a repricing of future-cash-flow multiples from collapsing revenues in this sector-specific episode.",
+      "text": "In early 2026, software and knowledge-services stocks lost nearly $1 trillion in market value over a matter of weeks; the report says the shift reflected the multiple assigned to future cash flows rather than collapsing revenues."
+    }
+  ]
+}

@@ -1,0 +1,2006 @@
+{
+  "schema_version": "1.4",
+  "artifact_hash": "f8f3f35f87536bd4386e4a179f678884871e8744258e3ff78cd00cee17c39661",
+  "package_hash": "b90b898b355bada580e0d9dc3bb5c918d878d297b2d8e6e7315beac08882de93",
+  "results": [
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:1",
+        "source_family": "summary",
+        "text": "Activate forecasts footnote-defined global Consumer Internet and Media Revenues to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E, with $302 billion growth and a 4.1% CAGR versus approximately 3% for global GDP.",
+        "text_hash": "66c503dfec7b3ce74473af56755745f4d76949677a38c20c6bb6c062a4a39c07",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:1.claim",
+        "entity_id": "summary_claim:1",
+        "provenance_hash": "33ec783eb1b798c2dc4622f711265e1ed56988a3e6ffa8103667fba0253a04c2"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:2",
+        "source_family": "summary",
+        "text": "Activate forecasts global Consumer Internet and Media Revenues at $2.0 trillion in 2021E.",
+        "text_hash": "08d7cd5aaac2550367cde459deeb89535c2153b9e80f4265a935c733183685f5",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:2.claim",
+        "entity_id": "summary_claim:2",
+        "provenance_hash": "33ec783eb1b798c2dc4622f711265e1ed56988a3e6ffa8103667fba0253a04c2"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:3",
+        "source_family": "summary",
+        "text": "In Activate’s global 2017E–2021E forecast, Cost of Internet access, including fixed broadband, wireless, and mobile Internet access, is projected to increase by $128B, the largest dollar increase among the three listed revenue segments, and to have the highest CAGR at 5.7%.",
+        "text_hash": "c2b4b301e337c540d281f07345029b5bb8726ceab20cbc0f81fcf9d68639f799",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f02",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c051a3bdb258dbf953024693a76d465409370c7f65c8221d030b722d56e0107b"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f02",
+            "source_pack": "findings",
+            "page": 6,
+            "text_hash": "c051a3bdb258dbf953024693a76d465409370c7f65c8221d030b722d56e0107b"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:3.claim",
+        "entity_id": "summary_claim:3",
+        "provenance_hash": "c8c7abf118283038a78fafdff3be6db7f08fe3c50165db69d6377a5c6e514752"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:4",
+        "source_family": "summary",
+        "text": "In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of total video time spent and 34% of total consumer spend, while all other users accounted for 39% of video time spent and 66% of consumer spend.",
+        "text_hash": "1a4b5f91dda0ae5e553f915e0a264402f1fdd0f37941c6c4a0dbc2f7bc759b03",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:4.claim",
+        "entity_id": "summary_claim:4",
+        "provenance_hash": "e5688492580f8cf9c5a13940b1431df547e53978dfa6f66ed206ab692ae16db2"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:5",
+        "source_family": "summary",
+        "text": "In Activate’s 2017 study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to podcast listening.",
+        "text_hash": "cf5670a16f69866e4bf4d3581d5dbb9897f9bc93ea2b78b0ab0d291963030add",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": 129,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:5.claim",
+        "entity_id": "summary_claim:5",
+        "provenance_hash": "df15cacfa84364c0771c8cf1216f2310f8c3b7ca0249fa98c1ef1fdbc9199d58"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:dd5a6c144405b1c0",
+        "source_family": "summary",
+        "text": "Activate forecasts footnote-defined global Consumer Internet and Media Revenues to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E, with $302 billion growth and a 4.1% CAGR versus approximately 3% for global GDP.",
+        "text_hash": "66c503dfec7b3ce74473af56755745f4d76949677a38c20c6bb6c062a4a39c07",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          }
+        ],
+        "affected_section": "summary",
+        "entity_id": "soft_copy:summary:dd5a6c144405b1c0",
+        "provenance_hash": "976970e7572716c8e081dbd2cb6fe6a57b274322d855dc3285f49c8f2cd3c7a3"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:8fa73d7d743fb1ae",
+        "source_family": "summary",
+        "text": "Activate forecasts global Consumer Internet and Media Revenues at $2.0 trillion in 2021E.",
+        "text_hash": "08d7cd5aaac2550367cde459deeb89535c2153b9e80f4265a935c733183685f5",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          }
+        ],
+        "affected_section": "summary",
+        "entity_id": "soft_copy:summary:8fa73d7d743fb1ae",
+        "provenance_hash": "976970e7572716c8e081dbd2cb6fe6a57b274322d855dc3285f49c8f2cd3c7a3"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:dd5a6c144405b1c0",
+        "source_family": "summary",
+        "text": "Activate forecasts footnote-defined global Consumer Internet and Media Revenues to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E, with $302 billion growth and a 4.1% CAGR versus approximately 3% for global GDP.",
+        "text_hash": "66c503dfec7b3ce74473af56755745f4d76949677a38c20c6bb6c062a4a39c07",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          }
+        ],
+        "affected_section": "summary",
+        "entity_id": "soft_copy:summary:dd5a6c144405b1c0",
+        "provenance_hash": "976970e7572716c8e081dbd2cb6fe6a57b274322d855dc3285f49c8f2cd3c7a3"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:8fa73d7d743fb1ae",
+        "source_family": "summary",
+        "text": "Activate forecasts global Consumer Internet and Media Revenues at $2.0 trillion in 2021E.",
+        "text_hash": "08d7cd5aaac2550367cde459deeb89535c2153b9e80f4265a935c733183685f5",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          }
+        ],
+        "affected_section": "summary",
+        "entity_id": "soft_copy:summary:8fa73d7d743fb1ae",
+        "provenance_hash": "976970e7572716c8e081dbd2cb6fe6a57b274322d855dc3285f49c8f2cd3c7a3"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:aff2fee085fbe0b9",
+        "source_family": "summary",
+        "text": "In Activate’s global 2017E–2021E forecast, Cost of Internet access, including fixed broadband, wireless, and mobile Internet access, is projected to increase by $128B, the largest dollar increase among the three listed revenue segments, and to have the highest CAGR at 5.7%.",
+        "text_hash": "c2b4b301e337c540d281f07345029b5bb8726ceab20cbc0f81fcf9d68639f799",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f02",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c051a3bdb258dbf953024693a76d465409370c7f65c8221d030b722d56e0107b"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f02",
+            "source_pack": "findings",
+            "page": 6,
+            "text_hash": "c051a3bdb258dbf953024693a76d465409370c7f65c8221d030b722d56e0107b"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:aff2fee085fbe0b9",
+        "provenance_hash": "6da8d7483d3f7ff4ffc7d6622d73f95bfeab144f985f62f2e97f743897527430"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:26305fb37aaa8f98",
+        "source_family": "summary",
+        "text": "In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of total video time spent and 34% of total consumer spend, while all other users accounted for 39% of video time spent and 66% of consumer spend.",
+        "text_hash": "1a4b5f91dda0ae5e553f915e0a264402f1fdd0f37941c6c4a0dbc2f7bc759b03",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:26305fb37aaa8f98",
+        "provenance_hash": "62be8aa4697e24ca81ad3b7e78f7e7a820c35ab373ffb5444a959bf0f5cab2b5"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:33e06a4e0cf98d82",
+        "source_family": "summary",
+        "text": "In Activate’s 2017 study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to podcast listening.",
+        "text_hash": "cf5670a16f69866e4bf4d3581d5dbb9897f9bc93ea2b78b0ab0d291963030add",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": 129,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:33e06a4e0cf98d82",
+        "provenance_hash": "f9988d82bf5c378b2af2ec7effa3de85d646a23d86daa0943c83684023499222"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:global-revenue-forecast:text",
+        "source_family": "insights_final",
+        "text": "Activate forecasts global Consumer Internet and Media Revenues, as defined in the page’s footnote, to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E. The forecast assigns the category $302 billion in growth and a 4.1% CAGR for 2017E–2021E, compared with approximately 3% for global GDP. Among the three listed revenue segments, Cost of Internet access—including fixed broadband, wireless, and mobile Internet access—is forecast to have the largest dollar increase ($128B) and highest CAGR (5.7%).",
+        "text_hash": "c826c623eebccc5e4a1974182cce98fcbeb437d889573e2933b6613502b10a21",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f02",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c051a3bdb258dbf953024693a76d465409370c7f65c8221d030b722d56e0107b"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f02",
+            "source_pack": "findings",
+            "page": 6,
+            "text_hash": "c051a3bdb258dbf953024693a76d465409370c7f65c8221d030b722d56e0107b"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          }
+        ],
+        "affected_section": "insights:global-revenue-forecast.text",
+        "entity_id": "insight:global-revenue-forecast:text",
+        "provenance_hash": "6135e992447a2640681aa3c26dd8899a23a51e7bc9e0d9449cb16ee92770cc59"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:global-revenue-forecast:metric",
+        "source_family": "insights_final",
+        "text": "label=Consumer Internet and Media Revenues; growth dollars; CAGR subject=Consumer Internet and Media Revenues value=$1.7 trillion (2017E) to $2.0 trillion (2021E); $302 billion growth; 4.1% CAGR; global GDP CAGR approximately 3% unit=USD for revenue and growth; percent per year for CAGRs geography=Global segment=Consumer Internet and Media Revenues cohort=Footnote-defined consumer Internet and media categories denominator=Not stated timeframe=2017E–2021E observation_status=Forecast estimates, not observed outcomes forecast_status=Forecast; years marked E label=Consumer Internet and Media Revenues, 2017E value=$1.7 trillion unit=USD timeframe=2017E geography=Global segment=Consumer Internet and Media Revenues cohort=Footnote-defined consumer Internet and media categories denominator=Not stated observation_status=Forecast estimate label=Consumer Internet and Media Revenues, 2021E value=$2.0 trillion unit=USD timeframe=2021E geography=Global segment=Consumer Internet and Media Revenues cohort=Footnote-defined consumer Internet and media categories denominator=Not stated observation_status=Forecast estimate label=Growth dollars value=$302 billion unit=USD timeframe=2017E–2021E geography=Global segment=Consumer Internet and Media Revenues cohort=Footnote-defined consumer Internet and media categories denominator=Not stated observation_status=Forecast-derived growth label=Consumer Internet and Media Revenues CAGR value=4.1% unit=Percent per year timeframe=2017E–2021E geography=Global segment=Consumer Internet and Media Revenues cohort=Footnote-defined consumer Internet and media categories denominator=Not stated observation_status=Forecast-derived CAGR label=Global GDP CAGR comparison value=Approximately 3% unit=Percent per year timeframe=2017E–2021E geography=Global segment=Global GDP cohort=Not specified denominator=Not stated observation_status=Forecast comparison stated on the page",
+        "text_hash": "8fe00d8c9a0b0592e4569cacecb2a1ad8630fd5c92bdd6287c7911bf9068a601",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f02",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c051a3bdb258dbf953024693a76d465409370c7f65c8221d030b722d56e0107b"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f02",
+            "source_pack": "findings",
+            "page": 6,
+            "text_hash": "c051a3bdb258dbf953024693a76d465409370c7f65c8221d030b722d56e0107b"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          }
+        ],
+        "affected_section": "insights:global-revenue-forecast.metric",
+        "entity_id": "insight:global-revenue-forecast:metric",
+        "provenance_hash": "6135e992447a2640681aa3c26dd8899a23a51e7bc9e0d9449cb16ee92770cc59"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:video-attention-spend:text",
+        "source_family": "insights_final",
+        "text": "In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of total video time spent and 34% of total consumer spend. All other users accounted for 39% of video time spent and 66% of consumer spend.",
+        "text_hash": "2dcf84ba086e16caf24ffb89181555f6e42ce3cf1bae433d1ad5f3920c643190",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:video-attention-spend",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "04f17957f359af80fa4692eeb42c0d6a43601b6f5f008879b6c73fc3425f0249"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:video-attention-spend",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "04f17957f359af80fa4692eeb42c0d6a43601b6f5f008879b6c73fc3425f0249"
+          }
+        ],
+        "affected_section": "insights:video-attention-spend.text",
+        "entity_id": "insight:video-attention-spend:text",
+        "provenance_hash": "ed17dc56cd4178a255d97aec1e8c3158ab6f5d3dc69c19313068eb054973cdcf"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:video-attention-spend:metric",
+        "source_family": "insights_final",
+        "text": "label=Share of total video time spent and share of total consumer spend subject=Video time spent and consumer spend value=61% of video time spent; 34% of consumer spend unit=percent of total geography=U.S. segment=Top 25% of users cohort=Top 25% of users with 4.5+ hours of daily video attention denominator=Total video time spent for the time metric; total consumer spend for the spend metric timeframe=2017 observation_status=Study-reported 2017 shares forecast_status=Not identified as a forecast label=Top 25% of users' share of time spent value=61% unit=percent of total video time spent timeframe=2017 geography=U.S. segment=Top 25% of users cohort=Users with 4.5+ hours of daily video attention denominator=Total video time spent observation_status=Study-reported label=Top 25% of users' share of consumer spend value=34% unit=percent of total consumer spend timeframe=2017 geography=U.S. segment=Top 25% of users cohort=Users with 4.5+ hours of daily video attention denominator=Total consumer spend observation_status=Study-reported",
+        "text_hash": "60905202c0164ce08f69298811a8ae823120cf47982e07ac3bb6250321fe61a0",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:video-attention-spend",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "04f17957f359af80fa4692eeb42c0d6a43601b6f5f008879b6c73fc3425f0249"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:video-attention-spend",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "04f17957f359af80fa4692eeb42c0d6a43601b6f5f008879b6c73fc3425f0249"
+          }
+        ],
+        "affected_section": "insights:video-attention-spend.metric",
+        "entity_id": "insight:video-attention-spend:metric",
+        "provenance_hash": "ed17dc56cd4178a255d97aec1e8c3158ab6f5d3dc69c19313068eb054973cdcf"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:sports-fan-segment-shares:text",
+        "source_family": "insights_final",
+        "text": "In Activate’s 2017 Consumer Tech & Media Research Study (n=2,406), Super Fans, defined as watching 10+ hours of sports content per week, were reported as 27% of fans and 61% of hours; Social Fans, defined as watching sports content only as a social activity, were reported as 10% of fans and 6% of hours. Separately, in the U.S. in 2017, 31% of sports viewers (more than five hours of sports programming per week) cited Broadcast as a cord-cutter substitution option and 21% cited Virtual Pay TV; among non-sports viewers (no sports programming on a regular basis), the respective shares were 21% and 15% (Activate study, n=1,172).",
+        "text_hash": "1cbcdc98d86b83f1d19d2f047b87509ec054896c5e8957ab0ec10e82107cae52",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:broadcast-cord-cutter-preference",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "0a30cdf45fdbff43a75285fba1ba5abc15380f32103859fa86dfe3d9258c450e"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:broadcast-cord-cutter-preference",
+            "source_pack": "findings",
+            "page": 70,
+            "text_hash": "0a30cdf45fdbff43a75285fba1ba5abc15380f32103859fa86dfe3d9258c450e"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:sports-fan-segment-shares",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "9445070d3bcb4aede3118b44528b6c842a3e175c531f85ba235ee6fc41d85c5e"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:sports-fan-segment-shares",
+            "source_pack": "findings",
+            "page": 84,
+            "text_hash": "9445070d3bcb4aede3118b44528b6c842a3e175c531f85ba235ee6fc41d85c5e"
+          }
+        ],
+        "affected_section": "insights:sports-fan-segment-shares.text",
+        "entity_id": "insight:sports-fan-segment-shares:text",
+        "provenance_hash": "c47ecec8e51ac206084dc7b75a3deaaa71076d6fe2e6a58a03066152e128d66c"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:sports-fan-segment-shares:metric",
+        "source_family": "insights_final",
+        "text": "label=Fan-segment share of fans and share of hours subject=Sports fans and their sports-content viewing value=Super Fans: 27% of fans and 61% of hours; Social Fans: 10% of fans and 6% of hours unit=percent geography=Not stated segment=Super Fans; Social Fans cohort=Super Fans watch 10+ hours of sports content per week; Social Fans watch sports content only as a social activity denominator=Fans for the 'of fans' figures; hours for the 'of hours' figures timeframe=Activate 2017 study; specific fieldwork period not stated observation_status=Study-reported findings forecast_status=Observed/reported, not a forecast label=Super Fans — of fans value=27% unit=percent timeframe=Activate 2017 study; specific fieldwork period not stated geography=Not stated segment=Super Fans cohort=Watches 10+ hours of sports content per week denominator=Fans observation_status=Study-reported finding label=Super Fans — of hours value=61% unit=percent timeframe=Activate 2017 study; specific fieldwork period not stated geography=Not stated segment=Super Fans cohort=Watches 10+ hours of sports content per week denominator=Hours observation_status=Study-reported finding label=Social Fans — of fans value=10% unit=percent timeframe=Activate 2017 study; specific fieldwork period not stated geography=Not stated segment=Social Fans cohort=Watches sports content only as a social activity denominator=Fans observation_status=Study-reported finding label=Social Fans — of hours value=6% unit=percent timeframe=Activate 2017 study; specific fieldwork period not stated geography=Not stated segment=Social Fans cohort=Watches sports content only as a social activity denominator=Hours observation_status=Study-reported finding",
+        "text_hash": "f37e392089ebe9da0d7c6cc3b0ff64609d2730d273f9302ad7c57c4659bf9f4e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:broadcast-cord-cutter-preference",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "0a30cdf45fdbff43a75285fba1ba5abc15380f32103859fa86dfe3d9258c450e"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:broadcast-cord-cutter-preference",
+            "source_pack": "findings",
+            "page": 70,
+            "text_hash": "0a30cdf45fdbff43a75285fba1ba5abc15380f32103859fa86dfe3d9258c450e"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:sports-fan-segment-shares",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "9445070d3bcb4aede3118b44528b6c842a3e175c531f85ba235ee6fc41d85c5e"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:sports-fan-segment-shares",
+            "source_pack": "findings",
+            "page": 84,
+            "text_hash": "9445070d3bcb4aede3118b44528b6c842a3e175c531f85ba235ee6fc41d85c5e"
+          }
+        ],
+        "affected_section": "insights:sports-fan-segment-shares.metric",
+        "entity_id": "insight:sports-fan-segment-shares:metric",
+        "provenance_hash": "c47ecec8e51ac206084dc7b75a3deaaa71076d6fe2e6a58a03066152e128d66c"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:consumer-vr-adoption-outlook:text",
+        "source_family": "insights_final",
+        "text": "Activate forecasts that VR will not reach scaled global adoption by 2021E; the consumer adoption chart measures users as a percentage of global population over 2016–2021E and is modeled after seventh-generation gaming consoles. The page lists limited applications outside gaming, an immersive but non-social experience, and inability to move beyond a confined area as barriers to mass adoption. The page does not numerically define the threshold for “scaled” adoption.",
+        "text_hash": "c00957850f878ca62de032a5ce9a13a1f2aa114f38452e396a4b9267d7a0d94f",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:consumer-vr-adoption-outlook",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "9aa02631777e0dce6840d2ba7d25d19d4abd0601deb183da5dcc4ac0d1c8f0c1"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:consumer-vr-adoption-outlook",
+            "source_pack": "findings",
+            "page": 42,
+            "text_hash": "9aa02631777e0dce6840d2ba7d25d19d4abd0601deb183da5dcc4ac0d1c8f0c1"
+          }
+        ],
+        "affected_section": "insights:consumer-vr-adoption-outlook.text",
+        "entity_id": "insight:consumer-vr-adoption-outlook:text",
+        "provenance_hash": "7106879e3308bbdbc4319e4553381e02e34a29c42b12038750d7c28974a7ddef"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:news-trust-comparison:text",
+        "source_family": "insights_final",
+        "text": "In 2017, news readers in each of the five selected countries reported a higher perceived-trustworthiness share for News Media than for Social Media.",
+        "text_hash": "7fb3bacb603035ed2bd5050cf3221faaa40d69e603a2a7f0344fe1aacacdb785",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:news-trust-comparison",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "029d4e72952f7e67a3f8a789033dfe8a8b083581f4f7e07a0a949c2983bc52ab"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:news-trust-comparison",
+            "source_pack": "findings",
+            "page": 101,
+            "text_hash": "029d4e72952f7e67a3f8a789033dfe8a8b083581f4f7e07a0a949c2983bc52ab"
+          }
+        ],
+        "affected_section": "insights:news-trust-comparison.text",
+        "entity_id": "insight:news-trust-comparison:text",
+        "provenance_hash": "76624c2556c5c03def7161d4611f2a9aebb3fbd72b1b2ee0709d21f7b5ffaa55"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:news-trust-comparison:metric",
+        "source_family": "insights_final",
+        "text": "label=Perceived trustworthiness by news source, % of news readers subject=Perceived trustworthiness by news source value=News Media exceeded Social Media in all five selected countries unit=% geography=Canada, Ireland, United Kingdom, Australia, United States segment=News readers cohort=News readers denominator=News readers timeframe=2017 observation_status=Observed forecast_status=Not a forecast label=News Media value=51 unit=% timeframe=2017 geography=Canada segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=Social Media value=24 unit=% timeframe=2017 geography=Canada segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=News Media value=47 unit=% timeframe=2017 geography=Ireland segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=Social Media value=28 unit=% timeframe=2017 geography=Ireland segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=News Media value=41 unit=% timeframe=2017 geography=United Kingdom segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=Social Media value=18 unit=% timeframe=2017 geography=United Kingdom segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=News Media value=40 unit=% timeframe=2017 geography=Australia segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=Social Media value=27 unit=% timeframe=2017 geography=Australia segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=News Media value=38 unit=% timeframe=2017 geography=United States segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=Social Media value=20 unit=% timeframe=2017 geography=United States segment=News readers cohort=News readers denominator=News readers observation_status=Observed",
+        "text_hash": "bf4d93fa2cae400c91b665143dd97d3a8351e567bd2f277a51a1127990c453fa",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:news-trust-comparison",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "029d4e72952f7e67a3f8a789033dfe8a8b083581f4f7e07a0a949c2983bc52ab"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:news-trust-comparison",
+            "source_pack": "findings",
+            "page": 101,
+            "text_hash": "029d4e72952f7e67a3f8a789033dfe8a8b083581f4f7e07a0a949c2983bc52ab"
+          }
+        ],
+        "affected_section": "insights:news-trust-comparison.metric",
+        "entity_id": "insight:news-trust-comparison:metric",
+        "provenance_hash": "76624c2556c5c03def7161d4611f2a9aebb3fbd72b1b2ee0709d21f7b5ffaa55"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:ecommerce-firsthand-experience:text",
+        "source_family": "insights_final",
+        "text": "The U.S. eCommerce growth matrix places grocery and automotive in its “Delayed Ecommerce Adoption” area alongside products involving first-hand experience, with food freshness and used-car condition as examples. It positions categories by 2016 category share of eCommerce sales and potential shift from physical to eCommerce; these are qualitative placements, not a measured time-to-adoption.",
+        "text_hash": "924ed8b123f7f67abdecb0be3c36cb0e7f54868f743c620931bc9ec4e6570bde",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:ecommerce-firsthand-experience",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "db4325435a248816a19aca88b7271449596e74ac8642e9b832c00439e1aea70a"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:ecommerce-firsthand-experience",
+            "source_pack": "findings",
+            "page": 119,
+            "text_hash": "db4325435a248816a19aca88b7271449596e74ac8642e9b832c00439e1aea70a"
+          }
+        ],
+        "affected_section": "insights:ecommerce-firsthand-experience.text",
+        "entity_id": "insight:ecommerce-firsthand-experience:text",
+        "provenance_hash": "5621da0220d54eb3d79ca4e1da3964107b519f2e2a7331b41bb4ac6aa97e7490"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:podcast-audience-factors:text",
+        "source_family": "insights_final",
+        "text": "In Activate’s 2017 Consumer Tech & Media Research Study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to podcast listening. Separately, 31% of podcast listeners (n=419) selected “Recommendations” as a factor that would lead to increased podcast consumption.",
+        "text_hash": "a967af4d04caa18a646ef6467b09e1f2ddaeaac4b69cbc607a92bfd3b2e270d4",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": 129,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          }
+        ],
+        "affected_section": "insights:podcast-audience-factors.text",
+        "entity_id": "insight:podcast-audience-factors:text",
+        "provenance_hash": "a3b2b7da9151cf25ba0235069b5c3403adaf6fcf55e5bdd35f8a741f6a038be5"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:podcast-audience-factors:metric",
+        "source_family": "insights_final",
+        "text": "label=Factors that would lead to podcast listening / increased podcast consumption subject=Factors selected as leading to podcast listening or increased podcast consumption value=34% among podcast non-listeners; 31% among podcast listeners unit=Percent geography=Not specified on the page segment=Podcast non-listeners and podcast listeners cohort=Podcast non-listeners for the listening factor; podcast listeners for the increased-consumption factor denominator=The respective chart populations; left n=700 and right n=419 timeframe=Activate 2017 Consumer Tech & Media Research Study observation_status=Reported survey responses; not a forecast forecast_status=Not a forecast label=Knowing which apps to use as a factor that would lead to podcast listening value=34% unit=Percent timeframe=Activate 2017 Consumer Tech & Media Research Study geography=Not specified on the page segment=Podcast non-listeners cohort=Podcast non-listeners denominator=Podcast non-listener survey sample (n=700) observation_status=Reported survey response label=Recommendations as a factor that would lead to increased podcast consumption value=31% unit=Percent timeframe=Activate 2017 Consumer Tech & Media Research Study geography=Not specified on the page segment=Podcast listeners cohort=Podcast listeners denominator=Podcast listener survey sample (n=419) observation_status=Reported survey response",
+        "text_hash": "9daf47c08700f15175b976538362874a5c5feb6182c80b976c6280ee6ffee358",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": 129,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          }
+        ],
+        "affected_section": "insights:podcast-audience-factors.metric",
+        "entity_id": "insight:podcast-audience-factors:metric",
+        "provenance_hash": "a3b2b7da9151cf25ba0235069b5c3403adaf6fcf55e5bdd35f8a741f6a038be5"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "key_figure:global-revenue-forecast:figure",
+        "source_family": "key_figures",
+        "text": "source_statement=Activate forecasts global Consumer Internet and Media Revenues, as defined in the page’s footnote, to increase from $1.7 trillion in 2017E to $2.0 trillion in 2021E (USD), with $302 billion in growth and a 4.1% CAGR; the page compares this with a global GDP CAGR of approximately 3%. label=Consumer Internet and Media Revenues; growth dollars; CAGR value=$1.7 trillion (2017E) to $2.0 trillion (2021E); $302 billion growth; 4.1% CAGR; global GDP CAGR approximately 3% subject=Consumer Internet and Media Revenues unit=USD for revenue and growth; percent per year for CAGRs geography=Global segment=Consumer Internet and Media Revenues cohort=Footnote-defined consumer Internet and media categories denominator=Not stated timeframe=2017E–2021E observation_status=Forecast estimates, not observed outcomes forecast_status=Forecast; years marked E label=Consumer Internet and Media Revenues, 2017E value=$1.7 trillion unit=USD timeframe=2017E geography=Global segment=Consumer Internet and Media Revenues cohort=Footnote-defined consumer Internet and media categories denominator=Not stated observation_status=Forecast estimate label=Consumer Internet and Media Revenues, 2021E value=$2.0 trillion unit=USD timeframe=2021E geography=Global segment=Consumer Internet and Media Revenues cohort=Footnote-defined consumer Internet and media categories denominator=Not stated observation_status=Forecast estimate label=Growth dollars value=$302 billion unit=USD timeframe=2017E–2021E geography=Global segment=Consumer Internet and Media Revenues cohort=Footnote-defined consumer Internet and media categories denominator=Not stated observation_status=Forecast-derived growth label=Consumer Internet and Media Revenues CAGR value=4.1% unit=Percent per year timeframe=2017E–2021E geography=Global segment=Consumer Internet and Media Revenues cohort=Footnote-defined consumer Internet and media categories denominator=Not stated observation_status=Forecast-derived CAGR label=Global GDP CAGR comparison value=Approximately 3% unit=Percent per year timeframe=2017E–2021E geography=Global segment=Global GDP cohort=Not specified denominator=Not stated observation_status=Forecast comparison stated on the page",
+        "text_hash": "55f2e000ae346e3181aa187a684d67be8010c71f8c904201b914a06be0de1689",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f02",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "c051a3bdb258dbf953024693a76d465409370c7f65c8221d030b722d56e0107b"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f02",
+            "source_pack": "findings",
+            "page": 6,
+            "text_hash": "c051a3bdb258dbf953024693a76d465409370c7f65c8221d030b722d56e0107b"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:global-revenue-forecast",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "08a7b61670f5e34d48689a643d017f38e530f7ff329bc9535b283efe45a1abcc"
+          }
+        ],
+        "affected_section": "key_figures:global-revenue-forecast.figure",
+        "entity_id": "key_figure:global-revenue-forecast:figure",
+        "provenance_hash": "4e329925ef13bd9f1b31d603b8d49cdc95d123caa2cded1ee3e82216ecdd5840"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "key_figure:video-attention-spend:figure",
+        "source_family": "key_figures",
+        "text": "source_statement=In the U.S. in 2017, the top 25% of users, defined as having 4.5+ hours of daily video attention, accounted for 61% of total video time spent and 34% of total consumer spend, according to the Activate 2017 Consumer Tech & Media Research Study (n=3,515). label=Share of total video time spent and share of total consumer spend value=61% of video time spent; 34% of consumer spend subject=Video time spent and consumer spend unit=percent of total geography=U.S. segment=Top 25% of users cohort=Top 25% of users with 4.5+ hours of daily video attention denominator=Total video time spent for the time metric; total consumer spend for the spend metric timeframe=2017 observation_status=Study-reported 2017 shares forecast_status=Not identified as a forecast label=Top 25% of users' share of time spent value=61% unit=percent of total video time spent timeframe=2017 geography=U.S. segment=Top 25% of users cohort=Users with 4.5+ hours of daily video attention denominator=Total video time spent observation_status=Study-reported label=Top 25% of users' share of consumer spend value=34% unit=percent of total consumer spend timeframe=2017 geography=U.S. segment=Top 25% of users cohort=Users with 4.5+ hours of daily video attention denominator=Total consumer spend observation_status=Study-reported",
+        "text_hash": "138c9a882b506254ee1aad9d516d584e8b4c7dbe51407619edc85e7010d650e1",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:video-attention-spend",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "04f17957f359af80fa4692eeb42c0d6a43601b6f5f008879b6c73fc3425f0249"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:video-attention-spend",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "04f17957f359af80fa4692eeb42c0d6a43601b6f5f008879b6c73fc3425f0249"
+          }
+        ],
+        "affected_section": "key_figures:video-attention-spend.figure",
+        "entity_id": "key_figure:video-attention-spend:figure",
+        "provenance_hash": "28a70001d80068fc8321232e28686efb160bbd022355c05c2e872035ca853cc6"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "key_figure:sports-fan-segment-shares:figure",
+        "source_family": "key_figures",
+        "text": "source_statement=In Activate’s 2017 Consumer Tech & Media Research Study (n=2,406), Super Fans, defined as watching 10+ hours of sports content per week, are reported as 27% of fans and 61% of hours. Social Fans, defined as watching sports content only as a social activity, are reported as 10% of fans and 6% of hours. label=Fan-segment share of fans and share of hours value=Super Fans: 27% of fans and 61% of hours; Social Fans: 10% of fans and 6% of hours subject=Sports fans and their sports-content viewing unit=percent geography=Not stated segment=Super Fans; Social Fans cohort=Super Fans watch 10+ hours of sports content per week; Social Fans watch sports content only as a social activity denominator=Fans for the 'of fans' figures; hours for the 'of hours' figures timeframe=Activate 2017 study; specific fieldwork period not stated observation_status=Study-reported findings forecast_status=Observed/reported, not a forecast label=Super Fans — of fans value=27% unit=percent timeframe=Activate 2017 study; specific fieldwork period not stated geography=Not stated segment=Super Fans cohort=Watches 10+ hours of sports content per week denominator=Fans observation_status=Study-reported finding label=Super Fans — of hours value=61% unit=percent timeframe=Activate 2017 study; specific fieldwork period not stated geography=Not stated segment=Super Fans cohort=Watches 10+ hours of sports content per week denominator=Hours observation_status=Study-reported finding label=Social Fans — of fans value=10% unit=percent timeframe=Activate 2017 study; specific fieldwork period not stated geography=Not stated segment=Social Fans cohort=Watches sports content only as a social activity denominator=Fans observation_status=Study-reported finding label=Social Fans — of hours value=6% unit=percent timeframe=Activate 2017 study; specific fieldwork period not stated geography=Not stated segment=Social Fans cohort=Watches sports content only as a social activity denominator=Hours observation_status=Study-reported finding",
+        "text_hash": "280f2f93ebc41fe2cab1d971073c708c93f32c93d12ba66b12ae4db1faa33b9f",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:broadcast-cord-cutter-preference",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "0a30cdf45fdbff43a75285fba1ba5abc15380f32103859fa86dfe3d9258c450e"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:broadcast-cord-cutter-preference",
+            "source_pack": "findings",
+            "page": 70,
+            "text_hash": "0a30cdf45fdbff43a75285fba1ba5abc15380f32103859fa86dfe3d9258c450e"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:sports-fan-segment-shares",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "9445070d3bcb4aede3118b44528b6c842a3e175c531f85ba235ee6fc41d85c5e"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:sports-fan-segment-shares",
+            "source_pack": "findings",
+            "page": 84,
+            "text_hash": "9445070d3bcb4aede3118b44528b6c842a3e175c531f85ba235ee6fc41d85c5e"
+          }
+        ],
+        "affected_section": "key_figures:sports-fan-segment-shares.figure",
+        "entity_id": "key_figure:sports-fan-segment-shares:figure",
+        "provenance_hash": "3ba3b6b840d8d277bd667ae31a728f1e83f560e4017cbe56f84852fb2a984a23"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "key_figure:news-trust-comparison:figure",
+        "source_family": "key_figures",
+        "text": "source_statement=In 2017, among news readers in the five selected countries, the share reporting perceived trustworthiness was higher for News Media than for Social Media: Canada 51% vs. 24%, Ireland 47% vs. 28%, the United Kingdom 41% vs. 18%, Australia 40% vs. 27%, and the United States 38% vs. 20%. label=Perceived trustworthiness by news source, % of news readers value=News Media exceeded Social Media in all five selected countries subject=Perceived trustworthiness by news source unit=% geography=Canada, Ireland, United Kingdom, Australia, United States segment=News readers cohort=News readers denominator=News readers timeframe=2017 observation_status=Observed forecast_status=Not a forecast label=News Media value=51 unit=% timeframe=2017 geography=Canada segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=Social Media value=24 unit=% timeframe=2017 geography=Canada segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=News Media value=47 unit=% timeframe=2017 geography=Ireland segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=Social Media value=28 unit=% timeframe=2017 geography=Ireland segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=News Media value=41 unit=% timeframe=2017 geography=United Kingdom segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=Social Media value=18 unit=% timeframe=2017 geography=United Kingdom segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=News Media value=40 unit=% timeframe=2017 geography=Australia segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=Social Media value=27 unit=% timeframe=2017 geography=Australia segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=News Media value=38 unit=% timeframe=2017 geography=United States segment=News readers cohort=News readers denominator=News readers observation_status=Observed label=Social Media value=20 unit=% timeframe=2017 geography=United States segment=News readers cohort=News readers denominator=News readers observation_status=Observed",
+        "text_hash": "aac63deefefda330989f504c9958a930931d82758edfc525c276c07067aca464",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:news-trust-comparison",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "029d4e72952f7e67a3f8a789033dfe8a8b083581f4f7e07a0a949c2983bc52ab"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:news-trust-comparison",
+            "source_pack": "findings",
+            "page": 101,
+            "text_hash": "029d4e72952f7e67a3f8a789033dfe8a8b083581f4f7e07a0a949c2983bc52ab"
+          }
+        ],
+        "affected_section": "key_figures:news-trust-comparison.figure",
+        "entity_id": "key_figure:news-trust-comparison:figure",
+        "provenance_hash": "9eaf072b17a99c9c742768fddca65ec6402b800876f2ed17ba77ad953add5d5c"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "key_figure:podcast-audience-factors:figure",
+        "source_family": "key_figures",
+        "text": "source_statement=In Activate’s 2017 Consumer Tech & Media Research Study, 34% of podcast non-listeners selected “Knowing which apps to use” as a factor that would lead to podcast listening; 31% of podcast listeners selected “Recommendations” as a factor that would lead to increased podcast consumption. label=Factors that would lead to podcast listening / increased podcast consumption value=34% among podcast non-listeners; 31% among podcast listeners subject=Factors selected as leading to podcast listening or increased podcast consumption unit=Percent geography=Not specified on the page segment=Podcast non-listeners and podcast listeners cohort=Podcast non-listeners for the listening factor; podcast listeners for the increased-consumption factor denominator=The respective chart populations; left n=700 and right n=419 timeframe=Activate 2017 Consumer Tech & Media Research Study observation_status=Reported survey responses; not a forecast forecast_status=Not a forecast label=Knowing which apps to use as a factor that would lead to podcast listening value=34% unit=Percent timeframe=Activate 2017 Consumer Tech & Media Research Study geography=Not specified on the page segment=Podcast non-listeners cohort=Podcast non-listeners denominator=Podcast non-listener survey sample (n=700) observation_status=Reported survey response label=Recommendations as a factor that would lead to increased podcast consumption value=31% unit=Percent timeframe=Activate 2017 Consumer Tech & Media Research Study geography=Not specified on the page segment=Podcast listeners cohort=Podcast listeners denominator=Podcast listener survey sample (n=419) observation_status=Reported survey response",
+        "text_hash": "4d41a9814ba20db70bcc6421659c28055fe1ed418c0766d1174f00d00028d55f",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": 129,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          }
+        ],
+        "affected_section": "key_figures:podcast-audience-factors.figure",
+        "entity_id": "key_figure:podcast-audience-factors:figure",
+        "provenance_hash": "fe7443d1ecff348e258372c336ba8434f5dde75bf6bfb8567833d8ac73cb7af8"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:expert_comment:7e4b4b2a933052bf",
+        "source_family": "expert_comment",
+        "text": "Podcast survey responses distinguish audience stages: among non-listeners, 34% selected “Knowing which apps to use” as a factor that would lead to listening (n=700); among listeners, 31% selected “Recommendations” as a factor that would lead to increased consumption (n=419).",
+        "text_hash": "c0bdb1f5fa6945bb168e5888f0653a2bfb642505ce5683ab244718b8086a229d",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": 129,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          }
+        ],
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:7e4b4b2a933052bf",
+        "provenance_hash": "f9988d82bf5c378b2af2ec7effa3de85d646a23d86daa0943c83684023499222"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:expert_comment:64fe37e6b2b36055",
+        "source_family": "expert_comment",
+        "text": "Separately, the U.S. eCommerce matrix places grocery and automotive in its delayed-adoption area alongside products involving first-hand experience, while positioning categories by 2016 eCommerce sales share and potential shift from physical to eCommerce, not by a measured adoption timetable.",
+        "text_hash": "212ef891f24d220fa4575badb4e24e54cd95e9a55c835399a847814470d92365",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:ecommerce-firsthand-experience",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "db4325435a248816a19aca88b7271449596e74ac8642e9b832c00439e1aea70a"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:ecommerce-firsthand-experience",
+            "source_pack": "findings",
+            "page": 119,
+            "text_hash": "db4325435a248816a19aca88b7271449596e74ac8642e9b832c00439e1aea70a"
+          }
+        ],
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:64fe37e6b2b36055",
+        "provenance_hash": "1eb99486f0927312700bcce5f1a00e5782a3faf2691892aea26544d4b5af2b70"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:expert_comment:d25c207d9f375e47",
+        "source_family": "expert_comment",
+        "text": "Together, the findings point to a decision-design tension: the relevant diagnostic differs by audience stage in podcasts and by product category in eCommerce, so a single adoption label or intervention would blur distinctions the evidence makes.",
+        "text_hash": "ea2ca0be77bde5a8e26156350277320492500ed04f6044c30150c67ba98a3b98",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:ecommerce-firsthand-experience",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "db4325435a248816a19aca88b7271449596e74ac8642e9b832c00439e1aea70a"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:ecommerce-firsthand-experience",
+            "source_pack": "findings",
+            "page": 119,
+            "text_hash": "db4325435a248816a19aca88b7271449596e74ac8642e9b832c00439e1aea70a"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": 129,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          }
+        ],
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:d25c207d9f375e47",
+        "provenance_hash": "ab9808e9b2b52b86bc2e2b1e59786cd5b26491036dcfa2579ba483d6d29f954a"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:expert_comment:ba39d994d4d5a808",
+        "source_family": "expert_comment",
+        "text": "MarketLense would recommend, where these areas are in scope, assessing podcast listening and increased consumption separately and treating the eCommerce matrix as category positioning rather than timing guidance.",
+        "text_hash": "b4640422f592269ecc7be0095e348c8858eaaa071b9e0a703f3dbdc70003845a",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:ecommerce-firsthand-experience",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "db4325435a248816a19aca88b7271449596e74ac8642e9b832c00439e1aea70a"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:ecommerce-firsthand-experience",
+            "source_pack": "findings",
+            "page": 119,
+            "text_hash": "db4325435a248816a19aca88b7271449596e74ac8642e9b832c00439e1aea70a"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:podcast-audience-factors",
+            "source_pack": "findings",
+            "page": 129,
+            "text_hash": "6a6cfa7576d7c92e1f1bf02ed52e14126c39ba56856f4f9123db1c2479adb21f"
+          }
+        ],
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:ba39d994d4d5a808",
+        "provenance_hash": "ab9808e9b2b52b86bc2e2b1e59786cd5b26491036dcfa2579ba483d6d29f954a"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:linkedin_post:53945652910863a8",
+        "source_family": "linkedin_post",
+        "text": "In the U.S. in 2017, the top 25% of users accounted for 61% of total video time spent and 34% of total consumer spend, according to Activate’s 2017 Consumer Tech & Media Research Study.",
+        "text_hash": "10f9e75273b5c0914a129ecef1b54982519bef167232ffc633154504a59d6f12",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:video-attention-spend",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "04f17957f359af80fa4692eeb42c0d6a43601b6f5f008879b6c73fc3425f0249"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:video-attention-spend",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "04f17957f359af80fa4692eeb42c0d6a43601b6f5f008879b6c73fc3425f0249"
+          }
+        ],
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:53945652910863a8",
+        "provenance_hash": "a3a2e51087e6aa7f5bd3a9b4b0ec11f24594ed13552a7cc5d410ee7b8e40e616"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:linkedin_post:cb8fb3aebb6bc1cf",
+        "source_family": "linkedin_post",
+        "text": "Attention and consumer spend were distributed differently across these user cohorts.",
+        "text_hash": "936a0201bc94575519a783a3c883f7ffde1ce7ecd4d228823287fca16a30ac15",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          }
+        ],
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:cb8fb3aebb6bc1cf",
+        "provenance_hash": "62be8aa4697e24ca81ad3b7e78f7e7a820c35ab373ffb5444a959bf0f5cab2b5"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:linkedin_post:0e0a079dd1036ae7",
+        "source_family": "linkedin_post",
+        "text": "MarketLense’s recommendation: If evaluating video monetization, assess attention and spend separately rather than treating one as a proxy for the other.",
+        "text_hash": "8d481533da14cb122745423bf976b5509d8cd9641728654f56ac7e6c5ed6a317",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:f04",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "80cf7f3e43c7a15179e129be95b4fc57a16315a4ee776ee763394f4634165c08"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:video-attention-spend",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "04f17957f359af80fa4692eeb42c0d6a43601b6f5f008879b6c73fc3425f0249"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "verified-fact:video-attention-spend",
+            "source_pack": "findings",
+            "page": 15,
+            "text_hash": "04f17957f359af80fa4692eeb42c0d6a43601b6f5f008879b6c73fc3425f0249"
+          }
+        ],
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:0e0a079dd1036ae7",
+        "provenance_hash": "a3a2e51087e6aa7f5bd3a9b4b0ec11f24594ed13552a7cc5d410ee7b8e40e616"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": null,
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    }
+  ],
+  "readiness_status": "not_publishable",
+  "unsupported_factual_count": 0,
+  "unresolved_factual_count": 36,
+  "deterministic_pass_count": 0,
+  "semantic_validation_count": 0,
+  "semantic_execution_identities": [],
+  "validation_identity": {
+    "schema_version": "1.1",
+    "report_id": "cohort-cbb6e7df67412186b8bc",
+    "source_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b|pdf-sha256:5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
+    "source_md5": "cbb6e7df67412186b8bc094a424ac890",
+    "claim_validation_validator_version": "retained_claim_validation:v10",
+    "grounding_validator_version": "grounding_validation_output:2.1",
+    "configuration_hash": "e50763d4a9df1b132fe130958d2fd03a782386224b62130d71fd6a48b1e2497a",
+    "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489"
+  },
+  "lineage": null
+}

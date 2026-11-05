@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/methods",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "methods": [
+      "Uses Adjust data to report app installs and sessions globally, with monthly trends from January 2024 to December 2025 and year-over-year comparisons for 2024–2025. The excerpts do not specify the app sample frame or a validation method."
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "methods",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

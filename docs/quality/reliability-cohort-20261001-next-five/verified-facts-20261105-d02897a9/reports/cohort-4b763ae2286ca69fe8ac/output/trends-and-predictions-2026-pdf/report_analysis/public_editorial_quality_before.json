@@ -1,0 +1,572 @@
+{
+  "report_id": "cohort-4b763ae2286ca69fe8ac",
+  "status": "pass",
+  "issues": [],
+  "measurements": [
+    {
+      "rule_id": "public_editorial_quality.insight_role_diversity",
+      "value": 5.0,
+      "unit": "distinct_roles",
+      "explanation": "Distinct assigned insight roles.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.repeated_syntax",
+      "value": 0.0,
+      "unit": "repeated_openings",
+      "explanation": "Repeated normalized insight openings.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.excessive_verbosity",
+      "value": 45.33,
+      "unit": "average_words_per_insight",
+      "explanation": "Average insight length; investigate only when it is unusually high.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.card_to_insight_linkage",
+      "value": 0.0,
+      "unit": "share",
+      "explanation": "Public chart cards with a retained insight ID.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.figure_to_evidence_linkage",
+      "value": 0.0,
+      "unit": "share",
+      "explanation": "Public chart cards with accepted candidate, source page, and evidence ID.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.figure_to_insight_linkage",
+      "value": 0.0,
+      "unit": "share",
+      "explanation": "Public chart cards with an accepted candidate and retained insight ID.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.source_note_completeness",
+      "value": 1.0,
+      "unit": "share",
+      "explanation": "Insights with explicit source evidence IDs.",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "public_editorial_quality.action_specificity",
+      "value": 1.0,
+      "unit": "share",
+      "explanation": "Insights with a specific decision action.",
+      "schema_version": "1.0"
+    }
+  ],
+  "disabled_rule_waivers": {},
+  "items": [
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:1:caption",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:1.caption",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:1:public_takeaway",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:1.public_takeaway",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:2:caption",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:2.caption",
+      "evidence_ids": [
+        "verified-fact:content-focus-shift"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:2:public_takeaway",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:2.public_takeaway",
+      "evidence_ids": [
+        "verified-fact:content-focus-shift"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:3:caption",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:3.caption",
+      "evidence_ids": [
+        "verified-fact:creator-audience-vs-talent-concern"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:3:public_takeaway",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:3.public_takeaway",
+      "evidence_ids": [
+        "verified-fact:creator-audience-vs-talent-concern"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:4:caption",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:4.caption",
+      "evidence_ids": [
+        "verified-fact:newsroom-ai-initiative-assessments"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:4:public_takeaway",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:4.public_takeaway",
+      "evidence_ids": [
+        "verified-fact:newsroom-ai-initiative-assessments"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:5:caption",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:5.caption",
+      "evidence_ids": [
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "chart_insight_cards:chart_insight_cards:5:public_takeaway",
+      "artifact": "chart_insight_cards",
+      "field_path": "chart_insight_cards:5.public_takeaway",
+      "evidence_ids": [
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "expert_comment:expert_comment",
+      "artifact": "expert_comment",
+      "field_path": "expert_comment",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global",
+        "verified-fact:content-focus-shift",
+        "verified-fact:creator-audience-vs-talent-concern",
+        "verified-fact:newsroom-ai-initiative-assessments",
+        "verified-fact:ai-licensing-income-expectations",
+        "verified-fact:platform-funding-revenue-expectation"
+      ],
+      "repair_target": "expert_comment",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:ai-licensing-income-expectations:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:ai-licensing-income-expectations.now_what",
+      "evidence_ids": [
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:ai-licensing-income-expectations:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:ai-licensing-income-expectations.so_what",
+      "evidence_ids": [
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:ai-licensing-income-expectations:text",
+      "artifact": "insights_final",
+      "field_path": "insights:ai-licensing-income-expectations",
+      "evidence_ids": [
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:content-focus-shift:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:content-focus-shift.now_what",
+      "evidence_ids": [
+        "verified-fact:content-focus-shift"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:content-focus-shift:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:content-focus-shift.so_what",
+      "evidence_ids": [
+        "verified-fact:content-focus-shift"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:content-focus-shift:text",
+      "artifact": "insights_final",
+      "field_path": "insights:content-focus-shift",
+      "evidence_ids": [
+        "verified-fact:content-focus-shift"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:creator-audience-vs-talent-concern:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:creator-audience-vs-talent-concern.now_what",
+      "evidence_ids": [
+        "verified-fact:creator-audience-vs-talent-concern"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:creator-audience-vs-talent-concern:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:creator-audience-vs-talent-concern.so_what",
+      "evidence_ids": [
+        "verified-fact:creator-audience-vs-talent-concern"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:creator-audience-vs-talent-concern:text",
+      "artifact": "insights_final",
+      "field_path": "insights:creator-audience-vs-talent-concern",
+      "evidence_ids": [
+        "verified-fact:creator-audience-vs-talent-concern"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:newsroom-ai-initiative-assessments:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:newsroom-ai-initiative-assessments.now_what",
+      "evidence_ids": [
+        "verified-fact:newsroom-ai-initiative-assessments"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:newsroom-ai-initiative-assessments:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:newsroom-ai-initiative-assessments.so_what",
+      "evidence_ids": [
+        "verified-fact:newsroom-ai-initiative-assessments"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:newsroom-ai-initiative-assessments:text",
+      "artifact": "insights_final",
+      "field_path": "insights:newsroom-ai-initiative-assessments",
+      "evidence_ids": [
+        "verified-fact:newsroom-ai-initiative-assessments"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:platform-funding-revenue-expectation:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:platform-funding-revenue-expectation.now_what",
+      "evidence_ids": [
+        "verified-fact:platform-funding-revenue-expectation"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:platform-funding-revenue-expectation:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:platform-funding-revenue-expectation.so_what",
+      "evidence_ids": [
+        "verified-fact:platform-funding-revenue-expectation"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:platform-funding-revenue-expectation:text",
+      "artifact": "insights_final",
+      "field_path": "insights:platform-funding-revenue-expectation",
+      "evidence_ids": [
+        "verified-fact:platform-funding-revenue-expectation"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:search-referrals-global:now_what",
+      "artifact": "insights_final",
+      "field_path": "insights:search-referrals-global.now_what",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:search-referrals-global:so_what",
+      "artifact": "insights_final",
+      "field_path": "insights:search-referrals-global.so_what",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "insight:search-referrals-global:text",
+      "artifact": "insights_final",
+      "field_path": "insights:search-referrals-global",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:1:figure",
+      "artifact": "key_figures",
+      "field_path": "key_figures:1.figure",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:1:label",
+      "artifact": "key_figures",
+      "field_path": "key_figures:1.label",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:1:why_it_matters",
+      "artifact": "key_figures",
+      "field_path": "key_figures:1.why_it_matters",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:2:figure",
+      "artifact": "key_figures",
+      "field_path": "key_figures:2.figure",
+      "evidence_ids": [
+        "verified-fact:content-focus-shift"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:2:label",
+      "artifact": "key_figures",
+      "field_path": "key_figures:2.label",
+      "evidence_ids": [
+        "verified-fact:content-focus-shift"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:2:why_it_matters",
+      "artifact": "key_figures",
+      "field_path": "key_figures:2.why_it_matters",
+      "evidence_ids": [
+        "verified-fact:content-focus-shift"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:3:figure",
+      "artifact": "key_figures",
+      "field_path": "key_figures:3.figure",
+      "evidence_ids": [
+        "verified-fact:creator-audience-vs-talent-concern"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:3:label",
+      "artifact": "key_figures",
+      "field_path": "key_figures:3.label",
+      "evidence_ids": [
+        "verified-fact:creator-audience-vs-talent-concern"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:3:why_it_matters",
+      "artifact": "key_figures",
+      "field_path": "key_figures:3.why_it_matters",
+      "evidence_ids": [
+        "verified-fact:creator-audience-vs-talent-concern"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:4:figure",
+      "artifact": "key_figures",
+      "field_path": "key_figures:4.figure",
+      "evidence_ids": [
+        "verified-fact:newsroom-ai-initiative-assessments"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:4:label",
+      "artifact": "key_figures",
+      "field_path": "key_figures:4.label",
+      "evidence_ids": [
+        "verified-fact:newsroom-ai-initiative-assessments"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:4:why_it_matters",
+      "artifact": "key_figures",
+      "field_path": "key_figures:4.why_it_matters",
+      "evidence_ids": [
+        "verified-fact:newsroom-ai-initiative-assessments"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:5:figure",
+      "artifact": "key_figures",
+      "field_path": "key_figures:5.figure",
+      "evidence_ids": [
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:5:label",
+      "artifact": "key_figures",
+      "field_path": "key_figures:5.label",
+      "evidence_ids": [
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "key_figures:key_figures:5:why_it_matters",
+      "artifact": "key_figures",
+      "field_path": "key_figures:5.why_it_matters",
+      "evidence_ids": [
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "insights_bundle",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "linkedin_post:linkedin_post",
+      "artifact": "linkedin_post",
+      "field_path": "linkedin_post",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global",
+        "verified-fact:content-focus-shift",
+        "verified-fact:creator-audience-vs-talent-concern",
+        "verified-fact:newsroom-ai-initiative-assessments",
+        "verified-fact:ai-licensing-income-expectations",
+        "verified-fact:platform-funding-revenue-expectation"
+      ],
+      "repair_target": "linkedin_post",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "summary:card_tldr_compact",
+      "artifact": "summary",
+      "field_path": "card_tldr_compact",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global",
+        "verified-fact:search-traffic-outlook",
+        "verified-fact:content-focus-shift",
+        "verified-fact:newsroom-ai-initiative-assessments",
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "summary",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "summary:executive_summary",
+      "artifact": "summary",
+      "field_path": "executive_summary",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global",
+        "verified-fact:search-traffic-outlook",
+        "verified-fact:content-focus-shift",
+        "verified-fact:newsroom-ai-initiative-assessments",
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "summary",
+      "schema_version": "1.0"
+    },
+    {
+      "item_id": "summary:tldr",
+      "artifact": "summary",
+      "field_path": "tldr",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global",
+        "verified-fact:search-traffic-outlook",
+        "verified-fact:content-focus-shift",
+        "verified-fact:newsroom-ai-initiative-assessments",
+        "verified-fact:ai-licensing-income-expectations"
+      ],
+      "repair_target": "summary",
+      "schema_version": "1.0"
+    }
+  ],
+  "publishable": true,
+  "hard_fail_count": 0,
+  "validator_version": "public-editorial-quality:v17",
+  "schema_version": "1.0"
+}

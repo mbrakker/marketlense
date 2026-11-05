@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_theme_coverage",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "explanation": "The insight states all three propositions: 2025 downloads, consumer-spending growth and endpoint, and the separate 2030 GDP projection.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "mobile-market-downloads-2025"
+      ],
+      "theme": "Market scale and outlook: the report records more than 112.1 billion app downloads in 2025 and mobile-app-market consumer spending up 10.6% year over year to $167 billion; separately, mobile technologies and services are projected to generate 8.4% of global GDP by 2030."
+    },
+    {
+      "explanation": "The insight gives both categories’ install declines and session increases, including the stated year-over-year period.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "global-ecommerce-finance-install-session-divergence"
+      ],
+      "theme": "Global 2025 acquisition and usage diverged in both categories: e-commerce app installs fell 10% year over year while sessions rose 5%, and finance app installs fell 4% while sessions rose 21%."
+    },
+    {
+      "explanation": "The insight reports each listed install and session relationship by subvertical and identifies the global 2024–2025 comparison.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "gaming-subvertical-growth-divergence"
+      ],
+      "theme": "Global gaming growth varied by subvertical from 2024 to 2025: Casual installs grew 19% and sessions 37%; Strategy sessions grew 57% while installs declined 1%; Casino installs grew 22% while sessions declined 5%; and Slots installs grew 46% while sessions declined 5%."
+    },
+    {
+      "explanation": "The insight includes minimal retention change, both all-games retention values, and the separate global CPI value and increase.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "gaming-retention-and-cpi"
+      ],
+      "theme": "Global all-games gaming retention showed minimal change from 2024 to 2025, with day 1 retention at 27% and day 30 at 5%; separately, overall global gaming app CPI reached $0.56 in 2025, up 30%."
+    },
+    {
+      "explanation": "The insight states both CPI movements, their category distinctions, values, and 2024–2025 timeframe.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "ecommerce-cpi-subvertical-divergence"
+      ],
+      "theme": "Global e-commerce app CPI moved down from $1.00 in 2024 to $0.98 in 2025, while CPI for the deal discovery category rose from $1.44 to $2.26 over the same period."
+    },
+    {
+      "explanation": "The insight develops both LATAM acquisition and session growth and the full global and regional session-length pattern, including the increases, highest regional value, and declines.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "finance-latam-growth"
+      ],
+      "theme": "Finance indicators varied by region and measure: for 2024–2025, LATAM finance-app installs grew 76% and sessions 57%; finance-app session length increased globally 8% to 7.18 minutes in 2025, with North America highest among regions at 8.43 minutes, LATAM rising to 5.87 minutes, and declines from 2024 to 2025 in APAC (7.07 to 6.94 minutes), Europe (5.77 to 5.62 minutes), and MENA (6.61 to 6.39 minutes)."
+    },
+    {
+      "explanation": "The insight includes the foundation’s stated qualities, all three capabilities and their purposes, and explicitly identifies the proposition as a recommendation rather than a measured outcome.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "measurement-recommendation"
+      ],
+      "theme": "The report recommends that app marketers use an integrated, adaptable, accountable data foundation combining cross-channel attribution, AI insights, and next-generation solutions for campaign optimization and budget allocation based on aggregated data; this is a recommendation, not a measured outcome."
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-36-1",
+  "candidate_type": "chart",
+  "page": 36,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    286.897,
+    104.899,
+    555.103,
+    421.101
+  ],
+  "final_bbox": [
+    278.897,
+    95.526,
+    563.103,
+    428.592
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 51,
+    "bottom": 42,
+    "left": 95,
+    "right": 0
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": true,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.9741,
+    "margin_balance": 0.0,
+    "neighbor_contamination": 0.0144,
+    "readability": 1.0,
+    "visual_crispness": 0.4221,
+    "total_score": 0.7068,
+    "defect_labels": [],
+    "edge_density": {
+      "top": 0.1311,
+      "bottom": 0.1875,
+      "left": 0.0255,
+      "right": 0.9975
+    },
+    "edge_leakage": {
+      "top": 0.0144,
+      "bottom": 0.0,
+      "left": 0.0,
+      "right": 0.0
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.5,
+        "strong_edges": [
+          "bottom",
+          "right"
+        ],
+        "edge_density": {
+          "top": 0.1311,
+          "bottom": 0.1875,
+          "left": 0.0255,
+          "right": 0.9975
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.1875,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.1311,
+          "bottom": 0.1875,
+          "left": 0.0255,
+          "right": 0.9975
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.9975,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.1311,
+          "bottom": 0.1875,
+          "left": 0.0255,
+          "right": 0.9975
+        }
+      }
+    }
+  },
+  "repair_actions": [
+    "content_aware_trim:1"
+  ],
+  "accepted": true,
+  "rejection_reason": ""
+}

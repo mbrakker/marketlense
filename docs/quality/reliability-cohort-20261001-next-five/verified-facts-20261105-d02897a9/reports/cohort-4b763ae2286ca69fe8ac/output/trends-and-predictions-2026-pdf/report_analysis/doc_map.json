@@ -1,0 +1,255 @@
+{
+  "schema_version": "doc_map_v1",
+  "doc_id": "cohort-4b763ae2286ca69fe8ac",
+  "title": "Journalism and Technology Trends and Predictions 2026",
+  "summary": "Nic Newman’s report examines the pressures facing journalism and publishers in 2026, including AI-driven changes to search and content, competition from creators, platform shifts, misinformation, newsroom AI adoption, and business-model challenges. It draws on a survey of senior digital leaders and combines survey results with analysis and predictions for the year ahead.",
+  "publisher": "Reuters Institute for the Study of Journalism",
+  "provenance_roles": {
+    "schema_version": "1.0",
+    "publication_name": "",
+    "publisher_name": "",
+    "author_names": [],
+    "author_kind": "unknown",
+    "data_provider_names": [],
+    "source_organization_names": [],
+    "report_owner_name": "",
+    "status": "unknown",
+    "resolution_method": "",
+    "issues": [],
+    "evidence": []
+  },
+  "sections": [
+    {
+      "id": "about-author",
+      "title": "About the Author",
+      "summary": "Introduces Nic Newman and his work in digital media and journalism. It notes his role at the Reuters Institute and his experience in BBC digital journalism and media strategy.",
+      "key_points": [
+        "Newman is a Senior Research Associate at the Reuters Institute for the Study of Journalism.",
+        "He was a founding member of the BBC News Website and later led product development for BBC Journalism sites."
+      ],
+      "pages": [
+        2
+      ],
+      "references": []
+    },
+    {
+      "id": "acknowledgements",
+      "title": "Acknowledgements",
+      "summary": "Thanks survey participants, Institute colleagues, and experts who contributed ideas, interviews, and background input. The acknowledgements also continue with a list of additional contributors later in the report.",
+      "key_points": [
+        "The report thanks 280 news executives from 51 countries and territories for responding to the survey.",
+        "The author credits Institute colleagues and other publishers, academics, and industry experts for their input."
+      ],
+      "pages": [
+        2,
+        44
+      ],
+      "references": []
+    },
+    {
+      "id": "executive-summary",
+      "title": "Executive Summary",
+      "summary": "Frames Generative AI and personality-led news as major forces reshaping journalism, while describing threats from political pressure, low trust, and declining referrals. It summarizes survey findings and introduces forecast terms including AEO, digital provenance, and liquid content.",
+      "key_points": [
+        "Among surveyed leaders, 38% were confident about journalism’s prospects, compared with 53% confident about their own business prospects.",
+        "Publishers expect search-engine traffic to fall by more than 40% over the next three years; the report also notes past referral declines from Facebook and X.",
+        "For 2026, publishers favor original investigations and on-the-ground reporting (+91 net difference between those planning more and less effort), while planning greater investment in video (+79) and audio (+71).",
+        "Back-end automation was considered important by 97% of publisher respondents; 44% described newsroom AI results as promising and 42% as limited."
+      ],
+      "pages": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "references": []
+    },
+    {
+      "id": "chapter-1",
+      "title": "1. Pressures on Journalism Mount",
+      "summary": "Describes political attacks, legal pressure, and challenges to public service media alongside concerns about press freedom and journalism’s public standing. It also notes that some subscription-based publishers remain optimistic and predicts politicians will further strengthen their direct media presence.",
+      "key_points": [
+        "The section discusses laws and political actions that make it harder or more dangerous for journalists to operate, and efforts to label legitimate journalism as “fake news.”",
+        "Public service media face disputes over impartiality, political pressure, and proposed funding reductions.",
+        "Some mostly subscription-based publishers, particularly in Northern Europe and North America, report stronger financial and audience performance.",
+        "The forecast anticipates politicians expanding their owned-media presence, potentially through podcasts and YouTube shows."
+      ],
+      "pages": [
+        7,
+        8,
+        9
+      ],
+      "references": []
+    },
+    {
+      "id": "chapter-2",
+      "title": "2. Answer Engines and the Implications for Access",
+      "summary": "Examines how AI-generated answers and search interfaces could reduce publisher traffic, while noting that current referral changes vary by publisher and content type. It considers possible licensing arrangements and the growth of answer-engine optimization services.",
+      "key_points": [
+        "For the charted question on expected search traffic in three years, publishers’ average expectation was a 43% loss; around one-fifth expected losses greater than 75%, while some expected a decline under 20% (printed p. 10).",
+        "In the chart “Number of referrals to publisher sites in the global Chartbeat network,” global year-on-year changes from November 2024 to November 2025 were Google Search −33%, Google Discover −21%, Facebook +9%, and X +15% (printed p. 11).",
+        "The section says major AI-content deals have chiefly involved upmarket publishers and news agencies, raising concerns that local and independent outlets may be left out; survey responses on expected AI-platform income range from 20% expecting a significant contribution to 20% expecting none (printed p. 13).",
+        "The report expects more agencies, specialist consultancies, and analytics tools to offer services for Answer Engine Optimization and Generative Engine Optimization."
+      ],
+      "pages": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "references": []
+    },
+    {
+      "id": "chapter-3",
+      "title": "3. Content Strategies Shift towards Distinctiveness",
+      "summary": "Argues that publishers are responding to AI by emphasizing journalism that is distinctive, human, and difficult to reproduce, while reducing emphasis on content that chatbots can readily supply. It contrasts this approach with examples of highly automated publishing models.",
+      "key_points": [
+        "In “Publisher perceptions on how content needs to be refocused in the era of AI,” net difference between respondents planning more versus less effort was +91 for original investigations/on-the-ground reporting, +82 for contextual analysis, and +76 for community building (printed p. 15).",
+        "In the same chart and measure, service journalism was −42, evergreen content −32, and general news −38 (printed p. 15).",
+        "The section presents Newsquest’s AI-assisted reporters and Velora Cycling’s one-person AI-supported operation as examples of automation at scale, contrasting these with a strategy based on human distinctiveness."
+      ],
+      "pages": [
+        15,
+        16,
+        17
+      ],
+      "references": []
+    },
+    {
+      "id": "chapter-4",
+      "title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything",
+      "summary": "Describes the shift from social sharing toward recommendation-driven feeds, video, and private messaging, and the resulting pressure on publisher referrals. It outlines publishers’ changing platform priorities and growing investment in video formats.",
+      "key_points": [
+        "The section reports that only 17% of time spent on Facebook and 7% on Instagram involved content from friends and family, with much of the rest spent on recommended content and video (printed p. 18).",
+        "The report says average news-site referrals from Facebook fell 43% and from X fell 46% over the previous two and a half years (printed p. 18).",
+        "In “Where publishers plan to put more and less effort in 2026,” the net difference between plans for more and less effort was +74 for YouTube, +61 for AI platforms, and +56 for TikTok (printed p. 19)."
+      ],
+      "pages": [
+        18,
+        19,
+        20,
+        21
+      ],
+      "references": []
+    },
+    {
+      "id": "chapter-5",
+      "title": "5. Responding to the Creator Wave",
+      "summary": "Explores creators as competitors for audience attention and editorial talent, while noting that publishers are also learning from creator-led approaches. It describes plans to adapt staff, partnerships, hiring, and studio models in response.",
+      "key_points": [
+        "For the Q19 measure of respondents somewhat or very concerned, 70% cited creators taking time and attention away from publisher content, compared with 39% concerned about losing talent (printed p. 22).",
+        "In “Top planned publisher initiatives in response to the creator wave,” 76% planned to encourage journalists to behave more like creators, 50% to partner with creators for distribution, and 31% to hire creators (printed p. 23).",
+        "The section describes the risk that journalists who build independent profiles may leave with their audiences, including the example of former Washington Post creator Dave Jorgenson."
+      ],
+      "pages": [
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "references": []
+    },
+    {
+      "id": "chapter-6",
+      "title": "6. AI Slop, Deep-Fakes, and Misinformation",
+      "summary": "Reviews the spread of AI-generated content and the use of manipulated media in political contexts, alongside uncertainty about the effects on trust and democracy. It discusses provenance standards, platform detection and labeling, AI content farms, and low-quality AI-generated workplace material.",
+      "key_points": [
+        "In “Publisher perceptions about whether misinformation and expansion of AI-generated content strengthen or weaken news media,” 52% said these trends could strengthen news media, 27% said weaken, and 15% said make no difference (printed p. 28).",
+        "The report says fewer than 1% of news images or videos published globally included C2PA metadata, and notes that TikTok’s automated detection may identify less than half of AI-generated content (printed p. 28).",
+        "The section describes more than 4,000 AI-powered fake news websites identified in France and cites a survey finding that four in ten respondents had encountered low-quality AI-generated workplace material during the previous month (printed p. 29)."
+      ],
+      "pages": [
+        27,
+        28,
+        29
+      ],
+      "references": []
+    },
+    {
+      "id": "chapter-7",
+      "title": "7. Latest Tales of AI in the Newsroom",
+      "summary": "Examines publishers’ adoption of AI for efficiency and journalistic work, alongside concerns about chatbot accuracy and uneven results from newsroom initiatives. Examples include automation, coding, newsgathering, and AI-supported reporting and product development.",
+      "key_points": [
+        "In “Different uses of AI that will be important in 2026,” the share rating each use “very important” was 64% for back-end automation, 44% for coding and product development, 36% for distribution and recommendations, 33% for commercial uses, and 29% each for newsgathering and human-supervised content creation (printed p. 30).",
+        "In the chart on the impact of current newsroom AI initiatives, 44% described results as promising, 42% as limited, and 13% as transformational (printed p. 31).",
+        "In the chart on jobs saved or added as a result of AI initiatives, 67% reported no jobs cut, 16% a small number cut, and 9% jobs added (printed p. 31)."
+      ],
+      "pages": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "references": []
+    },
+    {
+      "id": "chapter-8",
+      "title": "8. Changing Business Models and Barriers to Innovation",
+      "summary": "Reviews pressures on established revenue models, publishers’ expectations for commercial income, and barriers to developing new products. It also considers consolidation and new approaches to local news.",
+      "key_points": [
+        "In “Most important expected commercial publisher revenue streams in 2026,” the shares selecting subscription/membership, display advertising/sponsorship, native advertising, and events were 76%, 68%, 64%, and 54%, respectively (printed p. 36).",
+        "In the same chart, 37% selected funding from platforms, including AI platforms; the report notes this had risen 17 percentage points in two years (printed p. 36).",
+        "The section identifies lack of resources (62%), lack of skills (53% net), and internal competition between groups (49%) as barriers to innovation.",
+        "Predictions include further mergers and acquisitions and experimentation with community-participation models for local news."
+      ],
+      "pages": [
+        36,
+        37,
+        38
+      ],
+      "references": []
+    },
+    {
+      "id": "chapter-9",
+      "title": "9. What’s Next in Technology?",
+      "summary": "Considers rapid change in AI browsers, agentic apps, and interfaces, and the implications of increasingly adaptable content for publishers’ control, measurement, and monetization. The section also raises the possibility of a stronger backlash against technology.",
+      "key_points": [
+        "In “Expected impact of new browsers and agentic apps,” respondents assessed impact over the next three years: 15% expected a very large impact and 60% a large impact on publishers (printed p. 39).",
+        "The report describes AI browsers and apps that can summarize or translate webpages, complete tasks, and assemble personalized news briefings.",
+        "It argues that more liquid content and agentic bots may make it harder to control how stories appear and to measure human visits."
+      ],
+      "pages": [
+        39,
+        40,
+        41
+      ],
+      "references": []
+    },
+    {
+      "id": "chapter-10",
+      "title": "10. Conclusions",
+      "summary": "The report’s concluding section closes its discussion of journalism and technology trends for 2026.",
+      "key_points": [],
+      "pages": [
+        42
+      ],
+      "references": []
+    },
+    {
+      "id": "survey-methodology",
+      "title": "Survey Methodology",
+      "summary": "Explains the survey sample and collection period, emphasizing that the responses reflect a strategic group of senior industry leaders rather than a representative sample. It also summarizes participant roles, organization types, and geographic coverage.",
+      "key_points": [
+        "A closed online survey was completed by 280 senior publishing-industry participants from 51 countries and territories between 18 November and 20 December 2025 (printed p. 43).",
+        "Participants held editorial, commercial, or product roles and were responsible for aspects of digital or wider media strategy; the report cautions that the results are not representative of the wider industry."
+      ],
+      "pages": [
+        43
+      ],
+      "references": []
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "doc_map",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 1.0,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "methods": [
+    "The report presents Activate analysis and forecasts; specific forecast methods are not described.",
+    "Consumer research draws on Activate’s 2017 Consumer Tech & Media Research Study, with chart-specific samples reported as n=4,047, n=2,406, and n=820.",
+    "Some eCommerce adoption measures are indexed from measured consumer preferences in the 2017 Consumer Tech & Media Research Study (n=4,047).",
+    "Top news sites were selected from comScore’s Top 100 digital news properties; counts include desktop and mobile sites.",
+    "For a YouTube creator analysis, each channel is treated as a unique creator.",
+    "The influencer list was Forbes’ Top 10 Influencers list, generated with Traackr and Captiv8 using reach, virality, engagement, earnings per post, outside endorsements, and reputation.",
+    "Analyses cite secondary sources including Alexa, comScore, and other topic-specific sources; no validation method is reported."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "methods",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

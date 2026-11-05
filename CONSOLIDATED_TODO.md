@@ -2000,3 +2000,19 @@ docs/quality/reliability-cohort-20261001-next-five/verified-facts-20261105-95379
 E18 remains Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
 unstarted/not ready. The next work is bounded diagnosis of final-insight
 coverage and Adjust public distinctness; do not close this outcome.
+
+**Evidence update — 2026-11-05 (frozen five-report E2E acceptance at
+`d02897a9`):** The exact Capgemini, Activate, KPMG, Reuters Institute and
+Adjust frozen cohort completed once with 5/5 admission, 10/10 verified-fact
+admission evaluations, 0 quarantine, 1 `awaiting_review` result and 4
+validation failures. The run used 1,002 provider calls, 7,846,389 input and
+1,275,698 output tokens, cost `$1.517342`, and took 11,224.594 seconds; no
+workflow retry, operator intervention or publication write occurred. Reuters
+produced one final HTML artifact and passed validation/readiness; the other
+four failed closed before final HTML. The independent source/page review,
+exporter projections, exclusion inventory and source hashes are retained at
+`docs/quality/reliability-cohort-20261001-next-five/verified-facts-20261105-d02897a9`.
+This is **FAIL/NO-GO** evidence, not a live selection-effectiveness claim.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**. Do not close this outcome or begin Step 3 from
+this run.

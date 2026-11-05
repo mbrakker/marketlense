@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/cover_semantics",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "direction": "rising",
+    "domain_layer": "forecast",
+    "evidence_density": "metric_rich",
+    "evidence_shape": "trend",
+    "geography_scope": "global",
+    "selection_reason": "The report foregrounds quantified global revenue growth projections for 2017E–2021E, with audience and country comparisons as supporting evidence."
+  }
+}

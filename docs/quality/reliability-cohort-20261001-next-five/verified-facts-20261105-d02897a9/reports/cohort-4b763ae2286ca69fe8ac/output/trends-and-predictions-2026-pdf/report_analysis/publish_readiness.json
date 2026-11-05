@@ -1,0 +1,313 @@
+{
+  "report_id": "cohort-4b763ae2286ca69fe8ac",
+  "status": "pass",
+  "artifact_hashes": {
+    "artifacts": "d582034d745cc7c72e30d92d2294d25dc515ef551f73c0dc51076b55a780b994",
+    "evidence:findings": "09a019a5df11335589388b986c8b2836554caea9a8d3c1439e5099c269b074ef",
+    "evidence:verified_facts": "0478615628df04c40b31d1e0ae7d45f20ee9ea63641b6a1b530b3bde2a6258db",
+    "report_card_manifest_path": "016f17b20f393d6880fbf621db7f227bdaa63f138077bb8ab14c51d6b31447c5",
+    "validation": "caa8b06075e49a3867d19cd766d6503ebf294353971a55aeceb2d6f0911d5567",
+    "retained_claim_validation": "156bf863922e3146bfebd013bd236972e9d3fc29bbf60dd4853c8ba99398f468"
+  },
+  "rule_results": [
+    {
+      "rule_id": "publish_readiness.build_traceability",
+      "status": "pass",
+      "surfaces": [
+        "html_comment"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.category_consistency",
+      "status": "pass",
+      "surfaces": [
+        "categories",
+        "context_category_fit"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.editorial_quality",
+      "status": "pass",
+      "surfaces": [
+        "artifacts",
+        "rendered_html"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.evidence_fidelity",
+      "status": "pass",
+      "surfaces": [
+        "evidence_fidelity"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.figure_linkage",
+      "status": "pass",
+      "surfaces": [
+        "artifacts.chart_insight_cards",
+        "rendered.chart_cards"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.material_claim_evidence",
+      "status": "pass",
+      "surfaces": [
+        "artifacts",
+        "evidence_packs"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.public_identifier_leak",
+      "status": "pass",
+      "surfaces": [
+        "title",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "figcaption",
+        "body",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_href",
+        "link_label",
+        "link_href",
+        "alt",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "json_ld"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.public_source_provenance",
+      "status": "pass",
+      "surfaces": [
+        "source",
+        "source.links"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.public_title_quality",
+      "status": "pass",
+      "surfaces": [
+        "title",
+        "heading"
+      ],
+      "detail": "deferred to independent public-editorial semantic review",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.regeneration_promotion",
+      "status": "pass",
+      "surfaces": [
+        "regeneration"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.rendered_scaffolding",
+      "status": "pass",
+      "surfaces": [
+        "title",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "figcaption",
+        "body",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_href",
+        "link_label",
+        "link_href",
+        "alt",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "json_ld"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.repeated_boilerplate",
+      "status": "pass",
+      "surfaces": [
+        "body",
+        "caption",
+        "quotation"
+      ],
+      "detail": "deferred to independent public-editorial semantic review",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.report_card_manifest",
+      "status": "pass",
+      "surfaces": [
+        "report_card_manifest"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.retained_claim_grounding",
+      "status": "pass",
+      "surfaces": [
+        "retained_claim_validation"
+      ],
+      "detail": "unsupported_factual_count=0; unresolved_factual_count=0",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.semantic_grounding",
+      "status": "pass",
+      "surfaces": [
+        "validation"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.source_fidelity",
+      "status": "pass",
+      "surfaces": [
+        "public_items"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    }
+  ],
+  "final_html_hash": "eb629ae50af6ad814fa61561a1752c10cce618927e7e99b264d29cbbe4a9f49a",
+  "publication_projection_hash": "b014bda556b74b5a7728a2b9bd6a09b8ae2ed3a6d3114950bcbde9a9199fd94b",
+  "configuration_hash": "6e73f865b0ec22284ee34d98ced19cbbe5aab3a0c54d40645328ef0008ebbee5",
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "producer_revision": "workspace",
+  "created_at_utc": "2026-11-05T21:57:59.854873+00:00",
+  "expires_at_utc": "2026-11-06T21:57:59.854873+00:00",
+  "staleness_conditions": [
+    "final_html_hash_changed",
+    "publication_projection_hash_changed",
+    "artifact_hash_changed",
+    "retained_claim_grounding_changed",
+    "configuration_hash_changed",
+    "policy_hash_changed",
+    "producer_revision_changed",
+    "expired"
+  ],
+  "provenance": {
+    "build_artifact_hash": "78f3979cd1e56b211328c0aad79d12d481787cdbaaa3e9d0f53b367991fd568a",
+    "build_generated_at_utc": "2026-11-05T21:57:59.171413+00:00",
+    "build_generation_profile": "report_generation",
+    "build_generation_run_id": "769367fc-3391-4b5e-964d-3b33eff39dd7",
+    "build_git_sha": "unknown",
+    "build_source_id": "source:79cb8c886c55b49bfdec2128d5b25e0b|pdf-sha256:f746133b3d66479b716e61cbaf3771b45b035fdf7801251511cc7ba510413a52",
+    "build_source_md5": "4b763ae2286ca69fe8acb63b17508dfb",
+    "build_validation_run_id": "validation:4b55759fcc4ae536db07b1b737b8feba12e41c139f9c3c0efb8039738ed6efb3",
+    "internal_acquisition_path_hash": "3a53e3186ad4c8fcc9aaba89dd60ffba46ec603187011978b8c64050c9d71bc4",
+    "internal_archive_url_hash": "23dea86c959407f9aeb9b164ef50cd6f449754830db328c80864c6edcb8d3cf5",
+    "marketlense_article_url": "",
+    "original_report_url": "https://reutersinstitute.politics.ox.ac.uk/journalism-media-and-technology-trends-and-predictions",
+    "publisher_landing_page_url": "https://reutersinstitute.politics.ox.ac.uk/journalism-media-and-technology-trends-and-predictions"
+  },
+  "artifact_hash": "21cd7e76220a7fac9054e99b8cfd954d792c7de2528295f70e731f4661a07134",
+  "validator_version": "publish-readiness:v2",
+  "schema_version": "1.0"
+}

@@ -1,0 +1,1448 @@
+{
+  "attempt_index": 2,
+  "before_sha256": "f8f3f35f87536bd4386e4a179f678884871e8744258e3ff78cd00cee17c39661",
+  "after_sha256": "6a58e981b835471fe3bed735fe653eb755e662a650e30e8c1e9f0a1158461490",
+  "transformation_scope": [],
+  "unchanged_family_sha256": {
+    "summary": "ccb3faac205cbf9c85b3f19487c280b1d4d1b6601baade22c9671a6f958dce36",
+    "insights_candidates": "e602ed71f9772bb218b6ef99ed97aca997ef629172eb1d80526b5079c81a43c9",
+    "quotes_final": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "current_artifacts_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-cbb6e7df67412186b8bc\\ias-first-attempt-olry04oz\\output\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-cbb6e7df67412186b8bc\\ias-first-attempt-olry04oz\\output\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf\\report_analysis\\artifacts_regen_candidate_2.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "family_confidence:quotes",
+    "grounding:grounding",
+    "public_editorial_quality.semantic_review:insights:podcast-audience-factors",
+    "public_editorial_quality.semantic_review:linkedin_post",
+    "public_editorial_quality.source_limitation_omitted:insights:podcast-audience-factors",
+    "regeneration_scope_violation:insights_final[item=global-revenue-forecast].evidence",
+    "regeneration_scope_violation:insights_final[item=global-revenue-forecast].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=global-revenue-forecast].evidence_spans[1]",
+    "regeneration_scope_violation:insights_final[item=global-revenue-forecast].pages[1]",
+    "regeneration_scope_violation:insights_final[item=sports-fan-segment-shares].evidence",
+    "regeneration_scope_violation:insights_final[item=sports-fan-segment-shares].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=sports-fan-segment-shares].evidence_spans[1]",
+    "regeneration_scope_violation:insights_final[item=sports-fan-segment-shares].pages[1]",
+    "regeneration_scope_violation:insights_final[item=video-attention-spend].evidence",
+    "regeneration_scope_violation:insights_final[item=video-attention-spend].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=video-attention-spend].evidence_spans[1]"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "broadcast-cord-cutter-preference",
+      "original_evidence_ids": [
+        "verified-fact:broadcast-cord-cutter-preference"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:broadcast-cord-cutter-preference"
+      ],
+      "original_source_pages": [
+        70
+      ],
+      "candidate_source_pages": [
+        70
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "consumer-vr-adoption-outlook",
+      "original_evidence_ids": [
+        "verified-fact:consumer-vr-adoption-outlook"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:consumer-vr-adoption-outlook"
+      ],
+      "original_source_pages": [
+        42
+      ],
+      "candidate_source_pages": [
+        42
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "ecommerce-firsthand-experience",
+      "original_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "original_source_pages": [
+        119
+      ],
+      "candidate_source_pages": [
+        119
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "f02",
+      "original_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "f04",
+      "original_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "global-revenue-forecast",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "news-trust-comparison",
+      "original_evidence_ids": [
+        "verified-fact:news-trust-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:news-trust-comparison"
+      ],
+      "original_source_pages": [
+        101
+      ],
+      "candidate_source_pages": [
+        101
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "podcast-audience-factors",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "original_source_pages": [
+        129
+      ],
+      "candidate_source_pages": [
+        129
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "sports-fan-segment-shares",
+      "original_evidence_ids": [
+        "verified-fact:sports-fan-segment-shares"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:sports-fan-segment-shares"
+      ],
+      "original_source_pages": [
+        84
+      ],
+      "candidate_source_pages": [
+        84
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "video-attention-spend",
+      "original_evidence_ids": [
+        "verified-fact:video-attention-spend"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:video-attention-spend"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "consumer-vr-adoption-outlook",
+      "original_evidence_ids": [
+        "verified-fact:consumer-vr-adoption-outlook"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:consumer-vr-adoption-outlook"
+      ],
+      "original_source_pages": [
+        42
+      ],
+      "candidate_source_pages": [
+        42
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "ecommerce-firsthand-experience",
+      "original_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "original_source_pages": [
+        119
+      ],
+      "candidate_source_pages": [
+        119
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "global-revenue-forecast",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast",
+        "verified-fact:f02"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5,
+        6
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "news-trust-comparison",
+      "original_evidence_ids": [
+        "verified-fact:news-trust-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:news-trust-comparison"
+      ],
+      "original_source_pages": [
+        101
+      ],
+      "candidate_source_pages": [
+        101
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "podcast-audience-factors",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "original_source_pages": [
+        129
+      ],
+      "candidate_source_pages": [
+        129
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "sports-fan-segment-shares",
+      "original_evidence_ids": [
+        "verified-fact:sports-fan-segment-shares",
+        "verified-fact:broadcast-cord-cutter-preference"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:sports-fan-segment-shares"
+      ],
+      "original_source_pages": [
+        84,
+        70
+      ],
+      "candidate_source_pages": [
+        84
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "video-attention-spend",
+      "original_evidence_ids": [
+        "verified-fact:video-attention-spend",
+        "verified-fact:f04"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:video-attention-spend"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "original_source_pages": [
+        129
+      ],
+      "candidate_source_pages": [
+        129
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:64fe37e6b2b36055",
+      "original_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "original_source_pages": [
+        119
+      ],
+      "candidate_source_pages": [
+        119
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:7e4b4b2a933052bf",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "original_source_pages": [
+        129
+      ],
+      "candidate_source_pages": [
+        129
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:ba39d994d4d5a808",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors",
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors",
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "original_source_pages": [
+        129,
+        119
+      ],
+      "candidate_source_pages": [
+        129,
+        119
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:d25c207d9f375e47",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors",
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors",
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "original_source_pages": [
+        129,
+        119
+      ],
+      "candidate_source_pages": [
+        129,
+        119
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:0e0a079dd1036ae7",
+      "original_evidence_ids": [
+        "verified-fact:f04",
+        "verified-fact:video-attention-spend"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04",
+        "verified-fact:video-attention-spend"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:53945652910863a8",
+      "original_evidence_ids": [
+        "verified-fact:f04",
+        "verified-fact:video-attention-spend"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04",
+        "verified-fact:video-attention-spend"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:cb8fb3aebb6bc1cf",
+      "original_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:26305fb37aaa8f98",
+      "original_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:33e06a4e0cf98d82",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "original_source_pages": [
+        129
+      ],
+      "candidate_source_pages": [
+        129
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:8fa73d7d743fb1ae",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:aff2fee085fbe0b9",
+      "original_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:dd5a6c144405b1c0",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+    "ab2dccabc15296e1b3799012e2fd363d88fe3835a63cfd367eaaf268103f3bba",
+    "596f8aa1ab0c5803f207dbd5fc3bba535c2c0e5f3619da634c8d315396bee097",
+    "0714cfe1b076e1d2833d9292c07434e2aa24fc5c914d3c0e1b523f28655354d7",
+    "9e039ddef52cb5153dab8bbf0fd5c2d148583c31c0ca009f2fdb5db5480ace5c",
+    "7fcce32be2bd089b698fefdbe1ff43331abd2e4aa058d8e9ed97f39543a67c53",
+    "3c073d603c957c38d9ea5985c285d5d940544c1b9bd924b793adf4094cfbb196",
+    "1cd8f15eb8c3e419518596150c513db6a079ff84bcd1437f3e2d2f57771d43be",
+    "d96f0d9430f74a3dbb1ad66212f8ea89eb07ca6bd62808bc61ba4b95675a91e0",
+    "e9d16f4d238d6789e689d6c948d609836d61c0ef8afd9bed9a8bc9280d05476f",
+    "cb96d23b49f7432a72ff55c90d2dc68becb4d99bdcc0e823d199fcfccad2906e",
+    "87d0a7489308d84934f4f5d10af93f0bba71ca8fa641beb97761054c54dd2cd5",
+    "804901ca9593c8660fc8908f62c679f62ee26d7c0d41f6fee10bfdc7dc2281b1",
+    "7ba515a82d61b28726e68fb7174c9b56f5e368630c557c55bd9f6b3db18007ca",
+    "5753cddb0bd9768b23c4506ce35d85534f014974425c2e8faa1f6d5f1ecb5b8f",
+    "22d8c5db1ac053efa9a25826dcbfc254b8be57c4728ee675ee8aab61774bf9c5"
+  ],
+  "repair_action": "ABSTAIN",
+  "repair_strategy": "alternative_evidence:provider_rejected:changed_path_outside_allowed_paths",
+  "allowed_paths": [
+    "insights_final[item=podcast-audience-factors].evidence_id",
+    "insights_final[item=podcast-audience-factors].text"
+  ],
+  "verified_dependent_paths": [
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.output_controls.max_output_tokens",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.routing_policy_version",
+    "_cache.prompts.report_vs/artifacts/regenerate/insights_final",
+    "_cache.regeneration_prompt_requirements",
+    "chart_insight_cards[item=global-revenue-forecast].evidence_ids",
+    "chart_insight_cards[item=global-revenue-forecast].evidence_spans[1]",
+    "chart_insight_cards[item=sports-fan-segment-shares].evidence_ids",
+    "chart_insight_cards[item=sports-fan-segment-shares].evidence_spans[1]",
+    "chart_insight_cards[item=video-attention-spend].evidence_ids",
+    "chart_insight_cards[item=video-attention-spend].evidence_spans[1]",
+    "claim_ledgers[12].evidence_ids[0]",
+    "claim_ledgers[13].evidence_ids[0]",
+    "claim_ledgers[14].evidence_ids[0]",
+    "claim_ledgers[5].evidence_ids[0]",
+    "claim_ledgers[5].evidence_references[0]",
+    "claim_ledgers[5].evidence_span_count",
+    "claim_ledgers[6].evidence_ids[0]",
+    "claim_ledgers[6].evidence_references[0]",
+    "claim_ledgers[6].evidence_span_count",
+    "claim_ledgers[7].evidence_ids[0]",
+    "claim_ledgers[7].evidence_references[0]",
+    "claim_ledgers[7].evidence_span_count",
+    "key_figures[0].evidence_ids",
+    "key_figures[0].evidence_spans[1]",
+    "key_figures[1].evidence_ids",
+    "key_figures[1].evidence_spans[1]",
+    "key_figures[2].evidence_ids",
+    "key_figures[2].evidence_spans[1]",
+    "metric_spine[0].evidence_ids",
+    "metric_spine[0].evidence_spans[1]",
+    "metric_spine[1].evidence_ids",
+    "metric_spine[1].evidence_spans[1]",
+    "metric_spine[2].evidence_ids",
+    "metric_spine[2].evidence_spans[1]"
+  ],
+  "selected_evidence_ids": [],
+  "quarantined_evidence_ids": [],
+  "repair_delta": {
+    "resolved": [],
+    "persisting": [
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "linkedin_post",
+        "entity_id": "linkedin_post:linkedin_post",
+        "evidence_ids": [
+          "verified-fact:video-attention-spend"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "family_confidence",
+        "affected_section": "quotes",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:podcast-audience-factors",
+        "entity_id": "insight:podcast-audience-factors:text",
+        "evidence_ids": [
+          "verified-fact:podcast-audience-factors"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.source_limitation_omitted",
+        "affected_section": "insights:podcast-audience-factors",
+        "entity_id": "insight:podcast-audience-factors:text",
+        "evidence_ids": [
+          "verified-fact:podcast-audience-factors"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "grounding",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failures": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failure_count": 11,
+    "introduced_failure_categories": [],
+    "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+    "severity_changes": [],
+    "mutation_scope_result": "fail",
+    "evidence_lineage_result": "pass",
+    "repair_action": "ABSTAIN",
+    "repair_strategy": "alternative_evidence:provider_rejected:changed_path_outside_allowed_paths",
+    "evidence_ids_used": [],
+    "strategy_fingerprint": "ef38c83df76effe207ad12c712c87029065439e95cfadaea814d1862d0ffbb1b",
+    "candidate_sha256": "6a58e981b835471fe3bed735fe653eb755e662a650e30e8c1e9f0a1158461490",
+    "input_sha256": "f8f3f35f87536bd4386e4a179f678884871e8744258e3ff78cd00cee17c39661",
+    "validator_identity": "regeneration-candidate-v1:e50763d4a9df1b132fe130958d2fd03a782386224b62130d71fd6a48b1e2497a:d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [
+    {
+      "diagnosed_failure_class": "public_editorial_quality.semantic_review",
+      "repair_action": "ABSTAIN",
+      "repair_strategy": "alternative_evidence:provider_rejected:changed_path_outside_allowed_paths",
+      "evidence_ids_used": [],
+      "protected_fields": [
+        "insights_final[item=consumer-vr-adoption-outlook].coverage_role",
+        "insights_final[item=consumer-vr-adoption-outlook].decision_relevance_score",
+        "insights_final[item=consumer-vr-adoption-outlook].evidence",
+        "insights_final[item=consumer-vr-adoption-outlook].evidence_id",
+        "insights_final[item=consumer-vr-adoption-outlook].evidence_ids[0]",
+        "insights_final[item=consumer-vr-adoption-outlook].evidence_spans[0].evidence_id",
+        "insights_final[item=consumer-vr-adoption-outlook].evidence_spans[0].page",
+        "insights_final[item=consumer-vr-adoption-outlook].evidence_spans[0].source_identity",
+        "insights_final[item=consumer-vr-adoption-outlook].evidence_spans[0].source_pack",
+        "insights_final[item=consumer-vr-adoption-outlook].evidence_spans[0].text",
+        "insights_final[item=consumer-vr-adoption-outlook].id",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.baseline",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.cohort",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.comparator",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.confidence",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.delta",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.denominator",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.forecast_status",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.geography",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.label",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.observation_status",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.observations",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.sample_size",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.segment",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.subject",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.timeframe",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.trend",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.unit",
+        "insights_final[item=consumer-vr-adoption-outlook].metric.value",
+        "insights_final[item=consumer-vr-adoption-outlook].metric_strength_score",
+        "insights_final[item=consumer-vr-adoption-outlook].novelty_score",
+        "insights_final[item=consumer-vr-adoption-outlook].now_what",
+        "insights_final[item=consumer-vr-adoption-outlook].pages[0]",
+        "insights_final[item=consumer-vr-adoption-outlook].report_type_lens",
+        "insights_final[item=consumer-vr-adoption-outlook].score",
+        "insights_final[item=consumer-vr-adoption-outlook].so_what",
+        "insights_final[item=consumer-vr-adoption-outlook].text",
+        "insights_final[item=ecommerce-firsthand-experience].coverage_role",
+        "insights_final[item=ecommerce-firsthand-experience].decision_relevance_score",
+        "insights_final[item=ecommerce-firsthand-experience].evidence",
+        "insights_final[item=ecommerce-firsthand-experience].evidence_id",
+        "insights_final[item=ecommerce-firsthand-experience].evidence_ids[0]",
+        "insights_final[item=ecommerce-firsthand-experience].evidence_spans[0].evidence_id",
+        "insights_final[item=ecommerce-firsthand-experience].evidence_spans[0].page",
+        "insights_final[item=ecommerce-firsthand-experience].evidence_spans[0].source_identity",
+        "insights_final[item=ecommerce-firsthand-experience].evidence_spans[0].source_pack",
+        "insights_final[item=ecommerce-firsthand-experience].evidence_spans[0].text",
+        "insights_final[item=ecommerce-firsthand-experience].id",
+        "insights_final[item=ecommerce-firsthand-experience].metric.baseline",
+        "insights_final[item=ecommerce-firsthand-experience].metric.cohort",
+        "insights_final[item=ecommerce-firsthand-experience].metric.comparator",
+        "insights_final[item=ecommerce-firsthand-experience].metric.confidence",
+        "insights_final[item=ecommerce-firsthand-experience].metric.delta",
+        "insights_final[item=ecommerce-firsthand-experience].metric.denominator",
+        "insights_final[item=ecommerce-firsthand-experience].metric.forecast_status",
+        "insights_final[item=ecommerce-firsthand-experience].metric.geography",
+        "insights_final[item=ecommerce-firsthand-experience].metric.label",
+        "insights_final[item=ecommerce-firsthand-experience].metric.observation_status",
+        "insights_final[item=ecommerce-firsthand-experience].metric.observations",
+        "insights_final[item=ecommerce-firsthand-experience].metric.sample_size",
+        "insights_final[item=ecommerce-firsthand-experience].metric.segment",
+        "insights_final[item=ecommerce-firsthand-experience].metric.subject",
+        "insights_final[item=ecommerce-firsthand-experience].metric.timeframe",
+        "insights_final[item=ecommerce-firsthand-experience].metric.trend",
+        "insights_final[item=ecommerce-firsthand-experience].metric.unit",
+        "insights_final[item=ecommerce-firsthand-experience].metric.value",
+        "insights_final[item=ecommerce-firsthand-experience].metric_strength_score",
+        "insights_final[item=ecommerce-firsthand-experience].novelty_score",
+        "insights_final[item=ecommerce-firsthand-experience].now_what",
+        "insights_final[item=ecommerce-firsthand-experience].pages[0]",
+        "insights_final[item=ecommerce-firsthand-experience].report_type_lens",
+        "insights_final[item=ecommerce-firsthand-experience].score",
+        "insights_final[item=ecommerce-firsthand-experience].so_what",
+        "insights_final[item=ecommerce-firsthand-experience].text",
+        "insights_final[item=global-revenue-forecast].coverage_role",
+        "insights_final[item=global-revenue-forecast].decision_relevance_score",
+        "insights_final[item=global-revenue-forecast].evidence",
+        "insights_final[item=global-revenue-forecast].evidence_id",
+        "insights_final[item=global-revenue-forecast].evidence_spans[0].evidence_id",
+        "insights_final[item=global-revenue-forecast].evidence_spans[0].page",
+        "insights_final[item=global-revenue-forecast].evidence_spans[0].source_identity",
+        "insights_final[item=global-revenue-forecast].evidence_spans[0].source_pack",
+        "insights_final[item=global-revenue-forecast].evidence_spans[0].text",
+        "insights_final[item=global-revenue-forecast].id",
+        "insights_final[item=global-revenue-forecast].metric.baseline",
+        "insights_final[item=global-revenue-forecast].metric.cohort",
+        "insights_final[item=global-revenue-forecast].metric.comparator",
+        "insights_final[item=global-revenue-forecast].metric.confidence",
+        "insights_final[item=global-revenue-forecast].metric.delta",
+        "insights_final[item=global-revenue-forecast].metric.denominator",
+        "insights_final[item=global-revenue-forecast].metric.forecast_status",
+        "insights_final[item=global-revenue-forecast].metric.geography",
+        "insights_final[item=global-revenue-forecast].metric.label",
+        "insights_final[item=global-revenue-forecast].metric.observation_status",
+        "insights_final[item=global-revenue-forecast].metric.observations[0].cohort",
+        "insights_final[item=global-revenue-forecast].metric.observations[0].denominator",
+        "insights_final[item=global-revenue-forecast].metric.observations[0].geography",
+        "insights_final[item=global-revenue-forecast].metric.observations[0].label",
+        "insights_final[item=global-revenue-forecast].metric.observations[0].observation_status",
+        "insights_final[item=global-revenue-forecast].metric.observations[0].segment",
+        "insights_final[item=global-revenue-forecast].metric.observations[0].timeframe",
+        "insights_final[item=global-revenue-forecast].metric.observations[0].unit",
+        "insights_final[item=global-revenue-forecast].metric.observations[0].value",
+        "insights_final[item=global-revenue-forecast].metric.observations[1].cohort",
+        "insights_final[item=global-revenue-forecast].metric.observations[1].denominator",
+        "insights_final[item=global-revenue-forecast].metric.observations[1].geography",
+        "insights_final[item=global-revenue-forecast].metric.observations[1].label",
+        "insights_final[item=global-revenue-forecast].metric.observations[1].observation_status",
+        "insights_final[item=global-revenue-forecast].metric.observations[1].segment",
+        "insights_final[item=global-revenue-forecast].metric.observations[1].timeframe",
+        "insights_final[item=global-revenue-forecast].metric.observations[1].unit",
+        "insights_final[item=global-revenue-forecast].metric.observations[1].value",
+        "insights_final[item=global-revenue-forecast].metric.observations[2].cohort",
+        "insights_final[item=global-revenue-forecast].metric.observations[2].denominator",
+        "insights_final[item=global-revenue-forecast].metric.observations[2].geography",
+        "insights_final[item=global-revenue-forecast].metric.observations[2].label",
+        "insights_final[item=global-revenue-forecast].metric.observations[2].observation_status",
+        "insights_final[item=global-revenue-forecast].metric.observations[2].segment",
+        "insights_final[item=global-revenue-forecast].metric.observations[2].timeframe",
+        "insights_final[item=global-revenue-forecast].metric.observations[2].unit",
+        "insights_final[item=global-revenue-forecast].metric.observations[2].value",
+        "insights_final[item=global-revenue-forecast].metric.observations[3].cohort",
+        "insights_final[item=global-revenue-forecast].metric.observations[3].denominator",
+        "insights_final[item=global-revenue-forecast].metric.observations[3].geography",
+        "insights_final[item=global-revenue-forecast].metric.observations[3].label",
+        "insights_final[item=global-revenue-forecast].metric.observations[3].observation_status",
+        "insights_final[item=global-revenue-forecast].metric.observations[3].segment",
+        "insights_final[item=global-revenue-forecast].metric.observations[3].timeframe",
+        "insights_final[item=global-revenue-forecast].metric.observations[3].unit",
+        "insights_final[item=global-revenue-forecast].metric.observations[3].value",
+        "insights_final[item=global-revenue-forecast].metric.observations[4].cohort",
+        "insights_final[item=global-revenue-forecast].metric.observations[4].denominator",
+        "insights_final[item=global-revenue-forecast].metric.observations[4].geography",
+        "insights_final[item=global-revenue-forecast].metric.observations[4].label",
+        "insights_final[item=global-revenue-forecast].metric.observations[4].observation_status",
+        "insights_final[item=global-revenue-forecast].metric.observations[4].segment",
+        "insights_final[item=global-revenue-forecast].metric.observations[4].timeframe",
+        "insights_final[item=global-revenue-forecast].metric.observations[4].unit",
+        "insights_final[item=global-revenue-forecast].metric.observations[4].value",
+        "insights_final[item=global-revenue-forecast].metric.sample_size",
+        "insights_final[item=global-revenue-forecast].metric.segment",
+        "insights_final[item=global-revenue-forecast].metric.subject",
+        "insights_final[item=global-revenue-forecast].metric.timeframe",
+        "insights_final[item=global-revenue-forecast].metric.trend",
+        "insights_final[item=global-revenue-forecast].metric.unit",
+        "insights_final[item=global-revenue-forecast].metric.value",
+        "insights_final[item=global-revenue-forecast].metric_public_copy",
+        "insights_final[item=global-revenue-forecast].metric_strength_score",
+        "insights_final[item=global-revenue-forecast].novelty_score",
+        "insights_final[item=global-revenue-forecast].now_what",
+        "insights_final[item=global-revenue-forecast].pages[0]",
+        "insights_final[item=global-revenue-forecast].report_type_lens",
+        "insights_final[item=global-revenue-forecast].score",
+        "insights_final[item=global-revenue-forecast].so_what",
+        "insights_final[item=global-revenue-forecast].text",
+        "insights_final[item=news-trust-comparison].coverage_role",
+        "insights_final[item=news-trust-comparison].decision_relevance_score",
+        "insights_final[item=news-trust-comparison].evidence",
+        "insights_final[item=news-trust-comparison].evidence_id",
+        "insights_final[item=news-trust-comparison].evidence_ids[0]",
+        "insights_final[item=news-trust-comparison].evidence_spans[0].evidence_id",
+        "insights_final[item=news-trust-comparison].evidence_spans[0].page",
+        "insights_final[item=news-trust-comparison].evidence_spans[0].source_identity",
+        "insights_final[item=news-trust-comparison].evidence_spans[0].source_pack",
+        "insights_final[item=news-trust-comparison].evidence_spans[0].text",
+        "insights_final[item=news-trust-comparison].id",
+        "insights_final[item=news-trust-comparison].metric.baseline",
+        "insights_final[item=news-trust-comparison].metric.cohort",
+        "insights_final[item=news-trust-comparison].metric.comparator",
+        "insights_final[item=news-trust-comparison].metric.confidence",
+        "insights_final[item=news-trust-comparison].metric.delta",
+        "insights_final[item=news-trust-comparison].metric.denominator",
+        "insights_final[item=news-trust-comparison].metric.forecast_status",
+        "insights_final[item=news-trust-comparison].metric.geography",
+        "insights_final[item=news-trust-comparison].metric.label",
+        "insights_final[item=news-trust-comparison].metric.observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[0].cohort",
+        "insights_final[item=news-trust-comparison].metric.observations[0].denominator",
+        "insights_final[item=news-trust-comparison].metric.observations[0].geography",
+        "insights_final[item=news-trust-comparison].metric.observations[0].label",
+        "insights_final[item=news-trust-comparison].metric.observations[0].observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[0].segment",
+        "insights_final[item=news-trust-comparison].metric.observations[0].timeframe",
+        "insights_final[item=news-trust-comparison].metric.observations[0].unit",
+        "insights_final[item=news-trust-comparison].metric.observations[0].value",
+        "insights_final[item=news-trust-comparison].metric.observations[1].cohort",
+        "insights_final[item=news-trust-comparison].metric.observations[1].denominator",
+        "insights_final[item=news-trust-comparison].metric.observations[1].geography",
+        "insights_final[item=news-trust-comparison].metric.observations[1].label",
+        "insights_final[item=news-trust-comparison].metric.observations[1].observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[1].segment",
+        "insights_final[item=news-trust-comparison].metric.observations[1].timeframe",
+        "insights_final[item=news-trust-comparison].metric.observations[1].unit",
+        "insights_final[item=news-trust-comparison].metric.observations[1].value",
+        "insights_final[item=news-trust-comparison].metric.observations[2].cohort",
+        "insights_final[item=news-trust-comparison].metric.observations[2].denominator",
+        "insights_final[item=news-trust-comparison].metric.observations[2].geography",
+        "insights_final[item=news-trust-comparison].metric.observations[2].label",
+        "insights_final[item=news-trust-comparison].metric.observations[2].observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[2].segment",
+        "insights_final[item=news-trust-comparison].metric.observations[2].timeframe",
+        "insights_final[item=news-trust-comparison].metric.observations[2].unit",
+        "insights_final[item=news-trust-comparison].metric.observations[2].value",
+        "insights_final[item=news-trust-comparison].metric.observations[3].cohort",
+        "insights_final[item=news-trust-comparison].metric.observations[3].denominator",
+        "insights_final[item=news-trust-comparison].metric.observations[3].geography",
+        "insights_final[item=news-trust-comparison].metric.observations[3].label",
+        "insights_final[item=news-trust-comparison].metric.observations[3].observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[3].segment",
+        "insights_final[item=news-trust-comparison].metric.observations[3].timeframe",
+        "insights_final[item=news-trust-comparison].metric.observations[3].unit",
+        "insights_final[item=news-trust-comparison].metric.observations[3].value",
+        "insights_final[item=news-trust-comparison].metric.observations[4].cohort",
+        "insights_final[item=news-trust-comparison].metric.observations[4].denominator",
+        "insights_final[item=news-trust-comparison].metric.observations[4].geography",
+        "insights_final[item=news-trust-comparison].metric.observations[4].label",
+        "insights_final[item=news-trust-comparison].metric.observations[4].observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[4].segment",
+        "insights_final[item=news-trust-comparison].metric.observations[4].timeframe",
+        "insights_final[item=news-trust-comparison].metric.observations[4].unit",
+        "insights_final[item=news-trust-comparison].metric.observations[4].value",
+        "insights_final[item=news-trust-comparison].metric.observations[5].cohort",
+        "insights_final[item=news-trust-comparison].metric.observations[5].denominator",
+        "insights_final[item=news-trust-comparison].metric.observations[5].geography",
+        "insights_final[item=news-trust-comparison].metric.observations[5].label",
+        "insights_final[item=news-trust-comparison].metric.observations[5].observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[5].segment",
+        "insights_final[item=news-trust-comparison].metric.observations[5].timeframe",
+        "insights_final[item=news-trust-comparison].metric.observations[5].unit",
+        "insights_final[item=news-trust-comparison].metric.observations[5].value",
+        "insights_final[item=news-trust-comparison].metric.observations[6].cohort",
+        "insights_final[item=news-trust-comparison].metric.observations[6].denominator",
+        "insights_final[item=news-trust-comparison].metric.observations[6].geography",
+        "insights_final[item=news-trust-comparison].metric.observations[6].label",
+        "insights_final[item=news-trust-comparison].metric.observations[6].observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[6].segment",
+        "insights_final[item=news-trust-comparison].metric.observations[6].timeframe",
+        "insights_final[item=news-trust-comparison].metric.observations[6].unit",
+        "insights_final[item=news-trust-comparison].metric.observations[6].value",
+        "insights_final[item=news-trust-comparison].metric.observations[7].cohort",
+        "insights_final[item=news-trust-comparison].metric.observations[7].denominator",
+        "insights_final[item=news-trust-comparison].metric.observations[7].geography",
+        "insights_final[item=news-trust-comparison].metric.observations[7].label",
+        "insights_final[item=news-trust-comparison].metric.observations[7].observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[7].segment",
+        "insights_final[item=news-trust-comparison].metric.observations[7].timeframe",
+        "insights_final[item=news-trust-comparison].metric.observations[7].unit",
+        "insights_final[item=news-trust-comparison].metric.observations[7].value",
+        "insights_final[item=news-trust-comparison].metric.observations[8].cohort",
+        "insights_final[item=news-trust-comparison].metric.observations[8].denominator",
+        "insights_final[item=news-trust-comparison].metric.observations[8].geography",
+        "insights_final[item=news-trust-comparison].metric.observations[8].label",
+        "insights_final[item=news-trust-comparison].metric.observations[8].observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[8].segment",
+        "insights_final[item=news-trust-comparison].metric.observations[8].timeframe",
+        "insights_final[item=news-trust-comparison].metric.observations[8].unit",
+        "insights_final[item=news-trust-comparison].metric.observations[8].value",
+        "insights_final[item=news-trust-comparison].metric.observations[9].cohort",
+        "insights_final[item=news-trust-comparison].metric.observations[9].denominator",
+        "insights_final[item=news-trust-comparison].metric.observations[9].geography",
+        "insights_final[item=news-trust-comparison].metric.observations[9].label",
+        "insights_final[item=news-trust-comparison].metric.observations[9].observation_status",
+        "insights_final[item=news-trust-comparison].metric.observations[9].segment",
+        "insights_final[item=news-trust-comparison].metric.observations[9].timeframe",
+        "insights_final[item=news-trust-comparison].metric.observations[9].unit",
+        "insights_final[item=news-trust-comparison].metric.observations[9].value",
+        "insights_final[item=news-trust-comparison].metric.sample_size",
+        "insights_final[item=news-trust-comparison].metric.segment",
+        "insights_final[item=news-trust-comparison].metric.subject",
+        "insights_final[item=news-trust-comparison].metric.timeframe",
+        "insights_final[item=news-trust-comparison].metric.trend",
+        "insights_final[item=news-trust-comparison].metric.unit",
+        "insights_final[item=news-trust-comparison].metric.value",
+        "insights_final[item=news-trust-comparison].metric_public_copy",
+        "insights_final[item=news-trust-comparison].metric_strength_score",
+        "insights_final[item=news-trust-comparison].novelty_score",
+        "insights_final[item=news-trust-comparison].now_what",
+        "insights_final[item=news-trust-comparison].pages[0]",
+        "insights_final[item=news-trust-comparison].report_type_lens",
+        "insights_final[item=news-trust-comparison].score",
+        "insights_final[item=news-trust-comparison].so_what",
+        "insights_final[item=news-trust-comparison].text",
+        "insights_final[item=podcast-audience-factors].coverage_role",
+        "insights_final[item=podcast-audience-factors].decision_relevance_score",
+        "insights_final[item=podcast-audience-factors].evidence",
+        "insights_final[item=podcast-audience-factors].evidence_ids[0]",
+        "insights_final[item=podcast-audience-factors].evidence_spans[0].evidence_id",
+        "insights_final[item=podcast-audience-factors].evidence_spans[0].page",
+        "insights_final[item=podcast-audience-factors].evidence_spans[0].source_identity",
+        "insights_final[item=podcast-audience-factors].evidence_spans[0].source_pack",
+        "insights_final[item=podcast-audience-factors].evidence_spans[0].text",
+        "insights_final[item=podcast-audience-factors].id",
+        "insights_final[item=podcast-audience-factors].metric.baseline",
+        "insights_final[item=podcast-audience-factors].metric.cohort",
+        "insights_final[item=podcast-audience-factors].metric.comparator",
+        "insights_final[item=podcast-audience-factors].metric.confidence",
+        "insights_final[item=podcast-audience-factors].metric.delta",
+        "insights_final[item=podcast-audience-factors].metric.denominator",
+        "insights_final[item=podcast-audience-factors].metric.forecast_status",
+        "insights_final[item=podcast-audience-factors].metric.geography",
+        "insights_final[item=podcast-audience-factors].metric.label",
+        "insights_final[item=podcast-audience-factors].metric.observation_status",
+        "insights_final[item=podcast-audience-factors].metric.observations[0].cohort",
+        "insights_final[item=podcast-audience-factors].metric.observations[0].denominator",
+        "insights_final[item=podcast-audience-factors].metric.observations[0].geography",
+        "insights_final[item=podcast-audience-factors].metric.observations[0].label",
+        "insights_final[item=podcast-audience-factors].metric.observations[0].observation_status",
+        "insights_final[item=podcast-audience-factors].metric.observations[0].segment",
+        "insights_final[item=podcast-audience-factors].metric.observations[0].timeframe",
+        "insights_final[item=podcast-audience-factors].metric.observations[0].unit",
+        "insights_final[item=podcast-audience-factors].metric.observations[0].value",
+        "insights_final[item=podcast-audience-factors].metric.observations[1].cohort",
+        "insights_final[item=podcast-audience-factors].metric.observations[1].denominator",
+        "insights_final[item=podcast-audience-factors].metric.observations[1].geography",
+        "insights_final[item=podcast-audience-factors].metric.observations[1].label",
+        "insights_final[item=podcast-audience-factors].metric.observations[1].observation_status",
+        "insights_final[item=podcast-audience-factors].metric.observations[1].segment",
+        "insights_final[item=podcast-audience-factors].metric.observations[1].timeframe",
+        "insights_final[item=podcast-audience-factors].metric.observations[1].unit",
+        "insights_final[item=podcast-audience-factors].metric.observations[1].value",
+        "insights_final[item=podcast-audience-factors].metric.sample_size",
+        "insights_final[item=podcast-audience-factors].metric.segment",
+        "insights_final[item=podcast-audience-factors].metric.subject",
+        "insights_final[item=podcast-audience-factors].metric.timeframe",
+        "insights_final[item=podcast-audience-factors].metric.trend",
+        "insights_final[item=podcast-audience-factors].metric.unit",
+        "insights_final[item=podcast-audience-factors].metric.value",
+        "insights_final[item=podcast-audience-factors].metric_public_copy",
+        "insights_final[item=podcast-audience-factors].metric_strength_score",
+        "insights_final[item=podcast-audience-factors].novelty_score",
+        "insights_final[item=podcast-audience-factors].now_what",
+        "insights_final[item=podcast-audience-factors].pages[0]",
+        "insights_final[item=podcast-audience-factors].report_type_lens",
+        "insights_final[item=podcast-audience-factors].score",
+        "insights_final[item=podcast-audience-factors].so_what",
+        "insights_final[item=sports-fan-segment-shares].coverage_role",
+        "insights_final[item=sports-fan-segment-shares].decision_relevance_score",
+        "insights_final[item=sports-fan-segment-shares].evidence",
+        "insights_final[item=sports-fan-segment-shares].evidence_id",
+        "insights_final[item=sports-fan-segment-shares].evidence_spans[0].evidence_id",
+        "insights_final[item=sports-fan-segment-shares].evidence_spans[0].page",
+        "insights_final[item=sports-fan-segment-shares].evidence_spans[0].source_identity",
+        "insights_final[item=sports-fan-segment-shares].evidence_spans[0].source_pack",
+        "insights_final[item=sports-fan-segment-shares].evidence_spans[0].text",
+        "insights_final[item=sports-fan-segment-shares].id",
+        "insights_final[item=sports-fan-segment-shares].metric.baseline",
+        "insights_final[item=sports-fan-segment-shares].metric.cohort",
+        "insights_final[item=sports-fan-segment-shares].metric.comparator",
+        "insights_final[item=sports-fan-segment-shares].metric.confidence",
+        "insights_final[item=sports-fan-segment-shares].metric.delta",
+        "insights_final[item=sports-fan-segment-shares].metric.denominator",
+        "insights_final[item=sports-fan-segment-shares].metric.forecast_status",
+        "insights_final[item=sports-fan-segment-shares].metric.geography",
+        "insights_final[item=sports-fan-segment-shares].metric.label",
+        "insights_final[item=sports-fan-segment-shares].metric.observation_status",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[0].cohort",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[0].denominator",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[0].geography",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[0].label",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[0].observation_status",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[0].segment",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[0].timeframe",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[0].unit",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[0].value",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[1].cohort",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[1].denominator",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[1].geography",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[1].label",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[1].observation_status",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[1].segment",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[1].timeframe",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[1].unit",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[1].value",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[2].cohort",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[2].denominator",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[2].geography",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[2].label",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[2].observation_status",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[2].segment",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[2].timeframe",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[2].unit",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[2].value",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[3].cohort",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[3].denominator",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[3].geography",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[3].label",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[3].observation_status",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[3].segment",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[3].timeframe",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[3].unit",
+        "insights_final[item=sports-fan-segment-shares].metric.observations[3].value",
+        "insights_final[item=sports-fan-segment-shares].metric.sample_size",
+        "insights_final[item=sports-fan-segment-shares].metric.segment",
+        "insights_final[item=sports-fan-segment-shares].metric.subject",
+        "insights_final[item=sports-fan-segment-shares].metric.timeframe",
+        "insights_final[item=sports-fan-segment-shares].metric.trend",
+        "insights_final[item=sports-fan-segment-shares].metric.unit",
+        "insights_final[item=sports-fan-segment-shares].metric.value",
+        "insights_final[item=sports-fan-segment-shares].metric_public_copy",
+        "insights_final[item=sports-fan-segment-shares].metric_strength_score",
+        "insights_final[item=sports-fan-segment-shares].novelty_score",
+        "insights_final[item=sports-fan-segment-shares].now_what",
+        "insights_final[item=sports-fan-segment-shares].pages[0]",
+        "insights_final[item=sports-fan-segment-shares].report_type_lens",
+        "insights_final[item=sports-fan-segment-shares].score",
+        "insights_final[item=sports-fan-segment-shares].so_what",
+        "insights_final[item=sports-fan-segment-shares].text",
+        "insights_final[item=video-attention-spend].coverage_role",
+        "insights_final[item=video-attention-spend].decision_relevance_score",
+        "insights_final[item=video-attention-spend].evidence",
+        "insights_final[item=video-attention-spend].evidence_id",
+        "insights_final[item=video-attention-spend].evidence_spans[0].evidence_id",
+        "insights_final[item=video-attention-spend].evidence_spans[0].page",
+        "insights_final[item=video-attention-spend].evidence_spans[0].source_identity",
+        "insights_final[item=video-attention-spend].evidence_spans[0].source_pack",
+        "insights_final[item=video-attention-spend].evidence_spans[0].text",
+        "insights_final[item=video-attention-spend].id",
+        "insights_final[item=video-attention-spend].metric.baseline",
+        "insights_final[item=video-attention-spend].metric.cohort",
+        "insights_final[item=video-attention-spend].metric.comparator",
+        "insights_final[item=video-attention-spend].metric.confidence",
+        "insights_final[item=video-attention-spend].metric.delta",
+        "insights_final[item=video-attention-spend].metric.denominator",
+        "insights_final[item=video-attention-spend].metric.forecast_status",
+        "insights_final[item=video-attention-spend].metric.geography",
+        "insights_final[item=video-attention-spend].metric.label",
+        "insights_final[item=video-attention-spend].metric.observation_status",
+        "insights_final[item=video-attention-spend].metric.observations[0].cohort",
+        "insights_final[item=video-attention-spend].metric.observations[0].denominator",
+        "insights_final[item=video-attention-spend].metric.observations[0].geography",
+        "insights_final[item=video-attention-spend].metric.observations[0].label",
+        "insights_final[item=video-attention-spend].metric.observations[0].observation_status",
+        "insights_final[item=video-attention-spend].metric.observations[0].segment",
+        "insights_final[item=video-attention-spend].metric.observations[0].timeframe",
+        "insights_final[item=video-attention-spend].metric.observations[0].unit",
+        "insights_final[item=video-attention-spend].metric.observations[0].value",
+        "insights_final[item=video-attention-spend].metric.observations[1].cohort",
+        "insights_final[item=video-attention-spend].metric.observations[1].denominator",
+        "insights_final[item=video-attention-spend].metric.observations[1].geography",
+        "insights_final[item=video-attention-spend].metric.observations[1].label",
+        "insights_final[item=video-attention-spend].metric.observations[1].observation_status",
+        "insights_final[item=video-attention-spend].metric.observations[1].segment",
+        "insights_final[item=video-attention-spend].metric.observations[1].timeframe",
+        "insights_final[item=video-attention-spend].metric.observations[1].unit",
+        "insights_final[item=video-attention-spend].metric.observations[1].value",
+        "insights_final[item=video-attention-spend].metric.sample_size",
+        "insights_final[item=video-attention-spend].metric.segment",
+        "insights_final[item=video-attention-spend].metric.subject",
+        "insights_final[item=video-attention-spend].metric.timeframe",
+        "insights_final[item=video-attention-spend].metric.trend",
+        "insights_final[item=video-attention-spend].metric.unit",
+        "insights_final[item=video-attention-spend].metric.value",
+        "insights_final[item=video-attention-spend].metric_public_copy",
+        "insights_final[item=video-attention-spend].metric_strength_score",
+        "insights_final[item=video-attention-spend].novelty_score",
+        "insights_final[item=video-attention-spend].now_what",
+        "insights_final[item=video-attention-spend].pages[0]",
+        "insights_final[item=video-attention-spend].report_type_lens",
+        "insights_final[item=video-attention-spend].score",
+        "insights_final[item=video-attention-spend].so_what",
+        "insights_final[item=video-attention-spend].text"
+      ],
+      "changed_paths": [],
+      "minimal_patch": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "report_id": "cohort-cbb6e7df67412186b8bc",
+  "validation_run_id": "validation:b2e333e502c3222d3a1ebe74eba46081903ff4c6b4e8a7e9af5a014fd15b5b16",
+  "cohort_id": "4071b3f11fd259bd89d15305f94cee31d8dd4f15777e4d1fbc884adbb1b4e862",
+  "workflow_run_id": "a85aa794-c4d4-4bed-a19d-baa617b43606",
+  "configuration_hash": "e50763d4a9df1b132fe130958d2fd03a782386224b62130d71fd6a48b1e2497a",
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "ef38c83df76effe207ad12c712c87029065439e95cfadaea814d1862d0ffbb1b",
+  "latency_ms": 44746,
+  "schema_version": "1.0"
+}

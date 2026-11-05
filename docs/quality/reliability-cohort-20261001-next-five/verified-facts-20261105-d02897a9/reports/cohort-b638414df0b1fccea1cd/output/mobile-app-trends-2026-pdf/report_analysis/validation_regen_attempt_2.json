@@ -1,0 +1,179 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-b638414df0b1fccea1cd\\ias-first-attempt-vq54udoj\\output\\mobile-app-trends-2026-pdf\\report_analysis\\validation_regen_attempt_2.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Validation execution failed (model_client_required).",
+      "severity": "error",
+      "affected_section": "validation",
+      "rule_id": "validation_execution",
+      "violation_type": "model_client_required",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=finance-latam-growth].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=finance-latam-growth].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=finance-latam-growth].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=finance-latam-growth].pages[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence_spans[2]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The claim that session-length patterns differ across regions relies on regional session-length findings absent from this item’s LATAM-growth evidence binding.",
+      "severity": "error",
+      "affected_section": "insights:finance-latam-growth.so_what",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "unsupported_claim",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:finance-latam-growth:so_what",
+      "evidence_ids": [
+        "verified-fact:finance-latam-growth"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The bound LATAM-growth fact supports only the LATAM install and session growth figures. The global and regional session-length claims are not supported by this item’s evidence binding.",
+      "severity": "error",
+      "affected_section": "insights:finance-latam-growth",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "unsupported_claim",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:finance-latam-growth:text",
+      "evidence_ids": [
+        "verified-fact:finance-latam-growth"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The recommendation relies on distinguishing outcomes from a 2030 projection, an empirical premise not supported by the item’s downloads-only evidence binding.",
+      "severity": "error",
+      "affected_section": "insights:mobile-market-downloads-2025.now_what",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "unsupported_claim",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:mobile-market-downloads-2025:now_what",
+      "evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] This states that the report pairs activity and spending with a longer-term projection, but the only bound fact concerns app downloads and supports neither spending nor the projection.",
+      "severity": "error",
+      "affected_section": "insights:mobile-market-downloads-2025.so_what",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "unsupported_claim",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:mobile-market-downloads-2025:so_what",
+      "evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The bound fact supports the 2025 download figure only. The added consumer-spending increase and 2030 global-GDP projection are material assertions not supported by this item’s evidence binding.",
+      "severity": "error",
+      "affected_section": "insights:mobile-market-downloads-2025",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "unsupported_claim",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:mobile-market-downloads-2025:text",
+      "evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_limitation_omitted] The report represents the benchmark findings without disclosing a material source limitation: the canonical facts state that sample sizes are not stated and that underlying denominators are not stated for key install/session comparisons. This omission may affect how readers interpret the benchmark figures. The limitation is report-wide rather than localizable to one existing repair target. Dimensions: limitations: The public wording omits the source’s stated absence of sample sizes and, for key install/session comparisons, underlying denominators. That methodological uncertainty is material to interpreting the benchmark, but no existing item is a localized repair target for the report-wide caveat.",
+      "severity": "error",
+      "affected_section": "public_items",
+      "rule_id": "public_editorial_quality.material_limitation_omitted",
+      "violation_type": "report_editorial_acceptance",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence",
+        "verified-fact:gaming-subvertical-growth-divergence",
+        "verified-fact:finance-latam-growth"
+      ]
+    }
+  ]
+}

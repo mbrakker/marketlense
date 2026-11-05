@@ -1,0 +1,597 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/validate/public_editorial_quality",
+  "family_schema_version": "3.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "verdicts": [
+      {
+        "item_id": "soft_copy:summary:77ef8a6d1d176bca",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Correctly reports the Chartbeat aggregate, Google organic-search channel, more than 2,500 sites, 33% decline, global geography, and November 2024–November 2025 period.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:5649dbc915d97185",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately identifies the Q5 value as the average slider score for 268 respondents, retains the slider range, and describes declining search traffic as an expectation over three years rather than an observed outcome.",
+        "evidence_ids": [
+          "verified-fact:search-traffic-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:5273d1793f3dbb6b",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Correctly reports the Q13 base, era-of-AI focus question, and all three values as net differences between proportions saying more versus less important.",
+        "evidence_ids": [
+          "verified-fact:content-focus-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:c548569098a718a4",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The two stated Q11 category shares and their characterization as respondents’ closest adjective for initiative impact so far match the source; the wording does not imply the two categories are exhaustive.",
+        "evidence_ids": [
+          "verified-fact:newsroom-ai-initiative-assessments"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:20ee4db7242ac2c3",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately presents publisher respondents’ expectations about possible licensing deals, the base of 272, the roughly three-year horizon, and the combined minor and significant income categories.",
+        "evidence_ids": [
+          "verified-fact:ai-licensing-income-expectations"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:0def81d354476940",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claim preserves the Chartbeat attribution, organic-search channel, site population, global geography, percentage decline, and historical period.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:a1fafaaa159d9178",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Correctly characterizes −43% as the average Q5 slider score for 268 respondents’ expected search-traffic change, not an observed change.",
+        "evidence_ids": [
+          "verified-fact:search-traffic-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:299e86d0d5fc6baa",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Correctly reports the three Q13 net-difference values and respondent base; distinguishing stated perceptions from changed newsroom behavior is consistent with the evidence.",
+        "evidence_ids": [
+          "verified-fact:content-focus-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:df960bca4cd7e226",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is clearly MarketLense-authored planning advice. It appropriately keeps observed traffic, respondent expectations, and stated priorities distinct and does not present the advice as a source assertion.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global",
+          "verified-fact:search-traffic-outlook",
+          "verified-fact:content-focus-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:610ed7f9fd147704",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately states the observed Google organic-search decline, population, geography, period, and Chartbeat attribution.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:74e02a8d0c395a3a",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked fact describes observed historical data, so distinguishing it from a forecast is accurate.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:33f45841931c110b",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is MarketLense advice about preserving channel, geography, and period when updating scenarios; it asserts no unsupported empirical premise.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:search-referrals-global:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Both linked findings are accurately distinguished: the Chartbeat decline is observed historical data, while the Q5 slider score is a respondent expectation with its base and range stated.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global",
+          "verified-fact:search-traffic-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:search-referrals-global:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The interpretation follows from the distinction between observed traffic data and a survey expectation; treating them as separate scenario inputs is defensible.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global",
+          "verified-fact:search-traffic-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:search-referrals-global:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The recommendation to monitor observed referrals separately from respondent expectations is a reasonable MarketLense-authored action, not a source-attributed assertion.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global",
+          "verified-fact:search-traffic-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:content-focus-shift:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The Q13 base, era-of-AI context, and all three reported net differences are accurately stated.",
+        "evidence_ids": [
+          "verified-fact:content-focus-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:content-focus-shift:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It appropriately treats stated priorities as a directional perception signal rather than evidence of changed newsroom practice.",
+        "evidence_ids": [
+          "verified-fact:content-focus-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:content-focus-shift:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The planning recommendation uses survey responses as one input and calls for validation against newsroom-specific goals; it makes no unsupported empirical claim.",
+        "evidence_ids": [
+          "verified-fact:content-focus-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:creator-audience-vs-talent-concern:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The Q19 base and the two stated concern shares are accurately associated with attention diversion and talent loss.",
+        "evidence_ids": [
+          "verified-fact:creator-audience-vs-talent-concern"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:creator-audience-vs-talent-concern:so_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The interpretation that reported attention-related concern is greater than concern about talent loss matches the figures; treating the issues separately is a defensible strategy implication.",
+        "evidence_ids": [
+          "verified-fact:creator-audience-vs-talent-concern"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:creator-audience-vs-talent-concern:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This MarketLense recommendation proposes evaluating two distinct implications of creator partnerships without asserting that either impact has occurred.",
+        "evidence_ids": [
+          "verified-fact:creator-audience-vs-talent-concern"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:newsroom-ai-initiative-assessments:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "All four Q11 response categories, percentages, the base of 265, and the “so far” timeframe match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:newsroom-ai-initiative-assessments"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:newsroom-ai-initiative-assessments:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The distribution includes both promising and limited assessments, supporting the interpretation that respondents’ views are mixed.",
+        "evidence_ids": [
+          "verified-fact:newsroom-ai-initiative-assessments"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:newsroom-ai-initiative-assessments:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The recommendation to assess outcomes against newsroom-specific objectives is editorial advice and does not misstate the survey findings.",
+        "evidence_ids": [
+          "verified-fact:newsroom-ai-initiative-assessments"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ai-licensing-income-expectations:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The licensing subject, respondent base, time horizon, expected-income categories, and distinction between expected and realized income are accurately conveyed.",
+        "evidence_ids": [
+          "verified-fact:ai-licensing-income-expectations"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ai-licensing-income-expectations:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Characterizing licensing as an uncertain rather than main income contribution is consistent with the expected categories, including no-income and do-not-know responses and 0% expecting a main source.",
+        "evidence_ids": [
+          "verified-fact:ai-licensing-income-expectations"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ai-licensing-income-expectations:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Scenario-testing expected licensing income without treating it as booked revenue is a defensible recommendation that preserves the source’s expectation-versus-outcome boundary.",
+        "evidence_ids": [
+          "verified-fact:ai-licensing-income-expectations"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:platform-funding-revenue-expectation:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claim retains the commercial-publisher cohort, exclusion, base, 2026 expected-importance measure, 37% value, and the chart’s 17-point annotation and attribution.",
+        "evidence_ids": [
+          "verified-fact:platform-funding-revenue-expectation"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:platform-funding-revenue-expectation:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It correctly distinguishes respondents’ expected importance rating from realized platform revenue.",
+        "evidence_ids": [
+          "verified-fact:platform-funding-revenue-expectation"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:platform-funding-revenue-expectation:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Treating the 2026 importance rating as a planning assumption separate from recognized revenue is appropriate advice and does not claim revenue has been realized.",
+        "evidence_ids": [
+          "verified-fact:platform-funding-revenue-expectation"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:1:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately states the organic-search metric, site population, 33% decline, global geography, and November 2024–November 2025 period.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:2:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Correctly reports the Q5 average slider score, base, slider range, three-year horizon, and expectation status.",
+        "evidence_ids": [
+          "verified-fact:search-traffic-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:3:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Correctly reports all three Q13 net differences and identifies them as differences between proportions expressing more versus less importance.",
+        "evidence_ids": [
+          "verified-fact:content-focus-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "metric_spine:metric_spine:search-referrals-global",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The supporting projection accurately states the source, channel, population, decline, geography, and period.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "metric_spine:metric_spine:ai-licensing-income-expectations",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately reports publisher respondents’ expectation of at least some company income from possible AI licensing deals, with the base and approximate horizon stated.",
+        "evidence_ids": [
+          "verified-fact:ai-licensing-income-expectations"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "metric_spine:metric_spine:platform-funding-revenue-expectation",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately reports the 37% expected-importance finding with the commercial-publisher cohort, exclusion, base, and 2026 timeframe.",
+        "evidence_ids": [
+          "verified-fact:platform-funding-revenue-expectation"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:strategic_context",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The strategic-context statement accurately reports the linked Chartbeat aggregate finding; the broader supplied bindings do not alter the claim’s metric or scope.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:watchouts:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The watchout accurately reports Q19’s base and the two concern categories and percentages.",
+        "evidence_ids": [
+          "verified-fact:creator-audience-vs-talent-concern"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately reports the observed Google organic-search decline and its site population, global geography, and period.",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:2",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Correctly reports the Q5 average slider score and treats it as respondents’ expectation rather than observed traffic change.",
+        "evidence_ids": [
+          "verified-fact:search-traffic-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:3",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately reports the Q13 base, question context, and all three net-difference values.",
+        "evidence_ids": [
+          "verified-fact:content-focus-shift"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:4",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The Q11 base and the promising and limited response shares are accurately reported as respondents’ closest adjectives for impact so far.",
+        "evidence_ids": [
+          "verified-fact:newsroom-ai-initiative-assessments"
+        ],
+        "repair_target": ""
+      }
+    ],
+    "report_verdict": {
+      "status": "pass",
+      "severity": "info",
+      "rule_id": "",
+      "hard_fail_class": "",
+      "reason": "The report covers the planned search, content-priority, creator-concern, newsroom-AI, licensing, and platform-funding findings. It adds usable interpretations and recommendations, keeps observed results distinct from respondent expectations and perceptions, and uses repeated findings in summary, distribution, analysis, and supporting-projection roles rather than duplicating primary analysis. The wording preserves respondent bases and the applicable population, time, and expectation boundaries; it does not imply unreported survey geography or realized revenue.",
+      "evidence_ids": [
+        "verified-fact:search-referrals-global",
+        "verified-fact:search-traffic-outlook",
+        "verified-fact:content-focus-shift",
+        "verified-fact:creator-audience-vs-talent-concern",
+        "verified-fact:newsroom-ai-initiative-assessments",
+        "verified-fact:ai-licensing-income-expectations",
+        "verified-fact:platform-funding-revenue-expectation"
+      ],
+      "repair_target": "",
+      "affected_item_id": "",
+      "dimensions": {
+        "material_coverage": {
+          "status": "pass",
+          "reason": "The public items represent all six planned themes, including the observed and expected search signals, stated focus priorities, creator concerns, AI-initiative assessments, licensing expectations, and platform-funding expectations."
+        },
+        "analytical_depth": {
+          "status": "pass",
+          "reason": "Primary analysis distinguishes expectations from outcomes and perceptions from behavior, and adds scenario-planning, validation, and decision-use implications grounded in the reported findings."
+        },
+        "distinctness": {
+          "status": "pass",
+          "reason": "Recurring findings serve summary, distribution, expert-synthesis, and provenance roles. Within primary analysis, the factual finding, interpretation, and recommendation contribute different purposes rather than repeating the same analysis."
+        },
+        "limitations": {
+          "status": "pass",
+          "reason": "The report retains important boundaries such as survey bases, observed-versus-expected status, the stated historical period, and that stated priorities do not establish changed practice. It does not generalize respondent findings to an unstated geography or portray expected income as realized."
+        }
+      }
+    }
+  }
+}

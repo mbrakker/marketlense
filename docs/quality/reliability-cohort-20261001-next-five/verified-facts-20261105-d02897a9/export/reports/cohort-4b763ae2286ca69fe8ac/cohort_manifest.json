@@ -1,0 +1,11 @@
+{
+  "members": [
+    {
+      "publisher_id": "Reuters Institute",
+      "report_id": "cohort-4b763ae2286ca69fe8ac",
+      "source_identity_id": "source:79cb8c886c55b49bfdec2128d5b25e0b"
+    }
+  ],
+  "schema_version": "1.0",
+  "validation_run_id": "validation:4b55759fcc4ae536db07b1b737b8feba12e41c139f9c3c0efb8039738ed6efb3"
+}

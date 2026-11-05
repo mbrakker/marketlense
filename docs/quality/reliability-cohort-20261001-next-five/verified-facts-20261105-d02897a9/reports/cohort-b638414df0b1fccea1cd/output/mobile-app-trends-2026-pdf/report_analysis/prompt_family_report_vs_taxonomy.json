@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "mobile_gaming",
+      "ecommerce",
+      "finance apps",
+      "app_downloads",
+      "business_performance",
+      "ai_in_marketing",
+      "cross_channel"
+    ],
+    "primary_tags": [
+      "mobile_gaming",
+      "ecommerce",
+      "finance apps"
+    ],
+    "secondary_tags": [
+      "app_downloads",
+      "business_performance",
+      "ai_in_marketing",
+      "cross_channel"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "mobile_gaming",
+        "tier": "primary",
+        "section_label": "Gaming apps",
+        "evidence": "Dedicated section benchmarks gaming app installs, sessions, retention, and CPI."
+      },
+      {
+        "tag": "ecommerce",
+        "tier": "primary",
+        "section_label": "E-commerce/shopping apps",
+        "evidence": "Dedicated section reports trends in e-commerce and shopping app installs and sessions."
+      },
+      {
+        "tag": "finance apps",
+        "tier": "primary",
+        "section_label": "Finance apps",
+        "evidence": "Dedicated section benchmarks finance app sessions, retention, CPI, and acquisition."
+      },
+      {
+        "tag": "app_downloads",
+        "tier": "secondary",
+        "section_label": "Introduction: Evolution and opportunity in the mobile app industry",
+        "evidence": "Global app installs rose 10% year-over-year in 2025, alongside 7% session growth."
+      },
+      {
+        "tag": "business_performance",
+        "tier": "secondary",
+        "section_label": "Key takeaways & methodology",
+        "evidence": "The report benchmarks app performance using measures including installs, sessions, retention, and CPI."
+      },
+      {
+        "tag": "ai_in_marketing",
+        "tier": "secondary",
+        "section_label": "AI transforms from strategic tool to core infrastructure in 2026",
+        "evidence": "AI supports marketing data analysis, predictive segmentation, and creative testing."
+      },
+      {
+        "tag": "cross_channel",
+        "tier": "secondary",
+        "section_label": "Mobile-first approach evolves into multi-platform strategy",
+        "evidence": "Discusses measuring user journeys across apps, web, and connected environments."
+      }
+    ],
+    "region": "Global",
+    "time_period": "2024 to 2025",
+    "not_found_reason": null
+  }
+}

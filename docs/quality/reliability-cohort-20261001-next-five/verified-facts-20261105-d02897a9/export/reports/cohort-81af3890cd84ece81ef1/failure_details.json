@@ -1,0 +1,22 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "summary.claim_evidence_map:2.claim",
+      "claim_or_entity_id": "claim_ledgers:claim:2",
+      "error_context": {
+        "affected_section": "summary.claim_evidence_map:2.claim",
+        "evidence_id": "verified-fact:switch-uncommunicated-reduction"
+      },
+      "failure_code": "validation_terminal_outcome_missing",
+      "inner_error_class": "",
+      "outer_code": "validation_terminal_outcome_missing",
+      "repair_attempt": 1,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "stage": "semantic_validation",
+      "terminal_outcome": "missing",
+      "terminal_stage": "",
+      "validator_rule": "public_editorial_quality.semantic_review"
+    }
+  ],
+  "validation_run_id": "validation:6c53f0620ecb3bfc3af1f436c910662fa5667e9432392590579b5b7a39f39abe"
+}

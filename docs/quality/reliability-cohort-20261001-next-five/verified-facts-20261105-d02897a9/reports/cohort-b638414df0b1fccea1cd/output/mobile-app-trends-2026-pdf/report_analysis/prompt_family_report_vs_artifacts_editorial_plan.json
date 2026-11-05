@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_plan",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "report_thesis": "The benchmark shows that app acquisition and engagement patterns vary by vertical and region, supporting a category-specific reading of performance alongside the report’s recommendation for integrated measurement to inform optimization and budget allocation.",
+    "themes": [
+      {
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025",
+          "verified-fact:mobile-app-consumer-spending-2025",
+          "verified-fact:intro-mobile-gdp-forecast"
+        ],
+        "priority": 1,
+        "theme": "Market scale and outlook: the report records more than 112.1 billion app downloads in 2025 and mobile-app-market consumer spending up 10.6% year over year to $167 billion; separately, mobile technologies and services are projected to generate 8.4% of global GDP by 2030."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "priority": 2,
+        "theme": "Global 2025 acquisition and usage diverged in both categories: e-commerce app installs fell 10% year over year while sessions rose 5%, and finance app installs fell 4% while sessions rose 21%."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:gaming-subvertical-growth-divergence"
+        ],
+        "priority": 3,
+        "theme": "Global gaming growth varied by subvertical from 2024 to 2025: Casual installs grew 19% and sessions 37%; Strategy sessions grew 57% while installs declined 1%; Casino installs grew 22% while sessions declined 5%; and Slots installs grew 46% while sessions declined 5%."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:gaming-retention-and-cpi"
+        ],
+        "priority": 4,
+        "theme": "Global all-games gaming retention showed minimal change from 2024 to 2025, with day 1 retention at 27% and day 30 at 5%; separately, overall global gaming app CPI reached $0.56 in 2025, up 30%."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:ecommerce-cpi-subvertical-divergence"
+        ],
+        "priority": 5,
+        "theme": "Global e-commerce app CPI moved down from $1.00 in 2024 to $0.98 in 2025, while CPI for the deal discovery category rose from $1.44 to $2.26 over the same period."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:finance-latam-growth",
+          "verified-fact:finance-session-length-pattern"
+        ],
+        "priority": 6,
+        "theme": "Finance indicators varied by region and measure: for 2024–2025, LATAM finance-app installs grew 76% and sessions 57%; finance-app session length increased globally 8% to 7.18 minutes in 2025, with North America highest among regions at 8.43 minutes, LATAM rising to 5.87 minutes, and declines from 2024 to 2025 in APAC (7.07 to 6.94 minutes), Europe (5.77 to 5.62 minutes), and MENA (6.61 to 6.39 minutes)."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:measurement-recommendation"
+        ],
+        "priority": 7,
+        "theme": "The report recommends that app marketers use an integrated, adaptable, accountable data foundation combining cross-channel attribution, AI insights, and next-generation solutions for campaign optimization and budget allocation based on aggregated data; this is a recommendation, not a measured outcome."
+      }
+    ]
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/linkedin_post",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "claim_provenance": [
+      {
+        "claim": "Google organic-search traffic to more than 2,500 sites fell 33% globally between November 2024 and November 2025, according to aggregate Chartbeat data sourced for the report.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ]
+      },
+      {
+        "claim": "This is an observed historical change in Google organic-search traffic, not a forecast.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ]
+      },
+      {
+        "claim": "MarketLense’s advice: when updating acquisition scenarios, keep observed referral data tied to its channel, geography and period.",
+        "classification": "recommendation",
+        "evidence_ids": [
+          "verified-fact:search-referrals-global"
+        ]
+      }
+    ],
+    "generation_attempt": 1,
+    "producing_prompt_identity": {
+      "configuration_policy_hash": "79895e8de9d6d55e044b98f4345fcee062ab9f2f9d65b5f8e9101499ed809023",
+      "decision": "regenerated",
+      "execution_identity": "eaded184cdd0509122a35b883c72d7cc7a702f9cee6afd4b9cf77b539bf0acf0",
+      "execution_identity_manifest": {
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "execution_identity": "eaded184cdd0509122a35b883c72d7cc7a702f9cee6afd4b9cf77b539bf0acf0",
+        "model": "gpt-6-luna",
+        "output_contract_schema_version": "artifact_json:1.0",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "provider_retry_count": 0,
+          "timeout_seconds": 600.0
+        },
+        "prompt_content_hash": "577f51840353bb032dccff02212c52bc60f5486a3c38351a1c55634f4c5b4b44",
+        "provider": "openai",
+        "reasoning_effort": "medium",
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "compaction_enabled": true,
+          "execution_policy_hash": "717fac1f533ed855ef44f26edcb9c63113609f1139c4e23fa3cd1537b2bf7169",
+          "execution_policy_source": "report_vs/artifacts/linkedin_post",
+          "max_input_tokens": 48000,
+          "policy_source": "report_vs/artifacts/linkedin_post",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "tier": "routine_structured"
+        },
+        "schema_version": "1.0",
+        "seed": null,
+        "temperature": null,
+        "validator_version": "artifacts_schema:3.1"
+      },
+      "family_schema_version": "1.0",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "model_provider": "openai",
+      "namespace": "report_vs/artifacts/linkedin_post",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "577f51840353bb032dccff02212c52bc60f5486a3c38351a1c55634f4c5b4b44",
+      "prompt_dependency_manifest": {
+        "composition_version": "2.0",
+        "included_partials": [
+          {
+            "kind": "partial",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "schema_version": "1.0",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "source": "user:0"
+          }
+        ],
+        "namespace": "report_vs/artifacts/linkedin_post",
+        "prompt_content_hash": "577f51840353bb032dccff02212c52bc60f5486a3c38351a1c55634f4c5b4b44",
+        "schema_snippets": [],
+        "schema_version": "1.0",
+        "system_root": {
+          "kind": "system_root",
+          "path": "prompts/report_vs/artifacts/linkedin_post/system.yaml",
+          "schema_version": "1.0",
+          "sha256": "c6b3ee58c2066ab1396cf187f27909e513e8a6fe128b7a0ac31c43f02d752bc4",
+          "source": ""
+        },
+        "user_root": {
+          "kind": "user_root",
+          "path": "prompts/report_vs/artifacts/linkedin_post/user.yaml",
+          "schema_version": "1.0",
+          "sha256": "516b7ace089041fd27f0f09fa5943de8b39d897400b3c24a34135ff597de531f",
+          "source": ""
+        }
+      },
+      "regeneration_reason": "materialization_missing",
+      "relevant_input_hash": "b0d70c00ec1455e023a68f916f138ead672e2d75825e051663a3006a1da4d2d6",
+      "routing_policy_version": "717fac1f533ed855ef44f26edcb9c63113609f1139c4e23fa3cd1537b2bf7169",
+      "schema_version": "1.0",
+      "validator_version": "artifacts_schema:3.1"
+    },
+    "public_output": "Google organic-search traffic to more than 2,500 sites fell 33% globally between November 2024 and November 2025, according to aggregate Chartbeat data sourced for the report.\n\nThis is an observed historical change in Google organic-search traffic, not a forecast.\n\nMarketLense’s advice: when updating acquisition scenarios, keep observed referral data tied to its channel, geography and period.",
+    "schema_version": "1.0"
+  }
+}

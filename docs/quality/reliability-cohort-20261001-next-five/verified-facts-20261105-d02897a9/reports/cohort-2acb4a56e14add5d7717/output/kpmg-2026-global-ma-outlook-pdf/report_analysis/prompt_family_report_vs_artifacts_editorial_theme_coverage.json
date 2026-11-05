@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_theme_coverage",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "explanation": "The insight develops the buyer-type divergence and the qualitative geographic contrast, and distinguishes expectations from realized activity.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "ma-buyer-pipeline-outlook"
+      ],
+      "theme": "Buyer expectations diverge: private-equity dealmakers are significantly more likely than corporates to expect M&A pipeline activity to increase relative to 2025; geographically, private-equity optimism is strongest in the US, while dealmakers outside the US, particularly corporates, face greater uncertainty. These are expectations and qualitative comparisons, not realized activity or quantified geographic measures."
+    },
+    {
+      "explanation": "The insight gives both below-US$1B totals, the largest-band values, and the mid-sized-deal rebound framing, while identifying the figures as estimates rather than completed transactions.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "ma-anticipated-deal-size"
+      ],
+      "theme": "For the estimated value of the next M&A transaction, displayed size-band percentages sum to below US$1B for 81% of corporate estimates and 94% of private-equity estimates; the largest individual band is US$250M to <US$500M at 32% and 50%, respectively. These are estimates, not completed transactions, and the report describes the anticipated rebound as led by mid-sized, execution-intensive deals rather than megadeals."
+    },
+    {
+      "explanation": "The insight includes both carve-out values and their displayed difference, the full-business values, and clarifies that these are deals under consideration rather than completed transactions.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "ma-carveout-deal-interest"
+      ],
+      "theme": "Deal types under consideration show the sharpest stated buyer difference in carve-outs: 21% for Corporate and 55% for Private equity, with a displayed +34 percentage-point difference; acquisition of a full business is listed at 62% and 69%, respectively. These chart values describe deals under consideration, not completed transactions."
+    },
+    {
+      "explanation": "The insight states the portfolio-focus proposition and identifies the resources being concentrated and the aim of durable advantage in a complex global environment.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "five-drivers-strategic-focus"
+      ],
+      "theme": "The report describes organizations sharpening portfolio focus to concentrate capital, capabilities, and management attention where they believe they can build durable advantage in a more complex global environment."
+    },
+    {
+      "explanation": "The insight develops both the expanded-analysis and lower-cost propositions, describes the customer-concentration diligence workflow, and assigns execution to the agent while the human reviews and decides.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "ma-ai-expands-analysis-scope"
+      ],
+      "theme": "The report’s deal-execution discussion presents AI’s contribution as expanding analysis, not merely accelerating existing work: new categories become worth doing, and analysis previously uneconomical at traditional analyst-day rates becomes viable at a fraction of prior cost. Its customer-concentration diligence example assigns execution to an agent and review and decisions to a human; neither claim is a measured outcome."
+    },
+    {
+      "explanation": "The insight covers pre-close visibility of readiness and gaps, the risks, dependencies, and value-creation levers surfaced during diligence and planning, and the qualitative execution-failure implication.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "ma-ai-preclose-readiness"
+      ],
+      "theme": "A growing number of organizations are finding that AI makes execution readiness and gaps visible before close; the report says surfacing risks, dependencies, and value-creation levers during diligence and pre-close planning rather than after close reduces tolerance for execution failures. This is a qualitative finding, not a quantified rate or measured causal effect."
+    },
+    {
+      "explanation": "The insight gives the timing, scale, and affected stocks, and explains the repricing as a change in the multiple for future cash flows rather than collapsing revenues.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "ma-software-valuation-repricing"
+      ],
+      "theme": "The report records an early-2026 decline of nearly $1 trillion in market value for software and knowledge-services stocks over a matter of weeks. It says the repricing was not driven by collapsing revenues: many affected companies reported stable or growing earnings, while the market’s multiple for future cash flows changed."
+    }
+  ]
+}

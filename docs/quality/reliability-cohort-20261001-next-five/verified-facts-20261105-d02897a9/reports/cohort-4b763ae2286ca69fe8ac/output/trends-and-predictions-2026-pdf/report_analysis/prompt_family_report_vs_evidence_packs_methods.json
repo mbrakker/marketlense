@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/methods",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "methods": [
+      "Industry survey of a strategic sample of 280 digital leaders from 51 countries and territories; question-specific bases include 273 respondents (Q9) and 264 (Q13).",
+      "Chartbeat analytics data on page-view referrals aggregated across more than 2,000 news websites and apps in its network; the report also describes aggregate Google Search traffic to hundreds of news sites.",
+      "Background conversations, interviews, and emails with publishers, academics, and industry experts provided additional input."
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "methods",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

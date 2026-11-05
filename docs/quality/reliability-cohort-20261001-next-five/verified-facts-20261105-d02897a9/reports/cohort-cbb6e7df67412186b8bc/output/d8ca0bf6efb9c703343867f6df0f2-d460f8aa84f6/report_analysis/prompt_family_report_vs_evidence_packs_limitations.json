@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/limitations",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "limitations": [
+      "Top news sites are selected from comScore’s Top 100 digital news properties; reported site numbers cover desktop and mobile only.",
+      "The report notes that “Mixed Reality” is defined inconsistently by technology and media companies, and is sometimes used to describe VR.",
+      "AR-optimized smartphones are defined as phones with 6DoF tracking enabled by SLAM, which requires carefully calibrated hardware and software.",
+      "The AR enterprise-market examples cover three major early applications; the report notes that other industries may also be affected.",
+      "For the YouTube creator analysis, each YouTube channel is treated as a unique creator."
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "limitations",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

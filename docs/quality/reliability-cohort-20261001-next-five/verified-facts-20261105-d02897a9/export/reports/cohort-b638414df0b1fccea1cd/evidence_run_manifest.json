@@ -1,0 +1,17 @@
+{
+  "artifact_dir": "C:/ml-frozen-five-live-d02897a9-retry-20261105/frozen-reliability-t1n2mc7x/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-vq54udoj/output",
+  "cost_attribution": {
+    "missing_cost_event_count": 0,
+    "scope": "validation_run_id",
+    "status": "available"
+  },
+  "safe_fields_only": true,
+  "schema_version": "1.0",
+  "state_dir": "C:/ml-frozen-five-live-d02897a9-retry-20261105/frozen-reliability-t1n2mc7x/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-vq54udoj/state",
+  "usage_attribution": {
+    "matching_event_count": 170,
+    "scope": "validation_run_id",
+    "status": "available"
+  },
+  "validation_run_id": "validation:bb1ae8bfce83045694406343fec0bec8e5458767c51f131c607fdd57371874a1"
+}

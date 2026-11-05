@@ -1,0 +1,301 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "f01",
+      "text": "Activate forecasts that global consumer Internet and media revenues will grow by $302 billion from 2017E to 2021E, with a 4.1% CAGR versus approximately 3% for global GDP.",
+      "evidence": "We forecast that over the next four years, global Internet and media revenues will grow by approximately $300 billion, continuing to outpace GDP growth\nCONSUMER INTERNET AND MEDIA REVENUES1, GLOBAL, 2017E-2021E, USD\nACTIVATE\nFORECAST\n$302B\nGROWTH\nDOLLARS\nCAGR 4.1%\nGlobal GDP CAGR: ~3%\n$1.7T\n2017E\n$2.0T\n2021E",
+      "confidence": "high",
+      "pages": [
+        5
+      ],
+      "section_id": "section-1",
+      "section_title": "$300 Billion in Tech and Media Growth Dollars"
+    },
+    {
+      "id": "f02",
+      "text": "In Activate’s 2017E–2021E global forecast, cost of Internet access has the largest listed segment growth, at $128 billion and a 5.7% CAGR.",
+      "evidence": "Access will lead revenue growth for tech and media companies\nCONSUMER INTERNET AND MEDIA REVENUE GROWTH BY SEGMENT1, GLOBAL, 2017E-2021E, USD\nACTIVATE\nFORECAST\n$128B\nCAGR 5.7%\nCost of Internet access2",
+      "confidence": "high",
+      "pages": [
+        6
+      ],
+      "section_id": "section-1",
+      "section_title": "$300 Billion in Tech and Media Growth Dollars"
+    },
+    {
+      "id": "f03",
+      "text": "In the United States in 2017, the top 25% of video users, defined as having 4.5+ hours of daily video attention, accounted for 61% of video time.",
+      "evidence": "VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL\nTop 25% of Users\n(4.5+ hours of daily\nvideo attention)\n61%\nShare of Time Spent",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "section-3",
+      "section_title": "Super Users: A Lot More Time, a Lot More Money"
+    },
+    {
+      "id": "f04",
+      "text": "In the United States in 2017, the top 25% of video users, defined as having 4.5+ hours of daily video attention, accounted for 34% of consumer spend.",
+      "evidence": "VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL\nTop 25% of Users\n(4.5+ hours of daily\nvideo attention)\n34%\nShare of Consumer Spend",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "section-3",
+      "section_title": "Super Users: A Lot More Time, a Lot More Money"
+    },
+    {
+      "id": "f05",
+      "text": "Activate expects dedicated smart speakers to serve as a “trojan horse” for delivering AI into the home and expects digital assistants to become ubiquitous across a broad set of devices.",
+      "evidence": "To be relevant in the early stages of the digital assistant battle, each of the tech companies has started with a dedicated smart speaker — essentially a trojan horse to deliver AI into the home\nUltimately, we expect that the hardware will become a commodity, and the digital assistant will be ubiquitous through a broad set of devices",
+      "confidence": "high",
+      "pages": [
+        23
+      ],
+      "section_id": "section-4",
+      "section_title": "Smart Speaker Battles are about the Great Digital Assistant Wars"
+    },
+    {
+      "id": "f06",
+      "text": "Activate forecasts that consumer VR will not reach scaled global adoption by 2021E, citing limited applications outside gaming, limited social use, and confinement that restricts movement.",
+      "evidence": "Nevertheless, we forecast that VR will not reach scaled global adoption\nCONSUMER VR ADOPTION1, GLOBAL, 2016-2021E, % POPULATION\nACTIVATE\nFORECAST\nWhat will hold VR back from mass adoption?\n• Limited applications outside of gaming\n• Immersive, but not social\n• Doesn’t allow movement outside a confined area",
+      "confidence": "high",
+      "pages": [
+        42
+      ],
+      "section_id": "section-5",
+      "section_title": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+    },
+    {
+      "id": "f07",
+      "text": "In the United States in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 34% of consumer spend.",
+      "evidence": "VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL\nTop 25% of Users\n(4.5+ hours of daily\nvideo attention)\n34%\nShare of Consumer Spend",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "section-3",
+      "section_title": "Super Users: A Lot More Time, a Lot More Money"
+    },
+    {
+      "id": "f08",
+      "text": "In the United States in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of video time.",
+      "evidence": "VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL\nTop 25% of Users\n(4.5+ hours of daily\nvideo attention)\n61%\nShare of Time Spent",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "section-3",
+      "section_title": "Super Users: A Lot More Time, a Lot More Money"
+    },
+    {
+      "id": "f09",
+      "text": "In the United States in 2017, social media was cited as a source of news discovery by 40% of adults.",
+      "evidence": "SOURCES OF NEWS DISCOVERY, U.S., 2017, % ADULTS\nSocial Media\n40%",
+      "confidence": "high",
+      "pages": [
+        98
+      ],
+      "section_id": "section-9",
+      "section_title": "News Brands will Beat Fake News (Spread by Fake Friends)"
+    },
+    {
+      "id": "f10",
+      "text": "In the United States in 2017, direct visits were cited as a source of news discovery by 38% of adults.",
+      "evidence": "SOURCES OF NEWS DISCOVERY, U.S., 2017, % ADULTS\nDirect Visits\n38%",
+      "confidence": "high",
+      "pages": [
+        98
+      ],
+      "section_id": "section-9",
+      "section_title": "News Brands will Beat Fake News (Spread by Fake Friends)"
+    },
+    {
+      "id": "f11",
+      "text": "Among U.S. active news readers searching for news in 2017, 49% cited direct visits as a source of news discovery.",
+      "evidence": "NEWS CONSUMERS ACTIVELY SEARCHING FOR NEWS, U.S., 2017, % ACTIVE NEWS READERS\nDirect Visits\n49%",
+      "confidence": "high",
+      "pages": [
+        98
+      ],
+      "section_id": "section-9",
+      "section_title": "News Brands will Beat Fake News (Spread by Fake Friends)"
+    },
+    {
+      "id": "f12",
+      "text": "Among U.S. active news readers searching for news in 2017, 33% cited social media as a source of news discovery.",
+      "evidence": "NEWS CONSUMERS ACTIVELY SEARCHING FOR NEWS, U.S., 2017, % ACTIVE NEWS READERS\nSocial Media\n33%",
+      "confidence": "high",
+      "pages": [
+        98
+      ],
+      "section_id": "section-9",
+      "section_title": "News Brands will Beat Fake News (Spread by Fake Friends)"
+    },
+    {
+      "id": "f13",
+      "text": "In 2017, news media was rated more trustworthy than social media by news readers in each of the five listed countries: Canada, Ireland, the United Kingdom, Australia, and the United States.",
+      "evidence": "PERCEIVED TRUSTWORTHINESS BY NEWS SOURCE, SELECTED COUNTRIES, 2017, % NEWS READERS\n20%\n27%\n18%\n28%\n24%\n38%\n40%\n41%\n47%\n51%\nNews Media\nSocial Media\nCANADA\nIRELAND\nUNITED KINGDOM\nAUSTRALIA\nUNITED STATES",
+      "confidence": "high",
+      "pages": [
+        101
+      ],
+      "section_id": "section-9",
+      "section_title": "News Brands will Beat Fake News (Spread by Fake Friends)"
+    },
+    {
+      "id": "f14",
+      "text": "In the United States in 2017, 90% of sports viewers said they watched specifically for sports content.",
+      "evidence": "SPORTS VIEWER1 SEGMENTS (ADULTS, AGE 18+, U.S., 2017)\n90%\nwatch specifically for\nthe sports content",
+      "confidence": "high",
+      "pages": [
+        82
+      ],
+      "section_id": "section-8",
+      "section_title": "Sports is the Ultimate Moat"
+    },
+    {
+      "id": "f15",
+      "text": "In the United States in 2017, 10% of sports fans watched sports content only as a social activity.",
+      "evidence": "SPORTS VIEWER1 SEGMENTS (ADULTS, AGE 18+, U.S., 2017)\n10%\nSPORTS FANS\nwatch only as a\nsocial activity",
+      "confidence": "high",
+      "pages": [
+        82
+      ],
+      "section_id": "section-8",
+      "section_title": "Sports is the Ultimate Moat"
+    },
+    {
+      "id": "f19",
+      "text": "For U.S. cord-cutters in 2017 who still wanted low-cost traditional live or linear programming such as sports, the report described broadcast as more attractive than Virtual Pay TV.",
+      "evidence": "Broadcast has proven to be more attractive than Virtual Pay TV for cord-cutters that still want traditional live/linear programming — such as sports — at a low cost\nCORD-CUTTER SUBSTITUTION BY VIEWER TYPE1, U.S., 2017, % VIEWERS",
+      "confidence": "high",
+      "pages": [
+        70
+      ],
+      "section_id": "section-7",
+      "section_title": "Premium Video: The Chase for Television Viewers and Television Dollars"
+    },
+    {
+      "id": "f20",
+      "text": "OTA broadcast-only homes in the United States increased from 11.2 million in 2012 to 15.8 million in 2017E, a 41% rise.",
+      "evidence": "OTA BROADCAST-ONLY HOMES, U.S., 2012-2017E, MILLION HOUSEHOLDS\n+41%\n11.2\n2012\n15.8\n2017E",
+      "confidence": "high",
+      "pages": [
+        70
+      ],
+      "section_id": "section-7",
+      "section_title": "Premium Video: The Chase for Television Viewers and Television Dollars"
+    },
+    {
+      "id": "f21",
+      "text": "Among U.S. podcast non-listeners, 34% identified knowing which apps to use as a factor that would lead them to listen.",
+      "evidence": "AMONG PODCAST NON-LISTENERS\nFACTORS THAT WOULD LEAD TO PODCAST LISTENING\nKnowing which apps to use\n34%",
+      "confidence": "high",
+      "pages": [
+        129
+      ],
+      "section_id": "section-11",
+      "section_title": "In an Era of Voice Control, Look to Podcasting to Engage Users"
+    },
+    {
+      "id": "f22",
+      "text": "Among U.S. podcast listeners, 31% identified recommendations as a factor that would increase podcast consumption.",
+      "evidence": "AMONG PODCAST LISTENERS\nFACTORS THAT WOULD LEAD TO INCREASED PODCAST CONSUMPTION\nRecommendations\n31%",
+      "confidence": "high",
+      "pages": [
+        129
+      ],
+      "section_id": "section-11",
+      "section_title": "In an Era of Voice Control, Look to Podcasting to Engage Users"
+    },
+    {
+      "id": "f23",
+      "text": "Smart-speaker owners were approximately 1.6 times more likely to listen to podcasts than non-smart-speaker owners.",
+      "evidence": "Smart speaker owners are ~1.6x more likely to listen to podcasts than non-smart speaker owners",
+      "confidence": "high",
+      "pages": [
+        127
+      ],
+      "section_id": "section-11",
+      "section_title": "In an Era of Voice Control, Look to Podcasting to Engage Users"
+    },
+    {
+      "id": "f24",
+      "text": "The eCommerce category chart associates products involving first-hand experience, such as food freshness or used-car condition, with delayed eCommerce adoption.",
+      "evidence": "Products involve first-hand experience\n(e.g. food freshness,\nused car condition)\nDELAYED\nECOMMERCE\nADOPTION",
+      "confidence": "high",
+      "pages": [
+        119
+      ],
+      "section_id": "section-10",
+      "section_title": "eCommerce: More than Two Trillion Dollars To Go"
+    },
+    {
+      "id": "sports-01",
+      "text": "In U.S. 2017 sports-viewer segments of adults age 18+, 90% watch specifically for sports content, while 10% watch only as a social activity.",
+      "evidence": "The live TV ecosystem is built on sports: for 90% of sports viewers, there is no substitute\n90% \nwatch specifically for \nthe sports content\nSPORTS VIEWER1 SEGMENTS (ADULTS, AGE 18+, U.S., 2017)\n10% \nSPORTS FANS\nwatch only as a  \nsocial activity",
+      "confidence": "high",
+      "pages": [
+        82
+      ],
+      "section_id": "section-8",
+      "section_title": "Sports is the Ultimate Moat"
+    },
+    {
+      "id": "sports-03",
+      "text": "Super Fans account for 27% of fans and 61% of sports-viewing hours, while Social Fans account for 10% of fans and 6% of hours.",
+      "evidence": "SUPER FAN DEDICATED FAN CASUAL FAN SOCIAL FAN\n...\n27% OF FANS\n61% OF HOURS\n...\n10% OF FANS\n6% OF HOURS",
+      "confidence": "medium",
+      "pages": [
+        84
+      ],
+      "section_id": "section-8",
+      "section_title": "Sports is the Ultimate Moat"
+    },
+    {
+      "id": "podcasts-01",
+      "text": "Activate forecasts U.S. podcast ad revenue at $237M in 2017E and $642M in 2021E.",
+      "evidence": "We forecast that the podcast revenues will more than double in the \nnext few years\nPODCAST AD REVENUE AND LISTENERS, U.S., 2014-2021E, MILLIONS USD, % 12+ POPULATION\n...\n2014 2015 2016 2017E 2018E 2019E 2020E 2021E\n...\n$642M\n...\n$237M\n...\nFORECAST\nACTIVATE",
+      "confidence": "medium",
+      "pages": [
+        136
+      ],
+      "section_id": "section-11",
+      "section_title": "In an Era of Voice Control, Look to Podcasting to Engage Users"
+    },
+    {
+      "id": "podcasts-02",
+      "text": "Among podcast non-listeners, 34% selected knowing which apps to use as a factor that would lead them to listen; among podcast listeners, 31% selected recommendations as a factor that would increase consumption.",
+      "evidence": "AMONG PODCAST NON-LISTENERS\nFACTORS THAT WOULD LEAD TO PODCAST LISTENING\nKnowing which apps to use 34%\nAMONG PODCAST LISTENERS\nFACTORS THAT WOULD LEAD TO INCREASED PODCAST CONSUMPTION\nRecommendations 31%",
+      "confidence": "high",
+      "pages": [
+        129
+      ],
+      "section_id": "section-11",
+      "section_title": "In an Era of Voice Control, Look to Podcasting to Engage Users"
+    },
+    {
+      "id": "podcasts-03",
+      "text": "Smart-speaker owners are about 1.6 times more likely to listen to podcasts than non-smart-speaker owners.",
+      "evidence": "Smart speaker owners are ~1.6x\nmore likely to listen to podcasts\nthan non-smart speaker owners",
+      "confidence": "high",
+      "pages": [
+        127
+      ],
+      "section_id": "section-11",
+      "section_title": "In an Era of Voice Control, Look to Podcasting to Engage Users"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

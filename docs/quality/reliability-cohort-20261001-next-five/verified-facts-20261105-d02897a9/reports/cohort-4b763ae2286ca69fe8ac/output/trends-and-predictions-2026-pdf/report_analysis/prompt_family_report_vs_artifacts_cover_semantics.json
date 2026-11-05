@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/cover_semantics",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "direction": "falling",
+    "domain_layer": "grid",
+    "evidence_density": "metric_rich",
+    "evidence_shape": "trend",
+    "geography_scope": "global",
+    "selection_reason": "The evidence is metric-rich and led by a documented global search-traffic decline, alongside survey measures of priorities, assessments, and expectations."
+  }
+}

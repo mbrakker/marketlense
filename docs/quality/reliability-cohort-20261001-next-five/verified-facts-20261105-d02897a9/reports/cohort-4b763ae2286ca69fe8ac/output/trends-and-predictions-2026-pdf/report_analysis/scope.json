@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "scope": "Covers journalism and technology trends, challenges, and predictions for 2026, including AI, audience traffic, content and distribution strategies, misinformation, newsroom practices, and business models. Draws on an industry survey of digital leaders from 51 countries and territories; the excerpts do not identify specific geographic regions.",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "scope",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

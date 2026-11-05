@@ -1,0 +1,421 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-b638414df0b1fccea1cd\\ias-first-attempt-vq54udoj\\output\\mobile-app-trends-2026-pdf\\report_analysis\\validation_regen_candidate_3.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Validation execution failed (model_client_required).",
+      "severity": "error",
+      "affected_section": "validation",
+      "rule_id": "validation_execution",
+      "violation_type": "model_client_required",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=ecommerce-cpi-subvertical-divergence].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=ecommerce-cpi-subvertical-divergence].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=ecommerce-cpi-subvertical-divergence].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=finance-latam-growth].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=finance-latam-growth].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=finance-latam-growth].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=finance-session-length-pattern].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=finance-session-length-pattern].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=finance-session-length-pattern].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=gaming-retention-and-cpi].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=gaming-retention-and-cpi].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=gaming-retention-and-cpi].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=gaming-subvertical-growth-divergence].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=gaming-subvertical-growth-divergence].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=gaming-subvertical-growth-divergence].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=global-ecommerce-finance-install-session-divergence].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=global-ecommerce-finance-install-session-divergence].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=global-ecommerce-finance-install-session-divergence].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=intro-mobile-gdp-forecast].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=intro-mobile-gdp-forecast].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=intro-mobile-gdp-forecast].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=measurement-recommendation].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=measurement-recommendation].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=measurement-recommendation].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=measurement-recommendation].metric.forecast_status",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=measurement-recommendation].metric.observations",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=mobile-app-consumer-spending-2025].metric.baseline",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=mobile-app-consumer-spending-2025].metric.comparator",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=mobile-app-consumer-spending-2025].metric.delta",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=finance-latam-growth].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=finance-latam-growth].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=finance-latam-growth].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=finance-latam-growth].pages[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=mobile-app-consumer-spending-2025]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_claim_evidence_missing] verified metric projection has no authoritative metric_public_copy",
+      "severity": "error",
+      "affected_section": "insights:mobile-app-consumer-spending-2025.metric_public_copy",
+      "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "violation_type": "unsupported_factual_claim",
+      "repair_target": "insights_bundle",
+      "entity_id": "key_figures:key_figures:1:metric_public_copy",
+      "evidence_ids": [
+        "verified-fact:mobile-app-consumer-spending-2025"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_claim_evidence_missing] The text asserts more than 112.1 billion app downloads in 2025, but none of this item's bound facts is the verified app-download fact. The supplied bindings therefore do not establish this claim.",
+      "severity": "error",
+      "affected_section": "decision_brief.strategic_context",
+      "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "",
+      "entity_id": "executive_advisory:decision_brief:strategic_context",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_claim_evidence_missing] The item links only the LATAM growth fact. Its assertion about differing regional session-length patterns is not supported by that item-bound evidence, leaving a material premise of the interpretation unverified here.",
+      "severity": "error",
+      "affected_section": "insights:finance-latam-growth.so_what",
+      "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "",
+      "entity_id": "insight:finance-latam-growth:so_what",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_claim_evidence_missing] The linked fact supports only LATAM finance-app install and session growth. It does not support the additional global and regional session-length claims, so the complete factual statement lacks an item-bound source for those details.",
+      "severity": "error",
+      "affected_section": "insights:finance-latam-growth",
+      "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "",
+      "entity_id": "insight:finance-latam-growth:text",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.report_material_coverage_incomplete] The report omits the planned 8.4% global-GDP-by-2030 projection from all public content. Its finance session-length detail is also not supported by the binding on the primary finance item, so it does not provide reliably sourced coverage of that planned finding. In addition, the public content does not disclose that the source leaves sample sizes and underlying denominators unstated for the install/session growth benchmarks. Dimensions: material_coverage: The editorial plan includes the projected 8.4% share of global GDP by 2030, but that finding appears in no public item. The finance session-length pattern is also not supported by the primary finance item's supplied evidence binding.; limitations: The complete verified facts state that sample sizes and underlying denominators are not provided for the install/session growth benchmarks. The public report presents those comparisons without disclosing this source limitation.",
+      "severity": "error",
+      "affected_section": "public_items",
+      "rule_id": "public_editorial_quality.report_material_coverage_incomplete",
+      "violation_type": "report_editorial_acceptance",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": [
+        "verified-fact:intro-mobile-gdp-forecast",
+        "verified-fact:finance-session-length-pattern",
+        "verified-fact:global-ecommerce-finance-install-session-divergence",
+        "verified-fact:finance-latam-growth"
+      ]
+    }
+  ]
+}

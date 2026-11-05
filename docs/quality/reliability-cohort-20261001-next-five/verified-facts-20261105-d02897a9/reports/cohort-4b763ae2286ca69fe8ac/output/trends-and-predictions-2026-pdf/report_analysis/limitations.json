@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "limitations": [
+    "Publisher expectations that misinformation and AI-generated content could strengthen news media may be wishful thinking; audience uncertainty about truth does not necessarily mean they will return to news media.",
+    "Fewer than 1% of news images or videos published globally include C2PA metadata; adoption requires ecosystem-wide buy-in, and metadata can be stripped at any stage.",
+    "Content-detection systems have so far been only partly effective; some experts suggest TikTok automatically detects less than half of AI-generated content."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "limitations",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

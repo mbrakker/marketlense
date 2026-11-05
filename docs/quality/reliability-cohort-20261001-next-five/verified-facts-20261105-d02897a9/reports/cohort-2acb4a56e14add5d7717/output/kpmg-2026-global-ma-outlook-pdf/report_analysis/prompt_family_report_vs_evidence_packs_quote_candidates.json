@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/quote_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "quote_candidates": [
+      {
+        "id": "quote-001",
+        "text": "Execution capability has become the defining factor in M&A outcomes.",
+        "source": "kpmg-2026-global-ma-outlook.pdf",
+        "page": 2
+      },
+      {
+        "id": "quote-002",
+        "text": "Over successive deal cycles, evidence has shown that M&A outcomes are shaped as much by execution capability as by strategic intent.",
+        "source": "kpmg-2026-global-ma-outlook.pdf",
+        "page": 2
+      },
+      {
+        "id": "quote-003",
+        "text": "As deal complexity rises, execution risk has become a primary determinant of value creation, particularly for transactions involving separation, transformation and ongoing portfolio reshaping.",
+        "source": "kpmg-2026-global-ma-outlook.pdf",
+        "page": 31
+      },
+      {
+        "id": "quote-004",
+        "text": "The AI itself is rarely the bottleneck. The more complex challenge is codifying the unwritten rules, institutional shortcuts and tacit knowledge that experienced practitioners carry in their heads.",
+        "source": "kpmg-2026-global-ma-outlook.pdf",
+        "page": 27
+      },
+      {
+        "id": "quote-005",
+        "text": "Organizations that capture the most value will likely be those that make their deal processes legible to machines — not just automate them.",
+        "source": "kpmg-2026-global-ma-outlook.pdf",
+        "page": 27
+      },
+      {
+        "id": "quote-006",
+        "text": "AI is now automating significant portions of read, write and increasingly verify. What remains decisively human is think: the application of judgment, context and experience.",
+        "source": "kpmg-2026-global-ma-outlook.pdf",
+        "page": 24
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "quote_candidates",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

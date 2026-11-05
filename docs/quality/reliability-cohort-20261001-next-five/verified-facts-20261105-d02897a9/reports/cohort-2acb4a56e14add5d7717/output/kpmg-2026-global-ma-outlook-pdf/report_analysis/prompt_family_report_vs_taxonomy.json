@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "business_performance",
+      "macroeconomic_outlook",
+      "risk_management",
+      "organizational_transformation",
+      "generative_ai"
+    ],
+    "primary_tags": [
+      "business_performance",
+      "macroeconomic_outlook",
+      "risk_management",
+      "organizational_transformation"
+    ],
+    "secondary_tags": [
+      "generative_ai"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "business_performance",
+        "tier": "primary",
+        "section_label": "Portfolio simplification as a value creation strategy",
+        "evidence": "The report treats portfolio simplification as a value-creation strategy for dealmakers."
+      },
+      {
+        "tag": "macroeconomic_outlook",
+        "tier": "primary",
+        "section_label": "2025 retrospective and 2026 outlook",
+        "evidence": "The report reviews 2025 and looks ahead to the 2026 M&A environment."
+      },
+      {
+        "tag": "risk_management",
+        "tier": "primary",
+        "section_label": "Diverging risk appetites between buyers",
+        "evidence": "The section compares corporate and private-equity buyers’ risk appetites."
+      },
+      {
+        "tag": "organizational_transformation",
+        "tier": "primary",
+        "section_label": "Execution discipline as a decisive source of advantage",
+        "evidence": "The report emphasizes execution discipline as a source of advantage."
+      },
+      {
+        "tag": "generative_ai",
+        "tier": "secondary",
+        "section_label": "AI-driven transformation of deal execution",
+        "evidence": "A dedicated section examines AI-driven transformation of deal execution."
+      }
+    ],
+    "region": "Global",
+    "time_period": "2025 to 2026",
+    "not_found_reason": null
+  }
+}

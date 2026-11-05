@@ -1,0 +1,369 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_final",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "coverage_role": "market_context",
+      "decision_relevance_score": 0.9,
+      "evidence": "The chart title gives the global revenue metric, 2017E–2021E period, and USD; the bars associate $1.7T with 2017E and $2.0T with 2021E. The chart separately labels $302B growth and 4.1% CAGR, and explicitly labels the comparison Global GDP CAGR: ~3%. Footnote 1 supplies the stated category scope. The E suffixes and the page’s forecast headline establish forecast status. The Cost of Internet access label is paired with $128B and CAGR 5.7%; footnote 2 defines it as including fixed broadband, wireless, and mobile Internet access. The other two listed segments are Ad revenue at $108B and 4.7% and Paid content at $66B and 2.3%, confirming the stated comparisons. The E dates and Activate Forecast label indicate these are projections.",
+      "evidence_id": "verified-fact:global-revenue-forecast",
+      "evidence_ids": [
+        "verified-fact:global-revenue-forecast",
+        "verified-fact:f02"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:global-revenue-forecast",
+          "page": 5,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart title gives the global revenue metric, 2017E–2021E period, and USD; the bars associate $1.7T with 2017E and $2.0T with 2021E. The chart separately labels $302B growth and 4.1% CAGR, and explicitly labels the comparison Global GDP CAGR: ~3%. Footnote 1 supplies the stated category scope. The E suffixes and the page’s forecast headline establish forecast status."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:f02",
+          "page": 6,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart title gives the subject, global geography, 2017E–2021E period, and USD. The color-matched Cost of Internet access label is paired with $128B and CAGR 5.7%; footnote 2 defines it as including fixed broadband, wireless, and mobile Internet access. The other two listed segments are Ad revenue at $108B and 4.7% and Paid content at $66B and 2.3%, confirming the stated comparisons. The E dates and Activate Forecast label indicate these are projections."
+        }
+      ],
+      "id": "global-revenue-forecast",
+      "metric": {
+        "cohort": "Footnote-defined consumer Internet and media categories",
+        "confidence": "As presented in the source forecast",
+        "denominator": "Not stated",
+        "geography": "Global",
+        "label": "Global Consumer Internet and Media Revenues",
+        "observation_status": "Forecast estimates, not observed outcomes",
+        "sample_size": "Not stated",
+        "segment": "Consumer Internet and Media Revenues",
+        "subject": "Consumer Internet and Media Revenues",
+        "timeframe": "2017E–2021E",
+        "trend": "Forecast increase",
+        "unit": "USD",
+        "value": "$1.7 trillion in 2017E to $2.0 trillion in 2021E"
+      },
+      "metric_public_copy": "Activate forecasts global Consumer Internet and Media Revenues, as defined in the page’s footnote, to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E.",
+      "metric_strength_score": 0.93,
+      "novelty_score": 0.7,
+      "now_what": "MarketLense recommendation: Use it as a scenario input and distinguish forecast growth from observed results in investment cases.",
+      "pages": [
+        5,
+        6
+      ],
+      "report_type_lens": "market_size",
+      "score": 0.91,
+      "so_what": "This is a forecast benchmark, not a realized revenue outcome.",
+      "text": "Activate forecasts global Consumer Internet and Media Revenues, as defined in the page’s footnote, to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E. The forecast assigns the category $302 billion in growth and a 4.1% CAGR for 2017E–2021E, compared with approximately 3% for global GDP. Among the three listed revenue segments, Cost of Internet access—including fixed broadband, wireless, and mobile Internet access—is forecast to have the largest dollar increase ($128B) and highest CAGR (5.7%)."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.95,
+      "evidence": "The chart's title states “Video Time and Spend Relative to Share of Users, U.S., 2017, % Total.” The labels connect the top 25% of users (4.5+ hours of daily video attention) to 61% of share of time spent and 34% of share of consumer spend; the other-user portions are separately labeled 39% and 66%. The source line cites Activate analysis and its 2017 Consumer Tech & Media Research Study (n=3,515). The chart assigns 61% of video time and 34% of consumer spend to the top 25% cohort, and 39% of video time and 66% of consumer spend to all other users.",
+      "evidence_id": "verified-fact:video-attention-spend",
+      "evidence_ids": [
+        "verified-fact:video-attention-spend",
+        "verified-fact:f04"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:video-attention-spend",
+          "page": 15,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart's title states “Video Time and Spend Relative to Share of Users, U.S., 2017, % Total.” The labels connect the top 25% of users (4.5+ hours of daily video attention) to 61% of share of time spent and 34% of share of consumer spend; the other-user portions are separately labeled 39% and 66%. The source line cites Activate analysis and its 2017 Consumer Tech & Media Research Study (n=3,515)."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:f04",
+          "page": 15,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The left bar assigns 61% to the “Top 25% of Users (4.5+ hours of daily video attention)” cohort and 39% to “All Other Users.” The right bar assigns 34% to the top-25% cohort and 66% to all other users. The source line identifies the Activate 2017 Consumer Tech & Media Research Study (n=3,515)."
+        }
+      ],
+      "id": "video-attention-spend",
+      "metric": {
+        "cohort": "Top 25% of users with 4.5+ hours of daily video attention",
+        "confidence": "Not stated",
+        "denominator": "Total video time spent for the time metric; total consumer spend for the spend metric",
+        "geography": "U.S.",
+        "label": "Top 25% cohort’s share of video time and consumer spend",
+        "observation_status": "Study-reported 2017 shares",
+        "sample_size": "3,515",
+        "segment": "Top 25% of users",
+        "subject": "Video time spent and consumer spend",
+        "timeframe": "2017",
+        "trend": "The cohort’s share is greater for video time spent than for consumer spend",
+        "unit": "percent of total",
+        "value": "61% of total video time spent and 34% of total consumer spend"
+      },
+      "metric_public_copy": "In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of total video time spent and 34% of total consumer spend.",
+      "metric_strength_score": 0.94,
+      "novelty_score": 0.8,
+      "now_what": "MarketLense recommendation: Evaluate video audiences against both attention and spend measures before prioritizing monetization tests.",
+      "pages": [
+        15
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.93,
+      "so_what": "Video attention and consumer spend are distributed differently across these cohorts.",
+      "text": "In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of total video time spent and 34% of total consumer spend. All other users accounted for 39% of video time spent and 66% of consumer spend."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.91,
+      "evidence": "The Super Fan panel directly pairs the definition “Views 10+ hours of sports content per week” with 27% of fans and 61% of hours. The Social Fan panel directly pairs “Watches sports content only as a social activity” with 10% of fans and 6% of hours. The footer names the Activate 2017 Consumer Tech & Media Research Study and gives n=2,406. The Broadcast bars are labeled 21% for non-sports viewers and 31% for sports viewers; the Virtual Pay TV bars are labeled 15% and 21%, respectively. The footnote supplies the cohort definitions, and the source line identifies the Activate 2017 Consumer Tech & Media Research Study (n=1,172).",
+      "evidence_id": "verified-fact:sports-fan-segment-shares",
+      "evidence_ids": [
+        "verified-fact:sports-fan-segment-shares",
+        "verified-fact:broadcast-cord-cutter-preference"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:sports-fan-segment-shares",
+          "page": 84,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The Super Fan panel directly pairs the definition 'Views 10+ hours of sports content per week' with 27% of fans and 61% of hours. The Social Fan panel directly pairs 'Watches sports content only as a social activity' with 10% of fans and 6% of hours. The footer names the Activate 2017 Consumer Tech & Media Research Study and gives n=2,406."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:broadcast-cord-cutter-preference",
+          "page": 70,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart is titled “Cord-Cutter Substitution by Viewer Type, U.S., 2017, % Viewers.” Broadcast is labeled 21% for non-sports viewers and 31% for sports viewers; Virtual Pay TV is labeled 15% and 21%, respectively. The footnote supplies the cohort definitions, and the source line identifies the Activate 2017 Consumer Tech & Media Research Study (n=1,172)."
+        }
+      ],
+      "id": "sports-fan-segment-shares",
+      "metric": {
+        "cohort": "Super Fans watch 10+ hours of sports content per week; Social Fans watch sports content only as a social activity",
+        "confidence": "Not stated",
+        "denominator": "Fans for the 'of fans' figures; hours for the 'of hours' figures",
+        "geography": "Not stated",
+        "label": "Super Fans’ share of fans and hours",
+        "observation_status": "Study-reported findings",
+        "sample_size": "n=2,406",
+        "segment": "Super Fans",
+        "subject": "Sports fans and their sports-content viewing",
+        "timeframe": "Activate 2017 study; specific fieldwork period not stated",
+        "trend": "Segment shares",
+        "unit": "percent",
+        "value": "27% of fans and 61% of hours"
+      },
+      "metric_public_copy": "In Activate’s 2017 Consumer Tech & Media Research Study (n=2,406), Super Fans, defined as watching 10+ hours of sports content per week, were reported as 27% of fans and 61% of hours.",
+      "metric_strength_score": 0.91,
+      "novelty_score": 0.85,
+      "now_what": "MarketLense recommendation: Assess audience segmentation and platform substitution as separate inputs when evaluating sports distribution options.",
+      "pages": [
+        84,
+        70
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.89,
+      "so_what": "Fan-segment composition and cord-cutter substitution are distinct audience signals, not evidence of a causal link.",
+      "text": "In Activate’s 2017 Consumer Tech & Media Research Study (n=2,406), Super Fans, defined as watching 10+ hours of sports content per week, were reported as 27% of fans and 61% of hours; Social Fans, defined as watching sports content only as a social activity, were reported as 10% of fans and 6% of hours. Separately, in the U.S. in 2017, 31% of sports viewers (more than five hours of sports programming per week) cited Broadcast as a cord-cutter substitution option and 21% cited Virtual Pay TV; among non-sports viewers (no sports programming on a regular basis), the respective shares were 21% and 15% (Activate study, n=1,172)."
+    },
+    {
+      "coverage_role": "strategic_risk",
+      "decision_relevance_score": 0.89,
+      "evidence": "The page headline forecasts that VR will not reach scaled global adoption. Its chart title specifies consumer VR adoption globally over 2016–2021E as a percentage of population, and the y-axis specifies users as a percentage of global population. Footnote 1 identifies the seventh-generation gaming-console modeling basis. The mass-adoption barriers box lists limited applications outside gaming, an immersive but non-social experience, and inability to move beyond a confined area. The timeline marks 2016 without E and the 2017–2021 estimates with E. The page does not numerically define the threshold for “scaled” adoption.",
+      "evidence_id": "verified-fact:consumer-vr-adoption-outlook",
+      "evidence_ids": [
+        "verified-fact:consumer-vr-adoption-outlook"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:consumer-vr-adoption-outlook",
+          "page": 42,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The page headline forecasts that VR will not reach scaled global adoption. Its chart title specifies consumer VR adoption globally over 2016–2021E as a percentage of population, and the y-axis specifies users as a percentage of global population. Footnote 1 identifies the seventh-generation gaming-console modeling basis. The mass-adoption barriers box lists limited applications outside gaming, an immersive but non-social experience, and inability to move beyond a confined area. The timeline marks 2016 without E and the 2017–2021 estimates with E. The page does not numerically define the threshold for “scaled” adoption."
+        }
+      ],
+      "id": "consumer-vr-adoption-outlook",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "",
+        "subject": "",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": ""
+      },
+      "metric_public_copy": "",
+      "metric_strength_score": 0.74,
+      "novelty_score": 0.84,
+      "now_what": "MarketLense recommendation: If investing in VR, define a working adoption threshold and test the listed barriers before using the forecast in a business case.",
+      "pages": [
+        42
+      ],
+      "report_type_lens": "technology_shift",
+      "score": 0.87,
+      "so_what": "The forecast is directional, while the adoption threshold remains undefined and the listed barriers are qualitative.",
+      "text": "Activate forecasts that VR will not reach scaled global adoption by 2021E; the consumer adoption chart measures users as a percentage of global population over 2016–2021E and is modeled after seventh-generation gaming consoles. The page lists limited applications outside gaming, an immersive but non-social experience, and inability to move beyond a confined area as barriers to mass adoption. The page does not numerically define the threshold for “scaled” adoption."
+    },
+    {
+      "coverage_role": "proof_point",
+      "decision_relevance_score": 0.86,
+      "evidence": "The chart title states the measure, selected-country scope, year 2017, and % of news readers. The legend maps the two bar colors to News Media and Social Media, with values Canada 51%/24%, Ireland 47%/28%, United Kingdom 41%/18%, Australia 40%/27%, and United States 38%/20%, respectively. In every country pair the News Media value is higher.",
+      "evidence_id": "verified-fact:news-trust-comparison",
+      "evidence_ids": [
+        "verified-fact:news-trust-comparison"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:news-trust-comparison",
+          "page": 101,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart title states the measure, selected-country scope, year 2017, and % of news readers. The legend explicitly maps the two bar colors to News Media and Social Media, and the values printed adjacent to each country’s bars are Canada 51%/24%, Ireland 47%/28%, United Kingdom 41%/18%, Australia 40%/27%, and United States 38%/20%, respectively. In every country pair the News Media value is higher, supporting the corrected claim within the chart’s stated cohort and scope."
+        }
+      ],
+      "id": "news-trust-comparison",
+      "metric": {
+        "cohort": "News readers",
+        "confidence": "Not stated",
+        "denominator": "News readers",
+        "geography": "Canada, Ireland, United Kingdom, Australia, United States",
+        "label": "Perceived trustworthiness by news source, % of news readers",
+        "observation_status": "Observed",
+        "sample_size": "Not stated",
+        "segment": "News readers",
+        "subject": "Perceived trustworthiness by news source",
+        "timeframe": "2017",
+        "trend": "News Media higher than Social Media in each country",
+        "unit": "%",
+        "value": "News Media exceeded Social Media in all five selected countries"
+      },
+      "metric_public_copy": "In 2017, among news readers, perceived trustworthiness for News Media versus Social Media was 51% versus 24% in Canada, 47% versus 28% in Ireland, 41% versus 18% in the United Kingdom, 40% versus 27% in Australia, and 38% versus 20% in the United States.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.78,
+      "now_what": "MarketLense recommendation: For country-specific plans, test news-source assumptions against current local audience research.",
+      "pages": [
+        101
+      ],
+      "report_type_lens": "brand_strategy",
+      "score": 0.86,
+      "so_what": "The measure captures perceived trustworthiness, not accuracy.",
+      "text": "In 2017, news readers in each of the five selected countries reported a higher perceived-trustworthiness share for News Media than for Social Media."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.85,
+      "evidence": "The chart is titled “Ecommerce Growth Potential by Category, U.S.” Its horizontal axis specifies category share of eCommerce sales in 2016, and its vertical axis specifies potential for shift from physical to eCommerce, with low-to-high positioning. The callout “Products involve first-hand experience (e.g. food freshness, used car condition)” points to the chart region containing grocery and automotive; that region is labeled “Delayed Ecommerce Adoption.” These are qualitative category placements, not a time-to-adoption measure.",
+      "evidence_id": "verified-fact:ecommerce-firsthand-experience",
+      "evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:ecommerce-firsthand-experience",
+          "page": 119,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart is titled “Ecommerce Growth Potential by Category, U.S.” Its horizontal axis specifies category share of eCommerce sales in 2016, and its vertical axis specifies potential for shift from physical to eCommerce, with low-to-high positioning. The callout “Products involve first-hand experience (e.g. food freshness, used car condition)” points to the chart region containing grocery and automotive; that region is labeled “Delayed Ecommerce Adoption.” These are qualitative category placements, not a time-to-adoption measure."
+        }
+      ],
+      "id": "ecommerce-firsthand-experience",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "",
+        "subject": "",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": ""
+      },
+      "metric_public_copy": "",
+      "metric_strength_score": 0.73,
+      "novelty_score": 0.82,
+      "now_what": "MarketLense recommendation: Use the matrix to frame hypotheses for grocery and automotive, and set timing assumptions only with category-specific evidence.",
+      "pages": [
+        119
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.84,
+      "so_what": "The matrix offers category positioning, not a timetable; treat its adoption label as qualitative.",
+      "text": "The U.S. eCommerce growth matrix places grocery and automotive in its “Delayed Ecommerce Adoption” area alongside products involving first-hand experience, with food freshness and used-car condition as examples. It positions categories by 2016 category share of eCommerce sales and potential shift from physical to eCommerce; these are qualitative placements, not a measured time-to-adoption."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.84,
+      "evidence": "The chart headings and adjacent labels bind 34% to “Knowing which apps to use” in the podcast non-listener chart (factors leading to listening), and 31% to “Recommendations” in the podcast listener chart (factors leading to increased consumption). The source note names the Activate 2017 Consumer Tech & Media Research Study and specifies left n=700 and right n=419. The page reports survey results and does not specify geography.",
+      "evidence_id": "verified-fact:podcast-audience-factors",
+      "evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:podcast-audience-factors",
+          "page": 129,
+          "section_id": "",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The two chart headings and adjacent labels bind the values to their respective populations and outcomes: 34% is next to “Knowing which apps to use” in the podcast non-listener chart (factors leading to listening), while 31% is next to “Recommendations” in the podcast listener chart (factors leading to increased consumption). The source note names the Activate 2017 Consumer Tech & Media Research Study and specifies left n=700 and right n=419. The page reports survey results and does not specify geography."
+        }
+      ],
+      "id": "podcast-audience-factors",
+      "metric": {
+        "cohort": "Podcast non-listeners for the listening factor; podcast listeners for the increased-consumption factor",
+        "confidence": "Clearly legible chart labels and source note",
+        "denominator": "The respective chart populations; left n=700 and right n=419",
+        "geography": "Not specified on the page",
+        "label": "Podcast non-listeners selecting “Knowing which apps to use” as a factor leading to listening",
+        "observation_status": "Reported survey responses; not a forecast",
+        "sample_size": "n=700",
+        "segment": "Podcast non-listeners",
+        "subject": "Factors selected as leading to podcast listening or increased podcast consumption",
+        "timeframe": "Activate 2017 Consumer Tech & Media Research Study",
+        "trend": "Reported survey response",
+        "unit": "percent",
+        "value": "34% of podcast non-listeners selected “Knowing which apps to use” as a factor that would lead to podcast listening"
+      },
+      "metric_public_copy": "In Activate’s 2017 Consumer Tech & Media Research Study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to podcast listening.",
+      "metric_strength_score": 0.88,
+      "novelty_score": 0.8,
+      "now_what": "MarketLense recommendation: Test app-discovery messaging with non-listeners and recommendation prompts with listeners, measuring each group separately.",
+      "pages": [
+        129
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.82,
+      "so_what": "The survey distinguishes an access-navigation factor among non-listeners from a recommendation factor among current listeners.",
+      "text": "In Activate’s 2017 Consumer Tech & Media Research Study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to podcast listening. Separately, 31% of podcast listeners (n=419) selected “Recommendations” as a factor that would lead to increased podcast consumption."
+    }
+  ]
+}

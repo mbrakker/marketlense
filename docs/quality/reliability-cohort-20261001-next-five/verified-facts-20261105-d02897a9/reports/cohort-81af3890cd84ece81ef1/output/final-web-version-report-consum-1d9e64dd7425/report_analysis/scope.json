@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "scope": "The report examines evolving consumer behavior and implications for consumer products and retail, including value, spending, AI, and technology-enabled loyalty. It draws on a global survey of 12,000 consumers aged 18 and over across Australia, Canada, France, Germany, India, Italy, Japan, the Netherlands, Spain, Sweden, the UK, and the US, conducted in October 2025.",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "scope",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

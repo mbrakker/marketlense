@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/cover_semantics",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "direction": "diverging",
+    "domain_layer": "grid",
+    "evidence_density": "metric_rich",
+    "evidence_shape": "comparison",
+    "geography_scope": "global",
+    "selection_reason": "The evidence is dominated by metric-rich cross-category and regional comparisons, with installs and sessions—and some subcategory measures—moving in opposite directions."
+  }
+}

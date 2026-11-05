@@ -1,0 +1,633 @@
+{
+  "artifact_refs": {
+    "analysis_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+    "contents_image": "",
+    "source_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf"
+  },
+  "completed_at_utc": "2026-11-05T20:43:38.815256+00:00",
+  "file_id": "cohort-cbb6e7df67412186b8bc",
+  "payload": {
+    "artifact_integrity": {
+      "files": {
+        "analysis_pdf": {
+          "md5": "cbb6e7df67412186b8bc094a424ac890",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 6203358
+        },
+        "source_pdf": {
+          "md5": "cbb6e7df67412186b8bc094a424ac890",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 6203358
+        }
+      },
+      "schema_version": "1.0"
+    },
+    "artifact_lineage": {
+      "analysis_pdf": "art_cffde239f5095eb69bcd330153ce6239da0bf01dd5a9da2dce1750732061a18f",
+      "source_pdf": "art_74ac6ab26893e2b250f6aacec8f3194b723f48004aa792c42f9e49d6e2f57beb"
+    },
+    "artifact_registry": {
+      "refs": [
+        {
+          "artifact_id": "analysis_pdf",
+          "content_hash": "cbb6e7df67412186b8bc094a424ac890",
+          "created_at_utc": "2026-11-05T20:43:38.732626+00:00",
+          "kind": "analysis_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+          "producer_step": "selection_complete",
+          "required": true,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "source_pdf",
+          "content_hash": "cbb6e7df67412186b8bc094a424ac890",
+          "created_at_utc": "2026-11-05T20:43:38.732626+00:00",
+          "kind": "source_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+          "producer_step": "selection_complete",
+          "required": true,
+          "schema_version": "1.0"
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    "prompt_family_materializations": {},
+    "schema_version": "1.0",
+    "selection": {
+      "candidate_count": 1523,
+      "payload": {
+        "_contents_image": "",
+        "_evidence_packs": {},
+        "_figure_assets": [
+          {
+            "candidate_id": "chart-37-0",
+            "caption_source": "legacy",
+            "crop_dpi": 216,
+            "crop_image_sha256": "f712493cbb5279dc490f920b90920a24e28d1f38ffb0993691737f0c3aa44415",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.257,
+              "table_boundary": 0.75,
+              "visual_card_boundary": 0.2602
+            },
+            "crop_qa_score": 0.8712,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-37-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "CONSUMER AND ENTERPRISE SPEND ON VR/AR 1 , GLOBAL, 2016-2021E, BILLIONS",
+            "display_caption": "CONSUMER AND ENTERPRISE SPEND ON VR/AR 1 , GLOBAL, 2016-2021E, BILLIONS",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-37-0.png",
+            "is_primary": true,
+            "kind": "chart",
+            "page": 37,
+            "preview_text": "CONSUMER AND ENTERPRISE SPEND ON VR/AR 1 , GLOBAL, 2016-2021E, BILLIONS",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-11-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "6071c7771ea10e39e53e1b9d9fb72bf5619b17d64b7dee5061bef57de21d94d3",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.185,
+              "table_boundary": 0.25,
+              "visual_card_boundary": 0.185
+            },
+            "crop_qa_score": 0.8241,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-11-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "New services continue to drive adoption addressing new user behaviors such as smart speakers and mobile video",
+            "display_caption": "Additional figure 2",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-11-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 11,
+            "preview_text": "New services continue to drive adoption addressing new user behaviors such as smart speakers and mobile video",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-57-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "8a4da4c00a1b622017b2afbfe6b77017da8c71570fddbd1b60e7c35f4bab4937",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.2165,
+              "table_boundary": 0.25,
+              "visual_card_boundary": 0.2165
+            },
+            "crop_qa_score": 0.7624,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-57-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 3",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-57-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 57,
+            "preview_text": "PewdiePie | 56 |  | \nHolaSoyGerman | 32 |  | \nEl Rubius | 25 |  |",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-106-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "a2d15cc9178eab329040b6755ac3edf5746b7c3160b66cc20173155ebe2b33a5",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.3652,
+              "table_boundary": 0.5,
+              "visual_card_boundary": 0.3652
+            },
+            "crop_qa_score": 0.7357,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-106-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 4",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-106-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 106,
+            "preview_text": "SUBSCRIPTION |  | \u2022 The New York Times saw 46% growth over Q2 2016 in Q2 2017, adding 93,000 digital\nsubscriptions\nGROWTH |  | \u2022 The Washington Post broke through 1 million digital subscriptions in September 2017\n |  | \u2022 The Atlantic has launched a $100/month membership program called the Masthead, which\nprovides subscribers with exclusive content and members-only event access",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-47-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "f109e2c4e56310b509bffa4b001ad23bf94844ce1853112ec29059a1dbb47e15",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.2727,
+              "table_boundary": 0.75,
+              "visual_card_boundary": 0.2727
+            },
+            "crop_qa_score": 0.8406,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-47-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 5",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-47-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 47,
+            "preview_text": "| (ARKit works on all iPhones from 6s onwards) | (ARKit - 2017) | (Speculation, but no product)\n | (ARCore currently optimized for Pixel and\nGalaxy S8) | (Tango - 20141, ARCore - 2017 - expected for >100M Android phones by Q1 2018) | (Launched Google Glass in 2013, led $542 million\ninvestment in Magic Leap in 2014)\n | - | (Windows Mixed Reality - 2015, Xamarin2 allows coders to write apps native",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-99-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "5787261d81fa84c5b2850c42cb902e42866bdbb5f8463358ae69925d9826841f",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.6082,
+              "table_boundary": 0.75,
+              "visual_card_boundary": 0.6082
+            },
+            "crop_qa_score": 0.7337,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-99-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 6",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-99-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 99,
+            "preview_text": "SUBSCRIPTION | Planned subscription and\nnewsletter tools, possibly\nwith metered paywall\ncapability | Testing of subscription tools\n(\u201cfirst click free\u201d option sunset in\nfavor of \u201cflexible\u201d option that lets\npublishers meter paywalls) | Featured subscriptions\ncapability for select\npublications (e.g. TIME)\nADVERTISING | Changes allow publishers to\nshow more ads, and insert\n\u201ccall-to-action\u201d newsletters",
+            "schema_version": "1.0"
+          }
+        ],
+        "_figure_gallery": [
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-37-0.png",
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-11-0.png",
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-57-0.png",
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-106-0.png",
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-47-0.png",
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-99-0.png"
+        ],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-37-0.png",
+        "_text_char_count": 3753,
+        "_text_density": 750.6,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "",
+        "contents_page_number": 0,
+        "figure": {
+          "evidence": "CONSUMER AND ENTERPRISE SPEND ON VR/AR 1 , GLOBAL, 2016-2021E, BILLIONS",
+          "schema_version": "1.0",
+          "title": "CONSUMER AND ENTERPRISE SPEND ON VR/AR 1 , GLOBAL, 2016-2021E, BILLIONS"
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "October 17, 2017",
+        "tldr": "Not available from text"
+      },
+      "rank_usage": {
+        "completion_tokens": 150238,
+        "prompt_tokens": 265574,
+        "total_tokens": 415812
+      },
+      "schema_version": "1.0"
+    },
+    "source": {
+      "analysis_pdf_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "contents_heading": "",
+      "contents_image": "",
+      "contents_page_number": 0,
+      "info_response": {
+        "metadata": {
+          "CreationDate": "D:20231016194447Z",
+          "Creator": "Keynote",
+          "ModDate": "D:20231016124626-07'00'",
+          "Producer": "macOS Version 12.6.8 (Build 21G725) Quartz PDFContext",
+          "Title": "Activate Technology & Media Outlook 2018"
+        },
+        "page_count": 140,
+        "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "schema_version": "1.0"
+      },
+      "ocr_fallback_used": false,
+      "ocr_pdf_path": "",
+      "payload": {
+        "_contents_image": "",
+        "_evidence_packs": {},
+        "_figure_assets": [
+          {
+            "candidate_id": "chart-37-0",
+            "caption_source": "legacy",
+            "crop_dpi": 216,
+            "crop_image_sha256": "f712493cbb5279dc490f920b90920a24e28d1f38ffb0993691737f0c3aa44415",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.257,
+              "table_boundary": 0.75,
+              "visual_card_boundary": 0.2602
+            },
+            "crop_qa_score": 0.8712,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-37-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "CONSUMER AND ENTERPRISE SPEND ON VR/AR 1 , GLOBAL, 2016-2021E, BILLIONS",
+            "display_caption": "CONSUMER AND ENTERPRISE SPEND ON VR/AR 1 , GLOBAL, 2016-2021E, BILLIONS",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-37-0.png",
+            "is_primary": true,
+            "kind": "chart",
+            "page": 37,
+            "preview_text": "CONSUMER AND ENTERPRISE SPEND ON VR/AR 1 , GLOBAL, 2016-2021E, BILLIONS",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-11-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "6071c7771ea10e39e53e1b9d9fb72bf5619b17d64b7dee5061bef57de21d94d3",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.185,
+              "table_boundary": 0.25,
+              "visual_card_boundary": 0.185
+            },
+            "crop_qa_score": 0.8241,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-11-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "New services continue to drive adoption addressing new user behaviors such as smart speakers and mobile video",
+            "display_caption": "Additional figure 2",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-11-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 11,
+            "preview_text": "New services continue to drive adoption addressing new user behaviors such as smart speakers and mobile video",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-57-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "8a4da4c00a1b622017b2afbfe6b77017da8c71570fddbd1b60e7c35f4bab4937",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.2165,
+              "table_boundary": 0.25,
+              "visual_card_boundary": 0.2165
+            },
+            "crop_qa_score": 0.7624,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-57-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 3",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-57-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 57,
+            "preview_text": "PewdiePie | 56 |  | \nHolaSoyGerman | 32 |  | \nEl Rubius | 25 |  |",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-106-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "a2d15cc9178eab329040b6755ac3edf5746b7c3160b66cc20173155ebe2b33a5",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.3652,
+              "table_boundary": 0.5,
+              "visual_card_boundary": 0.3652
+            },
+            "crop_qa_score": 0.7357,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-106-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 4",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-106-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 106,
+            "preview_text": "SUBSCRIPTION |  | \u2022 The New York Times saw 46% growth over Q2 2016 in Q2 2017, adding 93,000 digital\nsubscriptions\nGROWTH |  | \u2022 The Washington Post broke through 1 million digital subscriptions in September 2017\n |  | \u2022 The Atlantic has launched a $100/month membership program called the Masthead, which\nprovides subscribers with exclusive content and members-only event access",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-47-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "f109e2c4e56310b509bffa4b001ad23bf94844ce1853112ec29059a1dbb47e15",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.2727,
+              "table_boundary": 0.75,
+              "visual_card_boundary": 0.2727
+            },
+            "crop_qa_score": 0.8406,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-47-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 5",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-47-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 47,
+            "preview_text": "| (ARKit works on all iPhones from 6s onwards) | (ARKit - 2017) | (Speculation, but no product)\n | (ARCore currently optimized for Pixel and\nGalaxy S8) | (Tango - 20141, ARCore - 2017 - expected for >100M Android phones by Q1 2018) | (Launched Google Glass in 2013, led $542 million\ninvestment in Magic Leap in 2014)\n | - | (Windows Mixed Reality - 2015, Xamarin2 allows coders to write apps native",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-99-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "5787261d81fa84c5b2850c42cb902e42866bdbb5f8463358ae69925d9826841f",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.6082,
+              "table_boundary": 0.75,
+              "visual_card_boundary": 0.6082
+            },
+            "crop_qa_score": 0.7337,
+            "crop_qa_sidecar_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-99-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 6",
+            "generated_caption": "",
+            "image_path": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-99-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 99,
+            "preview_text": "SUBSCRIPTION | Planned subscription and\nnewsletter tools, possibly\nwith metered paywall\ncapability | Testing of subscription tools\n(\u201cfirst click free\u201d option sunset in\nfavor of \u201cflexible\u201d option that lets\npublishers meter paywalls) | Featured subscriptions\ncapability for select\npublications (e.g. TIME)\nADVERTISING | Changes allow publishers to\nshow more ads, and insert\n\u201ccall-to-action\u201d newsletters",
+            "schema_version": "1.0"
+          }
+        ],
+        "_figure_gallery": [
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-37-0.png",
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-11-0.png",
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-57-0.png",
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-106-0.png",
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-47-0.png",
+          "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-table-99-0.png"
+        ],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "d8ca0bf-d460f8aa84f6/slices/d8ca0bf-d460f8aa84f6-chart-37-0.png",
+        "_text_char_count": 3753,
+        "_text_density": 750.6,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "",
+        "contents_page_number": 0,
+        "figure": {
+          "evidence": "CONSUMER AND ENTERPRISE SPEND ON VR/AR 1 , GLOBAL, 2016-2021E, BILLIONS",
+          "schema_version": "1.0",
+          "title": "CONSUMER AND ENTERPRISE SPEND ON VR/AR 1 , GLOBAL, 2016-2021E, BILLIONS"
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "October 17, 2017",
+        "tldr": "Not available from text"
+      },
+      "schema_version": "1.0",
+      "text_response": {
+        "char_count": 3753,
+        "pages": [
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 1,
+            "text": "www.activate.com\nOctober 17, 2017\nACTIVATE TECH & MEDIA OUTLOOK 2018"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 2,
+            "text": "www.activate.com  1\nWelcome to Activate\u2019s Tech and Media Outlook 2018 \n2018 will be a pivotal year for technology and media businesses; these are the major forces that \nwill create growth opportunities and reshape companies in the year ahead. \n  \nEach year, as part of the Wall Street Journal D.Live Conference, we take a deep dive into some of \nthe major consumer trends, technology innovations, and industry dynamics that will predict what \nis going to happen next and what it will mean. \n  \nWe are excited to share our third annual Outlook, and hope you will enjoy it for many of its \nsurprising and unexpected insights. From the trajectory of smart speakers, to the future of reality \ncomputing (AR/VR), to the global eCommerce business, we\u2019ve uncovered key insights and likely \ntrends. There is also an extensive evaluation of the creators who drive billions of web video views, \na hard look at the news business, and a view into the likely price wars ahead in streaming video. \nForecasts include how consumers will spend their tech and media time, the next wave of internet \nand media revenues, and the rise of Super Users \u2013 who will be critical to acquire and retain. \n  \nOn each slide you will \ufb01nd extensive analysis, drawing on proprietary industry research and large-\nscale surveys representing the U.S. population. \n  \nWe know you\u2019ll \ufb01nd the results both provocative and useful, and look forward to a lively \ndiscussion. \n  \nLet\u2019s see where tech and media are headed! \nThe Activate Team "
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 3,
+            "text": "www.activate.com\n  2\nThe Most Important Insights for Tech and Media in 2018\n$300 Billion in Tech and Media Growth Dollars 3\nThere are 31 Hours in a Day 7\nSuper Users: A Lot More Time, a Lot More Money 12\nSmart Speaker Battles are about the Great Digital Assistant Wars 18\nReality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform 33\nBig Influencers and Media Brands will Rule Web Video 49\nPremium Video: The Chase for Television Viewers and Television Dollars 62\nSports is the Ultimate Moat 80\nNews Brands will Beat Fake News (Spread by Fake Friends) 93\neCommerce: More than Two Trillion Dollars To Go 111\nIn an Era of Voice Control, Look to Podcasting to Engage Users 124\nPAGE"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 4,
+            "text": "www.activate.com\n  3\nThe Most Important Insights for Tech and Media in 2018\n$300 Billion in Tech and Media Growth Dollars 3\nThere are 31 Hours in a Day 7\nSuper Users: A Lot More Time, a Lot More Money 12\nSmart Speaker Battles are about the Great Digital Assistant Wars 18\nReality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform 33\nBig Influencers and Media Brands will Rule Web Video 49\nPremium Video: The Chase for Television Viewers and Television Dollars 62\nSports is the Ultimate Moat 80\nNews Brands will Beat Fake News (Spread by Fake Friends) 93\neCommerce: More than Two Trillion Dollars To Go 111\nIn an Era of Voice Control, Look to Podcasting to Engage Users 124\nPAGE"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 5,
+            "text": "CONSUMER\n1. Consumer Internet and Media Revenues include radio, recorded music, magazine publishing, newspaper publishing, video \ngames, filmed entertainment, book publishing, TV subscription and licensing fees, Internet access, digital advertising, and \ntraditional advertising on these platforms. \nSources: Activate analysis, eMarketer, GroupM, IBISWorld, IFPI, International Monetary Fund, NewZoo, \nPricewaterhouseCoopers, RBC, World Bank, ZenithOptimedia\nWe forecast that over the next four years, global Internet and media \nrevenues will grow by approximately $300 billion, continuing to \noutpace GDP growth\n 4\nCONSUMER INTERNET AND MEDIA REVENUES1, GLOBAL, 2017E-2021E, USD\n2017E 2021E\n$1.7T\n$2.0T$302B\nGROWTH \nDOLLARS\nCAGR 4.1%\nGlobal GDP CAGR: ~3%\nFORECAST\nACTIVATE"
+          }
+        ],
+        "pages_extracted": 5,
+        "schema_version": "1.0",
+        "text": "www.activate.com\nOctober 17, 2017\nACTIVATE TECH & MEDIA OUTLOOK 2018\n\nwww.activate.com  1\nWelcome to Activate\u2019s Tech and Media Outlook 2018 \n2018 will be a pivotal year for technology and media businesses; these are the major forces that \nwill create growth opportunities and reshape companies in the year ahead. \n  \nEach year, as part of the Wall Street Journal D.Live Conference, we take a deep dive into some of \nthe major consumer trends, technology innovations, and industry dynamics that will predict what \nis going to happen next and what it will mean. \n  \nWe are excited to share our third annual Outlook, and hope you will enjoy it for many of its \nsurprising and unexpected insights. From the trajectory of smart speakers, to the future of reality \ncomputing (AR/VR), to the global eCommerce business, we\u2019ve uncovered key insights and likely \ntrends. There is also an extensive evaluation of the creators who drive billions of web video views, \na hard look at the news business, and a view into the likely price wars ahead in streaming video. \nForecasts include how consumers will spend their tech and media time, the next wave of internet \nand media revenues, and the rise of Super Users \u2013 who will be critical to acquire and retain. \n  \nOn each slide you will \ufb01nd extensive analysis, drawing on proprietary industry research and large-\nscale surveys representing the U.S. population. \n  \nWe know you\u2019ll \ufb01nd the results both provocative and useful, and look forward to a lively \ndiscussion. \n  \nLet\u2019s see where tech and media are headed! \nThe Activate Team \n\nwww.activate.com\n  2\nThe Most Important Insights for Tech and Media in 2018\n$300 Billion in Tech and Media Growth Dollars 3\nThere are 31 Hours in a Day 7\nSuper Users: A Lot More Time, a Lot More Money 12\nSmart Speaker Battles are about the Great Digital Assistant Wars 18\nReality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform 33\nBig Influencers and Media Brands will Rule Web Video 49\nPremium Video: The Chase for Television Viewers and Television Dollars 62\nSports is the Ultimate Moat 80\nNews Brands will Beat Fake News (Spread by Fake Friends) 93\neCommerce: More than Two Trillion Dollars To Go 111\nIn an Era of Voice Control, Look to Podcasting to Engage Users 124\nPAGE\n\nwww.activate.com\n  3\nThe Most Important Insights for Tech and Media in 2018\n$300 Billion in Tech and Media Growth Dollars 3\nThere are 31 Hours in a Day 7\nSuper Users: A Lot More Time, a Lot More Money 12\nSmart Speaker Battles are about the Great Digital Assistant Wars 18\nReality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform 33\nBig Influencers and Media Brands will Rule Web Video 49\nPremium Video: The Chase for Television Viewers and Television Dollars 62\nSports is the Ultimate Moat 80\nNews Brands will Beat Fake News (Spread by Fake Friends) 93\neCommerce: More than Two Trillion Dollars To Go 111\nIn an Era of Voice Control, Look to Podcasting to Engage Users 124\nPAGE\n\nCONSUMER\n1. Consumer Internet and Media Revenues include radio, recorded music, magazine publishing, newspaper publishing, video \ngames, filmed entertainment, book publishing, TV subscription and licensing fees, Internet access, digital advertising, and \ntraditional advertising on these platforms. \nSources: Activate analysis, eMarketer, GroupM, IBISWorld, IFPI, International Monetary Fund, NewZoo, \nPricewaterhouseCoopers, RBC, World Bank, ZenithOptimedia\nWe forecast that over the next four years, global Internet and media \nrevenues will grow by approximately $300 billion, continuing to \noutpace GDP growth\n 4\nCONSUMER INTERNET AND MEDIA REVENUES1, GLOBAL, 2017E-2021E, USD\n2017E 2021E\n$1.7T\n$2.0T$302B\nGROWTH \nDOLLARS\nCAGR 4.1%\nGlobal GDP CAGR: ~3%\nFORECAST\nACTIVATE",
+        "text_density": 750.6
+      },
+      "text_status": {
+        "char_count": 3753,
+        "density_threshold": 250.0,
+        "low_confidence_pages": [],
+        "native_confidence_score": 1.0,
+        "native_confidence_threshold": 0.55,
+        "native_density_confidence_score": 1.0,
+        "native_page_confidence_threshold": 0.35,
+        "native_sample_confidence_score": 1.0,
+        "native_text_density": 750.6,
+        "native_text_not_available": false,
+        "not_available": false,
+        "ocr_policy": "native_first_selective",
+        "ocr_recommendation_reason": "",
+        "ocr_recommended": false,
+        "pages_sampled": 5,
+        "reason": "",
+        "schema_version": "1.0",
+        "text_density": 750.6
+      },
+      "text_validation_pages": [
+        11,
+        50,
+        85
+      ],
+      "text_validation_reason": "",
+      "text_validation_status": "pass",
+      "title_resolution": {
+        "candidate_source": "cover_title_page",
+        "candidates": [
+          {
+            "evidence": "page:1",
+            "page_number": 1,
+            "schema_version": "1.0",
+            "score": 1128.0,
+            "source": "cover_title_page",
+            "value": "October 17, 2017"
+          },
+          {
+            "evidence": "page:3",
+            "page_number": 3,
+            "schema_version": "1.0",
+            "score": 845.0,
+            "source": "repeated_header_title",
+            "value": "The Most Important Insights for Tech and Media in 2018"
+          },
+          {
+            "evidence": "document_metadata",
+            "page_number": 0,
+            "schema_version": "1.0",
+            "score": 335.0,
+            "source": "document_metadata",
+            "value": "Activate Technology & Media Outlook 2018"
+          }
+        ],
+        "confidence": "high",
+        "edition": "2017",
+        "evidence": [
+          "page:1"
+        ],
+        "explicit_source_title": "October 17, 2017",
+        "issues": [],
+        "publisher_candidate": "Activate",
+        "schema_version": "1.0",
+        "title": "October 17, 2017"
+      }
+    },
+    "vector_indexing": {
+      "indexed_at_utc": null,
+      "last_error": null,
+      "openai_file_id": "file-EjLeXoiFRE5JigZiwysqK7",
+      "schema_version": "1.0",
+      "vector_store_id": "vs_6aece1f3a7488191a8e345115dda296e",
+      "vector_store_status": "indexing"
+    }
+  },
+  "pipeline_name": "report_generation",
+  "report_slug": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf",
+  "schema_version": "1.0",
+  "source_run_id": "a85aa794-c4d4-4bed-a19d-baa617b43606",
+  "source_task_id": "workflow_job:7d9a6550-e802-4336-9cb9-6a4553760d9d",
+  "stage_name": "selection_complete",
+  "stage_status": "completed"
+}

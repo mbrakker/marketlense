@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "scope": "A global benchmark of mobile app performance, covering overall industry trends and gaming, e-commerce/shopping, and finance apps, with regional analysis including APAC, Europe, LATAM, MENA, and North America. Performance trends are reported for January 2024–December 2025, including year-over-year comparisons for 2024 and 2025.",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "scope",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

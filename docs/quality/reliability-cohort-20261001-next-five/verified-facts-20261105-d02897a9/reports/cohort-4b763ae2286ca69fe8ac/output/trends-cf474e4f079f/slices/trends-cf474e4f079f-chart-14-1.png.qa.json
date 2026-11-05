@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-14-1",
+  "candidate_type": "chart",
+  "page": 14,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    46.857,
+    89.372,
+    493.119,
+    251.628
+  ],
+  "final_bbox": [
+    38.857,
+    75.023,
+    501.119,
+    259.628
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 0,
+    "bottom": 0,
+    "left": 49,
+    "right": 44
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": true,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.8222,
+    "margin_balance": 0.7567,
+    "neighbor_contamination": 0.0988,
+    "readability": 1.0,
+    "visual_crispness": 0.443,
+    "total_score": 0.8234,
+    "defect_labels": [],
+    "edge_density": {
+      "top": 0.0271,
+      "bottom": 0.2682,
+      "left": 0.0428,
+      "right": 0.0407
+    },
+    "edge_leakage": {
+      "top": 0.0,
+      "bottom": 0.0988,
+      "left": 0.0,
+      "right": 0.0007
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.25,
+        "strong_edges": [
+          "bottom"
+        ],
+        "edge_density": {
+          "top": 0.0271,
+          "bottom": 0.2682,
+          "left": 0.0428,
+          "right": 0.0407
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.2682,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0271,
+          "bottom": 0.2682,
+          "left": 0.0428,
+          "right": 0.0407
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.2682,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0271,
+          "bottom": 0.2682,
+          "left": 0.0428,
+          "right": 0.0407
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": true,
+  "rejection_reason": ""
+}

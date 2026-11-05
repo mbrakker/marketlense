@@ -1,0 +1,460 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/validate/public_editorial_quality",
+  "family_schema_version": "3.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "verdicts": [
+      {
+        "item_id": "soft_copy:summary:dd5a6c144405b1c0",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The summary accurately presents the linked global forecast, including the 2017E–2021E timeframe, revenue values, growth, CAGR, and GDP CAGR comparison.",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:executive_summary",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "warning",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claims are supported by the item’s bindings and preserve their forecast periods and relevant populations. The separate sentence repeating the $2.0 trillion 2021E figure is minor internal repetition.",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast",
+          "verified-fact:f02",
+          "verified-fact:f04",
+          "verified-fact:podcast-audience-factors"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "expert_comment:expert_comment",
+        "status": "fail",
+        "classification": "analyst_interpretation",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "hard_fail_class": "",
+        "reason": "The podcast comparison asserts the 34% non-listener and 31% listener responses, but podcast-audience-factors is not among this item’s evidence bindings. The item’s other evidence does not establish those podcast populations, response labels, or figures.",
+        "evidence_ids": [],
+        "repair_target": "expert_comment"
+      },
+      {
+        "item_id": "linkedin_post:linkedin_post",
+        "status": "fail",
+        "classification": "factual_claim",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_dimension_omission",
+        "hard_fail_class": "",
+        "reason": "The linked source defines the top 25% cohort as users with 4.5+ hours of daily video attention. Calling them only the “top 25% of users” omits the defining cohort criterion, leaving the population materially under-specified.",
+        "evidence_ids": [
+          "verified-fact:video-attention-spend"
+        ],
+        "repair_target": "linkedin_post"
+      },
+      {
+        "item_id": "insight:global-revenue-forecast:text",
+        "status": "fail",
+        "classification": "factual_claim",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "hard_fail_class": "",
+        "reason": "The final sentence adds the Cost of Internet access forecast, its $128B increase, and 5.7% CAGR, but this item is bound only to the global-revenue-forecast fact. Its binding does not establish those segment figures or comparisons.",
+        "evidence_ids": [],
+        "repair_target": "insights_bundle"
+      },
+      {
+        "item_id": "insight:global-revenue-forecast:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It correctly distinguishes the linked forecast from a realized revenue outcome.",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:global-revenue-forecast:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The MarketLense-authored recommendation to use the forecast as a scenario input and distinguish it from observed results does not assert an unsupported empirical premise.",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:video-attention-spend:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claim preserves the U.S. 2017 timeframe, the defined top-quartile cohort, and the distinct total-time and total-spend denominators and values.",
+        "evidence_ids": [
+          "verified-fact:video-attention-spend"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:video-attention-spend:so_what",
+        "status": "fail",
+        "classification": "analyst_interpretation",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.generic_filler",
+        "hard_fail_class": "",
+        "reason": "This merely restates that the two measures differ, already apparent from the linked 61% and 34% shares; it adds no commercial implication or meaningful interpretation for a “so what” field.",
+        "evidence_ids": [
+          "verified-fact:video-attention-spend"
+        ],
+        "repair_target": "insights_bundle"
+      },
+      {
+        "item_id": "insight:video-attention-spend:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The recommendation to consider both attention and spend when prioritizing monetization tests is MarketLense-authored and does not claim an unsupported empirical result.",
+        "evidence_ids": [
+          "verified-fact:video-attention-spend"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:sports-fan-segment-shares:text",
+        "status": "fail",
+        "classification": "factual_claim",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "hard_fail_class": "",
+        "reason": "The item’s sports-fan binding supports the Super Fan and Social Fan figures, but not the additional U.S. cord-cutter substitution percentages, viewer cohorts, or study sample size asserted in the second sentence.",
+        "evidence_ids": [],
+        "repair_target": "insights_bundle"
+      },
+      {
+        "item_id": "insight:sports-fan-segment-shares:so_what",
+        "status": "fail",
+        "classification": "analyst_interpretation",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "hard_fail_class": "",
+        "reason": "The statement invokes cord-cutter substitution as a second audience signal, but this item is bound only to the sports-fan segment fact, which does not establish that substitution finding.",
+        "evidence_ids": [],
+        "repair_target": "insights_bundle"
+      },
+      {
+        "item_id": "insight:sports-fan-segment-shares:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This recommends treating segmentation and platform substitution as separate planning inputs without asserting an unsupported empirical relationship between them.",
+        "evidence_ids": [
+          "verified-fact:sports-fan-segment-shares"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:consumer-vr-adoption-outlook:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claim retains the forecast status and horizon, global population measure, modeling basis, Mobile VR-specific exclusion, listed barriers, and undefined “scaled” threshold.",
+        "evidence_ids": [
+          "verified-fact:consumer-vr-adoption-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:consumer-vr-adoption-outlook:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The interpretation accurately distinguishes a directional forecast from a numerically defined adoption threshold and identifies the barriers as qualitative.",
+        "evidence_ids": [
+          "verified-fact:consumer-vr-adoption-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:consumer-vr-adoption-outlook:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The recommendation to define a working threshold and test the listed barriers is MarketLense-authored and does not overstate the forecast.",
+        "evidence_ids": [
+          "verified-fact:consumer-vr-adoption-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:news-trust-comparison:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claim correctly limits the comparison to 2017 news readers in the five selected countries and reports the direction of the perceived-trustworthiness comparison.",
+        "evidence_ids": [
+          "verified-fact:news-trust-comparison"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:news-trust-comparison:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It appropriately limits the measure to perceived trustworthiness rather than asserting accuracy.",
+        "evidence_ids": [
+          "verified-fact:news-trust-comparison"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:news-trust-comparison:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Testing country-specific assumptions against current local audience research is a MarketLense recommendation, not an empirical claim attributed to the source.",
+        "evidence_ids": [
+          "verified-fact:news-trust-comparison"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ecommerce-firsthand-experience:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The wording preserves the U.S. matrix’s category placements, 2016 sales-share axis, qualitative shift-potential axis, and limitation that it is not a measured adoption timetable.",
+        "evidence_ids": [
+          "verified-fact:ecommerce-firsthand-experience"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ecommerce-firsthand-experience:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It draws the appropriate practical boundary from the linked matrix: use its adoption label qualitatively, not as a timetable.",
+        "evidence_ids": [
+          "verified-fact:ecommerce-firsthand-experience"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ecommerce-firsthand-experience:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The recommendation to use the matrix for hypotheses and rely on category-specific evidence for timing does not present the qualitative placement as a measured duration.",
+        "evidence_ids": [
+          "verified-fact:ecommerce-firsthand-experience"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:broadcast-cord-cutter-preference:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The statement accurately reports both 2017 U.S. viewer cohorts, their definitions, and their respective Broadcast and Virtual Pay TV shares.",
+        "evidence_ids": [
+          "verified-fact:broadcast-cord-cutter-preference"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:1:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claim accurately summarizes the linked global forecast, including its footnote-defined scope, years, growth, CAGRs, and GDP comparison.",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:2:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked forecast supports the stated $2.0 trillion 2021E value for global Consumer Internet and Media Revenues.",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:3:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claim preserves the forecast period, global scope, Internet-access category definition, comparison set, dollar increase, and CAGR supported by its binding.",
+        "evidence_ids": [
+          "verified-fact:f02"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:strategic_context",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The statement accurately presents the linked footnote-defined global revenue forecast and its values and comparison.",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:watchouts:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The VR watchout correctly identifies the forecast horizon, population measure, modeling basis, listed barriers, and undefined adoption threshold.",
+        "evidence_ids": [
+          "verified-fact:consumer-vr-adoption-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claim accurately presents the linked global revenue forecast and retains its stated scope, period, and comparison.",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:2",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked source supports the stated 2021E forecast value and metric.",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:3",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The statement accurately retains the global forecast period, Internet-access definition, comparison set, increase, and CAGR from the linked fact.",
+        "evidence_ids": [
+          "verified-fact:f02"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:4",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The statement correctly preserves the U.S. 2017 timeframe, both cohorts, and each cohort’s shares of total video time and consumer spend.",
+        "evidence_ids": [
+          "verified-fact:f04"
+        ],
+        "repair_target": ""
+      }
+    ],
+    "report_verdict": {
+      "status": "pass",
+      "severity": "info",
+      "rule_id": "",
+      "hard_fail_class": "",
+      "reason": "The planned source themes are represented across the primary analyses and supporting surfaces. The report offers commercially useful, source-bounded implications, including separating attention from spend and treating the VR and eCommerce boundaries cautiously. Recurring facts serve summary, distribution, expert-synthesis, or provenance roles; the primary analyses cover distinct subjects. The forecast and survey periods, VR threshold limitation, qualitative eCommerce placement, and perceived-trust measure are made explicit. Item-level binding and wording defects are adjudicated separately.",
+      "evidence_ids": [
+        "verified-fact:global-revenue-forecast",
+        "verified-fact:f02",
+        "verified-fact:f04",
+        "verified-fact:video-attention-spend",
+        "verified-fact:sports-fan-segment-shares",
+        "verified-fact:broadcast-cord-cutter-preference",
+        "verified-fact:consumer-vr-adoption-outlook",
+        "verified-fact:news-trust-comparison",
+        "verified-fact:ecommerce-firsthand-experience",
+        "verified-fact:podcast-audience-factors"
+      ],
+      "repair_target": "",
+      "affected_item_id": "",
+      "dimensions": {
+        "material_coverage": {
+          "status": "pass",
+          "reason": "All seven planned themes appear in the public wording, including the podcast audience-stage findings and the separate sports and cord-cutter signals."
+        },
+        "analytical_depth": {
+          "status": "pass",
+          "reason": "Beyond reporting figures, the report offers bounded decision implications such as using forecasts as scenario inputs, evaluating attention and spend separately, and testing category-specific assumptions."
+        },
+        "distinctness": {
+          "status": "pass",
+          "reason": "Primary analyses address distinct findings. Reuse in summaries, distribution copy, expert synthesis, and supporting projections serves the roles identified in the public_content index rather than repeating the same primary analysis."
+        },
+        "limitations": {
+          "status": "pass",
+          "reason": "The wording identifies forecast and observation periods, states that the VR adoption threshold is undefined, treats eCommerce adoption placement as qualitative rather than timed, and distinguishes perceived trustworthiness from accuracy."
+        }
+      }
+    }
+  }
+}

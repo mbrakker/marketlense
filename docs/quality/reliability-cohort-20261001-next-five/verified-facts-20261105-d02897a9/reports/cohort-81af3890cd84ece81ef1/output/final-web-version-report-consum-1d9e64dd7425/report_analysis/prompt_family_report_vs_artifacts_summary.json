@@ -1,0 +1,195 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "claim_provenance": [
+      {
+        "claim": "Consumers say they would switch brands for a lower regular price elsewhere (74%); separately, 71% would switch if pack sizes or product quality were reduced without clear communication.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction"
+        ]
+      },
+      {
+        "claim": "74% of consumers say they would switch brands for a lower regular price elsewhere.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ]
+      },
+      {
+        "claim": "The report says 54% of consumers say they are making fewer impulse purchases in the current report period, down from 71% last year, and characterizes this as easing impulse restraint and a modest rebound of “intentional indulgence” alongside persistent deal-seeking.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:impulse-purchase-shift"
+        ]
+      },
+      {
+        "claim": "In an October 2025 survey of 12,000 consumers, money-off offers (e.g., $5 off $25) were rated most effective for driving purchase decisions (75%), followed by percent-off offers (e.g., 20% off) (74%) and buy-one-get-one-free offers (73%).",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:careful-spending-promotions"
+        ]
+      },
+      {
+        "claim": "Among consumers surveyed (N = 12,000 in each survey), 54% in November 2024 and 74% in October 2025 said human interaction increases loyalty at the in-store customer-support stage.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ]
+      },
+      {
+        "claim": "MarketLense recommends assessing human interaction at the in-store customer-support stage as part of experience planning.",
+        "classification": "recommendation",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ]
+      }
+    ],
+    "generation_attempt": 1,
+    "producing_prompt_identity": {
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+      "execution_identity_manifest": {
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+        "model": "gpt-6-luna",
+        "output_contract_schema_version": "artifact_json:1.0",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "provider_retry_count": 0,
+          "timeout_seconds": 600.0
+        },
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "provider": "openai",
+        "reasoning_effort": "medium",
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary",
+          "max_input_tokens": 48000,
+          "policy_source": "report_vs/artifacts/summary",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "tier": "routine_structured"
+        },
+        "schema_version": "1.0",
+        "seed": null,
+        "temperature": null,
+        "validator_version": "artifacts_schema:3.1"
+      },
+      "family_schema_version": "1.0",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "model_provider": "openai",
+      "namespace": "report_vs/artifacts/summary",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+      "prompt_dependency_manifest": {
+        "composition_version": "2.0",
+        "included_partials": [
+          {
+            "kind": "partial",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "schema_version": "1.0",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "source": "user:0"
+          }
+        ],
+        "namespace": "report_vs/artifacts/summary",
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "schema_snippets": [
+          {
+            "kind": "schema_snippet",
+            "path": "schemas/artifacts.schema.json",
+            "schema_version": "1.0",
+            "sha256": "6e2a4ad3db5c4d518c096af2f180210e058e2cea70742a7d8e2b378b6a225272",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "schema_version": "1.0",
+        "system_root": {
+          "kind": "system_root",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "schema_version": "1.0",
+          "sha256": "a04cd94fb80ef9d2ad6f6c7f06f44213f839df93d304489fcce88300d4d6fd0b",
+          "source": ""
+        },
+        "user_root": {
+          "kind": "user_root",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "schema_version": "1.0",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "source": ""
+        }
+      },
+      "regeneration_reason": "materialization_missing",
+      "relevant_input_hash": "a796a447984a2bb5f61df8d58e4bbe3e928ac8d2fb8d5927bbe2f3ca43cf3a26",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "schema_version": "1.0",
+      "validator_version": "artifacts_schema:3.1"
+    },
+    "public_output": {
+      "card_tldr_compact": "74% of consumers say they would switch brands for a lower regular price elsewhere.",
+      "claim_evidence_map": [
+        {
+          "claim": "Consumers say they would switch brands for a lower regular price elsewhere (74%).",
+          "evidence": "The page reports that 74% of consumers say they would switch brands if they found a lower regular price elsewhere.",
+          "evidence_id": "verified-fact:regular-price-switching",
+          "evidence_spans": [],
+          "pages": [
+            4
+          ]
+        },
+        {
+          "claim": "Separately, 71% would switch if pack sizes or product quality were reduced without clear communication.",
+          "evidence": "The page reports that 71% of consumers would switch brands if pack sizes or product quality were reduced without clear communication.",
+          "evidence_id": "verified-fact:switch-uncommunicated-reduction",
+          "evidence_spans": [],
+          "pages": [
+            4
+          ]
+        },
+        {
+          "claim": "The report says 54% of consumers say they are making fewer impulse purchases in the current report period, down from 71% last year, and characterizes this as easing impulse restraint and a modest rebound of “intentional indulgence” alongside persistent deal-seeking.",
+          "evidence": "The report says 54% say they are making fewer impulse purchases, down from 71% last year, and characterizes this as easing impulse restraint and a modest rebound of “intentional indulgence” alongside persistent deal-seeking.",
+          "evidence_id": "verified-fact:impulse-purchase-shift",
+          "evidence_spans": [],
+          "pages": [
+            5
+          ]
+        },
+        {
+          "claim": "In an October 2025 survey of 12,000 consumers, money-off offers (e.g., $5 off $25) were rated most effective for driving purchase decisions (75%), followed by percent-off offers (e.g., 20% off) (74%) and buy-one-get-one-free offers (73%).",
+          "evidence": "In an October 2025 survey of 12,000 consumers, money-off offers were rated most effective for driving purchase decisions (75%), followed by percent-off offers (74%) and buy-one-get-one-free offers (73%).",
+          "evidence_id": "verified-fact:careful-spending-promotions",
+          "evidence_spans": [],
+          "pages": [
+            24
+          ]
+        },
+        {
+          "claim": "Among consumers surveyed (N = 12,000 in each survey), 54% in November 2024 and 74% in October 2025 said human interaction increases loyalty at the in-store customer-support stage.",
+          "evidence": "In surveys of consumers, 54% in November 2024 and 74% in October 2025 said human interaction increases loyalty at the customer-support stage of in-store shopping; each survey had N = 12,000 consumers.",
+          "evidence_id": "verified-fact:human-support-loyalty-comparison",
+          "evidence_spans": [],
+          "pages": [
+            45
+          ]
+        }
+      ],
+      "executive_summary": "Consumers say they would switch brands for a lower regular price elsewhere (74%); separately, 71% would switch if pack sizes or product quality were reduced without clear communication. The report says 54% of consumers say they are making fewer impulse purchases in the current report period, down from 71% last year, and characterizes this as easing impulse restraint and a modest rebound of “intentional indulgence” alongside persistent deal-seeking. In an October 2025 survey of 12,000 consumers, money-off offers (e.g., $5 off $25) were rated most effective for driving purchase decisions (75%), followed by percent-off offers (e.g., 20% off) (74%) and buy-one-get-one-free offers (73%). Among consumers surveyed (N = 12,000 in each survey), 54% in November 2024 and 74% in October 2025 said human interaction increases loyalty at the in-store customer-support stage. MarketLense recommends assessing human interaction at the in-store customer-support stage as part of experience planning.",
+      "tldr": "Consumers say they would switch brands for a lower regular price elsewhere (74%); separately, 71% would switch if pack sizes or product quality were reduced without clear communication."
+    },
+    "schema_version": "1.0"
+  }
+}

@@ -1,0 +1,769 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/findings",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "findings": [
+      {
+        "id": "intro-downloads-2025",
+        "text": "There were more than 112.1 billion app downloads in 2025.",
+        "evidence": "In 2025, there were \nmore than 112.1 billion app downloads",
+        "confidence": "high",
+        "pages": [
+          3
+        ],
+        "section_id": "introduction",
+        "section_title": "Introduction: Evolution and opportunity in the mobile app industry"
+      },
+      {
+        "id": "intro-consumer-spending",
+        "text": "Global consumer spending on apps rose to $167 billion in 2025.",
+        "evidence": "In 2025, there were \nmore than 112.1 billion app downloads, an estimated 5�8 billion \nunique smartphone users globally, and consumer spending \nrose 10�6% YoY to $167 billion.",
+        "confidence": "high",
+        "pages": [
+          3
+        ],
+        "section_id": "introduction",
+        "section_title": "Introduction: Evolution and opportunity in the mobile app industry"
+      },
+      {
+        "id": "intro-mobile-gdp-forecast",
+        "text": "Mobile technologies and services are projected to generate 8.4% of global GDP by 2030.",
+        "evidence": "mobile technologies and \nservices set to generate 8.4% of global GDP by 2030.",
+        "confidence": "high",
+        "pages": [
+          3
+        ],
+        "section_id": "introduction",
+        "section_title": "Introduction: Evolution and opportunity in the mobile app industry"
+      },
+      {
+        "id": "gaming-top-spending-apps",
+        "text": "Eight of the top 10 mobile games in 2025 each generated more than $1 billion in player spending.",
+        "evidence": "Eight of the top 10 mobile \ngames in 2025 each \ngenerated more than $1 \nbillion in player spending.",
+        "confidence": "high",
+        "pages": [
+          16
+        ],
+        "section_id": "gaming-apps",
+        "section_title": "Gaming apps"
+      },
+      {
+        "id": "gaming-population-2025",
+        "text": "The global mobile-gamer population reached nearly 3 billion in 2025, representing more than 80% of the global gaming population.",
+        "evidence": "The number of global \nmobile gamers reached \nnearly 3 billion in 2025, \nrepresenting more than \n80% of the global gaming \npopulation.",
+        "confidence": "high",
+        "pages": [
+          16
+        ],
+        "section_id": "gaming-apps",
+        "section_title": "Gaming apps"
+      },
+      {
+        "id": "gaming-mena-install-growth",
+        "text": "Gaming app installs in MENA grew 2% year over year in 2025.",
+        "evidence": "MENA had 2% install growth and a 7% \nsessions increase YoY in 2025.",
+        "confidence": "high",
+        "pages": [
+          17
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-europe-latam-install-decline",
+        "text": "Gaming app installs declined 7% in Europe and 9% in LATAM year over year in 2025.",
+        "evidence": "Europe  \nand LATAM both saw install decreases  \n(-7% and -9%).",
+        "confidence": "high",
+        "pages": [
+          17
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-na-install-decline",
+        "text": "Gaming app installs in North America dropped 5% year over year in 2025.",
+        "evidence": "Installs in North America dropped \n5% and sessions decreased by 2%.",
+        "confidence": "high",
+        "pages": [
+          17
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-regional-sessions",
+        "text": "Gaming app sessions increased 7% in MENA and 3% in Europe, were almost flat in LATAM at 0.4%, and decreased 2% in North America year over year in 2025.",
+        "evidence": "MENA had 2% install growth and a 7% \nsessions increase YoY in 2025. Europe  \nand LATAM both saw install decreases  \n(-7% and -9%). Sessions rose 3% in Europe \nand remained almost flat in LATAM (0.4%).  \n... Installs in North America dropped \n5% and sessions decreased by 2%.",
+        "confidence": "high",
+        "pages": [
+          17
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-casual-installs",
+        "text": "Casual-game installs grew 19% year over year in 2025.",
+        "evidence": "Installs of casual games grew 19% YoY in 2025, \nalongside a boost of 37% in sessions.",
+        "confidence": "high",
+        "pages": [
+          19
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-casual-sessions",
+        "text": "Casual-game sessions grew 37% year over year in 2025.",
+        "evidence": "Installs of casual games grew 19% YoY in 2025, \nalongside a boost of 37% in sessions.",
+        "confidence": "high",
+        "pages": [
+          19
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-hypercasual-installs-sessions",
+        "text": "Hyper casual gaming sessions increased 31% year over year in 2025, compared with a 4% increase in installs.",
+        "evidence": "despite being an install-led \ncategory, hyper casual’s sessions increased \n31%—much higher than their 4% install \nincrease.",
+        "confidence": "high",
+        "pages": [
+          19
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-strategy-sessions",
+        "text": "Strategy-game sessions grew 57% year over year in 2025 despite flat install growth.",
+        "evidence": "Strategy games led session growth at +57% \ndespite flat install growth, demonstrating \nthe large number of loyal users the genre \nhas.",
+        "confidence": "high",
+        "pages": [
+          19
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-casino-slots-installs",
+        "text": "Casino-game installs grew 22% and slots-game installs grew 46% year over year in 2025.",
+        "evidence": "Casino and slots both achieved strong \ninstall growth of 22% and 46%, but sessions \ndecreased 5% in each category",
+        "confidence": "high",
+        "pages": [
+          19
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-casino-slots-sessions",
+        "text": "Sessions decreased 5% year over year in both casino and slots games in 2025.",
+        "evidence": "Casino and slots both achieved strong \ninstall growth of 22% and 46%, but sessions \ndecreased 5% in each category",
+        "confidence": "high",
+        "pages": [
+          19
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-all-retention-2025",
+        "text": "In 2025, gaming retention for all games was 27% on day 1, 13% on day 7, 8% on day 14, and 5% on day 30; the report says rates showed minimal change from 2024 to 2025.",
+        "evidence": "Retention rates across gaming apps showed \nminimal change from 2024 to 2025. For all \ngames, day 1 retention remained at 27%, day 7 \nat 13%, day 14 at 8%, and day 30 at 5%.",
+        "confidence": "high",
+        "pages": [
+          21
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-hypercasual-retention-2025",
+        "text": "In 2025, hyper casual gaming retention was 27% on day 1, 8% on day 7, 6% on day 14, and 2% on day 30.",
+        "evidence": "Hyper \ncasual, as usual, starts strong but drops more \nthroughout the month as users churn to new \ntitles: day 1 was 27%, day 7 8%, day 14 6%, and \nday 30 2%.",
+        "confidence": "high",
+        "pages": [
+          21
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-global-cpi-2025",
+        "text": "Global gaming CPI reached $0.56 in 2025, up 30%.",
+        "evidence": "Gaming CPI rose globally to $0.56 in 2025, \nup 30%.",
+        "confidence": "high",
+        "pages": [
+          21
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-family-day1-retention",
+        "text": "Family-game day 1 retention reached 23%, up 5 percentage points.",
+        "evidence": "Day 1 retention for family games jumped to 23%, up 5 percentage points.",
+        "confidence": "high",
+        "pages": [
+          21
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-action-arcade-day1-retention",
+        "text": "Action and arcade games each gained 1 percentage point in day 1 retention, reaching 19% and 20%, respectively.",
+        "evidence": "Action and arcade apps each gained 1 percentage point in day 1 retention, reaching 19% and 20%.",
+        "confidence": "high",
+        "pages": [
+          21
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-global-installs-2025",
+        "text": "Global e-commerce app installs fell 10% year over year in 2025.",
+        "evidence": "Global e-commerce app installs fell 10% \nYoY in 2025, even as sessions increased 5%.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-global-sessions-2025",
+        "text": "Global e-commerce app sessions increased 5% year over year in 2025.",
+        "evidence": "Global e-commerce app installs fell 10% \nYoY in 2025, even as sessions increased 5%.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-feb-installs",
+        "text": "Global e-commerce app installs were 8% below average in February 2025.",
+        "evidence": "The install decline was most pronounced \nin February (8% below average)",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-q4-installs",
+        "text": "Global e-commerce app installs rebounded by 6% in November 2025 and 4% in December 2025.",
+        "evidence": "before a \nQ4 rebound of 6% and 4% in November \nand December, typical of the vertical’s \nbusy period.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-feb-sessions",
+        "text": "Global e-commerce app sessions were 11% below average in February 2025.",
+        "evidence": "Sessions followed a similar arc, \ndropping 11% below average in February",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-nov-dec-sessions",
+        "text": "Global e-commerce app sessions were 10% above average in November 2025 and 5% above average in December 2025.",
+        "evidence": "but hitting 10% above average by November \nand +5% in December.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-latam-installs",
+        "text": "LATAM e-commerce app installs grew 17% year over year in 2025.",
+        "evidence": "LATAM was the highest performing region, \nwith 17% install growth and a 30% jump in \nsessions.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-latam-sessions",
+        "text": "LATAM e-commerce app sessions increased 30% year over year in 2025.",
+        "evidence": "LATAM was the highest performing region, \nwith 17% install growth and a 30% jump in \nsessions.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-apac-installs-sessions",
+        "text": "In APAC, e-commerce app installs grew 7% year over year in 2025, while sessions were nearly stable at -0.7%.",
+        "evidence": "In APAC, installs grew 7% while \nsessions remained stable (-0.7%).",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-europe-installs-sessions",
+        "text": "In Europe, e-commerce app installs decreased 22% and sessions increased 6% year over year in 2025.",
+        "evidence": "Europe \npresented a mixed picture, with installs \ndecreasing 22% while sessions edged up 6%.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-deal-discovery-installs",
+        "text": "Deal discovery app installs rose 2% year over year in 2025.",
+        "evidence": "Installs for deal discovery apps rose 2% YoY in 2025, with sessions growing 6%.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-deal-discovery-sessions",
+        "text": "Deal discovery app sessions grew 6% year over year in 2025.",
+        "evidence": "Installs for deal discovery apps rose 2% YoY in 2025, with sessions growing 6%.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-marketplace-sessions",
+        "text": "Marketplace and classifieds app sessions increased 4% year over year in 2025.",
+        "evidence": "Marketplace and classifieds sessions increased 4% YoY.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-shopping-sessions",
+        "text": "Shopping app sessions increased 7% year over year in 2025.",
+        "evidence": "Shopping app sessions went up by 7% YoY.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-global-retention-2025",
+        "text": "Global e-commerce app day 1 retention declined from 13.2% in 2024 to 12.6% in 2025, and day 7 retention declined from 6.3% to 6%; day 14 was near 4.4%, while day 30 remained at 3%.",
+        "evidence": "Retention rates for e-commerce apps decreased slightly YoY \nin 2025. Day 1 retention dipped from 13.2% to 12.6%, and day 7 \nretention eased from 6.3% to 6%. Day 14 figures hovered near \n4.4%, with day 30 retention remaining flat at 3%.",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-marketplace-retention",
+        "text": "In 2025, marketplace and classifieds app retention declined by one percentage point at days 1, 7, and 14, reaching 24%, 14%, and 11%, respectively; day 30 retention remained 8%.",
+        "evidence": "Retention for marketplace and \nclassifieds decreased in 2025,  \nwith day 1, 7, and 14 each declining \none percentage point to 24%,  \n14%, and 11%. Day 30 retention \nremained at 8%.",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-shopping-retention",
+        "text": "Shopping app day 1 retention declined one percentage point to 12% in 2025; day 7, 14, and 30 retention remained at 6%, 4%, and 2%, respectively.",
+        "evidence": "Shopping day 1 retention declined \none percentage point to 12% \nin 2025, while day 7, 14, and 30 \nremained at 6%, 4%, and 2%.",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-global-cpi",
+        "text": "Global e-commerce app CPI declined from $1 in 2024 to $0.98 in 2025.",
+        "evidence": "Cost per install (CPI) for global e-commerce apps declined from \n$1 to $0.98 in 2025.",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-deal-discovery-cpi",
+        "text": "Deal discovery app CPI rose from $1.44 in 2024 to $2.26 in 2025.",
+        "evidence": "Subvertical trends diverged as deal discovery \nCPI rose from $1.44 to $2.26",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-marketplace-cpi",
+        "text": "Marketplace and classifieds app CPI declined from $0.99 in 2024 to $0.88 in 2025.",
+        "evidence": "marketplace and classifieds \ndropped from $0.99 to $0.88",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-shopping-cpi",
+        "text": "Shopping app CPI declined from $0.93 in 2024 to $0.91 in 2025.",
+        "evidence": "shopping decreased from \n$0.93 to $0.91.",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-regional-cpi",
+        "text": "E-commerce CPI declined in APAC from $1.27 in 2024 to $0.68 in 2025 and in North America from $2.61 to $2.49; it increased in Europe from $1.83 to $2.25 and in MENA from $0.45 to $0.51.",
+        "evidence": "CPI declined in APAC from $1.27  \nin 2024 to $0.68 in 2025, and in \nNorth America from $2.61 to $2.49.\n• Europe’s CPI climbed from $1.83 to \n$2.25, and MENA’s rose from $0.45 \nto $0.51.",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-paid-organic-global",
+        "text": "The global median paid/organic ratio for e-commerce apps increased from 0.48 in 2024 to 0.54 in 2025.",
+        "evidence": "The global median paid/organic ratio for \ne-commerce apps increased from 0.48 \nin 2024 to 0.54 in 2025",
+        "confidence": "high",
+        "pages": [
+          30
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-paid-organic-regions",
+        "text": "E-commerce paid/organic ratios increased in MENA from 0.54 to 0.63, APAC from 0.43 to 0.49, and North America from 0.38 to 0.42; LATAM and Europe saw declines.",
+        "evidence": "Paid share grew most notably \nin MENA (+16% from 0.54 to 0.63), APAC \n(+14% from 0.43 to 0.49), and North America \n(+10% from 0.38 to 0.42), while LATAM and \nEurope saw declines.",
+        "confidence": "high",
+        "pages": [
+          30
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "ecommerce-shopping-paid-organic",
+        "text": "The global paid/organic ratio for shopping apps grew to 0.57, up 14%.",
+        "evidence": "The global paid/organic ratio for \nshopping apps grew to 0.57, up 14%.",
+        "confidence": "high",
+        "pages": [
+          30
+        ],
+        "section_id": "e-commerce-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-global-installs",
+        "text": "Finance app installs declined 4% year over year in 2025.",
+        "evidence": "Finance app installs dropped 4% YoY \nin 2025, while sessions rose 21%.",
+        "confidence": "high",
+        "pages": [
+          34
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-global-sessions",
+        "text": "Finance app sessions increased 21% year over year in 2025.",
+        "evidence": "Finance app installs dropped 4% YoY \nin 2025, while sessions rose 21%.",
+        "confidence": "high",
+        "pages": [
+          34
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-feb-installs",
+        "text": "Finance app installs were 14% below the yearly average in February 2025.",
+        "evidence": "February 14% below the yearly average",
+        "confidence": "high",
+        "pages": [
+          34
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-dec-installs",
+        "text": "Finance app installs were 8% above average by December 2025.",
+        "evidence": "but were up 8% vs. average by December.",
+        "confidence": "high",
+        "pages": [
+          34
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-latam-installs-sessions",
+        "text": "LATAM finance app installs grew 76% and sessions grew 57% year over year in 2025.",
+        "evidence": "LATAM dominated regional growth with +76%\ninstall growth YoY and +57% for sessions.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-mena-installs-sessions",
+        "text": "MENA finance app installs grew 42% and sessions increased 10% year over year in 2025.",
+        "evidence": "MENA followed with 42% growth in installs\nand a 10% increase in sessions.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-apac-installs-sessions",
+        "text": "APAC finance app installs grew 5% and sessions increased 50% year over year in 2025.",
+        "evidence": "APAC\ncombined 5% install growth with a huge 50%\nincrease in sessions.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-europe-installs-sessions",
+        "text": "Europe finance app installs grew 15% and sessions increased 19% year over year in 2025.",
+        "evidence": "Europe also advanced\nacross both metrics, +15% in installs and +19%\nin sessions.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-north-america-installs-sessions",
+        "text": "North America finance app installs grew 5% and sessions grew 17% year over year in 2025.",
+        "evidence": "North America saw boosts of 5%\nand 17%.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-crypto-installs",
+        "text": "Crypto app installs grew 16% year over year in 2025.",
+        "evidence": "In 2025, crypto app installs\ngrew 16% YoY.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-payment-installs-sessions",
+        "text": "Payment app installs increased 2% year over year in 2025, and sessions grew 22%.",
+        "evidence": "Payment app installs increased\n2% YoY, sessions grew 22%.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-stock-trading-installs",
+        "text": "Stock trading app installs increased 12% year over year in 2025.",
+        "evidence": "Stock trading apps increased\n12% YoY.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-global-session-length",
+        "text": "Global finance app session length increased to 7.18 minutes in 2025, up 8%.",
+        "evidence": "Global finance app session lengths increased to 7.18 minutes in \n2025, up 8%.",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-na-session-length",
+        "text": "North America had the longest finance app session length at 8.43 minutes in 2025.",
+        "evidence": "North America led at 8.43 minutes",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-latam-session-length",
+        "text": "LATAM finance app session length reached 5.87 minutes in 2025.",
+        "evidence": "with LATAM \nalso advancing to 5.87.",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-regional-session-length-declines",
+        "text": "Finance app session length declined in APAC from 7.07 to 6.94 minutes, Europe from 5.77 to 5.62 minutes, and MENA from 6.61 to 6.39 minutes between 2024 and 2025.",
+        "evidence": "Session lengths declined in APAC (7.07 to \n6.94), Europe (5.77 to 5.62), and MENA (6.61 to 6.39).",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-global-day0-sessions",
+        "text": "Global finance app day 0 sessions per user per day declined from 1.52 in 2024 to 1.48 in 2025.",
+        "evidence": "Day 0 sessions per user for finance apps globally dipped YoY \nfrom 1.52 to 1.48.",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "finance-regional-day0-sessions",
+        "text": "Finance app day 0 sessions per user per day declined in APAC from 1.53 to 1.47, LATAM from 1.53 to 1.5, and MENA from 1.47 to 1.44 between 2024 and 2025.",
+        "evidence": "Decreases were seen in APAC (1.53 to 1.47), \nLATAM (1.53 to 1.5), and MENA (1.47 to 1.44)",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "finance-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-subvertical-growth",
+        "text": "Globally in 2025, casual games grew 19% in installs and 37% in sessions; hyper casual grew 4% in installs and 31% in sessions; strategy sessions grew 57% despite flat installs; and casino and slots installs grew 22% and 46%, respectively, while sessions decreased 5% in each.",
+        "evidence": "Installs of casual games grew 19% YoY in 2025, alongside a boost of 37% in sessions. As we explored above, despite being an install-led category, hyper casual’s sessions increased 31%—much higher than their 4% install increase. Strategy games led session growth at +57% despite flat install growth, demonstrating the large number of loyal users the genre has. Casino and slots both achieved strong install growth of 22% and 46%, but sessions decreased 5% in each category, meaning churn may need to be addressed. Gaming app install and session growth percetanges by subvertical YoY 2024 - 2025 (Global)",
+        "confidence": "high",
+        "pages": [
+          19
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-retention-all-games",
+        "text": "For all games, day 1 retention remained 27%, day 7 remained 13%, day 14 remained 8%, and day 30 remained 5% from 2024 to 2025.",
+        "evidence": "Retention rates across gaming apps showed minimal change from 2024 to 2025. For all games, day 1 retention remained at 27%, day 7 at 13%, day 14 at 8%, and day 30 at 5%. Gaming app retention rates 2024 - 2025 (Global)",
+        "confidence": "high",
+        "pages": [
+          21
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "gaming-regional-growth",
+        "text": "In 2025, MENA had 2% install growth and a 7% sessions increase; Europe had a 7% install decrease and sessions rose 3%; LATAM had a 9% install decrease and sessions remained almost flat at 0.4%; and North America installs dropped 5% and sessions decreased 2%.",
+        "evidence": "MENA had 2% install growth and a 7% sessions increase YoY in 2025. Europe and LATAM both saw install decreases (-7% and -9%). Sessions rose 3% in Europe and remained almost flat in LATAM (0.4%). APAC declined marginally across both metrics. Installs in North America dropped 5% and sessions decreased by 2%. Gaming app install and session growth percentages YoY 2024 - 2025",
+        "confidence": "high",
+        "pages": [
+          17
+        ],
+        "section_id": "gaming-finding-keeping-users",
+        "section_title": "Finding and keeping users"
+      },
+      {
+        "id": "conclusion-industry-trends",
+        "text": "The report says finance apps are part of daily life across the board and embedded features are becoming the norm, e-commerce is accelerating through AI personalization and agents, and gaming is balancing reach and high-volume user acquisition with retention and sustained engagement.",
+        "evidence": "We see this play out across every vertical; finance apps are part of daily life across the board and embedded features are becoming the norm. E-commerce is accelerating through AI personalization and agents, and gaming is balancing reach and high-volume UA with retention and sustained engagement.",
+        "confidence": "high",
+        "pages": [
+          40
+        ],
+        "section_id": "conclusion",
+        "section_title": "Conclusion: An exciting future for the mobile app industry"
+      },
+      {
+        "id": "conclusion-measurement-recommendations",
+        "text": "The report says app marketers need cross-channel attribution to remove blind spots and expose trends, AI insights to make data analysis faster and more effective, and next-generation solutions for campaign optimization and confident budget allocation based on aggregated data.",
+        "evidence": "App marketers need cross-channel attribution that removes blind spots and exposes trends, alongside AI insights that make data analysis faster and more effective, and next-generation solutions that enable campaign optimization and confident budget allocation based on aggregated data with ease.",
+        "confidence": "high",
+        "pages": [
+          40
+        ],
+        "section_id": "conclusion",
+        "section_title": "Conclusion: An exciting future for the mobile app industry"
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "findings",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

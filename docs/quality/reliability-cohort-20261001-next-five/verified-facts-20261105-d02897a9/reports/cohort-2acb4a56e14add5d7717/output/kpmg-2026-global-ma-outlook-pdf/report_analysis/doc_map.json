@@ -1,0 +1,222 @@
+{
+  "schema_version": "doc_map_v1",
+  "doc_id": "cohort-2acb4a56e14add5d7717",
+  "title": "2026 Global M&A Outlook",
+  "summary": "A global survey-based outlook on M&A, moving from a retrospective of 2025 to 2026 dealmaking themes and implications. Its main topics include strategic focus, differences between buyer types, portfolio simplification, AI-enabled deal execution, execution discipline, and industry-specific dynamics. The research surveyed 700 dealmakers across 20 countries and jurisdictions.",
+  "publisher": "",
+  "provenance_roles": {
+    "schema_version": "1.0",
+    "publication_name": "",
+    "publisher_name": "",
+    "author_names": [],
+    "author_kind": "unknown",
+    "data_provider_names": [],
+    "source_organization_names": [],
+    "report_owner_name": "Copyright owned by one or more of the KPMG International entities. KPMG International entities p",
+    "status": "ambiguous",
+    "resolution_method": "deterministic_source_visible_evidence",
+    "issues": [
+      "publisher_missing"
+    ],
+    "evidence": [
+      {
+        "schema_version": "1.0",
+        "role": "report_owner",
+        "name": "Copyright owned by one or more of the KPMG International entities. KPMG International entities p",
+        "evidence_kind": "copyright",
+        "evidence_locator": "document_pack:line:6",
+        "evidence_hash": "65c09ef65192b6f10a7c6cb18ea58cc513d34e92aad163ba5030e5afcd2f4d33"
+      },
+      {
+        "schema_version": "1.0",
+        "role": "report_owner",
+        "name": "Copyright owned by one or more of the KPMG International entities. KPMG International entities p",
+        "evidence_kind": "copyright",
+        "evidence_locator": "document_pack:line:95",
+        "evidence_hash": "67108dc2761c11b6bc7e53e8a0374217d58674f0f4143c5f881b69ad625cbb0b"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "foreword",
+      "title": "Foreword",
+      "summary": "Opens the report. The available report excerpts do not provide further substantive detail about the foreword.",
+      "key_points": [],
+      "pages": [
+        2
+      ],
+      "references": []
+    },
+    {
+      "id": "about-the-research",
+      "title": "About the research",
+      "summary": "Describes the survey behind the report, including its respondent base, coverage, and fieldwork period.",
+      "key_points": [
+        "The survey included 700 M&A dealmakers across 20 countries and jurisdictions and was fielded from 19 December 2025 to 27 January 2026.",
+        "Respondents comprised 519 corporate dealmakers and 181 respondents from private equity firms; they were senior executives involved in M&A decision-making across 10 sectors."
+      ],
+      "pages": [
+        4
+      ],
+      "references": []
+    },
+    {
+      "id": "executive-summary",
+      "title": "Executive summary",
+      "summary": "Provides an overview of the report’s findings and outlook. The available excerpts do not establish specific summary outcomes.",
+      "key_points": [],
+      "pages": [
+        5,
+        6
+      ],
+      "references": []
+    },
+    {
+      "id": "2025-retrospective-and-2026-outlook",
+      "title": "2025 retrospective and 2026 outlook",
+      "summary": "Reviews M&A in 2025 and sets out the report’s outlook for 2026. The available excerpts do not establish specific retrospective results or forecast figures.",
+      "key_points": [],
+      "pages": [
+        7,
+        8
+      ],
+      "references": []
+    },
+    {
+      "id": "five-drivers",
+      "title": "5 drivers shaping the 2026 M&A environment",
+      "summary": "Introduces the report’s five-part framework for the 2026 M&A environment. The following chapters address strategic focus, buyer risk appetites, portfolio simplification, AI-driven deal execution, and execution discipline. fileciteturn1file1turn1file2",
+      "key_points": [
+        "Strategic focus in a fragmented world.",
+        "Diverging risk appetites between buyers.",
+        "Portfolio simplification as a value creation strategy.",
+        "AI-driven deal execution and execution discipline as a source of advantage."
+      ],
+      "pages": [
+        9
+      ],
+      "references": []
+    },
+    {
+      "id": "strategic-focus",
+      "title": "Strategic focus in a fragmented world",
+      "summary": "Examines M&A strategy in a fragmented environment, including regional comparisons. The text emphasizes moving away from opportunistic expansion toward transactions that reinforce a clear strategic direction. fileciteturn5file10turn5file3",
+      "key_points": [
+        "The report describes a shift from opportunistic expansion toward transactions that reinforce clear strategic direction.",
+        "The section presents regional comparisons across APAC, EMEA, and the Americas; the available excerpt does not establish the numerical results. fileciteturn5file3turn5file10"
+      ],
+      "pages": [
+        10,
+        11,
+        12,
+        13
+      ],
+      "references": []
+    },
+    {
+      "id": "diverging-risk-appetites",
+      "title": "Diverging risk appetites between buyers",
+      "summary": "Compares risk appetites across buyer types, with corporate and private equity buyers treated as distinct groups. The available excerpts identify the comparison but do not establish the chart question or its full results. fileciteturn5file6turn5file2",
+      "key_points": [
+        "The section focuses on differences in risk appetite between corporate and private equity buyers.",
+        "A chart distinguishes corporate and private equity respondents and displays deal-count categories; the available excerpt does not establish enough chart context to report its numeric values."
+      ],
+      "pages": [
+        14,
+        15,
+        16,
+        17
+      ],
+      "references": []
+    },
+    {
+      "id": "portfolio-simplification",
+      "title": "Portfolio simplification as a value creation strategy",
+      "summary": "Considers portfolio simplification as a deliberate value-creation strategy. The available excerpts establish the section’s focus but do not provide enough detail to summarize its specific findings.",
+      "key_points": [
+        "Frames portfolio simplification as a value-creation strategy."
+      ],
+      "pages": [
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "references": []
+    },
+    {
+      "id": "ai-driven-deal-execution",
+      "title": "AI-driven transformation of deal execution",
+      "summary": "Discusses how AI can expand and change deal-execution analysis, including diligence and integration monitoring. The report argues that AI can make previously uneconomical analyses viable, while people retain review and decision authority.",
+      "key_points": [
+        "AI-enabled analysis can make new categories of work worthwhile, rather than only speeding up existing analysis.",
+        "Examples include clause-by-clause contract comparison and continuous monitoring of separation dependencies, TSA milestones, and performance indicators.",
+        "An AI agent can model customer concentration risk, compare it with benchmarks, draft diligence material, and flag anomalies; the human reviews and decides while the agent executes."
+      ],
+      "pages": [
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "references": []
+    },
+    {
+      "id": "execution-discipline",
+      "title": "Execution discipline as a decisive source of advantage",
+      "summary": "Focuses on integration planning and execution as determinants of deal outcomes. The report emphasizes that outcomes are shaped early by planning, sequencing, and governance rather than by post-close heroics.",
+      "key_points": [
+        "The section emphasizes readiness before close and argues that integration outcomes are shaped early.",
+        "Identified integration priorities include synergy realization, integration due diligence, and integrating cultures, processes, and systems."
+      ],
+      "pages": [
+        30,
+        31,
+        32,
+        33
+      ],
+      "references": []
+    },
+    {
+      "id": "industry-specific-dynamics",
+      "title": "Industry-specific dynamics",
+      "summary": "Examines M&A dynamics by industry. The research covers respondents across 10 sectors, but the available excerpts do not establish the section’s specific sector-by-sector findings. fileciteturn3file19turn1file2",
+      "key_points": [
+        "The report treats industry as a dimension of its M&A outlook.",
+        "The survey covered 10 sectors; specific comparisons from this section are not established by the available excerpts."
+      ],
+      "pages": [
+        34,
+        35,
+        36
+      ],
+      "references": []
+    },
+    {
+      "id": "implications-for-dealmakers",
+      "title": "Implications for dealmakers",
+      "summary": "Concludes with implications for dealmakers based on the report’s outlook and themes. The available excerpts establish the section heading but do not provide its specific recommendations.",
+      "key_points": [],
+      "pages": [
+        37,
+        38,
+        39
+      ],
+      "references": []
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "doc_map",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 1.0,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

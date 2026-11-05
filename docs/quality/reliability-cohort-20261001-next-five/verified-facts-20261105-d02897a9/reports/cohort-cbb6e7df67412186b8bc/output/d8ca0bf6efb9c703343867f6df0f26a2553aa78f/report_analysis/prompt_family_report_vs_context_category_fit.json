@@ -1,0 +1,202 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/context_category_fit",
+  "family_schema_version": "2.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "selected_category_ids": [
+      "technology",
+      "consumer_behavior"
+    ],
+    "category_fits": [
+      {
+        "category_id": "technology",
+        "label": "Technology & Innovation",
+        "fit_score": 0.91,
+        "decision": "primary",
+        "why_fit": "The report surveys major technology shifts and forecasts, including smart speakers and digital assistants, VR/AR, and technology and media revenues. Its Reality Computing section explicitly considers immersive technology as a broader computing platform.",
+        "why_not_fit": "It also covers media markets, consumer attention, and other trends, so not every section is about technology innovation.",
+        "evidence_sections": [
+          "$300 Billion in Tech and Media Growth Dollars",
+          "Smart Speaker Battles are about the Great Digital Assistant Wars",
+          "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+        ],
+        "semantic_rule_status": "supported",
+        "supported_topic_rules": [
+          "Technology is the report main lens rather than a supporting enabler.",
+          "The report is primarily about immersive experiences or spatial computing."
+        ],
+        "supported_topic_rule_ids": [
+          "technology:include:cec972d615d39d70",
+          "technology:include:5edc98445bb03a53"
+        ],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [
+          "Smart Speaker Battles are about the Great Digital Assistant Wars",
+          "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+        ],
+        "centrality_evidence_sections": [
+          "Smart Speaker Battles are about the Great Digital Assistant Wars",
+          "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+        ],
+        "remediation_signal": "none"
+      },
+      {
+        "category_id": "consumer_behavior",
+        "label": "Consumer Behavior & Insights",
+        "fit_score": 0.71,
+        "decision": "secondary",
+        "why_fit": "Dedicated sections analyze how consumers allocate media attention and how high-attention users account for disproportionate shares of video and audio time and spending; the report also draws on consumer research.",
+        "why_not_fit": "Consumer behavior is one important strand within a wider technology and media outlook, rather than the report's sole organizing lens.",
+        "evidence_sections": [
+          "There are 31 Hours in a Day",
+          "Super Users: A Lot More Time, a Lot More Money"
+        ],
+        "semantic_rule_status": "supported",
+        "supported_topic_rules": [
+          "The report repeatedly studies consumer attention and usage behavior."
+        ],
+        "supported_topic_rule_ids": [
+          "consumer_behavior:include:33643841657d9962"
+        ],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [
+          "There are 31 Hours in a Day",
+          "Super Users: A Lot More Time, a Lot More Money"
+        ],
+        "centrality_evidence_sections": [
+          "There are 31 Hours in a Day",
+          "Super Users: A Lot More Time, a Lot More Money"
+        ],
+        "remediation_signal": "none"
+      },
+      {
+        "category_id": "business_performance",
+        "label": "Business Performance & Growth",
+        "fit_score": 0.49,
+        "decision": "reject",
+        "why_fit": "The opening section forecasts $302 billion of global consumer Internet and media revenue growth from 2017E to 2021E and compares growth rates.",
+        "why_not_fit": "Those commercial forecasts are one part of a broad technology and media trends outlook, not the report's dominant performance-decision lens.",
+        "evidence_sections": [
+          "$300 Billion in Tech and Media Growth Dollars"
+        ],
+        "semantic_rule_status": "ambiguous",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Performance numbers are only an output metric inside a more domain-specific report."
+        ],
+        "rejected_topic_rule_ids": [
+          "business_performance:exclude:1aa1141407d69c39"
+        ],
+        "rule_evidence_sections": [
+          "$300 Billion in Tech and Media Growth Dollars"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": "none"
+      },
+      {
+        "category_id": "social_video_creator",
+        "label": "Social, Short Video & Creator",
+        "fit_score": 0.43,
+        "decision": "reject",
+        "why_fit": "The web-video section examines creator concentration and the relative shares of influencer and media-company views on YouTube and Facebook.",
+        "why_not_fit": "Creator and social video analysis is limited to one section within an outlook that also covers assistants, reality computing, consumer attention, and other media topics.",
+        "evidence_sections": [
+          "Big Influencers and Media Brands will Rule Web Video"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Creators or social platforms are only one activation tactic inside a broader report."
+        ],
+        "rejected_topic_rule_ids": [
+          "social_video_creator:exclude:f0cf93ee4c5c1480"
+        ],
+        "rule_evidence_sections": [
+          "Big Influencers and Media Brands will Rule Web Video"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": "none"
+      },
+      {
+        "category_id": "advertising_media",
+        "label": "Advertising Strategy & Media",
+        "fit_score": 0.32,
+        "decision": "reject",
+        "why_fit": "The report forecasts media revenues and includes analysis of digital video creators and media companies.",
+        "why_not_fit": "The context does not establish advertising strategy, media planning, buying, or effectiveness as a repeated central topic; it is a broader technology and media trends outlook.",
+        "evidence_sections": [
+          "$300 Billion in Tech and Media Growth Dollars",
+          "Big Influencers and Media Brands will Rule Web Video"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Media appears only as one route inside a broader consumer or business trends report."
+        ],
+        "rejected_topic_rule_ids": [
+          "advertising_media:exclude:dd740214afbdc03d"
+        ],
+        "rule_evidence_sections": [
+          "$300 Billion in Tech and Media Growth Dollars",
+          "Big Influencers and Media Brands will Rule Web Video"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": "none"
+      },
+      {
+        "category_id": "connected_tv",
+        "label": "Streaming & Connected TV",
+        "fit_score": 0.27,
+        "decision": "reject",
+        "why_fit": "The overview mentions web and premium video, and the report includes video attention and online-video creator analysis.",
+        "why_not_fit": "The provided sections do not establish CTV, OTT, FAST, or streaming television economics as a central subject; the video material described is broader and includes creator platforms.",
+        "evidence_sections": [
+          "Super Users: A Lot More Time, a Lot More Money",
+          "Big Influencers and Media Brands will Rule Web Video"
+        ],
+        "semantic_rule_status": "ambiguous",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [
+          "Big Influencers and Media Brands will Rule Web Video"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": "none"
+      },
+      {
+        "category_id": "ai_automation",
+        "label": "AI & Automation",
+        "fit_score": 0.25,
+        "decision": "reject",
+        "why_fit": "The smart-speaker section discusses AI and digital assistants entering the home and becoming available across devices.",
+        "why_not_fit": "AI is addressed as one part of a broader technology and media outlook; the report is not primarily about AI systems, automation, or workflow redesign.",
+        "evidence_sections": [
+          "Smart Speaker Battles are about the Great Digital Assistant Wars"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "AI is only one enabler inside a broader media or technology report."
+        ],
+        "rejected_topic_rule_ids": [
+          "ai_automation:exclude:1e73dca27527e17c"
+        ],
+        "rule_evidence_sections": [
+          "Smart Speaker Battles are about the Great Digital Assistant Wars"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": "none"
+      }
+    ]
+  }
+}

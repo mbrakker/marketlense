@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_plan",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "report_thesis": "Activate pairs a forecast of global consumer Internet and media revenue growth with evidence that audience attention, distribution choices, and adoption conditions differ across media and commerce categories.",
+    "themes": [
+      {
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast",
+          "verified-fact:f02"
+        ],
+        "priority": 1,
+        "theme": "Activate forecasts global Consumer Internet and Media Revenues, as defined in the page’s footnote, to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E, with $302 billion in growth and a 4.1% CAGR; within the three listed revenue segments, Cost of Internet access, including fixed broadband, wireless, and mobile Internet access, is forecast to have the largest dollar increase ($128B) and highest CAGR (5.7%). The page compares the overall revenue CAGR with approximately 3% for global GDP."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:video-attention-spend",
+          "verified-fact:f04"
+        ],
+        "priority": 2,
+        "theme": "In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of total video time spent and 34% of total consumer spend; all other users accounted for 39% of video time and 66% of consumer spend. The shares show that video attention and consumer spend are distributed differently across these cohorts."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:sports-fan-segment-shares",
+          "verified-fact:broadcast-cord-cutter-preference"
+        ],
+        "priority": 3,
+        "theme": "Sports findings give two distinct audience signals: in Activate’s 2017 study (n=2,406), Super Fans, defined as watching 10+ hours of sports content per week, were 27% of fans and 61% of hours; separately, in the U.S. in 2017, a higher share of sports viewers than Virtual Pay TV viewers cited Broadcast as a cord-cutter substitution option (31% vs. 21%), as did non-sports viewers (21% vs. 15%)."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:consumer-vr-adoption-outlook"
+        ],
+        "priority": 4,
+        "theme": "Activate forecasts that VR will not reach scaled global adoption by 2021E; the cited barriers are limited applications outside gaming, an immersive but non-social experience, and inability to move beyond a confined area. The forecast is modeled after seventh-generation gaming consoles, and the page does not numerically define “scaled” adoption."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:news-trust-comparison"
+        ],
+        "priority": 5,
+        "theme": "In 2017, among news readers in five selected countries, the share reporting perceived trustworthiness was higher for News Media than for Social Media: Canada 51% vs. 24%, Ireland 47% vs. 28%, the United Kingdom 41% vs. 18%, Australia 40% vs. 27%, and the United States 38% vs. 20%."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:ecommerce-firsthand-experience"
+        ],
+        "priority": 6,
+        "theme": "The U.S. eCommerce growth matrix places grocery and automotive in the delayed eCommerce adoption area alongside products involving first-hand experience, with food freshness and used-car condition as examples. It positions categories by 2016 category share of eCommerce sales and potential shift from physical to eCommerce, not by a measured time-to-adoption."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:podcast-audience-factors"
+        ],
+        "priority": 7,
+        "theme": "Podcast survey responses distinguish potential listening factors by audience: in Activate’s 2017 study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to listening, while 31% of podcast listeners (n=419) selected “Recommendations” as a factor that would lead to increased consumption. The page does not specify geography."
+      }
+    ]
+  }
+}

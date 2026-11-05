@@ -1,0 +1,178 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-cbb6e7df67412186b8bc\\ias-first-attempt-olry04oz\\output\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf\\report_analysis\\validation_regen_candidate_2.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[family_confidence] Artifact family 'quotes' abstained at confidence=0.00 because quotes_missing.",
+      "severity": "warning",
+      "affected_section": "quotes",
+      "rule_id": "family_confidence",
+      "repair_target": "quotes",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] Grounding check failed (grounding_claim_check_coverage_invalid).",
+      "severity": "error",
+      "affected_section": "grounding",
+      "rule_id": "grounding",
+      "violation_type": "grounding_claim_check_coverage_invalid",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The survey findings are correctly attributed to audience stages and sample sizes, but the text omits that the source page does not specify geography, a material boundary on the finding’s applicability.",
+      "severity": "error",
+      "affected_section": "insights:podcast-audience-factors",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:podcast-audience-factors:text",
+      "evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The post calls the cohort only the “top 25% of users,” omitting the source’s defining criterion of 4.5+ hours of daily video attention. This blurs which users the reported shares describe.",
+      "severity": "error",
+      "affected_section": "linkedin_post",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "unsupported_material_claim",
+      "repair_target": "linkedin_post",
+      "entity_id": "linkedin_post:linkedin_post",
+      "evidence_ids": [
+        "verified-fact:video-attention-spend"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.source_limitation_omitted] The primary podcast insight omits the source’s explicit limitation that geography is not specified. Adding this qualification prevents readers from inferring geographic applicability beyond the source evidence. Dimensions: limitations: The primary podcast finding does not disclose that the source page specifies no geography, leaving its scope open to overgeneralization.",
+      "severity": "error",
+      "affected_section": "insights:podcast-audience-factors",
+      "rule_id": "public_editorial_quality.source_limitation_omitted",
+      "violation_type": "report_editorial_acceptance",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:podcast-audience-factors:text",
+      "evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=global-revenue-forecast].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=global-revenue-forecast].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=global-revenue-forecast].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=global-revenue-forecast].pages[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=sports-fan-segment-shares].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=sports-fan-segment-shares].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=sports-fan-segment-shares].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=sports-fan-segment-shares].pages[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=video-attention-spend].evidence",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=video-attention-spend].evidence_ids",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=video-attention-spend].evidence_spans[1]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    }
+  ]
+}

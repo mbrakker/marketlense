@@ -1,0 +1,22 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "public_items",
+      "claim_or_entity_id": "verified-fact:ma-buyer-pipeline-outlook",
+      "error_context": {
+        "affected_section": "public_items",
+        "evidence_id": "verified-fact:ma-buyer-pipeline-outlook"
+      },
+      "failure_code": "validation_terminal_outcome_missing",
+      "inner_error_class": "",
+      "outer_code": "validation_terminal_outcome_missing",
+      "repair_attempt": 0,
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "stage": "semantic_validation",
+      "terminal_outcome": "missing",
+      "terminal_stage": "",
+      "validator_rule": "public_editorial_quality.report_limitations_omitted"
+    }
+  ],
+  "validation_run_id": "validation:76685424660e7aa76fc58aaadf0c427e76c7ffca36fe6bce7e8399192f077347"
+}

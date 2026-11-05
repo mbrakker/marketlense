@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-28-0",
+  "candidate_type": "chart",
+  "page": 28,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    49.64,
+    127.2,
+    803.589,
+    462.8
+  ],
+  "final_bbox": [
+    41.64,
+    142.792,
+    811.589,
+    470.8
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 3,
+    "bottom": 58,
+    "left": 75,
+    "right": 18
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": true,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.6844,
+    "margin_balance": 0.8222,
+    "neighbor_contamination": 0.1753,
+    "readability": 1.0,
+    "visual_crispness": 0.35,
+    "total_score": 0.788,
+    "defect_labels": [],
+    "edge_density": {
+      "top": 0.0948,
+      "bottom": 0.2073,
+      "left": 0.1864,
+      "right": 0.2517
+    },
+    "edge_leakage": {
+      "top": 0.0193,
+      "bottom": 0.1753,
+      "left": 0.129,
+      "right": 0.0
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.75,
+        "strong_edges": [
+          "bottom",
+          "left",
+          "right"
+        ],
+        "edge_density": {
+          "top": 0.0948,
+          "bottom": 0.2073,
+          "left": 0.1864,
+          "right": 0.2517
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.2073,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0948,
+          "bottom": 0.2073,
+          "left": 0.1864,
+          "right": 0.2517
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.2517,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0948,
+          "bottom": 0.2073,
+          "left": 0.1864,
+          "right": 0.2517
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": true,
+  "rejection_reason": ""
+}

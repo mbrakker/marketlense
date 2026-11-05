@@ -1,0 +1,1839 @@
+{
+  "attempt_index": 2,
+  "before_sha256": "890e27909ffc84ed9c51b94694da78344ac1e06aa43003a102500b7838912854",
+  "after_sha256": "e0318f57f6f5ba893157078ee2c108c12eca5d47b3165d0adb2466306a2dad7f",
+  "transformation_scope": [
+    "summary",
+    "insights_final",
+    "expert_comment"
+  ],
+  "unchanged_family_sha256": {
+    "insights_candidates": "1d4e003cc16270da250999a9c09886894e348041c9363ef26cde4d251e28326d",
+    "quotes_final": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "current_artifacts_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-b638414df0b1fccea1cd\\ias-first-attempt-vq54udoj\\output\\mobile-app-trends-2026-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-b638414df0b1fccea1cd\\ias-first-attempt-vq54udoj\\output\\mobile-app-trends-2026-pdf\\report_analysis\\artifacts_regen_candidate_2.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "public_editorial_quality.material_limitation_omitted:public_items",
+    "public_editorial_quality.semantic_review:insights:finance-latam-growth",
+    "public_editorial_quality.semantic_review:insights:finance-latam-growth.so_what",
+    "public_editorial_quality.semantic_review:insights:mobile-market-downloads-2025",
+    "public_editorial_quality.semantic_review:insights:mobile-market-downloads-2025.now_what",
+    "public_editorial_quality.semantic_review:insights:mobile-market-downloads-2025.so_what",
+    "regeneration_scope_violation:insights_final[item=finance-latam-growth].evidence",
+    "regeneration_scope_violation:insights_final[item=finance-latam-growth].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=finance-latam-growth].evidence_spans[1]",
+    "regeneration_scope_violation:insights_final[item=finance-latam-growth].pages[1]",
+    "regeneration_scope_violation:insights_final[item=mobile-market-downloads-2025].evidence",
+    "regeneration_scope_violation:insights_final[item=mobile-market-downloads-2025].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=mobile-market-downloads-2025].evidence_spans[1]",
+    "regeneration_scope_violation:insights_final[item=mobile-market-downloads-2025].evidence_spans[2]",
+    "validation_execution:validation"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "ecommerce-cpi-subvertical-divergence",
+      "original_evidence_ids": [
+        "verified-fact:ecommerce-cpi-subvertical-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:ecommerce-cpi-subvertical-divergence"
+      ],
+      "original_source_pages": [
+        29
+      ],
+      "candidate_source_pages": [
+        29
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "finance-latam-growth",
+      "original_evidence_ids": [
+        "verified-fact:finance-latam-growth"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:finance-latam-growth"
+      ],
+      "original_source_pages": [
+        35
+      ],
+      "candidate_source_pages": [
+        35
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "finance-session-length-pattern",
+      "original_evidence_ids": [
+        "verified-fact:finance-session-length-pattern"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:finance-session-length-pattern"
+      ],
+      "original_source_pages": [
+        36
+      ],
+      "candidate_source_pages": [
+        36
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "gaming-retention-and-cpi",
+      "original_evidence_ids": [
+        "verified-fact:gaming-retention-and-cpi"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:gaming-retention-and-cpi"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "gaming-subvertical-growth-divergence",
+      "original_evidence_ids": [
+        "verified-fact:gaming-subvertical-growth-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:gaming-subvertical-growth-divergence"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        19
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "global-ecommerce-finance-install-session-divergence",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "original_source_pages": [
+        27,
+        34
+      ],
+      "candidate_source_pages": [
+        27,
+        34
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "intro-mobile-gdp-forecast",
+      "original_evidence_ids": [
+        "verified-fact:intro-mobile-gdp-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:intro-mobile-gdp-forecast"
+      ],
+      "original_source_pages": [
+        3
+      ],
+      "candidate_source_pages": [
+        3
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "measurement-recommendation",
+      "original_evidence_ids": [
+        "verified-fact:measurement-recommendation"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:measurement-recommendation"
+      ],
+      "original_source_pages": [
+        40
+      ],
+      "candidate_source_pages": [
+        40
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "mobile-app-consumer-spending-2025",
+      "original_evidence_ids": [
+        "verified-fact:mobile-app-consumer-spending-2025"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:mobile-app-consumer-spending-2025"
+      ],
+      "original_source_pages": [
+        3
+      ],
+      "candidate_source_pages": [
+        3
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "mobile-market-downloads-2025",
+      "original_evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ],
+      "original_source_pages": [
+        3
+      ],
+      "candidate_source_pages": [
+        3
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "ecommerce-cpi-subvertical-divergence",
+      "original_evidence_ids": [
+        "verified-fact:ecommerce-cpi-subvertical-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:ecommerce-cpi-subvertical-divergence"
+      ],
+      "original_source_pages": [
+        29
+      ],
+      "candidate_source_pages": [
+        29
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "finance-latam-growth",
+      "original_evidence_ids": [
+        "verified-fact:finance-latam-growth",
+        "verified-fact:finance-session-length-pattern"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:finance-latam-growth"
+      ],
+      "original_source_pages": [
+        35,
+        36
+      ],
+      "candidate_source_pages": [
+        35
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "gaming-retention-and-cpi",
+      "original_evidence_ids": [
+        "verified-fact:gaming-retention-and-cpi"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:gaming-retention-and-cpi"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "gaming-subvertical-growth-divergence",
+      "original_evidence_ids": [
+        "verified-fact:gaming-subvertical-growth-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:gaming-subvertical-growth-divergence"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        19
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "global-ecommerce-finance-install-session-divergence",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "original_source_pages": [
+        27,
+        34
+      ],
+      "candidate_source_pages": [
+        27,
+        34
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "measurement-recommendation",
+      "original_evidence_ids": [
+        "verified-fact:measurement-recommendation"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:measurement-recommendation"
+      ],
+      "original_source_pages": [
+        40
+      ],
+      "candidate_source_pages": [
+        40
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "mobile-market-downloads-2025",
+      "original_evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025",
+        "verified-fact:mobile-app-consumer-spending-2025",
+        "verified-fact:intro-mobile-gdp-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ],
+      "original_source_pages": [
+        3
+      ],
+      "candidate_source_pages": [
+        3
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ],
+      "original_source_pages": [
+        3
+      ],
+      "candidate_source_pages": [
+        3
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "verified-fact:mobile-app-consumer-spending-2025"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:mobile-app-consumer-spending-2025"
+      ],
+      "original_source_pages": [
+        3
+      ],
+      "candidate_source_pages": [
+        3
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:gaming-subvertical-growth-divergence"
+      ],
+      "original_source_pages": [
+        27,
+        34
+      ],
+      "candidate_source_pages": [
+        19
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "verified-fact:gaming-subvertical-growth-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:measurement-recommendation"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        40
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "verified-fact:measurement-recommendation"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        40
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:25505f6ae36476b9",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "original_source_pages": [
+        27,
+        34
+      ],
+      "candidate_source_pages": [
+        27,
+        34
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:7d8ae34294741cf2",
+      "original_evidence_ids": [
+        "verified-fact:ecommerce-cpi-subvertical-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:ecommerce-cpi-subvertical-divergence"
+      ],
+      "original_source_pages": [
+        29
+      ],
+      "candidate_source_pages": [
+        29
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:b24d1dd2e064cd43",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence",
+        "verified-fact:ecommerce-cpi-subvertical-divergence",
+        "verified-fact:measurement-recommendation"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence",
+        "verified-fact:ecommerce-cpi-subvertical-divergence",
+        "verified-fact:measurement-recommendation"
+      ],
+      "original_source_pages": [
+        27,
+        34,
+        29,
+        40
+      ],
+      "candidate_source_pages": [
+        27,
+        34,
+        29,
+        40
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:d8d7437897480c36",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence",
+        "verified-fact:ecommerce-cpi-subvertical-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence",
+        "verified-fact:ecommerce-cpi-subvertical-divergence"
+      ],
+      "original_source_pages": [
+        27,
+        34,
+        29
+      ],
+      "candidate_source_pages": [
+        27,
+        34,
+        29
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:27237e5c3b5832aa",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "original_source_pages": [
+        27,
+        34
+      ],
+      "candidate_source_pages": [
+        27,
+        34
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:94aa5ac96907e445",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "original_source_pages": [
+        27,
+        34
+      ],
+      "candidate_source_pages": [
+        27,
+        34
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:9aa8cc4daaf14007",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "original_source_pages": [
+        27,
+        34
+      ],
+      "candidate_source_pages": [
+        27,
+        34
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:af7c93fea9f6d8ca",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "original_source_pages": [
+        27,
+        34
+      ],
+      "candidate_source_pages": [
+        27,
+        34
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:23be5bf5848237ca",
+      "original_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "original_source_pages": [
+        27,
+        34
+      ],
+      "candidate_source_pages": [
+        27,
+        34
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:3056860e32811175",
+      "original_evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ],
+      "original_source_pages": [
+        3
+      ],
+      "candidate_source_pages": [
+        3
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:50015422c54e8eb0",
+      "original_evidence_ids": [
+        "verified-fact:measurement-recommendation"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:measurement-recommendation"
+      ],
+      "original_source_pages": [
+        40
+      ],
+      "candidate_source_pages": [
+        40
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:51f9f0b350c321e2",
+      "original_evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ],
+      "original_source_pages": [
+        3
+      ],
+      "candidate_source_pages": [
+        3
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:b8df9dfa61500046",
+      "original_evidence_ids": [
+        "verified-fact:mobile-app-consumer-spending-2025"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:mobile-app-consumer-spending-2025"
+      ],
+      "original_source_pages": [
+        3
+      ],
+      "candidate_source_pages": [
+        3
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:dd03015103c1cdeb",
+      "original_evidence_ids": [
+        "verified-fact:gaming-subvertical-growth-divergence"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:gaming-subvertical-growth-divergence"
+      ],
+      "original_source_pages": [
+        19
+      ],
+      "candidate_source_pages": [
+        19
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "1311690fc05611510ec078e8929143432e134e10fd67611a2dbb0bb0254ee2ae",
+    "3127814bbba7cf32b6182634d009c7091fd4ddc90fdbf890d2f824ff1bb9bf2e",
+    "b43ce78858bf32b2893b630a50511c5fca85fa8e05d440602488ef2a84b3ab94",
+    "11214a55cceca1bcf7f79a48a1c3252b9da6a6201ad2028a938cea4c48986dbd",
+    "c97c57491a4c7ec1b4b188e92361a5891f0961a0359e103bc9e2c309c556bae3",
+    "db6a26e7ae2e2ab28f669e7a922d80b87bd54c9149b147d1c62141f0ffb77dfd",
+    "d475eba99b91ce65832e3224a6d9f62aaf60622d71d8438ae38fd33e934efdcd",
+    "2e2bff51db44139f0a8a76a63f5ae94f3dcbf58b9bdc9fb5305a081a16e8ca12",
+    "544a39c63586fb4d1881385169edbbec7dfb28d7323a5d09752485cbdcd45cd1",
+    "a579d31bbb7d790092e2988f265677c645f8fe6d591cb411089f3b8d66bc976a",
+    "dbc9617611168cce985f54a63c3889b0ec04045b6d29b177e96da869b1f91cb5",
+    "44c3059e51ac70bbf9c7d1c51bccea59faee15db2c715e76d08097433b9daf7c",
+    "35143fa91db1451f8f75da1e5d4ca966dbf8728ec586db0be6cd587a04b0faca",
+    "c3aa7ed40ff66c21bf64390357446c9b522e348a13938b1751dc295129cc1514",
+    "ada66848fef2cba578e99b82811fef87c258de6f80e4f12d2e6f2667b431a126"
+  ],
+  "repair_action": "REBIND_EVIDENCE",
+  "repair_strategy": "alternative_evidence",
+  "allowed_paths": [
+    "expert_comment[claim_index=0]",
+    "insights_final[item=mobile-market-downloads-2025].evidence_id",
+    "insights_final[item=mobile-market-downloads-2025].evidence_spans",
+    "insights_final[item=mobile-market-downloads-2025].metric_public_copy",
+    "summary.claim_evidence_map[2]",
+    "summary.executive_summary",
+    "summary.executive_summary[claim_index=2]"
+  ],
+  "verified_dependent_paths": [
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.included_partials[2]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.routing_policy_version",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.output_controls.max_output_tokens",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.routing_policy_version",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.included_partials[2]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/summary.routing_policy_version",
+    "_cache.prompts.report_vs/artifacts/regenerate/expert_comment",
+    "_cache.prompts.report_vs/artifacts/regenerate/insights_final",
+    "_cache.prompts.report_vs/artifacts/regenerate/summary",
+    "_cache.regeneration_prompt_requirements",
+    "_repair_evidence_selection",
+    "chart_insight_cards[item=mobile-market-downloads-2025].evidence_ids",
+    "chart_insight_cards[item=mobile-market-downloads-2025].evidence_spans[1]",
+    "chart_insight_cards[item=mobile-market-downloads-2025].evidence_spans[2]",
+    "claim_ledgers[10].canonical_claim_id",
+    "claim_ledgers[10].claim_text",
+    "claim_ledgers[10].evidence_ids[0]",
+    "claim_ledgers[10].evidence_ids[1]",
+    "claim_ledgers[10].evidence_references[0].evidence_id",
+    "claim_ledgers[10].evidence_references[1]",
+    "claim_ledgers[10].evidence_span_count",
+    "claim_ledgers[11].artifact_section",
+    "claim_ledgers[11].canonical_claim_id",
+    "claim_ledgers[11].claim_text",
+    "claim_ledgers[11].confidence",
+    "claim_ledgers[11].evidence_ids[0]",
+    "claim_ledgers[11].evidence_quality_grade",
+    "claim_ledgers[11].evidence_references",
+    "claim_ledgers[11].evidence_span_count",
+    "claim_ledgers[11].support_type",
+    "claim_ledgers[12].canonical_claim_id",
+    "claim_ledgers[12].claim_text",
+    "claim_ledgers[12].confidence",
+    "claim_ledgers[12].evidence_ids[0]",
+    "claim_ledgers[12].evidence_ids[1]",
+    "claim_ledgers[12].evidence_ids[2]",
+    "claim_ledgers[13].canonical_claim_id",
+    "claim_ledgers[13].claim_text",
+    "claim_ledgers[13].evidence_ids[0]",
+    "claim_ledgers[14].canonical_claim_id",
+    "claim_ledgers[14].claim_text",
+    "claim_ledgers[14].evidence_ids[0]",
+    "claim_ledgers[15].canonical_claim_id",
+    "claim_ledgers[15].claim_text",
+    "claim_ledgers[15].confidence",
+    "claim_ledgers[15].evidence_ids[0]",
+    "claim_ledgers[16].canonical_claim_id",
+    "claim_ledgers[16].claim_text",
+    "claim_ledgers[16].confidence",
+    "claim_ledgers[16].evidence_ids[0]",
+    "claim_ledgers[17].artifact_section",
+    "claim_ledgers[17].canonical_claim_id",
+    "claim_ledgers[17].claim_text",
+    "claim_ledgers[17].confidence",
+    "claim_ledgers[17].evidence_ids[0]",
+    "claim_ledgers[17].evidence_ids[1]",
+    "claim_ledgers[17].evidence_quality_grade",
+    "claim_ledgers[17].risk",
+    "claim_ledgers[17].support_type",
+    "claim_ledgers[18].canonical_claim_id",
+    "claim_ledgers[18].claim_text",
+    "claim_ledgers[18].evidence_ids[0]",
+    "claim_ledgers[19].canonical_claim_id",
+    "claim_ledgers[19].claim_text",
+    "claim_ledgers[19].evidence_ids[0]",
+    "claim_ledgers[20].canonical_claim_id",
+    "claim_ledgers[20].claim_text",
+    "claim_ledgers[20].evidence_ids[0]",
+    "claim_ledgers[21].canonical_claim_id",
+    "claim_ledgers[21].claim_text",
+    "claim_ledgers[21].evidence_ids[0]",
+    "claim_ledgers[22].canonical_claim_id",
+    "claim_ledgers[22].claim_text",
+    "claim_ledgers[22].evidence_ids[0]",
+    "claim_ledgers[23].canonical_claim_id",
+    "claim_ledgers[23].claim_text",
+    "claim_ledgers[23].evidence_ids[0]",
+    "claim_ledgers[24].artifact_section",
+    "claim_ledgers[24].canonical_claim_id",
+    "claim_ledgers[24].claim_text",
+    "claim_ledgers[24].evidence_ids[0]",
+    "claim_ledgers[24].evidence_quality_grade",
+    "claim_ledgers[24].support_type",
+    "claim_ledgers[25]",
+    "claim_ledgers[2].claim_text",
+    "claim_ledgers[2].evidence_ids[0]",
+    "claim_ledgers[2].evidence_references[0].evidence_id",
+    "claim_ledgers[2].evidence_span_count",
+    "claim_ledgers[3].claim_text",
+    "claim_ledgers[3].evidence_ids[0]",
+    "claim_ledgers[3].evidence_references[0].evidence_id",
+    "claim_ledgers[4].artifact_section",
+    "claim_ledgers[4].canonical_claim_id",
+    "claim_ledgers[4].claim_text",
+    "claim_ledgers[4].evidence_ids[0]",
+    "claim_ledgers[4].evidence_references[0].evidence_id",
+    "claim_ledgers[5].canonical_claim_id",
+    "claim_ledgers[5].claim_text",
+    "claim_ledgers[5].evidence_ids[0]",
+    "claim_ledgers[5].evidence_ids[1]",
+    "claim_ledgers[5].evidence_ids[2]",
+    "claim_ledgers[5].evidence_references[0].evidence_id",
+    "claim_ledgers[5].evidence_references[1]",
+    "claim_ledgers[5].evidence_references[2]",
+    "claim_ledgers[5].evidence_span_count",
+    "claim_ledgers[6].canonical_claim_id",
+    "claim_ledgers[6].claim_text",
+    "claim_ledgers[6].evidence_ids[0]",
+    "claim_ledgers[6].evidence_references[0].evidence_id",
+    "claim_ledgers[6].evidence_span_count",
+    "claim_ledgers[7].canonical_claim_id",
+    "claim_ledgers[7].claim_text",
+    "claim_ledgers[7].evidence_ids[0]",
+    "claim_ledgers[7].evidence_references[0].evidence_id",
+    "claim_ledgers[8].canonical_claim_id",
+    "claim_ledgers[8].claim_text",
+    "claim_ledgers[8].evidence_ids[0]",
+    "claim_ledgers[8].evidence_references[0].evidence_id",
+    "claim_ledgers[9].canonical_claim_id",
+    "claim_ledgers[9].claim_text",
+    "claim_ledgers[9].evidence_ids[0]",
+    "claim_ledgers[9].evidence_references[0].evidence_id",
+    "key_figures[0].evidence_ids",
+    "key_figures[0].evidence_spans[1]",
+    "key_figures[0].evidence_spans[2]",
+    "key_figures[0].metric_public_copy",
+    "metric_spine[0].evidence_ids",
+    "metric_spine[0].evidence_spans[1]",
+    "metric_spine[0].evidence_spans[2]",
+    "metric_spine[0].metric_public_copy",
+    "metric_spine[5].evidence_ids",
+    "metric_spine[5].evidence_spans[1]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:25505f6ae36476b9]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:63c5ea585007f9fc]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:summary:23be5bf5848237ca]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:summary:63c5ea585007f9fc]"
+  ],
+  "selected_evidence_ids": [
+    "verified-fact:global-ecommerce-finance-install-session-divergence",
+    "verified-fact:mobile-market-downloads-2025"
+  ],
+  "quarantined_evidence_ids": [],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "public_editorial_quality.report_limitations_omitted",
+        "affected_section": "public_items",
+        "entity_id": "",
+        "evidence_ids": [
+          "verified-fact:finance-session-length-pattern",
+          "verified-fact:gaming-retention-and-cpi",
+          "verified-fact:gaming-subvertical-growth-divergence",
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "family_confidence",
+        "affected_section": "quotes",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "summary.claim_evidence_map:3.claim",
+        "entity_id": "claim_ledgers:claim:3",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:63c5ea585007f9fc",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:mobile-market-downloads-2025.metric_public_copy",
+        "entity_id": "metric_spine:metric_spine:mobile-market-downloads-2025",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "executive_summary",
+        "entity_id": "soft_copy:summary:63c5ea585007f9fc",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "summary.claim_evidence_map:3.claim",
+        "entity_id": "summary:summary:claim_evidence_map:3:claim",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [],
+    "introduced": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=finance-latam-growth].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "validation_execution",
+        "affected_section": "validation",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=finance-latam-growth].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:mobile-market-downloads-2025.so_what",
+        "entity_id": "insight:mobile-market-downloads-2025:so_what",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:mobile-market-downloads-2025.now_what",
+        "entity_id": "insight:mobile-market-downloads-2025:now_what",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence_spans[2]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:finance-latam-growth.so_what",
+        "entity_id": "insight:finance-latam-growth:so_what",
+        "evidence_ids": [
+          "verified-fact:finance-latam-growth"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_limitation_omitted",
+        "affected_section": "public_items",
+        "entity_id": "",
+        "evidence_ids": [
+          "verified-fact:finance-latam-growth",
+          "verified-fact:gaming-subvertical-growth-divergence",
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=finance-latam-growth].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:mobile-market-downloads-2025",
+        "entity_id": "insight:mobile-market-downloads-2025:text",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=finance-latam-growth].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:finance-latam-growth",
+        "entity_id": "insight:finance-latam-growth:text",
+        "evidence_ids": [
+          "verified-fact:finance-latam-growth"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failures": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=finance-latam-growth].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "validation_execution",
+        "affected_section": "validation",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=finance-latam-growth].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:mobile-market-downloads-2025.so_what",
+        "entity_id": "insight:mobile-market-downloads-2025:so_what",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:mobile-market-downloads-2025.now_what",
+        "entity_id": "insight:mobile-market-downloads-2025:now_what",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence_spans[2]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:finance-latam-growth.so_what",
+        "entity_id": "insight:finance-latam-growth:so_what",
+        "evidence_ids": [
+          "verified-fact:finance-latam-growth"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_limitation_omitted",
+        "affected_section": "public_items",
+        "entity_id": "",
+        "evidence_ids": [
+          "verified-fact:finance-latam-growth",
+          "verified-fact:gaming-subvertical-growth-divergence",
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=finance-latam-growth].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:mobile-market-downloads-2025",
+        "entity_id": "insight:mobile-market-downloads-2025:text",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=finance-latam-growth].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=mobile-market-downloads-2025].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:finance-latam-growth",
+        "entity_id": "insight:finance-latam-growth:text",
+        "evidence_ids": [
+          "verified-fact:finance-latam-growth"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failure_count": 15,
+    "introduced_failure_categories": [],
+    "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+    "severity_changes": [],
+    "mutation_scope_result": "fail",
+    "evidence_lineage_result": "pass",
+    "repair_action": "REBIND_EVIDENCE",
+    "repair_strategy": "alternative_evidence",
+    "evidence_ids_used": [
+      "verified-fact:global-ecommerce-finance-install-session-divergence",
+      "verified-fact:mobile-market-downloads-2025"
+    ],
+    "strategy_fingerprint": "b71add93934ba87f3a9ed5c199c4beffd88b1183d0cf0c934ad449b36885311d",
+    "candidate_sha256": "e0318f57f6f5ba893157078ee2c108c12eca5d47b3165d0adb2466306a2dad7f",
+    "input_sha256": "890e27909ffc84ed9c51b94694da78344ac1e06aa43003a102500b7838912854",
+    "validator_identity": "regeneration-candidate-v1:01c948c7d929f44abb74e9eefbab31557b2097ed014d1fa776fcbfc7827ebcc3:d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [
+    {
+      "diagnosed_failure_class": "public_editorial_quality.semantic_review",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "protected_fields": [
+        "summary.card_tldr_compact[claim_index=0]",
+        "summary.claim_evidence_map[0].claim",
+        "summary.claim_evidence_map[0].evidence",
+        "summary.claim_evidence_map[0].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[0].evidence_spans[0].page",
+        "summary.claim_evidence_map[0].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[0].evidence_spans[0].text",
+        "summary.claim_evidence_map[0].pages[0]",
+        "summary.claim_evidence_map[1].claim",
+        "summary.claim_evidence_map[1].evidence",
+        "summary.claim_evidence_map[1].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[1].evidence_spans[0].page",
+        "summary.claim_evidence_map[1].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[1].evidence_spans[0].text",
+        "summary.claim_evidence_map[1].pages[0]",
+        "summary.claim_evidence_map[2].claim",
+        "summary.claim_evidence_map[2].evidence",
+        "summary.claim_evidence_map[2].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[2].evidence_spans[0].page",
+        "summary.claim_evidence_map[2].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[2].evidence_spans[0].text",
+        "summary.claim_evidence_map[2].pages[0]",
+        "summary.claim_evidence_map[3].claim",
+        "summary.claim_evidence_map[3].evidence",
+        "summary.claim_evidence_map[3].evidence_id",
+        "summary.claim_evidence_map[3].evidence_spans[0].evidence_id",
+        "summary.claim_evidence_map[3].evidence_spans[0].page",
+        "summary.claim_evidence_map[3].evidence_spans[0].source_pack",
+        "summary.claim_evidence_map[3].evidence_spans[0].text",
+        "summary.claim_evidence_map[3].pages[0]",
+        "summary.executive_summary[claim_index=0]",
+        "summary.executive_summary[claim_index=1]",
+        "summary.executive_summary[claim_index=3]",
+        "summary.executive_summary[claim_index=4]",
+        "summary.tldr[claim_index=0]"
+      ],
+      "changed_paths": [
+        "summary.executive_summary[claim_index=2]"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "summary.executive_summary[claim_index=2]",
+          "value": "In 2025, global e-commerce app installs fell 10% year over year while sessions rose 5%."
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "diagnosed_failure_class": "public_editorial_quality.semantic_review",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "verified-fact:mobile-market-downloads-2025"
+      ],
+      "protected_fields": [
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].coverage_role",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].decision_relevance_score",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].evidence",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].evidence_id",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].evidence_ids[0]",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].evidence_spans[0].evidence_id",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].evidence_spans[0].page",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].evidence_spans[0].source_identity",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].evidence_spans[0].source_pack",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].evidence_spans[0].text",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].id",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.baseline",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.cohort",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.comparator",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.confidence",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.delta",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.denominator",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.forecast_status",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.geography",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.label",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observation_status",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[0].cohort",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[0].denominator",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[0].geography",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[0].label",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[0].observation_status",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[0].segment",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[0].timeframe",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[0].unit",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[0].value",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[1].cohort",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[1].denominator",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[1].geography",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[1].label",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[1].observation_status",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[1].segment",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[1].timeframe",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[1].unit",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[1].value",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[2].cohort",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[2].denominator",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[2].geography",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[2].label",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[2].observation_status",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[2].segment",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[2].timeframe",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[2].unit",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[2].value",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[3].cohort",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[3].denominator",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[3].geography",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[3].label",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[3].observation_status",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[3].segment",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[3].timeframe",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[3].unit",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.observations[3].value",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.sample_size",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.segment",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.subject",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.timeframe",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.trend",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.unit",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric.value",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric_public_copy",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].metric_strength_score",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].novelty_score",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].now_what",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].pages[0]",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].report_type_lens",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].score",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].so_what",
+        "insights_final[item=ecommerce-cpi-subvertical-divergence].text",
+        "insights_final[item=finance-latam-growth].coverage_role",
+        "insights_final[item=finance-latam-growth].decision_relevance_score",
+        "insights_final[item=finance-latam-growth].evidence",
+        "insights_final[item=finance-latam-growth].evidence_id",
+        "insights_final[item=finance-latam-growth].evidence_spans[0].evidence_id",
+        "insights_final[item=finance-latam-growth].evidence_spans[0].page",
+        "insights_final[item=finance-latam-growth].evidence_spans[0].source_identity",
+        "insights_final[item=finance-latam-growth].evidence_spans[0].source_pack",
+        "insights_final[item=finance-latam-growth].evidence_spans[0].text",
+        "insights_final[item=finance-latam-growth].id",
+        "insights_final[item=finance-latam-growth].metric.baseline",
+        "insights_final[item=finance-latam-growth].metric.cohort",
+        "insights_final[item=finance-latam-growth].metric.comparator",
+        "insights_final[item=finance-latam-growth].metric.confidence",
+        "insights_final[item=finance-latam-growth].metric.delta",
+        "insights_final[item=finance-latam-growth].metric.denominator",
+        "insights_final[item=finance-latam-growth].metric.forecast_status",
+        "insights_final[item=finance-latam-growth].metric.geography",
+        "insights_final[item=finance-latam-growth].metric.label",
+        "insights_final[item=finance-latam-growth].metric.observation_status",
+        "insights_final[item=finance-latam-growth].metric.observations[0].cohort",
+        "insights_final[item=finance-latam-growth].metric.observations[0].denominator",
+        "insights_final[item=finance-latam-growth].metric.observations[0].geography",
+        "insights_final[item=finance-latam-growth].metric.observations[0].label",
+        "insights_final[item=finance-latam-growth].metric.observations[0].observation_status",
+        "insights_final[item=finance-latam-growth].metric.observations[0].segment",
+        "insights_final[item=finance-latam-growth].metric.observations[0].timeframe",
+        "insights_final[item=finance-latam-growth].metric.observations[0].unit",
+        "insights_final[item=finance-latam-growth].metric.observations[0].value",
+        "insights_final[item=finance-latam-growth].metric.observations[1].cohort",
+        "insights_final[item=finance-latam-growth].metric.observations[1].denominator",
+        "insights_final[item=finance-latam-growth].metric.observations[1].geography",
+        "insights_final[item=finance-latam-growth].metric.observations[1].label",
+        "insights_final[item=finance-latam-growth].metric.observations[1].observation_status",
+        "insights_final[item=finance-latam-growth].metric.observations[1].segment",
+        "insights_final[item=finance-latam-growth].metric.observations[1].timeframe",
+        "insights_final[item=finance-latam-growth].metric.observations[1].unit",
+        "insights_final[item=finance-latam-growth].metric.observations[1].value",
+        "insights_final[item=finance-latam-growth].metric.sample_size",
+        "insights_final[item=finance-latam-growth].metric.segment",
+        "insights_final[item=finance-latam-growth].metric.subject",
+        "insights_final[item=finance-latam-growth].metric.timeframe",
+        "insights_final[item=finance-latam-growth].metric.trend",
+        "insights_final[item=finance-latam-growth].metric.unit",
+        "insights_final[item=finance-latam-growth].metric.value",
+        "insights_final[item=finance-latam-growth].metric_public_copy",
+        "insights_final[item=finance-latam-growth].metric_strength_score",
+        "insights_final[item=finance-latam-growth].novelty_score",
+        "insights_final[item=finance-latam-growth].now_what",
+        "insights_final[item=finance-latam-growth].pages[0]",
+        "insights_final[item=finance-latam-growth].report_type_lens",
+        "insights_final[item=finance-latam-growth].score",
+        "insights_final[item=finance-latam-growth].so_what",
+        "insights_final[item=finance-latam-growth].text",
+        "insights_final[item=gaming-retention-and-cpi].coverage_role",
+        "insights_final[item=gaming-retention-and-cpi].decision_relevance_score",
+        "insights_final[item=gaming-retention-and-cpi].evidence",
+        "insights_final[item=gaming-retention-and-cpi].evidence_id",
+        "insights_final[item=gaming-retention-and-cpi].evidence_ids[0]",
+        "insights_final[item=gaming-retention-and-cpi].evidence_spans[0].evidence_id",
+        "insights_final[item=gaming-retention-and-cpi].evidence_spans[0].page",
+        "insights_final[item=gaming-retention-and-cpi].evidence_spans[0].source_identity",
+        "insights_final[item=gaming-retention-and-cpi].evidence_spans[0].source_pack",
+        "insights_final[item=gaming-retention-and-cpi].evidence_spans[0].text",
+        "insights_final[item=gaming-retention-and-cpi].id",
+        "insights_final[item=gaming-retention-and-cpi].metric.baseline",
+        "insights_final[item=gaming-retention-and-cpi].metric.cohort",
+        "insights_final[item=gaming-retention-and-cpi].metric.comparator",
+        "insights_final[item=gaming-retention-and-cpi].metric.confidence",
+        "insights_final[item=gaming-retention-and-cpi].metric.delta",
+        "insights_final[item=gaming-retention-and-cpi].metric.denominator",
+        "insights_final[item=gaming-retention-and-cpi].metric.forecast_status",
+        "insights_final[item=gaming-retention-and-cpi].metric.geography",
+        "insights_final[item=gaming-retention-and-cpi].metric.label",
+        "insights_final[item=gaming-retention-and-cpi].metric.observation_status",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[0].cohort",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[0].denominator",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[0].geography",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[0].label",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[0].observation_status",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[0].segment",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[0].timeframe",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[0].unit",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[0].value",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[1].cohort",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[1].denominator",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[1].geography",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[1].label",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[1].observation_status",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[1].segment",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[1].timeframe",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[1].unit",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[1].value",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[2].cohort",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[2].denominator",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[2].geography",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[2].label",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[2].observation_status",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[2].segment",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[2].timeframe",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[2].unit",
+        "insights_final[item=gaming-retention-and-cpi].metric.observations[2].value",
+        "insights_final[item=gaming-retention-and-cpi].metric.sample_size",
+        "insights_final[item=gaming-retention-and-cpi].metric.segment",
+        "insights_final[item=gaming-retention-and-cpi].metric.subject",
+        "insights_final[item=gaming-retention-and-cpi].metric.timeframe",
+        "insights_final[item=gaming-retention-and-cpi].metric.trend",
+        "insights_final[item=gaming-retention-and-cpi].metric.unit",
+        "insights_final[item=gaming-retention-and-cpi].metric.value",
+        "insights_final[item=gaming-retention-and-cpi].metric_public_copy",
+        "insights_final[item=gaming-retention-and-cpi].metric_strength_score",
+        "insights_final[item=gaming-retention-and-cpi].novelty_score",
+        "insights_final[item=gaming-retention-and-cpi].now_what",
+        "insights_final[item=gaming-retention-and-cpi].pages[0]",
+        "insights_final[item=gaming-retention-and-cpi].report_type_lens",
+        "insights_final[item=gaming-retention-and-cpi].score",
+        "insights_final[item=gaming-retention-and-cpi].so_what",
+        "insights_final[item=gaming-retention-and-cpi].text",
+        "insights_final[item=gaming-subvertical-growth-divergence].coverage_role",
+        "insights_final[item=gaming-subvertical-growth-divergence].decision_relevance_score",
+        "insights_final[item=gaming-subvertical-growth-divergence].evidence",
+        "insights_final[item=gaming-subvertical-growth-divergence].evidence_id",
+        "insights_final[item=gaming-subvertical-growth-divergence].evidence_ids[0]",
+        "insights_final[item=gaming-subvertical-growth-divergence].evidence_spans[0].evidence_id",
+        "insights_final[item=gaming-subvertical-growth-divergence].evidence_spans[0].page",
+        "insights_final[item=gaming-subvertical-growth-divergence].evidence_spans[0].source_identity",
+        "insights_final[item=gaming-subvertical-growth-divergence].evidence_spans[0].source_pack",
+        "insights_final[item=gaming-subvertical-growth-divergence].evidence_spans[0].text",
+        "insights_final[item=gaming-subvertical-growth-divergence].id",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.baseline",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.cohort",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.comparator",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.confidence",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.delta",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.denominator",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.forecast_status",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.geography",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.label",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observation_status",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[0].cohort",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[0].denominator",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[0].geography",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[0].label",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[0].observation_status",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[0].segment",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[0].timeframe",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[0].unit",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[0].value",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[1].cohort",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[1].denominator",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[1].geography",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[1].label",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[1].observation_status",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[1].segment",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[1].timeframe",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[1].unit",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[1].value",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[2].cohort",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[2].denominator",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[2].geography",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[2].label",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[2].observation_status",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[2].segment",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[2].timeframe",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[2].unit",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[2].value",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[3].cohort",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[3].denominator",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[3].geography",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[3].label",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[3].observation_status",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[3].segment",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[3].timeframe",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[3].unit",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[3].value",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[4].cohort",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[4].denominator",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[4].geography",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[4].label",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[4].observation_status",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[4].segment",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[4].timeframe",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[4].unit",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[4].value",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[5].cohort",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[5].denominator",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[5].geography",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[5].label",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[5].observation_status",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[5].segment",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[5].timeframe",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[5].unit",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[5].value",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[6].cohort",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[6].denominator",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[6].geography",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[6].label",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[6].observation_status",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[6].segment",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[6].timeframe",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[6].unit",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[6].value",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[7].cohort",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[7].denominator",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[7].geography",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[7].label",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[7].observation_status",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[7].segment",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[7].timeframe",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[7].unit",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.observations[7].value",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.sample_size",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.segment",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.subject",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.timeframe",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.trend",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.unit",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric.value",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric_public_copy",
+        "insights_final[item=gaming-subvertical-growth-divergence].metric_strength_score",
+        "insights_final[item=gaming-subvertical-growth-divergence].novelty_score",
+        "insights_final[item=gaming-subvertical-growth-divergence].now_what",
+        "insights_final[item=gaming-subvertical-growth-divergence].pages[0]",
+        "insights_final[item=gaming-subvertical-growth-divergence].report_type_lens",
+        "insights_final[item=gaming-subvertical-growth-divergence].score",
+        "insights_final[item=gaming-subvertical-growth-divergence].so_what",
+        "insights_final[item=gaming-subvertical-growth-divergence].text",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].coverage_role",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].decision_relevance_score",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_id",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_ids[0]",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_spans[0].evidence_id",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_spans[0].page",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_spans[0].source_identity",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_spans[0].source_pack",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_spans[0].text",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_spans[1].evidence_id",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_spans[1].page",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_spans[1].source_identity",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_spans[1].source_pack",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].evidence_spans[1].text",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].id",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.baseline",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.cohort",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.comparator",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.confidence",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.delta",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.denominator",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.forecast_status",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.geography",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.label",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observation_status",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[0].cohort",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[0].denominator",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[0].geography",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[0].label",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[0].observation_status",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[0].segment",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[0].timeframe",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[0].unit",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[0].value",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[1].cohort",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[1].denominator",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[1].geography",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[1].label",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[1].observation_status",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[1].segment",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[1].timeframe",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[1].unit",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[1].value",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[2].cohort",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[2].denominator",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[2].geography",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[2].label",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[2].observation_status",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[2].segment",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[2].timeframe",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[2].unit",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[2].value",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[3].cohort",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[3].denominator",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[3].geography",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[3].label",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[3].observation_status",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[3].segment",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[3].timeframe",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[3].unit",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.observations[3].value",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.sample_size",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.segment",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.subject",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.timeframe",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.trend",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.unit",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric.value",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric_public_copy",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].metric_strength_score",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].novelty_score",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].now_what",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].pages[0]",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].pages[1]",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].report_type_lens",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].score",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].so_what",
+        "insights_final[item=global-ecommerce-finance-install-session-divergence].text",
+        "insights_final[item=measurement-recommendation].coverage_role",
+        "insights_final[item=measurement-recommendation].decision_relevance_score",
+        "insights_final[item=measurement-recommendation].evidence",
+        "insights_final[item=measurement-recommendation].evidence_id",
+        "insights_final[item=measurement-recommendation].evidence_ids[0]",
+        "insights_final[item=measurement-recommendation].evidence_spans[0].evidence_id",
+        "insights_final[item=measurement-recommendation].evidence_spans[0].page",
+        "insights_final[item=measurement-recommendation].evidence_spans[0].source_identity",
+        "insights_final[item=measurement-recommendation].evidence_spans[0].source_pack",
+        "insights_final[item=measurement-recommendation].evidence_spans[0].text",
+        "insights_final[item=measurement-recommendation].id",
+        "insights_final[item=measurement-recommendation].metric.baseline",
+        "insights_final[item=measurement-recommendation].metric.cohort",
+        "insights_final[item=measurement-recommendation].metric.comparator",
+        "insights_final[item=measurement-recommendation].metric.confidence",
+        "insights_final[item=measurement-recommendation].metric.delta",
+        "insights_final[item=measurement-recommendation].metric.denominator",
+        "insights_final[item=measurement-recommendation].metric.forecast_status",
+        "insights_final[item=measurement-recommendation].metric.geography",
+        "insights_final[item=measurement-recommendation].metric.label",
+        "insights_final[item=measurement-recommendation].metric.observation_status",
+        "insights_final[item=measurement-recommendation].metric.observations",
+        "insights_final[item=measurement-recommendation].metric.sample_size",
+        "insights_final[item=measurement-recommendation].metric.segment",
+        "insights_final[item=measurement-recommendation].metric.subject",
+        "insights_final[item=measurement-recommendation].metric.timeframe",
+        "insights_final[item=measurement-recommendation].metric.trend",
+        "insights_final[item=measurement-recommendation].metric.unit",
+        "insights_final[item=measurement-recommendation].metric.value",
+        "insights_final[item=measurement-recommendation].metric_strength_score",
+        "insights_final[item=measurement-recommendation].novelty_score",
+        "insights_final[item=measurement-recommendation].now_what",
+        "insights_final[item=measurement-recommendation].pages[0]",
+        "insights_final[item=measurement-recommendation].report_type_lens",
+        "insights_final[item=measurement-recommendation].score",
+        "insights_final[item=measurement-recommendation].so_what",
+        "insights_final[item=measurement-recommendation].text",
+        "insights_final[item=mobile-market-downloads-2025].coverage_role",
+        "insights_final[item=mobile-market-downloads-2025].decision_relevance_score",
+        "insights_final[item=mobile-market-downloads-2025].evidence",
+        "insights_final[item=mobile-market-downloads-2025].evidence_spans[0].evidence_id",
+        "insights_final[item=mobile-market-downloads-2025].evidence_spans[0].page",
+        "insights_final[item=mobile-market-downloads-2025].evidence_spans[0].source_identity",
+        "insights_final[item=mobile-market-downloads-2025].evidence_spans[0].source_pack",
+        "insights_final[item=mobile-market-downloads-2025].evidence_spans[0].text",
+        "insights_final[item=mobile-market-downloads-2025].id",
+        "insights_final[item=mobile-market-downloads-2025].metric.baseline",
+        "insights_final[item=mobile-market-downloads-2025].metric.cohort",
+        "insights_final[item=mobile-market-downloads-2025].metric.comparator",
+        "insights_final[item=mobile-market-downloads-2025].metric.confidence",
+        "insights_final[item=mobile-market-downloads-2025].metric.delta",
+        "insights_final[item=mobile-market-downloads-2025].metric.denominator",
+        "insights_final[item=mobile-market-downloads-2025].metric.forecast_status",
+        "insights_final[item=mobile-market-downloads-2025].metric.geography",
+        "insights_final[item=mobile-market-downloads-2025].metric.label",
+        "insights_final[item=mobile-market-downloads-2025].metric.observation_status",
+        "insights_final[item=mobile-market-downloads-2025].metric.observations",
+        "insights_final[item=mobile-market-downloads-2025].metric.sample_size",
+        "insights_final[item=mobile-market-downloads-2025].metric.segment",
+        "insights_final[item=mobile-market-downloads-2025].metric.subject",
+        "insights_final[item=mobile-market-downloads-2025].metric.timeframe",
+        "insights_final[item=mobile-market-downloads-2025].metric.trend",
+        "insights_final[item=mobile-market-downloads-2025].metric.unit",
+        "insights_final[item=mobile-market-downloads-2025].metric.value",
+        "insights_final[item=mobile-market-downloads-2025].metric_strength_score",
+        "insights_final[item=mobile-market-downloads-2025].novelty_score",
+        "insights_final[item=mobile-market-downloads-2025].now_what",
+        "insights_final[item=mobile-market-downloads-2025].pages[0]",
+        "insights_final[item=mobile-market-downloads-2025].report_type_lens",
+        "insights_final[item=mobile-market-downloads-2025].score",
+        "insights_final[item=mobile-market-downloads-2025].so_what",
+        "insights_final[item=mobile-market-downloads-2025].text"
+      ],
+      "changed_paths": [
+        "insights_final[item=mobile-market-downloads-2025].metric_public_copy"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "insights_final[item=mobile-market-downloads-2025].metric_public_copy",
+          "value": "The report records more than 112.1 billion app downloads in 2025."
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "diagnosed_failure_class": "public_editorial_quality.semantic_review",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ],
+      "protected_fields": [
+        "expert_comment[claim_index=1]",
+        "expert_comment[claim_index=2]",
+        "expert_comment[claim_index=3]"
+      ],
+      "changed_paths": [
+        "expert_comment[claim_index=0]"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "expert_comment[claim_index=0]",
+          "value": "In 2025, global e-commerce app installs fell 10% year over year and sessions rose 5% year over year; global finance app installs fell 4% year over year and sessions rose 21% year over year."
+        }
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "report_id": "cohort-b638414df0b1fccea1cd",
+  "validation_run_id": "validation:bb1ae8bfce83045694406343fec0bec8e5458767c51f131c607fdd57371874a1",
+  "cohort_id": "65422ce6cd591e38bfef9d838e4dcbb862d1bb34a40461b5a7607eefab4a28c1",
+  "workflow_run_id": "829becab-6d00-4fc3-8b4a-ed604bb14642",
+  "configuration_hash": "01c948c7d929f44abb74e9eefbab31557b2097ed014d1fa776fcbfc7827ebcc3",
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "b71add93934ba87f3a9ed5c199c4beffd88b1183d0cf0c934ad449b36885311d",
+  "latency_ms": 128683,
+  "schema_version": "1.0"
+}

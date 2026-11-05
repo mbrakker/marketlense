@@ -1,0 +1,94 @@
+{
+  "report_id": "cohort-cbb6e7df67412186b8bc",
+  "title": "October 17, 2017",
+  "publisher": "",
+  "region": "United States",
+  "time_period": "2018; forecasts through 2021.",
+  "overview": "Activate Technology & Media Outlook 2018 by Activate Activate’s outlook surveys major technology, media, and consumer trends shaping the year ahead. It combines consumer research, market analysis, and forecasts across media attention and spending, smart speakers and reality computing, online video, premium video, sports, news, eCommerce, and podcasts; its opening letter describes analysis based on proprietary research and large-scale U.S. population surveys. The report covers technology and media trends for 2018, including digital growth and media use, smart speakers and digital assistants, VR/AR, web and premium video, sports, news, eCommerce, and podcasting. Geographic coverage varies across analyses, with U.S. and global data; periods include historical data and forecasts, including 2017–2021.",
+  "methods": [
+    "The report presents Activate analysis and forecasts; specific forecast methods are not described.",
+    "Consumer research draws on Activate’s 2017 Consumer Tech & Media Research Study, with chart-specific samples reported as n=4,047, n=2,406, and n=820.",
+    "Some eCommerce adoption measures are indexed from measured consumer preferences in the 2017 Consumer Tech & Media Research Study (n=4,047).",
+    "Top news sites were selected from comScore’s Top 100 digital news properties; counts include desktop and mobile sites."
+  ],
+  "key_findings": [
+    "Activate forecasts that global consumer Internet and media revenues will grow by $302 billion from 2017E to 2021E, with a 4.1% CAGR versus approximately 3% for global GDP.",
+    "In Activate’s 2017E–2021E global forecast, cost of Internet access has the largest listed segment growth, at $128 billion and a 5.7% CAGR.",
+    "In the United States in 2017, the top 25% of video users, defined as having 4.5+ hours of daily video attention, accounted for 61% of video time.",
+    "In the United States in 2017, the top 25% of video users, defined as having 4.5+ hours of daily video attention, accounted for 34% of consumer spend.",
+    "Activate expects dedicated smart speakers to serve as a “trojan horse” for delivering AI into the home and expects digital assistants to become ubiquitous across a broad set of devices.",
+    "Activate forecasts that consumer VR will not reach scaled global adoption by 2021E, citing limited applications outside gaming, limited social use, and confinement that restricts movement."
+  ],
+  "limitations": [
+    "Top news sites are selected from comScore’s Top 100 digital news properties; reported site numbers cover desktop and mobile only.",
+    "The report notes that “Mixed Reality” is defined inconsistently by technology and media companies, and is sometimes used to describe VR.",
+    "AR-optimized smartphones are defined as phones with 6DoF tracking enabled by SLAM, which requires carefully calibrated hardware and software.",
+    "The AR enterprise-market examples cover three major early applications; the report notes that other industries may also be affected."
+  ],
+  "sections": [
+    {
+      "section_label": "$300 Billion in Tech and Media Growth Dollars",
+      "source_pack": "doc_map",
+      "summary": "The opening outlook quantifies forecast growth in global consumer Internet and media revenues. It compares the projected growth rate with global GDP and breaks out expected sources of revenue growth.",
+      "key_points": [
+        "The chart “Consumer Internet and Media Revenues, Global, 2017E–2021E” forecasts growth from $1.7 trillion in 2017E to $2.0 trillion in 2021E, or $302 billion; the displayed CAGR is 4.1% versus appr...",
+        "The following segment chart presents revenue growth by paid content, advertising, and Internet access, with 2017E–2021E comparisons (p. 5)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "There are 31 Hours in a Day",
+      "source_pack": "doc_map",
+      "summary": "This section examines how consumers allocate attention across technology and media activities, framing the total as a day that can exceed 24 hours when media use overlaps. It considers the implications of that attention landscape for media and technology bu...",
+      "key_points": [
+        "The section frames combined media attention as extending beyond a conventional 24-hour day.",
+        "The report’s introduction identifies consumer time allocation as one of the outlook’s forecast topics."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Super Users: A Lot More Time, a Lot More Money",
+      "source_pack": "doc_map",
+      "summary": "The section compares high-attention consumers with other users, showing that the most engaged groups account for disproportionately large shares of media time and spending. It includes separate video and audio comparisons.",
+      "key_points": [
+        "In “Video Time and Spend Relative to Share of Users,” U.S., 2017, the top 25% of users—those with 4.5+ hours of daily video attention—account for 61% of video time and 34% of consumer spend (p. 14).",
+        "In “Audio Time and Spend Relative to Share of Users,” U.S., 2017, the top 25%—those with 3+ hours of daily audio attention—account for 64% of audio time and 47% of consumer spend (p. 16)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Smart Speaker Battles are about the Great Digital Assistant Wars",
+      "source_pack": "doc_map",
+      "summary": "The section treats smart speakers as an entry point in a broader competition to own digital assistants and their conversational interface. It describes the strategic stakes for technology companies, the falling cost of access, and the early uses of smart sp...",
+      "key_points": [
+        "The report describes dedicated smart speakers as a “trojan horse” for bringing AI and digital assistants into the home; it expects assistant access to become ubiquitous across devices (p. 22).",
+        "The chart “Entry Price Points for Digital Assistant-Enabled Devices,” U.S., 2014–2017, shows the access price moving from $180 in 2014 to free in 2017 (p. 26).",
+        "Smart-speaker owners primarily use the devices for music and a limited set of portal functions, including questions, weather, alarms, news, directions, and time checks (p. 29)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform",
+      "source_pack": "doc_map",
+      "summary": "The report traces virtual and augmented reality from primarily entertainment uses toward a broader computing platform integrating digital and physical environments. It presents adoption and spending forecasts, along with possible consumer and enterprise app...",
+      "key_points": [
+        "The chart “Consumer and Enterprise Spend on VR/AR,” Global, 2016–2021E, forecasts a $71 billion Reality Computing business in 2021 (p. 37).",
+        "The report forecasts that consumer VR will not reach scaled global adoption by 2021, citing limited applications beyond gaming, limited social use, and restricted movement (p. 41).",
+        "It argues that AR-enabled smartphones can bring the technology to large audiences, while enterprise applications include workflow support and worker collaboration (pp. 42–46)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Big Influencers and Media Brands will Rule Web Video",
+      "source_pack": "doc_map",
+      "summary": "This section examines the concentration of web-video views among top creators and the roles of influencers and media companies across YouTube and Facebook. It also considers the content categories and creators that attract audiences.",
+      "key_points": [
+        "In “Share of Top YouTube and Facebook Creators vs. Share of Views by Platform,” Global, Q2 2017, creators with 50M+ total views comprise 24% of the selected YouTube creators and account for 71% of...",
+        "Among top creators with over 50M views in Q2 2017, influencers account for 83% of YouTube views and media companies 17%; on Facebook, the split is 52% influencers and 48% media companies (p. 53).",
+        "The report identifies TV shows, artists, and TV networks among leading U.S. media-company creators on YouTube (p. 55)."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

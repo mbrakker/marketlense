@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.1",
+  "status": "pass",
+  "severity": "warning",
+  "source_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-4b763ae2286ca69fe8ac\\ias-first-attempt-pdc8e5o8\\output\\trends-and-predictions-2026-pdf\\report_analysis\\validation.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[family_confidence] Artifact family 'quotes' abstained at confidence=0.00 because quotes_missing.",
+      "severity": "warning",
+      "affected_section": "quotes",
+      "rule_id": "family_confidence",
+      "repair_target": "quotes",
+      "entity_id": "",
+      "evidence_ids": []
+    }
+  ]
+}

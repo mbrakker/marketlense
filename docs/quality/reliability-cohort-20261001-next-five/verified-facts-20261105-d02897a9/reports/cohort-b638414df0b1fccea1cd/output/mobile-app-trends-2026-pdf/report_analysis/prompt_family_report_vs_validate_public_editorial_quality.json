@@ -1,0 +1,560 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/validate/public_editorial_quality",
+  "family_schema_version": "3.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "verdicts": [
+      {
+        "item_id": "soft_copy:summary:3056860e32811175",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The wording preserves the reported threshold, 2025 timeframe, and observed—not forecast—status without assigning an unstated geography.",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:51f9f0b350c321e2",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claim accurately states the reported app-download threshold and year without adding a geography.",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:b8df9dfa61500046",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The 2025 consumer-spending amount and year-over-year increase match the verified fact; no unsupported geography is asserted.",
+        "evidence_ids": [
+          "verified-fact:mobile-app-consumer-spending-2025"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:dd03015103c1cdeb",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The summary preserves the global, 2024–2025 comparison and correctly assigns install and session changes to each gaming subvertical.",
+        "evidence_ids": [
+          "verified-fact:gaming-subvertical-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:50015422c54e8eb0",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This accurately attributes a qualitative recommendation to the report and does not present it as a measured outcome.",
+        "evidence_ids": [
+          "verified-fact:measurement-recommendation"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:7d8ae34294741cf2",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The CPI amounts and opposing directions are correctly assigned to global all-e-commerce apps and the deal-discovery category.",
+        "evidence_ids": [
+          "verified-fact:ecommerce-cpi-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:d8d7437897480c36",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The interpretation that installs and all-category CPI alone provide an incomplete view is defensibly grounded in the linked install/session and CPI divergences.",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence",
+          "verified-fact:ecommerce-cpi-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:b24d1dd2e064cd43",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is clearly framed as MarketLense's budget-review approach and reasonably combines the linked category metrics with integrated measurement.",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence",
+          "verified-fact:ecommerce-cpi-subvertical-divergence",
+          "verified-fact:measurement-recommendation"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:af7c93fea9f6d8ca",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The global finance-app install decline, session increase, and 2025 year-over-year timeframe match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:9aa8cc4daaf14007",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked global figures show installs declining while sessions increase in both named categories, supporting the concise description of opposite directions.",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:27237e5c3b5832aa",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked figures support the implication that install volume alone does not capture the reported session trend.",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:94aa5ac96907e445",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The recommendation is clearly MarketLense-authored and follows defensibly from the linked divergence between finance-app installs and sessions.",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:global-ecommerce-finance-install-session-divergence:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The category-specific global install and session changes are accurately stated for 2025 year over year.",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:global-ecommerce-finance-install-session-divergence:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Because installs fell while sessions rose in both categories, the inference that acquisition volume alone does not describe reported usage is defensible.",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:global-ecommerce-finance-install-session-divergence:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Tracking installs and sessions separately is a relevant recommendation given their divergent reported directions.",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:mobile-app-consumer-spending-2025:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The 2025 mobile-app-market spending amount and year-over-year increase match the linked source fact.",
+        "evidence_ids": [
+          "verified-fact:mobile-app-consumer-spending-2025"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:gaming-subvertical-growth-divergence:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The global timeframe, subverticals, metric assignments, values, and declines match the verified observations.",
+        "evidence_ids": [
+          "verified-fact:gaming-subvertical-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:gaming-subvertical-growth-divergence:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The reported variation across gaming subverticals and between installs and sessions supports the conclusion that aggregate results can obscure differences.",
+        "evidence_ids": [
+          "verified-fact:gaming-subvertical-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:gaming-subvertical-growth-divergence:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Comparing installs and sessions at subvertical level is a relevant recommendation in light of their reported differences.",
+        "evidence_ids": [
+          "verified-fact:gaming-subvertical-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:gaming-retention-and-cpi:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The all-games retention figures and global gaming-app CPI amount and increase are correctly stated with their respective periods.",
+        "evidence_ids": [
+          "verified-fact:gaming-retention-and-cpi"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:gaming-retention-and-cpi:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The item appropriately treats retention and CPI as distinct engagement and cost signals without asserting a causal relationship.",
+        "evidence_ids": [
+          "verified-fact:gaming-retention-and-cpi"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:gaming-retention-and-cpi:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Assessing retention alongside CPI is a relevant recommendation given the linked engagement and cost findings.",
+        "evidence_ids": [
+          "verified-fact:gaming-retention-and-cpi"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ecommerce-cpi-subvertical-divergence:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The item correctly states the global CPI changes for all e-commerce apps and deal discovery over 2024–2025.",
+        "evidence_ids": [
+          "verified-fact:ecommerce-cpi-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ecommerce-cpi-subvertical-divergence:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The deal-discovery CPI increase and all-e-commerce CPI decrease support the stated opposite-direction comparison.",
+        "evidence_ids": [
+          "verified-fact:ecommerce-cpi-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ecommerce-cpi-subvertical-divergence:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Reviewing CPI by e-commerce subcategory is a relevant recommendation given the reported difference between deal discovery and the all-category figure.",
+        "evidence_ids": [
+          "verified-fact:ecommerce-cpi-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:finance-latam-growth:text",
+        "status": "fail",
+        "classification": "factual_claim",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "hard_fail_class": "",
+        "reason": "The linked fact supports only LATAM finance-app install and session growth. It does not support the additional global and regional session-length claims, so the complete factual statement lacks an item-bound source for those details.",
+        "evidence_ids": [],
+        "repair_target": "insights_bundle"
+      },
+      {
+        "item_id": "insight:finance-latam-growth:so_what",
+        "status": "fail",
+        "classification": "analyst_interpretation",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "hard_fail_class": "",
+        "reason": "The item links only the LATAM growth fact. Its assertion about differing regional session-length patterns is not supported by that item-bound evidence, leaving a material premise of the interpretation unverified here.",
+        "evidence_ids": [],
+        "repair_target": "insights_bundle"
+      },
+      {
+        "item_id": "insight:finance-latam-growth:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Comparing finance performance by region and metric is a defensible recommendation based on the linked LATAM install and session findings.",
+        "evidence_ids": [
+          "verified-fact:finance-latam-growth"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:measurement-recommendation:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The statement accurately attributes a qualitative recommendation to the report and explicitly distinguishes it from a measured outcome.",
+        "evidence_ids": [
+          "verified-fact:measurement-recommendation"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:measurement-recommendation:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The listed links between measurement capabilities and trend visibility, analysis, optimization, and budget allocation reflect the recommendation's stated purposes.",
+        "evidence_ids": [
+          "verified-fact:measurement-recommendation"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:measurement-recommendation:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is a relevant, clearly framed recommendation that does not claim the proposed foundation has produced measured results.",
+        "evidence_ids": [
+          "verified-fact:measurement-recommendation"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:1:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The stated app-download threshold and 2025 timeframe match the verified fact, with no unsupported geography added.",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:2:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The amount, year, and year-over-year spending increase match the linked verified fact.",
+        "evidence_ids": [
+          "verified-fact:mobile-app-consumer-spending-2025"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:3:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The summary retains the global subvertical comparison and correctly assigns all listed growth and decline figures to installs or sessions.",
+        "evidence_ids": [
+          "verified-fact:gaming-subvertical-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:strategic_context",
+        "status": "fail",
+        "classification": "factual_claim",
+        "severity": "error",
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "hard_fail_class": "",
+        "reason": "The text asserts more than 112.1 billion app downloads in 2025, but none of this item's bound facts is the verified app-download fact. The supplied bindings therefore do not establish this claim.",
+        "evidence_ids": [],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:watchouts:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The all-games retention and global gaming CPI statement accurately reflects the item-bound verified fact.",
+        "evidence_ids": [
+          "verified-fact:gaming-retention-and-cpi"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The claim preserves the reported app-download threshold and 2025 timeframe without adding an unstated geography.",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:2",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The amount, year, and year-over-year increase accurately reflect the verified spending fact.",
+        "evidence_ids": [
+          "verified-fact:mobile-app-consumer-spending-2025"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:3",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The listed global gaming growth values and their subvertical and metric assignments match the verified observations.",
+        "evidence_ids": [
+          "verified-fact:gaming-subvertical-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:4",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This accurately reports the source's qualitative measurement recommendation without mischaracterizing it as measured performance.",
+        "evidence_ids": [
+          "verified-fact:measurement-recommendation"
+        ],
+        "repair_target": ""
+      }
+    ],
+    "report_verdict": {
+      "status": "fail",
+      "severity": "error",
+      "rule_id": "public_editorial_quality.report_material_coverage_incomplete",
+      "hard_fail_class": "",
+      "reason": "The report omits the planned 8.4% global-GDP-by-2030 projection from all public content. Its finance session-length detail is also not supported by the binding on the primary finance item, so it does not provide reliably sourced coverage of that planned finding. In addition, the public content does not disclose that the source leaves sample sizes and underlying denominators unstated for the install/session growth benchmarks.",
+      "evidence_ids": [
+        "verified-fact:intro-mobile-gdp-forecast",
+        "verified-fact:finance-session-length-pattern",
+        "verified-fact:global-ecommerce-finance-install-session-divergence",
+        "verified-fact:finance-latam-growth"
+      ],
+      "repair_target": "",
+      "affected_item_id": "",
+      "dimensions": {
+        "material_coverage": {
+          "status": "fail",
+          "reason": "The editorial plan includes the projected 8.4% share of global GDP by 2030, but that finding appears in no public item. The finance session-length pattern is also not supported by the primary finance item's supplied evidence binding."
+        },
+        "analytical_depth": {
+          "status": "pass",
+          "reason": "Primary analysis goes beyond reporting figures by drawing defensible implications from divergent install, session, retention, and CPI patterns and offering relevant category-level measurement actions."
+        },
+        "distinctness": {
+          "status": "pass",
+          "reason": "Repeated facts serve summary, distribution, expert-synthesis, or provenance roles; primary analysis separates findings, implications, and actions rather than repeating the same substantive analysis without a new purpose."
+        },
+        "limitations": {
+          "status": "fail",
+          "reason": "The complete verified facts state that sample sizes and underlying denominators are not provided for the install/session growth benchmarks. The public report presents those comparisons without disclosing this source limitation."
+        }
+      }
+    }
+  }
+}

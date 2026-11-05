@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "limitations_not_found",
+  "limitations": [],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "limitations",
+    "source": "evidence_pack",
+    "status": "abstained",
+    "confidence_score": 0.0,
+    "policy_action": "abstain",
+    "reason": "limitations_not_found"
+  }
+}

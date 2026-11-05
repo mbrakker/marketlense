@@ -1,0 +1,124 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/expert_comment",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "claim_provenance": [
+      {
+        "claim": "In 2025, global e-commerce app installs fell 10% year over year while sessions rose 5%; global finance app installs fell 4% while sessions rose 21%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ]
+      },
+      {
+        "claim": "Global e-commerce app CPI declined from $1.00 in 2024 to $0.98 in 2025, while deal discovery CPI increased from $1.44 to $2.26.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:ecommerce-cpi-subvertical-divergence"
+        ]
+      },
+      {
+        "claim": "The implication is that acquisition alone and the all-e-commerce CPI measure each give an incomplete view: session direction diverged from installs in e-commerce and finance, while deal discovery CPI moved opposite to the all-e-commerce figure.",
+        "classification": "interpretive",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence",
+          "verified-fact:ecommerce-cpi-subvertical-divergence"
+        ]
+      },
+      {
+        "claim": "For budget reviews, MarketLense would pair category-level install, session, and CPI views with integrated measurement rather than rely on any one signal.",
+        "classification": "recommendation",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence",
+          "verified-fact:ecommerce-cpi-subvertical-divergence",
+          "verified-fact:measurement-recommendation"
+        ]
+      }
+    ],
+    "generation_attempt": 1,
+    "producing_prompt_identity": {
+      "configuration_policy_hash": "448f00f1e76de493516c576b290b768bf0fd9944b40d636b33d088b0f3d49da0",
+      "decision": "regenerated",
+      "execution_identity": "5111d49626efeed48a58c2b4d2994c75131d845720f2d9d2be3c7788e8cf226b",
+      "execution_identity_manifest": {
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "execution_identity": "5111d49626efeed48a58c2b4d2994c75131d845720f2d9d2be3c7788e8cf226b",
+        "model": "gpt-6-luna",
+        "output_contract_schema_version": "artifact_json:1.0",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "provider_retry_count": 0,
+          "timeout_seconds": 600.0
+        },
+        "prompt_content_hash": "9281830b76cce4765934f825117ea28d6ff19d92acaf6984b28e5f70e1fe0434",
+        "provider": "openai",
+        "reasoning_effort": "high",
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "compaction_enabled": true,
+          "execution_policy_hash": "5d44b48e606f823ca30fd0a4fd9e45d6bc4b9b7b1ac1299b410ed546c154e0c0",
+          "execution_policy_source": "report_vs/artifacts/expert_comment",
+          "max_input_tokens": 48000,
+          "policy_source": "report_vs/artifacts/expert_comment",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "tier": "routine_structured"
+        },
+        "schema_version": "1.0",
+        "seed": null,
+        "temperature": null,
+        "validator_version": "artifacts_schema:3.1"
+      },
+      "family_schema_version": "1.0",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "model_provider": "openai",
+      "namespace": "report_vs/artifacts/expert_comment",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "9281830b76cce4765934f825117ea28d6ff19d92acaf6984b28e5f70e1fe0434",
+      "prompt_dependency_manifest": {
+        "composition_version": "2.0",
+        "included_partials": [
+          {
+            "kind": "partial",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "schema_version": "1.0",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "source": "user:0"
+          }
+        ],
+        "namespace": "report_vs/artifacts/expert_comment",
+        "prompt_content_hash": "9281830b76cce4765934f825117ea28d6ff19d92acaf6984b28e5f70e1fe0434",
+        "schema_snippets": [],
+        "schema_version": "1.0",
+        "system_root": {
+          "kind": "system_root",
+          "path": "prompts/report_vs/artifacts/expert_comment/system.yaml",
+          "schema_version": "1.0",
+          "sha256": "6ddcf2ba72d4dd808795acc993a5c17a3bb8fe7d7b6e8381898e9a8d3f5ecb96",
+          "source": ""
+        },
+        "user_root": {
+          "kind": "user_root",
+          "path": "prompts/report_vs/artifacts/expert_comment/user.yaml",
+          "schema_version": "1.0",
+          "sha256": "ddac9f2e505097c5f3c79144ee92328c051ac4b4a333d362ea37a0fbc8096ae6",
+          "source": ""
+        }
+      },
+      "regeneration_reason": "materialization_missing",
+      "relevant_input_hash": "a817cb11b5db27e3e248e077f823c062ba336df5073d08a343b51762ab152baf",
+      "routing_policy_version": "5d44b48e606f823ca30fd0a4fd9e45d6bc4b9b7b1ac1299b410ed546c154e0c0",
+      "schema_version": "1.0",
+      "validator_version": "artifacts_schema:3.1"
+    },
+    "public_output": "In 2025, global e-commerce app installs fell 10% year over year while sessions rose 5%; global finance app installs fell 4% while sessions rose 21%. Global e-commerce app CPI declined from $1.00 in 2024 to $0.98 in 2025, while deal discovery CPI increased from $1.44 to $2.26. The implication is that acquisition alone and the all-e-commerce CPI measure each give an incomplete view: session direction diverged from installs in e-commerce and finance, while deal discovery CPI moved opposite to the all-e-commerce figure. For budget reviews, MarketLense would pair category-level install, session, and CPI views with integrated measurement rather than rely on any one signal.",
+    "schema_version": "1.0"
+  }
+}

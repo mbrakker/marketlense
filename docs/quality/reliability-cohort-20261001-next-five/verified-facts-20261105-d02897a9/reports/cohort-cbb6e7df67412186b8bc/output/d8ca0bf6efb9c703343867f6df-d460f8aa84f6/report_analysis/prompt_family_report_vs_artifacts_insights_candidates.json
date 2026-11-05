@@ -1,0 +1,306 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "coverage_role": "market_context",
+      "decision_relevance_score": 0.9,
+      "evidence": "“$302B GROWTH DOLLARS”; “CAGR 4.1%”; “Global GDP CAGR: ~3%”; $1.7T in 2017E and $2.0T in 2021E.",
+      "evidence_id": "f01",
+      "evidence_ids": [
+        "f01"
+      ],
+      "evidence_spans": [],
+      "id": "global-revenue-forecast",
+      "metric": {
+        "cohort": "",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "Global",
+        "label": "Global consumer Internet and media revenue growth",
+        "observation_status": "forecast",
+        "sample_size": "",
+        "segment": "Consumer Internet and media",
+        "subject": "Consumer Internet and media revenues",
+        "timeframe": "2017E–2021E",
+        "trend": "growth forecast",
+        "unit": "USD",
+        "value": "$302 billion"
+      },
+      "metric_public_copy": "$302 billion growth, 2017E–2021E",
+      "metric_strength_score": 0.96,
+      "novelty_score": 0.72,
+      "now_what": "MarketLense would treat the forecast as a scenario input and assess individual category opportunities separately.",
+      "pages": [
+        5
+      ],
+      "report_type_lens": "market_size",
+      "score": 0.91,
+      "so_what": "The forecast offers a market-level reference point for evaluating exposure to technology and media growth.",
+      "text": "Activate forecasts global consumer Internet and media revenues rising from $1.7 trillion in 2017E to $2.0 trillion in 2021E, a $302 billion increase and a 4.1% CAGR versus approximately 3% for global GDP."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.88,
+      "evidence": "“Top 25% of Users (4.5+ hours of daily video attention)”; 61% share of time spent and 34% share of consumer spend, U.S., 2017.",
+      "evidence_id": "f03",
+      "evidence_ids": [
+        "f03",
+        "f04"
+      ],
+      "evidence_spans": [],
+      "id": "video-attention-spend",
+      "metric": {
+        "cohort": "Top 25% of video users with 4.5+ hours of daily video attention",
+        "confidence": "high",
+        "denominator": "Total video time; total consumer spend, respectively",
+        "geography": "United States",
+        "label": "Video time and consumer spend share",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "Top 25% of users with 4.5+ hours of daily video attention",
+        "subject": "Video time and consumer spend",
+        "timeframe": "2017",
+        "trend": "share",
+        "unit": "percent",
+        "value": "61% of video time; 34% of consumer spend"
+      },
+      "metric_public_copy": "61% of video time; 34% of consumer spend",
+      "metric_strength_score": 0.96,
+      "novelty_score": 0.85,
+      "now_what": "MarketLense would compare engagement and monetization measures separately when assessing plans aimed at high-attention video users.",
+      "pages": [
+        15
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.9,
+      "so_what": "Time share and spending share diverge within this high-attention cohort, making them distinct measures for audience evaluation.",
+      "text": "In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of video time and 34% of consumer spend."
+    },
+    {
+      "coverage_role": "strategic_risk",
+      "decision_relevance_score": 0.93,
+      "evidence": "“We forecast that VR will not reach scaled global adoption”; cited limits include applications outside gaming, social use, and movement outside a confined area.",
+      "evidence_id": "f06",
+      "evidence_ids": [
+        "f06"
+      ],
+      "evidence_spans": [],
+      "id": "consumer-vr-adoption-outlook",
+      "metric": {
+        "cohort": "Consumer population",
+        "confidence": "high",
+        "denominator": "Population",
+        "geography": "Global",
+        "label": "Consumer VR adoption outlook",
+        "observation_status": "forecast",
+        "sample_size": "",
+        "segment": "Consumer VR",
+        "subject": "Consumer VR adoption",
+        "timeframe": "By 2021E",
+        "trend": "forecast adoption constraint",
+        "unit": "",
+        "value": "Not forecast to reach scaled global adoption by 2021E"
+      },
+      "metric_public_copy": "Consumer VR is forecast not to reach scaled global adoption by 2021E",
+      "metric_strength_score": 0.72,
+      "novelty_score": 0.86,
+      "now_what": "If evaluating consumer VR opportunities, MarketLense would test proposed use cases against the adoption constraints cited in the forecast.",
+      "pages": [
+        42
+      ],
+      "report_type_lens": "technology_shift",
+      "score": 0.9,
+      "so_what": "The forecast identifies adoption constraints rather than a near-term mass-market case for consumer VR.",
+      "text": "Activate forecasts that consumer VR will not reach scaled global adoption by 2021E, citing limited applications outside gaming, limited social use, and confinement that restricts movement."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.88,
+      "evidence": "Among podcast non-listeners: “Knowing which apps to use” 34%. Among podcast listeners: “Recommendations” 31% as a factor for increased consumption.",
+      "evidence_id": "f21",
+      "evidence_ids": [
+        "f21",
+        "f22"
+      ],
+      "evidence_spans": [],
+      "id": "podcast-audience-factors",
+      "metric": {
+        "cohort": "Podcast non-listeners; podcast listeners",
+        "confidence": "high",
+        "denominator": "Podcast non-listeners; podcast listeners, respectively",
+        "geography": "United States",
+        "label": "Reported podcast listening and consumption factors",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "Podcast non-listeners and podcast listeners",
+        "subject": "Factors respondents said would lead to listening or increased consumption",
+        "timeframe": "",
+        "trend": "reported factors",
+        "unit": "percent",
+        "value": "34% of non-listeners; 31% of listeners"
+      },
+      "metric_public_copy": "34% of non-listeners; 31% of listeners",
+      "metric_strength_score": 0.88,
+      "novelty_score": 0.83,
+      "now_what": "MarketLense would test app-selection guidance with non-listeners and recommendations with current listeners as separate hypotheses.",
+      "pages": [
+        129
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.86,
+      "so_what": "The reported factors differ between non-listeners and current listeners, so a single audience prompt may not fit both groups.",
+      "text": "Among U.S. podcast non-listeners, 34% selected knowing which apps to use as a factor that would lead them to listen; among U.S. podcast listeners, 31% selected recommendations as a factor that would increase consumption."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.9,
+      "evidence": "“Broadcast has proven to be more attractive than Virtual Pay TV for cord-cutters that still want traditional live/linear programming — such as sports — at a low cost.”",
+      "evidence_id": "f19",
+      "evidence_ids": [
+        "f19"
+      ],
+      "evidence_spans": [],
+      "id": "broadcast-cord-cutter-preference",
+      "metric": {
+        "cohort": "Cord-cutters still wanting low-cost traditional live or linear programming",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "United States",
+        "label": "Broadcast preference among a cord-cutter segment",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "Cord-cutters seeking low-cost traditional live or linear programming such as sports",
+        "subject": "Broadcast versus Virtual Pay TV",
+        "timeframe": "2017",
+        "trend": "comparative preference",
+        "unit": "",
+        "value": "Broadcast more attractive than Virtual Pay TV"
+      },
+      "metric_public_copy": "Broadcast was described as more attractive than Virtual Pay TV for this cord-cutter segment",
+      "metric_strength_score": 0.69,
+      "novelty_score": 0.8,
+      "now_what": "If serving viewers with that preference, MarketLense would include broadcast among the distribution options evaluated against Virtual Pay TV.",
+      "pages": [
+        70
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.85,
+      "so_what": "The comparison applies to cord-cutters who still want low-cost live or linear programming.",
+      "text": "For U.S. cord-cutters in 2017 who still wanted low-cost traditional live or linear programming such as sports, Activate described broadcast as more attractive than Virtual Pay TV."
+    },
+    {
+      "coverage_role": "proof_point",
+      "decision_relevance_score": 0.87,
+      "evidence": "“27% OF FANS / 61% OF HOURS” for Super Fans; “10% OF FANS / 6% OF HOURS” for Social Fans.",
+      "evidence_id": "sports-03",
+      "evidence_ids": [
+        "sports-03"
+      ],
+      "evidence_spans": [],
+      "id": "sports-fan-segment-shares",
+      "metric": {
+        "cohort": "Super Fans; Social Fans",
+        "confidence": "medium",
+        "denominator": "Fans; sports-viewing hours",
+        "geography": "",
+        "label": "Fan and sports-viewing-hour shares by segment",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "Super Fans; Social Fans",
+        "subject": "Fan share and sports-viewing-hour share",
+        "timeframe": "",
+        "trend": "segment shares",
+        "unit": "percent",
+        "value": "Super Fans: 27% of fans, 61% of hours; Social Fans: 10% of fans, 6% of hours"
+      },
+      "metric_public_copy": "Super Fans: 27% of fans, 61% of hours; Social Fans: 10% of fans, 6% of hours",
+      "metric_strength_score": 0.86,
+      "novelty_score": 0.87,
+      "now_what": "MarketLense would consider viewing-hour share alongside audience size when evaluating sports audience opportunities.",
+      "pages": [
+        84
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.84,
+      "so_what": "Fan share and viewing-hour share diverge across the reported segments.",
+      "text": "Super Fans account for 27% of fans and 61% of sports-viewing hours, while Social Fans account for 10% of fans and 6% of hours."
+    },
+    {
+      "coverage_role": "counter_signal",
+      "decision_relevance_score": 0.85,
+      "evidence": "“PERCEIVED TRUSTWORTHINESS BY NEWS SOURCE, SELECTED COUNTRIES, 2017, % NEWS READERS”; news media scores higher than social media in Canada, Ireland, the United Kingdom, Australia, and the United States.",
+      "evidence_id": "f13",
+      "evidence_ids": [
+        "f13"
+      ],
+      "evidence_spans": [],
+      "id": "news-trust-comparison",
+      "metric": {
+        "cohort": "News readers",
+        "confidence": "high",
+        "denominator": "News readers",
+        "geography": "Canada, Ireland, United Kingdom, Australia, United States",
+        "label": "Perceived trustworthiness by news source",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "News readers",
+        "subject": "Perceived trustworthiness of news media and social media",
+        "timeframe": "2017",
+        "trend": "comparative rating",
+        "unit": "",
+        "value": "News media rated higher than social media in all five listed countries"
+      },
+      "metric_public_copy": "News media rated higher than social media in all five listed countries",
+      "metric_strength_score": 0.8,
+      "novelty_score": 0.79,
+      "now_what": "MarketLense would keep trust evidence distinct from discovery measures when assessing publisher distribution choices.",
+      "pages": [
+        101
+      ],
+      "report_type_lens": "brand_strategy",
+      "score": 0.84,
+      "so_what": "This is a perceived-trust measure, not a measure of news discovery or usage.",
+      "text": "In 2017, news media was rated more trustworthy than social media by news readers in each of the five listed countries: Canada, Ireland, the United Kingdom, Australia, and the United States."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.84,
+      "evidence": "“Products involve first-hand experience (e.g. food freshness, used car condition)” alongside “DELAYED ECOMMERCE ADOPTION.”",
+      "evidence_id": "f24",
+      "evidence_ids": [
+        "f24"
+      ],
+      "evidence_spans": [],
+      "id": "ecommerce-firsthand-experience",
+      "metric": {
+        "cohort": "Product categories involving first-hand experience",
+        "confidence": "high",
+        "denominator": "",
+        "geography": "",
+        "label": "eCommerce adoption condition by product type",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Products involving first-hand experience, including food freshness or used-car condition",
+        "subject": "eCommerce adoption",
+        "timeframe": "",
+        "trend": "delayed adoption association",
+        "unit": "",
+        "value": "First-hand-experience products associated with delayed adoption"
+      },
+      "metric_public_copy": "First-hand-experience products are associated with delayed eCommerce adoption",
+      "metric_strength_score": 0.65,
+      "novelty_score": 0.83,
+      "now_what": "MarketLense would assess category-specific experience requirements before applying a uniform eCommerce approach.",
+      "pages": [
+        119
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.82,
+      "so_what": "The category analysis identifies first-hand experience as a distinct consideration in adoption patterns.",
+      "text": "The eCommerce category chart associates products involving first-hand experience, such as food freshness or used-car condition, with delayed eCommerce adoption."
+    }
+  ]
+}

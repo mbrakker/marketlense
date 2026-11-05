@@ -1,0 +1,93 @@
+{
+  "report_id": "cohort-4b763ae2286ca69fe8ac",
+  "title": "JANUARY 2026",
+  "publisher": "",
+  "region": "",
+  "time_period": "2026",
+  "overview": "Journalism and Technology Trends and Predictions 2026 by Reuters Institute for the Study of Journalism Nic Newman’s report examines the pressures facing journalism and publishers in 2026, including AI-driven changes to search and content, competition from creators, platform shifts, misinformation, newsroom AI adoption, and business-model challenges. It draws on a survey of senior digital leaders and combines survey results with analysis and predictions for the year ahead. Covers journalism and technology trends, challenges, and predictions for 2026, including AI, audience traffic, content and distribution strategies, misinformation, newsroom practices, and business models. Draws on an industry survey of digital leaders from 51 countries and territories; the excerpts do not identify specific geographic regions.",
+  "methods": [
+    "Industry survey of a strategic sample of 280 digital leaders from 51 countries and territories; question-specific bases include 273 respondents (Q9) and 264 (Q13).",
+    "Chartbeat analytics data on page-view referrals aggregated across more than 2,000 news websites and apps in its network; the report also describes aggregate Google Search traffic to hundreds of news sites.",
+    "Background conversations, interviews, and emails with publishers, academics, and industry experts provided additional input."
+  ],
+  "key_findings": [
+    "Publishers’ average expectation was that search-engine traffic would fall 43% over the next three years.",
+    "From November 2024 to November 2025, Google Search referrals in the global Chartbeat network fell 33% year on year.",
+    "For possible news-content licensing deals with AI companies in about three years, 20% of publisher respondents expected a significant source of income.",
+    "For possible news-content licensing deals with AI companies in about three years, 49% of publisher respondents expected a minor contribution.",
+    "For possible news-content licensing deals with AI companies in about three years, 20% of publisher respondents expected no income.",
+    "The net difference between respondents planning more versus less focus was +91 for original investigations and on-the-ground reporting."
+  ],
+  "limitations": [
+    "Publisher expectations that misinformation and AI-generated content could strengthen news media may be wishful thinking; audience uncertainty about truth does not necessarily mean they will return to news media.",
+    "Fewer than 1% of news images or videos published globally include C2PA metadata; adoption requires ecosystem-wide buy-in, and metadata can be stripped at any stage.",
+    "Content-detection systems have so far been only partly effective; some experts suggest TikTok automatically detects less than half of AI-generated content."
+  ],
+  "sections": [
+    {
+      "section_label": "About the Author",
+      "source_pack": "doc_map",
+      "summary": "Introduces Nic Newman and his work in digital media and journalism. It notes his role at the Reuters Institute and his experience in BBC digital journalism and media strategy.",
+      "key_points": [
+        "Newman is a Senior Research Associate at the Reuters Institute for the Study of Journalism.",
+        "He was a founding member of the BBC News Website and later led product development for BBC Journalism sites."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Acknowledgements",
+      "source_pack": "doc_map",
+      "summary": "Thanks survey participants, Institute colleagues, and experts who contributed ideas, interviews, and background input. The acknowledgements also continue with a list of additional contributors later in the report.",
+      "key_points": [
+        "The report thanks 280 news executives from 51 countries and territories for responding to the survey.",
+        "The author credits Institute colleagues and other publishers, academics, and industry experts for their input."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Executive Summary",
+      "source_pack": "doc_map",
+      "summary": "Frames Generative AI and personality-led news as major forces reshaping journalism, while describing threats from political pressure, low trust, and declining referrals. It summarizes survey findings and introduces forecast terms including AEO, digital prov...",
+      "key_points": [
+        "Among surveyed leaders, 38% were confident about journalism’s prospects, compared with 53% confident about their own business prospects.",
+        "Publishers expect search-engine traffic to fall by more than 40% over the next three years; the report also notes past referral declines from Facebook and X.",
+        "For 2026, publishers favor original investigations and on-the-ground reporting (+91 net difference between those planning more and less effort), while planning greater investment in video (+79) and..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "1. Pressures on Journalism Mount",
+      "source_pack": "doc_map",
+      "summary": "Describes political attacks, legal pressure, and challenges to public service media alongside concerns about press freedom and journalism’s public standing. It also notes that some subscription-based publishers remain optimistic and predicts politicians wil...",
+      "key_points": [
+        "The section discusses laws and political actions that make it harder or more dangerous for journalists to operate, and efforts to label legitimate journalism as “fake news.”",
+        "Public service media face disputes over impartiality, political pressure, and proposed funding reductions.",
+        "Some mostly subscription-based publishers, particularly in Northern Europe and North America, report stronger financial and audience performance."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "2. Answer Engines and the Implications for Access",
+      "source_pack": "doc_map",
+      "summary": "Examines how AI-generated answers and search interfaces could reduce publisher traffic, while noting that current referral changes vary by publisher and content type. It considers possible licensing arrangements and the growth of answer-engine optimization...",
+      "key_points": [
+        "For the charted question on expected search traffic in three years, publishers’ average expectation was a 43% loss; around one-fifth expected losses greater than 75%, while some expected a decline...",
+        "In the chart “Number of referrals to publisher sites in the global Chartbeat network,” global year-on-year changes from November 2024 to November 2025 were Google Search −33%, Google Discover −21%,...",
+        "The section says major AI-content deals have chiefly involved upmarket publishers and news agencies, raising concerns that local and independent outlets may be left out; survey responses on expecte..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "3. Content Strategies Shift towards Distinctiveness",
+      "source_pack": "doc_map",
+      "summary": "Argues that publishers are responding to AI by emphasizing journalism that is distinctive, human, and difficult to reproduce, while reducing emphasis on content that chatbots can readily supply. It contrasts this approach with examples of highly automated p...",
+      "key_points": [
+        "In “Publisher perceptions on how content needs to be refocused in the era of AI,” net difference between respondents planning more versus less effort was +91 for original investigations/on-the-grou...",
+        "In the same chart and measure, service journalism was −42, evergreen content −32, and general news −38 (printed p. 15).",
+        "The section presents Newsquest’s AI-assisted reporters and Velora Cycling’s one-person AI-supported operation as examples of automation at scale, contrasting these with a strategy based on human di..."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

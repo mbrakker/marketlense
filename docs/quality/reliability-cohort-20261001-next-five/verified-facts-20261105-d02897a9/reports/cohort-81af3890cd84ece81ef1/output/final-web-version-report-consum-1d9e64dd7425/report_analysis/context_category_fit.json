@@ -1,0 +1,160 @@
+{
+  "schema_version": "1.0",
+  "selected_category_ids": [
+    "consumer_behavior"
+  ],
+  "category_fits": [
+    {
+      "category_id": "consumer_behavior",
+      "label": "Consumer Behavior & Insights",
+      "fit_score": 0.97,
+      "decision": "primary",
+      "why_fit": "The report is based on a global consumer survey and centers on changing attitudes and behaviors around fair value, spending, deals, AI-assisted shopping, trust, and human support.",
+      "why_not_fit": "The report discusses implications for retail organizations, but business performance is not its main lens.",
+      "evidence_sections": [
+        "Executive summary",
+        "Value redefined: where fairness and quality intersect",
+        "Careful spending meets intentional indulgence",
+        "AI - The consumer’s trusted guide",
+        "Reliable tech builds loyalty – but with boundaries"
+      ],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Studies consumer attitudes, decision drivers, and behavioral shifts.",
+        "Consumer behavior is the core subject independent of a business-performance lens."
+      ],
+      "supported_topic_rule_ids": [
+        "consumer_behavior:include:33643841657d9962",
+        "consumer_behavior:include:37fe6a8899033055"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "Executive summary",
+        "Value redefined: where fairness and quality intersect",
+        "Careful spending meets intentional indulgence",
+        "AI - The consumer’s trusted guide",
+        "Reliable tech builds loyalty – but with boundaries"
+      ],
+      "centrality_evidence_sections": [
+        "Executive summary",
+        "Who should read this report and why?",
+        "Value redefined: where fairness and quality intersect",
+        "Careful spending meets intentional indulgence"
+      ],
+      "remediation_signal": "none"
+    },
+    {
+      "category_id": "agentic_commerce",
+      "label": "Agentic Commerce & Shopping Automation",
+      "fit_score": 0.55,
+      "decision": "reject",
+      "why_fit": "The AI chapter discusses virtual assistants automating reordering or meal planning and consumer expectations about when assistants act.",
+      "why_not_fit": "The report does not make automated buying or checkout its central subject; AI-assisted shopping is one part of a broader study of consumer value, spending, and service.",
+      "evidence_sections": [
+        "AI - The consumer’s trusted guide",
+        "Executive summary"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Reject when the report is broadly about AI or automation without commerce execution at the center."
+      ],
+      "rejected_topic_rule_ids": [
+        "agentic_commerce:exclude:3c614fa230760869"
+      ],
+      "rule_evidence_sections": [
+        "AI - The consumer’s trusted guide",
+        "Executive summary"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "none"
+    },
+    {
+      "category_id": "ai_automation",
+      "label": "AI & Automation",
+      "fit_score": 0.48,
+      "decision": "reject",
+      "why_fit": "The report has a dedicated AI chapter covering virtual assistants, generative AI, personalization, and consumer concerns about AI use of information.",
+      "why_not_fit": "AI is one lens within a report whose broader subject is consumer behavior and value perception, rather than AI systems or automation as a general capability.",
+      "evidence_sections": [
+        "AI - The consumer’s trusted guide",
+        "Reliable tech builds loyalty – but with boundaries"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Reject when AI is only one enabler inside a broader media, technology, or vertical-market report."
+      ],
+      "rejected_topic_rule_ids": [
+        "ai_automation:exclude:1e73dca27527e17c"
+      ],
+      "rule_evidence_sections": [
+        "Executive summary",
+        "Value redefined: where fairness and quality intersect",
+        "Careful spending meets intentional indulgence",
+        "AI - The consumer’s trusted guide",
+        "Reliable tech builds loyalty – but with boundaries"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "none"
+    },
+    {
+      "category_id": "technology",
+      "label": "Technology & Innovation",
+      "fit_score": 0.31,
+      "decision": "reject",
+      "why_fit": "Technology-enabled shopping, personalization, and AI assistants appear in dedicated sections.",
+      "why_not_fit": "The report focuses on consumer expectations and behaviors, not technology platforms, infrastructure, or emerging technologies as the primary lens.",
+      "evidence_sections": [
+        "AI - The consumer’s trusted guide",
+        "Reliable tech builds loyalty – but with boundaries"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Reject when technology is only a supporting capability inside a category-specific commerce, media, or healthcare report."
+      ],
+      "rejected_topic_rule_ids": [
+        "technology:exclude:bcb4675ddd1f92ce"
+      ],
+      "rule_evidence_sections": [
+        "Executive summary",
+        "AI - The consumer’s trusted guide",
+        "Reliable tech builds loyalty – but with boundaries"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "none"
+    },
+    {
+      "category_id": "privacy_identity",
+      "label": "Privacy, Identity & Data",
+      "fit_score": 0.25,
+      "decision": "reject",
+      "why_fit": "The AI chapter reports concerns about how generative AI uses consumer information, and the technology chapter discusses privacy boundaries.",
+      "why_not_fit": "Privacy is addressed as a consumer concern within a broader report; identity resolution, compliance, and privacy-safe data management are not its central problem.",
+      "evidence_sections": [
+        "AI - The consumer’s trusted guide",
+        "Reliable tech builds loyalty – but with boundaries"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Reject when privacy or data governance is just a constraint mentioned inside a broader AI, media, or measurement report."
+      ],
+      "rejected_topic_rule_ids": [
+        "privacy_identity:exclude:486d2b9830aaacf5"
+      ],
+      "rule_evidence_sections": [
+        "AI - The consumer’s trusted guide",
+        "Reliable tech builds loyalty – but with boundaries"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "none"
+    }
+  ]
+}

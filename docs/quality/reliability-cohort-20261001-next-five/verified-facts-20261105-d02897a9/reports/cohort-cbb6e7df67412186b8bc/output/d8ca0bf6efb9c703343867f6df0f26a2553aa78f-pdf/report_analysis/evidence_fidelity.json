@@ -1,0 +1,4753 @@
+{
+  "schema_version": "1.4",
+  "artifact_hash": "067e80e147fd350f0d6d28a6395631e44b49a366e2b9d44e4f3f352ca3200cd0",
+  "package_hash": "8558ba967e3ee0e3947c457c21b6bd3291b150e85399ad2bfc491d13e76ef2f3",
+  "results": [
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f01",
+        "source_family": "evidence_pack:findings",
+        "text": "Activate forecasts that global consumer Internet and media revenues will grow by $302 billion from 2017E to 2021E, with a 4.1% CAGR versus approximately 3% for global GDP.",
+        "text_hash": "908af8e485a72b71f85335b2c722dfd6cc201e96e0277ecf8c477ff613b23ade",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:5",
+            "source_pack": "source_pdf",
+            "page": 5,
+            "text_hash": "dda296c047461c2d477480f95e81c61f6232d27a56fee77d4754417f28095709"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence states growth of $302B from 2017E to 2021E, a 4.1% CAGR versus approximately 3% for global GDP."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "3.0, 302000000000.0, 4.1",
+            "evidence_value": "1.0, 1700000000000.0, 2000000000000.0, 3.0, 300000000000.0, 302000000000.0, 4.0, 4.1",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency, percent",
+            "evidence_value": "count, currency, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2017, 2021",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "approximately 3% for global gdp",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence states growth of $302B from 2017E to 2021E, a 4.1% CAGR versus approximately 3% for global GDP.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f02",
+        "source_family": "evidence_pack:findings",
+        "text": "In Activate’s 2017E–2021E global forecast, cost of Internet access has the largest listed segment growth, at $128 billion and a 5.7% CAGR.",
+        "text_hash": "e22de931b9d5ee67c93c14fd11bd5c9b876e4196a58220cb4f6e0a2dd10ea78b",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:6",
+            "source_pack": "source_pdf",
+            "page": 6,
+            "text_hash": "cb6baaac8f17c67d8eca3fb9941723171715251f70e6ca7eedbde6cfadb1b6bc"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The forecast lists cost of Internet access at $128B with a 5.7% CAGR, the largest segment amount and CAGR shown."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "128000000000.0, 5.7",
+            "evidence_value": "1.0, 108000000000.0, 128000000000.0, 1700000000000.0, 2.0, 2.3, 2000000000000.0, 30.0, 31.0, 32.0, 37.0, 39.0, 4.7, 5.0, 5.7, 66000000000.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency, percent",
+            "evidence_value": "count, currency, percent, rate",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2017, 2021",
+            "evidence_value": "2017, 2021",
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "rank:largest",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The forecast lists cost of Internet access at $128B with a 5.7% CAGR, the largest segment amount and CAGR shown.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f03",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States in 2017, the top 25% of video users, defined as having 4.5+ hours of daily video attention, accounted for 61% of video time.",
+        "text_hash": "6b0a785c48f4a6b3e7985c1b2d7e4f05496338af37f0c50d52589ab2afad743e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:15",
+            "source_pack": "source_pdf",
+            "page": 15,
+            "text_hash": "52d3a19ca99d96c589ab0333d9f6066f3513e6f27b09aa73d9f25d2033a74b62"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The chart states that the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of video time in the U.S. in 2017."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "25.0, 4.5, 61.0",
+            "evidence_value": "14.0, 25.0, 34.0, 3515.0, 39.0, 4.5, 61.0, 66.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "count, index, percent, time",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The chart states that the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of video time in the U.S. in 2017.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f04",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States in 2017, the top 25% of video users, defined as having 4.5+ hours of daily video attention, accounted for 34% of consumer spend.",
+        "text_hash": "e21021721b193381a2c7c19445b2006e82690d6824e1497df292333a26d2da55",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:15",
+            "source_pack": "source_pdf",
+            "page": 15,
+            "text_hash": "52d3a19ca99d96c589ab0333d9f6066f3513e6f27b09aa73d9f25d2033a74b62"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The chart states that the top 25% of users with 4.5+ hours of daily video attention accounted for 34% of consumer spend in the U.S. in 2017."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "25.0, 34.0, 4.5",
+            "evidence_value": "14.0, 25.0, 34.0, 3515.0, 39.0, 4.5, 61.0, 66.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "count, index, percent, time",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The chart states that the top 25% of users with 4.5+ hours of daily video attention accounted for 34% of consumer spend in the U.S. in 2017.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f05",
+        "source_family": "evidence_pack:findings",
+        "text": "Activate expects dedicated smart speakers to serve as a “trojan horse” for delivering AI into the home and expects digital assistants to become ubiquitous across a broad set of devices.",
+        "text_hash": "1c590aa2574a733aae11b23b01466801c9c965fdec05ff2848764e7186095fff",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:23",
+            "source_pack": "source_pdf",
+            "page": 23,
+            "text_hash": "f9bc62abfab3c780f3e46c161d85246044cad540b289cb162546c380be3df709"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly describes dedicated smart speakers as a trojan horse to deliver AI into the home and expects digital assistants to become ubiquitous across a broad set of devices."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly describes dedicated smart speakers as a trojan horse to deliver AI into the home and expects digital assistants to become ubiquitous across a broad set of devices.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f06",
+        "source_family": "evidence_pack:findings",
+        "text": "Activate forecasts that consumer VR will not reach scaled global adoption by 2021E, citing limited applications outside gaming, limited social use, and confinement that restricts movement.",
+        "text_hash": "6f463c6898dbba13133116d93166906f3e30ebe105c58d9dc501e93fa1d3ea3e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:42",
+            "source_pack": "source_pdf",
+            "page": 42,
+            "text_hash": "d14a4bb3ba61b69913c6fa5bf8c1fe90e0b200b7eb3e994d6eab4ffabd4f3948"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence says VR is forecast not to reach scaled global adoption and lists the same barriers; 2021E is the chart's forecast horizon."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2021",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global, us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence says VR is forecast not to reach scaled global adoption and lists the same barriers; 2021E is the chart's forecast horizon.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f07",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 34% of consumer spend.",
+        "text_hash": "3ccd7ad0ef1274b7f5a8cd8b515e2a25d4e6ff04704ef554633699784ea6da20",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:15",
+            "source_pack": "source_pdf",
+            "page": 15,
+            "text_hash": "52d3a19ca99d96c589ab0333d9f6066f3513e6f27b09aa73d9f25d2033a74b62"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The chart supports 34% of consumer spend for the top 25% of users with 4.5+ hours of daily video attention in the U.S. in 2017."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "25.0, 34.0, 4.5",
+            "evidence_value": "14.0, 25.0, 34.0, 3515.0, 39.0, 4.5, 61.0, 66.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "count, index, percent, time",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The chart supports 34% of consumer spend for the top 25% of users with 4.5+ hours of daily video attention in the U.S. in 2017.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f08",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of video time.",
+        "text_hash": "93a192c391c48ba27f8556b3c1523ff0c8b8e792939f5d7a408baf659803d0ac",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:15",
+            "source_pack": "source_pdf",
+            "page": 15,
+            "text_hash": "52d3a19ca99d96c589ab0333d9f6066f3513e6f27b09aa73d9f25d2033a74b62"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The chart supports 61% of video time for the top 25% of users with 4.5+ hours of daily video attention in the U.S. in 2017."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "25.0, 4.5, 61.0",
+            "evidence_value": "14.0, 25.0, 34.0, 3515.0, 39.0, 4.5, 61.0, 66.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "count, index, percent, time",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The chart supports 61% of video time for the top 25% of users with 4.5+ hours of daily video attention in the U.S. in 2017.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f09",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States in 2017, social media was cited as a source of news discovery by 40% of adults.",
+        "text_hash": "7522ce8f188c1f0908fa59fa067851274cffe536d88d9f4b5c98b1e2f60acb51",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:98",
+            "source_pack": "source_pdf",
+            "page": 98,
+            "text_hash": "ceb327fefffd8cc3ac68429ed8c659df9c90187ee1befc9a240bdaf65cf07dea"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The chart lists Social Media at 40% for U.S. adults in 2017."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "40.0",
+            "evidence_value": "10.0, 11.0, 12.0, 2013.0, 31.0, 33.0, 38.0, 40.0, 4047.0, 49.0, 6.0, 7.0, 9.0, 97.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The chart lists Social Media at 40% for U.S. adults in 2017.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f10",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States in 2017, direct visits were cited as a source of news discovery by 38% of adults.",
+        "text_hash": "29adbfc6d52804be988261fbb7bc008e8a5997f30b9b660235361e883e037d4e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:98",
+            "source_pack": "source_pdf",
+            "page": 98,
+            "text_hash": "ceb327fefffd8cc3ac68429ed8c659df9c90187ee1befc9a240bdaf65cf07dea"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The chart lists Direct Visits at 38% for U.S. adults in 2017."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "38.0",
+            "evidence_value": "10.0, 11.0, 12.0, 2013.0, 31.0, 33.0, 38.0, 40.0, 4047.0, 49.0, 6.0, 7.0, 9.0, 97.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The chart lists Direct Visits at 38% for U.S. adults in 2017.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f11",
+        "source_family": "evidence_pack:findings",
+        "text": "Among U.S. active news readers searching for news in 2017, 49% cited direct visits as a source of news discovery.",
+        "text_hash": "b04668790c50557db714f40064e42ba20e187ec78ed175aba8b7c90e7cf379e3",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:98",
+            "source_pack": "source_pdf",
+            "page": 98,
+            "text_hash": "ceb327fefffd8cc3ac68429ed8c659df9c90187ee1befc9a240bdaf65cf07dea"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Among U.S. active news readers in 2017, the chart lists Direct Visits at 49%."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "49.0",
+            "evidence_value": "10.0, 11.0, 12.0, 2013.0, 31.0, 33.0, 38.0, 40.0, 4047.0, 49.0, 6.0, 7.0, 9.0, 97.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Among U.S. active news readers in 2017, the chart lists Direct Visits at 49%.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f12",
+        "source_family": "evidence_pack:findings",
+        "text": "Among U.S. active news readers searching for news in 2017, 33% cited social media as a source of news discovery.",
+        "text_hash": "c632691cc2807d602ed3898992e49ecc484ad0cc59cabe48d877641455a81137",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:98",
+            "source_pack": "source_pdf",
+            "page": 98,
+            "text_hash": "ceb327fefffd8cc3ac68429ed8c659df9c90187ee1befc9a240bdaf65cf07dea"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Among U.S. active news readers in 2017, the chart lists Social Media at 33%."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "33.0",
+            "evidence_value": "10.0, 11.0, 12.0, 2013.0, 31.0, 33.0, 38.0, 40.0, 4047.0, 49.0, 6.0, 7.0, 9.0, 97.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Among U.S. active news readers in 2017, the chart lists Social Media at 33%.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f13",
+        "source_family": "evidence_pack:findings",
+        "text": "In 2017, news media was rated more trustworthy than social media by news readers in each of the five listed countries: Canada, Ireland, the United Kingdom, Australia, and the United States.",
+        "text_hash": "9b815a8d4e9401827e18e6cc378f4d247724b0fe45cc7070af42b40f97bfff97",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:101",
+            "source_pack": "source_pdf",
+            "page": 101,
+            "text_hash": "4960db4df22567c9e361e2b2121c5ed0d9c195149dbd5842f168debf89b3df7c"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The chart shows higher perceived trustworthiness for news media than social media in all five listed countries in 2017."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "australia, canada, ireland, uk, us",
+            "evidence_value": "australia, canada, ireland, uk, us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The chart shows higher perceived trustworthiness for news media than social media in all five listed countries in 2017.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f14",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States in 2017, 90% of sports viewers said they watched specifically for sports content.",
+        "text_hash": "39e131e46db5233e0218ea60a6d7c6b8a8b6e8b56c95e8cc73195911ff20d370",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:82",
+            "source_pack": "source_pdf",
+            "page": 82,
+            "text_hash": "4ee594509a193eb3099817c4f1bb31d0d15d50a2ff02254b55d86f9082a4efd6"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence states that 90% of U.S. sports viewers watch specifically for sports content; the segment is adults age 18+ in 2017."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "90.0",
+            "evidence_value": "1.0, 10.0, 18.0, 2406.0, 81.0, 90.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence states that 90% of U.S. sports viewers watch specifically for sports content; the segment is adults age 18+ in 2017.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f15",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States in 2017, 10% of sports fans watched sports content only as a social activity.",
+        "text_hash": "1d948aca7d3cfc744167cbaeed64bde70a8717ad9b80422892dc83000ad49c43",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:82",
+            "source_pack": "source_pdf",
+            "page": 82,
+            "text_hash": "4ee594509a193eb3099817c4f1bb31d0d15d50a2ff02254b55d86f9082a4efd6"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence states that 10% of U.S. sports fans watch only as a social activity in 2017."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "10.0",
+            "evidence_value": "1.0, 10.0, 18.0, 2406.0, 81.0, 90.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence states that 10% of U.S. sports fans watch only as a social activity in 2017.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f16",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States, Super Fans made up 27% of sports fans and accounted for 61% of sports-viewing hours.",
+        "text_hash": "75899b90b80f32d2ec885b38943f0cfe4e6ef405e475f95a2842823f6011aefa",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:84",
+            "source_pack": "source_pdf",
+            "page": 84,
+            "text_hash": "88b4291446f9eb2db6cd243a4e3b31d2e1a8c54a4508784adf8bafdb16252cf8"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "unsupported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The 27% and 61% figures are supported, but the evidence does not specify that they refer to the United States."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "27.0, 61.0",
+            "evidence_value": "1.0, 10.0, 14.0, 17.0, 19.0, 2.5, 23.0, 2406.0, 27.0, 4.0, 40.0, 6.0, 61.0, 65.0, 7.5, 82.0, 83.0, 86.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, time, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "The 27% and 61% figures are supported, but the evidence does not specify that they refer to the United States.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f17",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States, Social Fans made up 10% of sports fans and accounted for 6% of sports-viewing hours.",
+        "text_hash": "a98818ce5275ef0b271cb09adf85a70eb9188a6e54a7bb9a976008145f78d8d7",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:84",
+            "source_pack": "source_pdf",
+            "page": 84,
+            "text_hash": "88b4291446f9eb2db6cd243a4e3b31d2e1a8c54a4508784adf8bafdb16252cf8"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "unsupported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The 10% and 6% figures are supported, but the evidence does not specify that they refer to the United States."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "10.0, 6.0",
+            "evidence_value": "1.0, 10.0, 14.0, 17.0, 19.0, 2.5, 23.0, 2406.0, 27.0, 4.0, 40.0, 6.0, 61.0, 65.0, 7.5, 82.0, 83.0, 86.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, time, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "The 10% and 6% figures are supported, but the evidence does not specify that they refer to the United States.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f18",
+        "source_family": "evidence_pack:findings",
+        "text": "In the United States in 2017, 62% of eSports viewers were ages 18–34, compared with 30% of traditional sports viewers.",
+        "text_hash": "a4f2dc202b42bbf4bcb077c2e7ef9fb4fc242adda815da8d3c7d9929ae840f64",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:90",
+            "source_pack": "source_pdf",
+            "page": 90,
+            "text_hash": "cf783d804beffcbb2039365d255736e74c750c6016e1b6e2be33e3a14723eaee"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "unsupported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence explicitly states that 30% of traditional sports viewers were ages 18–34, but it does not clearly associate the 62% chart value with eSports viewers."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "26.0, 30.0, 62.0",
+            "evidence_value": "1.0, 21.0, 2406.0, 26.0, 28.0, 29.0, 30.0, 36.0, 46.0, 62.0, 89.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "30% of traditional sports viewers",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "The evidence explicitly states that 30% of traditional sports viewers were ages 18–34, but it does not clearly associate the 62% chart value with eSports viewers.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f19",
+        "source_family": "evidence_pack:findings",
+        "text": "For U.S. cord-cutters in 2017 who still wanted low-cost traditional live or linear programming such as sports, the report described broadcast as more attractive than Virtual Pay TV.",
+        "text_hash": "2d7c51845d8e040a08a82c46976b87047658298401da89ec160ba04899d45874",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:70",
+            "source_pack": "source_pdf",
+            "page": 70,
+            "text_hash": "9debf0f6df7629e6074da460ddbcea6c7e9988c8ddb961ad282b5220e8016d0e"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly says broadcast was more attractive than Virtual Pay TV for cord-cutters seeking low-cost traditional live/linear programming such as sports."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly says broadcast was more attractive than Virtual Pay TV for cord-cutters seeking low-cost traditional live/linear programming such as sports.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f20",
+        "source_family": "evidence_pack:findings",
+        "text": "OTA broadcast-only homes in the United States increased from 11.2 million in 2012 to 15.8 million in 2017E, a 41% rise.",
+        "text_hash": "4fda6aa2ed723495a33f95b3bf35e12e630aa693d4c9ad76582f848c9c660f3f",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:70",
+            "source_pack": "source_pdf",
+            "page": 70,
+            "text_hash": "9debf0f6df7629e6074da460ddbcea6c7e9988c8ddb961ad282b5220e8016d0e"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence gives OTA broadcast-only homes as 11.2 million in 2012 and 15.8 million in 2017E, with a 41% increase."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "11200000.0, 15800000.0, 41.0",
+            "evidence_value": "0.0, 1.0, 1000000.0, 11.2, 1172.0, 13.0, 15.0, 15.8, 18.0, 2.0, 21.0, 28.0, 31.0, 36.0, 4.0, 41.0, 69.0, 8.0",
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, percent",
+            "evidence_value": "count, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2012, 2017",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": "broadcast-only homes in the united states",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence gives OTA broadcast-only homes as 11.2 million in 2012 and 15.8 million in 2017E, with a 41% increase.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f21",
+        "source_family": "evidence_pack:findings",
+        "text": "Among U.S. podcast non-listeners, 34% identified knowing which apps to use as a factor that would lead them to listen.",
+        "text_hash": "6652577a4ff47c2c01439cf0dcd12dc6610eb6ffa22fbc885c677abfac7d028e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:129",
+            "source_pack": "source_pdf",
+            "page": 129,
+            "text_hash": "ba4eb67346c4380d3308ab00a247066067a8d23afa0f51521e43d269d5ce0a44"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence states that 34% of podcast non-listeners selected knowing which apps to use as a factor that would lead them to listen."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "34.0",
+            "evidence_value": "1.0, 11.0, 128.0, 14.0, 15.0, 16.0, 17.0, 18.0, 2.0, 23.0, 26.0, 31.0, 34.0, 419.0, 700.0, 9.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence states that 34% of podcast non-listeners selected knowing which apps to use as a factor that would lead them to listen.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f22",
+        "source_family": "evidence_pack:findings",
+        "text": "Among U.S. podcast listeners, 31% identified recommendations as a factor that would increase podcast consumption.",
+        "text_hash": "a4b123a7dd1116d9d8276ff2e98a61f977a59100fd2bf2e74e0c63fa23136054",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:129",
+            "source_pack": "source_pdf",
+            "page": 129,
+            "text_hash": "ba4eb67346c4380d3308ab00a247066067a8d23afa0f51521e43d269d5ce0a44"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence states that 31% of podcast listeners selected recommendations as a factor that would increase consumption."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "31.0",
+            "evidence_value": "1.0, 11.0, 128.0, 14.0, 15.0, 16.0, 17.0, 18.0, 2.0, 23.0, 26.0, 31.0, 34.0, 419.0, 700.0, 9.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": "recommendations as a factor that would",
+            "evidence_value": "podcasts this",
+            "status": "compatible"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence states that 31% of podcast listeners selected recommendations as a factor that would increase consumption.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f23",
+        "source_family": "evidence_pack:findings",
+        "text": "Smart-speaker owners were approximately 1.6 times more likely to listen to podcasts than non-smart-speaker owners.",
+        "text_hash": "88970237e0b482cc78fac1fd4207765fb5c5fb28a36d0dee9ca3ecaf3b12ec9e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:127",
+            "source_pack": "source_pdf",
+            "page": 127,
+            "text_hash": "543cadc850a4d07d99a79cb9f81ad6d2163cb3dca3784a20c1a418fe4242af45"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly states smart-speaker owners are ~1.6x more likely to listen to podcasts than non-smart-speaker owners."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "1.6",
+            "evidence_value": "1.0, 1.6, 126.0, 15.0, 17.0, 18.0, 22.0, 25.0, 27.0, 29.0, 38.0, 419.0, 46.0, 60.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "ratio",
+            "evidence_value": "count, percent, ratio",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly states smart-speaker owners are ~1.6x more likely to listen to podcasts than non-smart-speaker owners.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:f24",
+        "source_family": "evidence_pack:findings",
+        "text": "The eCommerce category chart associates products involving first-hand experience, such as food freshness or used-car condition, with delayed eCommerce adoption.",
+        "text_hash": "9f13b3808bab4117556312ccc32965b40014db5502646fb7d3291390206e9ebd",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:119",
+            "source_pack": "source_pdf",
+            "page": 119,
+            "text_hash": "ae16813d3bb38572eb89ba6022090b05835156764e034dac93339e8e07e76406"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The chart identifies first-hand experience, including food freshness and used-car condition, and shows grocery and automotive among categories with delayed eCommerce adoption."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The chart identifies first-hand experience, including food freshness and used-car condition, and shows grocery and automotive among categories with delayed eCommerce adoption.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:sports-01",
+        "source_family": "evidence_pack:findings",
+        "text": "In U.S. 2017 sports-viewer segments of adults age 18+, 90% watch specifically for sports content, while 10% watch only as a social activity.",
+        "text_hash": "2f5e2c389a504a55ba9ace82f2fb689351df4378183895034a3cdecac4d160ef",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:82",
+            "source_pack": "source_pdf",
+            "page": 82,
+            "text_hash": "4ee594509a193eb3099817c4f1bb31d0d15d50a2ff02254b55d86f9082a4efd6"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly supports both percentages and identifies the segments as U.S. adults age 18+ in 2017."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "10.0, 18.0, 90.0",
+            "evidence_value": "1.0, 10.0, 18.0, 2406.0, 81.0, 90.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly supports both percentages and identifies the segments as U.S. adults age 18+ in 2017.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:sports-02",
+        "source_family": "evidence_pack:findings",
+        "text": "In the U.S. in 2017, 62% of eSports viewers were ages 18–34, compared with 30% of traditional sports viewers.",
+        "text_hash": "03ce643ebe836ed2be22dae11f3fdc429628a2039f5bbb39c7fc29293090f45c",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:90",
+            "source_pack": "source_pdf",
+            "page": 90,
+            "text_hash": "cf783d804beffcbb2039365d255736e74c750c6016e1b6e2be33e3a14723eaee"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "unsupported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence explicitly states that 30% of traditional sports viewers were ages 18–34, but it does not clearly associate the 62% chart value with eSports viewers."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "26.0, 30.0, 62.0",
+            "evidence_value": "1.0, 21.0, 2406.0, 26.0, 28.0, 29.0, 30.0, 36.0, 46.0, 62.0, 89.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "30% of traditional sports viewers",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "The evidence explicitly states that 30% of traditional sports viewers were ages 18–34, but it does not clearly associate the 62% chart value with eSports viewers.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:sports-03",
+        "source_family": "evidence_pack:findings",
+        "text": "Super Fans account for 27% of fans and 61% of sports-viewing hours, while Social Fans account for 10% of fans and 6% of hours.",
+        "text_hash": "88536f4cefb3a4f55917899556df4e7c9142ce8f626d44717db7148091117bc7",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:84",
+            "source_pack": "source_pdf",
+            "page": 84,
+            "text_hash": "88b4291446f9eb2db6cd243a4e3b31d2e1a8c54a4508784adf8bafdb16252cf8"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly states that Super Fans are 27% of fans and 61% of hours, and Social Fans are 10% of fans and 6% of hours."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "10.0, 27.0, 6.0, 61.0",
+            "evidence_value": "1.0, 10.0, 14.0, 17.0, 19.0, 2.5, 23.0, 2406.0, 27.0, 4.0, 40.0, 6.0, 61.0, 65.0, 7.5, 82.0, 83.0, 86.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, time, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly states that Super Fans are 27% of fans and 61% of hours, and Social Fans are 10% of fans and 6% of hours.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:podcasts-01",
+        "source_family": "evidence_pack:findings",
+        "text": "Activate forecasts U.S. podcast ad revenue at $237M in 2017E and $642M in 2021E.",
+        "text_hash": "b0b9a44f21ad33ca74204d2542e7f28ff768bce132a6d9798eb008ddb3cfc2b7",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:136",
+            "source_pack": "source_pdf",
+            "page": 136,
+            "text_hash": "7dbfd5d787041ca37dbc9392733b5df0d60760daaf7ac90c9a60cbb8edb21d20"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The chart shows U.S. podcast ad revenue of $237M in 2017E and $642M in 2021E."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "237000000.0, 642000000.0",
+            "evidence_value": "111000000.0, 12.0, 135.0, 15.0, 15000000000.0, 17.0, 175000000.0, 177000000.0, 20.0, 21.0, 237000000.0, 24.0, 25.0, 28.0, 30.0, 31.0, 332000000.0, 34.0, 35.0, 350000000.0, 39.0, 40.0, 478000000.0, 525000000.0, 571000000.0, 642000000.0, 700000000.0, 75000000.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency",
+            "evidence_value": "count, currency, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The chart shows U.S. podcast ad revenue of $237M in 2017E and $642M in 2021E.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:podcasts-02",
+        "source_family": "evidence_pack:findings",
+        "text": "Among podcast non-listeners, 34% selected knowing which apps to use as a factor that would lead them to listen; among podcast listeners, 31% selected recommendations as a factor that would increase consumption.",
+        "text_hash": "16e29e8775ffb2723e0f2f0515a908605ff0756631494d3bbe633e99c91b943a",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:129",
+            "source_pack": "source_pdf",
+            "page": 129,
+            "text_hash": "ba4eb67346c4380d3308ab00a247066067a8d23afa0f51521e43d269d5ce0a44"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Both claims match the evidence: 34% of non-listeners selected knowing which apps to use, and 31% of listeners selected recommendations."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "31.0, 34.0",
+            "evidence_value": "1.0, 11.0, 128.0, 14.0, 15.0, 16.0, 17.0, 18.0, 2.0, 23.0, 26.0, 31.0, 34.0, 419.0, 700.0, 9.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": "recommendations as a factor that would",
+            "evidence_value": "podcasts this",
+            "status": "compatible"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Both claims match the evidence: 34% of non-listeners selected knowing which apps to use, and 31% of listeners selected recommendations.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:podcasts-03",
+        "source_family": "evidence_pack:findings",
+        "text": "Smart-speaker owners are about 1.6 times more likely to listen to podcasts than non-smart-speaker owners.",
+        "text_hash": "0b3157b9b630ef248757f95e940b8a0b5ace6bb6992b1c902463afcd73ca6a8c",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:127",
+            "source_pack": "source_pdf",
+            "page": 127,
+            "text_hash": "543cadc850a4d07d99a79cb9f81ad6d2163cb3dca3784a20c1a418fe4242af45"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly supports the approximately 1.6-times greater likelihood of podcast listening."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "1.6",
+            "evidence_value": "1.0, 1.6, 126.0, 15.0, 17.0, 18.0, 22.0, 25.0, 27.0, 29.0, 38.0, 419.0, 46.0, 60.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "ratio",
+            "evidence_value": "count, percent, ratio",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly supports the approximately 1.6-times greater likelihood of podcast listening.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-001",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "We forecast that over the next four years, global Internet and media revenues will grow by approximately $300 billion, continuing to outpace GDP growth",
+        "text_hash": "0277ccbf364a4ac6f80005ef55fb53f1222cc6a36b9289e124e9b7a1650710cc",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:5",
+            "source_pack": "source_pdf",
+            "page": 5,
+            "text_hash": "dda296c047461c2d477480f95e81c61f6232d27a56fee77d4754417f28095709"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly says revenues will grow by approximately $300B over the next four years and continue to outpace GDP growth."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "300000000000.0",
+            "evidence_value": "1.0, 1700000000000.0, 2000000000000.0, 3.0, 300000000000.0, 302000000000.0, 4.0, 4.1",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency",
+            "evidence_value": "count, currency, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly says revenues will grow by approximately $300B over the next four years and continue to outpace GDP growth.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-002",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Access will lead revenue growth for tech and media companies",
+        "text_hash": "359f5dc68079f793ec04e6313a6dd328982ea99971d2d239e2720f2853794a91",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:6",
+            "source_pack": "source_pdf",
+            "page": 6,
+            "text_hash": "cb6baaac8f17c67d8eca3fb9941723171715251f70e6ca7eedbde6cfadb1b6bc"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence states verbatim, “Access will lead revenue growth for tech and media companies.”"
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence states verbatim, “Access will lead revenue growth for tech and media companies.”",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-003",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "The digital premium video market is becoming more fragmented by the day — every player wants to be in everything",
+        "text_hash": "b8acca3eccc21b820af18026870de1962b8c0f3cdc2741d82864603cc42da90d",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:66",
+            "source_pack": "source_pdf",
+            "page": 66,
+            "text_hash": "badc93bfb552db2e4c6fce53df3e5355692980d04b43f0cdf65ea9e0cd7651dc"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text appears verbatim in the evidence snippet."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text appears verbatim in the evidence snippet.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-004",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "The future winners in television and video streaming will look quite familiar to consumers",
+        "text_hash": "dfed125fb538f61ba2c196374144e4f5df890957f981931879c719459ff9f283",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:65",
+            "source_pack": "source_pdf",
+            "page": 65,
+            "text_hash": "849cf450d28c8770e6b5c879a9648b14c0872975bdd2b36eb5bf65ed1da290c5"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text appears verbatim in the evidence snippet."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text appears verbatim in the evidence snippet.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-005",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Activate research indicates that half of the news reading population could subscribe to a news publication, up from 27% today",
+        "text_hash": "74b7476c0b4123c737bbf600b9961ed82038f237bccfc693c53a80d045a6cd06",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:106",
+            "source_pack": "source_pdf",
+            "page": 106,
+            "text_hash": "046f0c8ab4c90b9dd44f1b380d9b5c18283271920487ef8abc7a05aeb98f6f7b"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly states that half of news readers could subscribe, up from 27% today."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "27.0",
+            "evidence_value": "105.0, 16.0, 23.0, 27.0, 34.0, 4047.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly states that half of news readers could subscribe, up from 27% today.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-006",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Sales of high-end devices will continue but we forecast that the cost of accessing a digital assistant will head to zero",
+        "text_hash": "61a201385d2f7c3102e7036937060ec8207eb6f8e25a54dcb2ca392ad38a9eb6",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:27",
+            "source_pack": "source_pdf",
+            "page": 27,
+            "text_hash": "a0bb0eeb931bf01f52d81b6e87abf09988c36cb7c8a0e3f1916cb4a3b6663dc4"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text is directly stated in the evidence snippet."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text is directly stated in the evidence snippet.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-007",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "For many categories, consumers will increasingly gravitate towards private labels, as platforms and retailers will favor discovery of their own products",
+        "text_hash": "155238df77ad0e570acddc8753dbfed7295542bbeaf62a6c3494812038eef963",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:117",
+            "source_pack": "source_pdf",
+            "page": 117,
+            "text_hash": "7176a4ae79ee5d8b0f6041b5a6166a0a4d4452c50eea3a9e1d791ce4f2571456"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text is directly stated in the evidence; no separate numeric value is provided."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text is directly stated in the evidence; no separate numeric value is provided.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    }
+  ],
+  "readiness_status": "not_publishable",
+  "unsupported_factual_count": 4,
+  "unresolved_factual_count": 0,
+  "deterministic_pass_count": 0,
+  "semantic_validation_count": 37,
+  "semantic_execution_identities": [
+    "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+  ],
+  "validation_identity": null,
+  "lineage": null
+}

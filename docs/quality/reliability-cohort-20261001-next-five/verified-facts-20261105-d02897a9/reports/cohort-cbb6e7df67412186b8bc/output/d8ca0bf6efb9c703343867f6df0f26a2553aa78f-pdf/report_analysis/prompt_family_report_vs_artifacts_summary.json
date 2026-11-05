@@ -1,0 +1,237 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "claim_provenance": [
+      {
+        "claim": "Activate forecasts footnote-defined global Consumer Internet and Media Revenues to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E, with $302 billion growth and a 4.1% CAGR versus approximately 3% for global GDP.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast"
+        ]
+      },
+      {
+        "claim": "Activate forecasts global Consumer Internet and Media Revenues at $2.0 trillion in 2021E.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:global-revenue-forecast"
+        ]
+      },
+      {
+        "claim": "In Activate’s global 2017E–2021E forecast, Cost of Internet access, including fixed broadband, wireless, and mobile Internet access, is projected to increase by $128B, the largest dollar increase among the three listed revenue segments, and to have the highest CAGR at 5.7%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:f02"
+        ]
+      },
+      {
+        "claim": "In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of total video time spent and 34% of total consumer spend, while all other users accounted for 39% of video time spent and 66% of consumer spend.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:f04"
+        ]
+      },
+      {
+        "claim": "In Activate’s 2017 study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to podcast listening.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:podcast-audience-factors"
+        ]
+      }
+    ],
+    "generation_attempt": 1,
+    "producing_prompt_identity": {
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+      "execution_identity_manifest": {
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+        "model": "gpt-6-luna",
+        "output_contract_schema_version": "artifact_json:1.0",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "provider_retry_count": 0,
+          "timeout_seconds": 600.0
+        },
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "provider": "openai",
+        "reasoning_effort": "medium",
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary",
+          "max_input_tokens": 48000,
+          "policy_source": "report_vs/artifacts/summary",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "tier": "routine_structured"
+        },
+        "schema_version": "1.0",
+        "seed": null,
+        "temperature": null,
+        "validator_version": "artifacts_schema:3.1"
+      },
+      "family_schema_version": "1.0",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "model_provider": "openai",
+      "namespace": "report_vs/artifacts/summary",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+      "prompt_dependency_manifest": {
+        "composition_version": "2.0",
+        "included_partials": [
+          {
+            "kind": "partial",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "schema_version": "1.0",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "source": "user:0"
+          }
+        ],
+        "namespace": "report_vs/artifacts/summary",
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "schema_snippets": [
+          {
+            "kind": "schema_snippet",
+            "path": "schemas/artifacts.schema.json",
+            "schema_version": "1.0",
+            "sha256": "6e2a4ad3db5c4d518c096af2f180210e058e2cea70742a7d8e2b378b6a225272",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "schema_version": "1.0",
+        "system_root": {
+          "kind": "system_root",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "schema_version": "1.0",
+          "sha256": "a04cd94fb80ef9d2ad6f6c7f06f44213f839df93d304489fcce88300d4d6fd0b",
+          "source": ""
+        },
+        "user_root": {
+          "kind": "user_root",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "schema_version": "1.0",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "source": ""
+        }
+      },
+      "regeneration_reason": "materialization_missing",
+      "relevant_input_hash": "c563fc6e3187faf27c983ad84c70814867684c33e6a30fe0e5b14e7524ea915b",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "schema_version": "1.0",
+      "validator_version": "artifacts_schema:3.1"
+    },
+    "public_output": {
+      "card_tldr_compact": "Activate forecasts global Consumer Internet and Media Revenues at $2.0 trillion in 2021E.",
+      "claim_evidence_map": [
+        {
+          "claim": "Activate forecasts footnote-defined global Consumer Internet and Media Revenues to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E, with $302 billion growth and a 4.1% CAGR versus approximately 3% for global GDP.",
+          "evidence": "The global forecast assigns $1.7 trillion to 2017E and $2.0 trillion to 2021E, with $302 billion growth and a 4.1% CAGR; it compares this with approximately 3% for global GDP.",
+          "evidence_id": "verified-fact:global-revenue-forecast",
+          "evidence_spans": [
+            {
+              "end_offset": 365,
+              "evidence_id": "verified-fact:global-revenue-forecast",
+              "page": 5,
+              "section_id": "section-1",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The chart title gives the global revenue metric, 2017E–2021E period, and USD; the bars associate $1.7T with 2017E and $2.0T with 2021E. The chart separately labels $302B growth and 4.1% CAGR, and explicitly labels the comparison Global GDP CAGR: ~3%. Footnote 1 supplies the stated category scope. The E suffixes and the page’s forecast headline establish forecast status."
+            }
+          ],
+          "pages": [
+            5
+          ]
+        },
+        {
+          "claim": "Activate forecasts global Consumer Internet and Media Revenues at $2.0 trillion in 2021E.",
+          "evidence": "Activate forecasts global Consumer Internet and Media Revenues at $2.0 trillion in 2021E.",
+          "evidence_id": "verified-fact:global-revenue-forecast",
+          "evidence_spans": [
+            {
+              "end_offset": 365,
+              "evidence_id": "verified-fact:global-revenue-forecast",
+              "page": 5,
+              "section_id": "section-1",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The chart title gives the global revenue metric, 2017E–2021E period, and USD; the bars associate $1.7T with 2017E and $2.0T with 2021E. The chart separately labels $302B growth and 4.1% CAGR, and explicitly labels the comparison Global GDP CAGR: ~3%. Footnote 1 supplies the stated category scope. The E suffixes and the page’s forecast headline establish forecast status."
+            }
+          ],
+          "pages": [
+            5
+          ]
+        },
+        {
+          "claim": "In Activate’s global 2017E–2021E forecast, Cost of Internet access, including fixed broadband, wireless, and mobile Internet access, is projected to increase by $128B, the largest dollar increase among the three listed revenue segments, and to have the highest CAGR at 5.7%.",
+          "evidence": "The global forecast projects Cost of Internet access, including fixed broadband, wireless, and mobile Internet access, to increase by $128B and have a 5.7% CAGR, the largest dollar increase and highest CAGR among the three listed segments.",
+          "evidence_id": "verified-fact:f02",
+          "evidence_spans": [
+            {
+              "end_offset": 453,
+              "evidence_id": "verified-fact:f02",
+              "page": 6,
+              "section_id": "section-1",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The chart title gives the subject, global geography, 2017E–2021E period, and USD. The color-matched Cost of Internet access label is paired with $128B and CAGR 5.7%; footnote 2 defines it as including fixed broadband, wireless, and mobile Internet access. The other two listed segments are Ad revenue at $108B and 4.7% and Paid content at $66B and 2.3%, confirming the stated comparisons. The E dates and Activate Forecast label indicate these are projections."
+            }
+          ],
+          "pages": [
+            6
+          ]
+        },
+        {
+          "claim": "In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of total video time spent and 34% of total consumer spend, while all other users accounted for 39% of video time spent and 66% of consumer spend.",
+          "evidence": "In the U.S. in 2017, the top 25% by video attention accounted for 61% of total video time spent and 34% of total consumer spend; all other users accounted for 39% and 66%, respectively.",
+          "evidence_id": "verified-fact:f04",
+          "evidence_spans": [
+            {
+              "end_offset": 428,
+              "evidence_id": "verified-fact:f04",
+              "page": 15,
+              "section_id": "section-3",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The chart is headed “VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL.” The left bar, labeled “Share of Time Spent,” assigns 61% to the adjacent “Top 25% of Users (4.5+ hours of daily video attention)” cohort and 39% to “All Other Users.” The right bar, labeled “Share of Consumer Spend,” assigns 34% to the top-25% cohort and 66% to all other users. The source line identifies the Activate 2017 Consumer Tech & Media Research Study (n=3,515)."
+            }
+          ],
+          "pages": [
+            15
+          ]
+        },
+        {
+          "claim": "In Activate’s 2017 study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to podcast listening.",
+          "evidence": "In Activate’s 2017 study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to podcast listening.",
+          "evidence_id": "verified-fact:podcast-audience-factors",
+          "evidence_spans": [
+            {
+              "end_offset": 562,
+              "evidence_id": "verified-fact:podcast-audience-factors",
+              "page": 129,
+              "section_id": "section-11",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The two chart headings and adjacent labels bind the values to their respective populations and outcomes: 34% is next to “Knowing which apps to use” in the podcast non-listener chart (factors leading to listening), while 31% is next to “Recommendations” in the podcast listener chart (factors leading to increased consumption). The source note names the Activate 2017 Consumer Tech & Media Research Study and specifies left n=700 and right n=419. The page reports survey results and does not specify geography. The printed page number is not used; this is physical PDF page 129."
+            }
+          ],
+          "pages": [
+            129
+          ]
+        }
+      ],
+      "executive_summary": "Activate forecasts footnote-defined global Consumer Internet and Media Revenues to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E, with $302 billion growth and a 4.1% CAGR versus approximately 3% for global GDP. Activate forecasts global Consumer Internet and Media Revenues at $2.0 trillion in 2021E. In Activate’s global 2017E–2021E forecast, Cost of Internet access, including fixed broadband, wireless, and mobile Internet access, is projected to increase by $128B, the largest dollar increase among the three listed revenue segments, and to have the highest CAGR at 5.7%. In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of total video time spent and 34% of total consumer spend, while all other users accounted for 39% of video time spent and 66% of consumer spend. In Activate’s 2017 study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to podcast listening.",
+      "tldr": "Activate forecasts footnote-defined global Consumer Internet and Media Revenues to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E, with $302 billion growth and a 4.1% CAGR versus approximately 3% for global GDP."
+    },
+    "schema_version": "1.0"
+  }
+}

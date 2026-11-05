@@ -1,0 +1,690 @@
+{
+  "artifact_refs": {
+    "analysis_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+    "contents_image": "fin-1d9e64dd7425/assets/preview-contents-b5ca9a0218d6.png",
+    "source_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf"
+  },
+  "completed_at_utc": "2026-11-05T19:31:23.917548+00:00",
+  "file_id": "cohort-81af3890cd84ece81ef1",
+  "payload": {
+    "artifact_integrity": {
+      "files": {
+        "analysis_pdf": {
+          "md5": "81af3890cd84ece81ef16e1aabda8027",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 5811818
+        },
+        "source_pdf": {
+          "md5": "81af3890cd84ece81ef16e1aabda8027",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 5811818
+        }
+      },
+      "schema_version": "1.0"
+    },
+    "artifact_lineage": {
+      "analysis_pdf": "art_a615fe1caea4f310c68f0fc146103b698f78845b3c5bcccbaf9ac79fb3e2321b",
+      "contents_image": "art_8fa4a1affb09b60344ff8201890d35e861018f45bdb4a27e6441a01dda470552",
+      "source_pdf": "art_5359e861521624d94cc3c118f08692f70855e128c26f6d7a0df68bfd2385a973"
+    },
+    "artifact_registry": {
+      "refs": [
+        {
+          "artifact_id": "analysis_pdf",
+          "content_hash": "81af3890cd84ece81ef16e1aabda8027",
+          "created_at_utc": "2026-11-05T19:31:23.851014+00:00",
+          "kind": "analysis_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+          "producer_step": "selection_complete",
+          "required": true,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "contents_image",
+          "content_hash": "",
+          "created_at_utc": "2026-11-05T19:31:23.851014+00:00",
+          "kind": "contents_image",
+          "path": "fin-1d9e64dd7425/assets/preview-contents-b5ca9a0218d6.png",
+          "producer_step": "selection_complete",
+          "required": false,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "source_pdf",
+          "content_hash": "81af3890cd84ece81ef16e1aabda8027",
+          "created_at_utc": "2026-11-05T19:31:23.851014+00:00",
+          "kind": "source_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+          "producer_step": "selection_complete",
+          "required": true,
+          "schema_version": "1.0"
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    "prompt_family_materializations": {},
+    "schema_version": "1.0",
+    "selection": {
+      "candidate_count": 79,
+      "payload": {
+        "_contents_image": "fin-1d9e64dd7425/assets/preview-contents-b5ca9a0218d6.png",
+        "_evidence_packs": {},
+        "_figure_assets": [
+          {
+            "candidate_id": "chart-38-0",
+            "caption_source": "legacy",
+            "crop_dpi": 216,
+            "crop_image_sha256": "42014f10a40555700c388f2023b7cc17f891a79fac56a12f8e5e1e1e2bffc62d",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0966,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0966
+            },
+            "crop_qa_score": 0.8495,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-38-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "figure 19.",
+            "display_caption": "figure 19.",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-38-0.png",
+            "is_primary": true,
+            "kind": "chart",
+            "page": 38,
+            "preview_text": "figure 19.",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-36-1",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "04cb66bf93bb432d19b02b4cc8d35ac3d44b6a3eb0fcf9af4fb1b89f1dae7f8f",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.1875,
+              "table_boundary": 0.5,
+              "visual_card_boundary": 0.9975
+            },
+            "crop_qa_score": 0.7068,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-36-1.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "figure 17.",
+            "display_caption": "Additional figure 2",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-36-1.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 36,
+            "preview_text": "figure 17.",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-21-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "b1ec053c2775faa4be625d87b3ab8096d52df9e13976e58fbc19ccba834f5320",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0599,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0599
+            },
+            "crop_qa_score": 0.8866,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-21-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Capgemini Research Institute 2026",
+            "display_caption": "Additional figure 3",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-21-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 21,
+            "preview_text": "Capgemini Research Institute 2026",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-23-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "39ee20e88b9457e98d949d7d68aa2c9da3075204b80e5e446d313ff8f48b720a",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.1521,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.1521
+            },
+            "crop_qa_score": 0.8627,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-23-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "The deal hierarchy is well defined",
+            "display_caption": "Additional figure 4",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-23-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 23,
+            "preview_text": "The deal hierarchy is well defined",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-26-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "7a619b5ad8861c92b1f53f405eec2b21b67606c27f03a3a54c0d8747c3fb52a4",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.1516,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.1516
+            },
+            "crop_qa_score": 0.8347,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-26-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "figure 11.",
+            "display_caption": "Additional figure 5",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-26-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 26,
+            "preview_text": "figure 11.",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-64-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "312590ebf5049db016fcbf577a383f00b4374de0a1d0becd0eeb69eaa934de23",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0943,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0943
+            },
+            "crop_qa_score": 0.7747,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-64-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 6",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-64-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 64,
+            "preview_text": "Consumers by | gender Consume | rs by sel | f-iden\n |  |  | \n52% | 51% 51% 50% 48% 49% 49% 50% |  | 61%",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-12-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "604d19720b26ba01b6f5a94ac3e4e01001cc803790cf190f0cbfd1069db1ed63",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.2057,
+              "table_boundary": 0.5,
+              "visual_card_boundary": 0.2308
+            },
+            "crop_qa_score": 0.9077,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-12-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 7",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-12-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 12,
+            "preview_text": "Fresh produce | Luxury products | Subscription model\nready-to-eat meal kits | Apparel and accessories\nDry groceries and food\nsupplies | Home improvements\nand DIY supplies |  | Furniture and\nhome d\u00e9cor\nHousehold necessities\n(e.g., cleaning products) | Consumer electronics |  | Personal care products",
+            "schema_version": "1.0"
+          }
+        ],
+        "_figure_gallery": [
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-38-0.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-36-1.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-21-0.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-23-0.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-26-0.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-64-0.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-12-0.png"
+        ],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-38-0.png",
+        "_text_char_count": 5562,
+        "_text_density": 1112.4,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "table of contents",
+        "contents_page_number": 2,
+        "figure": {
+          "evidence": "figure 19.",
+          "schema_version": "1.0",
+          "title": "figure 19."
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "How AI is transforming value perception today\u2019s consumer 2026",
+        "tldr": "Not available from text"
+      },
+      "rank_usage": {
+        "completion_tokens": 9195,
+        "prompt_tokens": 14570,
+        "total_tokens": 23765
+      },
+      "schema_version": "1.0"
+    },
+    "source": {
+      "analysis_pdf_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+      "contents_heading": "table of contents",
+      "contents_image": "fin-1d9e64dd7425/assets/preview-contents-b5ca9a0218d6.png",
+      "contents_page_number": 2,
+      "info_response": {
+        "metadata": {
+          "CreationDate": "D:20260105135550+05'30'",
+          "Creator": "Adobe InDesign 21.1 (Macintosh)",
+          "ModDate": "D:20260105135607+05'30'",
+          "Producer": "Adobe PDF Library 18.0",
+          "Trapped": "/False"
+        },
+        "page_count": 82,
+        "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+        "schema_version": "1.0"
+      },
+      "ocr_fallback_used": false,
+      "ocr_pdf_path": "",
+      "payload": {
+        "_contents_image": "fin-1d9e64dd7425/assets/preview-contents-b5ca9a0218d6.png",
+        "_evidence_packs": {},
+        "_figure_assets": [
+          {
+            "candidate_id": "chart-38-0",
+            "caption_source": "legacy",
+            "crop_dpi": 216,
+            "crop_image_sha256": "42014f10a40555700c388f2023b7cc17f891a79fac56a12f8e5e1e1e2bffc62d",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0966,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0966
+            },
+            "crop_qa_score": 0.8495,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-38-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "figure 19.",
+            "display_caption": "figure 19.",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-38-0.png",
+            "is_primary": true,
+            "kind": "chart",
+            "page": 38,
+            "preview_text": "figure 19.",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-36-1",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "04cb66bf93bb432d19b02b4cc8d35ac3d44b6a3eb0fcf9af4fb1b89f1dae7f8f",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.1875,
+              "table_boundary": 0.5,
+              "visual_card_boundary": 0.9975
+            },
+            "crop_qa_score": 0.7068,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-36-1.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "figure 17.",
+            "display_caption": "Additional figure 2",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-36-1.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 36,
+            "preview_text": "figure 17.",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-21-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "b1ec053c2775faa4be625d87b3ab8096d52df9e13976e58fbc19ccba834f5320",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0599,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0599
+            },
+            "crop_qa_score": 0.8866,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-21-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Capgemini Research Institute 2026",
+            "display_caption": "Additional figure 3",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-21-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 21,
+            "preview_text": "Capgemini Research Institute 2026",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-23-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "39ee20e88b9457e98d949d7d68aa2c9da3075204b80e5e446d313ff8f48b720a",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.1521,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.1521
+            },
+            "crop_qa_score": 0.8627,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-23-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "The deal hierarchy is well defined",
+            "display_caption": "Additional figure 4",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-23-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 23,
+            "preview_text": "The deal hierarchy is well defined",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-26-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "7a619b5ad8861c92b1f53f405eec2b21b67606c27f03a3a54c0d8747c3fb52a4",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.1516,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.1516
+            },
+            "crop_qa_score": 0.8347,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-26-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "figure 11.",
+            "display_caption": "Additional figure 5",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-26-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 26,
+            "preview_text": "figure 11.",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-64-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "312590ebf5049db016fcbf577a383f00b4374de0a1d0becd0eeb69eaa934de23",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0943,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0943
+            },
+            "crop_qa_score": 0.7747,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-64-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 6",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-64-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 64,
+            "preview_text": "Consumers by | gender Consume | rs by sel | f-iden\n |  |  | \n52% | 51% 51% 50% 48% 49% 49% 50% |  | 61%",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "table-12-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "604d19720b26ba01b6f5a94ac3e4e01001cc803790cf190f0cbfd1069db1ed63",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.2057,
+              "table_boundary": 0.5,
+              "visual_card_boundary": 0.2308
+            },
+            "crop_qa_score": 0.9077,
+            "crop_qa_sidecar_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-12-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "",
+            "display_caption": "Additional figure 7",
+            "generated_caption": "",
+            "image_path": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-12-0.png",
+            "is_primary": false,
+            "kind": "table",
+            "page": 12,
+            "preview_text": "Fresh produce | Luxury products | Subscription model\nready-to-eat meal kits | Apparel and accessories\nDry groceries and food\nsupplies | Home improvements\nand DIY supplies |  | Furniture and\nhome d\u00e9cor\nHousehold necessities\n(e.g., cleaning products) | Consumer electronics |  | Personal care products",
+            "schema_version": "1.0"
+          }
+        ],
+        "_figure_gallery": [
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-38-0.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-36-1.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-21-0.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-23-0.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-26-0.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-64-0.png",
+          "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-table-12-0.png"
+        ],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "final-w-1d9e64dd7425/slices/final-w-1d9e64dd7425-chart-38-0.png",
+        "_text_char_count": 5562,
+        "_text_density": 1112.4,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "table of contents",
+        "contents_page_number": 2,
+        "figure": {
+          "evidence": "figure 19.",
+          "schema_version": "1.0",
+          "title": "figure 19."
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "How AI is transforming value perception today\u2019s consumer 2026",
+        "tldr": "Not available from text"
+      },
+      "schema_version": "1.0",
+      "text_response": {
+        "char_count": 5562,
+        "pages": [
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 1,
+            "text": "What matters to\nHow AI is transforming \nvalue perception\ntoday\u2019s consumer 2026\nMake it real.Make it real."
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 2,
+            "text": "Table of contents\nExecutive summary\n04\nWho should read \nthis report and why?\n07\nValue redefined: \nwhere fairness and \nquality intersect\n08\nCareful spending \nmeets intentional \nindulgence\n20\nAI - The \nconsumer\u2019s \ntrusted guide\n30\n2\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 3,
+            "text": "Conclusion \n63\nResearch methodology\n64\nReliable tech builds \nloyalty \u2013 but with \nboundaries\n40\nWhat should CPR \norganizations do \ndifferently?\n46\n3\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 4,
+            "text": "Around two in five are choosing lower cost \nalternatives, opting for private label, or buying \nsmaller quantities to manage budgets. Yet these \nchoices stop short when reliability is at stake. \nMany have adopted a hybrid mindset: willing to \ntrade down in certain categories, while retaining \nspending in others (e.g., when prioritizing \nhealth-related aspects). Nearly four in five avoid \nprivate labels in performance critical categories. \nPromotional influence is also becoming more \nand 71 percent would switch if pack sizes or \nproduct quality were reduced without clear \ncommunication. Promotions still have pulling \npower. Sixty two percent say more attractive deals \ncan make them switch, while 61 percent believe \nbundles that combine products with services or \nwarranties create stronger value. Quality now \ncarries more weight than ever, and 64 percent \nof consumers view \u2018shrinkflation\u20191 as an unfair \npractice. Health benefits, \u2018clean\u2019 ingredients,2  \nconvenience, and durability guide decisions across \ncategories, and many shoppers are willing to pay \nmore for faster delivery when it meaningfully \nimproves their experience.\nCareful spending meets intentional \nindulgence\nConsumers are becoming more deliberate about \nhow they save and where they treat themselves. \nAI-enabled shopping, heightened expectations \nof fairness and transparency, and meaningful \nhuman interaction at key moments are reshaping \nconsumer decision-making in a new era of \nempowered consumer decision making. As AI \nbecomes more deeply woven into everyday \nchoices, shoppers are rewriting what they \nconsider acceptable, valuable, and worth paying \nfor. Expectations are sharper, tolerance is lower, \nand the definition of value has expanded beyond \nprice. This report explores how AI, trust, and \nemotion are reshaping what consumers perceive \nas worth their time, money, and attention\nFairness and quality define value\nTransparent prices, consistent policies, and \nclear communication sit alongside quality in \nshaping perceived value. Seventy four percent \nof consumers say they would switch brands if \nthey found a lower regular price elsewhere, \nExecutive summary \n71%\nof consumers would switch brands if pack sizes \nor product quality were reduced without clear \ncommunication.\n4\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 5,
+            "text": "structured. Three in four consumers say money \noff discounts are most motivating, followed by \npercent off and buy one get one offers. Impulse \nrestraint is also easing 54% say they are making \nfewer impulse purchases, down from 71% last \nyear, signaling a modest rebound of \u2018intentional \nindulgence\u2019 alongside persistent deal- seeking.\nTrust in channels matters. Two in three consumers \nbelieve ecommerce offers fair prices, with thrift \nand discount formats close behind. Emotional \nrelease also plays a role. Seven in ten say small \nindulgences help manage financial stress, \nshowing that value blends rational savings with \nemotional satisfaction.\nAI - The consumer\u2019s trusted guide\nAI-driven tools are becoming central to how \nshoppers navigate the marketplace. Chatbots \nare now widely used for service and personalized \nfollow up, and agentic AI is moving into routine \ntasks. Almost half of consumers (52%) use virtual \nassistants that automate re-ordering or meal \nplanning at least once a week, though only one \nin five is willing to pay a monthly subscription or \na one-time payment. Control remains essential. \nSeventy six percent want the ability to set clear \nrules for when an assistant acts. Concerns about \ntransparency continue, with 71 percent worried \nabout how generative AI uses their information. \nAwareness of synthetic influencers is widespread \nat 66 percent, yet trust remains low at 52 percent. \nTwo thirds of consumers expect brands to disclose \nAI generated advertising. Social commerce is \ngrowing quickly, and 35 percent have already \npurchased through platforms like Instagram \nor YouTube.\nTechnological convenience with a \nhuman touch drives loyalty\nConsumers want efficiency, relevance, and \nemotional connection to coexist. Sixty three \npercent want generative AI to provide hyper \npersonalized content, and 65 percent feel \ntechnology has reduced stress in their shopping \nroutines. Yet human support remains essential. \nMore than seven in ten consumers value in person \nassistance when dealing with complex purchases \nor resolving service issues. Preference for human \nassistance has risen sharply, with seventy four \npercent valuing support during in-store customer \nservice and sixty six percent during the purchase \nstage, up from 54 percent and 40 percent last year. \nTo win consumer loyalty brands must focus on fair \nvalue and dependable experiences such as clear \npricing, consistent product quality, and a balanced \nmix of digital convenience and human support.\n5\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026"
+          }
+        ],
+        "pages_extracted": 5,
+        "schema_version": "1.0",
+        "text": "What matters to\nHow AI is transforming \nvalue perception\ntoday\u2019s consumer 2026\nMake it real.Make it real.\n\nTable of contents\nExecutive summary\n04\nWho should read \nthis report and why?\n07\nValue redefined: \nwhere fairness and \nquality intersect\n08\nCareful spending \nmeets intentional \nindulgence\n20\nAI - The \nconsumer\u2019s \ntrusted guide\n30\n2\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026\n\nConclusion \n63\nResearch methodology\n64\nReliable tech builds \nloyalty \u2013 but with \nboundaries\n40\nWhat should CPR \norganizations do \ndifferently?\n46\n3\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026\n\nAround two in five are choosing lower cost \nalternatives, opting for private label, or buying \nsmaller quantities to manage budgets. Yet these \nchoices stop short when reliability is at stake. \nMany have adopted a hybrid mindset: willing to \ntrade down in certain categories, while retaining \nspending in others (e.g., when prioritizing \nhealth-related aspects). Nearly four in five avoid \nprivate labels in performance critical categories. \nPromotional influence is also becoming more \nand 71 percent would switch if pack sizes or \nproduct quality were reduced without clear \ncommunication. Promotions still have pulling \npower. Sixty two percent say more attractive deals \ncan make them switch, while 61 percent believe \nbundles that combine products with services or \nwarranties create stronger value. Quality now \ncarries more weight than ever, and 64 percent \nof consumers view \u2018shrinkflation\u20191 as an unfair \npractice. Health benefits, \u2018clean\u2019 ingredients,2  \nconvenience, and durability guide decisions across \ncategories, and many shoppers are willing to pay \nmore for faster delivery when it meaningfully \nimproves their experience.\nCareful spending meets intentional \nindulgence\nConsumers are becoming more deliberate about \nhow they save and where they treat themselves. \nAI-enabled shopping, heightened expectations \nof fairness and transparency, and meaningful \nhuman interaction at key moments are reshaping \nconsumer decision-making in a new era of \nempowered consumer decision making. As AI \nbecomes more deeply woven into everyday \nchoices, shoppers are rewriting what they \nconsider acceptable, valuable, and worth paying \nfor. Expectations are sharper, tolerance is lower, \nand the definition of value has expanded beyond \nprice. This report explores how AI, trust, and \nemotion are reshaping what consumers perceive \nas worth their time, money, and attention\nFairness and quality define value\nTransparent prices, consistent policies, and \nclear communication sit alongside quality in \nshaping perceived value. Seventy four percent \nof consumers say they would switch brands if \nthey found a lower regular price elsewhere, \nExecutive summary \n71%\nof consumers would switch brands if pack sizes \nor product quality were reduced without clear \ncommunication.\n4\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026\n\nstructured. Three in four consumers say money \noff discounts are most motivating, followed by \npercent off and buy one get one offers. Impulse \nrestraint is also easing 54% say they are making \nfewer impulse purchases, down from 71% last \nyear, signaling a modest rebound of \u2018intentional \nindulgence\u2019 alongside persistent deal- seeking.\nTrust in channels matters. Two in three consumers \nbelieve ecommerce offers fair prices, with thrift \nand discount formats close behind. Emotional \nrelease also plays a role. Seven in ten say small \nindulgences help manage financial stress, \nshowing that value blends rational savings with \nemotional satisfaction.\nAI - The consumer\u2019s trusted guide\nAI-driven tools are becoming central to how \nshoppers navigate the marketplace. Chatbots \nare now widely used for service and personalized \nfollow up, and agentic AI is moving into routine \ntasks. Almost half of consumers (52%) use virtual \nassistants that automate re-ordering or meal \nplanning at least once a week, though only one \nin five is willing to pay a monthly subscription or \na one-time payment. Control remains essential. \nSeventy six percent want the ability to set clear \nrules for when an assistant acts. Concerns about \ntransparency continue, with 71 percent worried \nabout how generative AI uses their information. \nAwareness of synthetic influencers is widespread \nat 66 percent, yet trust remains low at 52 percent. \nTwo thirds of consumers expect brands to disclose \nAI generated advertising. Social commerce is \ngrowing quickly, and 35 percent have already \npurchased through platforms like Instagram \nor YouTube.\nTechnological convenience with a \nhuman touch drives loyalty\nConsumers want efficiency, relevance, and \nemotional connection to coexist. Sixty three \npercent want generative AI to provide hyper \npersonalized content, and 65 percent feel \ntechnology has reduced stress in their shopping \nroutines. Yet human support remains essential. \nMore than seven in ten consumers value in person \nassistance when dealing with complex purchases \nor resolving service issues. Preference for human \nassistance has risen sharply, with seventy four \npercent valuing support during in-store customer \nservice and sixty six percent during the purchase \nstage, up from 54 percent and 40 percent last year. \nTo win consumer loyalty brands must focus on fair \nvalue and dependable experiences such as clear \npricing, consistent product quality, and a balanced \nmix of digital convenience and human support.\n5\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026",
+        "text_density": 1112.4
+      },
+      "text_status": {
+        "char_count": 5562,
+        "density_threshold": 250.0,
+        "low_confidence_pages": [],
+        "native_confidence_score": 1.0,
+        "native_confidence_threshold": 0.55,
+        "native_density_confidence_score": 1.0,
+        "native_page_confidence_threshold": 0.35,
+        "native_sample_confidence_score": 1.0,
+        "native_text_density": 1112.4,
+        "native_text_not_available": false,
+        "not_available": false,
+        "ocr_policy": "native_first_selective",
+        "ocr_recommendation_reason": "",
+        "ocr_recommended": false,
+        "pages_sampled": 5,
+        "reason": "",
+        "schema_version": "1.0",
+        "text_density": 1112.4
+      },
+      "text_validation_pages": [
+        21,
+        54,
+        55
+      ],
+      "text_validation_reason": "",
+      "text_validation_status": "pass",
+      "title_resolution": {
+        "candidate_source": "cover_title_page",
+        "candidates": [
+          {
+            "evidence": "page:1",
+            "page_number": 1,
+            "schema_version": "1.0",
+            "score": 1134.0,
+            "source": "cover_title_page",
+            "value": "How AI is transforming value perception today\u2019s consumer 2026"
+          },
+          {
+            "evidence": "filename",
+            "page_number": 0,
+            "schema_version": "1.0",
+            "score": 565.0,
+            "source": "filename",
+            "value": "Final Web Version Report Consumer Trends 2026"
+          }
+        ],
+        "confidence": "high",
+        "edition": "2026",
+        "evidence": [
+          "page:1"
+        ],
+        "explicit_source_title": "How AI is transforming value perception today\u2019s consumer 2026",
+        "issues": [],
+        "publisher_candidate": "Capgemini Research Institute",
+        "schema_version": "1.0",
+        "title": "How AI is transforming value perception today\u2019s consumer 2026"
+      }
+    },
+    "vector_indexing": {
+      "indexed_at_utc": null,
+      "last_error": null,
+      "openai_file_id": "file-StsgTVfrSH8itD9Nwhb2Ka",
+      "schema_version": "1.0",
+      "vector_store_id": "vs_6aecd8ad1f988191aa4f879397d3d029",
+      "vector_store_status": "indexing"
+    }
+  },
+  "pipeline_name": "report_generation",
+  "report_slug": "final-web-version-report-consumer-trends-2026-pdf",
+  "schema_version": "1.0",
+  "source_run_id": "55883762-7880-455f-b547-16c602211da3",
+  "source_task_id": "workflow_job:1b853f8d-042e-4472-bbf0-5035e6b95351",
+  "stage_name": "selection_complete",
+  "stage_status": "completed"
+}

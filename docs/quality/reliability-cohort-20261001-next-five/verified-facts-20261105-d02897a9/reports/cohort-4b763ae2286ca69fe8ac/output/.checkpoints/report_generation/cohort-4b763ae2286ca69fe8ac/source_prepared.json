@@ -1,0 +1,292 @@
+{
+  "artifact_refs": {
+    "analysis_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\reutersinstitute.politics.ox.ac.uk\\b0e410340498\\Trends_and_Predictions_2026.pdf",
+    "contents_image": "tre-cf474e4f079f/assets/preview-contents-9cee0a4fe60d.png",
+    "source_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\reutersinstitute.politics.ox.ac.uk\\b0e410340498\\Trends_and_Predictions_2026.pdf"
+  },
+  "completed_at_utc": "2026-11-05T21:36:00.126895+00:00",
+  "file_id": "cohort-4b763ae2286ca69fe8ac",
+  "payload": {
+    "artifact_integrity": {
+      "files": {
+        "analysis_pdf": {
+          "md5": "4b763ae2286ca69fe8acb63b17508dfb",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\reutersinstitute.politics.ox.ac.uk\\b0e410340498\\Trends_and_Predictions_2026.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 4272132
+        },
+        "source_pdf": {
+          "md5": "4b763ae2286ca69fe8acb63b17508dfb",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\reutersinstitute.politics.ox.ac.uk\\b0e410340498\\Trends_and_Predictions_2026.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 4272132
+        }
+      },
+      "schema_version": "1.0"
+    },
+    "artifact_lineage": {
+      "analysis_pdf": "art_1a5d6230c5c16eed69cd51a8672dd0039258d80b63d3d938c4f24dc205c19cb2",
+      "contents_image": "art_fb1199617478818e9bc8577e0bc9b4981719ab66611ee24b0560d9dae19156cd",
+      "source_pdf": "art_d25990172aa6a9652b52a17c84c87786bf22bc0b39f47d22582311e12b68b2ff"
+    },
+    "artifact_registry": {
+      "refs": [
+        {
+          "artifact_id": "source_pdf",
+          "content_hash": "4b763ae2286ca69fe8acb63b17508dfb",
+          "created_at_utc": "2026-11-05T21:36:00.040593+00:00",
+          "kind": "source_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\reutersinstitute.politics.ox.ac.uk\\b0e410340498\\Trends_and_Predictions_2026.pdf",
+          "producer_step": "source_prepared",
+          "required": true,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "analysis_pdf",
+          "content_hash": "4b763ae2286ca69fe8acb63b17508dfb",
+          "created_at_utc": "2026-11-05T21:36:00.040593+00:00",
+          "kind": "analysis_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\reutersinstitute.politics.ox.ac.uk\\b0e410340498\\Trends_and_Predictions_2026.pdf",
+          "producer_step": "source_prepared",
+          "required": true,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "contents_image",
+          "content_hash": "",
+          "created_at_utc": "2026-11-05T21:36:00.040593+00:00",
+          "kind": "contents_image",
+          "path": "tre-cf474e4f079f/assets/preview-contents-9cee0a4fe60d.png",
+          "producer_step": "source_prepared",
+          "required": false,
+          "schema_version": "1.0"
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    "prompt_family_materializations": {},
+    "schema_version": "1.0",
+    "source": {
+      "analysis_pdf_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\reutersinstitute.politics.ox.ac.uk\\b0e410340498\\Trends_and_Predictions_2026.pdf",
+      "contents_heading": "contents",
+      "contents_image": "tre-cf474e4f079f/assets/preview-contents-9cee0a4fe60d.png",
+      "contents_page_number": 3,
+      "info_response": {
+        "metadata": {
+          "Author": "Nic Newman",
+          "CreationDate": "D:20260108160606Z",
+          "Creator": "Adobe InDesign 17.4 (Macintosh)",
+          "Keywords": "Journalism, AI, answer engines, innovation, video, news creators",
+          "ModDate": "D:20260108162140Z",
+          "Producer": "Adobe PDF Library 16.0.7",
+          "Subject": "Journalism and Technology Trends and Predictions in 2026",
+          "Title": "Journalism and Technology Trends and Predictions 2026",
+          "Trapped": "/False"
+        },
+        "page_count": 47,
+        "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\reutersinstitute.politics.ox.ac.uk\\b0e410340498\\Trends_and_Predictions_2026.pdf",
+        "schema_version": "1.0"
+      },
+      "ocr_fallback_used": false,
+      "ocr_pdf_path": "",
+      "payload": {
+        "_contents_image": "tre-cf474e4f079f/assets/preview-contents-9cee0a4fe60d.png",
+        "_evidence_packs": {},
+        "_figure_assets": [],
+        "_figure_gallery": [],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "",
+        "_text_char_count": 6356,
+        "_text_density": 1271.2,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "contents",
+        "contents_page_number": 3,
+        "figure": {
+          "evidence": "",
+          "schema_version": "1.0",
+          "title": ""
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "JANUARY 2026",
+        "tldr": "Not available from text"
+      },
+      "schema_version": "1.0",
+      "text_response": {
+        "char_count": 6356,
+        "pages": [
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 1,
+            "text": "DIGITAL NEWS PROJECT\nJANUARY 2026\nJournalism and Technology \nTrends and Predictions 2026\nNic Newman"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 2,
+            "text": ""
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 3,
+            "text": "1\nContents\n \nAbout the Author 2\nAcknowledgements 2\n \nExecutive Summary 3\n1.  Pressures on Journalism Mount 7\n2.  Answer Engines and the Implications   \n\t \t for\tTraffic\t 10\n3.  Content Strategies Shift towards   \n  Distinctiveness 15\n4.  Social Media\u2019s Mid-Life Crisis and the   \n\t \t Video-fication\tof\tEverything\t 18\n5.  Responding to the Creator Wave 22\n6.   AI Slop, Deep-Fakes, and   \n  Misinformation  27\n7.  Latest Tales of AI in the Newsroom  30\n8.\t\t Changing\tBusiness\tModels\tand\tBarriers\t\t \t\n  to Innovation  36\n9.  What\u2019s Next in Technology? 39\n10. Conclusions 42\nSurvey Methodology 43\n \nDOI: 10.60625/risj-ps1d-np11"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 4,
+            "text": "THE REUTERS INSTITUTE FOR THE STUDY OF JOURNALISM\n2\nAbout the Author \nNic Newman is Senior Research Associate at the Reuters Institute for the Study of Journalism \nwhere he was lead author of the annual Digital News Report 2012\u201325. He is also a consultant \non digital media, working actively with news companies on product, audience, and business \nstrategies. He has produced a media and journalism predictions report for almost 20 years. This \nis\tthe\ttenth\tto\tbe\tpublished\tby\tthe\tReuters\tInstitute.\tNic\twas\ta\tfounding\tmember\tof\tthe\tBBC\t\nNews Website, leading international coverage as World Editor (1997\u20132001). As Head of Product \nDevelopment (2001\u201310) he led digital teams, developing websites, mobile, and interactive TV \napplications\tfor\tall\tBBC\tJournalism\tsites.\t\n \nAcknowledgements\nThe\tauthor\twould\tlike\tto\tthank\t280\tnews\texecutives\tfrom\t51\tcountries\tand\tterritories\twho\tgave\t\nup their time to respond to our survey around the key challenges and opportunities in the year \nahead. \nRespondents included 64 editors-in-chief, another 64 CEOs or managing directors, and 51 \nheads of digital or innovation, and came from some of the world\u2019s leading traditional media \ncompanies as well as digital-born organisations (see breakdown at the end of the report). \nSurvey input and answers helped guide some of the themes in this report and data have been \nused throughout. Some direct quotes do not carry names or organisations, at the request of \nthose contributors. \nThe author is particularly grateful to Mitali Mukherjee, Director of the Reuters Institute, \nRichard Fletcher, Director of Research, Federica Cherubini, Director of Leadership \nDevelopment, and the wider team at the Institute for their ideas and suggestions, and to \na range of other experts and news executives who generously contributed their time in \nbackground interviews (see full list at the end of this report). \nThanks also go to Alex Reid for her input on the manuscript over the holiday season and \nkeeping\tthe\tpublication\ton\ttrack.\tAs\twith\tmany\tpredictions\treports\tthere\tis\ta\tsignificant\t\nelement\tof\tspeculation,\tparticularly\taround\tspecifics\tand\tthe\treport\tshould\tbe\tread\tbearing\tthis\t\nin mind. Having said that, any mistakes \u2013 factual or otherwise \u2013 should be considered entirely \nthe responsibility of the author. \nPublished by the Reuters Institute for the Study of Journalism with the support of the Google \nNews Initiative (GNI). "
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 5,
+            "text": "3\nJOURNALISM AND TECHNOLOGY TRENDS AND PREDICTIONS 2026\nExecutive Summary \nWe are still at the early stages of another big shift in technology (Generative AI) which \nthreatens\tto\tupend\tthe\tnews\tindustry\tby\toffering\tmore\tefficient\tways\tof\taccessing\tand\tdistilling\t\ninformation\tat\tscale.\tAt\tthe\tsame\ttime,\tcreators\tand\tinfluencers\t(humans)\tare\tdriving\ta\tshift\t\ntowards personality-led news, at the expense of media institutions that can often feel less \nrelevant, less interesting, and less authentic. In 2026 the news media are likely to be further \nsqueezed by these two powerful forces. \nUnderstanding the impact of these trends, and working out how to combat them, will be high \nup the \u2018to do list\u2019 of media executives this year, despite the unevenly distributed pace of change \nacross countries and demographics.\nExistential challenges abound. Declining engagement for traditional media combined with \nlow trust is leading many politicians, businessmen, and celebrities to conclude that they can \nbypass the media entirely, giving interviews instead to sympathetic podcasters or YouTubers. \nThis Trump 2.0 playbook \u2013 now widely copied around the world \u2013 often comes bundled with a \nbarrage of intimidating legal threats against publishers and continuing attempts to undermine \ntrust by branding independent media and individual journalists as \u2018fake news\u2019. These \nnarratives\tare\tfinding\tfertile\tground\twith\taudiences\t\u2013\tespecially\tyounger\tones\t\u2013\tthat\tprefer\tthe\t\nconvenience of accessing news from platforms, and have weaker connections with traditional \nnews brands. Meanwhile search engines are turning into AI-driven answer engines, where \ncontent\tis\tsurfaced\tin\tchat\twindows,\traising\tfears\tthat\treferral\ttraffic\tfor\tpublishers\tcould\tdry\t\nup, undermining existing and future business models.\nDespite\tthese\tdifficulties\tmany\ttraditional\tnews\torganisations\tremain\toptimistic\tabout\ttheir\t\nown business \u2013 if not about journalism itself. Publishers will be focused this year on re-\nengineering their businesses for the age of AI, with more distinctive content and a more human \nface. They will also be looking beyond the article, investing more in multiple formats especially \nvideo and adjusting their content to make it more \u2018liquid\u2019 and therefore easier to reformat and \npersonalise. At the same time, they\u2019ll be continuing to work out how best to use Generative AI \nthemselves across newsgathering, packaging, and distribution. It\u2019s a delicate balancing act but \none\tthat\t\u2013\tif\tthey\tcan\tpull\tit\toff\t\u2013\tholds\tout\tthe\tpromise\tof\tgreater\tefficiency\tand\tmore\trelevant\t\nand engaging journalism.\nHow media leaders view the year ahead\nThese\tare\tthe\tmain\tfindings\tfrom\tour\tindustry\tsurvey,\tdrawn\tfrom\ta\tstrategic\tsample\tof\t280\t\ndigital leaders from 51 countries and territories: \n\u2022 Only\tslightly\tmore\tthan\ta\tthird\t(38%)\tof\tour\tsample\tof\teditors,\tCEOs,\tand\tdigital\t\nexecutives\tsay\tthey\tare\tconfident\tabout\tthe\tprospects\tfor\tjournalism\tin\tthe\tyear\tahead\t\n\u2013 that\u2019s 22pp lower than four years ago. Stated concerns relate to politically motivated \nattacks on journalism, loss of USAID money that previously supported independent media \nin\tmany\tparts\tof\tthe\tworld,\tand\tsignificant\tdeclines\tin\ttraffic\tto\tmany\tonline\tnews\tsites."
+          }
+        ],
+        "pages_extracted": 5,
+        "schema_version": "1.0",
+        "text": "DIGITAL NEWS PROJECT\nJANUARY 2026\nJournalism and Technology \nTrends and Predictions 2026\nNic Newman\n\n\n\n1\nContents\n \nAbout the Author 2\nAcknowledgements 2\n \nExecutive Summary 3\n1.  Pressures on Journalism Mount 7\n2.  Answer Engines and the Implications   \n\t \t for\tTraffic\t 10\n3.  Content Strategies Shift towards   \n  Distinctiveness 15\n4.  Social Media\u2019s Mid-Life Crisis and the   \n\t \t Video-fication\tof\tEverything\t 18\n5.  Responding to the Creator Wave 22\n6.   AI Slop, Deep-Fakes, and   \n  Misinformation  27\n7.  Latest Tales of AI in the Newsroom  30\n8.\t\t Changing\tBusiness\tModels\tand\tBarriers\t\t \t\n  to Innovation  36\n9.  What\u2019s Next in Technology? 39\n10. Conclusions 42\nSurvey Methodology 43\n \nDOI: 10.60625/risj-ps1d-np11\n\nTHE REUTERS INSTITUTE FOR THE STUDY OF JOURNALISM\n2\nAbout the Author \nNic Newman is Senior Research Associate at the Reuters Institute for the Study of Journalism \nwhere he was lead author of the annual Digital News Report 2012\u201325. He is also a consultant \non digital media, working actively with news companies on product, audience, and business \nstrategies. He has produced a media and journalism predictions report for almost 20 years. This \nis\tthe\ttenth\tto\tbe\tpublished\tby\tthe\tReuters\tInstitute.\tNic\twas\ta\tfounding\tmember\tof\tthe\tBBC\t\nNews Website, leading international coverage as World Editor (1997\u20132001). As Head of Product \nDevelopment (2001\u201310) he led digital teams, developing websites, mobile, and interactive TV \napplications\tfor\tall\tBBC\tJournalism\tsites.\t\n \nAcknowledgements\nThe\tauthor\twould\tlike\tto\tthank\t280\tnews\texecutives\tfrom\t51\tcountries\tand\tterritories\twho\tgave\t\nup their time to respond to our survey around the key challenges and opportunities in the year \nahead. \nRespondents included 64 editors-in-chief, another 64 CEOs or managing directors, and 51 \nheads of digital or innovation, and came from some of the world\u2019s leading traditional media \ncompanies as well as digital-born organisations (see breakdown at the end of the report). \nSurvey input and answers helped guide some of the themes in this report and data have been \nused throughout. Some direct quotes do not carry names or organisations, at the request of \nthose contributors. \nThe author is particularly grateful to Mitali Mukherjee, Director of the Reuters Institute, \nRichard Fletcher, Director of Research, Federica Cherubini, Director of Leadership \nDevelopment, and the wider team at the Institute for their ideas and suggestions, and to \na range of other experts and news executives who generously contributed their time in \nbackground interviews (see full list at the end of this report). \nThanks also go to Alex Reid for her input on the manuscript over the holiday season and \nkeeping\tthe\tpublication\ton\ttrack.\tAs\twith\tmany\tpredictions\treports\tthere\tis\ta\tsignificant\t\nelement\tof\tspeculation,\tparticularly\taround\tspecifics\tand\tthe\treport\tshould\tbe\tread\tbearing\tthis\t\nin mind. Having said that, any mistakes \u2013 factual or otherwise \u2013 should be considered entirely \nthe responsibility of the author. \nPublished by the Reuters Institute for the Study of Journalism with the support of the Google \nNews Initiative (GNI). \n\n3\nJOURNALISM AND TECHNOLOGY TRENDS AND PREDICTIONS 2026\nExecutive Summary \nWe are still at the early stages of another big shift in technology (Generative AI) which \nthreatens\tto\tupend\tthe\tnews\tindustry\tby\toffering\tmore\tefficient\tways\tof\taccessing\tand\tdistilling\t\ninformation\tat\tscale.\tAt\tthe\tsame\ttime,\tcreators\tand\tinfluencers\t(humans)\tare\tdriving\ta\tshift\t\ntowards personality-led news, at the expense of media institutions that can often feel less \nrelevant, less interesting, and less authentic. In 2026 the news media are likely to be further \nsqueezed by these two powerful forces. \nUnderstanding the impact of these trends, and working out how to combat them, will be high \nup the \u2018to do list\u2019 of media executives this year, despite the unevenly distributed pace of change \nacross countries and demographics.\nExistential challenges abound. Declining engagement for traditional media combined with \nlow trust is leading many politicians, businessmen, and celebrities to conclude that they can \nbypass the media entirely, giving interviews instead to sympathetic podcasters or YouTubers. \nThis Trump 2.0 playbook \u2013 now widely copied around the world \u2013 often comes bundled with a \nbarrage of intimidating legal threats against publishers and continuing attempts to undermine \ntrust by branding independent media and individual journalists as \u2018fake news\u2019. These \nnarratives\tare\tfinding\tfertile\tground\twith\taudiences\t\u2013\tespecially\tyounger\tones\t\u2013\tthat\tprefer\tthe\t\nconvenience of accessing news from platforms, and have weaker connections with traditional \nnews brands. Meanwhile search engines are turning into AI-driven answer engines, where \ncontent\tis\tsurfaced\tin\tchat\twindows,\traising\tfears\tthat\treferral\ttraffic\tfor\tpublishers\tcould\tdry\t\nup, undermining existing and future business models.\nDespite\tthese\tdifficulties\tmany\ttraditional\tnews\torganisations\tremain\toptimistic\tabout\ttheir\t\nown business \u2013 if not about journalism itself. Publishers will be focused this year on re-\nengineering their businesses for the age of AI, with more distinctive content and a more human \nface. They will also be looking beyond the article, investing more in multiple formats especially \nvideo and adjusting their content to make it more \u2018liquid\u2019 and therefore easier to reformat and \npersonalise. At the same time, they\u2019ll be continuing to work out how best to use Generative AI \nthemselves across newsgathering, packaging, and distribution. It\u2019s a delicate balancing act but \none\tthat\t\u2013\tif\tthey\tcan\tpull\tit\toff\t\u2013\tholds\tout\tthe\tpromise\tof\tgreater\tefficiency\tand\tmore\trelevant\t\nand engaging journalism.\nHow media leaders view the year ahead\nThese\tare\tthe\tmain\tfindings\tfrom\tour\tindustry\tsurvey,\tdrawn\tfrom\ta\tstrategic\tsample\tof\t280\t\ndigital leaders from 51 countries and territories: \n\u2022 Only\tslightly\tmore\tthan\ta\tthird\t(38%)\tof\tour\tsample\tof\teditors,\tCEOs,\tand\tdigital\t\nexecutives\tsay\tthey\tare\tconfident\tabout\tthe\tprospects\tfor\tjournalism\tin\tthe\tyear\tahead\t\n\u2013 that\u2019s 22pp lower than four years ago. Stated concerns relate to politically motivated \nattacks on journalism, loss of USAID money that previously supported independent media \nin\tmany\tparts\tof\tthe\tworld,\tand\tsignificant\tdeclines\tin\ttraffic\tto\tmany\tonline\tnews\tsites.",
+        "text_density": 1271.2
+      },
+      "text_status": {
+        "char_count": 6356,
+        "density_threshold": 250.0,
+        "low_confidence_pages": [],
+        "native_confidence_score": 1.0,
+        "native_confidence_threshold": 0.55,
+        "native_density_confidence_score": 1.0,
+        "native_page_confidence_threshold": 0.35,
+        "native_sample_confidence_score": 1.0,
+        "native_text_density": 1271.2,
+        "native_text_not_available": false,
+        "not_available": false,
+        "ocr_policy": "native_first_selective",
+        "ocr_recommendation_reason": "",
+        "ocr_recommended": false,
+        "pages_sampled": 5,
+        "reason": "",
+        "schema_version": "1.0",
+        "text_density": 1271.2
+      },
+      "text_validation_pages": [
+        20,
+        23,
+        29
+      ],
+      "text_validation_reason": "",
+      "text_validation_status": "pass",
+      "title_resolution": {
+        "candidate_source": "cover_title_page",
+        "candidates": [
+          {
+            "evidence": "page:1",
+            "page_number": 1,
+            "schema_version": "1.0",
+            "score": 1127.0,
+            "source": "cover_title_page",
+            "value": "JANUARY 2026"
+          },
+          {
+            "evidence": "page:5",
+            "page_number": 5,
+            "schema_version": "1.0",
+            "score": 845.0,
+            "source": "repeated_header_title",
+            "value": "JOURNALISM AND TECHNOLOGY TRENDS AND PREDICTIONS 2026"
+          },
+          {
+            "evidence": "page:1",
+            "page_number": 1,
+            "schema_version": "1.0",
+            "score": 775.0,
+            "source": "source_content",
+            "value": "Trends and Predictions 2026"
+          },
+          {
+            "evidence": "page:4",
+            "page_number": 4,
+            "schema_version": "1.0",
+            "score": 715.0,
+            "source": "source_content",
+            "value": "Nic Newman is Senior Research Associate at the Reuters Institute for the Study 2026"
+          },
+          {
+            "evidence": "page:4",
+            "page_number": 4,
+            "schema_version": "1.0",
+            "score": 715.0,
+            "source": "source_content",
+            "value": "Published by the Reuters Institute for the Study 2026"
+          },
+          {
+            "evidence": "page:4",
+            "page_number": 4,
+            "schema_version": "1.0",
+            "score": 715.0,
+            "source": "source_content",
+            "value": "THE REUTERS INSTITUTE FOR THE STUDY 2026"
+          },
+          {
+            "evidence": "page:4",
+            "page_number": 4,
+            "schema_version": "1.0",
+            "score": 695.0,
+            "source": "source_content",
+            "value": "FOR THE STUDY 2026"
+          }
+        ],
+        "confidence": "high",
+        "edition": "2026",
+        "evidence": [
+          "page:1"
+        ],
+        "explicit_source_title": "JANUARY 2026",
+        "issues": [],
+        "publisher_candidate": "Reuters Institute",
+        "schema_version": "1.0",
+        "title": "JANUARY 2026"
+      }
+    }
+  },
+  "pipeline_name": "report_generation",
+  "report_slug": "trends-and-predictions-2026-pdf",
+  "schema_version": "1.0",
+  "source_run_id": "769367fc-3391-4b5e-964d-3b33eff39dd7",
+  "source_task_id": "workflow_job:c55c8cfd-adb2-4356-879d-6156c6b822ee",
+  "stage_name": "source_prepared",
+  "stage_status": "completed"
+}

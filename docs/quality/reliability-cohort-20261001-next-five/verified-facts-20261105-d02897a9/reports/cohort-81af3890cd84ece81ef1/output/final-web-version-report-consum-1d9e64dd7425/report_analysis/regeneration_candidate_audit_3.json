@@ -1,0 +1,2731 @@
+{
+  "attempt_index": 3,
+  "before_sha256": "cc54cebc88957cc0848ee954f39ef002b571a622ed91fbd68eb903a42ba2c25c",
+  "after_sha256": "9809ae4752b3fc67ed67b3eb499bc24e1438fd3284c12fb93aa384c457c15faf",
+  "transformation_scope": [
+    "insights_candidates",
+    "insights_final",
+    "linkedin_post"
+  ],
+  "unchanged_family_sha256": {
+    "summary": "02dad00c218aff3a07b20ecb8eb768796c239fb79bfd54e3fd07e701b35676b2",
+    "quotes_final": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "current_artifacts_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-81af3890cd84ece81ef1\\ias-first-attempt-m4dv7o30\\output\\final-web-version-report-consum-1d9e64dd7425\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-81af3890cd84ece81ef1\\ias-first-attempt-m4dv7o30\\output\\final-web-version-report-consum-1d9e64dd7425\\report_analysis\\artifacts_regen_candidate_3.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "public_editorial_quality.material_claim_evidence_missing:insights:human-purchase-stage-loyalty-comparison.metric_public_copy",
+    "public_editorial_quality.material_claim_evidence_missing:insights:smaller-quantity-shopping.metric_public_copy",
+    "public_editorial_quality.material_claim_evidence_missing:insights:switch-uncommunicated-reduction.metric_public_copy",
+    "public_editorial_quality.report_material_coverage_missing:public_items",
+    "public_editorial_quality.semantic_review:insights:human-support-loyalty-comparison",
+    "public_editorial_quality.semantic_review:insights:regular-price-switching",
+    "public_editorial_quality.semantic_review:insights:regular-price-switching.now_what",
+    "public_editorial_quality.semantic_review:insights:regular-price-switching.so_what",
+    "regeneration_removed_insight_reintroduced:insights_candidates:careful-spending-promotions",
+    "regeneration_removed_insight_reintroduced:insights_final:careful-spending-promotions",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.cohort",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.confidence",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.denominator",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.forecast_status",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.geography",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.label",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.observation_status",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.observations",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.sample_size",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.segment",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.subject",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.timeframe",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.trend",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.unit",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].metric.value",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].source_identity",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].verified_fact",
+    "regeneration_scope_violation:insights_candidates[item=careful-spending-promotions].verified_fact_id",
+    "regeneration_scope_violation:insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=human-support-loyalty-comparison].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=human-support-loyalty-comparison].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=human-support-loyalty-comparison].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=hyperpersonalized-genai-content].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=hyperpersonalized-genai-content].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=hyperpersonalized-genai-content].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=regular-price-switching].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=regular-price-switching].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=regular-price-switching].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=smaller-quantity-shopping].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=smaller-quantity-shopping].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=smaller-quantity-shopping].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=switch-uncommunicated-reduction].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=switch-uncommunicated-reduction].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=switch-uncommunicated-reduction].metric.delta",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].coverage_role",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].decision_relevance_score",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.baseline",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.cohort",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.comparator",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.confidence",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.delta",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.denominator",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.forecast_status",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.geography",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.label",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.observation_status",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.observations",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.sample_size",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.segment",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.subject",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.timeframe",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.trend",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.unit",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric.value",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric_public_copy",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].metric_strength_score",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].novelty_score",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].now_what",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].report_type_lens",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].score",
+    "regeneration_scope_violation:insights_final[item=careful-spending-promotions].so_what",
+    "regeneration_scope_violation:insights_final[item=human-purchase-stage-loyalty-comparison]",
+    "regeneration_scope_violation:insights_final[item=human-support-loyalty-comparison].evidence",
+    "regeneration_scope_violation:insights_final[item=human-support-loyalty-comparison].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=human-support-loyalty-comparison].evidence_spans[1]",
+    "regeneration_scope_violation:insights_final[item=regular-price-switching].evidence",
+    "regeneration_scope_violation:insights_final[item=regular-price-switching].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=regular-price-switching].evidence_spans[1]",
+    "regeneration_scope_violation:insights_final[item=smaller-quantity-shopping]",
+    "regeneration_scope_violation:insights_final[item=switch-uncommunicated-reduction]",
+    "validation_execution:validation"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "assistant-use-and-control",
+      "original_evidence_ids": [
+        "verified-fact:assistant-use-and-control"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "careful-spending-promotions",
+      "original_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        24
+      ],
+      "candidate_source_pages": [
+        24
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "human-purchase-stage-loyalty-comparison",
+      "original_evidence_ids": [
+        "verified-fact:human-purchase-stage-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-purchase-stage-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "human-support-loyalty-comparison",
+      "original_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "hyperpersonalized-genai-content",
+      "original_evidence_ids": [
+        "verified-fact:hyperpersonalized-genai-content"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:hyperpersonalized-genai-content"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "impulse-purchase-shift",
+      "original_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "india-quick-commerce-spending-share",
+      "original_evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        12
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "regular-price-switching",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "smaller-quantity-shopping",
+      "original_evidence_ids": [
+        "verified-fact:smaller-quantity-shopping"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:smaller-quantity-shopping"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "switch-uncommunicated-reduction",
+      "original_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "assistant-use-and-control",
+      "original_evidence_ids": [
+        "verified-fact:assistant-use-and-control"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "careful-spending-promotions",
+      "original_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        24
+      ],
+      "candidate_source_pages": [
+        24
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "human-purchase-stage-loyalty-comparison",
+      "original_evidence_ids": [],
+      "candidate_evidence_ids": [
+        "verified-fact:human-purchase-stage-loyalty-comparison"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "human-support-loyalty-comparison",
+      "original_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison",
+        "verified-fact:human-purchase-stage-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "hyperpersonalized-genai-content",
+      "original_evidence_ids": [
+        "verified-fact:hyperpersonalized-genai-content"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:hyperpersonalized-genai-content"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "impulse-purchase-shift",
+      "original_evidence_ids": [
+        "verified-fact:impulse-purchase-shift",
+        "verified-fact:smaller-quantity-shopping"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        5,
+        21
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "india-quick-commerce-spending-share",
+      "original_evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        12
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "regular-price-switching",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "smaller-quantity-shopping",
+      "original_evidence_ids": [],
+      "candidate_evidence_ids": [
+        "verified-fact:smaller-quantity-shopping"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "switch-uncommunicated-reduction",
+      "original_evidence_ids": [],
+      "candidate_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [
+        "regeneration_removed_insight_reintroduced"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        24
+      ],
+      "candidate_source_pages": [
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:3167c39f8f82766f",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:9e9662cea1793aef",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction",
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction",
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        4,
+        24
+      ],
+      "candidate_source_pages": [
+        4,
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:bb5f7980b0aafd9c",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction",
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction",
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        4,
+        24
+      ],
+      "candidate_source_pages": [
+        4,
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:f057fa755054e4e3",
+      "original_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        24
+      ],
+      "candidate_source_pages": [
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:608c7fe219ffb274",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:9a14c1890fc408a0",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:f6a27ba95538eb27",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:02c1ea47a3a28f67",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:39da9d0cdec33fe5",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:670ffc34e7744153",
+      "original_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:8b483b274b59c5a7",
+      "original_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        24
+      ],
+      "candidate_source_pages": [
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:f08e00ec9b475fe1",
+      "original_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:face1a23c651a289",
+      "original_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:8738f48cd29e0fa0",
+      "original_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:dd5b82c2a1a2d38c",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "3754bae4800aac6a26a414bee1663494c6cfdd9c3f7ff62dd51257410ab4ded6",
+    "63374d42056d6379bdac75dd386e731d9fe3b40ba03c409d3bfafd7917fc1c94",
+    "1311690fc05611510ec078e8929143432e134e10fd67611a2dbb0bb0254ee2ae",
+    "5875ada906df23c125c20cb70120534516a40ea00bf4ae8e7416bc598b41ca5e",
+    "d5039109ab6006baf56c257da4fa903257f4808331a292b2ddd1f0e291c4ee1a",
+    "a6d2f5df804fcbbf3f86d9e4f9abdcc62b4466866850243e90ea2d95e9982897",
+    "e8ad62aeb0a015d00e741c4282b22d150ed8c329e287ec3bcbc654e7b81aca12",
+    "72b1afdf42d5f17f5fdb5b673f1fbfe8cf14554ac4e85cd0d9eff259db3d8331",
+    "18ad1ee7709ee130d1f89a28e144465832e13bfd5a78b63196293b9e8a187a32",
+    "a89a1119f25a3df10864352758111a8ecb8c27471e129800645987a6889e2787",
+    "f695f5c3205448b52a8d8adb93dfb10f0e0d1d7271b21bd4acfe2673aea0d7c2",
+    "f757c53496f90033c58239ce3d9ba5587fa44f3a3128a6f8d79ab8ecdb450bf6",
+    "82404eb77b672ebaa4755bc2f286b3d6d1a698bec5c090c516c88637bcafc617",
+    "f01bfb4e809606a68a392d5c12cb88379b6b44e61e3f01219d7ad1b0a95adfb5",
+    "a842a516678de40a244d640221650fd2b7eba3952bd2999b9ca940483d120f22",
+    "d634297485a893ba6040a8fa0a5f5e138565e5ef4b70331cb637e13b91c582f7",
+    "f4213156691e3e9af083696eb67c8ffa1f5a250ada55dfd1fe046e06fe748994",
+    "7e7cde65d20e9eee8193dc57837354d169ae2619029f1fb58ca7311cab37f868",
+    "17f3225139ad66bc937b07ba5133af6819269ca471880d3088d1b11d52af9a02",
+    "08e328569cbd30c6d211e9e6cd77c256bd36fbf1e49c56c2802852506758a44c",
+    "af943a33b4fa6caf72454ca067e583baee2beeabfb8a6a1659d5f3bd50706b90",
+    "02b4071643a65c68726dec6db9815369ba62f19e152c6f85c608ee161aff431c",
+    "a2f186d6e0e665098b12e7a739f6b23adfcee43b463f7f4368d80ff11a6f88c7",
+    "2d70019f1b33963c75bb462c84e2ec74ac01ddf0de29ffe8ef445606d69eedff",
+    "cf7dfd6c08f20ffb7a7c439923bac83a61d2f1c4e193881e020fd629d42a15a2",
+    "40123aaf7b7eaaa0e3a0c97986494129ec503347487f25c5c49975c645a02f4e",
+    "b702bc42b4a4e69a664970b1bc37a3b0c109de42c9573ff5e9c893335231fd08",
+    "8c9e5ec6e7a3642b2471ec9c7c91bd1d630ee248a60ed604a1f7be67f9c942a0",
+    "0506bed12451cc487649b0de32a0a029ca3ac3e3bdd1380431e01fa7b1d5b84f",
+    "965a197e7a912b9a72b6baaabafa04485405fe13fef4733bb1c6d493861be206",
+    "c6cb73d4e3ca6502bf21b8348c99cf9c8ded475dae7fae8baa6fa7a03feb4821",
+    "05473aeba1f8f017e83b7a516258fe94b1b9f0ee90554b5a448a3e996a7265c6",
+    "a55158829db3021fb67bf5f62ffd0df1d24fc141713e8acab8401919bdb4bebb",
+    "da79826d121f68c3c5c81d06aec002de52b656b7a0f881379086e634c1f7bde0",
+    "a49af19a3286c339a26b12c7faa04409ad9450688ca4f239dcaa60cfaf04cf9a",
+    "2e098ba755d2c37c2a7838bb9a89fa14bf2b472785c6948c7ef432a47f6941ab",
+    "0fd5e230c75a842d817242972ca0a18fbc16f0a368cacb451e39734f5051b731",
+    "4daea4578557986fea71a5911eae0285ceeb041f86112d25357b17d4ad00a0af",
+    "7113d15e76a10f51f320c146de95ae71a2b8c77e3874f3f3720363617dceaa5b",
+    "5f762fbb2f8dab75db601899e27c713a3a1cc951062eb888832b360d24c925d4",
+    "9c3459e324008654671ed38319bf851b5021a2da2352a699c95b54e90e509c54",
+    "25285c40ddc790085d31a3a522c35dd86201bb858af849b6fd8223cd3bbe4c61",
+    "0802e83d01e00b5f61cf66ee5e18ffe4e8f83b3463f2c9ef979a4313c82c7610",
+    "3c35304de4e57835586ae75ea1765d4ed6f88fc707f93d89a1244fefb880f83c",
+    "c16233124cbbeca67a9c45d70dd76564ead914907ebddff276b6e79860617c8b",
+    "24e76de93df17149338e6b10e975f9bd2b5ce973ca32c0da4da85be832762e75",
+    "1cda6a5c7093c3b69460e4f3852c4c775e66f447014d9f7305ba2bc93241e175",
+    "bb857c818a38ec1af770b171f0a3c1b7d1b7916d5470ec18d2a1df0e887ba145",
+    "012df311dd2c0a487eb3f858d0299f414ea49beeaa42b1b5f9c0807ee7d31bf6",
+    "a7a6b7c2c83dbcc7abd9b9e1f3e61956b351eb1e477b51eadfcf3692f45bcc1f",
+    "b41827b46fb6a5715150f58e1d1f750304c4fe3ab8122c7d6fafe604ded37b98",
+    "a52d3845287874780b130ad888579419d2c426b3fce8ca67fabd45439d0be79e",
+    "a24003615ff883ba9dd857f422afbfba7fa4d10143801df8be8fe61bbc2111ed",
+    "4ed0d3a2f231bf69105b24dd6bfadf998e1f5d376fcfd897be90f9529e3e15c6",
+    "7e4a92db70bde70ce98bf0587c86ff114f10ba59ee0d77ab9f8219541898877c",
+    "35874637950e911ab0ee4a47f6ddb4b9eede736ed1482d6b1257243a466efd75",
+    "807b6fce9ae11e14f775ca6aa04494fdbbfeceb101e8365d37e9e14e77574ce5",
+    "d3ee0cd33007ea76f441946d57e034b3bafff129194fbcf138fdfd4d4c16e41d",
+    "39963661f6f9cfa3ba128972e45264aacf200e923f72b14fa23bdd8411e31f93",
+    "88a7e42eb0dc77c35574eda6f1f8523912d7afd2569e248699687edb56319623",
+    "9a9733490c745032a1f632fa9da7d1027ef5a1316cfcac2aa338b9a625c7d806",
+    "b4e2a98498bec874f9207ae6bbb302295249a56923f69308cb1b2688a520617a",
+    "d59c84dbb272c2bf5ac4a32826653d1e6c4a1054cb866c452bfe04dd4dd81a8c",
+    "67c8b1fb5bf0da86af8f52d5f8d74029713f4e896b16e214815e8629a456a185",
+    "92cc065993bbede6053a32a080fa9466286d0a2ed2a115e7ac5d27713c25687f",
+    "b3ff2ed9d89a0b37b2a906f8190f93d3aaf391806c6f26d75d1c2386f27aebe5",
+    "48262590e21b8390438c710543be9c4d90bfb2c45b43f2d955d4a3a77e45602a",
+    "9390fb5783be58d5ff5ae20dbc32a316cedd315597fc8864674895727d89c536",
+    "7b9f53eba56a24064f3dd373ca9a3dc98f193bc7c1f9efcf4d0b5255b514918b",
+    "b9e83874afc0e8b0e3373dc1bd64f676fb9e0d132d0e2779cb9252f98050ec02",
+    "0eea59d89bea976c8ca80cef16e10ef243e6d2f96532220dc0834e33901510c6",
+    "bf68187859226da4807689ec6e4ba209841addb6c06cdb88dddaf966028105a5",
+    "634a033ff2fd5030e5c64b75d873519da5b60a78614c5ed4e65eb0600e9d3279",
+    "6c85774e8384ce05a8202dce67ae3bb7891915f9769a0f450f1115280927afef",
+    "ef3feaccb8c286ba39ec4439feb83e9fe982e7df34027ee69de010b0cdf65ff5",
+    "366178cfdcb79f50c3dee27d600b74069e2d4ae693d02d31bd651154e22e6e94",
+    "b62891316decc5940788bfe3883b8492358c00f0970c2fde5eb84164fe362b2b",
+    "b6adbcbfddbcbbb5a7ed246274e80263e1719775e5599d41d23b261bc0b12fbe",
+    "d5f267bda5e5682430f3c53b4049214f2017ab6de570b81eb97a0123b54492fe",
+    "85514103aa854440fcd460eb6d7e0502f830350e0440839d694d592da674f524",
+    "592d031d5379da5cbc2b65013202951ac649259d37ea8a60cf0087e46932efbc",
+    "7f9790e95af9b15e344783b4f05528cf90f2d3b4262bbd7f7d0aec7cdc39ade4",
+    "cb6ec87f1793ca6930561535c50ecfbfef3472461e95ae559deb4df2fc71221e",
+    "9f79a7a7fae8399ff2a8089ed3ccc5cd4fea095b2074c44ba4b34e93951e13aa"
+  ],
+  "repair_action": "REMOVE_CLAIM",
+  "repair_strategy": "safe_removal",
+  "allowed_paths": [
+    "insights_candidates[item=assistant-use-and-control]",
+    "insights_candidates[item=careful-spending-promotions]",
+    "insights_candidates[item=impulse-purchase-shift]",
+    "insights_candidates[item=india-quick-commerce-spending-share]",
+    "insights_final[item=assistant-use-and-control]",
+    "insights_final[item=careful-spending-promotions]",
+    "insights_final[item=human-purchase-stage-loyalty-comparison]",
+    "insights_final[item=impulse-purchase-shift]",
+    "insights_final[item=india-quick-commerce-spending-share]",
+    "insights_final[item=smaller-quantity-shopping]",
+    "insights_final[item=switch-uncommunicated-reduction]",
+    "linkedin_post[claim_index=1]",
+    "linkedin_post[claim_index=2]"
+  ],
+  "verified_dependent_paths": [
+    "chart_insight_cards[item=assistant-use-and-control]",
+    "chart_insight_cards[item=careful-spending-promotions]",
+    "chart_insight_cards[item=human-purchase-stage-loyalty-comparison]",
+    "chart_insight_cards[item=hyperpersonalized-genai-content]",
+    "chart_insight_cards[item=impulse-purchase-shift]",
+    "chart_insight_cards[item=india-quick-commerce-spending-share]",
+    "chart_insight_cards[item=regular-price-switching].evidence_ids",
+    "chart_insight_cards[item=regular-price-switching].evidence_spans[1]",
+    "chart_insight_cards[item=smaller-quantity-shopping]",
+    "chart_insight_cards[item=switch-uncommunicated-reduction]",
+    "claim_ledgers[10].canonical_claim_id",
+    "claim_ledgers[10].claim_text",
+    "claim_ledgers[10].evidence_ids[0]",
+    "claim_ledgers[10].evidence_references[0].evidence_id",
+    "claim_ledgers[11].canonical_claim_id",
+    "claim_ledgers[11].claim_text",
+    "claim_ledgers[11].evidence_ids[1]",
+    "claim_ledgers[11].evidence_references[1]",
+    "claim_ledgers[11].evidence_span_count",
+    "claim_ledgers[12].evidence_ids[1]",
+    "claim_ledgers[13].canonical_claim_id",
+    "claim_ledgers[13].claim_text",
+    "claim_ledgers[13].evidence_ids[0]",
+    "claim_ledgers[13].evidence_ids[1]",
+    "claim_ledgers[14].canonical_claim_id",
+    "claim_ledgers[14].claim_text",
+    "claim_ledgers[14].confidence",
+    "claim_ledgers[14].evidence_ids[0]",
+    "claim_ledgers[15].canonical_claim_id",
+    "claim_ledgers[15].claim_text",
+    "claim_ledgers[15].confidence",
+    "claim_ledgers[15].evidence_ids[0]",
+    "claim_ledgers[16].canonical_claim_id",
+    "claim_ledgers[16].claim_text",
+    "claim_ledgers[16].confidence",
+    "claim_ledgers[16].evidence_ids[0]",
+    "claim_ledgers[17].canonical_claim_id",
+    "claim_ledgers[17].claim_text",
+    "claim_ledgers[17].confidence",
+    "claim_ledgers[17].evidence_ids[0]",
+    "claim_ledgers[19].canonical_claim_id",
+    "claim_ledgers[19].claim_text",
+    "claim_ledgers[19].evidence_ids[0]",
+    "claim_ledgers[20].canonical_claim_id",
+    "claim_ledgers[20].claim_text",
+    "claim_ledgers[20].evidence_ids[0]",
+    "claim_ledgers[21].artifact_section",
+    "claim_ledgers[21].canonical_claim_id",
+    "claim_ledgers[21].claim_text",
+    "claim_ledgers[21].evidence_ids[0]",
+    "claim_ledgers[21].evidence_quality_grade",
+    "claim_ledgers[21].support_type",
+    "claim_ledgers[22]",
+    "claim_ledgers[23]",
+    "claim_ledgers[24]",
+    "claim_ledgers[25]",
+    "claim_ledgers[5].evidence_ids[1]",
+    "claim_ledgers[5].evidence_references[1]",
+    "claim_ledgers[5].evidence_span_count",
+    "claim_ledgers[6].canonical_claim_id",
+    "claim_ledgers[6].claim_text",
+    "claim_ledgers[6].evidence_ids[0]",
+    "claim_ledgers[6].evidence_references[0]",
+    "claim_ledgers[6].evidence_span_count",
+    "claim_ledgers[8].canonical_claim_id",
+    "claim_ledgers[8].claim_text",
+    "claim_ledgers[8].evidence_ids[0]",
+    "claim_ledgers[8].evidence_references[0].evidence_id",
+    "claim_ledgers[9].canonical_claim_id",
+    "claim_ledgers[9].claim_text",
+    "claim_ledgers[9].evidence_ids[0]",
+    "claim_ledgers[9].evidence_references[0].evidence_id",
+    "executive_advisory.decision_brief.decision_implications[1]",
+    "executive_advisory.decision_brief.decision_implications[2]",
+    "executive_advisory.decision_brief.evidence_links[0]",
+    "executive_advisory.decision_brief.evidence_links[1]",
+    "executive_advisory.decision_brief.evidence_links[4]",
+    "executive_advisory.decision_brief.evidence_links[5]",
+    "executive_advisory.decision_brief.evidence_links[6]",
+    "executive_advisory.decision_brief.priority_moves[1]",
+    "executive_advisory.decision_brief.priority_moves[2]",
+    "executive_advisory.recommendations.items[item=assistant-use-and-control]",
+    "executive_advisory.recommendations.items[item=careful-spending-promotions]",
+    "executive_advisory.recommendations.items[item=impulse-purchase-shift]",
+    "executive_advisory.recommendations.items[item=india-quick-commerce-spending-share]",
+    "key_figures[0].evidence_ids",
+    "key_figures[0].evidence_spans[1]",
+    "key_figures[1].cohort",
+    "key_figures[1].denominator",
+    "key_figures[1].evidence_id",
+    "key_figures[1].evidence_ids",
+    "key_figures[1].evidence_spans[0].evidence_id",
+    "key_figures[1].evidence_spans[0].page",
+    "key_figures[1].evidence_spans[0].text",
+    "key_figures[1].evidence_spans[1]",
+    "key_figures[1].figure",
+    "key_figures[1].figure_id",
+    "key_figures[1].forecast_status",
+    "key_figures[1].geography",
+    "key_figures[1].label",
+    "key_figures[1].metric_public_copy",
+    "key_figures[1].observation_status",
+    "key_figures[1].observations[0].cohort",
+    "key_figures[1].observations[0].denominator",
+    "key_figures[1].observations[0].geography",
+    "key_figures[1].observations[0].label",
+    "key_figures[1].observations[0].observation_status",
+    "key_figures[1].observations[0].timeframe",
+    "key_figures[1].observations[0].unit",
+    "key_figures[1].observations[0].value",
+    "key_figures[1].observations[1]",
+    "key_figures[1].source_page",
+    "key_figures[1].source_statement",
+    "key_figures[1].subject",
+    "key_figures[1].timeframe",
+    "key_figures[1].unit",
+    "key_figures[1].why_it_matters",
+    "key_figures[2].cohort",
+    "key_figures[2].denominator",
+    "key_figures[2].evidence_id",
+    "key_figures[2].evidence_ids",
+    "key_figures[2].evidence_spans[0].evidence_id",
+    "key_figures[2].evidence_spans[0].page",
+    "key_figures[2].evidence_spans[0].text",
+    "key_figures[2].figure",
+    "key_figures[2].figure_id",
+    "key_figures[2].forecast_status",
+    "key_figures[2].geography",
+    "key_figures[2].label",
+    "key_figures[2].metric_public_copy",
+    "key_figures[2].observation_status",
+    "key_figures[2].observations[0].cohort",
+    "key_figures[2].observations[0].denominator",
+    "key_figures[2].observations[0].geography",
+    "key_figures[2].observations[0].label",
+    "key_figures[2].observations[0].observation_status",
+    "key_figures[2].observations[0].timeframe",
+    "key_figures[2].observations[0].unit",
+    "key_figures[2].observations[0].value",
+    "key_figures[2].observations[1]",
+    "key_figures[2].observations[2]",
+    "key_figures[2].source_page",
+    "key_figures[2].source_statement",
+    "key_figures[2].subject",
+    "key_figures[2].timeframe",
+    "key_figures[2].why_it_matters",
+    "key_figures[3].cohort",
+    "key_figures[3].denominator",
+    "key_figures[3].evidence_id",
+    "key_figures[3].evidence_ids[0]",
+    "key_figures[3].evidence_spans[0].evidence_id",
+    "key_figures[3].evidence_spans[0].page",
+    "key_figures[3].evidence_spans[0].text",
+    "key_figures[3].figure",
+    "key_figures[3].figure_id",
+    "key_figures[3].forecast_status",
+    "key_figures[3].geography",
+    "key_figures[3].label",
+    "key_figures[3].metric_public_copy",
+    "key_figures[3].observation_status",
+    "key_figures[3].observations[0].cohort",
+    "key_figures[3].observations[0].denominator",
+    "key_figures[3].observations[0].geography",
+    "key_figures[3].observations[0].label",
+    "key_figures[3].observations[0].observation_status",
+    "key_figures[3].observations[0].segment",
+    "key_figures[3].observations[0].timeframe",
+    "key_figures[3].observations[0].unit",
+    "key_figures[3].observations[0].value",
+    "key_figures[3].observations[1].cohort",
+    "key_figures[3].observations[1].denominator",
+    "key_figures[3].observations[1].geography",
+    "key_figures[3].observations[1].label",
+    "key_figures[3].observations[1].observation_status",
+    "key_figures[3].observations[1].segment",
+    "key_figures[3].observations[1].timeframe",
+    "key_figures[3].observations[1].unit",
+    "key_figures[3].observations[1].value",
+    "key_figures[3].segment",
+    "key_figures[3].source_page",
+    "key_figures[3].source_statement",
+    "key_figures[3].subject",
+    "key_figures[3].timeframe",
+    "key_figures[3].unit",
+    "key_figures[3].why_it_matters",
+    "key_figures[4].cohort",
+    "key_figures[4].denominator",
+    "key_figures[4].evidence_id",
+    "key_figures[4].evidence_ids",
+    "key_figures[4].evidence_spans[0].evidence_id",
+    "key_figures[4].evidence_spans[0].page",
+    "key_figures[4].evidence_spans[0].text",
+    "key_figures[4].figure",
+    "key_figures[4].figure_id",
+    "key_figures[4].forecast_status",
+    "key_figures[4].geography",
+    "key_figures[4].label",
+    "key_figures[4].metric_public_copy",
+    "key_figures[4].observation_status",
+    "key_figures[4].observations[0].cohort",
+    "key_figures[4].observations[0].denominator",
+    "key_figures[4].observations[0].geography",
+    "key_figures[4].observations[0].label",
+    "key_figures[4].observations[0].observation_status",
+    "key_figures[4].observations[0].segment",
+    "key_figures[4].observations[0].timeframe",
+    "key_figures[4].observations[0].unit",
+    "key_figures[4].observations[0].value",
+    "key_figures[4].observations[1].cohort",
+    "key_figures[4].observations[1].denominator",
+    "key_figures[4].observations[1].geography",
+    "key_figures[4].observations[1].label",
+    "key_figures[4].observations[1].observation_status",
+    "key_figures[4].observations[1].segment",
+    "key_figures[4].observations[1].timeframe",
+    "key_figures[4].observations[1].unit",
+    "key_figures[4].observations[1].value",
+    "key_figures[4].segment",
+    "key_figures[4].source_page",
+    "key_figures[4].source_statement",
+    "key_figures[4].subject",
+    "key_figures[4].timeframe",
+    "key_figures[4].unit",
+    "key_figures[4].why_it_matters",
+    "metric_spine[0].evidence_ids",
+    "metric_spine[0].evidence_spans[1]",
+    "metric_spine[1].cohort",
+    "metric_spine[1].delta",
+    "metric_spine[1].denominator",
+    "metric_spine[1].evidence_id",
+    "metric_spine[1].evidence_ids",
+    "metric_spine[1].evidence_spans[0].evidence_id",
+    "metric_spine[1].evidence_spans[0].page",
+    "metric_spine[1].evidence_spans[0].text",
+    "metric_spine[1].evidence_spans[1]",
+    "metric_spine[1].forecast_status",
+    "metric_spine[1].geography",
+    "metric_spine[1].label",
+    "metric_spine[1].metric_id",
+    "metric_spine[1].metric_public_copy",
+    "metric_spine[1].numeric_metadata",
+    "metric_spine[1].observation_status",
+    "metric_spine[1].observations[0].cohort",
+    "metric_spine[1].observations[0].denominator",
+    "metric_spine[1].observations[0].geography",
+    "metric_spine[1].observations[0].label",
+    "metric_spine[1].observations[0].observation_status",
+    "metric_spine[1].observations[0].timeframe",
+    "metric_spine[1].observations[0].unit",
+    "metric_spine[1].observations[0].value",
+    "metric_spine[1].observations[1]",
+    "metric_spine[1].source_display_value",
+    "metric_spine[1].source_statement",
+    "metric_spine[1].subject",
+    "metric_spine[1].timeframe",
+    "metric_spine[1].unit",
+    "metric_spine[1].value",
+    "metric_spine[2].cohort",
+    "metric_spine[2].confidence",
+    "metric_spine[2].delta",
+    "metric_spine[2].denominator",
+    "metric_spine[2].evidence_id",
+    "metric_spine[2].evidence_ids",
+    "metric_spine[2].evidence_spans[0].evidence_id",
+    "metric_spine[2].evidence_spans[0].page",
+    "metric_spine[2].evidence_spans[0].text",
+    "metric_spine[2].forecast_status",
+    "metric_spine[2].geography",
+    "metric_spine[2].label",
+    "metric_spine[2].metric_id",
+    "metric_spine[2].metric_public_copy",
+    "metric_spine[2].numeric_metadata",
+    "metric_spine[2].observation_status",
+    "metric_spine[2].observations[0].cohort",
+    "metric_spine[2].observations[0].denominator",
+    "metric_spine[2].observations[0].geography",
+    "metric_spine[2].observations[0].label",
+    "metric_spine[2].observations[0].observation_status",
+    "metric_spine[2].observations[0].timeframe",
+    "metric_spine[2].observations[0].unit",
+    "metric_spine[2].observations[0].value",
+    "metric_spine[2].observations[1]",
+    "metric_spine[2].observations[2]",
+    "metric_spine[2].sample_size",
+    "metric_spine[2].source_display_value",
+    "metric_spine[2].source_statement",
+    "metric_spine[2].subject",
+    "metric_spine[2].timeframe",
+    "metric_spine[2].value",
+    "metric_spine[3].cohort",
+    "metric_spine[3].confidence",
+    "metric_spine[3].delta",
+    "metric_spine[3].denominator",
+    "metric_spine[3].evidence_id",
+    "metric_spine[3].evidence_ids[0]",
+    "metric_spine[3].evidence_spans[0].evidence_id",
+    "metric_spine[3].evidence_spans[0].page",
+    "metric_spine[3].evidence_spans[0].text",
+    "metric_spine[3].forecast_status",
+    "metric_spine[3].geography",
+    "metric_spine[3].label",
+    "metric_spine[3].metric_id",
+    "metric_spine[3].metric_public_copy",
+    "metric_spine[3].numeric_metadata",
+    "metric_spine[3].observation_status",
+    "metric_spine[3].observations[0].cohort",
+    "metric_spine[3].observations[0].denominator",
+    "metric_spine[3].observations[0].geography",
+    "metric_spine[3].observations[0].label",
+    "metric_spine[3].observations[0].observation_status",
+    "metric_spine[3].observations[0].segment",
+    "metric_spine[3].observations[0].timeframe",
+    "metric_spine[3].observations[0].unit",
+    "metric_spine[3].observations[0].value",
+    "metric_spine[3].observations[1].cohort",
+    "metric_spine[3].observations[1].denominator",
+    "metric_spine[3].observations[1].geography",
+    "metric_spine[3].observations[1].label",
+    "metric_spine[3].observations[1].observation_status",
+    "metric_spine[3].observations[1].segment",
+    "metric_spine[3].observations[1].timeframe",
+    "metric_spine[3].observations[1].unit",
+    "metric_spine[3].observations[1].value",
+    "metric_spine[3].sample_size",
+    "metric_spine[3].segment",
+    "metric_spine[3].source_display_value",
+    "metric_spine[3].source_statement",
+    "metric_spine[3].subject",
+    "metric_spine[3].timeframe",
+    "metric_spine[3].unit",
+    "metric_spine[3].value",
+    "metric_spine[4].cohort",
+    "metric_spine[4].confidence",
+    "metric_spine[4].delta",
+    "metric_spine[4].denominator",
+    "metric_spine[4].evidence_id",
+    "metric_spine[4].evidence_ids",
+    "metric_spine[4].evidence_spans[0].evidence_id",
+    "metric_spine[4].evidence_spans[0].page",
+    "metric_spine[4].evidence_spans[0].text",
+    "metric_spine[4].forecast_status",
+    "metric_spine[4].geography",
+    "metric_spine[4].label",
+    "metric_spine[4].metric_id",
+    "metric_spine[4].metric_public_copy",
+    "metric_spine[4].observation_status",
+    "metric_spine[4].observations[0].cohort",
+    "metric_spine[4].observations[0].denominator",
+    "metric_spine[4].observations[0].geography",
+    "metric_spine[4].observations[0].label",
+    "metric_spine[4].observations[0].observation_status",
+    "metric_spine[4].observations[0].segment",
+    "metric_spine[4].observations[0].timeframe",
+    "metric_spine[4].observations[0].unit",
+    "metric_spine[4].observations[0].value",
+    "metric_spine[4].observations[1].cohort",
+    "metric_spine[4].observations[1].denominator",
+    "metric_spine[4].observations[1].geography",
+    "metric_spine[4].observations[1].label",
+    "metric_spine[4].observations[1].observation_status",
+    "metric_spine[4].observations[1].segment",
+    "metric_spine[4].observations[1].timeframe",
+    "metric_spine[4].observations[1].unit",
+    "metric_spine[4].observations[1].value",
+    "metric_spine[4].sample_size",
+    "metric_spine[4].segment",
+    "metric_spine[4].source_statement",
+    "metric_spine[4].subject",
+    "metric_spine[4].timeframe",
+    "metric_spine[4].unit",
+    "metric_spine[4].value",
+    "metric_spine[5].confidence",
+    "metric_spine[5].delta",
+    "metric_spine[5].denominator",
+    "metric_spine[5].evidence_id",
+    "metric_spine[5].evidence_ids",
+    "metric_spine[5].evidence_spans[0].evidence_id",
+    "metric_spine[5].evidence_spans[0].page",
+    "metric_spine[5].evidence_spans[0].text",
+    "metric_spine[5].forecast_status",
+    "metric_spine[5].label",
+    "metric_spine[5].metric_id",
+    "metric_spine[5].metric_public_copy",
+    "metric_spine[5].observation_status",
+    "metric_spine[5].observations[0].denominator",
+    "metric_spine[5].observations[0].label",
+    "metric_spine[5].observations[0].observation_status",
+    "metric_spine[5].observations[0].segment",
+    "metric_spine[5].observations[0].unit",
+    "metric_spine[5].observations[0].value",
+    "metric_spine[5].observations[1].denominator",
+    "metric_spine[5].observations[1].label",
+    "metric_spine[5].observations[1].observation_status",
+    "metric_spine[5].observations[1].segment",
+    "metric_spine[5].observations[1].unit",
+    "metric_spine[5].observations[1].value",
+    "metric_spine[5].sample_size",
+    "metric_spine[5].segment",
+    "metric_spine[5].source_statement",
+    "metric_spine[5].subject",
+    "metric_spine[5].unit",
+    "metric_spine[5].value",
+    "soft_copy_claim_provenance.claims[item=soft_copy:linkedin_post:8738f48cd29e0fa0]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:linkedin_post:dd5b82c2a1a2d38c]"
+  ],
+  "selected_evidence_ids": [
+    "verified-fact:assistant-use-and-control",
+    "verified-fact:careful-spending-promotions",
+    "verified-fact:impulse-purchase-shift",
+    "verified-fact:india-quick-commerce-spending-share",
+    "verified-fact:regular-price-switching",
+    "verified-fact:smaller-quantity-shopping",
+    "verified-fact:switch-uncommunicated-reduction"
+  ],
+  "quarantined_evidence_ids": [],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "family_confidence",
+        "affected_section": "quotes",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "summary.claim_evidence_map:2.claim",
+        "entity_id": "claim_ledgers:claim:2",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:regular-price-switching.text",
+        "entity_id": "executive_advisory:decision_brief:watchouts:1",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:8738f48cd29e0fa0",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:careful-spending-promotions.so_what",
+        "entity_id": "insight:careful-spending-promotions:so_what",
+        "evidence_ids": [
+          "verified-fact:careful-spending-promotions"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.report_analytical_depth_and_limitations",
+        "affected_section": "public_items",
+        "entity_id": "",
+        "evidence_ids": [
+          "verified-fact:assistant-use-and-control",
+          "verified-fact:careful-spending-promotions",
+          "verified-fact:india-quick-commerce-spending-share",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:assistant-use-and-control.so_what",
+        "entity_id": "insight:assistant-use-and-control:so_what",
+        "evidence_ids": [
+          "verified-fact:assistant-use-and-control"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "decision_brief.strategic_context",
+        "entity_id": "executive_advisory:decision_brief:strategic_context",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:dd5b82c2a1a2d38c",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:impulse-purchase-shift.so_what",
+        "entity_id": "insight:impulse-purchase-shift:so_what",
+        "evidence_ids": [
+          "verified-fact:impulse-purchase-shift",
+          "verified-fact:smaller-quantity-shopping"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:india-quick-commerce-spending-share.so_what",
+        "entity_id": "insight:india-quick-commerce-spending-share:so_what",
+        "evidence_ids": [
+          "verified-fact:india-quick-commerce-spending-share"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "summary.claim_evidence_map:2.claim",
+        "entity_id": "summary:summary:claim_evidence_map:2:claim",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [],
+    "introduced": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.forecast_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=hyperpersonalized-genai-content].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=regular-price-switching].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].verified_fact",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=switch-uncommunicated-reduction].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "validation_execution",
+        "affected_section": "validation",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].source_identity",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.label",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.confidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=smaller-quantity-shopping].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.subject",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=switch-uncommunicated-reduction]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_removed_insight_reintroduced",
+        "affected_section": "insights_candidates:careful-spending-promotions",
+        "entity_id": "careful-spending-promotions",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.unit",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.cohort",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-support-loyalty-comparison].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].so_what",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=switch-uncommunicated-reduction].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.sample_size",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.cohort",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:regular-price-switching.now_what",
+        "entity_id": "insight:regular-price-switching:now_what",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].coverage_role",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_removed_insight_reintroduced",
+        "affected_section": "insights_final:careful-spending-promotions",
+        "entity_id": "careful-spending-promotions",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].now_what",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=switch-uncommunicated-reduction].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.geography",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.segment",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.value",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:regular-price-switching.so_what",
+        "entity_id": "insight:regular-price-switching:so_what",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.timeframe",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.segment",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:human-support-loyalty-comparison",
+        "entity_id": "insight:human-support-loyalty-comparison:text",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.value",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=hyperpersonalized-genai-content].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].report_type_lens",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-purchase-stage-loyalty-comparison]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=hyperpersonalized-genai-content].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric_public_copy",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].decision_relevance_score",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.report_material_coverage_missing",
+        "affected_section": "public_items",
+        "entity_id": "",
+        "evidence_ids": [
+          "verified-fact:assistant-use-and-control",
+          "verified-fact:india-quick-commerce-spending-share",
+          "verified-fact:regular-price-switching",
+          "verified-fact:smaller-quantity-shopping",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.observations",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=smaller-quantity-shopping].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.observation_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=regular-price-switching].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.denominator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.geography",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.timeframe",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.observation_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].verified_fact_id",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].score",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.label",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric_strength_score",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:human-purchase-stage-loyalty-comparison.metric_public_copy",
+        "entity_id": "key_figures:key_figures:5:metric_public_copy",
+        "evidence_ids": [
+          "verified-fact:human-purchase-stage-loyalty-comparison"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:smaller-quantity-shopping.metric_public_copy",
+        "entity_id": "key_figures:key_figures:3:metric_public_copy",
+        "evidence_ids": [
+          "verified-fact:smaller-quantity-shopping"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-support-loyalty-comparison].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.denominator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=regular-price-switching].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:regular-price-switching",
+        "entity_id": "insight:regular-price-switching:text",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-support-loyalty-comparison].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.trend",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.confidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].novelty_score",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:switch-uncommunicated-reduction.metric_public_copy",
+        "entity_id": "key_figures:key_figures:2:metric_public_copy",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.trend",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=smaller-quantity-shopping].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.forecast_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=smaller-quantity-shopping]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.subject",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.unit",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.observations",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.sample_size",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failures": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.forecast_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=hyperpersonalized-genai-content].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=regular-price-switching].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].verified_fact",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=switch-uncommunicated-reduction].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "validation_execution",
+        "affected_section": "validation",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].source_identity",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.label",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.confidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=smaller-quantity-shopping].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.subject",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=switch-uncommunicated-reduction]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_removed_insight_reintroduced",
+        "affected_section": "insights_candidates:careful-spending-promotions",
+        "entity_id": "careful-spending-promotions",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.unit",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.cohort",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-support-loyalty-comparison].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].so_what",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=switch-uncommunicated-reduction].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.sample_size",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.cohort",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:regular-price-switching.now_what",
+        "entity_id": "insight:regular-price-switching:now_what",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].coverage_role",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_removed_insight_reintroduced",
+        "affected_section": "insights_final:careful-spending-promotions",
+        "entity_id": "careful-spending-promotions",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].now_what",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=switch-uncommunicated-reduction].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.geography",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.segment",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.value",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:regular-price-switching.so_what",
+        "entity_id": "insight:regular-price-switching:so_what",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.timeframe",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.segment",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:human-support-loyalty-comparison",
+        "entity_id": "insight:human-support-loyalty-comparison:text",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.value",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=hyperpersonalized-genai-content].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].report_type_lens",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-purchase-stage-loyalty-comparison]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=hyperpersonalized-genai-content].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric_public_copy",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].decision_relevance_score",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.report_material_coverage_missing",
+        "affected_section": "public_items",
+        "entity_id": "",
+        "evidence_ids": [
+          "verified-fact:assistant-use-and-control",
+          "verified-fact:india-quick-commerce-spending-share",
+          "verified-fact:regular-price-switching",
+          "verified-fact:smaller-quantity-shopping",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.observations",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-purchase-stage-loyalty-comparison].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=smaller-quantity-shopping].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.observation_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=regular-price-switching].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.denominator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.geography",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.timeframe",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.observation_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].verified_fact_id",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].score",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.label",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric_strength_score",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:human-purchase-stage-loyalty-comparison.metric_public_copy",
+        "entity_id": "key_figures:key_figures:5:metric_public_copy",
+        "evidence_ids": [
+          "verified-fact:human-purchase-stage-loyalty-comparison"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:smaller-quantity-shopping.metric_public_copy",
+        "entity_id": "key_figures:key_figures:3:metric_public_copy",
+        "evidence_ids": [
+          "verified-fact:smaller-quantity-shopping"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-support-loyalty-comparison].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.denominator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=regular-price-switching].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:regular-price-switching",
+        "entity_id": "insight:regular-price-switching:text",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=human-support-loyalty-comparison].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].metric.trend",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.confidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=careful-spending-promotions].novelty_score",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:switch-uncommunicated-reduction.metric_public_copy",
+        "entity_id": "key_figures:key_figures:2:metric_public_copy",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.trend",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=smaller-quantity-shopping].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.forecast_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=smaller-quantity-shopping]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.subject",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.unit",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.observations",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=careful-spending-promotions].metric.sample_size",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failure_count": 84,
+    "introduced_failure_categories": [],
+    "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+    "severity_changes": [],
+    "mutation_scope_result": "fail",
+    "evidence_lineage_result": "fail",
+    "repair_action": "REMOVE_CLAIM",
+    "repair_strategy": "safe_removal",
+    "evidence_ids_used": [
+      "verified-fact:assistant-use-and-control",
+      "verified-fact:careful-spending-promotions",
+      "verified-fact:impulse-purchase-shift",
+      "verified-fact:smaller-quantity-shopping",
+      "verified-fact:india-quick-commerce-spending-share",
+      "verified-fact:regular-price-switching",
+      "verified-fact:switch-uncommunicated-reduction"
+    ],
+    "strategy_fingerprint": "e670066f3446b6be3ffaba5793545421430cf6cf766cc57a6004ba0997d3a26b",
+    "candidate_sha256": "9809ae4752b3fc67ed67b3eb499bc24e1438fd3284c12fb93aa384c457c15faf",
+    "input_sha256": "cc54cebc88957cc0848ee954f39ef002b571a622ed91fbd68eb903a42ba2c25c",
+    "validator_identity": "regeneration-candidate-v1:efc08894cd3e145233ae5dc8bde408e81ff074ce23341179fc1bca62f86073b4:d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [],
+  "report_id": "cohort-81af3890cd84ece81ef1",
+  "validation_run_id": "validation:6c53f0620ecb3bfc3af1f436c910662fa5667e9432392590579b5b7a39f39abe",
+  "cohort_id": "39958713d38bfca7e3f72e2dfe14b9943ffabe79470f4944803638dea5631db6",
+  "workflow_run_id": "55883762-7880-455f-b547-16c602211da3",
+  "configuration_hash": "efc08894cd3e145233ae5dc8bde408e81ff074ce23341179fc1bca62f86073b4",
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "e670066f3446b6be3ffaba5793545421430cf6cf766cc57a6004ba0997d3a26b",
+  "latency_ms": 206288,
+  "schema_version": "1.0"
+}

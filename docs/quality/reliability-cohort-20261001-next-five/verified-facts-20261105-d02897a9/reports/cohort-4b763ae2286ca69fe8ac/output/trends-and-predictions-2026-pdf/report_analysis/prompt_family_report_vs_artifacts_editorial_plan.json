@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_plan",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "report_thesis": "The evidence presents a decision picture spanning observed and anticipated search pressure, stated newsroom content priorities and creator concerns, and prospective platform/AI revenue alongside assessments of current newsroom AI initiatives.",
+    "themes": [
+      {
+        "evidence_ids": [
+          "verified-fact:search-referrals-global",
+          "verified-fact:search-traffic-outlook"
+        ],
+        "priority": 1,
+        "theme": "Search signals differ in status: aggregate Chartbeat data show Google organic-search traffic to more than 2,500 sites fell 33% globally from November 2024 to November 2025, while the average slider score among 268 Q5 respondents indicates an expectation of declining search-engine traffic over the next three years, not an observed change."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:content-focus-shift",
+          "verified-fact:content-focus-contextual-analysis"
+        ],
+        "priority": 2,
+        "theme": "Among 264 Q13 respondents, reported net differences between proportions saying each area was more versus less important for newsroom focus in the era of AI were +91 for original investigations/on-the-ground reporting, +82 for contextual analysis (explanation, framing), and −42 for service journalism; these are perceptions of importance, not newsroom behavior."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:creator-audience-vs-talent-concern"
+        ],
+        "priority": 3,
+        "theme": "Among 263 Q19 respondents, 70% were somewhat or very concerned about creators taking time and attention away from publisher content, compared with 39% concerned about losing talent."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:newsroom-ai-initiative-assessments",
+          "verified-fact:newsroom-ai-initiatives-limited"
+        ],
+        "priority": 4,
+        "theme": "Among 265 Q11 respondents, the adjective closest to describing the impact of newsroom AI initiatives so far was “promising” for 44%, “limited” for 42%, “transformational” for 13%, and “disappointing” for 2%."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:ai-licensing-income-expectations",
+          "verified-fact:ai-platform-income-significant"
+        ],
+        "priority": 5,
+        "theme": "Publisher respondents (base 272) express varied expectations for possible AI-company licensing deals around news-content IP in about three years: 69% expect at least some income, comprising 49% expecting a minor source and 20% a significant source; 20% expect no income, 11% do not know, and 0% expect a main source."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:platform-funding-revenue-expectation"
+        ],
+        "priority": 6,
+        "theme": "Among respondents from commercial publishers excluding publicly funded public broadcasters (base 259), 37% expect funding from platforms, including AI platforms, to be likely important or very important for their company in 2026; the chart annotates this as up 17 percentage points in the last two years, driven by new AI revenues."
+      }
+    ]
+  }
+}

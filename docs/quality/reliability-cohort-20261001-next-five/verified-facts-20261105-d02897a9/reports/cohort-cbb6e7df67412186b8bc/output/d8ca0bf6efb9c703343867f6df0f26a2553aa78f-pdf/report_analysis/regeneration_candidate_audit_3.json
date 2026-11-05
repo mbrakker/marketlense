@@ -1,0 +1,1926 @@
+{
+  "attempt_index": 3,
+  "before_sha256": "f8f3f35f87536bd4386e4a179f678884871e8744258e3ff78cd00cee17c39661",
+  "after_sha256": "6344e193ff5686d89cd74c31b63b10b3ce22cc8aa3e426e48cac0799a4f3af2d",
+  "transformation_scope": [
+    "insights_candidates",
+    "insights_final"
+  ],
+  "unchanged_family_sha256": {
+    "summary": "ccb3faac205cbf9c85b3f19487c280b1d4d1b6601baade22c9671a6f958dce36",
+    "quotes_final": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "current_artifacts_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-cbb6e7df67412186b8bc\\ias-first-attempt-olry04oz\\output\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-cbb6e7df67412186b8bc\\ias-first-attempt-olry04oz\\output\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf\\report_analysis\\artifacts_regen_candidate_3.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "public_editorial_quality.material_claim_evidence_missing:expert_comment",
+    "public_editorial_quality.material_claim_evidence_missing:insights:broadcast-cord-cutter-preference.metric_public_copy",
+    "public_editorial_quality.material_claim_evidence_missing:insights:global-revenue-forecast",
+    "public_editorial_quality.material_claim_evidence_missing:insights:sports-fan-segment-shares",
+    "public_editorial_quality.material_claim_evidence_missing:insights:sports-fan-segment-shares.so_what",
+    "public_editorial_quality.semantic_review:insights:video-attention-spend.so_what",
+    "public_editorial_quality.semantic_review:linkedin_post",
+    "regeneration_scope_violation:insights_candidates[item=broadcast-cord-cutter-preference].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=broadcast-cord-cutter-preference].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=broadcast-cord-cutter-preference].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=consumer-vr-adoption-outlook].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=consumer-vr-adoption-outlook].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=consumer-vr-adoption-outlook].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=consumer-vr-adoption-outlook].metric.forecast_status",
+    "regeneration_scope_violation:insights_candidates[item=consumer-vr-adoption-outlook].metric.observations",
+    "regeneration_scope_violation:insights_candidates[item=ecommerce-firsthand-experience].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=ecommerce-firsthand-experience].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=ecommerce-firsthand-experience].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=ecommerce-firsthand-experience].metric.forecast_status",
+    "regeneration_scope_violation:insights_candidates[item=ecommerce-firsthand-experience].metric.observations",
+    "regeneration_scope_violation:insights_candidates[item=f02].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=f02].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=f02].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=f04].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=f04].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=f04].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=global-revenue-forecast].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=global-revenue-forecast].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=global-revenue-forecast].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=news-trust-comparison].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=news-trust-comparison].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=news-trust-comparison].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=sports-fan-segment-shares].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=sports-fan-segment-shares].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=sports-fan-segment-shares].metric.delta",
+    "regeneration_scope_violation:insights_candidates[item=video-attention-spend].metric.baseline",
+    "regeneration_scope_violation:insights_candidates[item=video-attention-spend].metric.comparator",
+    "regeneration_scope_violation:insights_candidates[item=video-attention-spend].metric.delta",
+    "regeneration_scope_violation:insights_final[item=global-revenue-forecast].evidence",
+    "regeneration_scope_violation:insights_final[item=global-revenue-forecast].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=global-revenue-forecast].evidence_spans[1]",
+    "regeneration_scope_violation:insights_final[item=global-revenue-forecast].pages[1]",
+    "regeneration_scope_violation:insights_final[item=sports-fan-segment-shares].evidence",
+    "regeneration_scope_violation:insights_final[item=sports-fan-segment-shares].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=sports-fan-segment-shares].evidence_spans[1]",
+    "regeneration_scope_violation:insights_final[item=sports-fan-segment-shares].pages[1]",
+    "regeneration_scope_violation:insights_final[item=video-attention-spend].evidence",
+    "regeneration_scope_violation:insights_final[item=video-attention-spend].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=video-attention-spend].evidence_spans[1]",
+    "validation_execution:validation"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "broadcast-cord-cutter-preference",
+      "original_evidence_ids": [
+        "verified-fact:broadcast-cord-cutter-preference"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:broadcast-cord-cutter-preference"
+      ],
+      "original_source_pages": [
+        70
+      ],
+      "candidate_source_pages": [
+        70
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "consumer-vr-adoption-outlook",
+      "original_evidence_ids": [
+        "verified-fact:consumer-vr-adoption-outlook"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:consumer-vr-adoption-outlook"
+      ],
+      "original_source_pages": [
+        42
+      ],
+      "candidate_source_pages": [
+        42
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "ecommerce-firsthand-experience",
+      "original_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "original_source_pages": [
+        119
+      ],
+      "candidate_source_pages": [
+        119
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "f02",
+      "original_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "f04",
+      "original_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "global-revenue-forecast",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "news-trust-comparison",
+      "original_evidence_ids": [
+        "verified-fact:news-trust-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:news-trust-comparison"
+      ],
+      "original_source_pages": [
+        101
+      ],
+      "candidate_source_pages": [
+        101
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "podcast-audience-factors",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        129
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "sports-fan-segment-shares",
+      "original_evidence_ids": [
+        "verified-fact:sports-fan-segment-shares"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:sports-fan-segment-shares"
+      ],
+      "original_source_pages": [
+        84
+      ],
+      "candidate_source_pages": [
+        84
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "video-attention-spend",
+      "original_evidence_ids": [
+        "verified-fact:video-attention-spend"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:video-attention-spend"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "broadcast-cord-cutter-preference",
+      "original_evidence_ids": [],
+      "candidate_evidence_ids": [
+        "verified-fact:broadcast-cord-cutter-preference"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [
+        70
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "consumer-vr-adoption-outlook",
+      "original_evidence_ids": [
+        "verified-fact:consumer-vr-adoption-outlook"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:consumer-vr-adoption-outlook"
+      ],
+      "original_source_pages": [
+        42
+      ],
+      "candidate_source_pages": [
+        42
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "ecommerce-firsthand-experience",
+      "original_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "original_source_pages": [
+        119
+      ],
+      "candidate_source_pages": [
+        119
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "global-revenue-forecast",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast",
+        "verified-fact:f02"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5,
+        6
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "news-trust-comparison",
+      "original_evidence_ids": [
+        "verified-fact:news-trust-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:news-trust-comparison"
+      ],
+      "original_source_pages": [
+        101
+      ],
+      "candidate_source_pages": [
+        101
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "podcast-audience-factors",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        129
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "sports-fan-segment-shares",
+      "original_evidence_ids": [
+        "verified-fact:sports-fan-segment-shares",
+        "verified-fact:broadcast-cord-cutter-preference"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:sports-fan-segment-shares"
+      ],
+      "original_source_pages": [
+        84,
+        70
+      ],
+      "candidate_source_pages": [
+        84
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "video-attention-spend",
+      "original_evidence_ids": [
+        "verified-fact:video-attention-spend",
+        "verified-fact:f04"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:video-attention-spend"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "original_source_pages": [
+        129
+      ],
+      "candidate_source_pages": [
+        129
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:64fe37e6b2b36055",
+      "original_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "original_source_pages": [
+        119
+      ],
+      "candidate_source_pages": [
+        119
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:7e4b4b2a933052bf",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "original_source_pages": [
+        129
+      ],
+      "candidate_source_pages": [
+        129
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:ba39d994d4d5a808",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors",
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors",
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "original_source_pages": [
+        129,
+        119
+      ],
+      "candidate_source_pages": [
+        129,
+        119
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:d25c207d9f375e47",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors",
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors",
+        "verified-fact:ecommerce-firsthand-experience"
+      ],
+      "original_source_pages": [
+        129,
+        119
+      ],
+      "candidate_source_pages": [
+        129,
+        119
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:0e0a079dd1036ae7",
+      "original_evidence_ids": [
+        "verified-fact:f04",
+        "verified-fact:video-attention-spend"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04",
+        "verified-fact:video-attention-spend"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:53945652910863a8",
+      "original_evidence_ids": [
+        "verified-fact:f04",
+        "verified-fact:video-attention-spend"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04",
+        "verified-fact:video-attention-spend"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:cb8fb3aebb6bc1cf",
+      "original_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:26305fb37aaa8f98",
+      "original_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f04"
+      ],
+      "original_source_pages": [
+        15
+      ],
+      "candidate_source_pages": [
+        15
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:33e06a4e0cf98d82",
+      "original_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:podcast-audience-factors"
+      ],
+      "original_source_pages": [
+        129
+      ],
+      "candidate_source_pages": [
+        129
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:8fa73d7d743fb1ae",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:aff2fee085fbe0b9",
+      "original_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:f02"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:dd5a6c144405b1c0",
+      "original_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:global-revenue-forecast"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "1311690fc05611510ec078e8929143432e134e10fd67611a2dbb0bb0254ee2ae",
+    "8c51700b683a46560ab42c110a087143a92ff0720fb2050b597c10651cd9fdb2",
+    "7dd054445d3c22eef8fce17dfbdbafee2c92ffcbff75a1b1ca9b322610d950c2",
+    "adf3ea0d1054e7567efa7ec6b2b06837609bf65beedef07a6c20abafa93fd223",
+    "c842eddc0f33a053aa0bee471fc23c5e07cb1b3f49390be9ff20a257dc06eb67",
+    "fdbf0c2f5359e737bfe696f24fb9c3e47387a669815d463231e4e767b0ac5a1b",
+    "959ec455d939dea1a0794a48a86902882f376ebe77174b5b05d4317a62d5b15a",
+    "88bf9106ad17f2cfcaaa2c8f0161f4395b2964f06082c1b11764bdf01a927be7",
+    "95335e852233537b7d857c4519f2fbf2354aae3f400509f548bdee55ff8bc2b6",
+    "5871e2a0944685e094290912ae5287dd17d9ac5235933bfa5bb54a2178d49946",
+    "b693fec3791eee4ca7a82b43ad2fc9c2799128d4b33a00054967fea5176a1b58",
+    "0f64b8120cfc48fca585cf024b024e5e823522a3db42ccb8246afe1e31385203",
+    "fb763373db8b3f699541ee4d403b244dd641bba94354ff00917f5f2c4e344058",
+    "0bdfb961d256849e290c5ef9b19a8d67905cc3c5d38838802a1020419ef42da7",
+    "5e2cde3954f9b0d1b085667a64bc10ac96691ebbf6f198c2ffe62dbff955c8e3",
+    "aa2015e7c142925917ef0cae21148feccfe0e3c94b03a4c011928ed231516ce4",
+    "a248ea333c2e78f2a2281c1144f251489b15cf6cb587d4184904641914b0b26c",
+    "d2f036387f130da9a7ef4718a4f1f2edad09e6f96db14badd8b8727372b6315a",
+    "f8a63a8a4225fa80051297beb005c40b0a3f3ee5ebbc8fb4e12b536e8024f4d3",
+    "82f47e0a6e8f791644efefd760dcdb07afc8b2590ea2d957d9e2940968a6c567",
+    "e8b316746b12611a75fe793a71a0d34c0668590dc43e41d6ca1651de072d76e2",
+    "6d13ef11e7cbfc41185383ff844ceea98f03e011cd89c56337427cf303f11ec5",
+    "0fc836902765e60dc887a5bd9c4c270a74d5a1c5a401acd89abfd2b58b63eee1",
+    "ba4fe7a78929dcd3723774bb1b6b91ac963c662c68c910464d548e6eaea6dd07",
+    "569ca0b8a46671deb8cefb89b790d450f68ae2200792c306a0345fc79e23a462",
+    "03c0ab0035ab12a6654cb3752dfbf219621005efc877e5462a966e32ed3c465d",
+    "2c6c4fa92aa47cdabebd30e43e375bf7ef69a0bfe360b3f35bea29d93d1583f6",
+    "a3b3424b6cc450a8624c007a018620eedc487f117f6ed0750fc6184585e70191",
+    "699d8624ab66e846536d9a34ab3084bf4fc6890b7f7ccdcfd8f55b86bf93b4ad",
+    "c52b58dab48fc2bb5225351bc6582f81e0ac61481a9fd6430ba6e5ea92fe8a93",
+    "81da578c8738bf766754cf221bc253e8cf8c509c41bef3a4e1201968529747dd",
+    "34cdcb028c2d14372358927a8efd987970d1689b9245745f522e04a8c32f9246",
+    "7fcce32be2bd089b698fefdbe1ff43331abd2e4aa058d8e9ed97f39543a67c53",
+    "3c073d603c957c38d9ea5985c285d5d940544c1b9bd924b793adf4094cfbb196",
+    "1cd8f15eb8c3e419518596150c513db6a079ff84bcd1437f3e2d2f57771d43be",
+    "d96f0d9430f74a3dbb1ad66212f8ea89eb07ca6bd62808bc61ba4b95675a91e0",
+    "e9d16f4d238d6789e689d6c948d609836d61c0ef8afd9bed9a8bc9280d05476f",
+    "cb96d23b49f7432a72ff55c90d2dc68becb4d99bdcc0e823d199fcfccad2906e",
+    "87d0a7489308d84934f4f5d10af93f0bba71ca8fa641beb97761054c54dd2cd5",
+    "804901ca9593c8660fc8908f62c679f62ee26d7c0d41f6fee10bfdc7dc2281b1",
+    "7ba515a82d61b28726e68fb7174c9b56f5e368630c557c55bd9f6b3db18007ca",
+    "5753cddb0bd9768b23c4506ce35d85534f014974425c2e8faa1f6d5f1ecb5b8f",
+    "22d8c5db1ac053efa9a25826dcbfc254b8be57c4728ee675ee8aab61774bf9c5",
+    "889adb1445aefcbfa698d507d580eef785093f136f56d32b7743c81dc1f9fbe3",
+    "82488ac31a74e70a9c29a327fd26a03bb895b76144899f8546cc5fdb5bb312c7",
+    "c988d054bdcbc432be23a48c45c6ed99f721e7786fefb7814c01ec30dcce48f4",
+    "ef3816988cfc3f563d4ec9b4ff6c343e19bef7ad344567125b222da0498efba5",
+    "a5301dc72a9dbc1462d22e6ae5ce29b6f70900742984b4917980f527e31ccb57",
+    "566883e785f8439c7c9f4627f8cde07be7df24497e2ceaa814bfa2020e185eea",
+    "0714cfe1b076e1d2833d9292c07434e2aa24fc5c914d3c0e1b523f28655354d7"
+  ],
+  "repair_action": "REMOVE_CLAIM",
+  "repair_strategy": "safe_removal",
+  "allowed_paths": [
+    "insights_candidates[item=podcast-audience-factors]",
+    "insights_final[item=broadcast-cord-cutter-preference]",
+    "insights_final[item=podcast-audience-factors]"
+  ],
+  "verified_dependent_paths": [
+    "chart_insight_cards[item=broadcast-cord-cutter-preference]",
+    "chart_insight_cards[item=global-revenue-forecast].evidence_ids",
+    "chart_insight_cards[item=global-revenue-forecast].evidence_spans[1]",
+    "chart_insight_cards[item=news-trust-comparison].card_id",
+    "chart_insight_cards[item=podcast-audience-factors]",
+    "chart_insight_cards[item=sports-fan-segment-shares].card_id",
+    "chart_insight_cards[item=sports-fan-segment-shares].evidence_ids",
+    "chart_insight_cards[item=sports-fan-segment-shares].evidence_spans[1]",
+    "chart_insight_cards[item=video-attention-spend].evidence_ids",
+    "chart_insight_cards[item=video-attention-spend].evidence_spans[1]",
+    "claim_ledgers[11].canonical_claim_id",
+    "claim_ledgers[11].claim_text",
+    "claim_ledgers[11].evidence_ids[0]",
+    "claim_ledgers[11].evidence_references[0].evidence_id",
+    "claim_ledgers[12].evidence_ids[0]",
+    "claim_ledgers[13].evidence_ids[0]",
+    "claim_ledgers[14].canonical_claim_id",
+    "claim_ledgers[14].claim_text",
+    "claim_ledgers[14].evidence_ids[1]",
+    "claim_ledgers[15].canonical_claim_id",
+    "claim_ledgers[15].claim_text",
+    "claim_ledgers[15].evidence_ids[0]",
+    "claim_ledgers[16].canonical_claim_id",
+    "claim_ledgers[16].claim_text",
+    "claim_ledgers[16].confidence",
+    "claim_ledgers[16].evidence_ids[0]",
+    "claim_ledgers[23].artifact_section",
+    "claim_ledgers[23].canonical_claim_id",
+    "claim_ledgers[23].claim_text",
+    "claim_ledgers[23].evidence_ids[0]",
+    "claim_ledgers[23].evidence_quality_grade",
+    "claim_ledgers[23].support_type",
+    "claim_ledgers[24]",
+    "claim_ledgers[5].evidence_ids[0]",
+    "claim_ledgers[5].evidence_references[0]",
+    "claim_ledgers[5].evidence_span_count",
+    "claim_ledgers[6].evidence_ids[0]",
+    "claim_ledgers[6].evidence_references[0]",
+    "claim_ledgers[6].evidence_span_count",
+    "claim_ledgers[7].evidence_ids[0]",
+    "claim_ledgers[7].evidence_references[0]",
+    "claim_ledgers[7].evidence_span_count",
+    "executive_advisory.decision_brief.evidence_links[0]",
+    "executive_advisory.decision_brief.evidence_links[1]",
+    "executive_advisory.decision_brief.evidence_links[2]",
+    "executive_advisory.decision_brief.evidence_links[3]",
+    "executive_advisory.decision_brief.evidence_links[4]",
+    "executive_advisory.recommendations.items[item=podcast-audience-factors]",
+    "key_figures[0].evidence_ids",
+    "key_figures[0].evidence_spans[1]",
+    "key_figures[1].evidence_ids",
+    "key_figures[1].evidence_spans[1]",
+    "key_figures[2].cohort",
+    "key_figures[2].denominator",
+    "key_figures[2].evidence_id",
+    "key_figures[2].evidence_ids",
+    "key_figures[2].evidence_spans[0]",
+    "key_figures[2].figure",
+    "key_figures[2].figure_id",
+    "key_figures[2].geography",
+    "key_figures[2].label",
+    "key_figures[2].metric_public_copy",
+    "key_figures[2].observation_status",
+    "key_figures[2].observations[0].cohort",
+    "key_figures[2].observations[0].denominator",
+    "key_figures[2].observations[0].geography",
+    "key_figures[2].observations[0].label",
+    "key_figures[2].observations[0].observation_status",
+    "key_figures[2].observations[0].segment",
+    "key_figures[2].observations[0].timeframe",
+    "key_figures[2].observations[0].unit",
+    "key_figures[2].observations[0].value",
+    "key_figures[2].observations[1].cohort",
+    "key_figures[2].observations[1].denominator",
+    "key_figures[2].observations[1].geography",
+    "key_figures[2].observations[1].label",
+    "key_figures[2].observations[1].observation_status",
+    "key_figures[2].observations[1].segment",
+    "key_figures[2].observations[1].timeframe",
+    "key_figures[2].observations[1].unit",
+    "key_figures[2].observations[1].value",
+    "key_figures[2].observations[2].cohort",
+    "key_figures[2].observations[2].denominator",
+    "key_figures[2].observations[2].geography",
+    "key_figures[2].observations[2].label",
+    "key_figures[2].observations[2].observation_status",
+    "key_figures[2].observations[2].segment",
+    "key_figures[2].observations[2].timeframe",
+    "key_figures[2].observations[2].unit",
+    "key_figures[2].observations[2].value",
+    "key_figures[2].observations[3].cohort",
+    "key_figures[2].observations[3].denominator",
+    "key_figures[2].observations[3].geography",
+    "key_figures[2].observations[3].label",
+    "key_figures[2].observations[3].observation_status",
+    "key_figures[2].observations[3].segment",
+    "key_figures[2].observations[3].timeframe",
+    "key_figures[2].observations[3].unit",
+    "key_figures[2].observations[3].value",
+    "key_figures[2].segment",
+    "key_figures[2].source_page",
+    "key_figures[2].source_statement",
+    "key_figures[2].subject",
+    "key_figures[2].timeframe",
+    "key_figures[2].unit",
+    "key_figures[2].why_it_matters",
+    "key_figures[3].cohort",
+    "key_figures[3].denominator",
+    "key_figures[3].evidence_id",
+    "key_figures[3].evidence_ids",
+    "key_figures[3].evidence_spans[0].evidence_id",
+    "key_figures[3].evidence_spans[0].page",
+    "key_figures[3].evidence_spans[0].text",
+    "key_figures[3].figure",
+    "key_figures[3].figure_id",
+    "key_figures[3].forecast_status",
+    "key_figures[3].geography",
+    "key_figures[3].label",
+    "key_figures[3].metric_public_copy",
+    "key_figures[3].observation_status",
+    "key_figures[3].observations[0].cohort",
+    "key_figures[3].observations[0].denominator",
+    "key_figures[3].observations[0].geography",
+    "key_figures[3].observations[0].label",
+    "key_figures[3].observations[0].observation_status",
+    "key_figures[3].observations[0].segment",
+    "key_figures[3].observations[0].timeframe",
+    "key_figures[3].observations[0].unit",
+    "key_figures[3].observations[0].value",
+    "key_figures[3].observations[1].cohort",
+    "key_figures[3].observations[1].denominator",
+    "key_figures[3].observations[1].geography",
+    "key_figures[3].observations[1].label",
+    "key_figures[3].observations[1].observation_status",
+    "key_figures[3].observations[1].segment",
+    "key_figures[3].observations[1].timeframe",
+    "key_figures[3].observations[1].unit",
+    "key_figures[3].observations[1].value",
+    "key_figures[3].observations[2].cohort",
+    "key_figures[3].observations[2].denominator",
+    "key_figures[3].observations[2].geography",
+    "key_figures[3].observations[2].label",
+    "key_figures[3].observations[2].observation_status",
+    "key_figures[3].observations[2].segment",
+    "key_figures[3].observations[2].timeframe",
+    "key_figures[3].observations[2].unit",
+    "key_figures[3].observations[2].value",
+    "key_figures[3].observations[3].cohort",
+    "key_figures[3].observations[3].denominator",
+    "key_figures[3].observations[3].geography",
+    "key_figures[3].observations[3].label",
+    "key_figures[3].observations[3].observation_status",
+    "key_figures[3].observations[3].segment",
+    "key_figures[3].observations[3].timeframe",
+    "key_figures[3].observations[3].unit",
+    "key_figures[3].observations[3].value",
+    "key_figures[3].observations[4]",
+    "key_figures[3].observations[5]",
+    "key_figures[3].observations[6]",
+    "key_figures[3].observations[7]",
+    "key_figures[3].observations[8]",
+    "key_figures[3].observations[9]",
+    "key_figures[3].segment",
+    "key_figures[3].source_page",
+    "key_figures[3].source_statement",
+    "key_figures[3].subject",
+    "key_figures[3].timeframe",
+    "key_figures[3].unit",
+    "key_figures[3].why_it_matters",
+    "key_figures[4].cohort",
+    "key_figures[4].denominator",
+    "key_figures[4].evidence_id",
+    "key_figures[4].evidence_ids[0]",
+    "key_figures[4].evidence_spans[0].evidence_id",
+    "key_figures[4].evidence_spans[0].page",
+    "key_figures[4].evidence_spans[0].text",
+    "key_figures[4].figure",
+    "key_figures[4].figure_id",
+    "key_figures[4].geography",
+    "key_figures[4].label",
+    "key_figures[4].metric_public_copy",
+    "key_figures[4].observation_status",
+    "key_figures[4].observations[0].cohort",
+    "key_figures[4].observations[0].denominator",
+    "key_figures[4].observations[0].geography",
+    "key_figures[4].observations[0].label",
+    "key_figures[4].observations[0].observation_status",
+    "key_figures[4].observations[0].segment",
+    "key_figures[4].observations[0].timeframe",
+    "key_figures[4].observations[0].unit",
+    "key_figures[4].observations[0].value",
+    "key_figures[4].observations[1].cohort",
+    "key_figures[4].observations[1].denominator",
+    "key_figures[4].observations[1].geography",
+    "key_figures[4].observations[1].label",
+    "key_figures[4].observations[1].observation_status",
+    "key_figures[4].observations[1].segment",
+    "key_figures[4].observations[1].timeframe",
+    "key_figures[4].observations[1].unit",
+    "key_figures[4].observations[1].value",
+    "key_figures[4].observations[2]",
+    "key_figures[4].observations[3]",
+    "key_figures[4].observations[4]",
+    "key_figures[4].observations[5]",
+    "key_figures[4].observations[6]",
+    "key_figures[4].observations[7]",
+    "key_figures[4].observations[8]",
+    "key_figures[4].observations[9]",
+    "key_figures[4].segment",
+    "key_figures[4].source_page",
+    "key_figures[4].source_statement",
+    "key_figures[4].subject",
+    "key_figures[4].timeframe",
+    "key_figures[4].unit",
+    "key_figures[4].why_it_matters",
+    "metric_spine[0].evidence_ids",
+    "metric_spine[0].evidence_spans[1]",
+    "metric_spine[1].evidence_ids",
+    "metric_spine[1].evidence_spans[1]",
+    "metric_spine[2].cohort",
+    "metric_spine[2].delta",
+    "metric_spine[2].denominator",
+    "metric_spine[2].evidence_id",
+    "metric_spine[2].evidence_ids",
+    "metric_spine[2].evidence_spans[0]",
+    "metric_spine[2].geography",
+    "metric_spine[2].label",
+    "metric_spine[2].metric_id",
+    "metric_spine[2].metric_public_copy",
+    "metric_spine[2].observation_status",
+    "metric_spine[2].observations[0].cohort",
+    "metric_spine[2].observations[0].denominator",
+    "metric_spine[2].observations[0].geography",
+    "metric_spine[2].observations[0].label",
+    "metric_spine[2].observations[0].observation_status",
+    "metric_spine[2].observations[0].segment",
+    "metric_spine[2].observations[0].timeframe",
+    "metric_spine[2].observations[0].unit",
+    "metric_spine[2].observations[0].value",
+    "metric_spine[2].observations[1].cohort",
+    "metric_spine[2].observations[1].denominator",
+    "metric_spine[2].observations[1].geography",
+    "metric_spine[2].observations[1].label",
+    "metric_spine[2].observations[1].observation_status",
+    "metric_spine[2].observations[1].segment",
+    "metric_spine[2].observations[1].timeframe",
+    "metric_spine[2].observations[1].unit",
+    "metric_spine[2].observations[1].value",
+    "metric_spine[2].observations[2].cohort",
+    "metric_spine[2].observations[2].denominator",
+    "metric_spine[2].observations[2].geography",
+    "metric_spine[2].observations[2].label",
+    "metric_spine[2].observations[2].observation_status",
+    "metric_spine[2].observations[2].segment",
+    "metric_spine[2].observations[2].timeframe",
+    "metric_spine[2].observations[2].unit",
+    "metric_spine[2].observations[2].value",
+    "metric_spine[2].observations[3].cohort",
+    "metric_spine[2].observations[3].denominator",
+    "metric_spine[2].observations[3].geography",
+    "metric_spine[2].observations[3].label",
+    "metric_spine[2].observations[3].observation_status",
+    "metric_spine[2].observations[3].segment",
+    "metric_spine[2].observations[3].timeframe",
+    "metric_spine[2].observations[3].unit",
+    "metric_spine[2].observations[3].value",
+    "metric_spine[2].sample_size",
+    "metric_spine[2].segment",
+    "metric_spine[2].source_statement",
+    "metric_spine[2].subject",
+    "metric_spine[2].timeframe",
+    "metric_spine[2].unit",
+    "metric_spine[2].value",
+    "metric_spine[3].cohort",
+    "metric_spine[3].delta",
+    "metric_spine[3].denominator",
+    "metric_spine[3].evidence_id",
+    "metric_spine[3].evidence_ids",
+    "metric_spine[3].evidence_spans[0].evidence_id",
+    "metric_spine[3].evidence_spans[0].page",
+    "metric_spine[3].evidence_spans[0].text",
+    "metric_spine[3].forecast_status",
+    "metric_spine[3].geography",
+    "metric_spine[3].label",
+    "metric_spine[3].metric_id",
+    "metric_spine[3].metric_public_copy",
+    "metric_spine[3].observation_status",
+    "metric_spine[3].observations[0].cohort",
+    "metric_spine[3].observations[0].denominator",
+    "metric_spine[3].observations[0].geography",
+    "metric_spine[3].observations[0].label",
+    "metric_spine[3].observations[0].observation_status",
+    "metric_spine[3].observations[0].segment",
+    "metric_spine[3].observations[0].timeframe",
+    "metric_spine[3].observations[0].unit",
+    "metric_spine[3].observations[0].value",
+    "metric_spine[3].observations[1].cohort",
+    "metric_spine[3].observations[1].denominator",
+    "metric_spine[3].observations[1].geography",
+    "metric_spine[3].observations[1].label",
+    "metric_spine[3].observations[1].observation_status",
+    "metric_spine[3].observations[1].segment",
+    "metric_spine[3].observations[1].timeframe",
+    "metric_spine[3].observations[1].unit",
+    "metric_spine[3].observations[1].value",
+    "metric_spine[3].observations[2].cohort",
+    "metric_spine[3].observations[2].denominator",
+    "metric_spine[3].observations[2].geography",
+    "metric_spine[3].observations[2].label",
+    "metric_spine[3].observations[2].observation_status",
+    "metric_spine[3].observations[2].segment",
+    "metric_spine[3].observations[2].timeframe",
+    "metric_spine[3].observations[2].unit",
+    "metric_spine[3].observations[2].value",
+    "metric_spine[3].observations[3].cohort",
+    "metric_spine[3].observations[3].denominator",
+    "metric_spine[3].observations[3].geography",
+    "metric_spine[3].observations[3].label",
+    "metric_spine[3].observations[3].observation_status",
+    "metric_spine[3].observations[3].segment",
+    "metric_spine[3].observations[3].timeframe",
+    "metric_spine[3].observations[3].unit",
+    "metric_spine[3].observations[3].value",
+    "metric_spine[3].observations[4]",
+    "metric_spine[3].observations[5]",
+    "metric_spine[3].observations[6]",
+    "metric_spine[3].observations[7]",
+    "metric_spine[3].observations[8]",
+    "metric_spine[3].observations[9]",
+    "metric_spine[3].sample_size",
+    "metric_spine[3].segment",
+    "metric_spine[3].source_statement",
+    "metric_spine[3].subject",
+    "metric_spine[3].timeframe",
+    "metric_spine[3].unit",
+    "metric_spine[3].value",
+    "metric_spine[4].cohort",
+    "metric_spine[4].confidence",
+    "metric_spine[4].delta",
+    "metric_spine[4].denominator",
+    "metric_spine[4].evidence_id",
+    "metric_spine[4].evidence_ids[0]",
+    "metric_spine[4].evidence_spans[0].evidence_id",
+    "metric_spine[4].evidence_spans[0].page",
+    "metric_spine[4].evidence_spans[0].text",
+    "metric_spine[4].geography",
+    "metric_spine[4].label",
+    "metric_spine[4].metric_id",
+    "metric_spine[4].metric_public_copy",
+    "metric_spine[4].observation_status",
+    "metric_spine[4].observations[0].cohort",
+    "metric_spine[4].observations[0].denominator",
+    "metric_spine[4].observations[0].geography",
+    "metric_spine[4].observations[0].label",
+    "metric_spine[4].observations[0].observation_status",
+    "metric_spine[4].observations[0].segment",
+    "metric_spine[4].observations[0].timeframe",
+    "metric_spine[4].observations[0].unit",
+    "metric_spine[4].observations[0].value",
+    "metric_spine[4].observations[1].cohort",
+    "metric_spine[4].observations[1].denominator",
+    "metric_spine[4].observations[1].geography",
+    "metric_spine[4].observations[1].label",
+    "metric_spine[4].observations[1].observation_status",
+    "metric_spine[4].observations[1].segment",
+    "metric_spine[4].observations[1].timeframe",
+    "metric_spine[4].observations[1].unit",
+    "metric_spine[4].observations[1].value",
+    "metric_spine[4].observations[2]",
+    "metric_spine[4].observations[3]",
+    "metric_spine[4].observations[4]",
+    "metric_spine[4].observations[5]",
+    "metric_spine[4].observations[6]",
+    "metric_spine[4].observations[7]",
+    "metric_spine[4].observations[8]",
+    "metric_spine[4].observations[9]",
+    "metric_spine[4].sample_size",
+    "metric_spine[4].segment",
+    "metric_spine[4].source_statement",
+    "metric_spine[4].subject",
+    "metric_spine[4].timeframe",
+    "metric_spine[4].unit",
+    "metric_spine[4].value"
+  ],
+  "selected_evidence_ids": [
+    "verified-fact:podcast-audience-factors"
+  ],
+  "quarantined_evidence_ids": [],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "family_confidence",
+        "affected_section": "quotes",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:podcast-audience-factors",
+        "entity_id": "insight:podcast-audience-factors:text",
+        "evidence_ids": [
+          "verified-fact:podcast-audience-factors"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.source_limitation_omitted",
+        "affected_section": "insights:podcast-audience-factors",
+        "entity_id": "insight:podcast-audience-factors:text",
+        "evidence_ids": [
+          "verified-fact:podcast-audience-factors"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "grounding",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "linkedin_post",
+        "entity_id": "linkedin_post:linkedin_post",
+        "evidence_ids": [
+          "verified-fact:video-attention-spend"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=news-trust-comparison].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=ecommerce-firsthand-experience].metric.observations",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=ecommerce-firsthand-experience].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=global-revenue-forecast].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "validation_execution",
+        "affected_section": "validation",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=sports-fan-segment-shares].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=video-attention-spend].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:video-attention-spend.so_what",
+        "entity_id": "insight:video-attention-spend:so_what",
+        "evidence_ids": [
+          "verified-fact:video-attention-spend"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=news-trust-comparison].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=ecommerce-firsthand-experience].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f02].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=sports-fan-segment-shares].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=global-revenue-forecast].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=broadcast-cord-cutter-preference].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=video-attention-spend].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "expert_comment",
+        "entity_id": "expert_comment:expert_comment",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f04].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:broadcast-cord-cutter-preference.metric_public_copy",
+        "entity_id": "key_figures:key_figures:3:metric_public_copy",
+        "evidence_ids": [
+          "verified-fact:broadcast-cord-cutter-preference"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=consumer-vr-adoption-outlook].metric.forecast_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=broadcast-cord-cutter-preference].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=consumer-vr-adoption-outlook].metric.observations",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=consumer-vr-adoption-outlook].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f02].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=sports-fan-segment-shares].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:sports-fan-segment-shares",
+        "entity_id": "insight:sports-fan-segment-shares:text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f02].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=broadcast-cord-cutter-preference].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=ecommerce-firsthand-experience].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=news-trust-comparison].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=video-attention-spend].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=consumer-vr-adoption-outlook].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:global-revenue-forecast",
+        "entity_id": "insight:global-revenue-forecast:text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f04].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=global-revenue-forecast].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:sports-fan-segment-shares.so_what",
+        "entity_id": "insight:sports-fan-segment-shares:so_what",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f04].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=ecommerce-firsthand-experience].metric.forecast_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=consumer-vr-adoption-outlook].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failures": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=news-trust-comparison].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=ecommerce-firsthand-experience].metric.observations",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=ecommerce-firsthand-experience].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=global-revenue-forecast].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "validation_execution",
+        "affected_section": "validation",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=sports-fan-segment-shares].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=video-attention-spend].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:video-attention-spend.so_what",
+        "entity_id": "insight:video-attention-spend:so_what",
+        "evidence_ids": [
+          "verified-fact:video-attention-spend"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=news-trust-comparison].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=ecommerce-firsthand-experience].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f02].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=sports-fan-segment-shares].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=global-revenue-forecast].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=video-attention-spend].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=broadcast-cord-cutter-preference].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=video-attention-spend].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "expert_comment",
+        "entity_id": "expert_comment:expert_comment",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f04].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:broadcast-cord-cutter-preference.metric_public_copy",
+        "entity_id": "key_figures:key_figures:3:metric_public_copy",
+        "evidence_ids": [
+          "verified-fact:broadcast-cord-cutter-preference"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=consumer-vr-adoption-outlook].metric.forecast_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=broadcast-cord-cutter-preference].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=consumer-vr-adoption-outlook].metric.observations",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=consumer-vr-adoption-outlook].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f02].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=sports-fan-segment-shares].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:sports-fan-segment-shares",
+        "entity_id": "insight:sports-fan-segment-shares:text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f02].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=broadcast-cord-cutter-preference].metric.delta",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=ecommerce-firsthand-experience].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=news-trust-comparison].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=video-attention-spend].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=consumer-vr-adoption-outlook].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:global-revenue-forecast",
+        "entity_id": "insight:global-revenue-forecast:text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f04].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=global-revenue-forecast].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=global-revenue-forecast].metric.baseline",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=sports-fan-segment-shares].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:sports-fan-segment-shares.so_what",
+        "entity_id": "insight:sports-fan-segment-shares:so_what",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=f04].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=ecommerce-firsthand-experience].metric.forecast_status",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=consumer-vr-adoption-outlook].metric.comparator",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failure_count": 49,
+    "introduced_failure_categories": [],
+    "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+    "severity_changes": [],
+    "mutation_scope_result": "fail",
+    "evidence_lineage_result": "pass",
+    "repair_action": "REMOVE_CLAIM",
+    "repair_strategy": "safe_removal",
+    "evidence_ids_used": [
+      "verified-fact:podcast-audience-factors"
+    ],
+    "strategy_fingerprint": "97f0c670e22309071922e1ea56df0c454b775f8fb1dde77c7f9dfe2e0f2e8291",
+    "candidate_sha256": "6344e193ff5686d89cd74c31b63b10b3ce22cc8aa3e426e48cac0799a4f3af2d",
+    "input_sha256": "f8f3f35f87536bd4386e4a179f678884871e8744258e3ff78cd00cee17c39661",
+    "validator_identity": "regeneration-candidate-v1:e50763d4a9df1b132fe130958d2fd03a782386224b62130d71fd6a48b1e2497a:d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [],
+  "report_id": "cohort-cbb6e7df67412186b8bc",
+  "validation_run_id": "validation:b2e333e502c3222d3a1ebe74eba46081903ff4c6b4e8a7e9af5a014fd15b5b16",
+  "cohort_id": "4071b3f11fd259bd89d15305f94cee31d8dd4f15777e4d1fbc884adbb1b4e862",
+  "workflow_run_id": "a85aa794-c4d4-4bed-a19d-baa617b43606",
+  "configuration_hash": "e50763d4a9df1b132fe130958d2fd03a782386224b62130d71fd6a48b1e2497a",
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "97f0c670e22309071922e1ea56df0c454b775f8fb1dde77c7f9dfe2e0f2e8291",
+  "latency_ms": 173730,
+  "schema_version": "1.0"
+}

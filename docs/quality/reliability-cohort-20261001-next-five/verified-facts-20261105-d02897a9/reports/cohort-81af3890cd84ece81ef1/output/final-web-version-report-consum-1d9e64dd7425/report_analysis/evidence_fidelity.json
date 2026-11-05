@@ -1,0 +1,3622 @@
+{
+  "schema_version": "1.4",
+  "artifact_hash": "661617e625745168b9144016d5531759f2b54f0ff92ed91fd19b604b60f75542",
+  "package_hash": "8a626dde628b5786913c31a5e07a27b6c444cee0310c347182649b2dc087bc08",
+  "results": [
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:switch-lower-regular-price",
+        "source_family": "evidence_pack:findings",
+        "text": "74% of consumers say they would switch brands if they found a lower regular price elsewhere.",
+        "text_hash": "95468a6e0fbf05d9b1eeaf0490cad8960a84bfc1041696b851d8e8e782f37cff",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:4",
+            "source_pack": "source_pdf",
+            "page": 4,
+            "text_hash": "7842e765369ff6c014eb80a69d310c1605ebdda2d847d806d3608ed3ac9a8181"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence says 74% would switch brands for a lower regular price elsewhere."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "74.0",
+            "evidence_value": "0.4, 0.8, 1.0, 2.0, 4.0, 61.0, 62.0, 64.0, 71.0, 74.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence says 74% would switch brands for a lower regular price elsewhere.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:switch-uncommunicated-reduction",
+        "source_family": "evidence_pack:findings",
+        "text": "71% of consumers would switch if pack sizes or product quality were reduced without clear communication.",
+        "text_hash": "ba1449f68faf5b453db0dbb421aa1b7d27137d354a1b76c73ad36b6d74550fd3",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:4",
+            "source_pack": "source_pdf",
+            "page": 4,
+            "text_hash": "7842e765369ff6c014eb80a69d310c1605ebdda2d847d806d3608ed3ac9a8181"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence says 71% would switch if pack sizes or product quality were reduced without clear communication."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "71.0",
+            "evidence_value": "0.4, 0.8, 1.0, 2.0, 4.0, 61.0, 62.0, 64.0, 71.0, 74.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence says 71% would switch if pack sizes or product quality were reduced without clear communication.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:shrinkflation-unfair",
+        "source_family": "evidence_pack:findings",
+        "text": "64% of consumers view shrinkflation as an unfair practice.",
+        "text_hash": "50ebb0f5c3bd7360d95eddec8f60821c24b35115306c3f417940c2bda1087b74",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:4",
+            "source_pack": "source_pdf",
+            "page": 4,
+            "text_hash": "7842e765369ff6c014eb80a69d310c1605ebdda2d847d806d3608ed3ac9a8181"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence says 64% view shrinkflation as an unfair practice."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "64.0",
+            "evidence_value": "0.4, 0.8, 1.0, 2.0, 4.0, 61.0, 62.0, 64.0, 71.0, 74.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence says 64% view shrinkflation as an unfair practice.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:switch-attractive-deals",
+        "source_family": "evidence_pack:findings",
+        "text": "62% of consumers say more attractive deals can make them switch brands or retail stores.",
+        "text_hash": "dcc3984c94e83085903adb2feb0b0e9317f2e158e4c06c8adb974075cc387541",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:4",
+            "source_pack": "source_pdf",
+            "page": 4,
+            "text_hash": "7842e765369ff6c014eb80a69d310c1605ebdda2d847d806d3608ed3ac9a8181"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence says 62% say more attractive deals can make them switch."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "62.0",
+            "evidence_value": "0.4, 0.8, 1.0, 2.0, 4.0, 61.0, 62.0, 64.0, 71.0, 74.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence says 62% say more attractive deals can make them switch.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:switch-bundle-value",
+        "source_family": "evidence_pack:findings",
+        "text": "61% of consumers believe bundles combining products with services or warranties create stronger value.",
+        "text_hash": "70f5eac883ca23a7e5794c91b2b49ad13f1e02a03a8030a6800bb13cb28493e0",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:4",
+            "source_pack": "source_pdf",
+            "page": 4,
+            "text_hash": "7842e765369ff6c014eb80a69d310c1605ebdda2d847d806d3608ed3ac9a8181"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence says 61% believe bundles combining products with services or warranties create stronger value."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "61.0",
+            "evidence_value": "0.4, 0.8, 1.0, 2.0, 4.0, 61.0, 62.0, 64.0, 71.0, 74.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence says 61% believe bundles combining products with services or warranties create stronger value.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:impulse-purchase-decline",
+        "source_family": "evidence_pack:findings",
+        "text": "54% of consumers say they are making fewer impulse purchases, down from 71% the previous year.",
+        "text_hash": "8bd05944fa949f3bf799305c9cd5b713fc2a612c3d9d4b6bb6613b748024bd0e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:21",
+            "source_pack": "source_pdf",
+            "page": 21,
+            "text_hash": "8ae00ce2ff5b6e20fb2ab0c8ba649227419bacce5f7983e0b52d1b6e50852c95"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:5",
+            "source_pack": "source_pdf",
+            "page": 5,
+            "text_hash": "4831bfd69e742a9198286e1eeef42cad0242c97b8ddadaa6509f745d22205cb1"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly states 54% report fewer impulse purchases, down from 71% last year."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "54.0, 71.0",
+            "evidence_value": "0.2, 0.6666666666666666, 0.7, 0.75, 11.0, 2019.1, 21.0, 30.0, 35.0, 44.0, 47.0, 48.0, 49.0, 5.0, 52.0, 54.0, 61.0, 63.0, 65.0, 66.0, 71.0, 74.0, 76.0, 9.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, points, rank, ratio",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly states 54% report fewer impulse purchases, down from 71% last year.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:weekly-virtual-assistant-use",
+        "source_family": "evidence_pack:findings",
+        "text": "52% of consumers use virtual assistants that automate reordering or meal planning at least once a week.",
+        "text_hash": "a34df26e97b2449965dedd2730b1526b442e0edcfb673644d032e5a452fedb6e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:33",
+            "source_pack": "source_pdf",
+            "page": 33,
+            "text_hash": "d3d8bcd9805102841187351d3f6981db5f3838582531d6f03c35f7a6d222bf41"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:5",
+            "source_pack": "source_pdf",
+            "page": 5,
+            "text_hash": "4831bfd69e742a9198286e1eeef42cad0242c97b8ddadaa6509f745d22205cb1"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly states that 52% use virtual assistants for automated reordering or meal planning at least once a week."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "52.0",
+            "evidence_value": "0.2, 0.6, 0.6666666666666666, 0.7, 0.75, 17.0, 18.0, 19.0, 33.0, 35.0, 46.0, 47.0, 5.0, 52.0, 54.0, 61.0, 63.0, 65.0, 66.0, 71.0, 74.0, 76.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, ratio",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly states that 52% use virtual assistants for automated reordering or meal planning at least once a week.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:assistant-control-rules",
+        "source_family": "evidence_pack:findings",
+        "text": "76% of consumers want the ability to set clear rules for when a virtual assistant acts.",
+        "text_hash": "1bacee6ebd439fe7f40c3b48590fa1f9e7691b1088be4dd08cff241172326728",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:5",
+            "source_pack": "source_pdf",
+            "page": 5,
+            "text_hash": "4831bfd69e742a9198286e1eeef42cad0242c97b8ddadaa6509f745d22205cb1"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence states that 76% want the ability to set clear rules for when an assistant acts."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "76.0",
+            "evidence_value": "0.2, 0.6666666666666666, 0.7, 0.75, 35.0, 47.0, 5.0, 52.0, 54.0, 63.0, 65.0, 66.0, 71.0, 74.0, 76.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence states that 76% want the ability to set clear rules for when an assistant acts.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:genai-data-use-concern",
+        "source_family": "evidence_pack:findings",
+        "text": "71% of consumers are worried about how generative AI uses their information.",
+        "text_hash": "19c4657c9844ae7f82566a294ab1e7950891c19b34c7eac599e2ca90193400a2",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:36",
+            "source_pack": "source_pdf",
+            "page": 36,
+            "text_hash": "d1eb850dd10da9d07963b40a057f7c2e308defbbce61a780559867bb61f4e6c8"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:5",
+            "source_pack": "source_pdf",
+            "page": 5,
+            "text_hash": "4831bfd69e742a9198286e1eeef42cad0242c97b8ddadaa6509f745d22205cb1"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly reports that 71% of consumers are worried about transparency and consent in how Gen AI collects and uses personal data."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "71.0",
+            "evidence_value": "0.2, 0.6666666666666666, 0.7, 0.75, 12000.0, 16.0, 2003.0, 22.0, 35.0, 36.0, 47.0, 5.0, 52.0, 54.0, 63.0, 65.0, 66.0, 67.0, 71.0, 74.0, 76.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, ratio",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly reports that 71% of consumers are worried about transparency and consent in how Gen AI collects and uses personal data.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:human-interaction-loyalty-support",
+        "source_family": "evidence_pack:findings",
+        "text": "74% of consumers said human interaction during in-store customer support increases loyalty in October 2025, compared with 54% in November 2024.",
+        "text_hash": "29d82401dabbe00e70a63bbd03e6ded591ed0585f14c358afd6a701c50a9fbfb",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:45",
+            "source_pack": "source_pdf",
+            "page": 45,
+            "text_hash": "abe2d68eb1908bcb9e3292699b63ad4cbb180de27cad3397f86eabf57fa5edcf"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Figure 23 reports 74% for October 2025 and 54% for November 2024 for customer support."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "54.0, 74.0",
+            "evidence_value": "0.7, 12000.0, 23.0, 40.0, 45.0, 54.0, 66.0, 74.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "54% in november 2024",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Figure 23 reports 74% for October 2025 and 54% for November 2024 for customer support.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:human-interaction-loyalty-purchase",
+        "source_family": "evidence_pack:findings",
+        "text": "66% of consumers said human interaction during the in-store purchase stage increases loyalty in October 2025, compared with 40% in November 2024.",
+        "text_hash": "9a792174c29fad8af0a7e60b7b408ad6421a7da1ca28953e4784b66940493d75",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:45",
+            "source_pack": "source_pdf",
+            "page": 45,
+            "text_hash": "abe2d68eb1908bcb9e3292699b63ad4cbb180de27cad3397f86eabf57fa5edcf"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Figure 23 reports 66% for October 2025 and 40% for November 2024 for the purchase stage."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "40.0, 66.0",
+            "evidence_value": "0.7, 12000.0, 23.0, 40.0, 45.0, 54.0, 66.0, 74.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "40% in november 2024",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Figure 23 reports 66% for October 2025 and 40% for November 2024 for the purchase stage.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:money-off-promotion",
+        "source_family": "evidence_pack:findings",
+        "text": "75% of consumers said money-off promotions are effective in driving purchase decisions.",
+        "text_hash": "424fa5a82e2522b9819191280a20e25704c763f59d672450d473e13e143e3589",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:24",
+            "source_pack": "source_pdf",
+            "page": 24,
+            "text_hash": "bd6b4dcc633437cdae603644e0c02ce68613f306176067313f4120d3db0e8427"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence reports that 75% find money-off promotions effective in driving purchase decisions."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "75.0",
+            "evidence_value": "0.75, 12000.0, 20.0, 24.0, 25.0, 46.0, 5.0, 51.0, 55.0, 62.0, 72.0, 73.0, 74.0, 75.0, 9.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, currency, percent, ratio",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence reports that 75% find money-off promotions effective in driving purchase decisions.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:smaller-quantity-shopping",
+        "source_family": "evidence_pack:findings",
+        "text": "49% of consumers report looking to buy smaller quantities as prices rise.",
+        "text_hash": "921248c7ae240a817b3b8f98b359f6a2511b3807e43a9a9c65af260be5590fe6",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:21",
+            "source_pack": "source_pdf",
+            "page": 21,
+            "text_hash": "8ae00ce2ff5b6e20fb2ab0c8ba649227419bacce5f7983e0b52d1b6e50852c95"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence states that around half (49%) are buying smaller quantities as prices rise."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "49.0",
+            "evidence_value": "11.0, 2019.1, 21.0, 30.0, 44.0, 48.0, 49.0, 54.0, 61.0, 65.0, 71.0, 9.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, points, rank",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence states that around half (49%) are buying smaller quantities as prices rise.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:cheaper-alternatives-shopping",
+        "source_family": "evidence_pack:findings",
+        "text": "48% of consumers report buying cheaper alternatives, such as canned fruit instead of fresh fruit, as prices rise.",
+        "text_hash": "36bf02c3c36a43d3c48e20f3b1b478639a6db6340fe9a9b2d935b006f1ce5465",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:21",
+            "source_pack": "source_pdf",
+            "page": 21,
+            "text_hash": "8ae00ce2ff5b6e20fb2ab0c8ba649227419bacce5f7983e0b52d1b6e50852c95"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence reports 48% embracing cheaper alternatives, with canned fruit instead of fresh as an example."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "48.0",
+            "evidence_value": "11.0, 2019.1, 21.0, 30.0, 44.0, 48.0, 49.0, 54.0, 61.0, 65.0, 71.0, 9.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, points, rank",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence reports 48% embracing cheaper alternatives, with canned fruit instead of fresh as an example.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:small-treats-financial-stress",
+        "source_family": "evidence_pack:findings",
+        "text": "Seven in ten consumers say small treats help them deal with financial stress.",
+        "text_hash": "f1b2adfead147205bb32cb527c1f44c61abd51c585c69e1f95473106650c8aa9",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:26",
+            "source_pack": "source_pdf",
+            "page": 26,
+            "text_hash": "cf8048526c63f39fa4ec6dc1f2aba3bdf47a7f7fa0c40bc01806dd917bce4048"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly states that seven in ten shoppers say small treats help them deal with financial stress."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.7",
+            "evidence_value": "0.6666666666666666, 0.7, 14.0, 15.0, 16.0, 17.0, 26.0, 53.0, 59.0, 63.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "ratio",
+            "evidence_value": "count, percent, rank, ratio",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly states that seven in ten shoppers say small treats help them deal with financial stress.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:assistant-payment-options",
+        "source_family": "evidence_pack:findings",
+        "text": "Among consumers, 11% are open to a one-time payment for chatbots or virtual shopping assistants, and 8% prefer a subscription model.",
+        "text_hash": "ca4cf27cf49c5e8fdcb526af8639e68c5da0a3dec72b2f9b5a2f35d47f7adb8a",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:34",
+            "source_pack": "source_pdf",
+            "page": 34,
+            "text_hash": "1be3bf07c9d88d37a4ed0f734e2fa294567ceb763d8342d22ab10f7937362661"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly states 11% are open to a one-time payment and 8% prefer a subscription."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "11.0, 8.0",
+            "evidence_value": "0.2, 11.0, 14.0, 20.0, 21.0, 22.0, 28.0, 31.0, 3125.0, 34.0, 8.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent, ratio",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly states 11% are open to a one-time payment and 8% prefer a subscription.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:genai-hyperpersonalization",
+        "source_family": "evidence_pack:findings",
+        "text": "63% of consumers want generative AI to provide hyper-personalized content and product or service recommendations based on their preferences.",
+        "text_hash": "be2127ad51456ef1e897b37f513028cb8d00947c7edfca17c01011a6e38319b9",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:41",
+            "source_pack": "source_pdf",
+            "page": 41,
+            "text_hash": "4fed23b379b36ae6cabc39c1043f35ca1b510f28c28b6426b13ac0ecb9987580"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly states that 63% want Gen AI to provide hyper-personalized content and product/service recommendations based on individual preferences."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "63.0",
+            "evidence_value": "12000.0, 20.0, 41.0, 56.0, 58.0, 62.0, 63.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly states that 63% want Gen AI to provide hyper-personalized content and product/service recommendations based on individual preferences.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:careful-spending-trade-down",
+        "source_family": "evidence_pack:findings",
+        "text": "Around two in five are choosing lower-cost alternatives, private labels, or smaller quantities to manage budgets, while nearly four in five avoid private labels in performance-critical categories.",
+        "text_hash": "b88bc3a6aa175ecd3aa820dea8ebaf489853c13ca85f3e827a1436e0ea7a405d",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:4",
+            "source_pack": "source_pdf",
+            "page": 4,
+            "text_hash": "7842e765369ff6c014eb80a69d310c1605ebdda2d847d806d3608ed3ac9a8181"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence supports around two in five trading down or buying smaller quantities and nearly four in five avoiding private labels in performance-critical categories."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.4, 0.8",
+            "evidence_value": "0.4, 0.8, 1.0, 2.0, 4.0, 61.0, 62.0, 64.0, 71.0, 74.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "ratio",
+            "evidence_value": "percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence supports around two in five trading down or buying smaller quantities and nearly four in five avoiding private labels in performance-critical categories.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:careful-spending-hybrid",
+        "source_family": "evidence_pack:findings",
+        "text": "Many have adopted a hybrid mindset, trading down in some categories while retaining spending in others, including when prioritizing health-related aspects.",
+        "text_hash": "a9fc335b641c85e525bc03d8eb0052f217575ce94c757a34cb4218e9ea1654c5",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:21",
+            "source_pack": "source_pdf",
+            "page": 21,
+            "text_hash": "8ae00ce2ff5b6e20fb2ab0c8ba649227419bacce5f7983e0b52d1b6e50852c95"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence describes a hybrid mindset of trading down in some categories while retaining spending in others, including when prioritizing health."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "down",
+            "evidence_value": "down, up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence describes a hybrid mindset of trading down in some categories while retaining spending in others, including when prioritizing health.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:careful-spending-promotions",
+        "source_family": "evidence_pack:findings",
+        "text": "For consumers’ purchase decisions, the chart reports promotion effectiveness of 75% for money-off, 74% for percent-off, and 73% for buy-one-get-one-free offers.",
+        "text_hash": "f2a0c316e5cbfbc43ea7f55d9516cb1962ccb1ffb55ddbede6fb83fd292c45b7",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:24",
+            "source_pack": "source_pdf",
+            "page": 24,
+            "text_hash": "bd6b4dcc633437cdae603644e0c02ce68613f306176067313f4120d3db0e8427"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The chart reports 75% for money-off, 74% for percent-off, and 73% for BOGOF."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "73.0, 74.0, 75.0",
+            "evidence_value": "0.75, 12000.0, 20.0, 24.0, 25.0, 46.0, 5.0, 51.0, 55.0, 62.0, 72.0, 73.0, 74.0, 75.0, 9.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "count, currency, percent, ratio",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The chart reports 75% for money-off, 74% for percent-off, and 73% for BOGOF.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:executive-summary-price-switching",
+        "source_family": "evidence_pack:findings",
+        "text": "74% of consumers say they would switch brands if they found a lower regular price elsewhere, and 71% would switch if pack sizes or product quality were reduced without clear communication.",
+        "text_hash": "8cb58b985753e8b8b09bde74491207d7ee2cedcb0c1345c8f904eecd39834ffb",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:4",
+            "source_pack": "source_pdf",
+            "page": 4,
+            "text_hash": "7842e765369ff6c014eb80a69d310c1605ebdda2d847d806d3608ed3ac9a8181"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence supports both 74% switching for a lower regular price and 71% switching after uncommunicated reductions."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "71.0, 74.0",
+            "evidence_value": "0.4, 0.8, 1.0, 2.0, 4.0, 61.0, 62.0, 64.0, 71.0, 74.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence supports both 74% switching for a lower regular price and 71% switching after uncommunicated reductions.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:executive-summary-shrinkflation-deals",
+        "source_family": "evidence_pack:findings",
+        "text": "64% of consumers view shrinkflation as unfair, while 62% say more attractive deals can make them switch.",
+        "text_hash": "98638c38487d1d8be4238d2bcd379470eeb89cfebb0630c3aa55afa7240a4245",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:4",
+            "source_pack": "source_pdf",
+            "page": 4,
+            "text_hash": "7842e765369ff6c014eb80a69d310c1605ebdda2d847d806d3608ed3ac9a8181"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence supports 64% viewing shrinkflation as unfair and 62% switching in response to more attractive deals."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "62.0, 64.0",
+            "evidence_value": "0.4, 0.8, 1.0, 2.0, 4.0, 61.0, 62.0, 64.0, 71.0, 74.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence supports 64% viewing shrinkflation as unfair and 62% switching in response to more attractive deals.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:executive-summary-virtual-assistants",
+        "source_family": "evidence_pack:findings",
+        "text": "52% of consumers use virtual assistants for automated re-ordering or meal planning at least once a week, and 76% want the ability to set clear rules for when an assistant acts.",
+        "text_hash": "4ac83f927cca788fa166c30c6ef2f8e01f21724236cbcf6c2b4cff6e8189f555",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:5",
+            "source_pack": "source_pdf",
+            "page": 5,
+            "text_hash": "4831bfd69e742a9198286e1eeef42cad0242c97b8ddadaa6509f745d22205cb1"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly supports both claims: 52% use assistants for automated re-ordering or meal planning at least weekly, and 76% want clear rules for when assistants act."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "52.0, 76.0",
+            "evidence_value": "0.2, 0.6666666666666666, 0.7, 0.75, 35.0, 47.0, 5.0, 52.0, 54.0, 63.0, 65.0, 66.0, 71.0, 74.0, 76.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, ratio, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly supports both claims: 52% use assistants for automated re-ordering or meal planning at least weekly, and 76% want clear rules for when assistants act.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-1",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Inflation and tariffs have shifted consumers to value-seeking behavior. They actively compare prices across platforms, look for discounts and loyalty benefits, and trade down to private labels or affordable brands. We also see smaller pack sizes gaining traction and multi-brand baskets becoming common. Loyalty is now conditional, driven by better deals, faster delivery, and personalized rewards.",
+        "text_hash": "157702d0f8dee49cd45d48bdb34709ad0a9c71d2de533399c82b191302721f8e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:16",
+            "source_pack": "source_pdf",
+            "page": 16,
+            "text_hash": "a02a60cf387604bd44ebb5f82dfaf6345d5949f1012369832ef91cb026c7d2b3"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text is directly supported by the quoted evidence."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "down",
+            "evidence_value": "down",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text is directly supported by the quoted evidence.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-2",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Affordability cannot come at the expense of efficacy. Consumers expect both, they actively compare products, scrutinize ingredient lists, and demand transparency before making decisions. In short, today’s definition of value means delivering quality and trust at every price point.",
+        "text_hash": "3fc0550c1693d1684f52fe9022feb4036d980678e7e9f2b9d8b73ca3040d8b85",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:29",
+            "source_pack": "source_pdf",
+            "page": 29,
+            "text_hash": "4c349d51c88a5f709bb27b67571dd7d68bcf5c6b25236ec9766cce0fafd5ee3b"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text is directly supported by the evidence snippet."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text is directly supported by the evidence snippet.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-3",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Quick commerce is no longer a metro phenomenon, it’s democratizing speed across India. Today, 25% of quick commerce spending comes from mid to low-affluent consumers in Tier 2 and Tier 3 towns. These customers are willing to pay a little extra for faster delivery, signaling that convenience and immediacy are becoming universal expectations.",
+        "text_hash": "353dcdca653c282e124d5de5e555b28d4721e600e09276325a63fd4fd3eebe04",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:12",
+            "source_pack": "source_pdf",
+            "page": 12,
+            "text_hash": "66a0462cf26e5d4af4930d8d900947f3b375f15386f684f1420f86a497199832"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly states that 25% of quick-commerce spending comes from mid- to low-affluent consumers in Tier 2 and Tier 3 towns, and supports the remaining paraphrased claims."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "2.0, 25.0, 3.0",
+            "evidence_value": "12.0, 2.0, 25.0, 3.0, 6.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "india",
+            "evidence_value": "india",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly states that 25% of quick-commerce spending comes from mid- to low-affluent consumers in Tier 2 and Tier 3 towns, and supports the remaining paraphrased claims.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-4",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Pricing remains one of the biggest challenges for FMCG. Beyond rising commodity and supply-chain costs, brands must also navigate retailer margin pressure, increased price transparency, and highly price-sensitive consumers. While some cost increases have to be passed on, this only works where shoppers continue to perceive strong brand value and clear product efficacy.",
+        "text_hash": "2baa11a48cafa345082b28c3290785b7c3d41b3ef8b8e08438386426b87764b3",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:24",
+            "source_pack": "source_pdf",
+            "page": 24,
+            "text_hash": "bd6b4dcc633437cdae603644e0c02ce68613f306176067313f4120d3db0e8427"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The passage contains this quote verbatim, including its claims about pricing pressures and brand value."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The passage contains this quote verbatim, including its claims about pricing pressures and brand value.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-5",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Your core brand promise should remain the same, but the way you deliver it must adapt. Ten years ago, a TV commercial might have been enough. Today, social media dominates, and the challenge is to stay authentic while evolving your channel mix.",
+        "text_hash": "8e90291c2858e0f7e05ade1545bcfdb42190e345113924cfd231f8beb173bf6e",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:49",
+            "source_pack": "source_pdf",
+            "page": 49,
+            "text_hash": "4b929b24b48bf43a58695642c6723d4ef539bd0987447d00c574dd7c361f2707"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "semantic_grounding_required",
+          "status": "not_applicable",
+          "reason": "semantic_authority_deferred_to_grounding_model"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text is directly quoted in the evidence snippet."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text is directly quoted in the evidence snippet.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    }
+  ],
+  "readiness_status": "awaiting_review",
+  "unsupported_factual_count": 0,
+  "unresolved_factual_count": 0,
+  "deterministic_pass_count": 0,
+  "semantic_validation_count": 28,
+  "semantic_execution_identities": [
+    "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+  ],
+  "validation_identity": null,
+  "lineage": null
+}

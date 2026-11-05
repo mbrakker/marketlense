@@ -1,0 +1,628 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/validate/public_editorial_quality",
+  "family_schema_version": "3.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "verdicts": [
+      {
+        "item_id": "soft_copy:summary:9150838c7f6a0b0d",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The bound source supports the comparison of private-equity dealmakers’ expectations with corporates’ outlook, and the wording preserves that these are expectations relative to 2025.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:4780840aa008f547",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The 81% and 94% totals are supported sums of the displayed bands for estimated next-transaction deal values, with the buyer types correctly assigned.",
+        "evidence_ids": [
+          "verified-fact:ma-anticipated-deal-size"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:eb916a281e7ff3f7",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The source displays 21% for Corporate and 55% for Private equity for carve-outs under consideration, with a +34 percentage-point difference.",
+        "evidence_ids": [
+          "verified-fact:ma-carveout-deal-interest"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:c3b5a080d807f769",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The wording accurately attributes the qualitative portfolio-focus description to the report and preserves the stated purpose of concentrating resources where organizations believe they can build durable advantage.",
+        "evidence_ids": [
+          "verified-fact:five-drivers-strategic-focus"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:caace4fa7b74bfd7",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The source presents AI as making new categories of analysis worth doing, rather than merely accelerating existing analysis.",
+        "evidence_ids": [
+          "verified-fact:ma-ai-expands-analysis-scope"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:863a4f9c948cdc5d",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Both clauses are supported: the pipeline statement preserves its expectation status, and the next-transaction deal-size totals and buyer-type assignments match the displayed bands.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook",
+          "verified-fact:ma-anticipated-deal-size"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:253be4834ae0537c",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It makes the defensible distinction that stronger pipeline expectations do not establish larger next deals, and accurately reflects the report’s mid-sized, execution-intensive framing rather than megadeals.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook",
+          "verified-fact:ma-anticipated-deal-size"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:a3da99034d03fad3",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is clearly MarketLense-authored advice, grounded in the distinction between pipeline expectations and next-deal size estimates; it does not present the recommendation as a source finding.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook",
+          "verified-fact:ma-anticipated-deal-size"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:092199b64f6b945e",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The bound source supports the comparison of private-equity dealmakers’ and corporates’ expectations relative to 2025.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:85c5145123488712",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The source characterizes corporates’ outlook as more measured and says fewer anticipate a material acceleration in deal volume.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:3c448a9d424b448e",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The source explicitly frames the pipeline assertions as expectations, not realized activity.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:c5e88858e43a1cd9",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The qualitative geographic comparison supports that private-equity optimism is strongest in the US.",
+        "evidence_ids": [
+          "verified-fact:ma-geographic-buyer-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:f8ebd2fcb99c4638",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The source identifies greater uncertainty outside the US for dealmakers, particularly corporates, related to growth, regulation, and geopolitical exposure.",
+        "evidence_ids": [
+          "verified-fact:ma-geographic-buyer-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:c45ac2b034bc125e",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The advice to segment scenarios by buyer type and location and distinguish expectations from realized activity is a defensible MarketLense recommendation based on the bound findings.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook",
+          "verified-fact:ma-geographic-buyer-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-buyer-pipeline-outlook:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The pipeline and geographic statements are accurately attributed and retain the distinction between expectations and realized activity, as well as the qualitative nature of the geographic comparison.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook",
+          "verified-fact:ma-geographic-buyer-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-buyer-pipeline-outlook:so_what",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It accurately summarizes the buyer-type difference and states that the geographic comparison is qualitative rather than quantified.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook",
+          "verified-fact:ma-geographic-buyer-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-buyer-pipeline-outlook:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is a clearly attributed MarketLense recommendation and follows from the source’s buyer-type, geographic, and expectation-status distinctions.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook",
+          "verified-fact:ma-geographic-buyer-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-anticipated-deal-size:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The displayed-band sums, largest band values, buyer-type assignments, and mid-sized rather than megadeal framing match the complete source fact; the estimates are identified as next-transaction expectations.",
+        "evidence_ids": [
+          "verified-fact:ma-anticipated-deal-size"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-anticipated-deal-size:so_what",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It correctly distinguishes estimates for the next transaction from completed-deal mix.",
+        "evidence_ids": [
+          "verified-fact:ma-anticipated-deal-size"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-anticipated-deal-size:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Using the buyer-specific estimates as scenarios rather than completed-deal benchmarks is clearly MarketLense advice and respects the source’s forward-looking status.",
+        "evidence_ids": [
+          "verified-fact:ma-anticipated-deal-size"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-carveout-deal-interest:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The carve-out values and displayed difference are correct; the full-business values are also correctly assigned, and both categories are identified as under consideration rather than completed transactions.",
+        "evidence_ids": [
+          "verified-fact:ma-carveout-deal-interest",
+          "verified-fact:deal-types-full-business"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-carveout-deal-interest:so_what",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The source identifies the chart as deal types under consideration and does not report completed transaction outcomes, so the distinction is supported.",
+        "evidence_ids": [
+          "verified-fact:ma-carveout-deal-interest",
+          "verified-fact:deal-types-full-business"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-carveout-deal-interest:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This MarketLense recommendation appropriately keeps deal-type consideration separate from completed outcomes and does not claim the source recommends it.",
+        "evidence_ids": [
+          "verified-fact:ma-carveout-deal-interest",
+          "verified-fact:deal-types-full-business"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:five-drivers-strategic-focus:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The report identifies the named driver and describes organizations concentrating capital, capabilities, and management attention where they believe durable advantage can be built.",
+        "evidence_ids": [
+          "verified-fact:five-drivers-strategic-focus"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:five-drivers-strategic-focus:so_what",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is a supported summary of the source’s description of portfolio focus and its intended concentration of resources.",
+        "evidence_ids": [
+          "verified-fact:five-drivers-strategic-focus"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:five-drivers-strategic-focus:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Testing portfolio choices against where management believes durable advantage can be built is clearly MarketLense advice grounded in the source’s framing.",
+        "evidence_ids": [
+          "verified-fact:five-drivers-strategic-focus"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-ai-expands-analysis-scope:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The AI analysis-scope argument and the customer-concentration workflow, including the human review and decision role, are supported by the two bound facts.",
+        "evidence_ids": [
+          "verified-fact:ma-ai-expands-analysis-scope",
+          "verified-fact:ma-ai-agent-human-review"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-ai-expands-analysis-scope:so_what",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It accurately summarizes the source’s broader-scope framing and its example retaining human review and decisions.",
+        "evidence_ids": [
+          "verified-fact:ma-ai-expands-analysis-scope",
+          "verified-fact:ma-ai-agent-human-review"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-ai-expands-analysis-scope:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The recommendation to evaluate additional diligence analyses and define human decision points follows from the source’s analysis-scope argument and agent workflow example.",
+        "evidence_ids": [
+          "verified-fact:ma-ai-expands-analysis-scope",
+          "verified-fact:ma-ai-agent-human-review"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-ai-preclose-readiness:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The wording tracks the source’s qualitative finding about pre-close visibility and reduced tolerance for execution failures without adding a numerical magnitude.",
+        "evidence_ids": [
+          "verified-fact:ma-ai-preclose-readiness"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-ai-preclose-readiness:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It draws a bounded implication about execution discipline and explicitly preserves that the effect is not quantified.",
+        "evidence_ids": [
+          "verified-fact:ma-ai-preclose-readiness"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-ai-preclose-readiness:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Surfacing risks, dependencies, and value-creation levers during diligence and pre-close planning is clearly presented as MarketLense advice and is grounded in the source finding.",
+        "evidence_ids": [
+          "verified-fact:ma-ai-preclose-readiness"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-software-valuation-repricing:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The reported nearly US$1 trillion market-value decline, early-2026 timeframe, and distinction between earnings and valuation-multiple changes match the source.",
+        "evidence_ids": [
+          "verified-fact:ma-software-valuation-repricing"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-software-valuation-repricing:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "It draws a defensible distinction between reported earnings performance and the market multiple assigned to future cash flows.",
+        "evidence_ids": [
+          "verified-fact:ma-software-valuation-repricing"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:ma-software-valuation-repricing:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Separating earnings assumptions from valuation-multiple sensitivity is clearly MarketLense advice grounded in the reported repricing distinction.",
+        "evidence_ids": [
+          "verified-fact:ma-software-valuation-repricing"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:1:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The source supports the buyer-type comparison and the expectation of pipeline activity increasing versus 2025.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:2:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The source supports the displayed-band totals for estimates of next-transaction deal value, with the correct corporate and private-equity assignments.",
+        "evidence_ids": [
+          "verified-fact:ma-anticipated-deal-size"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:3:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The chart values and +34 percentage-point difference are correctly stated for carve-outs under consideration.",
+        "evidence_ids": [
+          "verified-fact:ma-carveout-deal-interest"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:strategic_context",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The sentence is supported by the bound pipeline-outlook fact and preserves the comparison as an expectation relative to 2025.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:watchouts:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The market-value decline, timeframe, affected stock category, and repricing-versus-earnings distinction match the bound source fact.",
+        "evidence_ids": [
+          "verified-fact:ma-software-valuation-repricing"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The source supports the comparison between private-equity dealmakers and corporates regarding expectations of pipeline activity increasing versus 2025.",
+        "evidence_ids": [
+          "verified-fact:ma-buyer-pipeline-outlook"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:2",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The displayed-band sums are accurately reported as estimates for the next M&A transaction, with the buyer types correctly assigned.",
+        "evidence_ids": [
+          "verified-fact:ma-anticipated-deal-size"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:3",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The carve-out percentages and displayed difference match the chart for deal types under consideration.",
+        "evidence_ids": [
+          "verified-fact:ma-carveout-deal-interest"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:4",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The source supports the qualitative description of organizations sharpening portfolio focus to concentrate resources where they believe durable advantage can be built.",
+        "evidence_ids": [
+          "verified-fact:five-drivers-strategic-focus"
+        ],
+        "repair_target": ""
+      }
+    ],
+    "report_verdict": {
+      "status": "fail",
+      "severity": "error",
+      "rule_id": "public_editorial_quality.report_limitations_omitted",
+      "hard_fail_class": "",
+      "reason": "The report states precise survey and deal-type percentages but omits material source boundaries: the pipeline source gives no sample size or geography, and the deal-type charts do not state sample size or denominator. Although the copy identifies expectations and deals under consideration rather than completed outcomes, readers are not told that the basis for these percentages is unspecified.",
+      "evidence_ids": [
+        "verified-fact:ma-buyer-pipeline-outlook",
+        "verified-fact:ma-anticipated-deal-size",
+        "verified-fact:ma-carveout-deal-interest",
+        "verified-fact:deal-types-full-business"
+      ],
+      "repair_target": "",
+      "affected_item_id": "",
+      "dimensions": {
+        "material_coverage": {
+          "status": "pass",
+          "reason": "The primary analysis and supporting surfaces cover the report plan’s buyer outlook, next-transaction size estimates, deal types under consideration, portfolio focus, AI-enabled execution, pre-close readiness, and valuation repricing findings."
+        },
+        "analytical_depth": {
+          "status": "pass",
+          "reason": "The report adds source-grounded commercial implications, including buyer-specific scenario planning, diligence and human-review planning, and separating earnings assumptions from valuation-multiple sensitivity."
+        },
+        "distinctness": {
+          "status": "pass",
+          "reason": "Repeated facts serve different roles across summary, distribution, expert synthesis, primary analysis, and supporting projections; the primary sections also distinguish findings from implications and recommendations."
+        },
+        "limitations": {
+          "status": "fail",
+          "reason": "The public wording does not disclose that the pipeline source lacks sample-size and geography details or that the deal-type chart percentages have no stated denominator or sample size, leaving material context for interpreting the stated percentages unstated."
+        }
+      }
+    }
+  }
+}

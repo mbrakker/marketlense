@@ -1,0 +1,11 @@
+{
+  "stage_records": [
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    }
+  ],
+  "validation_run_id": "validation:bb1ae8bfce83045694406343fec0bec8e5458767c51f131c607fdd57371874a1"
+}

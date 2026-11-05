@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-2acb4a56e14add5d7717\\ias-first-attempt-drahkp8t\\output\\kpmg-2026-global-ma-outlook-pdf\\report_analysis\\validation.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[family_confidence] Artifact family 'quotes' abstained at confidence=0.00 because quotes_missing.",
+      "severity": "warning",
+      "affected_section": "quotes",
+      "rule_id": "family_confidence",
+      "repair_target": "quotes",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.report_limitations_omitted] The report states precise survey and deal-type percentages but omits material source boundaries: the pipeline source gives no sample size or geography, and the deal-type charts do not state sample size or denominator. Although the copy identifies expectations and deals under consideration rather than completed outcomes, readers are not told that the basis for these percentages is unspecified. Dimensions: limitations: The public wording does not disclose that the pipeline source lacks sample-size and geography details or that the deal-type chart percentages have no stated denominator or sample size, leaving material context for interpreting the stated percentages unstated.",
+      "severity": "error",
+      "affected_section": "public_items",
+      "rule_id": "public_editorial_quality.report_limitations_omitted",
+      "violation_type": "report_editorial_acceptance",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": [
+        "verified-fact:ma-buyer-pipeline-outlook",
+        "verified-fact:ma-anticipated-deal-size",
+        "verified-fact:ma-carveout-deal-interest",
+        "verified-fact:deal-types-full-business"
+      ]
+    }
+  ]
+}

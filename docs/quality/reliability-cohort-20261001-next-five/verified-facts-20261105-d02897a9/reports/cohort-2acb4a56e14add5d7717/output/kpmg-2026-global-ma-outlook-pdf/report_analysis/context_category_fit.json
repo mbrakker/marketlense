@@ -1,0 +1,136 @@
+{
+  "schema_version": "1.0",
+  "selected_category_ids": [
+    "business_performance"
+  ],
+  "category_fits": [
+    {
+      "category_id": "business_performance",
+      "label": "Business Performance & Growth",
+      "fit_score": 0.76,
+      "decision": "primary",
+      "why_fit": "The report guides dealmakers on strategic business decisions, including M&A pipeline expectations, deal sizes, buyer risk appetites, and portfolio simplification as a value-creation strategy.",
+      "why_not_fit": "The report is specifically an M&A outlook, not a broad study of revenue, profitability, or business performance metrics.",
+      "evidence_sections": [
+        "2025 retrospective and 2026 outlook",
+        "5 drivers shaping the 2026 M&A environment",
+        "Strategic focus in a fragmented world"
+      ],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence emphasizes strategic business levers and decisions."
+      ],
+      "supported_topic_rule_ids": [
+        "business_performance:include:3fe298416b703617",
+        "business_performance:include:ec3517286d7b97e7"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "5 drivers shaping the 2026 M&A environment",
+        "Strategic focus in a fragmented world"
+      ],
+      "centrality_evidence_sections": [
+        "2025 retrospective and 2026 outlook",
+        "5 drivers shaping the 2026 M&A environment"
+      ],
+      "remediation_signal": "The taxonomy has no dedicated M&A category; this is the closest fit based on the report's strategic business decision focus."
+    },
+    {
+      "category_id": "macroeconomics",
+      "label": "Macroeconomics & Regional Outlooks",
+      "fit_score": 0.37,
+      "decision": "reject",
+      "why_fit": "The context notes regional differences and uncertainty related to growth, regulation, and geopolitical exposure.",
+      "why_not_fit": "Those conditions are presented as influences on M&A dealmaking; the report's main subject is not economy-wide indicators, policy, or regional economic outlooks.",
+      "evidence_sections": [
+        "Strategic focus in a fragmented world",
+        "2025 retrospective and 2026 outlook"
+      ],
+      "semantic_rule_status": "ambiguous",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Economic conditions are contextual to a more domain-specific report."
+      ],
+      "rejected_topic_rule_ids": [
+        "macroeconomics:exclude:51ddcfb369261ec0"
+      ],
+      "rule_evidence_sections": [
+        "Strategic focus in a fragmented world",
+        "2025 retrospective and 2026 outlook"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "Regional and geopolitical factors are contextual rather than the report's central frame."
+    },
+    {
+      "category_id": "ai_automation",
+      "label": "AI & Automation",
+      "fit_score": 0.25,
+      "decision": "reject",
+      "why_fit": "The overview identifies AI-enabled deal execution as one of the report's topics.",
+      "why_not_fit": "AI is one theme among several in a broader M&A outlook, and the context does not establish AI or automation as the report's central subject.",
+      "evidence_sections": [
+        "5 drivers shaping the 2026 M&A environment"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "AI is only one enabler inside a broader report."
+      ],
+      "rejected_topic_rule_ids": [
+        "ai_automation:exclude:1e73dca27527e17c"
+      ],
+      "rule_evidence_sections": [
+        "5 drivers shaping the 2026 M&A environment"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "AI-enabled execution is a supporting theme, not a standalone AI and automation focus."
+    },
+    {
+      "category_id": "technology",
+      "label": "Technology & Innovation",
+      "fit_score": 0.15,
+      "decision": "reject",
+      "why_fit": "The overview mentions AI-enabled deal execution.",
+      "why_not_fit": "The report is about M&A strategy and dealmaking, not technology platforms, infrastructure, or emerging technology as its main lens.",
+      "evidence_sections": [
+        "5 drivers shaping the 2026 M&A environment"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Technology is only a supporting capability inside another report."
+      ],
+      "rejected_topic_rule_ids": [
+        "technology:exclude:bcb4675ddd1f92ce"
+      ],
+      "rule_evidence_sections": [
+        "5 drivers shaping the 2026 M&A environment"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "Technology appears as an execution enabler rather than a central technology subject."
+    },
+    {
+      "category_id": "agentic_commerce",
+      "label": "Agentic Commerce & Shopping Automation",
+      "fit_score": 0.02,
+      "decision": "reject",
+      "why_fit": "The report overview mentions AI-enabled deal execution, but that refers to M&A execution rather than shopping or purchasing.",
+      "why_not_fit": "The context provides no evidence of agents or automation in search, selection, buying, checkout, or commerce flows.",
+      "evidence_sections": [
+        "5 drivers shaping the 2026 M&A environment"
+      ],
+      "semantic_rule_status": "not_evaluated",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "No commerce or shopping automation focus is evidenced."
+    }
+  ]
+}

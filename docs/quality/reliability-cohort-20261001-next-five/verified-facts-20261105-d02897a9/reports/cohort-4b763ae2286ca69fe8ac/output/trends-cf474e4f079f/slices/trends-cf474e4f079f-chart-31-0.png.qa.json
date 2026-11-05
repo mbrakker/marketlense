@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-31-0",
+  "candidate_type": "chart",
+  "page": 31,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    60.857,
+    289.372,
+    548.143,
+    621.628
+  ],
+  "final_bbox": [
+    52.857,
+    278.715,
+    556.143,
+    621.618
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 0,
+    "bottom": 41,
+    "left": 46,
+    "right": 95
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": true,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.7393,
+    "margin_balance": 0.5769,
+    "neighbor_contamination": 0.1448,
+    "readability": 1.0,
+    "visual_crispness": 0.5969,
+    "total_score": 0.7897,
+    "defect_labels": [],
+    "edge_density": {
+      "top": 0.2486,
+      "bottom": 0.0188,
+      "left": 0.2095,
+      "right": 0.0161
+    },
+    "edge_leakage": {
+      "top": 0.1448,
+      "bottom": 0.0,
+      "left": 0.0,
+      "right": 0.0
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.5,
+        "strong_edges": [
+          "top",
+          "left"
+        ],
+        "edge_density": {
+          "top": 0.2486,
+          "bottom": 0.0188,
+          "left": 0.2095,
+          "right": 0.0161
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.2095,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.2486,
+          "bottom": 0.0188,
+          "left": 0.2095,
+          "right": 0.0161
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.2486,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.2486,
+          "bottom": 0.0188,
+          "left": 0.2095,
+          "right": 0.0161
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": true,
+  "rejection_reason": ""
+}

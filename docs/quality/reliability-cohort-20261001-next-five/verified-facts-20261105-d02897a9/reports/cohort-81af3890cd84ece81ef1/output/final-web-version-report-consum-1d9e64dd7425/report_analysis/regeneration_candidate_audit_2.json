@@ -1,0 +1,3013 @@
+{
+  "attempt_index": 2,
+  "before_sha256": "cc54cebc88957cc0848ee954f39ef002b571a622ed91fbd68eb903a42ba2c25c",
+  "after_sha256": "ea78ddc6a3633634ab69e9212d91e69a7618a4d23ba65d7896b9dff34b3823a0",
+  "transformation_scope": [
+    "summary",
+    "insights_final",
+    "linkedin_post"
+  ],
+  "unchanged_family_sha256": {
+    "insights_candidates": "5f75c2e00a16d9e6aa47e43bbbb1c6e6d22d7915ebf210db69ba19efcd2fbad3",
+    "quotes_final": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "current_artifacts_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-81af3890cd84ece81ef1\\ias-first-attempt-m4dv7o30\\output\\final-web-version-report-consum-1d9e64dd7425\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-81af3890cd84ece81ef1\\ias-first-attempt-m4dv7o30\\output\\final-web-version-report-consum-1d9e64dd7425\\report_analysis\\artifacts_regen_candidate_2.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "public_editorial_quality.material_limitation_omitted:insights:india-quick-commerce-spending-share",
+    "public_editorial_quality.semantic_review:insights:human-support-loyalty-comparison",
+    "public_editorial_quality.semantic_review:insights:impulse-purchase-shift",
+    "public_editorial_quality.semantic_review:insights:india-quick-commerce-spending-share",
+    "public_editorial_quality.semantic_review:insights:regular-price-switching",
+    "public_editorial_quality.semantic_review:insights:regular-price-switching.so_what",
+    "regeneration_scope_violation:insights_final[item=human-support-loyalty-comparison].evidence",
+    "regeneration_scope_violation:insights_final[item=human-support-loyalty-comparison].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=human-support-loyalty-comparison].evidence_spans[1]",
+    "regeneration_scope_violation:insights_final[item=impulse-purchase-shift].evidence",
+    "regeneration_scope_violation:insights_final[item=impulse-purchase-shift].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=impulse-purchase-shift].evidence_spans[1]",
+    "regeneration_scope_violation:insights_final[item=impulse-purchase-shift].pages[1]",
+    "regeneration_scope_violation:insights_final[item=regular-price-switching].evidence",
+    "regeneration_scope_violation:insights_final[item=regular-price-switching].evidence_ids",
+    "regeneration_scope_violation:insights_final[item=regular-price-switching].evidence_spans[1]",
+    "validation_execution:validation"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "assistant-use-and-control",
+      "original_evidence_ids": [
+        "verified-fact:assistant-use-and-control"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:assistant-use-and-control"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "careful-spending-promotions",
+      "original_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        24
+      ],
+      "candidate_source_pages": [
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "human-purchase-stage-loyalty-comparison",
+      "original_evidence_ids": [
+        "verified-fact:human-purchase-stage-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-purchase-stage-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "human-support-loyalty-comparison",
+      "original_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "hyperpersonalized-genai-content",
+      "original_evidence_ids": [
+        "verified-fact:hyperpersonalized-genai-content"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:hyperpersonalized-genai-content"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "impulse-purchase-shift",
+      "original_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "india-quick-commerce-spending-share",
+      "original_evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ],
+      "original_source_pages": [
+        12
+      ],
+      "candidate_source_pages": [
+        12
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "regular-price-switching",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "smaller-quantity-shopping",
+      "original_evidence_ids": [
+        "verified-fact:smaller-quantity-shopping"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:smaller-quantity-shopping"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "switch-uncommunicated-reduction",
+      "original_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "assistant-use-and-control",
+      "original_evidence_ids": [
+        "verified-fact:assistant-use-and-control"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:assistant-use-and-control"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "careful-spending-promotions",
+      "original_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        24
+      ],
+      "candidate_source_pages": [
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "human-support-loyalty-comparison",
+      "original_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison",
+        "verified-fact:human-purchase-stage-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "hyperpersonalized-genai-content",
+      "original_evidence_ids": [
+        "verified-fact:hyperpersonalized-genai-content"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:hyperpersonalized-genai-content"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "impulse-purchase-shift",
+      "original_evidence_ids": [
+        "verified-fact:impulse-purchase-shift",
+        "verified-fact:smaller-quantity-shopping"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "original_source_pages": [
+        5,
+        21
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "india-quick-commerce-spending-share",
+      "original_evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ],
+      "original_source_pages": [
+        12
+      ],
+      "candidate_source_pages": [
+        12
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "regular-price-switching",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        24
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:3167c39f8f82766f",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:9e9662cea1793aef",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction",
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction",
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        4,
+        24
+      ],
+      "candidate_source_pages": [
+        4,
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:bb5f7980b0aafd9c",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction",
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction",
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        4,
+        24
+      ],
+      "candidate_source_pages": [
+        4,
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:f057fa755054e4e3",
+      "original_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        24
+      ],
+      "candidate_source_pages": [
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:608c7fe219ffb274",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:9a14c1890fc408a0",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:a51b63ffeda3b6fe",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:f6a27ba95538eb27",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:fd94d86becf00dde",
+      "original_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:02c1ea47a3a28f67",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching",
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:39da9d0cdec33fe5",
+      "original_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ],
+      "original_source_pages": [
+        4
+      ],
+      "candidate_source_pages": [
+        4
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:670ffc34e7744153",
+      "original_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:impulse-purchase-shift"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:8b483b274b59c5a7",
+      "original_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "original_source_pages": [
+        24
+      ],
+      "candidate_source_pages": [
+        24
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:f08e00ec9b475fe1",
+      "original_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:face1a23c651a289",
+      "original_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "candidate_evidence_ids": [
+        "verified-fact:human-support-loyalty-comparison"
+      ],
+      "original_source_pages": [
+        45
+      ],
+      "candidate_source_pages": [
+        45
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "1311690fc05611510ec078e8929143432e134e10fd67611a2dbb0bb0254ee2ae",
+    "7b9f53eba56a24064f3dd373ca9a3dc98f193bc7c1f9efcf4d0b5255b514918b",
+    "b9e83874afc0e8b0e3373dc1bd64f676fb9e0d132d0e2779cb9252f98050ec02",
+    "0eea59d89bea976c8ca80cef16e10ef243e6d2f96532220dc0834e33901510c6",
+    "3388754b78b18fe3a5435b59c6dceadb74f870ad071388a95850528b03d37e97",
+    "06b3b8d04fcaf3be3b4a94c415328beb163443c82186d2d8f35cbe103b10978f",
+    "d1081aea22c12bf59ec29a40d996c077243aaac7d87178b3e8f657535a99a35d",
+    "160e684f846f8049584c7bbddc2e7a4df4e1905d3379871bb3a289148347bb98",
+    "bf68187859226da4807689ec6e4ba209841addb6c06cdb88dddaf966028105a5",
+    "634a033ff2fd5030e5c64b75d873519da5b60a78614c5ed4e65eb0600e9d3279",
+    "6c85774e8384ce05a8202dce67ae3bb7891915f9769a0f450f1115280927afef",
+    "85514103aa854440fcd460eb6d7e0502f830350e0440839d694d592da674f524",
+    "84d2c71ee7e00883ec6b68f28cccffaa00df37580b6d91d730899c7e651c4c93",
+    "4c147636f71d9894d34af0a987f53ed9538eef8be401a8432e6fb747048d82dd",
+    "7f9790e95af9b15e344783b4f05528cf90f2d3b4262bbd7f7d0aec7cdc39ade4",
+    "cb6ec87f1793ca6930561535c50ecfbfef3472461e95ae559deb4df2fc71221e",
+    "fead4e461b4a0a1d51c556a04074e84a39626b31a46e195647bb3cda90524e71"
+  ],
+  "repair_action": "REBIND_EVIDENCE",
+  "repair_strategy": "alternative_evidence",
+  "allowed_paths": [
+    "insights_final[item=assistant-use-and-control].evidence_id",
+    "insights_final[item=assistant-use-and-control].evidence_spans",
+    "insights_final[item=assistant-use-and-control].so_what",
+    "insights_final[item=careful-spending-promotions].evidence_id",
+    "insights_final[item=careful-spending-promotions].evidence_spans",
+    "insights_final[item=careful-spending-promotions].so_what",
+    "insights_final[item=impulse-purchase-shift].evidence_id",
+    "insights_final[item=impulse-purchase-shift].evidence_spans",
+    "insights_final[item=impulse-purchase-shift].so_what",
+    "insights_final[item=india-quick-commerce-spending-share].evidence_id",
+    "insights_final[item=india-quick-commerce-spending-share].evidence_spans",
+    "insights_final[item=india-quick-commerce-spending-share].so_what",
+    "linkedin_post[claim_index=1]",
+    "linkedin_post[claim_index=2]",
+    "summary.claim_evidence_map[1]"
+  ],
+  "verified_dependent_paths": [
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.output_controls.max_output_tokens",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[0].sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.schema_snippets[0]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/insights_final.routing_policy_version",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.prompt_dependency_manifest.included_partials[2]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/linkedin_post.routing_policy_version",
+    "_cache.prompts.report_vs/artifacts/regenerate/insights_final",
+    "_cache.prompts.report_vs/artifacts/regenerate/linkedin_post",
+    "_cache.regeneration_prompt_requirements",
+    "_repair_evidence_selection",
+    "chart_insight_cards[item=impulse-purchase-shift].evidence_ids",
+    "chart_insight_cards[item=impulse-purchase-shift].evidence_spans[1]",
+    "chart_insight_cards[item=regular-price-switching].evidence_ids",
+    "chart_insight_cards[item=regular-price-switching].evidence_spans[1]",
+    "claim_ledgers[10].canonical_claim_id",
+    "claim_ledgers[10].claim_text",
+    "claim_ledgers[10].evidence_ids[0]",
+    "claim_ledgers[10].evidence_references[0].evidence_id",
+    "claim_ledgers[11].artifact_section",
+    "claim_ledgers[11].canonical_claim_id",
+    "claim_ledgers[11].claim_text",
+    "claim_ledgers[11].confidence",
+    "claim_ledgers[11].evidence_ids[0]",
+    "claim_ledgers[11].evidence_ids[1]",
+    "claim_ledgers[11].evidence_quality_grade",
+    "claim_ledgers[11].evidence_references",
+    "claim_ledgers[11].evidence_span_count",
+    "claim_ledgers[11].support_type",
+    "claim_ledgers[12].canonical_claim_id",
+    "claim_ledgers[12].claim_text",
+    "claim_ledgers[12].evidence_ids[0]",
+    "claim_ledgers[12].evidence_ids[1]",
+    "claim_ledgers[13].canonical_claim_id",
+    "claim_ledgers[13].claim_text",
+    "claim_ledgers[13].confidence",
+    "claim_ledgers[13].evidence_ids[0]",
+    "claim_ledgers[13].evidence_ids[1]",
+    "claim_ledgers[14].canonical_claim_id",
+    "claim_ledgers[14].claim_text",
+    "claim_ledgers[14].confidence",
+    "claim_ledgers[14].evidence_ids[0]",
+    "claim_ledgers[15].canonical_claim_id",
+    "claim_ledgers[15].claim_text",
+    "claim_ledgers[15].evidence_ids[0]",
+    "claim_ledgers[16].canonical_claim_id",
+    "claim_ledgers[16].claim_text",
+    "claim_ledgers[16].confidence",
+    "claim_ledgers[16].evidence_ids[0]",
+    "claim_ledgers[17].artifact_section",
+    "claim_ledgers[17].canonical_claim_id",
+    "claim_ledgers[17].claim_text",
+    "claim_ledgers[17].confidence",
+    "claim_ledgers[17].evidence_ids[0]",
+    "claim_ledgers[17].evidence_quality_grade",
+    "claim_ledgers[17].risk",
+    "claim_ledgers[17].support_type",
+    "claim_ledgers[18].canonical_claim_id",
+    "claim_ledgers[18].claim_text",
+    "claim_ledgers[18].evidence_ids[0]",
+    "claim_ledgers[19].canonical_claim_id",
+    "claim_ledgers[19].claim_text",
+    "claim_ledgers[19].evidence_ids[0]",
+    "claim_ledgers[1].claim_text",
+    "claim_ledgers[1].evidence_ids[0]",
+    "claim_ledgers[1].evidence_references[0].evidence_id",
+    "claim_ledgers[20].canonical_claim_id",
+    "claim_ledgers[20].claim_text",
+    "claim_ledgers[20].evidence_ids[0]",
+    "claim_ledgers[21].canonical_claim_id",
+    "claim_ledgers[21].claim_text",
+    "claim_ledgers[21].evidence_ids[0]",
+    "claim_ledgers[22].canonical_claim_id",
+    "claim_ledgers[22].claim_text",
+    "claim_ledgers[22].evidence_ids[0]",
+    "claim_ledgers[23].canonical_claim_id",
+    "claim_ledgers[23].claim_text",
+    "claim_ledgers[23].evidence_ids[0]",
+    "claim_ledgers[24].artifact_section",
+    "claim_ledgers[24].canonical_claim_id",
+    "claim_ledgers[24].claim_text",
+    "claim_ledgers[24].evidence_ids[0]",
+    "claim_ledgers[24].evidence_quality_grade",
+    "claim_ledgers[24].support_type",
+    "claim_ledgers[25]",
+    "claim_ledgers[2].claim_text",
+    "claim_ledgers[2].evidence_ids[0]",
+    "claim_ledgers[2].evidence_references[0].evidence_id",
+    "claim_ledgers[3].claim_text",
+    "claim_ledgers[3].evidence_ids[0]",
+    "claim_ledgers[3].evidence_references[0].evidence_id",
+    "claim_ledgers[4].artifact_section",
+    "claim_ledgers[4].canonical_claim_id",
+    "claim_ledgers[4].claim_text",
+    "claim_ledgers[4].evidence_ids[0]",
+    "claim_ledgers[4].evidence_references[0].evidence_id",
+    "claim_ledgers[5].canonical_claim_id",
+    "claim_ledgers[5].claim_text",
+    "claim_ledgers[5].evidence_ids[0]",
+    "claim_ledgers[5].evidence_ids[1]",
+    "claim_ledgers[5].evidence_references[0].evidence_id",
+    "claim_ledgers[5].evidence_references[1]",
+    "claim_ledgers[5].evidence_span_count",
+    "claim_ledgers[6].canonical_claim_id",
+    "claim_ledgers[6].claim_text",
+    "claim_ledgers[6].evidence_ids[0]",
+    "claim_ledgers[6].evidence_ids[1]",
+    "claim_ledgers[6].evidence_references[0].evidence_id",
+    "claim_ledgers[6].evidence_references[1]",
+    "claim_ledgers[6].evidence_span_count",
+    "claim_ledgers[7].canonical_claim_id",
+    "claim_ledgers[7].claim_text",
+    "claim_ledgers[7].evidence_ids[0]",
+    "claim_ledgers[7].evidence_references[0].evidence_id",
+    "claim_ledgers[8].canonical_claim_id",
+    "claim_ledgers[8].claim_text",
+    "claim_ledgers[8].evidence_ids[0]",
+    "claim_ledgers[8].evidence_references[0].evidence_id",
+    "claim_ledgers[9].canonical_claim_id",
+    "claim_ledgers[9].claim_text",
+    "claim_ledgers[9].evidence_ids[0]",
+    "claim_ledgers[9].evidence_references[0].evidence_id",
+    "executive_advisory.decision_brief.decision_implications[1]",
+    "executive_advisory.decision_brief.decision_implications[2]",
+    "key_figures[0].evidence_ids",
+    "key_figures[0].evidence_spans[1]",
+    "key_figures[1].evidence_ids",
+    "key_figures[1].evidence_spans[1]",
+    "metric_spine[0].evidence_ids",
+    "metric_spine[0].evidence_spans[1]",
+    "metric_spine[1].evidence_ids",
+    "metric_spine[1].evidence_spans[1]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:linkedin_post:8738f48cd29e0fa0]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:linkedin_post:a51b63ffeda3b6fe]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:linkedin_post:dd5b82c2a1a2d38c]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:linkedin_post:fd94d86becf00dde]"
+  ],
+  "selected_evidence_ids": [
+    "verified-fact:assistant-use-and-control",
+    "verified-fact:careful-spending-promotions",
+    "verified-fact:impulse-purchase-shift",
+    "verified-fact:india-quick-commerce-spending-share",
+    "verified-fact:regular-price-switching",
+    "verified-fact:smaller-quantity-shopping",
+    "verified-fact:switch-uncommunicated-reduction"
+  ],
+  "quarantined_evidence_ids": [],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "family_confidence",
+        "affected_section": "quotes",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "summary.claim_evidence_map:2.claim",
+        "entity_id": "claim_ledgers:claim:2",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "insights:regular-price-switching.text",
+        "entity_id": "executive_advisory:decision_brief:watchouts:1",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:8738f48cd29e0fa0",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:careful-spending-promotions.so_what",
+        "entity_id": "insight:careful-spending-promotions:so_what",
+        "evidence_ids": [
+          "verified-fact:careful-spending-promotions"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.report_analytical_depth_and_limitations",
+        "affected_section": "public_items",
+        "entity_id": "",
+        "evidence_ids": [
+          "verified-fact:assistant-use-and-control",
+          "verified-fact:careful-spending-promotions",
+          "verified-fact:india-quick-commerce-spending-share",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:assistant-use-and-control.so_what",
+        "entity_id": "insight:assistant-use-and-control:so_what",
+        "evidence_ids": [
+          "verified-fact:assistant-use-and-control"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+        "affected_section": "decision_brief.strategic_context",
+        "entity_id": "executive_advisory:decision_brief:strategic_context",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:dd5b82c2a1a2d38c",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:impulse-purchase-shift.so_what",
+        "entity_id": "insight:impulse-purchase-shift:so_what",
+        "evidence_ids": [
+          "verified-fact:impulse-purchase-shift",
+          "verified-fact:smaller-quantity-shopping"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:india-quick-commerce-spending-share.so_what",
+        "entity_id": "insight:india-quick-commerce-spending-share:so_what",
+        "evidence_ids": [
+          "verified-fact:india-quick-commerce-spending-share"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "summary.claim_evidence_map:2.claim",
+        "entity_id": "summary:summary:claim_evidence_map:2:claim",
+        "evidence_ids": [
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [],
+    "introduced": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=impulse-purchase-shift].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "validation_execution",
+        "affected_section": "validation",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=impulse-purchase-shift].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=impulse-purchase-shift].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:india-quick-commerce-spending-share",
+        "entity_id": "insight:india-quick-commerce-spending-share:text",
+        "evidence_ids": [
+          "verified-fact:india-quick-commerce-spending-share"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:regular-price-switching.so_what",
+        "entity_id": "insight:regular-price-switching:so_what",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:impulse-purchase-shift",
+        "entity_id": "insight:impulse-purchase-shift:text",
+        "evidence_ids": [
+          "verified-fact:impulse-purchase-shift"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:human-support-loyalty-comparison",
+        "entity_id": "insight:human-support-loyalty-comparison:text",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:regular-price-switching",
+        "entity_id": "insight:regular-price-switching:text",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=impulse-purchase-shift].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_limitation_omitted",
+        "affected_section": "insights:india-quick-commerce-spending-share",
+        "entity_id": "insight:india-quick-commerce-spending-share:text",
+        "evidence_ids": [
+          "verified-fact:india-quick-commerce-spending-share"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failures": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=impulse-purchase-shift].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "validation_execution",
+        "affected_section": "validation",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=impulse-purchase-shift].pages[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=impulse-purchase-shift].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:india-quick-commerce-spending-share",
+        "entity_id": "insight:india-quick-commerce-spending-share:text",
+        "evidence_ids": [
+          "verified-fact:india-quick-commerce-spending-share"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:regular-price-switching.so_what",
+        "entity_id": "insight:regular-price-switching:so_what",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:impulse-purchase-shift",
+        "entity_id": "insight:impulse-purchase-shift:text",
+        "evidence_ids": [
+          "verified-fact:impulse-purchase-shift"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:human-support-loyalty-comparison",
+        "entity_id": "insight:human-support-loyalty-comparison:text",
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=human-support-loyalty-comparison].evidence_ids",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=regular-price-switching].evidence",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.semantic_review",
+        "affected_section": "insights:regular-price-switching",
+        "entity_id": "insight:regular-price-switching:text",
+        "evidence_ids": [
+          "verified-fact:regular-price-switching"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=impulse-purchase-shift].evidence_spans[1]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.material_limitation_omitted",
+        "affected_section": "insights:india-quick-commerce-spending-share",
+        "entity_id": "insight:india-quick-commerce-spending-share:text",
+        "evidence_ids": [
+          "verified-fact:india-quick-commerce-spending-share"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failure_count": 17,
+    "introduced_failure_categories": [],
+    "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+    "severity_changes": [],
+    "mutation_scope_result": "fail",
+    "evidence_lineage_result": "pass",
+    "repair_action": "REBIND_EVIDENCE",
+    "repair_strategy": "alternative_evidence",
+    "evidence_ids_used": [
+      "verified-fact:assistant-use-and-control",
+      "verified-fact:careful-spending-promotions",
+      "verified-fact:impulse-purchase-shift",
+      "verified-fact:smaller-quantity-shopping",
+      "verified-fact:india-quick-commerce-spending-share",
+      "verified-fact:switch-uncommunicated-reduction",
+      "verified-fact:regular-price-switching"
+    ],
+    "strategy_fingerprint": "e6fab1c344ce00c878078980f1859a46bc9f7b2af806a603f45c8ec4f1c8991b",
+    "candidate_sha256": "ea78ddc6a3633634ab69e9212d91e69a7618a4d23ba65d7896b9dff34b3823a0",
+    "input_sha256": "cc54cebc88957cc0848ee954f39ef002b571a622ed91fbd68eb903a42ba2c25c",
+    "validator_identity": "regeneration-candidate-v1:efc08894cd3e145233ae5dc8bde408e81ff074ce23341179fc1bca62f86073b4:d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [
+    {
+      "diagnosed_failure_class": "public_editorial_quality.semantic_review",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "verified-fact:assistant-use-and-control"
+      ],
+      "protected_fields": [
+        "insights_final[item=assistant-use-and-control].coverage_role",
+        "insights_final[item=assistant-use-and-control].decision_relevance_score",
+        "insights_final[item=assistant-use-and-control].evidence",
+        "insights_final[item=assistant-use-and-control].evidence_ids[0]",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].evidence_id",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].page",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].source_identity",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].source_pack",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].text",
+        "insights_final[item=assistant-use-and-control].id",
+        "insights_final[item=assistant-use-and-control].metric.baseline",
+        "insights_final[item=assistant-use-and-control].metric.cohort",
+        "insights_final[item=assistant-use-and-control].metric.comparator",
+        "insights_final[item=assistant-use-and-control].metric.confidence",
+        "insights_final[item=assistant-use-and-control].metric.delta",
+        "insights_final[item=assistant-use-and-control].metric.denominator",
+        "insights_final[item=assistant-use-and-control].metric.forecast_status",
+        "insights_final[item=assistant-use-and-control].metric.geography",
+        "insights_final[item=assistant-use-and-control].metric.label",
+        "insights_final[item=assistant-use-and-control].metric.observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].cohort",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].denominator",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].geography",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].label",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].segment",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].timeframe",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].unit",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].value",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].cohort",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].denominator",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].geography",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].label",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].segment",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].timeframe",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].unit",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].value",
+        "insights_final[item=assistant-use-and-control].metric.sample_size",
+        "insights_final[item=assistant-use-and-control].metric.segment",
+        "insights_final[item=assistant-use-and-control].metric.subject",
+        "insights_final[item=assistant-use-and-control].metric.timeframe",
+        "insights_final[item=assistant-use-and-control].metric.trend",
+        "insights_final[item=assistant-use-and-control].metric.unit",
+        "insights_final[item=assistant-use-and-control].metric.value",
+        "insights_final[item=assistant-use-and-control].metric_public_copy",
+        "insights_final[item=assistant-use-and-control].metric_strength_score",
+        "insights_final[item=assistant-use-and-control].novelty_score",
+        "insights_final[item=assistant-use-and-control].now_what",
+        "insights_final[item=assistant-use-and-control].pages[0]",
+        "insights_final[item=assistant-use-and-control].report_type_lens",
+        "insights_final[item=assistant-use-and-control].score",
+        "insights_final[item=assistant-use-and-control].text",
+        "insights_final[item=careful-spending-promotions].coverage_role",
+        "insights_final[item=careful-spending-promotions].decision_relevance_score",
+        "insights_final[item=careful-spending-promotions].evidence",
+        "insights_final[item=careful-spending-promotions].evidence_id",
+        "insights_final[item=careful-spending-promotions].evidence_ids[0]",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].evidence_id",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].page",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].source_identity",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].source_pack",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].text",
+        "insights_final[item=careful-spending-promotions].id",
+        "insights_final[item=careful-spending-promotions].metric.baseline",
+        "insights_final[item=careful-spending-promotions].metric.cohort",
+        "insights_final[item=careful-spending-promotions].metric.comparator",
+        "insights_final[item=careful-spending-promotions].metric.confidence",
+        "insights_final[item=careful-spending-promotions].metric.delta",
+        "insights_final[item=careful-spending-promotions].metric.denominator",
+        "insights_final[item=careful-spending-promotions].metric.forecast_status",
+        "insights_final[item=careful-spending-promotions].metric.geography",
+        "insights_final[item=careful-spending-promotions].metric.label",
+        "insights_final[item=careful-spending-promotions].metric.observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].value",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].value",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].value",
+        "insights_final[item=careful-spending-promotions].metric.sample_size",
+        "insights_final[item=careful-spending-promotions].metric.segment",
+        "insights_final[item=careful-spending-promotions].metric.subject",
+        "insights_final[item=careful-spending-promotions].metric.timeframe",
+        "insights_final[item=careful-spending-promotions].metric.trend",
+        "insights_final[item=careful-spending-promotions].metric.unit",
+        "insights_final[item=careful-spending-promotions].metric.value",
+        "insights_final[item=careful-spending-promotions].metric_public_copy",
+        "insights_final[item=careful-spending-promotions].metric_strength_score",
+        "insights_final[item=careful-spending-promotions].novelty_score",
+        "insights_final[item=careful-spending-promotions].now_what",
+        "insights_final[item=careful-spending-promotions].pages[0]",
+        "insights_final[item=careful-spending-promotions].report_type_lens",
+        "insights_final[item=careful-spending-promotions].score",
+        "insights_final[item=careful-spending-promotions].so_what",
+        "insights_final[item=careful-spending-promotions].text",
+        "insights_final[item=human-support-loyalty-comparison].coverage_role",
+        "insights_final[item=human-support-loyalty-comparison].decision_relevance_score",
+        "insights_final[item=human-support-loyalty-comparison].evidence",
+        "insights_final[item=human-support-loyalty-comparison].evidence_id",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].evidence_id",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].page",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].source_identity",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].source_pack",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].text",
+        "insights_final[item=human-support-loyalty-comparison].id",
+        "insights_final[item=human-support-loyalty-comparison].metric.baseline",
+        "insights_final[item=human-support-loyalty-comparison].metric.cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.comparator",
+        "insights_final[item=human-support-loyalty-comparison].metric.confidence",
+        "insights_final[item=human-support-loyalty-comparison].metric.delta",
+        "insights_final[item=human-support-loyalty-comparison].metric.denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.forecast_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].value",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].value",
+        "insights_final[item=human-support-loyalty-comparison].metric.sample_size",
+        "insights_final[item=human-support-loyalty-comparison].metric.segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.subject",
+        "insights_final[item=human-support-loyalty-comparison].metric.timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.trend",
+        "insights_final[item=human-support-loyalty-comparison].metric.unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.value",
+        "insights_final[item=human-support-loyalty-comparison].metric_public_copy",
+        "insights_final[item=human-support-loyalty-comparison].metric_strength_score",
+        "insights_final[item=human-support-loyalty-comparison].novelty_score",
+        "insights_final[item=human-support-loyalty-comparison].now_what",
+        "insights_final[item=human-support-loyalty-comparison].pages[0]",
+        "insights_final[item=human-support-loyalty-comparison].report_type_lens",
+        "insights_final[item=human-support-loyalty-comparison].score",
+        "insights_final[item=human-support-loyalty-comparison].so_what",
+        "insights_final[item=human-support-loyalty-comparison].text",
+        "insights_final[item=hyperpersonalized-genai-content].coverage_role",
+        "insights_final[item=hyperpersonalized-genai-content].decision_relevance_score",
+        "insights_final[item=hyperpersonalized-genai-content].evidence",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_id",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_ids[0]",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].evidence_id",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].page",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].source_identity",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].source_pack",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].text",
+        "insights_final[item=hyperpersonalized-genai-content].id",
+        "insights_final[item=hyperpersonalized-genai-content].metric.baseline",
+        "insights_final[item=hyperpersonalized-genai-content].metric.cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.comparator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.confidence",
+        "insights_final[item=hyperpersonalized-genai-content].metric.delta",
+        "insights_final[item=hyperpersonalized-genai-content].metric.denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.forecast_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].value",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].value",
+        "insights_final[item=hyperpersonalized-genai-content].metric.sample_size",
+        "insights_final[item=hyperpersonalized-genai-content].metric.segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.subject",
+        "insights_final[item=hyperpersonalized-genai-content].metric.timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.trend",
+        "insights_final[item=hyperpersonalized-genai-content].metric.unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.value",
+        "insights_final[item=hyperpersonalized-genai-content].metric_public_copy",
+        "insights_final[item=hyperpersonalized-genai-content].metric_strength_score",
+        "insights_final[item=hyperpersonalized-genai-content].novelty_score",
+        "insights_final[item=hyperpersonalized-genai-content].now_what",
+        "insights_final[item=hyperpersonalized-genai-content].pages[0]",
+        "insights_final[item=hyperpersonalized-genai-content].report_type_lens",
+        "insights_final[item=hyperpersonalized-genai-content].score",
+        "insights_final[item=hyperpersonalized-genai-content].so_what",
+        "insights_final[item=hyperpersonalized-genai-content].text",
+        "insights_final[item=impulse-purchase-shift].coverage_role",
+        "insights_final[item=impulse-purchase-shift].decision_relevance_score",
+        "insights_final[item=impulse-purchase-shift].evidence",
+        "insights_final[item=impulse-purchase-shift].evidence_id",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].evidence_id",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].page",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].source_identity",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].source_pack",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].text",
+        "insights_final[item=impulse-purchase-shift].id",
+        "insights_final[item=impulse-purchase-shift].metric.baseline",
+        "insights_final[item=impulse-purchase-shift].metric.cohort",
+        "insights_final[item=impulse-purchase-shift].metric.comparator",
+        "insights_final[item=impulse-purchase-shift].metric.confidence",
+        "insights_final[item=impulse-purchase-shift].metric.delta",
+        "insights_final[item=impulse-purchase-shift].metric.denominator",
+        "insights_final[item=impulse-purchase-shift].metric.forecast_status",
+        "insights_final[item=impulse-purchase-shift].metric.geography",
+        "insights_final[item=impulse-purchase-shift].metric.label",
+        "insights_final[item=impulse-purchase-shift].metric.observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].cohort",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].denominator",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].geography",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].label",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].segment",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].unit",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].value",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].cohort",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].denominator",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].geography",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].label",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].segment",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].unit",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].value",
+        "insights_final[item=impulse-purchase-shift].metric.sample_size",
+        "insights_final[item=impulse-purchase-shift].metric.segment",
+        "insights_final[item=impulse-purchase-shift].metric.subject",
+        "insights_final[item=impulse-purchase-shift].metric.timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.trend",
+        "insights_final[item=impulse-purchase-shift].metric.unit",
+        "insights_final[item=impulse-purchase-shift].metric.value",
+        "insights_final[item=impulse-purchase-shift].metric_public_copy",
+        "insights_final[item=impulse-purchase-shift].metric_strength_score",
+        "insights_final[item=impulse-purchase-shift].novelty_score",
+        "insights_final[item=impulse-purchase-shift].now_what",
+        "insights_final[item=impulse-purchase-shift].pages[0]",
+        "insights_final[item=impulse-purchase-shift].report_type_lens",
+        "insights_final[item=impulse-purchase-shift].score",
+        "insights_final[item=impulse-purchase-shift].so_what",
+        "insights_final[item=impulse-purchase-shift].text",
+        "insights_final[item=india-quick-commerce-spending-share].coverage_role",
+        "insights_final[item=india-quick-commerce-spending-share].decision_relevance_score",
+        "insights_final[item=india-quick-commerce-spending-share].evidence",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_id",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_ids[0]",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].evidence_id",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].page",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].source_identity",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].source_pack",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].text",
+        "insights_final[item=india-quick-commerce-spending-share].id",
+        "insights_final[item=india-quick-commerce-spending-share].metric.baseline",
+        "insights_final[item=india-quick-commerce-spending-share].metric.cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.comparator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.confidence",
+        "insights_final[item=india-quick-commerce-spending-share].metric.delta",
+        "insights_final[item=india-quick-commerce-spending-share].metric.denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.forecast_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].value",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].value",
+        "insights_final[item=india-quick-commerce-spending-share].metric.sample_size",
+        "insights_final[item=india-quick-commerce-spending-share].metric.segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.subject",
+        "insights_final[item=india-quick-commerce-spending-share].metric.timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.trend",
+        "insights_final[item=india-quick-commerce-spending-share].metric.unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.value",
+        "insights_final[item=india-quick-commerce-spending-share].metric_public_copy",
+        "insights_final[item=india-quick-commerce-spending-share].metric_strength_score",
+        "insights_final[item=india-quick-commerce-spending-share].novelty_score",
+        "insights_final[item=india-quick-commerce-spending-share].now_what",
+        "insights_final[item=india-quick-commerce-spending-share].pages[0]",
+        "insights_final[item=india-quick-commerce-spending-share].report_type_lens",
+        "insights_final[item=india-quick-commerce-spending-share].score",
+        "insights_final[item=india-quick-commerce-spending-share].so_what",
+        "insights_final[item=india-quick-commerce-spending-share].text",
+        "insights_final[item=regular-price-switching].coverage_role",
+        "insights_final[item=regular-price-switching].decision_relevance_score",
+        "insights_final[item=regular-price-switching].evidence",
+        "insights_final[item=regular-price-switching].evidence_id",
+        "insights_final[item=regular-price-switching].evidence_spans[0].evidence_id",
+        "insights_final[item=regular-price-switching].evidence_spans[0].page",
+        "insights_final[item=regular-price-switching].evidence_spans[0].source_identity",
+        "insights_final[item=regular-price-switching].evidence_spans[0].source_pack",
+        "insights_final[item=regular-price-switching].evidence_spans[0].text",
+        "insights_final[item=regular-price-switching].id",
+        "insights_final[item=regular-price-switching].metric.baseline",
+        "insights_final[item=regular-price-switching].metric.cohort",
+        "insights_final[item=regular-price-switching].metric.comparator",
+        "insights_final[item=regular-price-switching].metric.confidence",
+        "insights_final[item=regular-price-switching].metric.delta",
+        "insights_final[item=regular-price-switching].metric.denominator",
+        "insights_final[item=regular-price-switching].metric.forecast_status",
+        "insights_final[item=regular-price-switching].metric.geography",
+        "insights_final[item=regular-price-switching].metric.label",
+        "insights_final[item=regular-price-switching].metric.observation_status",
+        "insights_final[item=regular-price-switching].metric.observations[0].cohort",
+        "insights_final[item=regular-price-switching].metric.observations[0].denominator",
+        "insights_final[item=regular-price-switching].metric.observations[0].geography",
+        "insights_final[item=regular-price-switching].metric.observations[0].label",
+        "insights_final[item=regular-price-switching].metric.observations[0].observation_status",
+        "insights_final[item=regular-price-switching].metric.observations[0].segment",
+        "insights_final[item=regular-price-switching].metric.observations[0].timeframe",
+        "insights_final[item=regular-price-switching].metric.observations[0].unit",
+        "insights_final[item=regular-price-switching].metric.observations[0].value",
+        "insights_final[item=regular-price-switching].metric.sample_size",
+        "insights_final[item=regular-price-switching].metric.segment",
+        "insights_final[item=regular-price-switching].metric.subject",
+        "insights_final[item=regular-price-switching].metric.timeframe",
+        "insights_final[item=regular-price-switching].metric.trend",
+        "insights_final[item=regular-price-switching].metric.unit",
+        "insights_final[item=regular-price-switching].metric.value",
+        "insights_final[item=regular-price-switching].metric_public_copy",
+        "insights_final[item=regular-price-switching].metric_strength_score",
+        "insights_final[item=regular-price-switching].novelty_score",
+        "insights_final[item=regular-price-switching].now_what",
+        "insights_final[item=regular-price-switching].pages[0]",
+        "insights_final[item=regular-price-switching].report_type_lens",
+        "insights_final[item=regular-price-switching].score",
+        "insights_final[item=regular-price-switching].so_what",
+        "insights_final[item=regular-price-switching].text"
+      ],
+      "changed_paths": [
+        "insights_final[item=assistant-use-and-control].so_what"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "insights_final[item=assistant-use-and-control].so_what",
+          "value": "Taken together, reported assistant use and demand for action rules indicate that retailer assistant experiences should pair convenience with user control."
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "diagnosed_failure_class": "public_editorial_quality.semantic_review",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "verified-fact:careful-spending-promotions"
+      ],
+      "protected_fields": [
+        "insights_final[item=assistant-use-and-control].coverage_role",
+        "insights_final[item=assistant-use-and-control].decision_relevance_score",
+        "insights_final[item=assistant-use-and-control].evidence",
+        "insights_final[item=assistant-use-and-control].evidence_id",
+        "insights_final[item=assistant-use-and-control].evidence_ids[0]",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].evidence_id",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].page",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].source_identity",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].source_pack",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].text",
+        "insights_final[item=assistant-use-and-control].id",
+        "insights_final[item=assistant-use-and-control].metric.baseline",
+        "insights_final[item=assistant-use-and-control].metric.cohort",
+        "insights_final[item=assistant-use-and-control].metric.comparator",
+        "insights_final[item=assistant-use-and-control].metric.confidence",
+        "insights_final[item=assistant-use-and-control].metric.delta",
+        "insights_final[item=assistant-use-and-control].metric.denominator",
+        "insights_final[item=assistant-use-and-control].metric.forecast_status",
+        "insights_final[item=assistant-use-and-control].metric.geography",
+        "insights_final[item=assistant-use-and-control].metric.label",
+        "insights_final[item=assistant-use-and-control].metric.observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].cohort",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].denominator",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].geography",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].label",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].segment",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].timeframe",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].unit",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].value",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].cohort",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].denominator",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].geography",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].label",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].segment",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].timeframe",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].unit",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].value",
+        "insights_final[item=assistant-use-and-control].metric.sample_size",
+        "insights_final[item=assistant-use-and-control].metric.segment",
+        "insights_final[item=assistant-use-and-control].metric.subject",
+        "insights_final[item=assistant-use-and-control].metric.timeframe",
+        "insights_final[item=assistant-use-and-control].metric.trend",
+        "insights_final[item=assistant-use-and-control].metric.unit",
+        "insights_final[item=assistant-use-and-control].metric.value",
+        "insights_final[item=assistant-use-and-control].metric_public_copy",
+        "insights_final[item=assistant-use-and-control].metric_strength_score",
+        "insights_final[item=assistant-use-and-control].novelty_score",
+        "insights_final[item=assistant-use-and-control].now_what",
+        "insights_final[item=assistant-use-and-control].pages[0]",
+        "insights_final[item=assistant-use-and-control].report_type_lens",
+        "insights_final[item=assistant-use-and-control].score",
+        "insights_final[item=assistant-use-and-control].so_what",
+        "insights_final[item=assistant-use-and-control].text",
+        "insights_final[item=careful-spending-promotions].coverage_role",
+        "insights_final[item=careful-spending-promotions].decision_relevance_score",
+        "insights_final[item=careful-spending-promotions].evidence",
+        "insights_final[item=careful-spending-promotions].evidence_ids[0]",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].evidence_id",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].page",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].source_identity",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].source_pack",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].text",
+        "insights_final[item=careful-spending-promotions].id",
+        "insights_final[item=careful-spending-promotions].metric.baseline",
+        "insights_final[item=careful-spending-promotions].metric.cohort",
+        "insights_final[item=careful-spending-promotions].metric.comparator",
+        "insights_final[item=careful-spending-promotions].metric.confidence",
+        "insights_final[item=careful-spending-promotions].metric.delta",
+        "insights_final[item=careful-spending-promotions].metric.denominator",
+        "insights_final[item=careful-spending-promotions].metric.forecast_status",
+        "insights_final[item=careful-spending-promotions].metric.geography",
+        "insights_final[item=careful-spending-promotions].metric.label",
+        "insights_final[item=careful-spending-promotions].metric.observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].value",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].value",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].value",
+        "insights_final[item=careful-spending-promotions].metric.sample_size",
+        "insights_final[item=careful-spending-promotions].metric.segment",
+        "insights_final[item=careful-spending-promotions].metric.subject",
+        "insights_final[item=careful-spending-promotions].metric.timeframe",
+        "insights_final[item=careful-spending-promotions].metric.trend",
+        "insights_final[item=careful-spending-promotions].metric.unit",
+        "insights_final[item=careful-spending-promotions].metric.value",
+        "insights_final[item=careful-spending-promotions].metric_public_copy",
+        "insights_final[item=careful-spending-promotions].metric_strength_score",
+        "insights_final[item=careful-spending-promotions].novelty_score",
+        "insights_final[item=careful-spending-promotions].now_what",
+        "insights_final[item=careful-spending-promotions].pages[0]",
+        "insights_final[item=careful-spending-promotions].report_type_lens",
+        "insights_final[item=careful-spending-promotions].score",
+        "insights_final[item=careful-spending-promotions].text",
+        "insights_final[item=human-support-loyalty-comparison].coverage_role",
+        "insights_final[item=human-support-loyalty-comparison].decision_relevance_score",
+        "insights_final[item=human-support-loyalty-comparison].evidence",
+        "insights_final[item=human-support-loyalty-comparison].evidence_id",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].evidence_id",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].page",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].source_identity",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].source_pack",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].text",
+        "insights_final[item=human-support-loyalty-comparison].id",
+        "insights_final[item=human-support-loyalty-comparison].metric.baseline",
+        "insights_final[item=human-support-loyalty-comparison].metric.cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.comparator",
+        "insights_final[item=human-support-loyalty-comparison].metric.confidence",
+        "insights_final[item=human-support-loyalty-comparison].metric.delta",
+        "insights_final[item=human-support-loyalty-comparison].metric.denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.forecast_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].value",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].value",
+        "insights_final[item=human-support-loyalty-comparison].metric.sample_size",
+        "insights_final[item=human-support-loyalty-comparison].metric.segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.subject",
+        "insights_final[item=human-support-loyalty-comparison].metric.timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.trend",
+        "insights_final[item=human-support-loyalty-comparison].metric.unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.value",
+        "insights_final[item=human-support-loyalty-comparison].metric_public_copy",
+        "insights_final[item=human-support-loyalty-comparison].metric_strength_score",
+        "insights_final[item=human-support-loyalty-comparison].novelty_score",
+        "insights_final[item=human-support-loyalty-comparison].now_what",
+        "insights_final[item=human-support-loyalty-comparison].pages[0]",
+        "insights_final[item=human-support-loyalty-comparison].report_type_lens",
+        "insights_final[item=human-support-loyalty-comparison].score",
+        "insights_final[item=human-support-loyalty-comparison].so_what",
+        "insights_final[item=human-support-loyalty-comparison].text",
+        "insights_final[item=hyperpersonalized-genai-content].coverage_role",
+        "insights_final[item=hyperpersonalized-genai-content].decision_relevance_score",
+        "insights_final[item=hyperpersonalized-genai-content].evidence",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_id",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_ids[0]",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].evidence_id",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].page",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].source_identity",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].source_pack",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].text",
+        "insights_final[item=hyperpersonalized-genai-content].id",
+        "insights_final[item=hyperpersonalized-genai-content].metric.baseline",
+        "insights_final[item=hyperpersonalized-genai-content].metric.cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.comparator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.confidence",
+        "insights_final[item=hyperpersonalized-genai-content].metric.delta",
+        "insights_final[item=hyperpersonalized-genai-content].metric.denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.forecast_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].value",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].value",
+        "insights_final[item=hyperpersonalized-genai-content].metric.sample_size",
+        "insights_final[item=hyperpersonalized-genai-content].metric.segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.subject",
+        "insights_final[item=hyperpersonalized-genai-content].metric.timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.trend",
+        "insights_final[item=hyperpersonalized-genai-content].metric.unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.value",
+        "insights_final[item=hyperpersonalized-genai-content].metric_public_copy",
+        "insights_final[item=hyperpersonalized-genai-content].metric_strength_score",
+        "insights_final[item=hyperpersonalized-genai-content].novelty_score",
+        "insights_final[item=hyperpersonalized-genai-content].now_what",
+        "insights_final[item=hyperpersonalized-genai-content].pages[0]",
+        "insights_final[item=hyperpersonalized-genai-content].report_type_lens",
+        "insights_final[item=hyperpersonalized-genai-content].score",
+        "insights_final[item=hyperpersonalized-genai-content].so_what",
+        "insights_final[item=hyperpersonalized-genai-content].text",
+        "insights_final[item=impulse-purchase-shift].coverage_role",
+        "insights_final[item=impulse-purchase-shift].decision_relevance_score",
+        "insights_final[item=impulse-purchase-shift].evidence",
+        "insights_final[item=impulse-purchase-shift].evidence_id",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].evidence_id",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].page",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].source_identity",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].source_pack",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].text",
+        "insights_final[item=impulse-purchase-shift].id",
+        "insights_final[item=impulse-purchase-shift].metric.baseline",
+        "insights_final[item=impulse-purchase-shift].metric.cohort",
+        "insights_final[item=impulse-purchase-shift].metric.comparator",
+        "insights_final[item=impulse-purchase-shift].metric.confidence",
+        "insights_final[item=impulse-purchase-shift].metric.delta",
+        "insights_final[item=impulse-purchase-shift].metric.denominator",
+        "insights_final[item=impulse-purchase-shift].metric.forecast_status",
+        "insights_final[item=impulse-purchase-shift].metric.geography",
+        "insights_final[item=impulse-purchase-shift].metric.label",
+        "insights_final[item=impulse-purchase-shift].metric.observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].cohort",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].denominator",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].geography",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].label",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].segment",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].unit",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].value",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].cohort",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].denominator",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].geography",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].label",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].segment",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].unit",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].value",
+        "insights_final[item=impulse-purchase-shift].metric.sample_size",
+        "insights_final[item=impulse-purchase-shift].metric.segment",
+        "insights_final[item=impulse-purchase-shift].metric.subject",
+        "insights_final[item=impulse-purchase-shift].metric.timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.trend",
+        "insights_final[item=impulse-purchase-shift].metric.unit",
+        "insights_final[item=impulse-purchase-shift].metric.value",
+        "insights_final[item=impulse-purchase-shift].metric_public_copy",
+        "insights_final[item=impulse-purchase-shift].metric_strength_score",
+        "insights_final[item=impulse-purchase-shift].novelty_score",
+        "insights_final[item=impulse-purchase-shift].now_what",
+        "insights_final[item=impulse-purchase-shift].pages[0]",
+        "insights_final[item=impulse-purchase-shift].report_type_lens",
+        "insights_final[item=impulse-purchase-shift].score",
+        "insights_final[item=impulse-purchase-shift].so_what",
+        "insights_final[item=impulse-purchase-shift].text",
+        "insights_final[item=india-quick-commerce-spending-share].coverage_role",
+        "insights_final[item=india-quick-commerce-spending-share].decision_relevance_score",
+        "insights_final[item=india-quick-commerce-spending-share].evidence",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_id",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_ids[0]",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].evidence_id",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].page",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].source_identity",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].source_pack",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].text",
+        "insights_final[item=india-quick-commerce-spending-share].id",
+        "insights_final[item=india-quick-commerce-spending-share].metric.baseline",
+        "insights_final[item=india-quick-commerce-spending-share].metric.cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.comparator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.confidence",
+        "insights_final[item=india-quick-commerce-spending-share].metric.delta",
+        "insights_final[item=india-quick-commerce-spending-share].metric.denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.forecast_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].value",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].value",
+        "insights_final[item=india-quick-commerce-spending-share].metric.sample_size",
+        "insights_final[item=india-quick-commerce-spending-share].metric.segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.subject",
+        "insights_final[item=india-quick-commerce-spending-share].metric.timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.trend",
+        "insights_final[item=india-quick-commerce-spending-share].metric.unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.value",
+        "insights_final[item=india-quick-commerce-spending-share].metric_public_copy",
+        "insights_final[item=india-quick-commerce-spending-share].metric_strength_score",
+        "insights_final[item=india-quick-commerce-spending-share].novelty_score",
+        "insights_final[item=india-quick-commerce-spending-share].now_what",
+        "insights_final[item=india-quick-commerce-spending-share].pages[0]",
+        "insights_final[item=india-quick-commerce-spending-share].report_type_lens",
+        "insights_final[item=india-quick-commerce-spending-share].score",
+        "insights_final[item=india-quick-commerce-spending-share].so_what",
+        "insights_final[item=india-quick-commerce-spending-share].text",
+        "insights_final[item=regular-price-switching].coverage_role",
+        "insights_final[item=regular-price-switching].decision_relevance_score",
+        "insights_final[item=regular-price-switching].evidence",
+        "insights_final[item=regular-price-switching].evidence_id",
+        "insights_final[item=regular-price-switching].evidence_spans[0].evidence_id",
+        "insights_final[item=regular-price-switching].evidence_spans[0].page",
+        "insights_final[item=regular-price-switching].evidence_spans[0].source_identity",
+        "insights_final[item=regular-price-switching].evidence_spans[0].source_pack",
+        "insights_final[item=regular-price-switching].evidence_spans[0].text",
+        "insights_final[item=regular-price-switching].id",
+        "insights_final[item=regular-price-switching].metric.baseline",
+        "insights_final[item=regular-price-switching].metric.cohort",
+        "insights_final[item=regular-price-switching].metric.comparator",
+        "insights_final[item=regular-price-switching].metric.confidence",
+        "insights_final[item=regular-price-switching].metric.delta",
+        "insights_final[item=regular-price-switching].metric.denominator",
+        "insights_final[item=regular-price-switching].metric.forecast_status",
+        "insights_final[item=regular-price-switching].metric.geography",
+        "insights_final[item=regular-price-switching].metric.label",
+        "insights_final[item=regular-price-switching].metric.observation_status",
+        "insights_final[item=regular-price-switching].metric.observations[0].cohort",
+        "insights_final[item=regular-price-switching].metric.observations[0].denominator",
+        "insights_final[item=regular-price-switching].metric.observations[0].geography",
+        "insights_final[item=regular-price-switching].metric.observations[0].label",
+        "insights_final[item=regular-price-switching].metric.observations[0].observation_status",
+        "insights_final[item=regular-price-switching].metric.observations[0].segment",
+        "insights_final[item=regular-price-switching].metric.observations[0].timeframe",
+        "insights_final[item=regular-price-switching].metric.observations[0].unit",
+        "insights_final[item=regular-price-switching].metric.observations[0].value",
+        "insights_final[item=regular-price-switching].metric.sample_size",
+        "insights_final[item=regular-price-switching].metric.segment",
+        "insights_final[item=regular-price-switching].metric.subject",
+        "insights_final[item=regular-price-switching].metric.timeframe",
+        "insights_final[item=regular-price-switching].metric.trend",
+        "insights_final[item=regular-price-switching].metric.unit",
+        "insights_final[item=regular-price-switching].metric.value",
+        "insights_final[item=regular-price-switching].metric_public_copy",
+        "insights_final[item=regular-price-switching].metric_strength_score",
+        "insights_final[item=regular-price-switching].novelty_score",
+        "insights_final[item=regular-price-switching].now_what",
+        "insights_final[item=regular-price-switching].pages[0]",
+        "insights_final[item=regular-price-switching].report_type_lens",
+        "insights_final[item=regular-price-switching].score",
+        "insights_final[item=regular-price-switching].so_what",
+        "insights_final[item=regular-price-switching].text"
+      ],
+      "changed_paths": [
+        "insights_final[item=careful-spending-promotions].so_what"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "insights_final[item=careful-spending-promotions].so_what",
+          "value": "Consumers rated several promotion formats similarly for purchase-decision effectiveness, so the survey alone offers limited basis for choosing one format over another."
+        }
+      ],
+      "schema_version": "5"
+    },
+    {
+      "diagnosed_failure_class": "public_editorial_quality.semantic_review",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "verified-fact:impulse-purchase-shift",
+        "verified-fact:smaller-quantity-shopping"
+      ],
+      "protected_fields": [
+        "insights_final[item=assistant-use-and-control].coverage_role",
+        "insights_final[item=assistant-use-and-control].decision_relevance_score",
+        "insights_final[item=assistant-use-and-control].evidence",
+        "insights_final[item=assistant-use-and-control].evidence_id",
+        "insights_final[item=assistant-use-and-control].evidence_ids[0]",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].evidence_id",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].page",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].source_identity",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].source_pack",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].text",
+        "insights_final[item=assistant-use-and-control].id",
+        "insights_final[item=assistant-use-and-control].metric.baseline",
+        "insights_final[item=assistant-use-and-control].metric.cohort",
+        "insights_final[item=assistant-use-and-control].metric.comparator",
+        "insights_final[item=assistant-use-and-control].metric.confidence",
+        "insights_final[item=assistant-use-and-control].metric.delta",
+        "insights_final[item=assistant-use-and-control].metric.denominator",
+        "insights_final[item=assistant-use-and-control].metric.forecast_status",
+        "insights_final[item=assistant-use-and-control].metric.geography",
+        "insights_final[item=assistant-use-and-control].metric.label",
+        "insights_final[item=assistant-use-and-control].metric.observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].cohort",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].denominator",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].geography",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].label",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].segment",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].timeframe",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].unit",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].value",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].cohort",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].denominator",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].geography",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].label",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].segment",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].timeframe",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].unit",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].value",
+        "insights_final[item=assistant-use-and-control].metric.sample_size",
+        "insights_final[item=assistant-use-and-control].metric.segment",
+        "insights_final[item=assistant-use-and-control].metric.subject",
+        "insights_final[item=assistant-use-and-control].metric.timeframe",
+        "insights_final[item=assistant-use-and-control].metric.trend",
+        "insights_final[item=assistant-use-and-control].metric.unit",
+        "insights_final[item=assistant-use-and-control].metric.value",
+        "insights_final[item=assistant-use-and-control].metric_public_copy",
+        "insights_final[item=assistant-use-and-control].metric_strength_score",
+        "insights_final[item=assistant-use-and-control].novelty_score",
+        "insights_final[item=assistant-use-and-control].now_what",
+        "insights_final[item=assistant-use-and-control].pages[0]",
+        "insights_final[item=assistant-use-and-control].report_type_lens",
+        "insights_final[item=assistant-use-and-control].score",
+        "insights_final[item=assistant-use-and-control].so_what",
+        "insights_final[item=assistant-use-and-control].text",
+        "insights_final[item=careful-spending-promotions].coverage_role",
+        "insights_final[item=careful-spending-promotions].decision_relevance_score",
+        "insights_final[item=careful-spending-promotions].evidence",
+        "insights_final[item=careful-spending-promotions].evidence_id",
+        "insights_final[item=careful-spending-promotions].evidence_ids[0]",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].evidence_id",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].page",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].source_identity",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].source_pack",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].text",
+        "insights_final[item=careful-spending-promotions].id",
+        "insights_final[item=careful-spending-promotions].metric.baseline",
+        "insights_final[item=careful-spending-promotions].metric.cohort",
+        "insights_final[item=careful-spending-promotions].metric.comparator",
+        "insights_final[item=careful-spending-promotions].metric.confidence",
+        "insights_final[item=careful-spending-promotions].metric.delta",
+        "insights_final[item=careful-spending-promotions].metric.denominator",
+        "insights_final[item=careful-spending-promotions].metric.forecast_status",
+        "insights_final[item=careful-spending-promotions].metric.geography",
+        "insights_final[item=careful-spending-promotions].metric.label",
+        "insights_final[item=careful-spending-promotions].metric.observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].value",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].value",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].value",
+        "insights_final[item=careful-spending-promotions].metric.sample_size",
+        "insights_final[item=careful-spending-promotions].metric.segment",
+        "insights_final[item=careful-spending-promotions].metric.subject",
+        "insights_final[item=careful-spending-promotions].metric.timeframe",
+        "insights_final[item=careful-spending-promotions].metric.trend",
+        "insights_final[item=careful-spending-promotions].metric.unit",
+        "insights_final[item=careful-spending-promotions].metric.value",
+        "insights_final[item=careful-spending-promotions].metric_public_copy",
+        "insights_final[item=careful-spending-promotions].metric_strength_score",
+        "insights_final[item=careful-spending-promotions].novelty_score",
+        "insights_final[item=careful-spending-promotions].now_what",
+        "insights_final[item=careful-spending-promotions].pages[0]",
+        "insights_final[item=careful-spending-promotions].report_type_lens",
+        "insights_final[item=careful-spending-promotions].score",
+        "insights_final[item=careful-spending-promotions].so_what",
+        "insights_final[item=careful-spending-promotions].text",
+        "insights_final[item=human-support-loyalty-comparison].coverage_role",
+        "insights_final[item=human-support-loyalty-comparison].decision_relevance_score",
+        "insights_final[item=human-support-loyalty-comparison].evidence",
+        "insights_final[item=human-support-loyalty-comparison].evidence_id",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].evidence_id",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].page",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].source_identity",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].source_pack",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].text",
+        "insights_final[item=human-support-loyalty-comparison].id",
+        "insights_final[item=human-support-loyalty-comparison].metric.baseline",
+        "insights_final[item=human-support-loyalty-comparison].metric.cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.comparator",
+        "insights_final[item=human-support-loyalty-comparison].metric.confidence",
+        "insights_final[item=human-support-loyalty-comparison].metric.delta",
+        "insights_final[item=human-support-loyalty-comparison].metric.denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.forecast_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].value",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].value",
+        "insights_final[item=human-support-loyalty-comparison].metric.sample_size",
+        "insights_final[item=human-support-loyalty-comparison].metric.segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.subject",
+        "insights_final[item=human-support-loyalty-comparison].metric.timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.trend",
+        "insights_final[item=human-support-loyalty-comparison].metric.unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.value",
+        "insights_final[item=human-support-loyalty-comparison].metric_public_copy",
+        "insights_final[item=human-support-loyalty-comparison].metric_strength_score",
+        "insights_final[item=human-support-loyalty-comparison].novelty_score",
+        "insights_final[item=human-support-loyalty-comparison].now_what",
+        "insights_final[item=human-support-loyalty-comparison].pages[0]",
+        "insights_final[item=human-support-loyalty-comparison].report_type_lens",
+        "insights_final[item=human-support-loyalty-comparison].score",
+        "insights_final[item=human-support-loyalty-comparison].so_what",
+        "insights_final[item=human-support-loyalty-comparison].text",
+        "insights_final[item=hyperpersonalized-genai-content].coverage_role",
+        "insights_final[item=hyperpersonalized-genai-content].decision_relevance_score",
+        "insights_final[item=hyperpersonalized-genai-content].evidence",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_id",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_ids[0]",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].evidence_id",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].page",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].source_identity",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].source_pack",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].text",
+        "insights_final[item=hyperpersonalized-genai-content].id",
+        "insights_final[item=hyperpersonalized-genai-content].metric.baseline",
+        "insights_final[item=hyperpersonalized-genai-content].metric.cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.comparator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.confidence",
+        "insights_final[item=hyperpersonalized-genai-content].metric.delta",
+        "insights_final[item=hyperpersonalized-genai-content].metric.denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.forecast_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].value",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].value",
+        "insights_final[item=hyperpersonalized-genai-content].metric.sample_size",
+        "insights_final[item=hyperpersonalized-genai-content].metric.segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.subject",
+        "insights_final[item=hyperpersonalized-genai-content].metric.timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.trend",
+        "insights_final[item=hyperpersonalized-genai-content].metric.unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.value",
+        "insights_final[item=hyperpersonalized-genai-content].metric_public_copy",
+        "insights_final[item=hyperpersonalized-genai-content].metric_strength_score",
+        "insights_final[item=hyperpersonalized-genai-content].novelty_score",
+        "insights_final[item=hyperpersonalized-genai-content].now_what",
+        "insights_final[item=hyperpersonalized-genai-content].pages[0]",
+        "insights_final[item=hyperpersonalized-genai-content].report_type_lens",
+        "insights_final[item=hyperpersonalized-genai-content].score",
+        "insights_final[item=hyperpersonalized-genai-content].so_what",
+        "insights_final[item=hyperpersonalized-genai-content].text",
+        "insights_final[item=impulse-purchase-shift].coverage_role",
+        "insights_final[item=impulse-purchase-shift].decision_relevance_score",
+        "insights_final[item=impulse-purchase-shift].evidence",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].evidence_id",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].page",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].source_identity",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].source_pack",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].text",
+        "insights_final[item=impulse-purchase-shift].id",
+        "insights_final[item=impulse-purchase-shift].metric.baseline",
+        "insights_final[item=impulse-purchase-shift].metric.cohort",
+        "insights_final[item=impulse-purchase-shift].metric.comparator",
+        "insights_final[item=impulse-purchase-shift].metric.confidence",
+        "insights_final[item=impulse-purchase-shift].metric.delta",
+        "insights_final[item=impulse-purchase-shift].metric.denominator",
+        "insights_final[item=impulse-purchase-shift].metric.forecast_status",
+        "insights_final[item=impulse-purchase-shift].metric.geography",
+        "insights_final[item=impulse-purchase-shift].metric.label",
+        "insights_final[item=impulse-purchase-shift].metric.observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].cohort",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].denominator",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].geography",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].label",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].segment",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].unit",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].value",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].cohort",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].denominator",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].geography",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].label",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].segment",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].unit",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].value",
+        "insights_final[item=impulse-purchase-shift].metric.sample_size",
+        "insights_final[item=impulse-purchase-shift].metric.segment",
+        "insights_final[item=impulse-purchase-shift].metric.subject",
+        "insights_final[item=impulse-purchase-shift].metric.timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.trend",
+        "insights_final[item=impulse-purchase-shift].metric.unit",
+        "insights_final[item=impulse-purchase-shift].metric.value",
+        "insights_final[item=impulse-purchase-shift].metric_public_copy",
+        "insights_final[item=impulse-purchase-shift].metric_strength_score",
+        "insights_final[item=impulse-purchase-shift].novelty_score",
+        "insights_final[item=impulse-purchase-shift].now_what",
+        "insights_final[item=impulse-purchase-shift].pages[0]",
+        "insights_final[item=impulse-purchase-shift].report_type_lens",
+        "insights_final[item=impulse-purchase-shift].score",
+        "insights_final[item=impulse-purchase-shift].text",
+        "insights_final[item=india-quick-commerce-spending-share].coverage_role",
+        "insights_final[item=india-quick-commerce-spending-share].decision_relevance_score",
+        "insights_final[item=india-quick-commerce-spending-share].evidence",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_id",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_ids[0]",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].evidence_id",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].page",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].source_identity",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].source_pack",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].text",
+        "insights_final[item=india-quick-commerce-spending-share].id",
+        "insights_final[item=india-quick-commerce-spending-share].metric.baseline",
+        "insights_final[item=india-quick-commerce-spending-share].metric.cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.comparator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.confidence",
+        "insights_final[item=india-quick-commerce-spending-share].metric.delta",
+        "insights_final[item=india-quick-commerce-spending-share].metric.denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.forecast_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].value",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].value",
+        "insights_final[item=india-quick-commerce-spending-share].metric.sample_size",
+        "insights_final[item=india-quick-commerce-spending-share].metric.segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.subject",
+        "insights_final[item=india-quick-commerce-spending-share].metric.timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.trend",
+        "insights_final[item=india-quick-commerce-spending-share].metric.unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.value",
+        "insights_final[item=india-quick-commerce-spending-share].metric_public_copy",
+        "insights_final[item=india-quick-commerce-spending-share].metric_strength_score",
+        "insights_final[item=india-quick-commerce-spending-share].novelty_score",
+        "insights_final[item=india-quick-commerce-spending-share].now_what",
+        "insights_final[item=india-quick-commerce-spending-share].pages[0]",
+        "insights_final[item=india-quick-commerce-spending-share].report_type_lens",
+        "insights_final[item=india-quick-commerce-spending-share].score",
+        "insights_final[item=india-quick-commerce-spending-share].so_what",
+        "insights_final[item=india-quick-commerce-spending-share].text",
+        "insights_final[item=regular-price-switching].coverage_role",
+        "insights_final[item=regular-price-switching].decision_relevance_score",
+        "insights_final[item=regular-price-switching].evidence",
+        "insights_final[item=regular-price-switching].evidence_id",
+        "insights_final[item=regular-price-switching].evidence_spans[0].evidence_id",
+        "insights_final[item=regular-price-switching].evidence_spans[0].page",
+        "insights_final[item=regular-price-switching].evidence_spans[0].source_identity",
+        "insights_final[item=regular-price-switching].evidence_spans[0].source_pack",
+        "insights_final[item=regular-price-switching].evidence_spans[0].text",
+        "insights_final[item=regular-price-switching].id",
+        "insights_final[item=regular-price-switching].metric.baseline",
+        "insights_final[item=regular-price-switching].metric.cohort",
+        "insights_final[item=regular-price-switching].metric.comparator",
+        "insights_final[item=regular-price-switching].metric.confidence",
+        "insights_final[item=regular-price-switching].metric.delta",
+        "insights_final[item=regular-price-switching].metric.denominator",
+        "insights_final[item=regular-price-switching].metric.forecast_status",
+        "insights_final[item=regular-price-switching].metric.geography",
+        "insights_final[item=regular-price-switching].metric.label",
+        "insights_final[item=regular-price-switching].metric.observation_status",
+        "insights_final[item=regular-price-switching].metric.observations[0].cohort",
+        "insights_final[item=regular-price-switching].metric.observations[0].denominator",
+        "insights_final[item=regular-price-switching].metric.observations[0].geography",
+        "insights_final[item=regular-price-switching].metric.observations[0].label",
+        "insights_final[item=regular-price-switching].metric.observations[0].observation_status",
+        "insights_final[item=regular-price-switching].metric.observations[0].segment",
+        "insights_final[item=regular-price-switching].metric.observations[0].timeframe",
+        "insights_final[item=regular-price-switching].metric.observations[0].unit",
+        "insights_final[item=regular-price-switching].metric.observations[0].value",
+        "insights_final[item=regular-price-switching].metric.sample_size",
+        "insights_final[item=regular-price-switching].metric.segment",
+        "insights_final[item=regular-price-switching].metric.subject",
+        "insights_final[item=regular-price-switching].metric.timeframe",
+        "insights_final[item=regular-price-switching].metric.trend",
+        "insights_final[item=regular-price-switching].metric.unit",
+        "insights_final[item=regular-price-switching].metric.value",
+        "insights_final[item=regular-price-switching].metric_public_copy",
+        "insights_final[item=regular-price-switching].metric_strength_score",
+        "insights_final[item=regular-price-switching].novelty_score",
+        "insights_final[item=regular-price-switching].now_what",
+        "insights_final[item=regular-price-switching].pages[0]",
+        "insights_final[item=regular-price-switching].report_type_lens",
+        "insights_final[item=regular-price-switching].score",
+        "insights_final[item=regular-price-switching].so_what",
+        "insights_final[item=regular-price-switching].text"
+      ],
+      "changed_paths": [
+        "insights_final[item=impulse-purchase-shift].so_what"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "insights_final[item=impulse-purchase-shift].so_what",
+          "value": "The signals point to selective spending, not an across-the-board return to impulse buying: retailers should preserve value cues while making smaller purchase options easy."
+        }
+      ],
+      "schema_version": "5"
+    },
+    {
+      "diagnosed_failure_class": "public_editorial_quality.semantic_review",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ],
+      "protected_fields": [
+        "insights_final[item=assistant-use-and-control].coverage_role",
+        "insights_final[item=assistant-use-and-control].decision_relevance_score",
+        "insights_final[item=assistant-use-and-control].evidence",
+        "insights_final[item=assistant-use-and-control].evidence_id",
+        "insights_final[item=assistant-use-and-control].evidence_ids[0]",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].evidence_id",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].page",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].source_identity",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].source_pack",
+        "insights_final[item=assistant-use-and-control].evidence_spans[0].text",
+        "insights_final[item=assistant-use-and-control].id",
+        "insights_final[item=assistant-use-and-control].metric.baseline",
+        "insights_final[item=assistant-use-and-control].metric.cohort",
+        "insights_final[item=assistant-use-and-control].metric.comparator",
+        "insights_final[item=assistant-use-and-control].metric.confidence",
+        "insights_final[item=assistant-use-and-control].metric.delta",
+        "insights_final[item=assistant-use-and-control].metric.denominator",
+        "insights_final[item=assistant-use-and-control].metric.forecast_status",
+        "insights_final[item=assistant-use-and-control].metric.geography",
+        "insights_final[item=assistant-use-and-control].metric.label",
+        "insights_final[item=assistant-use-and-control].metric.observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].cohort",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].denominator",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].geography",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].label",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].segment",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].timeframe",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].unit",
+        "insights_final[item=assistant-use-and-control].metric.observations[0].value",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].cohort",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].denominator",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].geography",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].label",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].observation_status",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].segment",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].timeframe",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].unit",
+        "insights_final[item=assistant-use-and-control].metric.observations[1].value",
+        "insights_final[item=assistant-use-and-control].metric.sample_size",
+        "insights_final[item=assistant-use-and-control].metric.segment",
+        "insights_final[item=assistant-use-and-control].metric.subject",
+        "insights_final[item=assistant-use-and-control].metric.timeframe",
+        "insights_final[item=assistant-use-and-control].metric.trend",
+        "insights_final[item=assistant-use-and-control].metric.unit",
+        "insights_final[item=assistant-use-and-control].metric.value",
+        "insights_final[item=assistant-use-and-control].metric_public_copy",
+        "insights_final[item=assistant-use-and-control].metric_strength_score",
+        "insights_final[item=assistant-use-and-control].novelty_score",
+        "insights_final[item=assistant-use-and-control].now_what",
+        "insights_final[item=assistant-use-and-control].pages[0]",
+        "insights_final[item=assistant-use-and-control].report_type_lens",
+        "insights_final[item=assistant-use-and-control].score",
+        "insights_final[item=assistant-use-and-control].so_what",
+        "insights_final[item=assistant-use-and-control].text",
+        "insights_final[item=careful-spending-promotions].coverage_role",
+        "insights_final[item=careful-spending-promotions].decision_relevance_score",
+        "insights_final[item=careful-spending-promotions].evidence",
+        "insights_final[item=careful-spending-promotions].evidence_id",
+        "insights_final[item=careful-spending-promotions].evidence_ids[0]",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].evidence_id",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].page",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].source_identity",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].source_pack",
+        "insights_final[item=careful-spending-promotions].evidence_spans[0].text",
+        "insights_final[item=careful-spending-promotions].id",
+        "insights_final[item=careful-spending-promotions].metric.baseline",
+        "insights_final[item=careful-spending-promotions].metric.cohort",
+        "insights_final[item=careful-spending-promotions].metric.comparator",
+        "insights_final[item=careful-spending-promotions].metric.confidence",
+        "insights_final[item=careful-spending-promotions].metric.delta",
+        "insights_final[item=careful-spending-promotions].metric.denominator",
+        "insights_final[item=careful-spending-promotions].metric.forecast_status",
+        "insights_final[item=careful-spending-promotions].metric.geography",
+        "insights_final[item=careful-spending-promotions].metric.label",
+        "insights_final[item=careful-spending-promotions].metric.observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[0].value",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[1].value",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].cohort",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].denominator",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].geography",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].label",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].observation_status",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].segment",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].timeframe",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].unit",
+        "insights_final[item=careful-spending-promotions].metric.observations[2].value",
+        "insights_final[item=careful-spending-promotions].metric.sample_size",
+        "insights_final[item=careful-spending-promotions].metric.segment",
+        "insights_final[item=careful-spending-promotions].metric.subject",
+        "insights_final[item=careful-spending-promotions].metric.timeframe",
+        "insights_final[item=careful-spending-promotions].metric.trend",
+        "insights_final[item=careful-spending-promotions].metric.unit",
+        "insights_final[item=careful-spending-promotions].metric.value",
+        "insights_final[item=careful-spending-promotions].metric_public_copy",
+        "insights_final[item=careful-spending-promotions].metric_strength_score",
+        "insights_final[item=careful-spending-promotions].novelty_score",
+        "insights_final[item=careful-spending-promotions].now_what",
+        "insights_final[item=careful-spending-promotions].pages[0]",
+        "insights_final[item=careful-spending-promotions].report_type_lens",
+        "insights_final[item=careful-spending-promotions].score",
+        "insights_final[item=careful-spending-promotions].so_what",
+        "insights_final[item=careful-spending-promotions].text",
+        "insights_final[item=human-support-loyalty-comparison].coverage_role",
+        "insights_final[item=human-support-loyalty-comparison].decision_relevance_score",
+        "insights_final[item=human-support-loyalty-comparison].evidence",
+        "insights_final[item=human-support-loyalty-comparison].evidence_id",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].evidence_id",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].page",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].source_identity",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].source_pack",
+        "insights_final[item=human-support-loyalty-comparison].evidence_spans[0].text",
+        "insights_final[item=human-support-loyalty-comparison].id",
+        "insights_final[item=human-support-loyalty-comparison].metric.baseline",
+        "insights_final[item=human-support-loyalty-comparison].metric.cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.comparator",
+        "insights_final[item=human-support-loyalty-comparison].metric.confidence",
+        "insights_final[item=human-support-loyalty-comparison].metric.delta",
+        "insights_final[item=human-support-loyalty-comparison].metric.denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.forecast_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[0].value",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].cohort",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].denominator",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].geography",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].label",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].observation_status",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.observations[1].value",
+        "insights_final[item=human-support-loyalty-comparison].metric.sample_size",
+        "insights_final[item=human-support-loyalty-comparison].metric.segment",
+        "insights_final[item=human-support-loyalty-comparison].metric.subject",
+        "insights_final[item=human-support-loyalty-comparison].metric.timeframe",
+        "insights_final[item=human-support-loyalty-comparison].metric.trend",
+        "insights_final[item=human-support-loyalty-comparison].metric.unit",
+        "insights_final[item=human-support-loyalty-comparison].metric.value",
+        "insights_final[item=human-support-loyalty-comparison].metric_public_copy",
+        "insights_final[item=human-support-loyalty-comparison].metric_strength_score",
+        "insights_final[item=human-support-loyalty-comparison].novelty_score",
+        "insights_final[item=human-support-loyalty-comparison].now_what",
+        "insights_final[item=human-support-loyalty-comparison].pages[0]",
+        "insights_final[item=human-support-loyalty-comparison].report_type_lens",
+        "insights_final[item=human-support-loyalty-comparison].score",
+        "insights_final[item=human-support-loyalty-comparison].so_what",
+        "insights_final[item=human-support-loyalty-comparison].text",
+        "insights_final[item=hyperpersonalized-genai-content].coverage_role",
+        "insights_final[item=hyperpersonalized-genai-content].decision_relevance_score",
+        "insights_final[item=hyperpersonalized-genai-content].evidence",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_id",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_ids[0]",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].evidence_id",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].page",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].source_identity",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].source_pack",
+        "insights_final[item=hyperpersonalized-genai-content].evidence_spans[0].text",
+        "insights_final[item=hyperpersonalized-genai-content].id",
+        "insights_final[item=hyperpersonalized-genai-content].metric.baseline",
+        "insights_final[item=hyperpersonalized-genai-content].metric.cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.comparator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.confidence",
+        "insights_final[item=hyperpersonalized-genai-content].metric.delta",
+        "insights_final[item=hyperpersonalized-genai-content].metric.denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.forecast_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[0].value",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].cohort",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].denominator",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].geography",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].label",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].observation_status",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.observations[1].value",
+        "insights_final[item=hyperpersonalized-genai-content].metric.sample_size",
+        "insights_final[item=hyperpersonalized-genai-content].metric.segment",
+        "insights_final[item=hyperpersonalized-genai-content].metric.subject",
+        "insights_final[item=hyperpersonalized-genai-content].metric.timeframe",
+        "insights_final[item=hyperpersonalized-genai-content].metric.trend",
+        "insights_final[item=hyperpersonalized-genai-content].metric.unit",
+        "insights_final[item=hyperpersonalized-genai-content].metric.value",
+        "insights_final[item=hyperpersonalized-genai-content].metric_public_copy",
+        "insights_final[item=hyperpersonalized-genai-content].metric_strength_score",
+        "insights_final[item=hyperpersonalized-genai-content].novelty_score",
+        "insights_final[item=hyperpersonalized-genai-content].now_what",
+        "insights_final[item=hyperpersonalized-genai-content].pages[0]",
+        "insights_final[item=hyperpersonalized-genai-content].report_type_lens",
+        "insights_final[item=hyperpersonalized-genai-content].score",
+        "insights_final[item=hyperpersonalized-genai-content].so_what",
+        "insights_final[item=hyperpersonalized-genai-content].text",
+        "insights_final[item=impulse-purchase-shift].coverage_role",
+        "insights_final[item=impulse-purchase-shift].decision_relevance_score",
+        "insights_final[item=impulse-purchase-shift].evidence",
+        "insights_final[item=impulse-purchase-shift].evidence_id",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].evidence_id",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].page",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].source_identity",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].source_pack",
+        "insights_final[item=impulse-purchase-shift].evidence_spans[0].text",
+        "insights_final[item=impulse-purchase-shift].id",
+        "insights_final[item=impulse-purchase-shift].metric.baseline",
+        "insights_final[item=impulse-purchase-shift].metric.cohort",
+        "insights_final[item=impulse-purchase-shift].metric.comparator",
+        "insights_final[item=impulse-purchase-shift].metric.confidence",
+        "insights_final[item=impulse-purchase-shift].metric.delta",
+        "insights_final[item=impulse-purchase-shift].metric.denominator",
+        "insights_final[item=impulse-purchase-shift].metric.forecast_status",
+        "insights_final[item=impulse-purchase-shift].metric.geography",
+        "insights_final[item=impulse-purchase-shift].metric.label",
+        "insights_final[item=impulse-purchase-shift].metric.observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].cohort",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].denominator",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].geography",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].label",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].segment",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].unit",
+        "insights_final[item=impulse-purchase-shift].metric.observations[0].value",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].cohort",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].denominator",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].geography",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].label",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].observation_status",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].segment",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].unit",
+        "insights_final[item=impulse-purchase-shift].metric.observations[1].value",
+        "insights_final[item=impulse-purchase-shift].metric.sample_size",
+        "insights_final[item=impulse-purchase-shift].metric.segment",
+        "insights_final[item=impulse-purchase-shift].metric.subject",
+        "insights_final[item=impulse-purchase-shift].metric.timeframe",
+        "insights_final[item=impulse-purchase-shift].metric.trend",
+        "insights_final[item=impulse-purchase-shift].metric.unit",
+        "insights_final[item=impulse-purchase-shift].metric.value",
+        "insights_final[item=impulse-purchase-shift].metric_public_copy",
+        "insights_final[item=impulse-purchase-shift].metric_strength_score",
+        "insights_final[item=impulse-purchase-shift].novelty_score",
+        "insights_final[item=impulse-purchase-shift].now_what",
+        "insights_final[item=impulse-purchase-shift].pages[0]",
+        "insights_final[item=impulse-purchase-shift].report_type_lens",
+        "insights_final[item=impulse-purchase-shift].score",
+        "insights_final[item=impulse-purchase-shift].so_what",
+        "insights_final[item=impulse-purchase-shift].text",
+        "insights_final[item=india-quick-commerce-spending-share].coverage_role",
+        "insights_final[item=india-quick-commerce-spending-share].decision_relevance_score",
+        "insights_final[item=india-quick-commerce-spending-share].evidence",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_ids[0]",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].evidence_id",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].page",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].source_identity",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].source_pack",
+        "insights_final[item=india-quick-commerce-spending-share].evidence_spans[0].text",
+        "insights_final[item=india-quick-commerce-spending-share].id",
+        "insights_final[item=india-quick-commerce-spending-share].metric.baseline",
+        "insights_final[item=india-quick-commerce-spending-share].metric.cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.comparator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.confidence",
+        "insights_final[item=india-quick-commerce-spending-share].metric.delta",
+        "insights_final[item=india-quick-commerce-spending-share].metric.denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.forecast_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[0].value",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].cohort",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].denominator",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].geography",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].label",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].observation_status",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.observations[1].value",
+        "insights_final[item=india-quick-commerce-spending-share].metric.sample_size",
+        "insights_final[item=india-quick-commerce-spending-share].metric.segment",
+        "insights_final[item=india-quick-commerce-spending-share].metric.subject",
+        "insights_final[item=india-quick-commerce-spending-share].metric.timeframe",
+        "insights_final[item=india-quick-commerce-spending-share].metric.trend",
+        "insights_final[item=india-quick-commerce-spending-share].metric.unit",
+        "insights_final[item=india-quick-commerce-spending-share].metric.value",
+        "insights_final[item=india-quick-commerce-spending-share].metric_public_copy",
+        "insights_final[item=india-quick-commerce-spending-share].metric_strength_score",
+        "insights_final[item=india-quick-commerce-spending-share].novelty_score",
+        "insights_final[item=india-quick-commerce-spending-share].now_what",
+        "insights_final[item=india-quick-commerce-spending-share].pages[0]",
+        "insights_final[item=india-quick-commerce-spending-share].report_type_lens",
+        "insights_final[item=india-quick-commerce-spending-share].score",
+        "insights_final[item=india-quick-commerce-spending-share].text",
+        "insights_final[item=regular-price-switching].coverage_role",
+        "insights_final[item=regular-price-switching].decision_relevance_score",
+        "insights_final[item=regular-price-switching].evidence",
+        "insights_final[item=regular-price-switching].evidence_id",
+        "insights_final[item=regular-price-switching].evidence_spans[0].evidence_id",
+        "insights_final[item=regular-price-switching].evidence_spans[0].page",
+        "insights_final[item=regular-price-switching].evidence_spans[0].source_identity",
+        "insights_final[item=regular-price-switching].evidence_spans[0].source_pack",
+        "insights_final[item=regular-price-switching].evidence_spans[0].text",
+        "insights_final[item=regular-price-switching].id",
+        "insights_final[item=regular-price-switching].metric.baseline",
+        "insights_final[item=regular-price-switching].metric.cohort",
+        "insights_final[item=regular-price-switching].metric.comparator",
+        "insights_final[item=regular-price-switching].metric.confidence",
+        "insights_final[item=regular-price-switching].metric.delta",
+        "insights_final[item=regular-price-switching].metric.denominator",
+        "insights_final[item=regular-price-switching].metric.forecast_status",
+        "insights_final[item=regular-price-switching].metric.geography",
+        "insights_final[item=regular-price-switching].metric.label",
+        "insights_final[item=regular-price-switching].metric.observation_status",
+        "insights_final[item=regular-price-switching].metric.observations[0].cohort",
+        "insights_final[item=regular-price-switching].metric.observations[0].denominator",
+        "insights_final[item=regular-price-switching].metric.observations[0].geography",
+        "insights_final[item=regular-price-switching].metric.observations[0].label",
+        "insights_final[item=regular-price-switching].metric.observations[0].observation_status",
+        "insights_final[item=regular-price-switching].metric.observations[0].segment",
+        "insights_final[item=regular-price-switching].metric.observations[0].timeframe",
+        "insights_final[item=regular-price-switching].metric.observations[0].unit",
+        "insights_final[item=regular-price-switching].metric.observations[0].value",
+        "insights_final[item=regular-price-switching].metric.sample_size",
+        "insights_final[item=regular-price-switching].metric.segment",
+        "insights_final[item=regular-price-switching].metric.subject",
+        "insights_final[item=regular-price-switching].metric.timeframe",
+        "insights_final[item=regular-price-switching].metric.trend",
+        "insights_final[item=regular-price-switching].metric.unit",
+        "insights_final[item=regular-price-switching].metric.value",
+        "insights_final[item=regular-price-switching].metric_public_copy",
+        "insights_final[item=regular-price-switching].metric_strength_score",
+        "insights_final[item=regular-price-switching].novelty_score",
+        "insights_final[item=regular-price-switching].now_what",
+        "insights_final[item=regular-price-switching].pages[0]",
+        "insights_final[item=regular-price-switching].report_type_lens",
+        "insights_final[item=regular-price-switching].score",
+        "insights_final[item=regular-price-switching].so_what",
+        "insights_final[item=regular-price-switching].text"
+      ],
+      "changed_paths": [
+        "insights_final[item=india-quick-commerce-spending-share].so_what"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "insights_final[item=india-quick-commerce-spending-share].so_what",
+          "value": "The reported willingness to pay extra makes delivery speed a possible source of value differentiation for quick-commerce offers to this cohort."
+        }
+      ],
+      "schema_version": "5"
+    },
+    {
+      "diagnosed_failure_class": "public_editorial_quality.semantic_review",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ],
+      "protected_fields": [
+        "linkedin_post[claim_index=0]",
+        "linkedin_post[claim_index=1]",
+        "linkedin_post[claim_index=3]",
+        "linkedin_post[claim_index=4]"
+      ],
+      "changed_paths": [
+        "linkedin_post[claim_index=2]"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "linkedin_post[claim_index=2]",
+          "value": "71% of consumers say they would switch brands if pack sizes or product quality were reduced without clear communication."
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "diagnosed_failure_class": "public_editorial_quality.semantic_review",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "verified-fact:regular-price-switching"
+      ],
+      "protected_fields": [
+        "linkedin_post[claim_index=0]",
+        "linkedin_post[claim_index=2]",
+        "linkedin_post[claim_index=3]",
+        "linkedin_post[claim_index=4]"
+      ],
+      "changed_paths": [
+        "linkedin_post[claim_index=1]"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "linkedin_post[claim_index=1]",
+          "value": "74% of consumers say they would switch brands if they found a lower regular price elsewhere."
+        }
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "report_id": "cohort-81af3890cd84ece81ef1",
+  "validation_run_id": "validation:6c53f0620ecb3bfc3af1f436c910662fa5667e9432392590579b5b7a39f39abe",
+  "cohort_id": "39958713d38bfca7e3f72e2dfe14b9943ffabe79470f4944803638dea5631db6",
+  "workflow_run_id": "55883762-7880-455f-b547-16c602211da3",
+  "configuration_hash": "efc08894cd3e145233ae5dc8bde408e81ff074ce23341179fc1bca62f86073b4",
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "e6fab1c344ce00c878078980f1859a46bc9f7b2af806a603f45c8ec4f1c8991b",
+  "latency_ms": 300046,
+  "schema_version": "1.0"
+}

@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "consumer_behavior",
+      "value_perception",
+      "spending_behavior",
+      "agentic_commerce",
+      "consumer_trust",
+      "brand_loyalty"
+    ],
+    "primary_tags": [
+      "consumer_behavior",
+      "value_perception",
+      "spending_behavior",
+      "agentic_commerce"
+    ],
+    "secondary_tags": [
+      "consumer_trust",
+      "brand_loyalty"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "consumer_behavior",
+        "tier": "primary",
+        "section_label": "Executive summary",
+        "evidence": "The report examines evolving consumer behavior and decision-making across 12 countries."
+      },
+      {
+        "tag": "value_perception",
+        "tier": "primary",
+        "section_label": "Value redefined: where fairness and quality intersect",
+        "evidence": "Explores how fairness and quality shape consumer perceptions of value."
+      },
+      {
+        "tag": "spending_behavior",
+        "tier": "primary",
+        "section_label": "Careful spending meets intentional indulgence",
+        "evidence": "Connects careful spending with small indulgences and emotional satisfaction."
+      },
+      {
+        "tag": "agentic_commerce",
+        "tier": "primary",
+        "section_label": "AI – The consumer’s trusted guide",
+        "evidence": "Discusses AI-guided shopping, recommendations, and agents that can reduce friction in searching, comparing, and purchasing."
+      },
+      {
+        "tag": "consumer_trust",
+        "tier": "secondary",
+        "section_label": "Conclusion",
+        "evidence": "Emphasizes transparent value delivery and responsible AI to earn consumer trust."
+      },
+      {
+        "tag": "brand_loyalty",
+        "tier": "secondary",
+        "section_label": "Reliable tech builds loyalty – but with boundaries",
+        "evidence": "Examines how dependable technology and experiences contribute to loyalty, while respecting consumer boundaries."
+      }
+    ],
+    "region": "Global (12 countries)",
+    "time_period": "October 2025 survey",
+    "not_found_reason": null
+  }
+}

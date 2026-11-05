@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "internet_and_media",
+      "consumer_internet",
+      "digital_video",
+      "ecommerce",
+      "ar_vr",
+      "podcasting",
+      "consumer_attention",
+      "sports_streaming"
+    ],
+    "primary_tags": [
+      "internet_and_media",
+      "consumer_internet",
+      "digital_video",
+      "ecommerce",
+      "ar_vr"
+    ],
+    "secondary_tags": [
+      "podcasting",
+      "consumer_attention",
+      "sports_streaming"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "internet_and_media",
+        "tier": "primary",
+        "section_label": "The Most Important Insights for Tech and Media in 2018",
+        "evidence": "Report-wide outlook covers tech and media growth, digital usage, video, news, commerce and emerging technology."
+      },
+      {
+        "tag": "consumer_internet",
+        "tier": "primary",
+        "section_label": "The Most Important Insights for Tech and Media in 2018",
+        "evidence": "Major sections address consumer time and spending, smart speakers, news brands, and online commerce."
+      },
+      {
+        "tag": "digital_video",
+        "tier": "primary",
+        "section_label": "Big Influencers and Media Brands will Rule Web Video",
+        "evidence": "Web video and creator-driven viewing have a dedicated major section."
+      },
+      {
+        "tag": "ecommerce",
+        "tier": "primary",
+        "section_label": "eCommerce: More than Two Trillion Dollars To Go",
+        "evidence": "A major section examines eCommerce growth and category adoption."
+      },
+      {
+        "tag": "ar_vr",
+        "tier": "primary",
+        "section_label": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform",
+        "evidence": "The report treats virtual and augmented reality as an emerging computing platform."
+      },
+      {
+        "tag": "podcasting",
+        "tier": "secondary",
+        "section_label": "In an Era of Voice Control, Look to Podcasting to Engage Users",
+        "evidence": "A dedicated section discusses podcasting as a way to engage users."
+      },
+      {
+        "tag": "consumer_attention",
+        "tier": "secondary",
+        "section_label": "There are 31 Hours in a Day",
+        "evidence": "A major section focuses on consumers' daily time and media use."
+      },
+      {
+        "tag": "sports_streaming",
+        "tier": "secondary",
+        "section_label": "Sports is the Ultimate Moat",
+        "evidence": "The sports section includes U.S. sports video viewership forecasts through 2021."
+      }
+    ],
+    "region": "United States",
+    "time_period": "2018; forecasts through 2021.",
+    "not_found_reason": ""
+  }
+}

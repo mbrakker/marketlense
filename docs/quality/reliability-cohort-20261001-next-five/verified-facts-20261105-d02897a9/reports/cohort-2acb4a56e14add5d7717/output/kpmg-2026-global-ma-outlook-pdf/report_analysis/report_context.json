@@ -1,0 +1,75 @@
+{
+  "report_id": "cohort-2acb4a56e14add5d7717",
+  "title": "2026 Global",
+  "publisher": "",
+  "region": "Global",
+  "time_period": "2025 to 2026",
+  "overview": "2026 Global M&A Outlook A global survey-based outlook on M&A, moving from a retrospective of 2025 to 2026 dealmaking themes and implications. Its main topics include strategic focus, differences between buyer types, portfolio simplification, AI-enabled deal execution, execution discipline, and industry-specific dynamics. The research surveyed 700 dealmakers across 20 countries and jurisdictions. A global outlook on mergers and acquisitions, reviewing 2025 and examining the 2026 M&A environment. It covers strategic focus, buyer risk appetites, portfolio simplification, AI-driven deal execution, execution discipline, industry-specific dynamics, and implications for dealmakers.",
+  "methods": [
+    "The report’s findings are based on a global survey of corporate respondents."
+  ],
+  "key_findings": [
+    "The report says private equity dealmakers are significantly more likely than corporate dealmakers to expect M&A pipeline activity to increase relative to 2025; corporates are described as having a more measured outlook, with fewer anticipating a material ac...",
+    "The report says the majority of anticipated transactions fall below the US$1B threshold, describing the expected rebound as led by mid-sized deals rather than megadeals.",
+    "The report describes private equity optimism as strongest in the US, while dealmakers outside the US—particularly corporates—face greater uncertainty related to growth, regulation and geopolitical exposure.",
+    "For “Types of deals under consideration — corporate vs. private equity,” acquisition of a full business is listed at 62% for corporate respondents and 69% for private equity respondents.",
+    "For “Types of deals under consideration — corporate vs. private equity,” carve-out acquisitions are listed at 21% for corporate respondents and 55% for private equity respondents, a displayed difference of +34 pts.",
+    "For “Types of deals under consideration — corporate vs. private equity,” minority-to-majority investments are listed at 18% for corporate respondents and 50% for private equity respondents, a displayed difference of +32 pts."
+  ],
+  "limitations": [],
+  "sections": [
+    {
+      "section_label": "Foreword",
+      "source_pack": "doc_map",
+      "summary": "Opens the report. The available report excerpts do not provide further substantive detail about the foreword.",
+      "key_points": [],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "About the research",
+      "source_pack": "doc_map",
+      "summary": "Describes the survey behind the report, including its respondent base, coverage, and fieldwork period.",
+      "key_points": [
+        "The survey included 700 M&A dealmakers across 20 countries and jurisdictions and was fielded from 19 December 2025 to 27 January 2026.",
+        "Respondents comprised 519 corporate dealmakers and 181 respondents from private equity firms; they were senior executives involved in M&A decision-making across 10 sectors."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Executive summary",
+      "source_pack": "doc_map",
+      "summary": "Provides an overview of the report’s findings and outlook. The available excerpts do not establish specific summary outcomes.",
+      "key_points": [],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "2025 retrospective and 2026 outlook",
+      "source_pack": "doc_map",
+      "summary": "Reviews M&A in 2025 and sets out the report’s outlook for 2026. The available excerpts do not establish specific retrospective results or forecast figures.",
+      "key_points": [],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "5 drivers shaping the 2026 M&A environment",
+      "source_pack": "doc_map",
+      "summary": "Introduces the report’s five-part framework for the 2026 M&A environment. The following chapters address strategic focus, buyer risk appetites, portfolio simplification, AI-driven deal execution, and execution discipline. fileciteturn1file1turn1file2",
+      "key_points": [
+        "Strategic focus in a fragmented world.",
+        "Diverging risk appetites between buyers.",
+        "Portfolio simplification as a value creation strategy."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Strategic focus in a fragmented world",
+      "source_pack": "doc_map",
+      "summary": "Examines M&A strategy in a fragmented environment, including regional comparisons. The text emphasizes moving away from opportunistic expansion toward transactions that reinforce a clear strategic direction. fileciteturn5file10turn5file3",
+      "key_points": [
+        "The report describes a shift from opportunistic expansion toward transactions that reinforce clear strategic direction.",
+        "The section presents regional comparisons across APAC, EMEA, and the Americas; the available excerpt does not establish the numerical results. fileciteturn5file3turn5file10"
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

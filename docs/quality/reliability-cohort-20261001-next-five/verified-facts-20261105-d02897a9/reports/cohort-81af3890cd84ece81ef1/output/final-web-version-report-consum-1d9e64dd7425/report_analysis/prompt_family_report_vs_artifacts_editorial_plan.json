@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_plan",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "report_thesis": "The evidence supports attention to consumer-reported value sensitivities and selective spending, while treating assistant use, personalization, and human interaction at specific in-store stages as distinct experience considerations.",
+    "themes": [
+      {
+        "evidence_ids": [
+          "verified-fact:regular-price-switching",
+          "verified-fact:switch-uncommunicated-reduction"
+        ],
+        "priority": 1,
+        "theme": "Consumers report separate hypothetical switching intentions: 74% say they would switch brands for a lower regular price elsewhere, and 71% would switch if pack sizes or product quality were reduced without clear communication; these are stated intentions, not observed switching behavior."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:impulse-purchase-shift",
+          "verified-fact:smaller-quantity-shopping"
+        ],
+        "priority": 2,
+        "theme": "Self-reported impulse restraint is easing: 54% of consumers say they are making fewer impulse purchases in the current report period, down from 71% last year, a comparison the report characterizes as a modest rebound of intentional indulgence alongside persistent deal-seeking. Separately, as prices rise, around half of consumers (49%) are buying smaller quantities, which the report characterizes as consumption control rather than complete avoidance; the measurement period for this figure is not stated."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:careful-spending-promotions"
+        ],
+        "priority": 3,
+        "theme": "In an October 2025 survey of 12,000 consumers, reported promotion effectiveness for driving purchase decisions ranked money-off offers (e.g., $5 off $25) at 75%, percent-off offers (e.g., 20% off) at 74%, and buy-one-get-one-free offers at 73%."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:india-quick-commerce-spending-share"
+        ],
+        "priority": 4,
+        "theme": "Priyanka Bhargav says that today 25% of quick-commerce spending in India comes from mid- to low-affluent consumers in Tier 2 and Tier 3 towns, and that these customers are willing to pay a little extra for faster delivery."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:assistant-use-and-control"
+        ],
+        "priority": 5,
+        "theme": "Among consumers, 52% report using virtual assistants that automate re-ordering or meal planning at least once a week; separately, 76% want the ability to set clear rules for when an assistant acts."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:hyperpersonalized-genai-content"
+        ],
+        "priority": 6,
+        "theme": "Agreement among consumers surveyed with wanting Gen AI to provide hyper-personalized content and product/service recommendations based on individual preferences was 58% in November 2024 and 63% in October 2025; each survey had N=12,000 consumers."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:human-support-loyalty-comparison",
+          "verified-fact:human-purchase-stage-loyalty-comparison"
+        ],
+        "priority": 7,
+        "theme": "In surveys of 12,000 consumers each, the share saying human interaction increases loyalty at the in-store customer-support stage was 54% in November 2024 and 74% in October 2025, an increase of 20 percentage points. At the in-store purchase stage, the corresponding figures were 40% and 66%, an increase of 26 percentage points."
+      }
+    ]
+  }
+}

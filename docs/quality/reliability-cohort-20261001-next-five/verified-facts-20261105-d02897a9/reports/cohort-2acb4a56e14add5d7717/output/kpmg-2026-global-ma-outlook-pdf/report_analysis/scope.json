@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "scope": "A global outlook on mergers and acquisitions, reviewing 2025 and examining the 2026 M&A environment. It covers strategic focus, buyer risk appetites, portfolio simplification, AI-driven deal execution, execution discipline, industry-specific dynamics, and implications for dealmakers.",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "scope",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

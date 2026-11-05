@@ -1,0 +1,277 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/findings",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "findings": [
+      {
+        "id": "switch-lower-regular-price",
+        "text": "74% of consumers say they would switch brands if they found a lower regular price elsewhere.",
+        "evidence": "The executive summary states: “Seventy four percent of consumers say they would switch brands if they found a lower regular price elsewhere.”",
+        "confidence": "high",
+        "pages": [
+          4
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "switch-uncommunicated-reduction",
+        "text": "71% of consumers would switch if pack sizes or product quality were reduced without clear communication.",
+        "evidence": "The executive summary states: “71% of consumers would switch brands if pack sizes or product quality were reduced without clear communication.”",
+        "confidence": "high",
+        "pages": [
+          4
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "shrinkflation-unfair",
+        "text": "64% of consumers view shrinkflation as an unfair practice.",
+        "evidence": "The executive summary states that “64 percent of consumers view ‘shrinkflation’ as an unfair practice.”",
+        "confidence": "high",
+        "pages": [
+          4
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "switch-attractive-deals",
+        "text": "62% of consumers say more attractive deals can make them switch brands or retail stores.",
+        "evidence": "The executive summary states: “Promotions still have pulling power. Sixty two percent say more attractive deals can make them switch.”",
+        "confidence": "high",
+        "pages": [
+          4
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "switch-bundle-value",
+        "text": "61% of consumers believe bundles combining products with services or warranties create stronger value.",
+        "evidence": "The executive summary states: “61 percent believe bundles that combine products with services or warranties create stronger value.”",
+        "confidence": "high",
+        "pages": [
+          4
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "impulse-purchase-decline",
+        "text": "54% of consumers say they are making fewer impulse purchases, down from 71% the previous year.",
+        "evidence": "The report states: “54% say they are making fewer impulse purchases, down from 71% last year.”",
+        "confidence": "high",
+        "pages": [
+          5,
+          21
+        ],
+        "section_id": "careful-spending",
+        "section_title": "Careful spending meets intentional indulgence"
+      },
+      {
+        "id": "weekly-virtual-assistant-use",
+        "text": "52% of consumers use virtual assistants that automate reordering or meal planning at least once a week.",
+        "evidence": "The report states: “Almost half of consumers (52%) use virtual assistants that automate re-ordering or meal planning at least once a week.”",
+        "confidence": "high",
+        "pages": [
+          5,
+          33
+        ],
+        "section_id": "ai-consumer-trusted-guide",
+        "section_title": "AI - The consumer’s trusted guide"
+      },
+      {
+        "id": "assistant-control-rules",
+        "text": "76% of consumers want the ability to set clear rules for when a virtual assistant acts.",
+        "evidence": "The executive summary states: “Seventy six percent want the ability to set clear rules for when an assistant acts.”",
+        "confidence": "high",
+        "pages": [
+          5
+        ],
+        "section_id": "ai-consumer-trusted-guide",
+        "section_title": "AI - The consumer’s trusted guide"
+      },
+      {
+        "id": "genai-data-use-concern",
+        "text": "71% of consumers are worried about how generative AI uses their information.",
+        "evidence": "The report states that 71% are worried about lack of clarity on consent and transparency around collection and use of personal data.",
+        "confidence": "high",
+        "pages": [
+          5,
+          36
+        ],
+        "section_id": "ai-consumer-trusted-guide",
+        "section_title": "AI - The consumer’s trusted guide"
+      },
+      {
+        "id": "human-interaction-loyalty-support",
+        "text": "74% of consumers said human interaction during in-store customer support increases loyalty in October 2025, compared with 54% in November 2024.",
+        "evidence": "Figure 23 reports customer-support figures of 54% for November 2024 and 74% for October 2025 for consumers who said human interaction increases loyalty.",
+        "confidence": "high",
+        "pages": [
+          45
+        ],
+        "section_id": "reliable-tech-loyalty",
+        "section_title": "Reliable tech builds loyalty – but with boundaries"
+      },
+      {
+        "id": "human-interaction-loyalty-purchase",
+        "text": "66% of consumers said human interaction during the in-store purchase stage increases loyalty in October 2025, compared with 40% in November 2024.",
+        "evidence": "Figure 23 reports purchase-stage figures of 40% for November 2024 and 66% for October 2025 for consumers who said human interaction increases loyalty.",
+        "confidence": "high",
+        "pages": [
+          45
+        ],
+        "section_id": "reliable-tech-loyalty",
+        "section_title": "Reliable tech builds loyalty – but with boundaries"
+      },
+      {
+        "id": "money-off-promotion",
+        "text": "75% of consumers said money-off promotions are effective in driving purchase decisions.",
+        "evidence": "Figure 9 reports “Money-off (e.g., $5 off $25)” at 75% in response to how effective promotion types are in driving purchase decisions.",
+        "confidence": "high",
+        "pages": [
+          24
+        ],
+        "section_id": "careful-spending",
+        "section_title": "Careful spending meets intentional indulgence"
+      },
+      {
+        "id": "smaller-quantity-shopping",
+        "text": "49% of consumers report looking to buy smaller quantities as prices rise.",
+        "evidence": "The report states: “around half (49%) are buying smaller quantities.”",
+        "confidence": "high",
+        "pages": [
+          21
+        ],
+        "section_id": "careful-spending",
+        "section_title": "Careful spending meets intentional indulgence"
+      },
+      {
+        "id": "cheaper-alternatives-shopping",
+        "text": "48% of consumers report buying cheaper alternatives, such as canned fruit instead of fresh fruit, as prices rise.",
+        "evidence": "The report states: “A similar proportion (48%) are embracing cheaper alternatives, such as canned fruit instead of fresh.”",
+        "confidence": "high",
+        "pages": [
+          21
+        ],
+        "section_id": "careful-spending",
+        "section_title": "Careful spending meets intentional indulgence"
+      },
+      {
+        "id": "small-treats-financial-stress",
+        "text": "Seven in ten consumers say small treats help them deal with financial stress.",
+        "evidence": "The report states: “Seven in ten shoppers in our survey say small treats help them deal with financial stress.”",
+        "confidence": "high",
+        "pages": [
+          26
+        ],
+        "section_id": "careful-spending",
+        "section_title": "Careful spending meets intentional indulgence"
+      },
+      {
+        "id": "assistant-payment-options",
+        "text": "Among consumers, 11% are open to a one-time payment for chatbots or virtual shopping assistants, and 8% prefer a subscription model.",
+        "evidence": "Figure 14 reports 11% willing to pay as a one-time payment and 8% willing to pay for a monthly subscription.",
+        "confidence": "high",
+        "pages": [
+          34
+        ],
+        "section_id": "ai-consumer-trusted-guide",
+        "section_title": "AI - The consumer’s trusted guide"
+      },
+      {
+        "id": "genai-hyperpersonalization",
+        "text": "63% of consumers want generative AI to provide hyper-personalized content and product or service recommendations based on their preferences.",
+        "evidence": "Figure 20 reports 63% agreeing: “I want Gen AI to provide hyper-personalized content and product/service recommendations based on my individual preferences.”",
+        "confidence": "high",
+        "pages": [
+          41
+        ],
+        "section_id": "reliable-tech-loyalty",
+        "section_title": "Reliable tech builds loyalty – but with boundaries"
+      },
+      {
+        "id": "careful-spending-trade-down",
+        "text": "Around two in five are choosing lower-cost alternatives, private labels, or smaller quantities to manage budgets, while nearly four in five avoid private labels in performance-critical categories.",
+        "evidence": "Around two in five are choosing lower cost alternatives, opting for private label, or buying smaller quantities to manage budgets. ... Nearly four in five avoid private labels in performance critical categories.",
+        "confidence": "high",
+        "pages": [
+          4
+        ],
+        "section_id": "careful-spending",
+        "section_title": "Careful spending meets intentional indulgence"
+      },
+      {
+        "id": "careful-spending-hybrid",
+        "text": "Many have adopted a hybrid mindset, trading down in some categories while retaining spending in others, including when prioritizing health-related aspects.",
+        "evidence": "Many have adopted a hybrid mindset: willing to trade down in certain categories, while retaining spending in others (e.g., when prioritizing health-related aspects).",
+        "confidence": "high",
+        "pages": [
+          21
+        ],
+        "section_id": "careful-spending",
+        "section_title": "Careful spending meets intentional indulgence"
+      },
+      {
+        "id": "careful-spending-promotions",
+        "text": "For consumers’ purchase decisions, the chart reports promotion effectiveness of 75% for money-off, 74% for percent-off, and 73% for buy-one-get-one-free offers.",
+        "evidence": "Figure 9. Three in four consumers find money-off the most effective promotion type\nHow eﬀective are the following types of promotions in driving your purchase decisions?\nMoney-oﬀ (e.g., $5 oﬀ $25) 75%\n% oﬀ (e.g., 20% oﬀ) 74%\nBuy-one-get-one-free (BOGOF) 73%\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000 consumers.",
+        "confidence": "high",
+        "pages": [
+          24
+        ],
+        "section_id": "careful-spending",
+        "section_title": "Careful spending meets intentional indulgence"
+      },
+      {
+        "id": "executive-summary-price-switching",
+        "text": "74% of consumers say they would switch brands if they found a lower regular price elsewhere, and 71% would switch if pack sizes or product quality were reduced without clear communication.",
+        "evidence": "Seventy four percent of consumers say they would switch brands if they found a lower regular price elsewhere, ... and 71 percent would switch if pack sizes or product quality were reduced without clear communication.",
+        "confidence": "high",
+        "pages": [
+          4
+        ],
+        "section_id": "executive-summary",
+        "section_title": "Executive summary"
+      },
+      {
+        "id": "executive-summary-shrinkflation-deals",
+        "text": "64% of consumers view shrinkflation as unfair, while 62% say more attractive deals can make them switch.",
+        "evidence": "Sixty two percent say more attractive deals can make them switch, ... and 64 percent of consumers view ‘shrinkflation’1 as an unfair practice.",
+        "confidence": "high",
+        "pages": [
+          4
+        ],
+        "section_id": "executive-summary",
+        "section_title": "Executive summary"
+      },
+      {
+        "id": "executive-summary-virtual-assistants",
+        "text": "52% of consumers use virtual assistants for automated re-ordering or meal planning at least once a week, and 76% want the ability to set clear rules for when an assistant acts.",
+        "evidence": "Almost half of consumers (52%) use virtual assistants that automate re-ordering or meal planning at least once a week, ... Seventy six percent want the ability to set clear rules for when an assistant acts.",
+        "confidence": "high",
+        "pages": [
+          5
+        ],
+        "section_id": "executive-summary",
+        "section_title": "Executive summary"
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "findings",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

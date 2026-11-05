@@ -1,0 +1,21 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "grounding",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "affected_section": "grounding"
+      },
+      "failure_code": "validation_terminal_outcome_missing",
+      "inner_error_class": "",
+      "outer_code": "validation_terminal_outcome_missing",
+      "repair_attempt": 1,
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "stage": "semantic_validation",
+      "terminal_outcome": "missing",
+      "terminal_stage": "",
+      "validator_rule": "grounding"
+    }
+  ],
+  "validation_run_id": "validation:b2e333e502c3222d3a1ebe74eba46081903ff4c6b4e8a7e9af5a014fd15b5b16"
+}

@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "producer_git_sha": "d02897a91e2f1773c611ade56c41f3af41ec2661",
+  "run_identity": "frozen-reliability-t1n2mc7x",
+  "source_manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+  "execution_mode": {
+    "verified_facts_architecture": true,
+    "shared_batch": false,
+    "cross_report_analysis": false,
+    "publication_enabled": false,
+    "wordpress_writes": 0,
+    "workflow_retry_count": 0
+  },
+  "repository_resource_hashes": {
+    "application_config_sha256": "70129aefc7294bab36081040871e701b88310c19332dc8faf1bac9c502caff32",
+    "prompt_tree_sha256": "d21c3e28fe4843595da95249b24167f593443d159ec815f3e8e6d32dca8ff0e1",
+    "contract_tree_sha256": "022dc879dbfa266aff60463305d2ccb7b8558b273231d579b653da0c5cb9ff19"
+  },
+  "report_identities": [
+    {
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3",
+      "cohort_id": "2188cef250d971830fa2fc43ab5727fa23b6e832f562d9b1872523b1d239083c",
+      "validation_run_id": "validation:76685424660e7aa76fc58aaadf0c427e76c7ffca36fe6bce7e8399192f077347",
+      "configuration_hash": "f7968bc94a795a4e6329c68029d8bab882c747ec02a983b311b8b402ced9eb52",
+      "configuration_snapshot_sha256": "f7968bc94a795a4e6329c68029d8bab882c747ec02a983b311b8b402ced9eb52",
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "admission_decision_hash": "5a8d516c7c73051e25bcad5d37e51021107fd3d39a72d9819f978d34e2166901",
+      "producer_build_identity": "workspace"
+    },
+    {
+      "report_id": "cohort-4b763ae2286ca69fe8ac",
+      "source_identity_id": "source:79cb8c886c55b49bfdec2128d5b25e0b",
+      "cohort_id": "e671f0d29166b9fdcc55d2323c79f6dc0d8913092b4ff01c4d483bf1fe75dce6",
+      "validation_run_id": "validation:4b55759fcc4ae536db07b1b737b8feba12e41c139f9c3c0efb8039738ed6efb3",
+      "configuration_hash": "6e73f865b0ec22284ee34d98ced19cbbe5aab3a0c54d40645328ef0008ebbee5",
+      "configuration_snapshot_sha256": "6e73f865b0ec22284ee34d98ced19cbbe5aab3a0c54d40645328ef0008ebbee5",
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "admission_decision_hash": "00b76ae6b86f6cac9557a9ced18a91703a138186980845494201c39456362fdc",
+      "producer_build_identity": "workspace"
+    },
+    {
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "source_identity_id": "source:f584854bc13cdca0b0d86327c85f71ff",
+      "cohort_id": "39958713d38bfca7e3f72e2dfe14b9943ffabe79470f4944803638dea5631db6",
+      "validation_run_id": "validation:6c53f0620ecb3bfc3af1f436c910662fa5667e9432392590579b5b7a39f39abe",
+      "configuration_hash": "efc08894cd3e145233ae5dc8bde408e81ff074ce23341179fc1bca62f86073b4",
+      "configuration_snapshot_sha256": "efc08894cd3e145233ae5dc8bde408e81ff074ce23341179fc1bca62f86073b4",
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "admission_decision_hash": "b952f018fff5687b653ab5cd5fb5a5ba967089c26e8f90965e6e08bbcaae7d17",
+      "producer_build_identity": "workspace"
+    },
+    {
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235",
+      "cohort_id": "65422ce6cd591e38bfef9d838e4dcbb862d1bb34a40461b5a7607eefab4a28c1",
+      "validation_run_id": "validation:bb1ae8bfce83045694406343fec0bec8e5458767c51f131c607fdd57371874a1",
+      "configuration_hash": "01c948c7d929f44abb74e9eefbab31557b2097ed014d1fa776fcbfc7827ebcc3",
+      "configuration_snapshot_sha256": "01c948c7d929f44abb74e9eefbab31557b2097ed014d1fa776fcbfc7827ebcc3",
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "admission_decision_hash": "fcce1997bc18f0fee2d72ad7c46f0d04052e3454962520b56f70d57a48e57568",
+      "producer_build_identity": "workspace"
+    },
+    {
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "source_identity_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b",
+      "cohort_id": "4071b3f11fd259bd89d15305f94cee31d8dd4f15777e4d1fbc884adbb1b4e862",
+      "validation_run_id": "validation:b2e333e502c3222d3a1ebe74eba46081903ff4c6b4e8a7e9af5a014fd15b5b16",
+      "configuration_hash": "e50763d4a9df1b132fe130958d2fd03a782386224b62130d71fd6a48b1e2497a",
+      "configuration_snapshot_sha256": "e50763d4a9df1b132fe130958d2fd03a782386224b62130d71fd6a48b1e2497a",
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "admission_decision_hash": "2f29b262f87bbfa958c1550e2f956671c85328aa0027be3a66b1a319cd264178",
+      "producer_build_identity": "workspace"
+    }
+  ]
+}

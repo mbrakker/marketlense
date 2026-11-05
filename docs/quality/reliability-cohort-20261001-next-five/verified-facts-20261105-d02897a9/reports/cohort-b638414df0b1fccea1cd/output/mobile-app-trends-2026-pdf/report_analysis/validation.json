@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-b638414df0b1fccea1cd\\ias-first-attempt-vq54udoj\\output\\mobile-app-trends-2026-pdf\\report_analysis\\validation.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[family_confidence] Artifact family 'quotes' abstained at confidence=0.00 because quotes_missing.",
+      "severity": "warning",
+      "affected_section": "quotes",
+      "rule_id": "family_confidence",
+      "repair_target": "quotes",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The finance-app percentage changes lack an explicit comparison period, unlike the e-commerce changes. The bound source identifies the finance values as year-over-year changes.",
+      "severity": "error",
+      "affected_section": "summary.claim_evidence_map:3.claim",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "summary",
+      "entity_id": "claim_ledgers:claim:3",
+      "evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The text asserts 2025 consumer spending rose 10.6% to $167 billion, but this item is bound only to the app-downloads fact. That binding does not support the spending metric or values; the separate spending fact cannot be borrowed for this item.",
+      "severity": "error",
+      "affected_section": "insights:mobile-market-downloads-2025.metric_public_copy",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "metric_spine:metric_spine:mobile-market-downloads-2025",
+      "evidence_ids": [
+        "verified-fact:mobile-market-downloads-2025"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The e-commerce changes are explicitly year over year, but the finance-app declines and increases lack an explicit comparison period. The bound fact specifies year-over-year changes for finance installs and sessions; the comparator is not established for those clauses as written.",
+      "severity": "error",
+      "affected_section": "expert_comment",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "expert_comment",
+      "entity_id": "soft_copy:expert_comment:63c5ea585007f9fc",
+      "evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The e-commerce changes are explicitly year over year, but the finance-app declines and increases lack an explicit comparison period. The bound fact specifies year-over-year changes for finance installs and sessions too; the reader should not have to infer that comparator from the preceding clause.",
+      "severity": "error",
+      "affected_section": "executive_summary",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "summary",
+      "entity_id": "soft_copy:summary:63c5ea585007f9fc",
+      "evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The e-commerce changes are explicitly year over year, but the finance-app changes have no explicit comparison period. The bound fact specifies a year-over-year comparison for the finance figures as well.",
+      "severity": "error",
+      "affected_section": "summary.claim_evidence_map:3.claim",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "summary",
+      "entity_id": "summary:summary:claim_evidence_map:3:claim",
+      "evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.report_limitations_omitted] The report covers the planned findings, but it presents several benchmark rates and retention/session measures without disclosing material source limitations: the verified facts state that sample sizes and/or underlying denominators are not provided. That caveat matters when readers interpret or compare the results, and no public item makes it clear. Dimensions: limitations: The source fact map records missing sample sizes and/or underlying denominators for multiple benchmark measures, but the public report does not disclose this methodological limitation for readers evaluating or comparing those measures.",
+      "severity": "error",
+      "affected_section": "public_items",
+      "rule_id": "public_editorial_quality.report_limitations_omitted",
+      "violation_type": "report_editorial_acceptance",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": [
+        "verified-fact:global-ecommerce-finance-install-session-divergence",
+        "verified-fact:gaming-retention-and-cpi",
+        "verified-fact:gaming-subvertical-growth-divergence",
+        "verified-fact:finance-session-length-pattern"
+      ]
+    }
+  ]
+}

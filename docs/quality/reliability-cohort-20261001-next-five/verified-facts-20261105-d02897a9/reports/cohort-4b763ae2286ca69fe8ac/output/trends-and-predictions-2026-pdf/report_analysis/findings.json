@@ -1,0 +1,400 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "search-traffic-outlook",
+      "text": "Publishers’ average expectation was that search-engine traffic would fall 43% over the next three years.",
+      "evidence": "Publishers expect traffic from search engines to almost halve (-43%) over the next three years. The chart reports an average score of -43%.",
+      "confidence": "high",
+      "pages": [
+        12
+      ],
+      "section_id": "chapter-2",
+      "section_title": "2. Answer Engines and the Implications for Access"
+    },
+    {
+      "id": "search-referrals-global",
+      "text": "From November 2024 to November 2025, Google Search referrals in the global Chartbeat network fell 33% year on year.",
+      "evidence": "Chartbeat data show that Google traffic from organic search to over 2,500 sites was down by a third (33%) globally between Nov 2024 and Nov 2025.",
+      "confidence": "high",
+      "pages": [
+        12
+      ],
+      "section_id": "chapter-2",
+      "section_title": "2. Answer Engines and the Implications for Access"
+    },
+    {
+      "id": "ai-platform-income-significant",
+      "text": "For possible news-content licensing deals with AI companies in about three years, 20% of publisher respondents expected a significant source of income.",
+      "evidence": "Significant source of income 20%. The question asks how significant possible licensing-deal income will be in about three years. Base = 272.",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "chapter-2",
+      "section_title": "2. Answer Engines and the Implications for Access"
+    },
+    {
+      "id": "ai-platform-income-minor",
+      "text": "For possible news-content licensing deals with AI companies in about three years, 49% of publisher respondents expected a minor contribution.",
+      "evidence": "Minor source of income 49%. The question asks how significant possible licensing-deal income will be in about three years. Base = 272.",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "chapter-2",
+      "section_title": "2. Answer Engines and the Implications for Access"
+    },
+    {
+      "id": "ai-platform-income-none",
+      "text": "For possible news-content licensing deals with AI companies in about three years, 20% of publisher respondents expected no income.",
+      "evidence": "We won't be getting any income 20%. The question asks how significant possible licensing-deal income will be in about three years. Base = 272.",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "chapter-2",
+      "section_title": "2. Answer Engines and the Implications for Access"
+    },
+    {
+      "id": "content-focus-reporting",
+      "text": "The net difference between respondents planning more versus less focus was +91 for original investigations and on-the-ground reporting.",
+      "evidence": "Original investigations/on the ground reporting +91; net difference between the proportion saying each is more or less important to focus on in the era of AI. Base = 264.",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "chapter-3",
+      "section_title": "3. Content Strategies Shift towards Distinctiveness"
+    },
+    {
+      "id": "content-focus-contextual-analysis",
+      "text": "The net difference between respondents planning more versus less focus was +82 for contextual analysis and framing.",
+      "evidence": "Contextual analysis (explanation, framing) +82; net difference between the proportion saying each is more or less important to focus on in the era of AI. Base = 264.",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "chapter-3",
+      "section_title": "3. Content Strategies Shift towards Distinctiveness"
+    },
+    {
+      "id": "content-focus-community",
+      "text": "The net difference between respondents planning more versus less focus was +76 for community building.",
+      "evidence": "Community building (live journalism/events) +76; net difference between the proportion saying each is more or less important to focus on in the era of AI. Base = 264.",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "chapter-3",
+      "section_title": "3. Content Strategies Shift towards Distinctiveness"
+    },
+    {
+      "id": "content-focus-service-journalism",
+      "text": "The net difference for service journalism was −42, indicating less planned focus relative to more planned focus.",
+      "evidence": "Service journalism −42; net difference between the proportion saying each is more or less important to focus on in the era of AI. Base = 264.",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "chapter-3",
+      "section_title": "3. Content Strategies Shift towards Distinctiveness"
+    },
+    {
+      "id": "content-focus-evergreen",
+      "text": "The net difference for evergreen content was −32, indicating less planned focus relative to more planned focus.",
+      "evidence": "Evergreen content −32; net difference between the proportion saying each is more or less important to focus on in the era of AI. Base = 264.",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "chapter-3",
+      "section_title": "3. Content Strategies Shift towards Distinctiveness"
+    },
+    {
+      "id": "content-focus-general-news",
+      "text": "The net difference for general news was −38, indicating less planned focus relative to more planned focus.",
+      "evidence": "General news −38; net difference between the proportion saying each is more or less important to focus on in the era of AI. Base = 264.",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "chapter-3",
+      "section_title": "3. Content Strategies Shift towards Distinctiveness"
+    },
+    {
+      "id": "facebook-friends-time",
+      "text": "A court filing by Meta revealed that 17% of time spent on Facebook involved content from friends and family.",
+      "evidence": "Meta revealed that only 17% of time spent on Facebook involves content from friends and family.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "chapter-4",
+      "section_title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything"
+    },
+    {
+      "id": "instagram-friends-time",
+      "text": "A court filing by Meta revealed that 7% of time spent on Instagram involved content from friends and family.",
+      "evidence": "Meta revealed that just 7% of time spent on Instagram involves content from friends and family.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "chapter-4",
+      "section_title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything"
+    },
+    {
+      "id": "facebook-referral-long-term",
+      "text": "The average number of referrals to news websites from Facebook fell 43% in the last two and a half years, according to Chartbeat data.",
+      "evidence": "The average number of referrals to news websites from Facebook fell by 43% in the last two and a half years, according to Chartbeat data.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "chapter-4",
+      "section_title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything"
+    },
+    {
+      "id": "x-referral-long-term",
+      "text": "The average number of referrals to news websites from X fell 46% in the last two and a half years, according to Chartbeat data.",
+      "evidence": "The average number of referrals to news websites from X fell by 46% in the last two and a half years, according to Chartbeat data.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "chapter-4",
+      "section_title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything"
+    },
+    {
+      "id": "platform-effort-youtube",
+      "text": "For 2026, publishers’ net difference in plans for more versus less effort was +74 for YouTube.",
+      "evidence": "YouTube +74; net difference between the proportion planning to put more effort and less effort into each platform. Base = 268.",
+      "confidence": "high",
+      "pages": [
+        21
+      ],
+      "section_id": "chapter-4",
+      "section_title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything"
+    },
+    {
+      "id": "platform-effort-ai",
+      "text": "For 2026, publishers’ net difference in plans for more versus less effort was +61 for AI platforms.",
+      "evidence": "AI platforms +61; net difference between the proportion planning to put more effort and less effort into each platform. Base = 268.",
+      "confidence": "high",
+      "pages": [
+        21
+      ],
+      "section_id": "chapter-4",
+      "section_title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything"
+    },
+    {
+      "id": "platform-effort-tiktok",
+      "text": "For 2026, publishers’ net difference in plans for more versus less effort was +56 for TikTok.",
+      "evidence": "TikTok +56; net difference between the proportion planning to put more effort and less effort into each platform. Base = 268.",
+      "confidence": "high",
+      "pages": [
+        21
+      ],
+      "section_id": "chapter-4",
+      "section_title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything"
+    },
+    {
+      "id": "creator-concern-attention",
+      "text": "Among respondents, 70% were somewhat or very concerned that creators were taking time and attention away from publisher content.",
+      "evidence": "Taking time and attention away: 24% very concerned and 46% somewhat concerned; 70% somewhat or very concerned. Base = 263.",
+      "confidence": "high",
+      "pages": [
+        24
+      ],
+      "section_id": "chapter-5",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "creator-concern-talent",
+      "text": "Among respondents, 39% were somewhat or very concerned about losing talent to creators.",
+      "evidence": "Losing talent: 10% very concerned and 29% somewhat concerned; 39% somewhat or very concerned. Base = 263.",
+      "confidence": "high",
+      "pages": [
+        24
+      ],
+      "section_id": "chapter-5",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "creator-initiative-journalists",
+      "text": "76% of publisher respondents planned to encourage journalists to behave more like creators.",
+      "evidence": "Getting our journalists to be a bit more like creators 76%. Base = 263.",
+      "confidence": "high",
+      "pages": [
+        25
+      ],
+      "section_id": "chapter-5",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "creator-initiative-partnerships",
+      "text": "50% of publisher respondents planned to partner with creators for distribution.",
+      "evidence": "Partnering with creators for distribution 50%. Base = 263.",
+      "confidence": "high",
+      "pages": [
+        25
+      ],
+      "section_id": "chapter-5",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "creator-initiative-hiring",
+      "text": "31% of publisher respondents planned to hire creators to reach young audiences.",
+      "evidence": "Hiring creators to reach young audiences 31%. Base = 263.",
+      "confidence": "high",
+      "pages": [
+        25
+      ],
+      "section_id": "chapter-5",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "newsroom-ai-initiatives-promising",
+      "text": "44% of respondents described the impact of current newsroom AI initiatives as promising.",
+      "evidence": "Promising 44% in the chart on adjectives describing the impact of current newsroom AI initiatives. Base = 265.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "chapter-7",
+      "section_title": "7. Latest Tales of AI in the Newsroom"
+    },
+    {
+      "id": "newsroom-ai-initiatives-limited",
+      "text": "42% of respondents described the impact of current newsroom AI initiatives as limited.",
+      "evidence": "Limited 42% in the chart on adjectives describing the impact of current newsroom AI initiatives. Base = 265.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "chapter-7",
+      "section_title": "7. Latest Tales of AI in the Newsroom"
+    },
+    {
+      "id": "newsroom-ai-initiatives-transformational",
+      "text": "13% of respondents described the impact of current newsroom AI initiatives as transformational.",
+      "evidence": "Transformational 13% in the chart on adjectives describing the impact of current newsroom AI initiatives. Base = 265.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "chapter-7",
+      "section_title": "7. Latest Tales of AI in the Newsroom"
+    },
+    {
+      "id": "ai-jobs-no-cuts",
+      "text": "67% of respondents reported that no jobs had been cut as a result of AI initiatives.",
+      "evidence": "No jobs cut 67% in the chart on jobs saved or added as a result of AI initiatives. Base = 263.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "chapter-7",
+      "section_title": "7. Latest Tales of AI in the Newsroom"
+    },
+    {
+      "id": "ai-jobs-small-cuts",
+      "text": "16% of respondents reported that a small number of jobs had been cut as a result of AI initiatives.",
+      "evidence": "Cut a small number 16% in the chart on jobs saved or added as a result of AI initiatives. Base = 263.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "chapter-7",
+      "section_title": "7. Latest Tales of AI in the Newsroom"
+    },
+    {
+      "id": "ai-jobs-added",
+      "text": "9% of respondents reported that jobs had been added as a result of AI initiatives.",
+      "evidence": "We've actually added jobs 9% in the chart on jobs saved or added as a result of AI initiatives. Base = 263.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "chapter-7",
+      "section_title": "7. Latest Tales of AI in the Newsroom"
+    },
+    {
+      "id": "chapter-2-search-traffic-forecast",
+      "text": "Publishers expect traffic from search engines to almost halve (-43%) over the next three years.",
+      "evidence": "Publishers expect traffic from search engines to almost halve (-43%) over the next three years",
+      "confidence": "high",
+      "pages": [
+        12
+      ],
+      "section_id": "chapter-2",
+      "section_title": "2. Answer Engines and the Implications for Access"
+    },
+    {
+      "id": "chapter-2-ai-income-expectations",
+      "text": "For possible licensing deals with AI companies, 20% of respondents expected significant income and 20% expected no income for their company in three years’ time.",
+      "evidence": "Publisher expectations around revenue they can expect from AI platforms\n\nSignificant source of income               20%\n\nWe won't be getting any income             20%\n\nQ8. When it comes to possible licensing deals with AI companies around news content IP (intellectual property), how significant\ndo you think the money will be to your company in, say, three years’ time? Choose one. Base = 272.",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "chapter-2",
+      "section_title": "2. Answer Engines and the Implications for Access"
+    },
+    {
+      "id": "chapter-2-aeo-geo-services",
+      "text": "The report expects more digital marketing agencies to repurpose services for AEO and GEO, alongside new specialist consultancies and analytics systems.",
+      "evidence": "Expect to see more digital marketing agencies repurposing their services to include AEO and GEO (Generative Engine Optimisation), as well as new specialist consultancies and analytics systems emerging.",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "chapter-2",
+      "section_title": "2. Answer Engines and the Implications for Access"
+    },
+    {
+      "id": "chapter-8-revenue-streams-2026",
+      "text": "Among commercial-publisher respondents, the shares identifying 2026 revenue streams as likely important or very important were subscription/membership 76%, display advertising/sponsorship 68%, native advertising 64%, and events 54%.",
+      "evidence": "Most important expected commercial publisher revenue streams in 2026\n\n     Subscription/membership (ongoing payments)                                    76%      No change\n\n                    Display advertising/sponsorship                                68%           Was 81% in 2020\n\n             Native advertising (sponsored content)                               64%      +5pp (perhaps driven by growing                                                                                                                         importance of short form video)\n\n                        Events (physical & online)                          54%             +6pp (renewed interest in community)\n\nQ16. Which of the following digital revenue streams are likely to be important or very important for your company in 2026? –\nchoose all that apply. Base = Respondents from commercial publishers (excluding publicly funded publicly broadcasters) = 259.",
+      "confidence": "high",
+      "pages": [
+        38
+      ],
+      "section_id": "chapter-8",
+      "section_title": "8. Changing Business Models and Barriers to Innovation"
+    },
+    {
+      "id": "chapter-8-platform-funding",
+      "text": "Among commercial-publisher respondents, 37% selected funding from platforms (including AI platforms) as likely important or very important in 2026; the chart notes this was up 17 percentage points in the last two years.",
+      "evidence": "Most important expected commercial publisher revenue streams in 2026\n\n    Funding from platforms (including AI platforms)                  37%          + 17pp in last two years (driven by new AI revenues)\n\nQ16. Which of the following digital revenue streams are likely to be important or very important for your company in 2026? –\nchoose all that apply. Base = Respondents from commercial publishers (excluding publicly funded publicly broadcasters) = 259.",
+      "confidence": "high",
+      "pages": [
+        38
+      ],
+      "section_id": "chapter-8",
+      "section_title": "8. Changing Business Models and Barriers to Innovation"
+    },
+    {
+      "id": "chapter-8-innovation-barriers",
+      "text": "Surveyed respondents identified lack of resources (62%), skills challenges in attracting or delivering product and technical talent (53%), and internal competition between groups (49%) as barriers to innovation.",
+      "evidence": "There are many other barriers to innovation. Six in ten (62%) of our respondents say that media companies simply aren’t investing enough in future models, citing lack of resources. There is also a skills problem, with around half (53%) identifying challenges in either attracting product people who can help define the right solutions, or the technical and design talent to deliver them.\n\nThe other big problem identified by our survey is alignment. Around a quarter (26%) think the top-level strategy is not sufficiently clear, with half (49%) complaining about internal competition between different groups which makes it hard to align different parts of the organisation around new projects.",
+      "confidence": "high",
+      "pages": [
+        39
+      ],
+      "section_id": "chapter-8",
+      "section_title": "8. Changing Business Models and Barriers to Innovation"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

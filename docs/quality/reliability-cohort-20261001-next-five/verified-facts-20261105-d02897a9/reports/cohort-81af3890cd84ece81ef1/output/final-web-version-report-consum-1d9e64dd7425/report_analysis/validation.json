@@ -1,0 +1,161 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\ml-frozen-five-live-d02897a9-retry-20261105\\frozen-reliability-t1n2mc7x\\members\\cohort-81af3890cd84ece81ef1\\ias-first-attempt-m4dv7o30\\output\\final-web-version-report-consum-1d9e64dd7425\\report_analysis\\validation.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[family_confidence] Artifact family 'quotes' abstained at confidence=0.00 because quotes_missing.",
+      "severity": "warning",
+      "affected_section": "quotes",
+      "rule_id": "family_confidence",
+      "repair_target": "quotes",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The bound 71% figure describes consumers' hypothetical switching intention, but the wording does not specify the population.",
+      "severity": "error",
+      "affected_section": "summary.claim_evidence_map:2.claim",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "summary",
+      "entity_id": "claim_ledgers:claim:2",
+      "evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_claim_evidence_missing] The strategic-context text includes the 71% pack-size or quality-change claim, but that fact is absent from this item's evidence bindings. The other bound facts do not establish it, so the claim cannot be validated from this item's supplied evidence.",
+      "severity": "error",
+      "affected_section": "decision_brief.strategic_context",
+      "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "violation_type": "missing_item_bound_evidence",
+      "repair_target": "",
+      "entity_id": "executive_advisory:decision_brief:strategic_context",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.material_claim_evidence_missing] The text includes the 71% pack-size or quality-change claim, but that fact is absent from this item's evidence bindings. Its other bound facts do not establish the claim.",
+      "severity": "error",
+      "affected_section": "insights:regular-price-switching.text",
+      "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "violation_type": "missing_item_bound_evidence",
+      "repair_target": "",
+      "entity_id": "executive_advisory:decision_brief:watchouts:1",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] It only repeats that the findings are separate and provides no implication beyond the factual wording.",
+      "severity": "error",
+      "affected_section": "insights:assistant-use-and-control.so_what",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:assistant-use-and-control:so_what",
+      "evidence_ids": [
+        "verified-fact:assistant-use-and-control"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] This merely restates that the survey compares promotion ratings and adds no analytical implication.",
+      "severity": "error",
+      "affected_section": "insights:careful-spending-promotions.so_what",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:careful-spending-promotions:so_what",
+      "evidence_ids": [
+        "verified-fact:careful-spending-promotions"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] It only restates that the report distinguishes two findings and adds no implication beyond the factual content.",
+      "severity": "error",
+      "affected_section": "insights:impulse-purchase-shift.so_what",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:impulse-purchase-shift:so_what",
+      "evidence_ids": [
+        "verified-fact:impulse-purchase-shift",
+        "verified-fact:smaller-quantity-shopping"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] It only restates the cohort and market scope of Bhargav's statement and supplies no analytical implication.",
+      "severity": "error",
+      "affected_section": "insights:india-quick-commerce-spending-share.so_what",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:india-quick-commerce-spending-share:so_what",
+      "evidence_ids": [
+        "verified-fact:india-quick-commerce-spending-share"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The bound fact concerns consumers' hypothetical intention, but the copy states 71% without naming that population.",
+      "severity": "error",
+      "affected_section": "linkedin_post",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "linkedin_post",
+      "entity_id": "soft_copy:linkedin_post:8738f48cd29e0fa0",
+      "evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The bound fact describes consumers' stated hypothetical intention, but the copy gives the percentage without identifying whose responses it represents.",
+      "severity": "error",
+      "affected_section": "linkedin_post",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "linkedin_post",
+      "entity_id": "soft_copy:linkedin_post:dd5b82c2a1a2d38c",
+      "evidence_ids": [
+        "verified-fact:regular-price-switching"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.semantic_review] The 71% figure describes consumers' hypothetical intention, but the wording does not identify that population.",
+      "severity": "error",
+      "affected_section": "summary.claim_evidence_map:2.claim",
+      "rule_id": "public_editorial_quality.semantic_review",
+      "violation_type": "semantic_review_unresolved",
+      "repair_target": "summary",
+      "entity_id": "summary:summary:claim_evidence_map:2:claim",
+      "evidence_ids": [
+        "verified-fact:switch-uncommunicated-reduction"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.report_analytical_depth_and_limitations] The planned themes are represented, and reuse across surfaces has distinct roles. However, several primary-analysis so-what lines restate findings without analytical implications. The India quick-commerce 25% share is also reported without clearly noting that the source does not specify its measurement method or further define the spending denominator. In addition, two advisory items include the 71% claim without that fact in their item-level evidence bindings. Dimensions: analytical_depth: Several primary-analysis so-what lines merely repeat the fact or its scope, without adding a defensible analytical implication.; limitations: The quick-commerce share is stated without noting that the source does not specify the measurement method or further define the spending denominator.",
+      "severity": "error",
+      "affected_section": "public_items",
+      "rule_id": "public_editorial_quality.report_analytical_depth_and_limitations",
+      "violation_type": "report_editorial_acceptance",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": [
+        "verified-fact:careful-spending-promotions",
+        "verified-fact:india-quick-commerce-spending-share",
+        "verified-fact:assistant-use-and-control",
+        "verified-fact:switch-uncommunicated-reduction"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,254 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "claim_provenance": [
+      {
+        "claim": "The report records more than 112.1 billion app downloads in 2025, reported as having occurred rather than as a forecast.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ]
+      },
+      {
+        "claim": "The report records more than 112.1 billion app downloads in 2025.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:mobile-market-downloads-2025"
+        ]
+      },
+      {
+        "claim": "In 2025, consumer spending in the mobile-app market rose 10.6% year over year to $167 billion.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:mobile-app-consumer-spending-2025"
+        ]
+      },
+      {
+        "claim": "In 2025, global e-commerce app installs fell 10% year over year while sessions rose 5%; global finance app installs fell 4% while sessions rose 21%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:global-ecommerce-finance-install-session-divergence"
+        ]
+      },
+      {
+        "claim": "Globally, gaming app growth from 2024 to 2025 varied by subvertical: Casual installs grew 19% and sessions 37%; Strategy sessions grew 57% while installs declined 1%; Casino installs grew 22% while sessions declined 5%; and Slots installs grew 46% while sessions declined 5%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:gaming-subvertical-growth-divergence"
+        ]
+      },
+      {
+        "claim": "The report recommends that app marketers use an integrated, adaptable, and accountable data foundation combining cross-channel attribution, AI insights, and next-generation solutions for campaign optimization and budget allocation based on aggregated data.",
+        "classification": "recommendation",
+        "evidence_ids": [
+          "verified-fact:measurement-recommendation"
+        ]
+      }
+    ],
+    "generation_attempt": 1,
+    "producing_prompt_identity": {
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+      "execution_identity_manifest": {
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+        "model": "gpt-6-luna",
+        "output_contract_schema_version": "artifact_json:1.0",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "provider_retry_count": 0,
+          "timeout_seconds": 600.0
+        },
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "provider": "openai",
+        "reasoning_effort": "medium",
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary",
+          "max_input_tokens": 48000,
+          "policy_source": "report_vs/artifacts/summary",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "tier": "routine_structured"
+        },
+        "schema_version": "1.0",
+        "seed": null,
+        "temperature": null,
+        "validator_version": "artifacts_schema:3.1"
+      },
+      "family_schema_version": "1.0",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "model_provider": "openai",
+      "namespace": "report_vs/artifacts/summary",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+      "prompt_dependency_manifest": {
+        "composition_version": "2.0",
+        "included_partials": [
+          {
+            "kind": "partial",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "schema_version": "1.0",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "source": "user:0"
+          }
+        ],
+        "namespace": "report_vs/artifacts/summary",
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "schema_snippets": [
+          {
+            "kind": "schema_snippet",
+            "path": "schemas/artifacts.schema.json",
+            "schema_version": "1.0",
+            "sha256": "6e2a4ad3db5c4d518c096af2f180210e058e2cea70742a7d8e2b378b6a225272",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "schema_version": "1.0",
+        "system_root": {
+          "kind": "system_root",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "schema_version": "1.0",
+          "sha256": "a04cd94fb80ef9d2ad6f6c7f06f44213f839df93d304489fcce88300d4d6fd0b",
+          "source": ""
+        },
+        "user_root": {
+          "kind": "user_root",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "schema_version": "1.0",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "source": ""
+        }
+      },
+      "regeneration_reason": "materialization_missing",
+      "relevant_input_hash": "c1526ec6fb6854f983de51232fc599df561d93ee68fc22fad6c0b82b2d97df66",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "schema_version": "1.0",
+      "validator_version": "artifacts_schema:3.1"
+    },
+    "public_output": {
+      "card_tldr_compact": "The report records more than 112.1 billion app downloads in 2025.",
+      "claim_evidence_map": [
+        {
+          "claim": "The report records more than 112.1 billion app downloads in 2025.",
+          "evidence": "The page reports more than 112.1 billion app downloads in 2025.",
+          "evidence_id": "verified-fact:mobile-market-downloads-2025",
+          "evidence_spans": [
+            {
+              "end_offset": 244,
+              "evidence_id": "verified-fact:mobile-market-downloads-2025",
+              "page": 3,
+              "section_id": "introduction",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The introduction directly reports more than 112.1 billion app downloads in 2025. It describes the downloads as having occurred, not as a forecast. The following global qualifier belongs to the separate estimate of unique smartphone users, so the verified statement does not infer a geography for downloads."
+            }
+          ],
+          "pages": [
+            3
+          ]
+        },
+        {
+          "claim": "In 2025, consumer spending in the mobile-app market rose 10.6% year over year to $167 billion.",
+          "evidence": "In 2025, consumer spending in the mobile-app market rose 10.6% year over year to $167 billion.",
+          "evidence_id": "verified-fact:mobile-app-consumer-spending-2025",
+          "evidence_spans": [
+            {
+              "end_offset": 276,
+              "evidence_id": "verified-fact:mobile-app-consumer-spending-2025",
+              "page": 3,
+              "section_id": "introduction",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The page’s introduction states that in 2025 consumer spending “rose 10.6% YoY to $167 billion.” The stated year, increase, year-over-year comparison, and endpoint match the claim. The report context is the mobile app industry; no specific geography is attached to this spending figure in the sentence."
+            }
+          ],
+          "pages": [
+            3
+          ]
+        },
+        {
+          "claim": "In 2025, global e-commerce app installs fell 10% year over year while sessions rose 5%; global finance app installs fell 4% while sessions rose 21%.",
+          "evidence": "The source reports 2025 year-over-year changes for global e-commerce apps and global finance apps: installs declined while sessions increased in each category.",
+          "evidence_id": "verified-fact:global-ecommerce-finance-install-session-divergence",
+          "evidence_spans": [
+            {
+              "end_offset": 294,
+              "evidence_id": "verified-fact:global-ecommerce-finance-install-session-divergence",
+              "page": 27,
+              "section_id": "e-commerce-shopping-apps",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The page’s narrative explicitly reports that global e-commerce app installs fell 10% YoY in 2025 while sessions increased 5%. Its accompanying chart is titled “E-commerce app install and session growth” and identifies the geography as Global, supporting both metric labels, directions, values, period, and geography."
+            },
+            {
+              "end_offset": 280,
+              "evidence_id": "verified-fact:global-ecommerce-finance-install-session-divergence",
+              "page": 34,
+              "section_id": "finance-apps",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The page’s narrative explicitly reports that finance app installs dropped 4% YoY in 2025 while sessions rose 21%. The accompanying chart title specifies finance app install and session growth and identifies the population as Global, supporting the finance figures and their geography."
+            }
+          ],
+          "pages": [
+            27,
+            34
+          ]
+        },
+        {
+          "claim": "Globally, gaming app growth from 2024 to 2025 varied by subvertical: Casual installs grew 19% and sessions 37%; Strategy sessions grew 57% while installs declined 1%; Casino installs grew 22% while sessions declined 5%; and Slots installs grew 46% while sessions declined 5%.",
+          "evidence": "The global chart reports different year-over-year install and session growth values across the named gaming subverticals from 2024 to 2025.",
+          "evidence_id": "verified-fact:gaming-subvertical-growth-divergence",
+          "evidence_spans": [
+            {
+              "end_offset": 532,
+              "evidence_id": "verified-fact:gaming-subvertical-growth-divergence",
+              "page": 19,
+              "section_id": "gaming-apps",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The chart title specifies gaming app install and session growth by subvertical, YoY 2024–2025, Global. Its legend labels green bars as Installs and purple bars as Sessions. The values adjacent to Casual’s bars are 19% and 37%; Strategy’s are -1% and 57%; Casino’s are 22% and -5%; and Slots’ are 46% and -5%, respectively. Thus the corrected claim assigns the values to the right metrics and subverticals, including the declines."
+            }
+          ],
+          "pages": [
+            19
+          ]
+        },
+        {
+          "claim": "The report recommends that app marketers use an integrated, adaptable, and accountable data foundation combining cross-channel attribution, AI insights, and next-generation solutions for campaign optimization and budget allocation based on aggregated data.",
+          "evidence": "The report’s recommendation links an integrated, adaptable, and accountable data foundation with cross-channel attribution, AI insights, and next-generation solutions for campaign optimization and budget allocation based on aggregated data.",
+          "evidence_id": "verified-fact:measurement-recommendation",
+          "evidence_spans": [
+            {
+              "end_offset": 415,
+              "evidence_id": "verified-fact:measurement-recommendation",
+              "page": 40,
+              "section_id": "conclusion",
+              "source_pack": "verified_facts",
+              "start_offset": 0,
+              "text": "The page’s recommendation for app marketers explicitly links cross-channel attribution with removing blind spots and exposing trends, AI insights with faster and more effective analysis, and next-generation solutions with campaign optimization and confident budget allocation based on aggregated data. Its separate description of the foundation as integrated, adaptable, and accountable supports characterizing these capabilities together as that kind of foundation."
+            }
+          ],
+          "pages": [
+            40
+          ]
+        }
+      ],
+      "executive_summary": "The report records more than 112.1 billion app downloads in 2025. In 2025, consumer spending in the mobile-app market rose 10.6% year over year to $167 billion. In 2025, global e-commerce app installs fell 10% year over year while sessions rose 5%; global finance app installs fell 4% while sessions rose 21%. Globally, gaming app growth from 2024 to 2025 varied by subvertical: Casual installs grew 19% and sessions 37%; Strategy sessions grew 57% while installs declined 1%; Casino installs grew 22% while sessions declined 5%; and Slots installs grew 46% while sessions declined 5%. The report recommends that app marketers use an integrated, adaptable, and accountable data foundation combining cross-channel attribution, AI insights, and next-generation solutions for campaign optimization and budget allocation based on aggregated data.",
+      "tldr": "The report records more than 112.1 billion app downloads in 2025, reported as having occurred rather than as a forecast."
+    },
+    "schema_version": "1.0"
+  }
+}

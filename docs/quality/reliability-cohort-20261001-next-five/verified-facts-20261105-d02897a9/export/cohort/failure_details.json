@@ -1,0 +1,71 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "public_items",
+      "claim_or_entity_id": "verified-fact:ma-buyer-pipeline-outlook",
+      "error_context": {
+        "affected_section": "public_items",
+        "evidence_id": "verified-fact:ma-buyer-pipeline-outlook"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 0,
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "public_editorial_quality.report_limitations_omitted"
+    },
+    {
+      "artifact_family": "summary.claim_evidence_map:2.claim",
+      "claim_or_entity_id": "claim_ledgers:claim:2",
+      "error_context": {
+        "affected_section": "summary.claim_evidence_map:2.claim",
+        "evidence_id": "verified-fact:switch-uncommunicated-reduction"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "public_editorial_quality.semantic_review"
+    },
+    {
+      "artifact_family": "summary.claim_evidence_map:3.claim",
+      "claim_or_entity_id": "claim_ledgers:claim:3",
+      "error_context": {
+        "affected_section": "summary.claim_evidence_map:3.claim",
+        "evidence_id": "verified-fact:global-ecommerce-finance-install-session-divergence"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "public_editorial_quality.semantic_review"
+    },
+    {
+      "artifact_family": "grounding",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "affected_section": "grounding"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "grounding"
+    }
+  ]
+}

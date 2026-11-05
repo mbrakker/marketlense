@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/cover_semantics",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "direction": "rising",
+    "domain_layer": "grid",
+    "evidence_density": "metric_rich",
+    "evidence_shape": "comparison",
+    "geography_scope": "unknown",
+    "selection_reason": "The evidence is dominated by quantified comparisons across survey waves and consumer-response categories, with several measures rising over time and no explicit overall geographic scope."
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/scope",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "scope": "The report covers technology and media trends for 2018, including digital growth and media use, smart speakers and digital assistants, VR/AR, web and premium video, sports, news, eCommerce, and podcasting. Geographic coverage varies across analyses, with U.S. and global data; periods include historical data and forecasts, including 2017–2021.",
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "scope",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

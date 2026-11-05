@@ -10395,3 +10395,103 @@ unstarted/not ready. The next bounded work is to diagnose the general
 final-insight coverage failure and the Adjust public-distinctness failure,
 then rerun only affected reports under the normal recovery policy; those fixes
 were deliberately not made in this acceptance run.
+
+## Frozen five-report E2E acceptance and full artifact retention — 2026-11-05 — producer d02897a9
+
+The exact frozen cohort in
+`docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json` was
+executed once at producer SHA
+`d02897a91e2f1773c611ade56c41f3af41ec2661` with isolated per-report state,
+`--verified-facts-architecture`, no shared batch, no cross-report analysis and
+publication disabled. The run identity is
+`frozen-reliability-t1n2mc7x`. The complete safely retainable package is
+[`verified-facts-20261105-d02897a9`](reliability-cohort-20261001-next-five/verified-facts-20261105-d02897a9/)
+and its machine-readable inventory is `artifact_manifest.json`.
+
+The command was:
+
+    python -u scripts/quality/run_frozen_reliability_cohort.py \
+      --sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json \
+      --runs-root C:\ml-frozen-five-live-d02897a9-retry-20261105 \
+      --sources-root C:\Programing\Market lense \
+      --max-duration 7200 \
+      --verified-facts-architecture
+
+### Aggregate result
+
+| Measure | Result |
+| --- | ---: |
+| Reports admitted | 5 / 5 |
+| Admission evaluations / admitted / quarantined | 10 / 10 / 0 |
+| Terminal outcomes | 1 awaiting review, 4 failed |
+| Final HTML artifacts | 1 |
+| Provider calls | 1,002 |
+| Input / output tokens | 7,846,389 / 1,275,698 |
+| Estimated cost | `$1.517342` |
+| Wall-clock | 11,224.594 s |
+| Automatic targeted repairs | 9 across 3 reports |
+| Workflow retries / operator interventions | 0 / 0 |
+| Publication attempts / writes | 0 / 0 |
+
+The terminal ledger is mutually exclusive and comes from the authoritative
+`cohort_result.json`: Reuters reached `awaiting_review` with validation and
+publication readiness passing; Capgemini, Activate, KPMG and Adjust failed
+closed during validation. No unsupported retained factual claim was marked
+verified, and no unresolved retained claim was promoted. The frozen-five
+verdict is **FAIL / NO-GO**; this is not a Step 3 start or a claim of improved
+live selection effectiveness.
+
+### Per-report outcome and source review
+
+| Report | Calls | Cost | Duration | Terminal outcome | Root failure / retained output |
+| --- | ---: | ---: | ---: | --- | --- |
+| Capgemini | 127 | `$0.348167` | 2,377.532 s | failed | `public_editorial_quality.semantic_review`; no HTML |
+| Activate | 486 | `$0.423778` | 3,918.371 s | failed | `grounding`, 36 unresolved retained claims; no HTML |
+| KPMG | 114 | `$0.217314` | 1,405.377 s | failed | `report_limitations_omitted`; no HTML |
+| Reuters Institute | 105 | `$0.202846` | 1,327.291 s | awaiting review | validation/readiness pass; HTML retained |
+| Adjust | 170 | `$0.325237` | 2,196.023 s | failed | public semantic review after 3 targeted repairs; no HTML |
+
+All five source PDFs were hash-checked against the frozen identities and their
+physical page counts are retained in `source_identity_manifest.json`. Only
+Reuters produced final public HTML, so the other four are explicitly marked
+unavailable rather than treated as factual passes. Reuters pages 12, 15, 17,
+24 and 33 were independently checked against the final wording: the checks
+covered the 33% search-referral change for more than 2,500 sites, the 69%
+licensing-income relationship, the base-264 content-priority chart, the
+base-263 creator comparison and the base-265 newsroom-AI comparison. The
+retained HTML is
+`reports/cohort-4b763ae2286ca69fe8ac/output/trends-and-predictions-2026-pdf.html`
+(57,464 bytes; SHA-256
+`eb629ae50af6ad814fa61561a1752c10cce618927e7e99b264d29cbbe4a9f49a`) and
+contains no internal evidence identifiers. The Adjust source SHA remains
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`; its
+public output was not accepted because the semantic/limitation failures
+remained after bounded repair.
+
+### Baseline comparison and limitations
+
+Compared with retained package `verified-facts-20261105-95379` (producer
+`95379a8decc5d4f1ca814170619e832c8bacf95f`), provider calls increased from 914
+to 1,002, input tokens from 4,168,035 to 7,846,389, output tokens from
+840,654 to 1,275,698, cost from `$0.937278` to `$1.517342`, and wall-clock
+from 9,202.773 s to 11,224.594 s. Final HTML increased from zero to one, but
+four reports still failed. This is an observational comparison: code,
+retained runtime state and provider/model variability differ, so the result
+does not isolate a causal improvement.
+
+The exporter was run for the aggregate and all five report states. The
+per-report Reuters exporter view has a missing terminal row because its local
+`reports.sqlite` attempt row has blank terminal fields; the authoritative
+`cohort_result.json` records the complete `awaiting_review` outcome and is the
+source for the aggregate ledger. Raw workflow databases, provider caches, raw
+usage ledgers, local runtime configuration and source PDF bytes were not
+committed. The manifest records their hashes and exclusion reasons; 2,471
+runtime files were scanned, 852 safe runtime files retained, 1,619 runtime
+files excluded, and 1,002 committed package entries retained including
+exporter and review projections.
+
+**Frozen-five E2E acceptance: FAIL / NO-GO.** Step 2 remains **PARTIAL / NO-GO**,
+E18 remains **Active/PARTIAL**, and Step 3 remains **unstarted/not ready**.
+The remaining blockers are the four report-specific terminal validation
+failures plus the exporter terminal-row retention gap; no production repair was
+made during this acceptance run.

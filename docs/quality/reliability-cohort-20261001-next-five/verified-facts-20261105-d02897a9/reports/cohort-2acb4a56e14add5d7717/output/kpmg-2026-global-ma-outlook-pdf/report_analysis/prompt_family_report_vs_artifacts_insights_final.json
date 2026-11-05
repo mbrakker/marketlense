@@ -1,0 +1,368 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_final",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.93,
+      "evidence": "The page identifies private-equity dealmakers as significantly more likely to expect increased M&A pipeline activity relative to 2025 and contrasts corporates’ more measured expectations. It separately describes private-equity optimism as strongest in the US and greater uncertainty outside the US, particularly for corporates.",
+      "evidence_id": "verified-fact:ma-buyer-pipeline-outlook",
+      "evidence_ids": [
+        "verified-fact:ma-buyer-pipeline-outlook",
+        "verified-fact:ma-geographic-buyer-outlook"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:ma-buyer-pipeline-outlook",
+          "page": 15,
+          "section_id": "diverging-risk-appetites",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The page’s narrative explicitly identifies the survey population as private-equity dealmakers and says they are significantly more likely to expect an increase in M&A pipeline activity relative to 2025. The following paragraph contrasts corporates’ more measured outlook and says fewer anticipate a material acceleration in deal volume. Both assertions are framed as expectations; the page does not claim these outcomes have been realized."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:ma-geographic-buyer-outlook",
+          "page": 16,
+          "section_id": "diverging-risk-appetites",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The “Geography amplifies the divergence” section directly gives the claimed relationship: private equity optimism is strongest in the US, where capital availability and transaction infrastructure are comparatively supportive despite broader global volatility; outside the US, dealmakers—particularly corporates—face greater uncertainty related to growth, regulation and geopolitical exposure. The page supports this as a qualitative comparison, not a quantified measure."
+        }
+      ],
+      "id": "ma-buyer-pipeline-outlook",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "",
+        "subject": "",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": ""
+      },
+      "metric_public_copy": "",
+      "metric_strength_score": 0.72,
+      "novelty_score": 0.82,
+      "now_what": "MarketLense recommends segmenting pipeline scenarios by buyer type and location, while distinguishing expectations from realized activity.",
+      "pages": [
+        15,
+        16
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.94,
+      "so_what": "Pipeline expectations differ by buyer type, while the report describes geographic differences qualitatively rather than as quantified measures.",
+      "text": "Survey results show private-equity dealmakers are significantly more likely to expect an increase in M&A pipeline activity relative to 2025; corporates have a more measured outlook, and fewer anticipate a material acceleration in deal volume. These are expectations, not realized activity. Separately, the report says private-equity optimism is strongest in the US, where capital availability and transaction infrastructure are comparatively supportive despite broader global volatility; outside the US, dealmakers—particularly corporates—face greater uncertainty related to growth, regulation and geopolitical exposure."
+    },
+    {
+      "coverage_role": "investment_signal",
+      "decision_relevance_score": 0.94,
+      "evidence": "The displayed size bands below US$1B sum to 81% for corporate and 94% for private equity; the US$250M to <US$500M band is 32% and 50%, respectively, and the page describes the anticipated rebound as led by mid-sized, execution-intensive deals rather than megadeals. These are estimates for the next transaction.",
+      "evidence_id": "verified-fact:ma-anticipated-deal-size",
+      "evidence_ids": [
+        "verified-fact:ma-anticipated-deal-size"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:ma-anticipated-deal-size",
+          "page": 16,
+          "section_id": "diverging-risk-appetites",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart titled “Estimated total deal value of next M&A transaction — corporate vs. private equity” explicitly labels the buyer-type columns and size bands. The three displayed bands below US$1B sum to 81% for corporate (20% + 32% + 29%) and 94% for private equity (11% + 50% + 33%). The US$250M to <US$500M band is 32% for corporate and 50% for private equity, the largest single band in each column. The accompanying text characterizes expectations as measured and says the anticipated rebound is led by mid-sized, execution-intensive deals rather than megadeals. The figures are estimates for the next transaction; the page does not specify a sample size, calendar period, or geography."
+        }
+      ],
+      "id": "ma-anticipated-deal-size",
+      "metric": {
+        "cohort": "Corporate estimates and private-equity estimates",
+        "confidence": "High for the displayed band values and narrative; below-US$1B totals are arithmetic sums of the displayed bands",
+        "denominator": "Percentage distribution of estimated next-transaction deal values within each buyer type; sample count not stated",
+        "geography": "Not specified",
+        "label": "Estimated next-transaction deal value below US$1B, summed from displayed bands",
+        "observation_status": "Estimates/expectations, not observed completed transactions",
+        "sample_size": "Not stated",
+        "segment": "Corporate and private equity",
+        "subject": "Expected total deal value of the next M&A transaction",
+        "timeframe": "Estimated value of the next M&A transaction; no calendar period specified",
+        "trend": "No time trend shown; the largest single size band is US$250M to <US$500M for both buyer types",
+        "unit": "percent",
+        "value": "Corporate estimates: 81%; private-equity estimates: 94%"
+      },
+      "metric_public_copy": "For the estimated total deal value of the next M&A transaction, displayed bands below US$1B sum to 81% for corporate estimates and 94% for private-equity estimates.",
+      "metric_strength_score": 0.98,
+      "novelty_score": 0.78,
+      "now_what": "MarketLense recommends using the estimates as buyer-specific scenarios rather than completed-deal benchmarks.",
+      "pages": [
+        16
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.96,
+      "so_what": "These buyer-specific distributions describe expectations for the next transaction, not completed-deal mix.",
+      "text": "For the estimated total deal value of the next M&A transaction, the displayed percentage bands below US$1B sum to 81% for corporate estimates and 94% for private-equity estimates. The largest individual band for both buyer types is US$250M to <US$500M, at 32% for corporate estimates and 50% for private-equity estimates. The page describes the anticipated rebound as led by mid-sized, execution-intensive deals rather than megadeals."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.89,
+      "evidence": "The chart shows carve-out acquisitions at 21% for Corporate and 55% for Private equity, with a displayed difference of +34 percentage points. It lists acquisition of a full business at 62% for Corporate and 69% for Private equity; the chart reports deal types under consideration.",
+      "evidence_id": "verified-fact:ma-carveout-deal-interest",
+      "evidence_ids": [
+        "verified-fact:ma-carveout-deal-interest",
+        "verified-fact:deal-types-full-business"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:ma-carveout-deal-interest",
+          "page": 17,
+          "section_id": "diverging-risk-appetites",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart title identifies the subject as deal types under consideration and its columns are headed Corporate and Private equity. On the exact “Carve-out acquisitions” row, the displayed values are 21% and 55%, respectively, and the adjacent displayed difference is +34 pts. This supports the stated comparison in favor of Private equity. No timeframe, geography, sample size, or denominator is specified on the page."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:deal-types-full-business",
+          "page": 17,
+          "section_id": "diverging-risk-appetites",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The chart title identifies types of deals under consideration, with separate Corporate and Private equity columns. The “Acquisition of a full business” row shows 62% under Corporate and 69% under Private equity, supporting the corrected claim’s category-to-value pairings. No timeframe, geography, sample size, or denominator is stated on the chart."
+        }
+      ],
+      "id": "ma-carveout-deal-interest",
+      "metric": {
+        "cohort": "Carve-out acquisitions",
+        "confidence": "Not stated on the page",
+        "denominator": "Not specified on the page",
+        "geography": "Not stated on the page",
+        "label": "Displayed percentage for carve-out acquisitions under consideration",
+        "observation_status": "Displayed as deal types under consideration; realized transaction outcomes are not reported",
+        "sample_size": "Not stated on the page",
+        "segment": "Corporate and Private equity",
+        "subject": "Types of deals under consideration",
+        "timeframe": "Not stated on the page",
+        "trend": "Private equity is higher than Corporate by 34 percentage points",
+        "unit": "percent",
+        "value": "Corporate: 21%; Private equity: 55%"
+      },
+      "metric_public_copy": "For carve-out acquisitions under consideration, the chart shows 21% for Corporate and 55% for Private equity.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.8,
+      "now_what": "MarketLense recommends tracking carve-out and full-business consideration separately from completed deal outcomes.",
+      "pages": [
+        17
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.91,
+      "so_what": "The chart distinguishes deal-type consideration from completed transaction mix.",
+      "text": "For carve-out acquisitions under consideration, the chart displays 21% for Corporate and 55% for Private equity, with a displayed difference of +34 percentage points in favor of Private equity. Acquisition of a full business is listed at 62% for Corporate and 69% for Private equity. Both categories are deals under consideration, not completed transactions."
+    },
+    {
+      "coverage_role": "investment_signal",
+      "decision_relevance_score": 0.84,
+      "evidence": "The page identifies five drivers shaping the 2026 M&A environment and describes organizations sharpening portfolio focus to concentrate capital, capabilities and management attention where they believe they can build durable advantage in a more complex global environment.",
+      "evidence_id": "verified-fact:five-drivers-strategic-focus",
+      "evidence_ids": [
+        "verified-fact:five-drivers-strategic-focus"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:five-drivers-strategic-focus",
+          "page": 9,
+          "section_id": "strategic-focus",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The page heading identifies five drivers shaping the 2026 M&A environment. The first driver is labeled “Strategic focus in a fragmented world,” and its text describes organizations sharpening portfolio focus to concentrate capital, capabilities, and management attention where they believe they can build durable advantage in a more complex global environment. These statements support the corrected claim."
+        }
+      ],
+      "id": "five-drivers-strategic-focus",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "",
+        "subject": "",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": ""
+      },
+      "metric_public_copy": "",
+      "metric_strength_score": 0.55,
+      "novelty_score": 0.7,
+      "now_what": "MarketLense recommends testing portfolio choices against where management believes durable advantage can be built.",
+      "pages": [
+        9
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.85,
+      "so_what": "The report frames portfolio focus as concentrating resources where organizations believe durable advantage can be built.",
+      "text": "The report identifies “Strategic focus in a fragmented world” as one of five drivers shaping the 2026 M&A environment. It describes organizations sharpening portfolio focus to concentrate capital, capabilities, and management attention where they believe they can build durable advantage in a more complex global environment."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.9,
+      "evidence": "The deal-execution discussion contrasts expanding analysis with accelerating existing analysis, and says previously uneconomical analysis becomes viable at a fraction of prior cost. The customer-concentration diligence example assigns execution to an agent and review and decisions to a human.",
+      "evidence_id": "verified-fact:ma-ai-expands-analysis-scope",
+      "evidence_ids": [
+        "verified-fact:ma-ai-expands-analysis-scope",
+        "verified-fact:ma-ai-agent-human-review"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:ma-ai-expands-analysis-scope",
+          "page": 26,
+          "section_id": "ai-driven-deal-execution",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The deal-execution discussion explicitly contrasts expansion with acceleration: it says the significant effect is not that existing analysis gets faster, but that entirely new categories become worth doing. It also says previously uneconomical analysis at traditional analyst-day rates becomes viable at a fraction of prior cost. The page presents these as qualitative claims and gives no numerical cost fraction."
+        },
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:ma-ai-agent-human-review",
+          "page": 26,
+          "section_id": "ai-driven-deal-execution",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The right-hand column gives the customer-concentration diligence example and lists the workflow steps: ingesting raw data, segmenting by customer, modeling under multiple scenarios, comparing against sector benchmarks, drafting the relevant diligence-report section, and flagging anomalies for the deal team. It expressly says the human reviews and decides while the agent executes."
+        }
+      ],
+      "id": "ma-ai-expands-analysis-scope",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "",
+        "subject": "",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": ""
+      },
+      "metric_public_copy": "",
+      "metric_strength_score": 0.58,
+      "novelty_score": 0.88,
+      "now_what": "MarketLense recommends evaluating additional diligence analyses and defining human review and decision points in the workflow.",
+      "pages": [
+        26
+      ],
+      "report_type_lens": "technology_shift",
+      "score": 0.88,
+      "so_what": "The report frames AI’s opportunity as broader analytical scope and its example retains human review and decisions.",
+      "text": "In its deal-execution discussion, the report argues that AI’s advantage is expanding analysis, not merely accelerating existing analysis: entirely new categories become worth doing, and analysis previously uneconomical at traditional analyst-day rates becomes viable at a fraction of the prior cost. In its customer-concentration diligence example, an agent ingests and segments customer data, models concentration risk under multiple scenarios, compares against sector benchmarks, drafts the relevant report section, and flags anomalies; the human reviews and decides while the agent executes."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.89,
+      "evidence": "The page describes AI making execution readiness and gaps visible before close, and says surfacing risks, dependencies, and value-creation levers during diligence and pre-close planning reduces tolerance for execution failures.",
+      "evidence_id": "verified-fact:ma-ai-preclose-readiness",
+      "evidence_ids": [
+        "verified-fact:ma-ai-preclose-readiness"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:ma-ai-preclose-readiness",
+          "page": 28,
+          "section_id": "execution-discipline",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "The left column directly describes AI making execution readiness—and execution gaps—visible before close, and states that surfacing risks, dependencies, and value-creation levers during diligence and pre-close planning rather than discovering them post-close reduces tolerance for execution failures. The page frames this as a qualitative finding about organizations, without a numerical measure."
+        }
+      ],
+      "id": "ma-ai-preclose-readiness",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "",
+        "subject": "",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": ""
+      },
+      "metric_public_copy": "",
+      "metric_strength_score": 0.52,
+      "novelty_score": 0.78,
+      "now_what": "MarketLense recommends surfacing risks, dependencies, and value-creation levers during diligence and pre-close planning.",
+      "pages": [
+        28
+      ],
+      "report_type_lens": "operations",
+      "score": 0.87,
+      "so_what": "The report frames pre-close visibility as relevant to execution discipline, but not as a quantified effect.",
+      "text": "A growing number of organizations are finding that AI makes execution readiness and gaps visible before close. The report says surfacing risks, dependencies, and value-creation levers during diligence and pre-close planning, rather than discovering them after close, reduces tolerance for execution failures."
+    },
+    {
+      "coverage_role": "counter_signal",
+      "decision_relevance_score": 0.88,
+      "evidence": "The page reports an early-2026 decline of nearly $1 trillion in market value for software and knowledge-services stocks over a matter of weeks. It says many affected companies reported stable or growing earnings and that the market multiple assigned to future cash flows changed.",
+      "evidence_id": "verified-fact:ma-software-valuation-repricing",
+      "evidence_ids": [
+        "verified-fact:ma-software-valuation-repricing"
+      ],
+      "evidence_spans": [
+        {
+          "end_offset": 0,
+          "evidence_id": "verified-fact:ma-software-valuation-repricing",
+          "page": 28,
+          "section_id": "execution-discipline",
+          "source_pack": "verified_facts",
+          "start_offset": 0,
+          "text": "Under “A structural repricing,” the page reports an early-2026 decline of nearly $1 trillion in market value for software and knowledge-services stocks over a matter of weeks. It explicitly distinguishes the cause from collapsing revenues, stating that many affected companies reported stable or growing earnings and that the changed factor was the market multiple assigned to future cash flows."
+        }
+      ],
+      "id": "ma-software-valuation-repricing",
+      "metric": {
+        "cohort": "Affected software and knowledge-services companies",
+        "confidence": "Not stated",
+        "denominator": "Aggregate market value; exact stock universe not stated",
+        "geography": "Not specified",
+        "label": "Market value decline",
+        "observation_status": "Reported as having occurred",
+        "sample_size": "Not stated",
+        "segment": "Software and knowledge-services stocks",
+        "subject": "Market value of software and knowledge-services stocks",
+        "timeframe": "Early 2026; over a matter of weeks",
+        "trend": "Decline",
+        "unit": "USD",
+        "value": "Nearly 1 trillion"
+      },
+      "metric_public_copy": "In early 2026, software and knowledge-services stocks lost nearly $1 trillion in market value over a matter of weeks.",
+      "metric_strength_score": 0.91,
+      "novelty_score": 0.9,
+      "now_what": "MarketLense recommends separating earnings assumptions from valuation-multiple sensitivity in relevant investment reviews.",
+      "pages": [
+        28
+      ],
+      "report_type_lens": "investment_outlook",
+      "score": 0.86,
+      "so_what": "The episode distinguishes reported earnings performance from the market multiple assigned to future cash flows.",
+      "text": "In early 2026, software and knowledge-services stocks lost nearly $1 trillion in market value over a matter of weeks. The report says the repricing was not driven by collapsing revenues: many affected companies reported stable or growing earnings, while the market’s multiple for future cash flows changed."
+    }
+  ]
+}

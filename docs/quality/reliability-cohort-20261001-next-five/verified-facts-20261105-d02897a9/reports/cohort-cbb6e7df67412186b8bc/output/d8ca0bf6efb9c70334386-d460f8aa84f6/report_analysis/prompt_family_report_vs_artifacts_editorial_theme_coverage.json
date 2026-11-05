@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_theme_coverage",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "explanation": "The insight states the forecast values, growth and CAGR, compares the CAGR with global GDP, and identifies Cost of Internet access as the segment with the largest increase and highest CAGR, including its definition.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "global-revenue-forecast"
+      ],
+      "theme": "Activate forecasts global Consumer Internet and Media Revenues, as defined in the page’s footnote, to rise from $1.7 trillion in 2017E to $2.0 trillion in 2021E, with $302 billion in growth and a 4.1% CAGR; within the three listed revenue segments, Cost of Internet access, including fixed broadband, wireless, and mobile Internet access, is forecast to have the largest dollar increase ($128B) and highest CAGR (5.7%). The page compares the overall revenue CAGR with approximately 3% for global GDP."
+    },
+    {
+      "explanation": "The insight gives the top-quartile and all-other-user shares for both video time and consumer spend, and explicitly notes that the distributions differ.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "video-attention-spend"
+      ],
+      "theme": "In the U.S. in 2017, the top 25% of users with 4.5+ hours of daily video attention accounted for 61% of total video time spent and 34% of total consumer spend; all other users accounted for 39% of video time and 66% of consumer spend. The shares show that video attention and consumer spend are distributed differently across these cohorts."
+    },
+    {
+      "explanation": "The insight states the Super Fan definition, study size and 27%/61% shares, then separately reports Broadcast and Virtual Pay TV substitution percentages for sports and non-sports viewers with their cohort definitions.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "sports-fan-segment-shares"
+      ],
+      "theme": "Sports findings give two distinct audience signals: in Activate’s 2017 study (n=2,406), Super Fans, defined as watching 10+ hours of sports content per week, were 27% of fans and 61% of hours; separately, in the U.S. in 2017, a higher share of sports viewers than Virtual Pay TV viewers cited Broadcast as a cord-cutter substitution option (31% vs. 21%), as did non-sports viewers (21% vs. 15%)."
+    },
+    {
+      "explanation": "The insight includes the forecast and timeframe, all three listed barriers, the console-modeling basis, and the caveat that scaled adoption is not numerically defined.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "consumer-vr-adoption-outlook"
+      ],
+      "theme": "Activate forecasts that VR will not reach scaled global adoption by 2021E; the cited barriers are limited applications outside gaming, an immersive but non-social experience, and inability to move beyond a confined area. The forecast is modeled after seventh-generation gaming consoles, and the page does not numerically define “scaled” adoption."
+    },
+    {
+      "explanation": "The insight states that News Media had higher perceived trustworthiness in all five countries; its metric public copy supplies each country’s stated News Media and Social Media percentages.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "news-trust-comparison"
+      ],
+      "theme": "In 2017, among news readers in five selected countries, the share reporting perceived trustworthiness was higher for News Media than for Social Media: Canada 51% vs. 24%, Ireland 47% vs. 28%, the United Kingdom 41% vs. 18%, Australia 40% vs. 27%, and the United States 38% vs. 20%."
+    },
+    {
+      "explanation": "The insight identifies grocery and automotive, the first-hand-experience examples, the matrix axes and the qualitative—not measured timing—nature of the delayed-adoption placement.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "ecommerce-firsthand-experience"
+      ],
+      "theme": "The U.S. eCommerce growth matrix places grocery and automotive in the delayed eCommerce adoption area alongside products involving first-hand experience, with food freshness and used-car condition as examples. It positions categories by 2016 category share of eCommerce sales and potential shift from physical to eCommerce, not by a measured time-to-adoption."
+    },
+    {
+      "explanation": "The insight gives both factor selections, percentages, distinct listener cohorts and sample sizes, and notes that geography is unspecified.",
+      "status": "covered",
+      "supporting_insight_ids": [
+        "podcast-audience-factors"
+      ],
+      "theme": "Podcast survey responses distinguish potential listening factors by audience: in Activate’s 2017 study, 34% of podcast non-listeners (n=700) selected “Knowing which apps to use” as a factor that would lead to listening, while 31% of podcast listeners (n=419) selected “Recommendations” as a factor that would lead to increased consumption. The page does not specify geography."
+    }
+  ]
+}
