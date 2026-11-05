@@ -10137,11 +10137,16 @@ an actual downstream quality failure, not a selection checkpoint omission.
 | Workflow retries / operator intervention | 0 / 0 |
 | Validation / publication readiness | fail / fail |
 
-The retained evidence is available in the [cohort result](C:/ml-e2e-selection-recovery-live-db1d317b-20261105/frozen-reliability-2vcyvzd3/cohort_result.json),
-[artifact checkpoint](C:/ml-e2e-selection-recovery-live-db1d317b-20261105/frozen-reliability-2vcyvzd3/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-b5pli5ly/output/mobile-app-trends-2026-pdf/report_analysis/artifacts.json),
-[validation result](C:/ml-e2e-selection-recovery-live-db1d317b-20261105/frozen-reliability-2vcyvzd3/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-b5pli5ly/output/mobile-app-trends-2026-pdf/report_analysis/validation.json),
-and [workflow database](C:/ml-e2e-selection-recovery-live-db1d317b-20261105/frozen-reliability-2vcyvzd3/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-b5pli5ly/state/workflow.sqlite).
-The source PDF used for the run is [mobile-app-trends-2026.pdf](C:/Programing/Market%20lense/out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf).
+The retained evidence is available at these local paths: the cohort result
+`C:\ml-e2e-selection-recovery-live-db1d317b-20261105\frozen-reliability-2vcyvzd3\cohort_result.json`,
+artifact checkpoint
+`C:\ml-e2e-selection-recovery-live-db1d317b-20261105\frozen-reliability-2vcyvzd3\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-b5pli5ly\output\mobile-app-trends-2026-pdf\report_analysis\artifacts.json`,
+validation result
+`C:\ml-e2e-selection-recovery-live-db1d317b-20261105\frozen-reliability-2vcyvzd3\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-b5pli5ly\output\mobile-app-trends-2026-pdf\report_analysis\validation.json`,
+and workflow database
+`C:\ml-e2e-selection-recovery-live-db1d317b-20261105\frozen-reliability-2vcyvzd3\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-b5pli5ly\state\workflow.sqlite`.
+The source PDF used for the run is
+`C:\Programing\Market lense\out\browser_downloads\www.adjust.com\b6b998e34a7c\mobile-app-trends-2026.pdf`.
 
 ### Verdict
 
