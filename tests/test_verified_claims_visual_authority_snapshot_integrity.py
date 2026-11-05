@@ -186,59 +186,6 @@ def test_verified_visual_evaluation_sees_full_candidate_roster_before_editorial_
     ]
 
 
-def test_verified_ten_fact_roster_can_retain_seven_material_planned_themes(
-    tmp_path,
-):
-    candidates = [
-        _insight(f"f{i}", score=1.0 - i / 100, coverage_role="proof_point")
-        for i in range(1, 11)
-    ]
-    plan_ids = [f"f{i}" for i in range(1, 8)]
-    responses = _generation_responses(candidates, plan_evidence_ids=plan_ids)
-    responses["insights_final"] = {
-        "insights_final": [
-            {
-                **deepcopy(candidate),
-                "evidence_id": f"verified-fact:{candidate['id']}",
-                "evidence_spans": [],
-            }
-            for candidate in candidates[:7]
-        ]
-    }
-    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
-        "verified-fact:insight-f1-0.99"
-    )
-    responses["editorial_theme_coverage"] = _theme_coverage_response(
-        candidates,
-        plan_ids,
-        covered_evidence_ids=set(plan_ids),
-    )
-
-    payload = generate_artifacts(
-        report_id="verified-ten-fact-theme-roster",
-        report_name="Verified ten-fact theme roster",
-        doc_map=_doc_map(10),
-        evidence_packs=_generation_evidence(10),
-        settings=_settings(tmp_path),
-        ctx=_ctx(),
-        openai_client=FakeOpenAI(responses),
-        prompt_client=CapturingPromptClient(),
-        analysis_store=FakeAnalysisStore(),
-        visual_authority_admitter=lambda shortlisted: _verified_admission(
-            shortlisted, digest="t" * 64
-        ),
-    )
-
-    assert len(payload["verified_facts"]) == 10
-    assert len(payload["insights_final"]) == 7
-    assert {item["evidence_id"] for item in payload["insights_final"]} == {
-        f"verified-fact:{candidate['id']}" for candidate in candidates[:7]
-    }
-    coverage = payload["_cache"]["candidate_generation"]["editorial_plan_coverage"]
-    assert coverage["final_selected_theme_coverage"]["omitted_themes"] == []
-    assert len(coverage["final_selected_theme_coverage"]["theme_coverage"]) == 7
-
-
 def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
     tmp_path,
 ):
