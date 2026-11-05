@@ -1,0 +1,82 @@
+{
+  "report_id": "cohort-2acb4a56e14add5d7717",
+  "title": "2026 Global",
+  "publisher": "",
+  "region": "Global",
+  "time_period": "2025 to 2026",
+  "overview": "2026 Global M&A Outlook The report reviews the recovery and changing character of global M&A, using survey findings to frame the 2026 outlook. It examines buyer differences and the effects of market fragmentation, portfolio simplification, AI-enabled deal execution, and execution discipline, followed by industry-specific perspectives and implications for dealmakers. Global mergers and acquisitions (M&A), covering the 2025 retrospective and outlook for 2026.",
+  "methods": [
+    "The findings are based on a global survey of corporate respondents."
+  ],
+  "key_findings": [
+    "On the chart titled “Expected change in M&A deal pipeline volume 2026 vs. 2025 — by region,” the combined “Much/slightly higher” expectation was 62% for the Americas, 43% for EMEA, and 58% for APAC.",
+    "The report says US-based organizations are moving forward with greater confidence and deal readiness, while many outside the US face macroeconomic, regulatory, and geopolitical constraints affecting how quickly and aggressively they can pursue growth strate...",
+    "For their approach to cross-border M&A in 2026, the chart reports 20% actively pursuing it as a major focus, 36% open to it selectively, 21% neutral or with no specific emphasis, 17% focused on domestic deals, 3% avoiding cross-border acquisitions entirely,...",
+    "The report describes cross-border M&A as still critical to growth strategies, but says dealmakers are approaching it with greater selectivity; changing tax frameworks and trade volatility increase the complexity of cross-border modeling.",
+    "As deal activity rebuilds in 2026, private equity firms are signaling greater confidence in deal volume and deal quality than corporate counterparts; private equity dealmakers are significantly more likely to expect an increase in M&A pipeline activity rela...",
+    "The chart “Planned number of M&A deals in 2026 — corporate vs. private equity” reports a mean of 5.2 for corporate respondents and 7.3 for private equity respondents."
+  ],
+  "limitations": [],
+  "sections": [
+    {
+      "section_label": "Foreword",
+      "source_pack": "doc_map",
+      "summary": "Opening remarks introduce the report’s outlook on global M&A.",
+      "key_points": [],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "About the research",
+      "source_pack": "doc_map",
+      "summary": "Describes the survey basis for the report and the composition of its respondents.",
+      "key_points": [
+        "The findings are based on a global survey of corporate respondents.",
+        "The report presents respondent composition by geography and corporate industry."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Executive summary",
+      "source_pack": "doc_map",
+      "summary": "Summarizes a recovering M&A market whose foundations have shifted, with consequences for deal execution and value creation.",
+      "key_points": [
+        "Global M&A momentum is rebuilding, but the market’s foundations have changed.",
+        "Deal activity regained momentum through 2025.",
+        "The report characterizes the global market as multi-speed."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "2025 retrospective and 2026 outlook",
+      "source_pack": "doc_map",
+      "summary": "Reviews the return of M&A momentum and the varying conditions facing dealmakers in the United States and elsewhere.",
+      "key_points": [
+        "Momentum has returned with greater selectivity.",
+        "US dealmakers are described as setting the pace in a multi-speed market.",
+        "Dealmakers outside the US face a more complex mix of conditions."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "5 drivers shaping the 2026 M&A environment",
+      "source_pack": "doc_map",
+      "summary": "Introduces the report’s five-driver framework for the 2026 M&A environment and leads into the following thematic sections.",
+      "key_points": [
+        "The framework includes strategic focus in a fragmented world.",
+        "The following themes address buyer risk appetites, portfolio simplification, AI-driven deal execution, and execution discipline."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Strategic focus in a fragmented world",
+      "source_pack": "doc_map",
+      "summary": "Explores strategic focus amid fragmentation and presents regional differences in M&A outlook.",
+      "key_points": [
+        "The section presents outlook categories ranging from much higher to slightly or much lower.",
+        "It compares regional views for APAC, EMEA, and the Americas."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

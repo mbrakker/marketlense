@@ -1,0 +1,89 @@
+{
+  "report_id": "cohort-b638414df0b1fccea1cd",
+  "title": "2026 edition REPORT",
+  "publisher": "",
+  "region": "Global",
+  "time_period": "2024 to 2025",
+  "overview": "Mobile app trends: 2026 edition A global benchmark of mobile app performance, covering the gaming, e-commerce/shopping, and finance verticals. It combines app performance data and methodology with analysis of AI, multi-platform measurement, user acquisition, retention, and growth strategy. A global benchmark of mobile app performance, covering gaming, e-commerce/shopping, and finance apps, including trends in installs, sessions, retention, and acquisition costs. It compares 2024–2025 performance and discusses trends and expectations for 2026, with regional comparisons where shown.",
+  "methods": [
+    "The report presents a global benchmark comparing app performance metrics, including installs, sessions, retention, and cost per install, across 2024 and 2025; one chart tracks installs and sessions from January 2024 to December 2025."
+  ],
+  "key_findings": [
+    "The report says there were more than 112.1 billion app downloads in 2025.",
+    "The report estimates 5.8 billion unique smartphone users globally in 2025.",
+    "Global consumer spending rose 10.6% year over year to $167 billion in 2025.",
+    "The report projects that the global app market will exceed $1.23 trillion by 2035.",
+    "The report says mobile technologies and services are set to generate 8.4% of global GDP by 2030.",
+    "Most organizations report low or moderate generative-AI maturity, while a small group with advanced deployment has reportedly achieved efficiency gains over 20%."
+  ],
+  "limitations": [],
+  "sections": [
+    {
+      "section_label": "Introduction: Evolution and opportunity in the mobile app industry",
+      "source_pack": "doc_map",
+      "summary": "The introduction frames mobile app growth in 2026 around expanding app use, increasingly complex marketing environments, and the need for actionable data. It presents cross-channel measurement and AI as important foundations for app growth.",
+      "key_points": [
+        "The report describes 2025 as a year of experimentation with AI, automation, and channel diversification, making reliable, actionable data increasingly important to campaign optimization and ROI.",
+        "The introduction cites more than 112.1 billion app downloads and an estimated 5.8 billion unique smartphone users globally in 2025, and says consumer spending rose 10.6% year over year to $167 bill...",
+        "The report says the global app market is projected to exceed $1.23 trillion by 2035 and that mobile technologies and services are set to generate 8.4% of global GDP by 2030."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "AI transforms from strategic tool to core infrastructure in 2026",
+      "source_pack": "doc_map",
+      "summary": "This section describes ways AI can be integrated into marketing and measurement workflows, including data analysis assistance, predictive audience segmentation, and generative AI applications. It contrasts broad experimentation with more advanced operationa...",
+      "key_points": [
+        "AI assistants can let marketers query multi-channel data in natural language and surface analyses, reports, and visualizations.",
+        "The section describes audience segmentation shifting from static lists toward dynamic, predictive groups informed by first-party data, behavior, intent, and likelihood to convert.",
+        "Generative AI is presented as being judged by outcomes such as testing creative variants, modeling user journeys, and tailoring in-app messaging; the section says a small group with advanced deploy..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Mobile-first approach evolves into multi-platform strategy",
+      "source_pack": "doc_map",
+      "summary": "This section argues that user journeys now cross mobile web, desktop, apps, and other channels, creating measurement blind spots and potential drop-off. It presents cross-platform measurement and deep linking as ways to connect those touchpoints and improve...",
+      "key_points": [
+        "The section says only around 31% of marketers report complete satisfaction with their ability to unify and read data across platforms.",
+        "Cross-platform measurement is described as connecting interactions such as a mobile web session to an in-app conversion, or an email click to an app download.",
+        "It recommends integrated measurement, high-quality deep linking, audience segmentation, retargeting, and web-to-app solutions to support coordinated journeys."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Key takeaways & methodology",
+      "source_pack": "doc_map",
+      "summary": "This section summarizes selected findings across the three app verticals and explains the report’s coverage and data basis. It identifies the regions, app sample, and date range used for the benchmarks.",
+      "key_points": [
+        "The takeaways highlight global e-commerce session growth, casual-game install and session growth, LATAM finance-app growth, and global finance session-length growth.",
+        "The report covers e-commerce/shopping, finance/fintech, and gaming across Global, APAC, Europe, LATAM, MENA, and North America.",
+        "The dataset combines Adjust’s top 5,000 apps with its total tracked-app dataset, drawing on country lists of 45 and approximately 250 countries; the stated date range is January 2024–January 2026."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Gaming apps",
+      "source_pack": "doc_map",
+      "summary": "The gaming chapter benchmarks acquisition, engagement, retention, and partner strategies, with “Finding and keeping users” beginning on page 17. Its findings show divergent performance across game subverticals, including cases where session growth outpaced...",
+      "key_points": [
+        "On “Gaming app install and session growth percentages by subvertical YoY 2024–2025 (Global)” (p. 19), casual games grew 19% in installs and 37% in sessions; hyper casual grew 4% in installs and 31%...",
+        "On the same chart (p. 19), strategy games had flat install growth and 57% session growth; casino installs grew 22% while sessions fell 5%, and slots installs grew 46% while sessions fell 5%.",
+        "“Gaming app retention rates 2024–2025 (Global)” (p. 21) reports all-game day 1, day 7, day 14, and day 30 retention of 27%, 13%, 8%, and 5%, respectively. The section also reports that global gamin..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "E-commerce/shopping",
+      "source_pack": "doc_map",
+      "summary": "The e-commerce/shopping chapter examines acquisition and post-install performance, with “Finding and keeping users” beginning on page 27. It reports an overall install decline alongside session growth and describes variation across regions and shopping subv...",
+      "key_points": [
+        "For global e-commerce apps in 2025, installs fell 10% year over year while sessions increased 5% (“E-commerce app install and session growth,” p. 27). LATAM had 17% install growth and 30% session g...",
+        "“E-commerce app session lengths 2024–2025” (p. 28) reports global average session length falling from 10.04 minutes in 2024 to 9.6 minutes in 2025. “E-commerce sessions per user per day on day 0 20...",
+        "“E-commerce app retention rates 2024–2025 (Global)” (p. 29) reports day 1 retention decreasing from 13.2% to 12.6%, day 7 from 6.3% to 6%, day 14 near 4.4%, and day 30 unchanged at 3%."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

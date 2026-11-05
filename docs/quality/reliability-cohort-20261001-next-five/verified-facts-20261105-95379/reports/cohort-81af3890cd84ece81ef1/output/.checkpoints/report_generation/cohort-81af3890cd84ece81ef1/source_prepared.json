@@ -1,0 +1,248 @@
+{
+  "artifact_refs": {
+    "analysis_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+    "contents_image": "final-web-ve-1d9e64dd7425/assets/preview-contents-b5ca9a0218d6.png",
+    "source_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf"
+  },
+  "completed_at_utc": "2026-11-05T13:51:06.247894+00:00",
+  "file_id": "cohort-81af3890cd84ece81ef1",
+  "payload": {
+    "artifact_integrity": {
+      "files": {
+        "analysis_pdf": {
+          "md5": "81af3890cd84ece81ef16e1aabda8027",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 5811818
+        },
+        "source_pdf": {
+          "md5": "81af3890cd84ece81ef16e1aabda8027",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 5811818
+        }
+      },
+      "schema_version": "1.0"
+    },
+    "artifact_lineage": {
+      "analysis_pdf": "art_21a6c3fca0cd31eb759332e6967db478864967d4a8e87433e1bbed3ba2f71962",
+      "contents_image": "art_4d8e21db09bcc5d4c25940827d82f7843bcb6ddff4f8aca63370050c5c1d6c49",
+      "source_pdf": "art_02344b0ff17c353b410fff8536d4272e20e37c51a51681630c80605aed18f71b"
+    },
+    "artifact_registry": {
+      "refs": [
+        {
+          "artifact_id": "source_pdf",
+          "content_hash": "81af3890cd84ece81ef16e1aabda8027",
+          "created_at_utc": "2026-11-05T13:51:06.160804+00:00",
+          "kind": "source_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+          "producer_step": "source_prepared",
+          "required": true,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "analysis_pdf",
+          "content_hash": "81af3890cd84ece81ef16e1aabda8027",
+          "created_at_utc": "2026-11-05T13:51:06.160804+00:00",
+          "kind": "analysis_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+          "producer_step": "source_prepared",
+          "required": true,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "contents_image",
+          "content_hash": "",
+          "created_at_utc": "2026-11-05T13:51:06.160804+00:00",
+          "kind": "contents_image",
+          "path": "final-web-ve-1d9e64dd7425/assets/preview-contents-b5ca9a0218d6.png",
+          "producer_step": "source_prepared",
+          "required": false,
+          "schema_version": "1.0"
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    "prompt_family_materializations": {},
+    "schema_version": "1.0",
+    "source": {
+      "analysis_pdf_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+      "contents_heading": "table of contents",
+      "contents_image": "final-web-ve-1d9e64dd7425/assets/preview-contents-b5ca9a0218d6.png",
+      "contents_page_number": 2,
+      "info_response": {
+        "metadata": {
+          "CreationDate": "D:20260105135550+05'30'",
+          "Creator": "Adobe InDesign 21.1 (Macintosh)",
+          "ModDate": "D:20260105135607+05'30'",
+          "Producer": "Adobe PDF Library 18.0",
+          "Trapped": "/False"
+        },
+        "page_count": 82,
+        "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+        "schema_version": "1.0"
+      },
+      "ocr_fallback_used": false,
+      "ocr_pdf_path": "",
+      "payload": {
+        "_contents_image": "final-web-ve-1d9e64dd7425/assets/preview-contents-b5ca9a0218d6.png",
+        "_evidence_packs": {},
+        "_figure_assets": [],
+        "_figure_gallery": [],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "",
+        "_text_char_count": 5562,
+        "_text_density": 1112.4,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "table of contents",
+        "contents_page_number": 2,
+        "figure": {
+          "evidence": "",
+          "schema_version": "1.0",
+          "title": ""
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "How AI is transforming value perception today\u2019s consumer 2026",
+        "tldr": "Not available from text"
+      },
+      "schema_version": "1.0",
+      "text_response": {
+        "char_count": 5562,
+        "pages": [
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 1,
+            "text": "What matters to\nHow AI is transforming \nvalue perception\ntoday\u2019s consumer 2026\nMake it real.Make it real."
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 2,
+            "text": "Table of contents\nExecutive summary\n04\nWho should read \nthis report and why?\n07\nValue redefined: \nwhere fairness and \nquality intersect\n08\nCareful spending \nmeets intentional \nindulgence\n20\nAI - The \nconsumer\u2019s \ntrusted guide\n30\n2\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 3,
+            "text": "Conclusion \n63\nResearch methodology\n64\nReliable tech builds \nloyalty \u2013 but with \nboundaries\n40\nWhat should CPR \norganizations do \ndifferently?\n46\n3\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 4,
+            "text": "Around two in five are choosing lower cost \nalternatives, opting for private label, or buying \nsmaller quantities to manage budgets. Yet these \nchoices stop short when reliability is at stake. \nMany have adopted a hybrid mindset: willing to \ntrade down in certain categories, while retaining \nspending in others (e.g., when prioritizing \nhealth-related aspects). Nearly four in five avoid \nprivate labels in performance critical categories. \nPromotional influence is also becoming more \nand 71 percent would switch if pack sizes or \nproduct quality were reduced without clear \ncommunication. Promotions still have pulling \npower. Sixty two percent say more attractive deals \ncan make them switch, while 61 percent believe \nbundles that combine products with services or \nwarranties create stronger value. Quality now \ncarries more weight than ever, and 64 percent \nof consumers view \u2018shrinkflation\u20191 as an unfair \npractice. Health benefits, \u2018clean\u2019 ingredients,2  \nconvenience, and durability guide decisions across \ncategories, and many shoppers are willing to pay \nmore for faster delivery when it meaningfully \nimproves their experience.\nCareful spending meets intentional \nindulgence\nConsumers are becoming more deliberate about \nhow they save and where they treat themselves. \nAI-enabled shopping, heightened expectations \nof fairness and transparency, and meaningful \nhuman interaction at key moments are reshaping \nconsumer decision-making in a new era of \nempowered consumer decision making. As AI \nbecomes more deeply woven into everyday \nchoices, shoppers are rewriting what they \nconsider acceptable, valuable, and worth paying \nfor. Expectations are sharper, tolerance is lower, \nand the definition of value has expanded beyond \nprice. This report explores how AI, trust, and \nemotion are reshaping what consumers perceive \nas worth their time, money, and attention\nFairness and quality define value\nTransparent prices, consistent policies, and \nclear communication sit alongside quality in \nshaping perceived value. Seventy four percent \nof consumers say they would switch brands if \nthey found a lower regular price elsewhere, \nExecutive summary \n71%\nof consumers would switch brands if pack sizes \nor product quality were reduced without clear \ncommunication.\n4\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 5,
+            "text": "structured. Three in four consumers say money \noff discounts are most motivating, followed by \npercent off and buy one get one offers. Impulse \nrestraint is also easing 54% say they are making \nfewer impulse purchases, down from 71% last \nyear, signaling a modest rebound of \u2018intentional \nindulgence\u2019 alongside persistent deal- seeking.\nTrust in channels matters. Two in three consumers \nbelieve ecommerce offers fair prices, with thrift \nand discount formats close behind. Emotional \nrelease also plays a role. Seven in ten say small \nindulgences help manage financial stress, \nshowing that value blends rational savings with \nemotional satisfaction.\nAI - The consumer\u2019s trusted guide\nAI-driven tools are becoming central to how \nshoppers navigate the marketplace. Chatbots \nare now widely used for service and personalized \nfollow up, and agentic AI is moving into routine \ntasks. Almost half of consumers (52%) use virtual \nassistants that automate re-ordering or meal \nplanning at least once a week, though only one \nin five is willing to pay a monthly subscription or \na one-time payment. Control remains essential. \nSeventy six percent want the ability to set clear \nrules for when an assistant acts. Concerns about \ntransparency continue, with 71 percent worried \nabout how generative AI uses their information. \nAwareness of synthetic influencers is widespread \nat 66 percent, yet trust remains low at 52 percent. \nTwo thirds of consumers expect brands to disclose \nAI generated advertising. Social commerce is \ngrowing quickly, and 35 percent have already \npurchased through platforms like Instagram \nor YouTube.\nTechnological convenience with a \nhuman touch drives loyalty\nConsumers want efficiency, relevance, and \nemotional connection to coexist. Sixty three \npercent want generative AI to provide hyper \npersonalized content, and 65 percent feel \ntechnology has reduced stress in their shopping \nroutines. Yet human support remains essential. \nMore than seven in ten consumers value in person \nassistance when dealing with complex purchases \nor resolving service issues. Preference for human \nassistance has risen sharply, with seventy four \npercent valuing support during in-store customer \nservice and sixty six percent during the purchase \nstage, up from 54 percent and 40 percent last year. \nTo win consumer loyalty brands must focus on fair \nvalue and dependable experiences such as clear \npricing, consistent product quality, and a balanced \nmix of digital convenience and human support.\n5\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026"
+          }
+        ],
+        "pages_extracted": 5,
+        "schema_version": "1.0",
+        "text": "What matters to\nHow AI is transforming \nvalue perception\ntoday\u2019s consumer 2026\nMake it real.Make it real.\n\nTable of contents\nExecutive summary\n04\nWho should read \nthis report and why?\n07\nValue redefined: \nwhere fairness and \nquality intersect\n08\nCareful spending \nmeets intentional \nindulgence\n20\nAI - The \nconsumer\u2019s \ntrusted guide\n30\n2\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026\n\nConclusion \n63\nResearch methodology\n64\nReliable tech builds \nloyalty \u2013 but with \nboundaries\n40\nWhat should CPR \norganizations do \ndifferently?\n46\n3\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026\n\nAround two in five are choosing lower cost \nalternatives, opting for private label, or buying \nsmaller quantities to manage budgets. Yet these \nchoices stop short when reliability is at stake. \nMany have adopted a hybrid mindset: willing to \ntrade down in certain categories, while retaining \nspending in others (e.g., when prioritizing \nhealth-related aspects). Nearly four in five avoid \nprivate labels in performance critical categories. \nPromotional influence is also becoming more \nand 71 percent would switch if pack sizes or \nproduct quality were reduced without clear \ncommunication. Promotions still have pulling \npower. Sixty two percent say more attractive deals \ncan make them switch, while 61 percent believe \nbundles that combine products with services or \nwarranties create stronger value. Quality now \ncarries more weight than ever, and 64 percent \nof consumers view \u2018shrinkflation\u20191 as an unfair \npractice. Health benefits, \u2018clean\u2019 ingredients,2  \nconvenience, and durability guide decisions across \ncategories, and many shoppers are willing to pay \nmore for faster delivery when it meaningfully \nimproves their experience.\nCareful spending meets intentional \nindulgence\nConsumers are becoming more deliberate about \nhow they save and where they treat themselves. \nAI-enabled shopping, heightened expectations \nof fairness and transparency, and meaningful \nhuman interaction at key moments are reshaping \nconsumer decision-making in a new era of \nempowered consumer decision making. As AI \nbecomes more deeply woven into everyday \nchoices, shoppers are rewriting what they \nconsider acceptable, valuable, and worth paying \nfor. Expectations are sharper, tolerance is lower, \nand the definition of value has expanded beyond \nprice. This report explores how AI, trust, and \nemotion are reshaping what consumers perceive \nas worth their time, money, and attention\nFairness and quality define value\nTransparent prices, consistent policies, and \nclear communication sit alongside quality in \nshaping perceived value. Seventy four percent \nof consumers say they would switch brands if \nthey found a lower regular price elsewhere, \nExecutive summary \n71%\nof consumers would switch brands if pack sizes \nor product quality were reduced without clear \ncommunication.\n4\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026\n\nstructured. Three in four consumers say money \noff discounts are most motivating, followed by \npercent off and buy one get one offers. Impulse \nrestraint is also easing 54% say they are making \nfewer impulse purchases, down from 71% last \nyear, signaling a modest rebound of \u2018intentional \nindulgence\u2019 alongside persistent deal- seeking.\nTrust in channels matters. Two in three consumers \nbelieve ecommerce offers fair prices, with thrift \nand discount formats close behind. Emotional \nrelease also plays a role. Seven in ten say small \nindulgences help manage financial stress, \nshowing that value blends rational savings with \nemotional satisfaction.\nAI - The consumer\u2019s trusted guide\nAI-driven tools are becoming central to how \nshoppers navigate the marketplace. Chatbots \nare now widely used for service and personalized \nfollow up, and agentic AI is moving into routine \ntasks. Almost half of consumers (52%) use virtual \nassistants that automate re-ordering or meal \nplanning at least once a week, though only one \nin five is willing to pay a monthly subscription or \na one-time payment. Control remains essential. \nSeventy six percent want the ability to set clear \nrules for when an assistant acts. Concerns about \ntransparency continue, with 71 percent worried \nabout how generative AI uses their information. \nAwareness of synthetic influencers is widespread \nat 66 percent, yet trust remains low at 52 percent. \nTwo thirds of consumers expect brands to disclose \nAI generated advertising. Social commerce is \ngrowing quickly, and 35 percent have already \npurchased through platforms like Instagram \nor YouTube.\nTechnological convenience with a \nhuman touch drives loyalty\nConsumers want efficiency, relevance, and \nemotional connection to coexist. Sixty three \npercent want generative AI to provide hyper \npersonalized content, and 65 percent feel \ntechnology has reduced stress in their shopping \nroutines. Yet human support remains essential. \nMore than seven in ten consumers value in person \nassistance when dealing with complex purchases \nor resolving service issues. Preference for human \nassistance has risen sharply, with seventy four \npercent valuing support during in-store customer \nservice and sixty six percent during the purchase \nstage, up from 54 percent and 40 percent last year. \nTo win consumer loyalty brands must focus on fair \nvalue and dependable experiences such as clear \npricing, consistent product quality, and a balanced \nmix of digital convenience and human support.\n5\nCapgemini Research Institute 2026\nWhat matters to today\u2019s consumer 2026",
+        "text_density": 1112.4
+      },
+      "text_status": {
+        "char_count": 5562,
+        "density_threshold": 250.0,
+        "low_confidence_pages": [],
+        "native_confidence_score": 1.0,
+        "native_confidence_threshold": 0.55,
+        "native_density_confidence_score": 1.0,
+        "native_page_confidence_threshold": 0.35,
+        "native_sample_confidence_score": 1.0,
+        "native_text_density": 1112.4,
+        "native_text_not_available": false,
+        "not_available": false,
+        "ocr_policy": "native_first_selective",
+        "ocr_recommendation_reason": "",
+        "ocr_recommended": false,
+        "pages_sampled": 5,
+        "reason": "",
+        "schema_version": "1.0",
+        "text_density": 1112.4
+      },
+      "text_validation_pages": [
+        21,
+        54,
+        55
+      ],
+      "text_validation_reason": "",
+      "text_validation_status": "pass",
+      "title_resolution": {
+        "candidate_source": "cover_title_page",
+        "candidates": [
+          {
+            "evidence": "page:1",
+            "page_number": 1,
+            "schema_version": "1.0",
+            "score": 1134.0,
+            "source": "cover_title_page",
+            "value": "How AI is transforming value perception today\u2019s consumer 2026"
+          },
+          {
+            "evidence": "filename",
+            "page_number": 0,
+            "schema_version": "1.0",
+            "score": 565.0,
+            "source": "filename",
+            "value": "Final Web Version Report Consumer Trends 2026"
+          }
+        ],
+        "confidence": "high",
+        "edition": "2026",
+        "evidence": [
+          "page:1"
+        ],
+        "explicit_source_title": "How AI is transforming value perception today\u2019s consumer 2026",
+        "issues": [],
+        "publisher_candidate": "Capgemini Research Institute",
+        "schema_version": "1.0",
+        "title": "How AI is transforming value perception today\u2019s consumer 2026"
+      }
+    }
+  },
+  "pipeline_name": "report_generation",
+  "report_slug": "final-web-version-report-consumer-trends-2026-pdf",
+  "schema_version": "1.0",
+  "source_run_id": "a1a441f3-fea2-4776-80b1-3d6ec1ab2a58",
+  "source_task_id": "workflow_job:da7770aa-8ddb-4725-a07d-babee5231106",
+  "stage_name": "source_prepared",
+  "stage_status": "completed"
+}

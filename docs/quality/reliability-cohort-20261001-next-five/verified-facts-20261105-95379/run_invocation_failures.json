@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "producer_git_sha": "95379a8decc5d4f1ca814170619e832c8bacf95f",
+  "events": [
+    {
+      "event": "initial_live_invocation_blocked",
+      "stage": "runner_preflight",
+      "reason_code": "clean_git_sha_required",
+      "detail": "The first invocation used the target worktree, which contained the protected pre-existing modification Wordpress/dist/marketlense.zip. The runner refused a measured run before provider submission.",
+      "provider_calls": 0,
+      "publication_attempts": 0,
+      "resolution": "A separate clean detached producer worktree at the fixed producer SHA was used. The protected ZIP was not changed, staged or removed."
+    },
+    {
+      "event": "initial_preflight_policy_blocked",
+      "stage": "runner_preflight",
+      "reason_code": "provider_environment_unavailable",
+      "detail": "The first provider preflight ran before the ignored local environment file was available in the clean producer worktree and therefore returned policy_blocked for all five members.",
+      "provider_calls": 0,
+      "publication_attempts": 0,
+      "resolution": "The ignored local environment configuration was copied into the clean producer worktree without exposing or committing secrets; the preflight then admitted all five sources."
+    }
+  ]
+}

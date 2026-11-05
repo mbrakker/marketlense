@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "methods": [
+    "Global survey of 12,000 consumers aged 18 and over across 12 countries; survey conducted in October 2025.",
+    "In-depth interviews with executives from the consumer products and retail industries."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "methods",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

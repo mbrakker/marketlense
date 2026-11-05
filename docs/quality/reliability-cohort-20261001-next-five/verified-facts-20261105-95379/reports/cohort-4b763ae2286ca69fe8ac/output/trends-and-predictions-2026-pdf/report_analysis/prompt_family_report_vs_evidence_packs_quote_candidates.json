@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/quote_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "quote_candidates": [
+      {
+        "id": "quote_001",
+        "text": "“I think it is an incredible time to be in News and journalism and the public are seeking out trustworthy news and information.” — Justin Stevens, Director of News, ABC, Australia",
+        "source": "Trends_and_Predictions_2026.pdf",
+        "page": 10
+      },
+      {
+        "id": "quote_002",
+        "text": "“The rise of creators has pushed us to think more deeply about voice, authenticity, and direct audience connection,” — Maria Lorente Estrada, bureau chief for AFP in Latin America",
+        "source": "Trends_and_Predictions_2026.pdf",
+        "page": 24
+      },
+      {
+        "id": "quote_003",
+        "text": "“The article as we know it is gone,” — Gard Steiro, Editor-in-Chief at Norway’s VG",
+        "source": "Trends_and_Predictions_2026.pdf",
+        "page": 42
+      },
+      {
+        "id": "quote_004",
+        "text": "Publishers expect traffic from search engines to decline by more than 40% over the next three years.",
+        "source": "Trends_and_Predictions_2026.pdf",
+        "page": 6
+      },
+      {
+        "id": "quote_005",
+        "text": "Over four in ten (44%) survey respondents say that their newsroom AI initiatives are showing ‘promising’ results, but a similar proportion (42%) describe them as ‘limited’.",
+        "source": "Trends_and_Predictions_2026.pdf",
+        "page": 7
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "quote_candidates",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

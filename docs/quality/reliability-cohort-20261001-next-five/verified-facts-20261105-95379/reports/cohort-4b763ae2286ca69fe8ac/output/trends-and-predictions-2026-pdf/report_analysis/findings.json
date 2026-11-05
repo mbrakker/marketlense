@@ -1,0 +1,213 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "social-platform-referrals",
+      "text": "News-site referrals fell by 43% from Facebook and 46% from X over the previous two and a half years, according to the report’s Chartbeat data.",
+      "evidence": "The report states that the average number of referrals to news websites from Facebook fell by 43% in the last two and a half years and from X by 46%.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "social-media-and-video",
+      "section_title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything"
+    },
+    {
+      "id": "publisher-platform-priorities-2026",
+      "text": "For 2026, publishers planned to put more effort into YouTube (+74 percentage points net), AI platforms (+61), and TikTok (+56), and less effort into X (−52), Facebook (−23), and old-style Google Search (−25).",
+      "evidence": "The report lists these net differences between publishers planning more and less effort in 2026: YouTube +74, AI platforms +61, TikTok +56, X −52, Facebook −23, and Google Search (old style) −25.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "social-media-and-video",
+      "section_title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything"
+    },
+    {
+      "id": "publisher-video-and-substack-experiments",
+      "text": "Publishers were experimenting with Substack as a distribution channel and expanding vertical video, including a curated vertical-video feed in the New York Times app’s watch tab.",
+      "evidence": "The report describes the Financial Times launching a free Alphaville newsletter on Substack and notes that the New York Times added a curated vertical video feed in a new watch tab on its app.",
+      "confidence": "high",
+      "pages": [
+        22
+      ],
+      "section_id": "social-media-and-video",
+      "section_title": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything"
+    },
+    {
+      "id": "creator-competition-and-talent",
+      "text": "Publishers were more concerned about creators taking audience time and attention (70% somewhat or very concerned) than about losing talent to creators (39%).",
+      "evidence": "The report gives 70% as somewhat or very concerned about creators taking time and attention away, compared with 39% concerned about losing talent.",
+      "confidence": "high",
+      "pages": [
+        24
+      ],
+      "section_id": "responding-to-creator-wave",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "publisher-responses-to-creators",
+      "text": "Planned responses to the creator wave included making journalists more like creators (76%), partnering with creators for distribution (50%), hiring creators (31%), and creating a joint venture such as a creator studio (28%).",
+      "evidence": "The report’s Q20 chart lists the four planned initiatives and their percentages: 76%, 50%, 31%, and 28%, respectively.",
+      "confidence": "high",
+      "pages": [
+        25
+      ],
+      "section_id": "responding-to-creator-wave",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "journalist-personality-risks",
+      "text": "The report notes that building journalists’ independent profiles may help them leave with their audiences, citing Dave Jorgenson’s departure from the Washington Post and the subsequent collapse in reach of its Universe YouTube channel.",
+      "evidence": "The report says journalists may gain confidence to leave with their followers and describes the Post’s Universe channel reach crumbling after Jorgenson set up his own enterprise.",
+      "confidence": "high",
+      "pages": [
+        25
+      ],
+      "section_id": "responding-to-creator-wave",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "search-traffic-expectations",
+      "text": "Publishers expected traffic from search engines to fall by an average of 43% over the next three years.",
+      "evidence": "The report says publishers expect search-engine traffic to almost halve, with the average expectation shown as −43%.",
+      "confidence": "high",
+      "pages": [
+        12
+      ],
+      "section_id": "answer-engines-and-traffic",
+      "section_title": "2. Answer Engines and the Implications for Traffic"
+    },
+    {
+      "id": "observed-google-organic-traffic-decline",
+      "text": "Between November 2024 and November 2025, organic Google search traffic to more than 2,500 sites declined by 33% globally and 38% in the United States; the report says lifestyle and utility publishers may have been more affected than hard-news publishers.",
+      "evidence": "The report cites Chartbeat data showing a 33% global and 38% US decline, and notes that lifestyle or utility publishers were more likely to have been affected.",
+      "confidence": "high",
+      "pages": [
+        12
+      ],
+      "section_id": "answer-engines-and-traffic",
+      "section_title": "2. Answer Engines and the Implications for Traffic"
+    },
+    {
+      "id": "ai-platform-licensing-income-expectations",
+      "text": "For potential licensing deals with AI companies in three years, 20% expected significant income, 49% minor income, 20% no income, and 11% were unsure.",
+      "evidence": "The report’s Q8 results list 20% significant, 49% minor, 20% no income, and 11% don’t know.",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "answer-engines-and-traffic",
+      "section_title": "2. Answer Engines and the Implications for Traffic"
+    },
+    {
+      "id": "newsroom-ai-use-priorities",
+      "text": "For 2026, 64% of respondents rated back-end automation very important; 44% rated coding and product development very important; and 29% each did so for newsgathering and content creation with human oversight.",
+      "evidence": "The Q10 chart reports back-end automation at 64%, coding and product development at 44%, and newsgathering and content creation at 29% each as very important uses.",
+      "confidence": "high",
+      "pages": [
+        32
+      ],
+      "section_id": "latest-tales-ai-newsroom",
+      "section_title": "7. Latest Tales of AI in the Newsroom"
+    },
+    {
+      "id": "reported-results-of-newsroom-ai",
+      "text": "Respondents described current newsroom AI initiatives as promising (44%), limited (42%), or transformational (13%).",
+      "evidence": "The report gives these percentages in its Q11 chart on adjectives describing the impact of current newsroom AI initiatives.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "latest-tales-ai-newsroom",
+      "section_title": "7. Latest Tales of AI in the Newsroom"
+    },
+    {
+      "id": "reported-ai-job-effects",
+      "text": "On AI-related job effects, 67% of respondents reported no jobs cut, 16% reported a small number cut, and 9% reported jobs added.",
+      "evidence": "The Q12 chart lists 67% no jobs cut, 16% a small number cut, and 9% jobs added.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "latest-tales-ai-newsroom",
+      "section_title": "7. Latest Tales of AI in the Newsroom"
+    },
+    {
+      "id": "creator-concerns-q19",
+      "text": "Among Q19 respondents, 70% were somewhat or very concerned that creators take time and attention away from publisher content, compared with 39% concerned about losing talent to creators.",
+      "evidence": "Proportion concerned about the different impact of creators on publishing\nQ19. News brands are increasingly seeing personalities/individuals setting up on their own as substackers, podcasters, or YouTubers. How concerned are you about each of the following? Base = 263.\nTaking time and attention away\n24% 46% 21% 8%\nLosing talent\n10% 29% 33% 27%\n39% somewhat or very concerned\n70% somewhat or very concerned",
+      "confidence": "high",
+      "pages": [
+        24
+      ],
+      "section_id": "responding-to-creator-wave",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "creator-initiatives-q20",
+      "text": "For Q20, the top planned publisher initiatives were getting journalists to be more like creators (76%), partnering with creators for distribution (50%), hiring creators to reach young audiences (31%), and creating a joint venture such as a creator studio (28%).",
+      "evidence": "Top planned publisher initiatives in response to the creator wave\n\nGetting our journalists to be a bit more like creators\n                                      76%\n\nPartnering with creators for distribution\n                        50%\n\nHiring creators to reach young audiences\n             31%\n\nCreating a joint venture such a creator studio\n            28%\n\nQ20. News brands are increasingly seeing personalities/individuals setting up on their own as substackers, podcasters, or YouTubers. What initiatives, if any, are you thinking about in response? Please select all that apply. Base = 263.",
+      "confidence": "high",
+      "pages": [
+        25
+      ],
+      "section_id": "responding-to-creator-wave",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "creator-profile-departure-risk",
+      "text": "The report says helping journalists build independent profiles may give them confidence to leave with their followers; it describes Dave Jorgenson’s departure from the Washington Post and says reach of the Post’s “Universe” YouTube channel crumbled almost overnight.",
+      "evidence": "Another significant risk is that, by helping journalists to build their independent profile, they may be giving them confidence to leave – taking their followers with them. The Washington Post’s TikTok guy, Dave Jorgenson, worked at the company for eight years picking up many prizes in the process before setting up on his own. Almost overnight the reach of the Post’s ‘Universe’ YouTube channel, which hosted his videos, crumbled, overtaken by Jorgenson’s new enterprise LNI (Local News International), according to data from Rival IQ.",
+      "confidence": "high",
+      "pages": [
+        25
+      ],
+      "section_id": "responding-to-creator-wave",
+      "section_title": "5. Responding to the Creator Wave"
+    },
+    {
+      "id": "search-traffic-three-year-expectation",
+      "text": "Publishers expected traffic from search engines to fall by 43% over the next three years.",
+      "evidence": "Publishers expect a loss of \ntraffic from search of … \n-43%\n\nPublishers expect traffic from search engines to almost halve (-43%) over the next three years",
+      "confidence": "high",
+      "pages": [
+        12
+      ],
+      "section_id": "answer-engines-and-traffic",
+      "section_title": "2. Answer Engines and the Implications for Traffic"
+    },
+    {
+      "id": "chartbeat-organic-search-decline",
+      "text": "Chartbeat data for organic Google search traffic to more than 2,500 sites showed a 33% decline globally and a 38% decline in the United States between November 2024 and November 2025.",
+      "evidence": "Aggregate data, sourced from the analytics company Chartbeat for this report, show that Google traffic from organic search to over 2,500 sites was down by a third (33%) globally between Nov 2024 and Nov 2025 and by 38% in the United States",
+      "confidence": "high",
+      "pages": [
+        12
+      ],
+      "section_id": "answer-engines-and-traffic",
+      "section_title": "2. Answer Engines and the Implications for Traffic"
+    },
+    {
+      "id": "ai-licensing-income-expectations",
+      "text": "For possible licensing deals with AI companies around news-content IP, respondents’ expectations for their company in three years were: main source of income, 0%; significant source, 20%; minor source, 49%; no income, 20%; and don’t know, 11%.",
+      "evidence": "Publisher expectations around revenue they can expect from AI platforms\n\nMain source of income        0%\n\nSignificant source of income               20%\n\nMinor source of income                                      49%\n\nWe won't be getting any income             20%\n\nDon't know                   11%\n\nQ8. When it comes to possible licensing deals with AI companies around news content IP (intellectual property), how significant do you think the money will be to your company in, say, three years’ time? Choose one. Base = 272.",
+      "confidence": "high",
+      "pages": [
+        15
+      ],
+      "section_id": "answer-engines-and-traffic",
+      "section_title": "2. Answer Engines and the Implications for Traffic"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

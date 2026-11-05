@@ -1,0 +1,46 @@
+{
+  "configuration_hash": "c63de844ea0e966fb91afeaf6ed6af2870329ab3a56a7b630fd639d293d6a3e9",
+  "decision_set_hash": "4c63b00df7653f2ff330b449c7516c9a2bf68c2f13acfcc33ac15ca2da8c947f",
+  "decisions": [
+    {
+      "budget_decision": "allow",
+      "configuration_hash": "c63de844ea0e966fb91afeaf6ed6af2870329ab3a56a7b630fd639d293d6a3e9",
+      "decision_hash": "174b67a5e96fdae4b0e90b95fdebf6421ea421f0ea04bcc77e45ae545d766063",
+      "duplicate_identity_match": "",
+      "estimated_cost_usd": 0.008366,
+      "estimated_provider_calls": 1,
+      "estimated_provider_tokens": 18123,
+      "evidence_potential": "sufficient",
+      "file_id": "cohort-4b763ae2286ca69fe8ac",
+      "media_type": "application/pdf",
+      "model_policy_covered": true,
+      "near_duplicate_title_match": "",
+      "outcome": "admitted",
+      "page_count": 47,
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "preflight_version": "2.0",
+      "publisher_id": "Reuters Institute",
+      "report_title": "Trends_and_Predictions_2026",
+      "required_artifact_families": [
+        "doc_map"
+      ],
+      "runtime_dependencies_ready": true,
+      "runtime_dependency_status": "validated_pre_freeze",
+      "runtime_preflight_hash": "2f5adc07ceb76992d6a7c4cf6d7d2003e389079174b6f3cefb47f114025c04da",
+      "sample_char_count": 6957,
+      "sample_text_density": 2319.0,
+      "schema_version": "1.0",
+      "size_bytes": 4272132,
+      "source_artifact_exists": true,
+      "source_artifact_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\reutersinstitute.politics.ox.ac.uk\\b0e410340498\\Trends_and_Predictions_2026.pdf",
+      "source_identity_id": "source:79cb8c886c55b49bfdec2128d5b25e0b",
+      "source_url": "https://reutersinstitute.politics.ox.ac.uk/journalism-media-and-technology-trends-and-predictions",
+      "source_url_classification": "drive_artifact_nonpublic",
+      "structure_readable": true,
+      "title_key": "trendsandpredictions2026"
+    }
+  ],
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "run_id": "b579c563-e7e9-49be-a558-7669e9df6199",
+  "schema_version": "1.0"
+}

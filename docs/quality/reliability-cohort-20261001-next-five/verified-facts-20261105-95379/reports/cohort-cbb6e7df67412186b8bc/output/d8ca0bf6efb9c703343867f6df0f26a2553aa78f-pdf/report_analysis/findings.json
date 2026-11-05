@@ -1,0 +1,323 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "s01-access-growth",
+      "text": "Activate forecasts that global Internet access revenue will contribute $128B of consumer Internet and media revenue growth at a 5.7% CAGR over 2017E–2021E.",
+      "evidence": "CONSUMER INTERNET AND MEDIA REVENUE GROWTH BY SEGMENT1, GLOBAL, 2017E-2021E, USD\n$128B\nCAGR 5.7%",
+      "confidence": "high",
+      "pages": [
+        6
+      ],
+      "section_id": "section-01",
+      "section_title": "$300 Billion in Tech and Media Growth Dollars"
+    },
+    {
+      "id": "s01-paid-content-growth",
+      "text": "Activate forecasts that global paid-content revenue will contribute $108B of consumer Internet and media revenue growth at a 4.7% CAGR over 2017E–2021E.",
+      "evidence": "CONSUMER INTERNET AND MEDIA REVENUE GROWTH BY SEGMENT1, GLOBAL, 2017E-2021E, USD\n$108B\nCAGR 4.7%",
+      "confidence": "high",
+      "pages": [
+        6
+      ],
+      "section_id": "section-01",
+      "section_title": "$300 Billion in Tech and Media Growth Dollars"
+    },
+    {
+      "id": "s01-ad-growth",
+      "text": "Activate forecasts that global advertising revenue will contribute $66B of consumer Internet and media revenue growth at a 2.3% CAGR over 2017E–2021E.",
+      "evidence": "CONSUMER INTERNET AND MEDIA REVENUE GROWTH BY SEGMENT1, GLOBAL, 2017E-2021E, USD\n$66B\nCAGR 2.3%",
+      "confidence": "high",
+      "pages": [
+        6
+      ],
+      "section_id": "section-01",
+      "section_title": "$300 Billion in Tech and Media Growth Dollars"
+    },
+    {
+      "id": "s02-daily-time",
+      "text": "For U.S. adults age 18+, average daily time spent with technology and media is forecast to increase from 12:28 in 2017E to 12:46 in 2021E.",
+      "evidence": "DAILY HOURS SPENT PER ADULT (AGE 18+), U.S., 2017E-2021E, HOURS:MINUTES\n2017E 2021E\n12:28 12:46",
+      "confidence": "high",
+      "pages": [
+        11
+      ],
+      "section_id": "section-02",
+      "section_title": "There are 31 Hours in a Day"
+    },
+    {
+      "id": "s04-assistant-game-changers",
+      "text": "The report identifies platform portability as a potential game changer: Google Assistant and Alexa are accessible to third-party developers and OEMs, who have integrated and distributed the assistants across a wide range of devices.",
+      "evidence": "PLATFORM PORTABILITY\nGoogle Assistant and Alexa are openly accessible to third-party developers and OEMs, who in turn have integrated and distributed these digital assistants across a wide range of devices",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "section-04",
+      "section_title": "Smart Speaker Battles are about the Great Digital Assistant Wars"
+    },
+    {
+      "id": "s05-reality-spend",
+      "text": "Activate forecasts global consumer and enterprise spending on VR/AR will reach $71B in 2021E.",
+      "evidence": "CONSUMER AND ENTERPRISE SPEND ON VR/AR1, GLOBAL, 2016-2021E, BILLIONS\n$71B\n2021E",
+      "confidence": "high",
+      "pages": [
+        38
+      ],
+      "section_id": "section-05",
+      "section_title": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+    },
+    {
+      "id": "s05-ar-oilgas",
+      "text": "Activate estimates the global addressable AR market for oil and gas at $5–7B in 2021E.",
+      "evidence": "ADDRESSABLE AR MARKET BY SECTOR1, GLOBAL, 2021E, BILLIONS USD\nOIL & GAS\n$5-7B",
+      "confidence": "high",
+      "pages": [
+        47
+      ],
+      "section_id": "section-05",
+      "section_title": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+    },
+    {
+      "id": "s05-ar-healthcare",
+      "text": "Activate estimates the global addressable AR market for healthcare at $7–9B in 2021E.",
+      "evidence": "ADDRESSABLE AR MARKET BY SECTOR1, GLOBAL, 2021E, BILLIONS USD\nHEALTHCARE\n$7-9B",
+      "confidence": "high",
+      "pages": [
+        47
+      ],
+      "section_id": "section-05",
+      "section_title": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+    },
+    {
+      "id": "s05-ar-higher-ed",
+      "text": "Activate estimates the global addressable AR market for higher education at $1–2B in 2021E.",
+      "evidence": "ADDRESSABLE AR MARKET BY SECTOR1, GLOBAL, 2021E, BILLIONS USD\nHIGHER EDUCATION\n$1-2B",
+      "confidence": "high",
+      "pages": [
+        47
+      ],
+      "section_id": "section-05",
+      "section_title": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+    },
+    {
+      "id": "s06-youtube-creator-views",
+      "text": "The report states that in Q1 2016, the top 1% of YouTube creators accounted for 94% of views globally, while the bottom 99% accounted for 6%.",
+      "evidence": "SHARE OF YOUTUBE CREATORS1 VS. SHARE OF VIEWS, GLOBAL, Q1 2016, % CREATORS, VIEWS\n94%\n6%\nTop 1%\nBottom 99%",
+      "confidence": "high",
+      "pages": [
+        52
+      ],
+      "section_id": "section-06",
+      "section_title": "Big Influencers and Media Brands will Rule Web Video"
+    },
+    {
+      "id": "s06-youtube-influencer-views",
+      "text": "Among top creators’ YouTube views globally in Q2 2017, influencers accounted for 83% and media companies accounted for 17%.",
+      "evidence": "SHARE OF VIEWS FROM TOP CREATORS1 BY PLATFORM, GLOBAL, Q2 2017, % TOTAL\n17%\n83%\nMEDIA COMPANIES2\nINFLUENCERS3",
+      "confidence": "high",
+      "pages": [
+        54
+      ],
+      "section_id": "section-06",
+      "section_title": "Big Influencers and Media Brands will Rule Web Video"
+    },
+    {
+      "id": "s06-facebook-influencer-views",
+      "text": "Among top creators’ Facebook views globally in Q2 2017, influencers accounted for 52% and media companies accounted for 48%.",
+      "evidence": "SHARE OF VIEWS FROM TOP CREATORS1 BY PLATFORM, GLOBAL, Q2 2017, % TOTAL\n48%\n52%\nMEDIA COMPANIES INFLUENCERS",
+      "confidence": "high",
+      "pages": [
+        54
+      ],
+      "section_id": "section-06",
+      "section_title": "Big Influencers and Media Brands will Rule Web Video"
+    },
+    {
+      "id": "s06-platform-territories",
+      "text": "The report says web-video platforms were attempting to move into one another’s territories to attract creators and capture user attention.",
+      "evidence": "To attract these creators and capture user attention, web video platforms are attempting to move into each others’ turfs",
+      "confidence": "high",
+      "pages": [
+        60
+      ],
+      "section_id": "section-06",
+      "section_title": "Big Influencers and Media Brands will Rule Web Video"
+    },
+    {
+      "id": "s07-virtual-paytv-churn",
+      "text": "Virtual Pay TV’s average annual churn rate in the U.S. was 50% in 2017.",
+      "evidence": "AVERAGE ANNUAL CHURN RATES BY SERVICE1, U.S., 2017, %\nVirtual Pay TV\n50%",
+      "confidence": "high",
+      "pages": [
+        69
+      ],
+      "section_id": "section-07",
+      "section_title": "Premium Video: The Chase for Television Viewers and Television Dollars"
+    },
+    {
+      "id": "s07-paytv-churn",
+      "text": "Pay TV’s average annual churn rate in the U.S. was less than 1% in 2017.",
+      "evidence": "AVERAGE ANNUAL CHURN RATES BY SERVICE1, U.S., 2017, %\nPay TV\n<1%",
+      "confidence": "high",
+      "pages": [
+        69
+      ],
+      "section_id": "section-07",
+      "section_title": "Premium Video: The Chase for Television Viewers and Television Dollars"
+    },
+    {
+      "id": "s07-programming-costs",
+      "text": "Activate forecasts monthly programming costs per subscriber for a U.S. standard bundle to rise from $43.9 in 2017E to $56.8 in 2021E.",
+      "evidence": "MONTHLY PROGRAMMING COSTS PER SUBSCRIBER FOR STANDARD BUNDLE2, U.S., 2017E-2021E, USD\n2017E 2021E\n$43.9 $56.8",
+      "confidence": "high",
+      "pages": [
+        69
+      ],
+      "section_id": "section-07",
+      "section_title": "Premium Video: The Chase for Television Viewers and Television Dollars"
+    },
+    {
+      "id": "s07-vpaytv-households-high",
+      "text": "The high-case forecast for U.S. Virtual Pay TV households is 12.7 million in 2021E.",
+      "evidence": "PROJECTED VIRTUAL PAY TV HOUSEHOLDS, U.S., JUNE 2017E-2021E, MILLION HOUSEHOLDS\n12.7\nHigh Case\n2021E",
+      "confidence": "high",
+      "pages": [
+        72
+      ],
+      "section_id": "section-07",
+      "section_title": "Premium Video: The Chase for Television Viewers and Television Dollars"
+    },
+    {
+      "id": "s07-vpaytv-households-intermediate",
+      "text": "The intermediate-case forecast for U.S. Virtual Pay TV households is 9.6 million in 2021E.",
+      "evidence": "PROJECTED VIRTUAL PAY TV HOUSEHOLDS, U.S., JUNE 2017E-2021E, MILLION HOUSEHOLDS\n9.6\nIntermediate Case\n2021E",
+      "confidence": "high",
+      "pages": [
+        72
+      ],
+      "section_id": "section-07",
+      "section_title": "Premium Video: The Chase for Television Viewers and Television Dollars"
+    },
+    {
+      "id": "s07-vpaytv-households-low",
+      "text": "The low-case forecast for U.S. Virtual Pay TV households is 7.6 million in 2021E.",
+      "evidence": "PROJECTED VIRTUAL PAY TV HOUSEHOLDS, U.S., JUNE 2017E-2021E, MILLION HOUSEHOLDS\n7.6\nLow Case\n2021E",
+      "confidence": "high",
+      "pages": [
+        72
+      ],
+      "section_id": "section-07",
+      "section_title": "Premium Video: The Chase for Television Viewers and Television Dollars"
+    },
+    {
+      "id": "s08-young-traditional-sports-viewers",
+      "text": "In the U.S. in 2017, 30% of traditional sports viewers were ages 18–34.",
+      "evidence": "SPORTS VIEWERS AGE 18-34 BY SPORT, U.S., 2017, % VIEWERS\n30% of traditional sports1 viewers are 18-34\n1. Traditional sports are comprised of football, baseball, basketball, hockey, etc.",
+      "confidence": "high",
+      "pages": [
+        90
+      ],
+      "section_id": "section-08",
+      "section_title": "Sports is the Ultimate Moat"
+    },
+    {
+      "id": "s09-news-discovery-social",
+      "text": "In the U.S. in 2017, 40% of adults identified social media as a source of news discovery.",
+      "evidence": "SOURCES OF NEWS DISCOVERY, U.S., 2017, % ADULTS\nSocial Media 40%",
+      "confidence": "high",
+      "pages": [
+        98
+      ],
+      "section_id": "section-09",
+      "section_title": "News Brands will Beat Fake News (Spread by Fake Friends)"
+    },
+    {
+      "id": "s09-news-discovery-direct",
+      "text": "In the U.S. in 2017, 38% of adults identified direct visits as a source of news discovery.",
+      "evidence": "SOURCES OF NEWS DISCOVERY, U.S., 2017, % ADULTS\nDirect Visits 38%",
+      "confidence": "high",
+      "pages": [
+        98
+      ],
+      "section_id": "section-09",
+      "section_title": "News Brands will Beat Fake News (Spread by Fake Friends)"
+    },
+    {
+      "id": "s09-active-news-direct",
+      "text": "Among U.S. active news readers searching for news in 2017, 49% identified direct visits as a source of news discovery.",
+      "evidence": "NEWS CONSUMERS ACTIVELY SEARCHING FOR NEWS, U.S., 2017, % ACTIVE NEWS READERS\nDirect Visits 49%",
+      "confidence": "high",
+      "pages": [
+        98
+      ],
+      "section_id": "section-09",
+      "section_title": "News Brands will Beat Fake News (Spread by Fake Friends)"
+    },
+    {
+      "id": "s09-active-news-social",
+      "text": "Among U.S. active news readers searching for news in 2017, 33% identified social media as a source of news discovery.",
+      "evidence": "NEWS CONSUMERS ACTIVELY SEARCHING FOR NEWS, U.S., 2017, % ACTIVE NEWS READERS\nSocial Media 33%",
+      "confidence": "high",
+      "pages": [
+        98
+      ],
+      "section_id": "section-09",
+      "section_title": "News Brands will Beat Fake News (Spread by Fake Friends)"
+    },
+    {
+      "id": "section-07-video-revenues-2018e",
+      "text": "U.S. video revenues in 2018E included $98.1B in Pay TV subscriptions and $72.3B in TV advertising for traditional television, and $15.4B in ad-supported video, $9.1B in subscription video, and $5.0B in paid downloads for digital video.",
+      "evidence": "VIDEO REVENUES, U.S., 2018E, BILLIONS USD\nPay TV Subscriptions \n$98.1B\nTV Advertising \n$72.3B\nAd-Supported \n$15.4B\nSubscription \n$9.1B\nPaid Downloads \n$5.0B\nTRADITIONAL \nTELEVISION\nDIGITAL \nVIDEO",
+      "confidence": "high",
+      "pages": [
+        64
+      ],
+      "section_id": "section-07",
+      "section_title": "Premium Video: The Chase for Television Viewers and Television Dollars"
+    },
+    {
+      "id": "section-05-reality-computing-today-tomorrow",
+      "text": "The report describes Reality Computing as primarily an entertainment experience today that will become the next big computing platform, incorporating sophisticated technology.",
+      "evidence": "Reality Computing is primarily entertainment today, but will \nbecome the next big computing platform, incorporating \nsophisticated technology",
+      "confidence": "high",
+      "pages": [
+        37
+      ],
+      "section_id": "section-05",
+      "section_title": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+    },
+    {
+      "id": "section-05-ar-market-2021e",
+      "text": "The global 2021E addressable AR market was estimated at $5–7B for oil and gas, $7–9B for healthcare, and $1–2B for higher education.",
+      "evidence": "ADDRESSABLE AR MARKET BY SECTOR1, GLOBAL, 2021E, BILLIONS USD\nHEAL THCAREOIL & GAS \n HIGHER EDUCATION\n$7-9B$5-7B $1-2B",
+      "confidence": "medium",
+      "pages": [
+        47
+      ],
+      "section_id": "section-05",
+      "section_title": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+    },
+    {
+      "id": "section-05-reality-computing-tomorrow-uses",
+      "text": "Reality Computing tomorrow is shown with collaboration, testing and repairs, “everywhere screens,” and virtual assistants, supported by spatial mapping, IoT data, 5G, and AI.",
+      "evidence": "“EVERYWHERE SCREENS”\nCOLLABORATION\n...\nVIRTUAL ASSISTANT\n...\nTESTING/REPAIRS\n+ 5G3\n+ Spatial Mapping1\n+ AI\n+ IoT Data2",
+      "confidence": "high",
+      "pages": [
+        37
+      ],
+      "section_id": "section-05",
+      "section_title": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

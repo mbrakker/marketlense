@@ -1,0 +1,201 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "claim_provenance": [
+      {
+        "claim": "In 2025, global e-commerce app installs fell 10% year over year while sessions increased 5%, a divergence across the two measures.",
+        "classification": "interpretive",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ]
+      },
+      {
+        "claim": "Global e-commerce app sessions rose 5% in 2025 as installs fell 10% year over year.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ]
+      },
+      {
+        "claim": "In 2025, global e-commerce app installs fell 10% year over year while sessions increased 5%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ]
+      },
+      {
+        "claim": "For global e-commerce apps, reported CPI (USD per install) was $1.00 in 2024 and $0.98 in 2025 overall; for Deal discovery, $1.44 in 2024 and $2.26 in 2025; for Marketplace & classifieds, $0.99 in 2024 and $0.88 in 2025.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:insight-ecommerce-cpi-divergence"
+        ]
+      },
+      {
+        "claim": "In 2025, global finance app installs fell 4% year over year, while sessions rose 21%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:insight-finance-growth-divergence"
+        ]
+      },
+      {
+        "claim": "Globally, finance-app session length increased 8% to 7.18 minutes in 2025.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:insight-finance-engagement-measures"
+        ]
+      },
+      {
+        "claim": "Global day-0 finance-app sessions per user declined year over year from 1.52 in 2024 to 1.48 in 2025.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:insight-finance-engagement-measures"
+        ]
+      }
+    ],
+    "generation_attempt": 1,
+    "producing_prompt_identity": {
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+      "execution_identity_manifest": {
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "execution_identity": "209e2227f8d50a8f672aa96c9e4cb10c5a72122a1b03104f2ea29ac0e0454616",
+        "model": "gpt-6-luna",
+        "output_contract_schema_version": "artifact_json:1.0",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "provider_retry_count": 0,
+          "timeout_seconds": 600.0
+        },
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "provider": "openai",
+        "reasoning_effort": "medium",
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary",
+          "max_input_tokens": 48000,
+          "policy_source": "report_vs/artifacts/summary",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "tier": "routine_structured"
+        },
+        "schema_version": "1.0",
+        "seed": null,
+        "temperature": null,
+        "validator_version": "artifacts_schema:3.1"
+      },
+      "family_schema_version": "1.0",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "model_provider": "openai",
+      "namespace": "report_vs/artifacts/summary",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+      "prompt_dependency_manifest": {
+        "composition_version": "2.0",
+        "included_partials": [
+          {
+            "kind": "partial",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "schema_version": "1.0",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "source": "user:0"
+          }
+        ],
+        "namespace": "report_vs/artifacts/summary",
+        "prompt_content_hash": "d042f939394fbe202cd5942ab60a11dbde6e178a4b48ef3564a100ebc8365d76",
+        "schema_snippets": [
+          {
+            "kind": "schema_snippet",
+            "path": "schemas/artifacts.schema.json",
+            "schema_version": "1.0",
+            "sha256": "6e2a4ad3db5c4d518c096af2f180210e058e2cea70742a7d8e2b378b6a225272",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "schema_version": "1.0",
+        "system_root": {
+          "kind": "system_root",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "schema_version": "1.0",
+          "sha256": "a04cd94fb80ef9d2ad6f6c7f06f44213f839df93d304489fcce88300d4d6fd0b",
+          "source": ""
+        },
+        "user_root": {
+          "kind": "user_root",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "schema_version": "1.0",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "source": ""
+        }
+      },
+      "regeneration_reason": "materialization_missing",
+      "relevant_input_hash": "50c295419e3eac65045df3d1a9887edd03f742967966a7b4e09f7b2d7a4f5145",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "schema_version": "1.0",
+      "validator_version": "artifacts_schema:3.1"
+    },
+    "public_output": {
+      "card_tldr_compact": "Global e-commerce app sessions rose 5% in 2025 as installs fell 10% year over year.",
+      "claim_evidence_map": [
+        {
+          "claim": "Global e-commerce app sessions rose 5% in 2025 as installs fell 10% year over year.",
+          "evidence": "In 2025, global e-commerce app installs fell 10% year over year while sessions increased 5%.",
+          "evidence_id": "verified-fact:insight-ecom-growth-divergence",
+          "evidence_spans": [],
+          "pages": [
+            27
+          ]
+        },
+        {
+          "claim": "For global e-commerce apps, reported CPI (USD per install) was $1.00 in 2024 and $0.98 in 2025 overall; for Deal discovery, $1.44 in 2024 and $2.26 in 2025; for Marketplace & classifieds, $0.99 in 2024 and $0.88 in 2025.",
+          "evidence": "Reported global e-commerce CPI values: All, $1.00 in 2024 and $0.98 in 2025; Deal discovery, $1.44 and $2.26; Marketplace & classifieds, $0.99 and $0.88.",
+          "evidence_id": "verified-fact:insight-ecommerce-cpi-divergence",
+          "evidence_spans": [],
+          "pages": [
+            29
+          ]
+        },
+        {
+          "claim": "In 2025, global finance app installs fell 4% year over year, while sessions rose 21%.",
+          "evidence": "In 2025, global finance app installs fell 4% year over year, while sessions rose 21%.",
+          "evidence_id": "verified-fact:insight-finance-growth-divergence",
+          "evidence_spans": [],
+          "pages": [
+            34
+          ]
+        },
+        {
+          "claim": "Globally, finance-app session length increased 8% to 7.18 minutes in 2025.",
+          "evidence": "The global finance-app session-length result was 7.18 minutes in 2025, up 8%.",
+          "evidence_id": "verified-fact:insight-finance-engagement-measures",
+          "evidence_spans": [],
+          "pages": [
+            36
+          ]
+        },
+        {
+          "claim": "Global day-0 finance-app sessions per user declined year over year from 1.52 in 2024 to 1.48 in 2025.",
+          "evidence": "The global day-0 finance-app sessions-per-user figure declined year over year from 1.52 in 2024 to 1.48 in 2025.",
+          "evidence_id": "verified-fact:insight-finance-engagement-measures",
+          "evidence_spans": [],
+          "pages": [
+            36
+          ]
+        }
+      ],
+      "executive_summary": "In 2025, global e-commerce app installs fell 10% year over year while sessions increased 5%. For global e-commerce apps, reported CPI (USD per install) was $1.00 in 2024 and $0.98 in 2025 overall; for Deal discovery, $1.44 in 2024 and $2.26 in 2025; for Marketplace & classifieds, $0.99 in 2024 and $0.88 in 2025. In 2025, global finance app installs fell 4% year over year, while sessions rose 21%. Globally, finance-app session length increased 8% to 7.18 minutes in 2025. Global day-0 finance-app sessions per user declined year over year from 1.52 in 2024 to 1.48 in 2025.",
+      "tldr": "In 2025, global e-commerce app installs fell 10% year over year while sessions increased 5%, a divergence across the two measures."
+    },
+    "schema_version": "1.0"
+  }
+}

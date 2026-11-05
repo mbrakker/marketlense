@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-32-0",
+  "candidate_type": "chart",
+  "page": 32,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    52.64,
+    127.2,
+    771.36,
+    540.8
+  ],
+  "final_bbox": [
+    44.64,
+    184.193,
+    779.36,
+    513.704
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 3,
+    "bottom": 59,
+    "left": 144,
+    "right": 144
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": true,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.9106,
+    "margin_balance": 0.0,
+    "neighbor_contamination": 0.0497,
+    "readability": 1.0,
+    "visual_crispness": 0.4873,
+    "total_score": 0.7007,
+    "defect_labels": [],
+    "edge_density": {
+      "top": 0.9828,
+      "bottom": 0.051,
+      "left": 0.2743,
+      "right": 0.0
+    },
+    "edge_leakage": {
+      "top": 0.0,
+      "bottom": 0.0497,
+      "left": 0.0,
+      "right": 0.0
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.5,
+        "strong_edges": [
+          "top",
+          "left"
+        ],
+        "edge_density": {
+          "top": 0.9828,
+          "bottom": 0.051,
+          "left": 0.2743,
+          "right": 0.0
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.2743,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.9828,
+          "bottom": 0.051,
+          "left": 0.2743,
+          "right": 0.0
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.9828,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.9828,
+          "bottom": 0.051,
+          "left": 0.2743,
+          "right": 0.0
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": true,
+  "rejection_reason": ""
+}

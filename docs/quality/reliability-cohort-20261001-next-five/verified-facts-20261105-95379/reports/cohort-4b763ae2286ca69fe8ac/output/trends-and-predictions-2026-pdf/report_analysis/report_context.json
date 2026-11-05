@@ -1,0 +1,90 @@
+{
+  "report_id": "cohort-4b763ae2286ca69fe8ac",
+  "title": "JANUARY 2026",
+  "publisher": "",
+  "region": "Global",
+  "time_period": "2026",
+  "overview": "Journalism and Technology Trends and Predictions 2026 by Reuters Institute for the Study of Journalism Nic Newman’s report examines how generative AI, answer engines, social platforms, and the creator economy are reshaping journalism and news publishing. Drawing on a survey of digital leaders and industry examples, it considers pressures on journalism, publisher strategy, newsroom AI, business models, and likely technology developments in 2026. A report on journalism and technology trends, drawing on a survey of digital leaders from 51 countries and territories and discussing predictions for 2026.",
+  "methods": [
+    "Industry survey using a strategic sample of 280 digital leaders from 51 countries and territories; the report describes respondents as editors, CEOs, and digital executives.",
+    "Traffic data sourced from Chartbeat, including aggregated Google-search referrals to news sites; a report footnote says the referral data aggregate over 2,000 news websites and apps in the Chartbeat network.",
+    "Additional report input gathered through background conversations, interviews, and emails with publishers, academics, and industry experts."
+  ],
+  "key_findings": [
+    "News-site referrals fell by 43% from Facebook and 46% from X over the previous two and a half years, according to the report’s Chartbeat data.",
+    "For 2026, publishers planned to put more effort into YouTube (+74 percentage points net), AI platforms (+61), and TikTok (+56), and less effort into X (−52), Facebook (−23), and old-style Google Search (−25).",
+    "Publishers were experimenting with Substack as a distribution channel and expanding vertical video, including a curated vertical-video feed in the New York Times app’s watch tab.",
+    "Publishers were more concerned about creators taking audience time and attention (70% somewhat or very concerned) than about losing talent to creators (39%).",
+    "Planned responses to the creator wave included making journalists more like creators (76%), partnering with creators for distribution (50%), hiring creators (31%), and creating a joint venture such as a creator studio (28%).",
+    "The report notes that building journalists’ independent profiles may help them leave with their audiences, citing Dave Jorgenson’s departure from the Washington Post and the subsequent collapse in reach of its Universe YouTube channel."
+  ],
+  "limitations": [
+    "The industry survey draws on a strategic sample of 280 digital leaders from 51 countries and territories; reported question bases vary (for example, 264, 265, and 273).",
+    "The report cautions that audience concern about misinformation does not necessarily mean audiences will return to news media; many distrust news media or rely on comments and AI chatbots for fact-checking.",
+    "Fewer than 1% of news images or videos published globally include C2PA metadata; adoption requires ecosystem-wide buy-in, and metadata can be stripped out.",
+    "Platforms’ synthetic-content detection systems have been only partly effective; some experts suggest TikTok detects less than half of AI-generated content."
+  ],
+  "sections": [
+    {
+      "section_label": "About the Author",
+      "source_pack": "doc_map",
+      "summary": "Front matter identifying the report’s author.",
+      "key_points": [],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Acknowledgements",
+      "source_pack": "doc_map",
+      "summary": "Acknowledges contributions to the report and states its publication and support arrangements.",
+      "key_points": [
+        "The publication note names the Reuters Institute for the Study of Journalism as publisher and the Google News Initiative as supporting organization."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Executive Summary",
+      "source_pack": "doc_map",
+      "summary": "Frames generative AI and personality-led news as forces likely to intensify pressure on traditional media, while outlining publisher responses involving distinctive journalism, multiple formats, and newsroom AI. It also summarizes survey findings on confide...",
+      "key_points": [
+        "The report describes a strategic survey of 280 digital leaders from 51 countries and territories; 38% were confident about journalism’s prospects for the year ahead, while 53% were confident about...",
+        "For the three years ahead, publishers expected search traffic to decline by more than 40%; the summary also reports referral declines over the previous three years of 43% for Facebook and 46% for X...",
+        "For 2026, respondents favored more original investigations and on-the-ground reporting, contextual analysis, and human stories, while planning less emphasis on service journalism, evergreen content..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "1. Pressures on Journalism Mount",
+      "source_pack": "doc_map",
+      "summary": "Examines declining confidence in journalism amid political attacks, economic pressures, changing audience relationships, and uncertainty about AI and platform distribution. It contrasts those concerns with some publishers’ optimism about their own organizat...",
+      "key_points": [
+        "In “Just over a third are confident about the future of journalism” (Q2, 2022 versus 2026), confidence fell from 60% to 38%, while the not-confident share rose from 10% to 18% (p. 7).",
+        "The report attributes the loss of confidence to uncertainty about AI and visibility, traditional media’s weaker connection with some audiences, and politicians’ efforts to undermine journalism (p. 7).",
+        "It describes legal threats, political attacks on media, and pressure on public service media, while noting that some mostly subscription-based publishers—especially in Northern Europe and North Ame..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "2. Answer Engines and the Implications for Traffic",
+      "source_pack": "doc_map",
+      "summary": "Considers how AI-driven search and answer engines may reduce referrals to publisher sites, and how publishers might respond through licensing and answer-engine optimization. It distinguishes the expected future traffic impact from observed traffic changes a...",
+      "key_points": [
+        "In Q5, “Publishers expect a loss of traffic from search of …,” the average expectation for search-engine traffic over the next three years was −43% (p. 10).",
+        "Chartbeat data for organic Google search traffic to more than 2,500 sites showed a 33% decline globally and a 38% decline in the United States between November 2024 and November 2025; the report sa...",
+        "For potential AI-platform licensing income in three years, Q8 reports 20% expecting a significant source, 49% a minor source, 20% no income, and 11% unsure; the report notes that major deals had so..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "3. Content Strategies Shift towards Distinctiveness",
+      "source_pack": "doc_map",
+      "summary": "Argues that publishers may compete with AI by emphasizing original, human, and locally grounded journalism, while reducing content that answer engines can readily commoditize. It also describes a contrasting strategy in which publishers use automation to in...",
+      "key_points": [
+        "In “Publisher perceptions on how content needs to be refocused in the era of AI” (Q13, net difference between saying more or less important; p. 15), original investigations/on-the-ground reporting...",
+        "The report says some publishers are adopting AI-assisted production at scale, while others are emphasizing distinctive reporting; it characterizes the possible outcome as a “barbell effect,” with o...",
+        "Newsquest’s AI-assisted reporters and the one-person Velora Cycling operation are presented as examples of automation supporting higher-volume or specialist publishing, with human oversight describ..."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

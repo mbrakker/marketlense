@@ -1,0 +1,181 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/context_category_fit",
+  "family_schema_version": "2.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "selected_category_ids": [
+      "consumer_behavior"
+    ],
+    "category_fits": [
+      {
+        "category_id": "consumer_behavior",
+        "label": "Consumer Behavior & Insights",
+        "fit_score": 0.98,
+        "decision": "primary",
+        "why_fit": "The report's central focus is how consumers think, feel, choose, and shop: it examines value perceptions, deal-seeking, brand switching, trust, spending, AI-assisted shopping, and human interaction, based on a global survey of 12,000 consumers.",
+        "why_not_fit": "",
+        "evidence_sections": [
+          "Executive summary",
+          "Value redefined: where fairness and quality intersect",
+          "Careful spending meets intentional indulgence",
+          "AI – The consumer’s trusted guide",
+          "Reliable tech builds loyalty – but with boundaries"
+        ],
+        "semantic_rule_status": "supported",
+        "supported_topic_rules": [
+          "The report repeatedly studies consumer attitudes, motivations, trust, decision drivers, and behavioral shifts.",
+          "Consumer behavior is the core subject and the report remains useful without a business-performance or media lens."
+        ],
+        "supported_topic_rule_ids": [
+          "consumer_behavior:include:33643841657d9962",
+          "consumer_behavior:include:37fe6a8899033055"
+        ],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [
+          "Executive summary",
+          "Value redefined: where fairness and quality intersect",
+          "Careful spending meets intentional indulgence",
+          "AI – The consumer’s trusted guide",
+          "Reliable tech builds loyalty – but with boundaries"
+        ],
+        "centrality_evidence_sections": [
+          "Executive summary",
+          "Value redefined: where fairness and quality intersect",
+          "Careful spending meets intentional indulgence"
+        ],
+        "remediation_signal": ""
+      },
+      {
+        "category_id": "agentic_commerce",
+        "label": "Agentic Commerce & Shopping Automation",
+        "fit_score": 0.57,
+        "decision": "reject",
+        "why_fit": "The AI section reports that 52% use virtual assistants weekly for tasks such as reordering or meal planning, and that consumers want rules controlling when assistants act.",
+        "why_not_fit": "AI-assisted shopping is one major topic within a broader consumer-expectations report; the report is not mainly about agents executing shopping, purchase, or checkout flows.",
+        "evidence_sections": [
+          "Executive summary",
+          "AI – The consumer’s trusted guide",
+          "Reliable tech builds loyalty – but with boundaries"
+        ],
+        "semantic_rule_status": "ambiguous",
+        "supported_topic_rules": [
+          "The report connects assistants and automation with shopping-related tasks such as reordering."
+        ],
+        "supported_topic_rule_ids": [
+          "agentic_commerce:include:42d7f409effd8579"
+        ],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [
+          "AI – The consumer’s trusted guide"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": ""
+      },
+      {
+        "category_id": "ai_automation",
+        "label": "AI & Automation",
+        "fit_score": 0.52,
+        "decision": "reject",
+        "why_fit": "The report discusses virtual assistants, generative-AI recommendations, and consumer control over assistant actions.",
+        "why_not_fit": "Its main lens is consumer attitudes and shopping behavior, not AI systems or automation as a general capability across tasks, teams, or systems.",
+        "evidence_sections": [
+          "Executive summary",
+          "AI – The consumer’s trusted guide",
+          "Reliable tech builds loyalty – but with boundaries"
+        ],
+        "semantic_rule_status": "ambiguous",
+        "supported_topic_rules": [
+          "The report discusses AI assistants and generative-AI-enabled shopping experiences."
+        ],
+        "supported_topic_rule_ids": [
+          "ai_automation:include:c52423eacfe719f1"
+        ],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [
+          "AI – The consumer’s trusted guide",
+          "Reliable tech builds loyalty – but with boundaries"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": ""
+      },
+      {
+        "category_id": "omnichannel_commerce",
+        "label": "Omnichannel Commerce",
+        "fit_score": 0.43,
+        "decision": "reject",
+        "why_fit": "The report discusses online deal-seeking, social-media purchases, retail-channel trust, and in-store human support.",
+        "why_not_fit": "These are consumer findings across shopping contexts; the report does not make coordinated online-and-offline commerce experience or end-to-end touchpoint integration its main subject.",
+        "evidence_sections": [
+          "Value redefined: where fairness and quality intersect",
+          "AI – The consumer’s trusted guide",
+          "Reliable tech builds loyalty – but with boundaries"
+        ],
+        "semantic_rule_status": "ambiguous",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [],
+        "centrality_evidence_sections": [],
+        "remediation_signal": ""
+      },
+      {
+        "category_id": "privacy_identity",
+        "label": "Privacy, Identity & Data",
+        "fit_score": 0.34,
+        "decision": "reject",
+        "why_fit": "The report notes that consumers assess data privacy when judging retail-channel trust and discusses comfort with sharing shopping history for personalization.",
+        "why_not_fit": "Privacy is a trust consideration within a wider consumer report, not its core problem; the context does not focus on identity, consent systems, compliance, or privacy-safe data design.",
+        "evidence_sections": [
+          "Value redefined: where fairness and quality intersect",
+          "Reliable tech builds loyalty – but with boundaries"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Privacy is a constraint mentioned within a broader consumer and AI report rather than the report's central subject."
+        ],
+        "rejected_topic_rule_ids": [
+          "privacy_identity:exclude:486d2b9830aaacf5"
+        ],
+        "rule_evidence_sections": [
+          "Value redefined: where fairness and quality intersect",
+          "Reliable tech builds loyalty – but with boundaries"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": ""
+      },
+      {
+        "category_id": "digital_payments",
+        "label": "Digital Payments & Wallets",
+        "fit_score": 0.27,
+        "decision": "reject",
+        "why_fit": "The report mentions secure payments as one factor consumers consider when assessing retail-channel trust.",
+        "why_not_fit": "It does not examine payment products, wallet adoption, checkout friction, payment preferences, or payment security as a central business problem.",
+        "evidence_sections": [
+          "Value redefined: where fairness and quality intersect"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Payments are a minor trust consideration within a broader consumer report."
+        ],
+        "rejected_topic_rule_ids": [
+          "digital_payments:exclude:7ec56f2566215972"
+        ],
+        "rule_evidence_sections": [
+          "Value redefined: where fairness and quality intersect"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": ""
+      }
+    ]
+  }
+}

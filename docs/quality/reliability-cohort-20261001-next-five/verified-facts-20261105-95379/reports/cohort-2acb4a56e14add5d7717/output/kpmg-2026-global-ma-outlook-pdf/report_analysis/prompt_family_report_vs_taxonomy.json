@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "macroeconomic_outlook",
+      "risk_management",
+      "business_performance",
+      "generative_ai_and_ai_agents",
+      "technology",
+      "country_analysis"
+    ],
+    "primary_tags": [
+      "macroeconomic_outlook",
+      "risk_management",
+      "business_performance"
+    ],
+    "secondary_tags": [
+      "generative_ai_and_ai_agents",
+      "technology",
+      "country_analysis"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "macroeconomic_outlook",
+        "tier": "primary",
+        "section_label": "Executive summary; 2025 retrospective and 2026 outlook",
+        "evidence": "Reviews rebuilding global M&A momentum through 2025 and outlook for 2026."
+      },
+      {
+        "tag": "risk_management",
+        "tier": "primary",
+        "section_label": "Strategic focus in a fragmented world; Diverging risk appetites between buyers",
+        "evidence": "Examines geopolitical fragmentation and differing buyer risk appetites across regions."
+      },
+      {
+        "tag": "business_performance",
+        "tier": "primary",
+        "section_label": "Portfolio simplification as a value creation strategy",
+        "evidence": "Focuses on portfolio strategy and value creation through M&A."
+      },
+      {
+        "tag": "generative_ai_and_ai_agents",
+        "tier": "secondary",
+        "section_label": "AI-driven transformation of deal execution",
+        "evidence": "A major section addresses AI-driven transformation in deal execution."
+      },
+      {
+        "tag": "technology",
+        "tier": "secondary",
+        "section_label": "AI-driven transformation of deal execution",
+        "evidence": "Discusses technology as a force reshaping M&A execution."
+      },
+      {
+        "tag": "country_analysis",
+        "tier": "secondary",
+        "section_label": "Industry-specific dynamics",
+        "evidence": "Reports regional differences, including APAC, EMEA, and the Americas."
+      }
+    ],
+    "region": "Global",
+    "time_period": "2025 to 2026",
+    "not_found_reason": null
+  }
+}

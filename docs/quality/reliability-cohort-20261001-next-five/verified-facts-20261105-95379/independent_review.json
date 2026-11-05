@@ -1,0 +1,111 @@
+{
+  "schema_version": "1.0",
+  "review_scope": "Provider-backed frozen five-report run; no production fixes or reruns were made during the experiment.",
+  "producer_git_sha": "95379a8decc5d4f1ca814170619e832c8bacf95f",
+  "run_id": "frozen-reliability-oboqn82y",
+  "source_identity_manifest": "source_identity_manifest.json",
+  "aggregate": {
+    "reports": 5,
+    "admitted": 5,
+    "terminal_complete": 0,
+    "terminal_failed": 5,
+    "final_html_outputs": 0,
+    "publication_writes": 0,
+    "unsupported_material_claims_marked_verified": 0,
+    "independently_confirmed_factual_errors_in_final_public_output": 0,
+    "quality_verdict": "FAIL",
+    "step_2_readiness": "NO-GO"
+  },
+  "report_reviews": [
+    {
+      "publisher": "Capgemini Research Institute",
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "terminal_outcome": "artifact_final_insight_coverage_invalid",
+      "final_public_output": "absent",
+      "independent_factual_review": "not_applicable_to_final_output",
+      "reason": "Workflow terminated at artifact-generation coverage validation before final artifacts, HTML or publication-readiness output existed. Retained findings and evidence-fidelity output were inspected; this is not a factual pass."
+    },
+    {
+      "publisher": "Activate",
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "terminal_outcome": "artifact_final_insight_coverage_invalid",
+      "final_public_output": "absent",
+      "independent_factual_review": "not_applicable_to_final_output",
+      "reason": "Workflow terminated at artifact-generation coverage validation. Evidence-fidelity output recorded one unsupported result, so no final public claim was treated as verified."
+    },
+    {
+      "publisher": "KPMG",
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "terminal_outcome": "artifact_final_insight_coverage_invalid",
+      "final_public_output": "absent",
+      "independent_factual_review": "not_applicable_to_final_output",
+      "reason": "Workflow terminated at artifact-generation coverage validation before final artifacts or HTML existed. Retained findings and evidence-fidelity output were inspected; this is not a factual pass."
+    },
+    {
+      "publisher": "Reuters Institute",
+      "report_id": "cohort-4b763ae2286ca69fe8ac",
+      "terminal_outcome": "artifact_final_insight_coverage_invalid",
+      "final_public_output": "absent",
+      "independent_factual_review": "not_applicable_to_final_output",
+      "reason": "Workflow terminated at artifact-generation coverage validation before final artifacts or HTML existed. Retained findings and evidence-fidelity output were inspected; this is not a factual pass."
+    },
+    {
+      "publisher": "Adjust",
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "terminal_outcome": "validation_failed",
+      "final_public_output": "artifact_without_html",
+      "independent_factual_review": "completed_for_seven_retained_insights",
+      "reason": "The exact source SHA and verified-fact coverage passed, but public editorial quality failed on repeated e-commerce/finance output and a GenAI limitation omission. No HTML was produced and no claim was promoted to publication readiness."
+    }
+  ],
+  "adjust_source_page_audit": [
+    {
+      "stable_id": "intro-downloads",
+      "pages": [3],
+      "status": "supported",
+      "finding": "Page 3 states more than 112.1 billion app downloads in 2025; the final wording did not invent a geography or category split."
+    },
+    {
+      "stable_id": "insight-genai-efficiency-qualified",
+      "pages": [9],
+      "status": "supported",
+      "finding": "Page 9 qualifies most organizations as low or moderate maturity and attributes efficiency gains over 20% to a small group with advanced deployment."
+    },
+    {
+      "stable_id": "insight-gaming-subvertical-divergence",
+      "pages": [19],
+      "status": "supported",
+      "finding": "Page 19 supports global 2024–2025 casino installs +22% and sessions −5%, and slots installs +46% and sessions −5%."
+    },
+    {
+      "stable_id": "gaming-retention",
+      "pages": [21],
+      "status": "supported",
+      "finding": "Page 21 supports all-game retention of 27%, 13%, 8% and 5% at days 1, 7, 14 and 30, with minimal year-over-year change."
+    },
+    {
+      "stable_id": "insight-ecom-growth-divergence",
+      "pages": [27, 29],
+      "status": "supported",
+      "finding": "Pages 27 and 29 support global e-commerce installs −10%, sessions +5%, and the global CPI relationships; the final wording preserved the category and year relationships."
+    },
+    {
+      "stable_id": "insight-finance-growth-divergence",
+      "pages": [34, 36],
+      "status": "supported",
+      "finding": "Pages 34 and 36 support finance installs −4%, sessions +21%, session length 7.18 minutes/+8%, and day-0 sessions per user 1.52 to 1.48."
+    },
+    {
+      "stable_id": "insight-finance-latam-growth",
+      "pages": [35],
+      "status": "supported_with_qualification",
+      "finding": "Page 35 supports LATAM installs +76% and sessions +57%; the source does not state counts or denominators, so none were added."
+    }
+  ],
+  "limitations": [
+    "No final HTML was generated for any member, so a five-report public-output factual acceptance cannot be claimed.",
+    "The four coverage-failure reports have no final public claims to inspect; their retained findings and evidence-fidelity records are diagnostic evidence only.",
+    "The Adjust audit covers seven retained final insights before the public-quality terminal failure. It does not make the failed run publication-ready.",
+    "The run demonstrates terminal behavior and current evidence quality, not a live selection-effectiveness improvement over a controlled baseline."
+  ]
+}

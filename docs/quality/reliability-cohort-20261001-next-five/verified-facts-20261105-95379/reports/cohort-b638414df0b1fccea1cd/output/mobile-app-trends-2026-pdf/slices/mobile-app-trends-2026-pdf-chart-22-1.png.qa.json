@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-22-1",
+  "candidate_type": "chart",
+  "page": 22,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    440.64,
+    126.2,
+    1034.36,
+    523.8
+  ],
+  "final_bbox": [
+    432.64,
+    162.791,
+    1042.36,
+    531.8
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 0,
+    "bottom": 67,
+    "left": 118,
+    "right": 118
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": true,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.7396,
+    "margin_balance": 0.9707,
+    "neighbor_contamination": 0.1447,
+    "readability": 1.0,
+    "visual_crispness": 0.35,
+    "total_score": 0.8315,
+    "defect_labels": [],
+    "edge_density": {
+      "top": 0.1797,
+      "bottom": 0.1507,
+      "left": 0.0033,
+      "right": 0.0036
+    },
+    "edge_leakage": {
+      "top": 0.0347,
+      "bottom": 0.1447,
+      "left": 0.0,
+      "right": 0.0
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.0,
+        "strong_edges": [],
+        "edge_density": {
+          "top": 0.1797,
+          "bottom": 0.1507,
+          "left": 0.0033,
+          "right": 0.0036
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.1507,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.1797,
+          "bottom": 0.1507,
+          "left": 0.0033,
+          "right": 0.0036
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.1797,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.1797,
+          "bottom": 0.1507,
+          "left": 0.0033,
+          "right": 0.0036
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": true,
+  "rejection_reason": ""
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "limitations": [
+    "The industry survey draws on a strategic sample of 280 digital leaders from 51 countries and territories; reported question bases vary (for example, 264, 265, and 273).",
+    "The report cautions that audience concern about misinformation does not necessarily mean audiences will return to news media; many distrust news media or rely on comments and AI chatbots for fact-checking.",
+    "Fewer than 1% of news images or videos published globally include C2PA metadata; adoption requires ecosystem-wide buy-in, and metadata can be stripped out.",
+    "Platforms’ synthetic-content detection systems have been only partly effective; some experts suggest TikTok detects less than half of AI-generated content.",
+    "The report says it may become harder to know how AI-mediated use of content affects visits, measurement, and monetisation."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "limitations",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

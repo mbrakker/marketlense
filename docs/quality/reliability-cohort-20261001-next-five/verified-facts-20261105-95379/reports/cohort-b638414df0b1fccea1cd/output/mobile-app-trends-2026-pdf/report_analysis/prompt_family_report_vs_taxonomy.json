@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "mobile_gaming",
+      "ecommerce",
+      "app_downloads",
+      "business_performance",
+      "attribution",
+      "ai_in_marketing"
+    ],
+    "primary_tags": [
+      "mobile_gaming",
+      "ecommerce",
+      "app_downloads",
+      "business_performance"
+    ],
+    "secondary_tags": [
+      "attribution",
+      "ai_in_marketing"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "mobile_gaming",
+        "tier": "primary",
+        "section_label": "Gaming apps",
+        "evidence": "Benchmarks gaming app installs, sessions, retention, and cost per install across subverticals."
+      },
+      {
+        "tag": "ecommerce",
+        "tier": "primary",
+        "section_label": "E-commerce/shopping apps",
+        "evidence": "Reports e-commerce app install and session growth, retention, and CPI."
+      },
+      {
+        "tag": "app_downloads",
+        "tier": "primary",
+        "section_label": "Finding and keeping users",
+        "evidence": "Tracks app install growth and acquisition costs across gaming and e-commerce categories."
+      },
+      {
+        "tag": "business_performance",
+        "tier": "primary",
+        "section_label": "Introduction: Evolution and opportunity in the mobile app industry",
+        "evidence": "Presents a global benchmark of app performance and discusses growth, measurement, and outcomes."
+      },
+      {
+        "tag": "attribution",
+        "tier": "secondary",
+        "section_label": "Gaming apps — Finding and keeping users",
+        "evidence": "Recommends attribution dashboards to assess whether ad channels deliver installs with good LTV."
+      },
+      {
+        "tag": "ai_in_marketing",
+        "tier": "secondary",
+        "section_label": "AI transforms from strategic tool to core infrastructure in 2026",
+        "evidence": "Describes AI for campaign analysis, audience segmentation, and creative testing."
+      }
+    ],
+    "region": "Global",
+    "time_period": "2024 to 2025",
+    "not_found_reason": null
+  }
+}

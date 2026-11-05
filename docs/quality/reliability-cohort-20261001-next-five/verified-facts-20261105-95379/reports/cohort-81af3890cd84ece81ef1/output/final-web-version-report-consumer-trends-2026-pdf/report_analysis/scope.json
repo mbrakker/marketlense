@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "scope": "Examines evolving consumer behavior in the consumer products and retail ecosystem, including value, technology, trust, AI, and purchasing decisions. Based on a global survey of 12,000 consumers aged 18 and over across Australia, Canada, France, Germany, India, Italy, Japan, the Netherlands, Spain, Sweden, the UK, and the US, plus executive interviews; the survey was conducted in October 2025 and the report is dated 2026.",
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "scope",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

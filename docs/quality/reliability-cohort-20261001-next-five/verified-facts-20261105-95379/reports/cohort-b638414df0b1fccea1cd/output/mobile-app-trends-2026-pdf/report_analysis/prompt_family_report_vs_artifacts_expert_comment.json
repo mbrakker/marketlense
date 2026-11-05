@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/expert_comment",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "claim_provenance": [
+      {
+        "claim": "In the 2025 year-over-year comparison, global e-commerce app installs fell 10% while sessions rose 5%; global finance-app installs fell 4% while sessions rose 21%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence",
+          "verified-fact:insight-finance-growth-divergence"
+        ]
+      },
+      {
+        "claim": "In the global 2024–2025 year-over-year comparison, casino installs increased 22% and casino sessions decreased 5%; slots installs increased 46% and slots sessions decreased 5%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "verified-fact:insight-gaming-subvertical-divergence"
+        ]
+      },
+      {
+        "claim": "Across these verticals and subverticals, install movement and session movement do not form a single aligned growth signal.",
+        "classification": "interpretive",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence",
+          "verified-fact:insight-finance-growth-divergence",
+          "verified-fact:insight-gaming-subvertical-divergence"
+        ]
+      },
+      {
+        "claim": "MarketLense recommends that leaders assess installs and sessions separately within each vertical and subvertical when using these findings to set growth priorities.",
+        "classification": "recommendation",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence",
+          "verified-fact:insight-finance-growth-divergence",
+          "verified-fact:insight-gaming-subvertical-divergence"
+        ]
+      }
+    ],
+    "generation_attempt": 1,
+    "producing_prompt_identity": {
+      "configuration_policy_hash": "448f00f1e76de493516c576b290b768bf0fd9944b40d636b33d088b0f3d49da0",
+      "decision": "regenerated",
+      "execution_identity": "5111d49626efeed48a58c2b4d2994c75131d845720f2d9d2be3c7788e8cf226b",
+      "execution_identity_manifest": {
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "execution_identity": "5111d49626efeed48a58c2b4d2994c75131d845720f2d9d2be3c7788e8cf226b",
+        "model": "gpt-6-luna",
+        "output_contract_schema_version": "artifact_json:1.0",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "provider_retry_count": 0,
+          "timeout_seconds": 600.0
+        },
+        "prompt_content_hash": "9281830b76cce4765934f825117ea28d6ff19d92acaf6984b28e5f70e1fe0434",
+        "provider": "openai",
+        "reasoning_effort": "high",
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "compaction_enabled": true,
+          "execution_policy_hash": "5d44b48e606f823ca30fd0a4fd9e45d6bc4b9b7b1ac1299b410ed546c154e0c0",
+          "execution_policy_source": "report_vs/artifacts/expert_comment",
+          "max_input_tokens": 48000,
+          "policy_source": "report_vs/artifacts/expert_comment",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "tier": "routine_structured"
+        },
+        "schema_version": "1.0",
+        "seed": null,
+        "temperature": null,
+        "validator_version": "artifacts_schema:3.1"
+      },
+      "family_schema_version": "1.0",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "model_provider": "openai",
+      "namespace": "report_vs/artifacts/expert_comment",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "9281830b76cce4765934f825117ea28d6ff19d92acaf6984b28e5f70e1fe0434",
+      "prompt_dependency_manifest": {
+        "composition_version": "2.0",
+        "included_partials": [
+          {
+            "kind": "partial",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "schema_version": "1.0",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "source": "user:0"
+          }
+        ],
+        "namespace": "report_vs/artifacts/expert_comment",
+        "prompt_content_hash": "9281830b76cce4765934f825117ea28d6ff19d92acaf6984b28e5f70e1fe0434",
+        "schema_snippets": [],
+        "schema_version": "1.0",
+        "system_root": {
+          "kind": "system_root",
+          "path": "prompts/report_vs/artifacts/expert_comment/system.yaml",
+          "schema_version": "1.0",
+          "sha256": "6ddcf2ba72d4dd808795acc993a5c17a3bb8fe7d7b6e8381898e9a8d3f5ecb96",
+          "source": ""
+        },
+        "user_root": {
+          "kind": "user_root",
+          "path": "prompts/report_vs/artifacts/expert_comment/user.yaml",
+          "schema_version": "1.0",
+          "sha256": "ddac9f2e505097c5f3c79144ee92328c051ac4b4a333d362ea37a0fbc8096ae6",
+          "source": ""
+        }
+      },
+      "regeneration_reason": "materialization_missing",
+      "relevant_input_hash": "ad62d6da4db24116bf45c7a1957021983dbf99956294f88a98d72cbaf4f2905f",
+      "routing_policy_version": "5d44b48e606f823ca30fd0a4fd9e45d6bc4b9b7b1ac1299b410ed546c154e0c0",
+      "schema_version": "1.0",
+      "validator_version": "artifacts_schema:3.1"
+    },
+    "public_output": "In the 2025 year-over-year comparison, global e-commerce app installs fell 10% while sessions rose 5%; global finance-app installs fell 4% while sessions rose 21%. In the global 2024–2025 year-over-year comparison, casino installs increased 22% and casino sessions decreased 5%; slots installs increased 46% and slots sessions decreased 5%. Across these verticals and subverticals, install movement and session movement do not form a single aligned growth signal. MarketLense recommends that leaders assess installs and sessions separately within each vertical and subvertical when using these findings to set growth priorities.",
+    "schema_version": "1.0"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "members": [
+    {
+      "publisher_id": "KPMG",
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3"
+    }
+  ],
+  "schema_version": "1.0",
+  "validation_run_id": "validation:07f745655912e49c7ebe57fe99f5858ea7294c41c3ffde188e83eee83d807d7b"
+}

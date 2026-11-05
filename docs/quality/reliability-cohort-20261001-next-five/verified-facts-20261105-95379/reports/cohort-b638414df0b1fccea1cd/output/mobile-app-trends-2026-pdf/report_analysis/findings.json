@@ -1,0 +1,400 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "intro-downloads",
+      "text": "The report says there were more than 112.1 billion app downloads in 2025.",
+      "evidence": "In 2025, there were more than 112.1 billion app downloads",
+      "confidence": "high",
+      "pages": [
+        3
+      ],
+      "section_id": "introduction",
+      "section_title": "Introduction: Evolution and opportunity in the mobile app industry"
+    },
+    {
+      "id": "intro-smartphone-users",
+      "text": "The report estimates 5.8 billion unique smartphone users globally in 2025.",
+      "evidence": "an estimated 5.8 billion unique smartphone users globally",
+      "confidence": "high",
+      "pages": [
+        3
+      ],
+      "section_id": "introduction",
+      "section_title": "Introduction: Evolution and opportunity in the mobile app industry"
+    },
+    {
+      "id": "intro-spending",
+      "text": "Global consumer spending rose 10.6% year over year to $167 billion in 2025.",
+      "evidence": "consumer spending rose 10.6% YoY to $167 billion",
+      "confidence": "high",
+      "pages": [
+        3
+      ],
+      "section_id": "introduction",
+      "section_title": "Introduction: Evolution and opportunity in the mobile app industry"
+    },
+    {
+      "id": "intro-market-forecast",
+      "text": "The report projects that the global app market will exceed $1.23 trillion by 2035.",
+      "evidence": "the global market projected to exceed $1.23 trillion by 2035",
+      "confidence": "high",
+      "pages": [
+        3
+      ],
+      "section_id": "introduction",
+      "section_title": "Introduction: Evolution and opportunity in the mobile app industry"
+    },
+    {
+      "id": "intro-gdp-forecast",
+      "text": "The report says mobile technologies and services are set to generate 8.4% of global GDP by 2030.",
+      "evidence": "mobile technologies and services set to generate 8.4% of global GDP by 2030",
+      "confidence": "high",
+      "pages": [
+        3
+      ],
+      "section_id": "introduction",
+      "section_title": "Introduction: Evolution and opportunity in the mobile app industry"
+    },
+    {
+      "id": "ai-genai-maturity",
+      "text": "Most organizations report low or moderate generative-AI maturity, while a small group with advanced deployment has reportedly achieved efficiency gains over 20%.",
+      "evidence": "Most organizations report low or moderate GenAI maturity, while a small group with advanced deployment has reportedly achieved efficiency gains over 20%.",
+      "confidence": "high",
+      "pages": [
+        9
+      ],
+      "section_id": "ai-infrastructure",
+      "section_title": "AI transforms from strategic tool to core infrastructure in 2026"
+    },
+    {
+      "id": "multiplatform-satisfaction",
+      "text": "Only around 31% of marketers report complete satisfaction with their ability to unify and read data across platforms.",
+      "evidence": "Only around 31% of marketers report complete satisfaction with their ability to unify and read data across platforms.",
+      "confidence": "high",
+      "pages": [
+        11
+      ],
+      "section_id": "multiplatform-strategy",
+      "section_title": "Mobile-first approach evolves into multi-platform strategy"
+    },
+    {
+      "id": "gaming-casual-growth",
+      "text": "Global casual-game installs grew 19% and sessions grew 37% year over year in 2025.",
+      "evidence": "Installs of casual games grew 19% YoY in 2025, alongside a boost of 37% in sessions.",
+      "confidence": "high",
+      "pages": [
+        19
+      ],
+      "section_id": "gaming-apps",
+      "section_title": "Gaming apps"
+    },
+    {
+      "id": "gaming-hypercasual-growth",
+      "text": "Global hyper-casual installs grew 4% and sessions increased 31% year over year in 2025.",
+      "evidence": "Hyper casual’s sessions increased 31%—much higher than their 4% install increase.",
+      "confidence": "high",
+      "pages": [
+        19
+      ],
+      "section_id": "gaming-apps",
+      "section_title": "Gaming apps"
+    },
+    {
+      "id": "gaming-strategy-growth",
+      "text": "Global strategy-game installs were flat while sessions grew 57% year over year in 2025.",
+      "evidence": "Strategy games led session growth at +57% despite flat install growth.",
+      "confidence": "high",
+      "pages": [
+        19
+      ],
+      "section_id": "gaming-apps",
+      "section_title": "Gaming apps"
+    },
+    {
+      "id": "gaming-casino-slots-growth",
+      "text": "Global casino installs grew 22% and slots installs grew 46% in 2025, while sessions declined 5% in each category.",
+      "evidence": "Casino and slots both achieved strong install growth of 22% and 46%, but sessions decreased 5% in each category.",
+      "confidence": "high",
+      "pages": [
+        19
+      ],
+      "section_id": "gaming-apps",
+      "section_title": "Gaming apps"
+    },
+    {
+      "id": "gaming-retention",
+      "text": "Global all-game retention remained at 27% on day 1, 13% on day 7, 8% on day 14, and 5% on day 30 from 2024 to 2025.",
+      "evidence": "For all games, day 1 retention remained at 27%, day 7 at 13%, day 14 at 8%, and day 30 at 5%.",
+      "confidence": "high",
+      "pages": [
+        21
+      ],
+      "section_id": "gaming-apps",
+      "section_title": "Gaming apps"
+    },
+    {
+      "id": "gaming-cpi",
+      "text": "Global gaming CPI rose 30% to $0.56 in 2025.",
+      "evidence": "Gaming CPI rose globally to $0.56 in 2025, up 30%.",
+      "confidence": "high",
+      "pages": [
+        21
+      ],
+      "section_id": "gaming-apps",
+      "section_title": "Gaming apps"
+    },
+    {
+      "id": "gaming-partners",
+      "text": "Global gaming apps averaged 5.3 partners per app in 2025, down from 6 in 2024.",
+      "evidence": "Gaming apps averaged 5.3 partners in 2025, down from 6 the prior year.",
+      "confidence": "high",
+      "pages": [
+        23
+      ],
+      "section_id": "gaming-apps",
+      "section_title": "Gaming apps"
+    },
+    {
+      "id": "gaming-subvertical-partners",
+      "text": "Hybrid-casual, idle RPG, and simulation games had 9.8, 6.7, and 6.8 partners per app, respectively, in 2025.",
+      "evidence": "Hybrid casual, idle RPG, and simulation went against this pattern, expanding to 9.8, 6.7, and 6.8 partners.",
+      "confidence": "high",
+      "pages": [
+        23
+      ],
+      "section_id": "gaming-apps",
+      "section_title": "Gaming apps"
+    },
+    {
+      "id": "ecom-global-growth",
+      "text": "Global e-commerce-app installs fell 10% year over year in 2025 while sessions increased 5%.",
+      "evidence": "Global e-commerce app installs fell 10% YoY in 2025, even as sessions increased 5%.",
+      "confidence": "high",
+      "pages": [
+        27
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "ecom-regional-growth",
+      "text": "In 2025, LATAM e-commerce-app installs grew 17% and sessions grew 30%; APAC installs grew 7% while sessions declined 0.7%; and Europe installs fell 22% while sessions rose 6%.",
+      "evidence": "LATAM was the highest performing region, with 17% install growth and a 30% jump in sessions. In APAC, installs grew 7% while sessions remained stable (-0.7%). Europe presented a mixed picture, with installs decreasing 22% while sessions edged up 6%.",
+      "confidence": "high",
+      "pages": [
+        27
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "ecom-subvertical-sessions",
+      "text": "In 2025, deal-discovery app installs rose 2% and sessions grew 6%; marketplace and classifieds sessions increased 4%; and shopping-app sessions increased 7%.",
+      "evidence": "Installs for deal discovery apps rose 2% YoY in 2025, with sessions growing 6%. Marketplace and classifieds sessions increased 4% YoY. Shopping app sessions went up by 7% YoY.",
+      "confidence": "high",
+      "pages": [
+        27
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "ecom-session-length",
+      "text": "Average global e-commerce-app session length declined from 10.04 minutes in 2024 to 9.6 minutes in 2025.",
+      "evidence": "The average global e-commerce app session length declined YoY in 2025, down from 10.04 to 9.6 minutes.",
+      "confidence": "high",
+      "pages": [
+        28
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "ecom-sessions-per-user",
+      "text": "Global e-commerce day-0 sessions per user decreased from 1.37 in 2024 to 1.36 in 2025; LATAM increased from 1.35 to 1.36.",
+      "evidence": "Global e-commerce day 0 sessions per user decreased from 1.37 to 1.36 in 2025. Most regions (APAC, Europe, MENA, and North America) saw declines, and LATAM increased from 1.35 to 1.36.",
+      "confidence": "high",
+      "pages": [
+        28
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "ecom-retention",
+      "text": "Global e-commerce-app day-1 retention fell from 13.2% in 2024 to 12.6% in 2025, day-7 retention fell from 6.3% to 6%, day-14 retention hovered near 4.4%, and day-30 retention remained at 3%.",
+      "evidence": "Day 1 retention dipped from 13.2% to 12.6%, and day 7 retention eased from 6.3% to 6%. Day 14 figures hovered near 4.4%, with day 30 retention remaining flat at 3%.",
+      "confidence": "high",
+      "pages": [
+        29
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "ecom-cpi",
+      "text": "Global e-commerce-app CPI declined from $1 in 2024 to $0.98 in 2025. Deal-discovery CPI rose from $1.44 to $2.26, marketplace and classifieds fell from $0.99 to $0.88, and shopping fell from $0.93 to $0.91.",
+      "evidence": "Cost per install (CPI) for global e-commerce apps declined from $1 to $0.98 in 2025. Subvertical trends diverged as deal discovery CPI rose from $1.44 to $2.26, while marketplace and classifieds dropped from $0.99 to $0.88, and shopping decreased from $0.93 to $0.91.",
+      "confidence": "high",
+      "pages": [
+        29
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "ecom-regional-cpi",
+      "text": "E-commerce-app CPI declined in APAC from $1.27 to $0.68 and in North America from $2.61 to $2.49; it rose in Europe from $1.83 to $2.25 and in MENA from $0.45 to $0.51.",
+      "evidence": "CPI declined in APAC from $1.27 in 2024 to $0.68 in 2025, and in North America from $2.61 to $2.49. Europe’s CPI climbed from $1.83 to $2.25, and MENA’s rose from $0.45 to $0.51.",
+      "confidence": "high",
+      "pages": [
+        29
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "finance-global-growth",
+      "text": "Global finance-app installs fell 4% year over year in 2025 while sessions rose 21%.",
+      "evidence": "Finance app installs dropped 4% YoY in 2025, while sessions rose 21%.",
+      "confidence": "high",
+      "pages": [
+        34
+      ],
+      "section_id": "finance-apps",
+      "section_title": "Finance apps"
+    },
+    {
+      "id": "finance-regional-growth",
+      "text": "In 2025, LATAM finance-app installs grew 76% and sessions grew 57%; APAC installs grew 5% and sessions grew 50%.",
+      "evidence": "LATAM dominated regional growth with +76% install growth YoY and +57% for sessions. APAC combined 5% install growth with a huge 50% increase in sessions.",
+      "confidence": "high",
+      "pages": [
+        35
+      ],
+      "section_id": "finance-apps",
+      "section_title": "Finance apps"
+    },
+    {
+      "id": "finance-session-length",
+      "text": "Global finance-app session length increased 8% to 7.18 minutes in 2025, and North America had the longest reported session length at 8.43 minutes.",
+      "evidence": "Global finance app session lengths increased to 7.18 minutes in 2025, up 8%. North America led at 8.43 minutes.",
+      "confidence": "high",
+      "pages": [
+        36
+      ],
+      "section_id": "finance-apps",
+      "section_title": "Finance apps"
+    },
+    {
+      "id": "finance-sessions-per-user",
+      "text": "Global day-0 sessions per user for finance apps declined from 1.52 in 2024 to 1.48 in 2025.",
+      "evidence": "Day 0 sessions per user for finance apps globally dipped YoY from 1.52 to 1.48.",
+      "confidence": "high",
+      "pages": [
+        36
+      ],
+      "section_id": "finance-apps",
+      "section_title": "Finance apps"
+    },
+    {
+      "id": "finance-paid-organic",
+      "text": "The global finance-app paid/organic ratio rose to 1.13 in 2025, with LATAM reaching 3.26.",
+      "evidence": "The global paid/organic ratio climbed to 1.13, with LATAM’s increase to 3.26 the most pronounced.",
+      "confidence": "high",
+      "pages": [
+        38
+      ],
+      "section_id": "finance-apps",
+      "section_title": "Finance apps"
+    },
+    {
+      "id": "finance-subvertical-ratios",
+      "text": "The paid/organic ratio for stock trading apps rose from 0.34 to 0.63, and the ratio for crypto apps rose from 0.51 to 0.72.",
+      "evidence": "Stock trading paid/organic ratio climbed from 0.34 to 0.63, an 83% increase. Crypto followed suit, increasing their paid/organic ratio 43%, from 0.51 to 0.72.",
+      "confidence": "high",
+      "pages": [
+        38
+      ],
+      "section_id": "finance-apps",
+      "section_title": "Finance apps"
+    },
+    {
+      "id": "conclusion-integrated-growth",
+      "text": "The report concludes that the next phase of app growth is architectural and depends on integrated, adaptable capabilities rather than any single tool.",
+      "evidence": "The next phase of growth is architectural, not because of any single tool, but because of how these capabilities work together. Teams that build this kind of foundation—integrated, adaptable, and accountable—will be best positioned to navigate the complexity of 2026.",
+      "confidence": "high",
+      "pages": [
+        40
+      ],
+      "section_id": "conclusion",
+      "section_title": "Conclusion: An exciting future for the mobile app industry"
+    },
+    {
+      "id": "ecommerce-global-regional-growth",
+      "text": "Global e-commerce app installs fell 10% year over year in 2025 while sessions increased 5%; LATAM had 17% install growth and 30% session growth, whereas Europe’s installs decreased 22% while sessions increased 6%.",
+      "evidence": "Global e-commerce app installs fell 10% \nYoY in 2025, even as sessions increased 5%.\nLATAM was the highest performing region, \nwith 17% install growth and a 30% jump in \nsessions. ... Europe \npresented a mixed picture, with installs \ndecreasing 22% while sessions edged up 6%.",
+      "confidence": "high",
+      "pages": [
+        27
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "ecommerce-retention",
+      "text": "Global e-commerce app day 1 retention dipped from 13.2% to 12.6% and day 7 retention eased from 6.3% to 6% in 2025; day 14 figures hovered near 4.4%, and day 30 retention remained flat at 3%.",
+      "evidence": "E-commerce app retention rates  \n2024 - 2025 (Global)\nRetention rates for e-commerce apps decreased slightly YoY \nin 2025. Day 1 retention dipped from 13.2% to 12.6%, and day 7 \nretention eased from 6.3% to 6%. Day 14 figures hovered near \n4.4%, with day 30 retention remaining flat at 3%.",
+      "confidence": "high",
+      "pages": [
+        29
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "ecommerce-cpi",
+      "text": "Global e-commerce app CPI declined from $1 in 2024 to $0.98 in 2025; deal discovery CPI rose from $1.44 to $2.26, while marketplace and classifieds CPI fell from $0.99 to $0.88.",
+      "evidence": "E-commerce app CPI 2024 - 2025 (Global)\nCost per install (CPI) for global e-commerce apps declined from \n$1 to $0.98 in 2025. Subvertical trends diverged as deal discovery \nCPI rose from $1.44 to $2.26, while marketplace and classifieds \ndropped from $0.99 to $0.88",
+      "confidence": "high",
+      "pages": [
+        29
+      ],
+      "section_id": "ecommerce-shopping",
+      "section_title": "E-commerce/shopping"
+    },
+    {
+      "id": "conclusion-architectural-growth",
+      "text": "The conclusion says the next phase of growth is architectural, arising from capabilities working together rather than from any single tool.",
+      "evidence": "The next phase of growth is architectural, not \nbecause of any single tool, but because of how these \ncapabilities work together.",
+      "confidence": "high",
+      "pages": [
+        40
+      ],
+      "section_id": "conclusion",
+      "section_title": "Conclusion: An exciting future for the mobile app industry"
+    },
+    {
+      "id": "conclusion-cross-vertical-integration",
+      "text": "The conclusion links embedded finance features, AI personalization and agents in e-commerce, and gaming’s balance of user acquisition with retention to a shared strategic direction involving cross-channel attribution, AI insights, and campaign optimization.",
+      "evidence": "We see this play out across every vertical; finance apps  \nare part of daily life across the board and embedded  \nfeatures are becoming the norm. E-commerce is  \naccelerating through AI personalization and agents,  \nand gaming is balancing reach and high-volume UA  \nwith retention and sustained engagement.\nData is still the foundation, but the bar for quality has  \nbeen raised. App marketers need cross-channel attribution \nthat removes blind spots and exposes trends, alongside  \nAI insights that make data analysis faster and more effective, \nand next-generation solutions that enable campaign \noptimization and confident budget allocation based on \naggregated data with ease.",
+      "confidence": "high",
+      "pages": [
+        40
+      ],
+      "section_id": "conclusion",
+      "section_title": "Conclusion: An exciting future for the mobile app industry"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

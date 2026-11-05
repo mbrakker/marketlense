@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_plan",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "report_thesis": "The findings show that app performance is not one growth story: signals vary by vertical, segment and measure, so decisions should be grounded in the specific cohort and metric.",
+    "themes": [
+      {
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence",
+          "verified-fact:insight-ecommerce-cpi-divergence"
+        ],
+        "priority": 1,
+        "theme": "Global e-commerce signals diverged by measure in 2025: installs fell 10% year over year while sessions increased 5%. Reported CPI shifted from $1.00 in 2024 to $0.98 in 2025 overall, but rose from $1.44 to $2.26 for Deal discovery and declined from $0.99 to $0.88 for Marketplace & classifieds."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:insight-finance-growth-divergence",
+          "verified-fact:insight-finance-engagement-measures"
+        ],
+        "priority": 2,
+        "theme": "Global finance-app measures also diverged: in 2025, installs fell 4% year over year while sessions rose 21%; session length increased 8% to 7.18 minutes, while day-0 sessions per user declined from 1.52 in 2024 to 1.48 in 2025. These are distinct measures of finance-app activity, not a single directional signal."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:insight-finance-latam-growth"
+        ],
+        "priority": 3,
+        "theme": "LATAM led regional finance-app growth in 2024–2025, with installs growing 76% and sessions growing 57% year over year; the chart does not state underlying counts or denominators."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:insight-gaming-subvertical-divergence"
+        ],
+        "priority": 4,
+        "theme": "Globally, in the 2024–2025 year-over-year comparison, casino installs increased 22% and sessions decreased 5%, while slots installs increased 46% and sessions decreased 5%."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:insight-genai-efficiency-qualified"
+        ],
+        "priority": 5,
+        "theme": "Most organizations report low or moderate GenAI maturity, while a small group with advanced deployment reportedly achieved efficiency gains of over 20%."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:gaming-retention"
+        ],
+        "priority": 6,
+        "theme": "Global gaming-app all-game retention changed minimally from 2024 to 2025; reported rates were 27% on day 1, 13% on day 7, 8% on day 14 and 5% on day 30."
+      },
+      {
+        "evidence_ids": [
+          "verified-fact:intro-downloads"
+        ],
+        "priority": 7,
+        "theme": "The page reports more than 112.1 billion app downloads in 2025; the download figure's geography is not specified."
+      }
+    ]
+  }
+}

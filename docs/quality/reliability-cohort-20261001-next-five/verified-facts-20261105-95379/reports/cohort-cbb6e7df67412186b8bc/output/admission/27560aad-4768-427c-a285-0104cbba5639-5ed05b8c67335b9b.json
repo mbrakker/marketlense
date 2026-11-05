@@ -1,0 +1,46 @@
+{
+  "configuration_hash": "785b1cd1562f7b4df728c2140f4d25eb9f9c9a860fc1c3b2fb4f69a17ebadadc",
+  "decision_set_hash": "5ed05b8c67335b9b77ad8290e53f5fd0c8abaf0586a0ad2d3b452c9ee72e0b99",
+  "decisions": [
+    {
+      "budget_decision": "allow",
+      "configuration_hash": "785b1cd1562f7b4df728c2140f4d25eb9f9c9a860fc1c3b2fb4f69a17ebadadc",
+      "decision_hash": "38e15569b9d0bf76c310d936442d5c3302d524406aa5f180c26cb580759e3865",
+      "duplicate_identity_match": "",
+      "estimated_cost_usd": 0.008249,
+      "estimated_provider_calls": 1,
+      "estimated_provider_tokens": 16952,
+      "evidence_potential": "sufficient",
+      "file_id": "cohort-cbb6e7df67412186b8bc",
+      "media_type": "application/pdf",
+      "model_policy_covered": true,
+      "near_duplicate_title_match": "",
+      "outcome": "admitted",
+      "page_count": 140,
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "preflight_version": "2.0",
+      "publisher_id": "Activate",
+      "report_title": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f",
+      "required_artifact_families": [
+        "doc_map"
+      ],
+      "runtime_dependencies_ready": true,
+      "runtime_dependency_status": "validated_pre_freeze",
+      "runtime_preflight_hash": "2f5adc07ceb76992d6a7c4cf6d7d2003e389079174b6f3cefb47f114025c04da",
+      "sample_char_count": 2273,
+      "sample_text_density": 757.666667,
+      "schema_version": "1.0",
+      "size_bytes": 6203358,
+      "source_artifact_exists": true,
+      "source_artifact_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "source_identity_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b",
+      "source_url": "https://cdn.sanity.io/files/bw8wgpyt/production/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "source_url_classification": "drive_artifact_nonpublic",
+      "structure_readable": true,
+      "title_key": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f"
+    }
+  ],
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "run_id": "27560aad-4768-427c-a285-0104cbba5639",
+  "schema_version": "1.0"
+}

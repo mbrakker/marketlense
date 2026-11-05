@@ -1,0 +1,90 @@
+{
+  "report_id": "cohort-81af3890cd84ece81ef1",
+  "title": "How AI is transforming value perception today’s consumer 2026",
+  "publisher": "",
+  "region": "Global",
+  "time_period": "October 2025, with comparisons from November 2022 to November 2024",
+  "overview": "What matters to today’s consumer 2026 by Capgemini Research Institute Capgemini Research Institute’s annual consumer research report examines how fairness, quality, careful spending, AI, and human interaction shape consumer decisions. Based on a survey of 12,000 consumers in 12 countries and interviews with consumer products and retail experts, it presents findings and recommendations for organizations navigating changing expectations around value, trust, and technology. Examines evolving consumer behavior in the consumer products and retail ecosystem, including value, technology, trust, AI, and purchasing decisions. Based on a global survey of 12,000 consumers aged 18 and over across Australia, Canada, France, Germany, India, Italy, Japan, the Netherlands, Spain, Sweden, the UK, and the US, plus executive interviews; the survey was conducted in October 2025 and the report is dated 2026.",
+  "methods": [
+    "Global survey of 12,000 consumers aged 18 and over across 12 countries; survey conducted in October 2025.",
+    "In-depth interviews with executives from the consumer products and retail industries."
+  ],
+  "key_findings": [
+    "In October 2025, 62% of consumers said they were spending more time searching online for deals and discounts, compared with 64% in November 2024.",
+    "In October 2025, 62% of consumers said they were cutting back on non-essential items.",
+    "Almost half of consumers (49%) were buying smaller pack sizes.",
+    "Most consumers (74%) will switch brands if competitors offer lower regular prices.",
+    "Most consumers (71%) will switch brands if their current brand reduces pack size or product quality without clear communication rationalizing the change.",
+    "Consumers assess the retail channel’s reliability, transparency, and ethical standards, including secure payments, data privacy, product authenticity, fulfilment speeds, and fair return policies, when evaluating trust."
+  ],
+  "limitations": [],
+  "sections": [
+    {
+      "section_label": "Executive summary",
+      "source_pack": "doc_map",
+      "summary": "Summarizes how consumer expectations around fair value, quality, AI-enabled shopping, and human assistance are changing. It previews the report’s findings and implications for consumer products and retail organizations.",
+      "key_points": [
+        "Transparent prices, consistent policies, and clear communication are presented alongside quality as drivers of perceived value.",
+        "Consumers balance budget-conscious choices with occasional indulgence; the summary reports that 54% are making fewer impulse purchases, down from 71% the previous year (p. 6).",
+        "AI assistants are entering routine shopping tasks, while consumers continue to expect control over when assistants act (pp. 5–6)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Who should read this report and why?",
+      "source_pack": "doc_map",
+      "summary": "Identifies consumer products and retail leaders and teams who can use the report’s findings. It explains the report’s relevance to decisions about value, technology, trust, personalization, and consumer behavior.",
+      "key_points": [
+        "Intended readers include marketing, digital and ecommerce, loyalty, consumer insights, product, and category leaders.",
+        "Strategy, pricing, innovation, technology, and data teams can use the findings to understand switching behavior, loyalty, and consumer-grade AI.",
+        "The report draws on a global survey of 12,000 adults in 12 countries and interviews with consumer products and retail executives."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Value redefined: where fairness and quality intersect",
+      "source_pack": "doc_map",
+      "summary": "Examines how consumers define value through fairness, product quality, trust, and the shopping channel, rather than price alone. It discusses inflation fatigue, pricing practices, and the differing roles of price and brand across product categories.",
+      "key_points": [
+        "In October 2025, 62% of consumers said they were spending more time searching online for deals, compared with 64% in November 2024; 62% said they were cutting back on non-essential items (p. 9).",
+        "The report distinguishes categories where price takes precedence, such as fresh produce and household necessities, from categories where brand takes precedence, including luxury products and baby c...",
+        "Figure 4 reports that 64% of consumers consider shrinkflation unfair (p. 15)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Careful spending meets intentional indulgence",
+      "source_pack": "doc_map",
+      "summary": "Explores how consumers manage constrained budgets while preserving room for treats and emotionally rewarding purchases. It considers deal-seeking, alternative channels, and the varying importance of small indulgences across age groups.",
+      "key_points": [
+        "Figure 11 reports that 71% on average say small indulgences help them cope with financial stress; the figure is 75% among Millennials and 66% among Boomers (p. 27).",
+        "The report frames small treats as an emotional reward that can coexist with saving and careful spending (p. 27).",
+        "It describes consumer trust in discount and secondhand formats, while noting that consumers also weigh product reliability and quality (p. 27)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "AI – The consumer’s trusted guide",
+      "source_pack": "doc_map",
+      "summary": "Describes the growing role of AI and digital assistants in discovery, shopping, service, and routine purchasing tasks. It also addresses consumer control, trust, and social commerce.",
+      "key_points": [
+        "The report says 52% of consumers use virtual assistants at least weekly to automate tasks such as reordering or meal planning, while only one in five is willing to pay for such a service (p. 5).",
+        "Consumers want boundaries on assistant actions: 76% want the ability to set clear rules for when an assistant acts (p. 6).",
+        "Figure 17 shows the share who had purchased via social media rising from 24% in November 2023 to 32% in November 2024 and 35% in October 2025 (p. 37)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Reliable tech builds loyalty – but with boundaries",
+      "source_pack": "doc_map",
+      "summary": "Considers how personalization and technology can improve shopping experiences while maintaining privacy, trust, and human connection. It covers consumers’ interest in tailored recommendations and the loyalty value of human interaction in stores.",
+      "key_points": [
+        "Figure 20 reports that, in October 2025, 63% wanted Gen AI to provide hyper-personalized content and recommendations, compared with 58% in November 2024; 56% were comfortable sharing shopping histo...",
+        "In Figure 23, the share saying human interaction during in-store customer support increases loyalty rose from 54% in November 2024 to 74% in October 2025; for the purchase stage, it rose from 40% t...",
+        "The section argues that digital tools can enhance physical retail, but should not displace the emotional and sensory value of in-store experiences (pp. 44–45)."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

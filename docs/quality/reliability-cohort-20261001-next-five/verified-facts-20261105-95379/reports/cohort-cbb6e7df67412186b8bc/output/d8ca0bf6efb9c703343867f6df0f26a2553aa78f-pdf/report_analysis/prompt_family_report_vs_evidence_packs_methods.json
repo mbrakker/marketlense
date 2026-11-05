@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/methods",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "methods": [
+      "Activate-labeled forecasts estimate global consumer internet and media revenues for 2017E–2021E; cited inputs include eMarketer, GroupM, IBISWorld, IFPI, the International Monetary Fund, NewZoo, PricewaterhouseCoopers, RBC, the World Bank, and ZenithOptimedia.",
+      "The report cites the Activate 2017 Consumer Tech & Media Research Study, with chart-specific sample sizes including n=4,047, n=2,406, and n=996; platform-specific samples are also reported (Facebook n=2,641; Snapchat n=969; YouTube n=2,940).",
+      "Top news sites were selected from comScore’s Top 100 digital news properties; figures cover desktop and mobile sites only.",
+      "Virtual Pay TV churn covers the trailing twelve months beginning September 2017, while SVOD churn covers calendar year 2016. Programming-cost estimates average base Virtual Pay TV offerings from major services that include broadcast networks and/or sports; estimates account for a premium associated with reduced scale and per-channel costs.",
+      "The eCommerce adoption index is based on measured consumer preferences, including preferences measured in the Activate 2017 Consumer Tech & Media Research Study (n=4,047).",
+      "For the influencer analysis, the Forbes Top 10 Influencers list was generated with Traackr and Captiv8 using reach, virality, engagement, earnings per post, outside endorsements, and reputation; YouTube channels are counted as unique creators."
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "methods",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

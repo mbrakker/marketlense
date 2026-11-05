@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "consumer_trends",
+      "consumer_behavior",
+      "value_perception",
+      "consumer_trust",
+      "brand_loyalty",
+      "agentic_commerce",
+      "spending_behavior"
+    ],
+    "primary_tags": [
+      "consumer_trends",
+      "consumer_behavior",
+      "value_perception",
+      "consumer_trust",
+      "brand_loyalty"
+    ],
+    "secondary_tags": [
+      "agentic_commerce",
+      "spending_behavior"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "consumer_trends",
+        "tier": "primary",
+        "section_label": "Executive summary and report structure",
+        "evidence": "Annual research report examines evolving consumer behaviors and expectations around value, technology, and trust."
+      },
+      {
+        "tag": "consumer_behavior",
+        "tier": "primary",
+        "section_label": "Who should read this report and why?",
+        "evidence": "Explores how AI, personalization, and emotion reshape consumer decision making."
+      },
+      {
+        "tag": "value_perception",
+        "tier": "primary",
+        "section_label": "Value redefined: where fairness and quality intersect",
+        "evidence": "Examines consumer assessments of fairness, quality, price, and value."
+      },
+      {
+        "tag": "consumer_trust",
+        "tier": "primary",
+        "section_label": "Reliable tech builds loyalty – but with boundaries",
+        "evidence": "Discusses trust in retail channels, including privacy, authenticity, payment security, and fair returns."
+      },
+      {
+        "tag": "brand_loyalty",
+        "tier": "primary",
+        "section_label": "Reliable tech builds loyalty – but with boundaries",
+        "evidence": "Connects human interactions and loyalty programs with stronger consumer loyalty."
+      },
+      {
+        "tag": "agentic_commerce",
+        "tier": "secondary",
+        "section_label": "AI – The consumer’s trusted guide",
+        "evidence": "Describes intelligent agents reducing friction in searching, comparing, and purchasing."
+      },
+      {
+        "tag": "spending_behavior",
+        "tier": "secondary",
+        "section_label": "Careful spending meets intentional indulgence",
+        "evidence": "Focuses on careful spending, price sensitivity, and consumers’ intentional purchases."
+      }
+    ],
+    "region": "Global",
+    "time_period": "October 2025, with comparisons from November 2022 to November 2024",
+    "not_found_reason": null
+  }
+}

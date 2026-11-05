@@ -1,0 +1,29 @@
+{
+  "cohort_size": 1,
+  "cost_attribution": {
+    "missing_cost_event_count": 0,
+    "scope": "validation_run_id",
+    "status": "available"
+  },
+  "disposition": "insufficient_evidence",
+  "findings": [
+    "Immutable cohort retained; no member replacement occurred.",
+    "Publication and repeat publication were not performed; publication was not evaluated.",
+    "Terminal outcomes are typed and attributed to each member's current attempt.",
+    "The scoped terminal outcome evidence is incomplete or unavailable."
+  ],
+  "publication_disposition": "not_evaluated",
+  "publication_performed": false,
+  "publish_ready": 0,
+  "scope": {
+    "publication": "not_evaluated",
+    "terminal_outcomes": "in_scope"
+  },
+  "status": "insufficient_evidence",
+  "usage_attribution": {
+    "matching_event_count": 95,
+    "scope": "validation_run_id",
+    "status": "available"
+  },
+  "validation_run_id": "validation:e55e779bc7cf8cbdbabd90db6eaee61edaa5dbaca9ac5bd58f3df16559705115"
+}

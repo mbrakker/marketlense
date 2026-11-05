@@ -1,0 +1,46 @@
+{
+  "configuration_hash": "22137a7469f22edd710fcf80015bc73fd2de826ffc1ff96266b4e150589f8dc5",
+  "decision_set_hash": "d4e629983ed3e46eabd73e5324dd1897e204188e6956ad7b7f982a067ea0cbd0",
+  "decisions": [
+    {
+      "budget_decision": "allow",
+      "configuration_hash": "22137a7469f22edd710fcf80015bc73fd2de826ffc1ff96266b4e150589f8dc5",
+      "decision_hash": "0e353990ef860387f139f923e15878082b2bffcb36775cfc74897cae3a8ef1dc",
+      "duplicate_identity_match": "",
+      "estimated_cost_usd": 0.008292,
+      "estimated_provider_calls": 1,
+      "estimated_provider_tokens": 17383,
+      "evidence_potential": "sufficient",
+      "file_id": "cohort-2acb4a56e14add5d7717",
+      "media_type": "application/pdf",
+      "model_policy_covered": true,
+      "near_duplicate_title_match": "",
+      "outcome": "admitted",
+      "page_count": 42,
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "preflight_version": "2.0",
+      "publisher_id": "KPMG",
+      "report_title": "kpmg-2026-global-ma-outlook",
+      "required_artifact_families": [
+        "doc_map"
+      ],
+      "runtime_dependencies_ready": true,
+      "runtime_dependency_status": "validated_pre_freeze",
+      "runtime_preflight_hash": "2f5adc07ceb76992d6a7c4cf6d7d2003e389079174b6f3cefb47f114025c04da",
+      "sample_char_count": 3998,
+      "sample_text_density": 1332.666667,
+      "schema_version": "1.0",
+      "size_bytes": 3358281,
+      "source_artifact_exists": true,
+      "source_artifact_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\kpmg.com\\d2cdf31f6df8\\kpmg-2026-global-ma-outlook.pdf",
+      "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3",
+      "source_url": "https://kpmg.com/xx/en/our-insights/value-creation/global-m-and-a-outlook.html",
+      "source_url_classification": "drive_artifact_nonpublic",
+      "structure_readable": true,
+      "title_key": "kpmg2026globalmaoutlook"
+    }
+  ],
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "run_id": "8bcf521b-9f90-473a-a207-e0e2393a5c8d",
+  "schema_version": "1.0"
+}

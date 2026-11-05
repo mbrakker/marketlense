@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "internet_and_media",
+      "consumer_behavior",
+      "tech_trends",
+      "streaming_video",
+      "ecommerce",
+      "ar_vr",
+      "podcasting",
+      "live_sports"
+    ],
+    "primary_tags": [
+      "internet_and_media",
+      "consumer_behavior",
+      "tech_trends",
+      "streaming_video",
+      "ecommerce"
+    ],
+    "secondary_tags": [
+      "ar_vr",
+      "podcasting",
+      "live_sports"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "internet_and_media",
+        "tier": "primary",
+        "section_label": "$300 Billion in Tech and Media Growth Dollars",
+        "evidence": "Forecasts global consumer Internet and media revenue growth of about $302 billion from 2017E to 2021E."
+      },
+      {
+        "tag": "consumer_behavior",
+        "tier": "primary",
+        "section_label": "There are 31 Hours in a Day; Super Users: A Lot More Time, a Lot More Money",
+        "evidence": "The report devotes major sections to time use and the behavior of high-engagement consumers."
+      },
+      {
+        "tag": "tech_trends",
+        "tier": "primary",
+        "section_label": "Smart Speaker Battles are about the Great Digital Assistant Wars",
+        "evidence": "A major section examines smart speakers and digital assistants."
+      },
+      {
+        "tag": "streaming_video",
+        "tier": "primary",
+        "section_label": "Premium Video: The Chase for Television Viewers and Television Dollars",
+        "evidence": "Analyzes virtual pay TV, subscription video, churn, and programming costs."
+      },
+      {
+        "tag": "ecommerce",
+        "tier": "primary",
+        "section_label": "eCommerce: More than Two Trillion Dollars To Go",
+        "evidence": "A dedicated section examines eCommerce growth and adoption across product categories."
+      },
+      {
+        "tag": "ar_vr",
+        "tier": "secondary",
+        "section_label": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform",
+        "evidence": "A major section covers VR and AR evolving from entertainment toward computing platforms."
+      },
+      {
+        "tag": "podcasting",
+        "tier": "secondary",
+        "section_label": "In an Era of Voice Control, Look to Podcasting to Engage Users",
+        "evidence": "The report examines podcasting as a way to engage users in voice-controlled media."
+      },
+      {
+        "tag": "live_sports",
+        "tier": "secondary",
+        "section_label": "Sports is the Ultimate Moat",
+        "evidence": "A dedicated section considers sports audiences, video viewership, and emerging leagues."
+      }
+    ],
+    "region": "Global and U.S.",
+    "time_period": "2017 to 2021 E forecasts, published 2018",
+    "not_found_reason": null
+  }
+}

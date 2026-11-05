@@ -1,0 +1,183 @@
+{
+  "schema_version": "1.0",
+  "selected_category_ids": [
+    "business_performance"
+  ],
+  "category_fits": [
+    {
+      "category_id": "business_performance",
+      "label": "Business Performance & Growth",
+      "fit_score": 0.74,
+      "decision": "primary",
+      "why_fit": "The report is a global benchmark of app performance, repeatedly comparing installs, sessions, retention, acquisition costs, and growth across 2024–2025 to inform growth strategy.",
+      "why_not_fit": "The performance metrics are framed within mobile app verticals rather than broad corporate profitability or margin performance.",
+      "evidence_sections": [
+        "Introduction: Evolution and opportunity in the mobile app industry",
+        "Key takeaways & methodology",
+        "Gaming apps",
+        "E-commerce/shopping"
+      ],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence emphasizes app growth and performance benchmarks.",
+        "The benchmark is intended to inform growth strategy and campaign optimization."
+      ],
+      "supported_topic_rule_ids": [
+        "business_performance:include:3fe298416b703617",
+        "business_performance:include:ec3517286d7b97e7"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "Introduction: Evolution and opportunity in the mobile app industry",
+        "Key takeaways & methodology",
+        "Gaming apps",
+        "E-commerce/shopping"
+      ],
+      "centrality_evidence_sections": [
+        "Key takeaways & methodology",
+        "Gaming apps",
+        "E-commerce/shopping"
+      ],
+      "remediation_signal": "No remediation guidance is central to the report."
+    },
+    {
+      "category_id": "measurement_attribution",
+      "label": "Measurement & Attribution",
+      "fit_score": 0.48,
+      "decision": "reject",
+      "why_fit": "The report discusses cross-channel measurement, multi-platform data, and app performance metrics.",
+      "why_not_fit": "Measurement is a supporting topic; the report primarily benchmarks app outcomes rather than explaining attribution, incrementality, or formal measurement frameworks.",
+      "evidence_sections": [
+        "Introduction: Evolution and opportunity in the mobile app industry",
+        "Mobile-first approach evolves into multi-platform strategy",
+        "Key takeaways & methodology"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Metrics and measurement discussion serve a broader app-performance report rather than making measurement the central subject."
+      ],
+      "rejected_topic_rule_ids": [
+        "measurement_attribution:exclude:f41d528d822930b7"
+      ],
+      "rule_evidence_sections": [
+        "Mobile-first approach evolves into multi-platform strategy",
+        "Key takeaways & methodology"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "Measurement is discussed as an enabler, not the report's main decision domain."
+    },
+    {
+      "category_id": "ai_automation",
+      "label": "AI & Automation",
+      "fit_score": 0.37,
+      "decision": "reject",
+      "why_fit": "A section discusses generative AI maturity, AI assistants, predictive segmentation, and AI-supported marketing workflows.",
+      "why_not_fit": "The report is principally a mobile app performance benchmark; AI is one supporting topic among app growth, measurement, acquisition, and retention.",
+      "evidence_sections": [
+        "Introduction: Evolution and opportunity in the mobile app industry",
+        "AI transforms from strategic tool to core infrastructure in 2026"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "AI is an enabler inside a broader vertical-market report rather than its central topic."
+      ],
+      "rejected_topic_rule_ids": [
+        "ai_automation:exclude:1e73dca27527e17c"
+      ],
+      "rule_evidence_sections": [
+        "AI transforms from strategic tool to core infrastructure in 2026",
+        "Key takeaways & methodology"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "AI is covered as an enabling capability, not as the report's primary subject."
+    },
+    {
+      "category_id": "omni_channel",
+      "label": "Omni-Channel Marketing",
+      "fit_score": 0.34,
+      "decision": "reject",
+      "why_fit": "The report describes user journeys across mobile web, desktop, apps, and other channels, and recommends integrated measurement and coordinated journeys.",
+      "why_not_fit": "This discussion is concentrated in one section; the report's central content is app performance benchmarking, not coordinated marketing planning and activation across channels.",
+      "evidence_sections": [
+        "Introduction: Evolution and opportunity in the mobile app industry",
+        "Mobile-first approach evolves into multi-platform strategy"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Cross-channel discussion is not the central subject of the broader app benchmark."
+      ],
+      "rejected_topic_rule_ids": [
+        "omni_channel:exclude:dd52da0f2e02f0f1"
+      ],
+      "rule_evidence_sections": [
+        "Mobile-first approach evolves into multi-platform strategy",
+        "Key takeaways & methodology"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "Cross-platform strategy is discussed, but does not define the report's main purpose."
+    },
+    {
+      "category_id": "advertising_media",
+      "label": "Advertising Strategy & Media",
+      "fit_score": 0.29,
+      "decision": "reject",
+      "why_fit": "The introduction discusses campaign optimization, ROI, user acquisition, and channel diversification.",
+      "why_not_fit": "The report does not center on media planning, advertising investment, or media effectiveness; marketing is a context for app growth metrics.",
+      "evidence_sections": [
+        "Introduction: Evolution and opportunity in the mobile app industry",
+        "Gaming apps",
+        "E-commerce/shopping"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Media and campaign topics appear as routes within a broader app-performance report."
+      ],
+      "rejected_topic_rule_ids": [
+        "advertising_media:exclude:dd740214afbdc03d"
+      ],
+      "rule_evidence_sections": [
+        "Introduction: Evolution and opportunity in the mobile app industry",
+        "Gaming apps",
+        "E-commerce/shopping"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "The report does not provide advertising or media strategy as its central guidance."
+    },
+    {
+      "category_id": "technology",
+      "label": "Technology & Innovation",
+      "fit_score": 0.23,
+      "decision": "reject",
+      "why_fit": "The report references mobile technologies and discusses AI in app marketing workflows.",
+      "why_not_fit": "It benchmarks app installs, engagement, retention, and acquisition rather than examining technology infrastructure, architecture, or technology change as its main lens.",
+      "evidence_sections": [
+        "Introduction: Evolution and opportunity in the mobile app industry",
+        "AI transforms from strategic tool to core infrastructure in 2026"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Technology and AI are supporting capabilities within a report focused on app performance."
+      ],
+      "rejected_topic_rule_ids": [
+        "technology:exclude:bcb4675ddd1f92ce"
+      ],
+      "rule_evidence_sections": [
+        "Introduction: Evolution and opportunity in the mobile app industry",
+        "AI transforms from strategic tool to core infrastructure in 2026"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "Technology is context and an enabler, rather than the main report subject."
+    }
+  ]
+}

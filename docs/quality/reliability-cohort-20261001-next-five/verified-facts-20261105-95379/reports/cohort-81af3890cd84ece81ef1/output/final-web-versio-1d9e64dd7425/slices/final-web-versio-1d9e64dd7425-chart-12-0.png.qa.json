@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-12-0",
+  "candidate_type": "chart",
+  "page": 12,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    300.897,
+    73.899,
+    813.103,
+    421.101
+  ],
+  "final_bbox": [
+    292.897,
+    65.762,
+    821.103,
+    424.215
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 65,
+    "bottom": 42,
+    "left": 101,
+    "right": 101
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": false,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.8273,
+    "margin_balance": 0.8475,
+    "neighbor_contamination": 0.0959,
+    "readability": 1.0,
+    "visual_crispness": 0.35,
+    "total_score": 0.8288,
+    "defect_labels": [
+      "chart_axis_or_label_clipped"
+    ],
+    "edge_density": {
+      "top": 0.0226,
+      "bottom": 0.1533,
+      "left": 0.6688,
+      "right": 0.6471
+    },
+    "edge_leakage": {
+      "top": 0.0,
+      "bottom": 0.0959,
+      "left": 0.0059,
+      "right": 0.0131
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.5,
+        "strong_edges": [
+          "left",
+          "right"
+        ],
+        "edge_density": {
+          "top": 0.0226,
+          "bottom": 0.1533,
+          "left": 0.6688,
+          "right": 0.6471
+        }
+      },
+      "chart_completeness": {
+        "accepted": false,
+        "confidence": 0.6688,
+        "clipped_edges": [
+          "left"
+        ],
+        "edge_density": {
+          "top": 0.0226,
+          "bottom": 0.1533,
+          "left": 0.6688,
+          "right": 0.6471
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.6688,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0226,
+          "bottom": 0.1533,
+          "left": 0.6688,
+          "right": 0.6471
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": false,
+  "rejection_reason": "chart_axis_or_label_clipped"
+}

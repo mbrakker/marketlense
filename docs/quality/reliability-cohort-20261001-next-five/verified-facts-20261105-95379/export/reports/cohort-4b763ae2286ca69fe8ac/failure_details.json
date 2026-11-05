@@ -1,0 +1,11 @@
+{
+  "terminal_failures": [
+    {
+      "failure_code": "validation_terminal_outcome_missing",
+      "report_id": "cohort-4b763ae2286ca69fe8ac",
+      "terminal_outcome": "missing",
+      "terminal_stage": ""
+    }
+  ],
+  "validation_run_id": "validation:ea1f217f110d2938dccc08503ee6e39cd4bffa3cd65e71ad720b1e453ffc759d"
+}

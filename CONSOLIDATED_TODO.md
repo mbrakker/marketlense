@@ -1983,3 +1983,20 @@ regeneration blocker, but broader Step 2 remains **PARTIAL/NO-GO** pending the
 frozen-five/live-effectiveness scope; E18 remains **Active/PARTIAL** and Step 3
 remains **unstarted/not ready**. Full evidence and artifact paths are recorded
 in `docs/quality/verified-claims-step2-visual-shadow-20261018.md`.
+
+
+**Evidence update — 2026-11-05 (frozen five-report E2E acceptance):** The
+authoritative frozen cohort was executed once at producer SHA
+95379a8decc5d4f1ca814170619e832c8bacf95f with no production changes, retries
+or publication writes. All five reports were admitted, but all five terminated
+before readiness: Capgemini, Activate, KPMG and Reuters failed
+artifact_final_insight_coverage_invalid; Adjust failed the existing public
+editorial distinctness/limitations gate after verified-fact admission. The run
+made 914 provider calls, used 4,168,035 input and 840,654 output tokens,
+cost $0.937278, and took 9,202.773 seconds. It produced no final HTML and is
+FAIL/NO-GO evidence, not a selection-quality improvement claim. All safe
+artifacts, exclusions and source identities are retained under
+docs/quality/reliability-cohort-20261001-next-five/verified-facts-20261105-95379.
+E18 remains Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
+unstarted/not ready. The next work is bounded diagnosis of final-insight
+coverage and Adjust public distinctness; do not close this outcome.

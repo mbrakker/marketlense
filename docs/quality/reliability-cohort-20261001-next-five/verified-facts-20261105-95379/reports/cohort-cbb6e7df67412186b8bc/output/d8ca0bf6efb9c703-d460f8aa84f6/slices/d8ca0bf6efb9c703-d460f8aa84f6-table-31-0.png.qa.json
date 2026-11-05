@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "table-31-0",
+  "candidate_type": "table",
+  "page": 31,
+  "mode": "publication_strict",
+  "effective_mode": "table_strict",
+  "original_bbox": [
+    46.712,
+    48.48,
+    1003.288,
+    761.52
+  ],
+  "final_bbox": [
+    0.0,
+    0.0,
+    1024.0,
+    765.864
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 0,
+    "bottom": 45,
+    "left": 171,
+    "right": 172
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": true,
+    "crop_type": "table",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.8428,
+    "margin_balance": 0.7666,
+    "neighbor_contamination": 0.0874,
+    "readability": 1.0,
+    "visual_crispness": 0.578,
+    "total_score": 0.8507,
+    "defect_labels": [],
+    "edge_density": {
+      "top": 0.0,
+      "bottom": 0.1382,
+      "left": 0.3573,
+      "right": 0.2621
+    },
+    "edge_leakage": {
+      "top": 0.0,
+      "bottom": 0.0874,
+      "left": 0.0,
+      "right": 0.0
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.5,
+        "strong_edges": [
+          "left",
+          "right"
+        ],
+        "edge_density": {
+          "top": 0.0,
+          "bottom": 0.1382,
+          "left": 0.3573,
+          "right": 0.2621
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.3573,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0,
+          "bottom": 0.1382,
+          "left": 0.3573,
+          "right": 0.2621
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.3573,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0,
+          "bottom": 0.1382,
+          "left": 0.3573,
+          "right": 0.2621
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": true,
+  "rejection_reason": ""
+}

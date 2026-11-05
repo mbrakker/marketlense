@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/quote_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "quote_candidates": [
+      {
+        "id": "quote-1",
+        "text": "Inflation and tariffs have shifted consumers to value-seeking behavior. They actively compare prices across platforms, look for discounts and loyalty benefits, and trade down to private labels or affordable brands. We also see smaller pack sizes gaining traction and multi-brand baskets becoming common. Loyalty is now conditional, driven by better deals, faster delivery, and personalized rewards.",
+        "source": "Final-Web-Version-Report-Consumer-Trends-2026.pdf — Neha Donald, Senior Director of Global Strategy, Transformation and Innovation, PepsiCo",
+        "page": 16
+      },
+      {
+        "id": "quote-2",
+        "text": "Affordability cannot come at the expense of efficacy. Consumers expect both, they actively compare products, scrutinize ingredient lists, and demand transparency before making decisions. In short, today’s definition of value means delivering quality and trust at every price point.",
+        "source": "Final-Web-Version-Report-Consumer-Trends-2026.pdf — Edwin Taborda, Global Chief Consumer & Market Intelligence Officer, L'Oreal Consumer Products Division",
+        "page": 29
+      },
+      {
+        "id": "quote-3",
+        "text": "Brands must move beyond being optimized for search to being optimized for selection. Success increasingly depends on being chosen by algorithms, not just found by consumers. This requires brands to be context aware, relevant, and ready to surface naturally at the right moment. The future of discovery lies in being present where decisions are made, often before the consumer even realizes a choice is underway.",
+        "source": "Final-Web-Version-Report-Consumer-Trends-2026.pdf — Dreen Yang, EVP, Global Consumer Products and Retail Lead, Capgemini",
+        "page": 28
+      },
+      {
+        "id": "quote-4",
+        "text": "Your core brand promise should remain the same, but the way you deliver it must adapt. Ten years ago, a TV commercial might have been enough. Today, social media dominates, and the challenge is to stay authentic while evolving your channel mix.",
+        "source": "Final-Web-Version-Report-Consumer-Trends-2026.pdf — Nikos Bartzoulianos, Group Chief Marketing Officer, Electrolux (2024–2025)",
+        "page": 49
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "quote_candidates",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

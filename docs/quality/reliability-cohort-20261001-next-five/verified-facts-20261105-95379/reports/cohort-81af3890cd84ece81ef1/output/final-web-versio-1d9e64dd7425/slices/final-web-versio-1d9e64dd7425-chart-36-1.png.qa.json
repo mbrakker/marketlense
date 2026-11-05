@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-36-1",
+  "candidate_type": "chart",
+  "page": 36,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    286.897,
+    104.899,
+    553.103,
+    419.101
+  ],
+  "final_bbox": [
+    278.897,
+    95.526,
+    561.103,
+    428.592
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 51,
+    "bottom": 42,
+    "left": 49,
+    "right": 49
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": true,
+    "crop_type": "chart",
+    "content_completeness": 0.8454,
+    "edge_integrity": 0.4115,
+    "margin_balance": 0.7406,
+    "neighbor_contamination": 0.3269,
+    "readability": 1.0,
+    "visual_crispness": 0.4611,
+    "total_score": 0.6815,
+    "defect_labels": [],
+    "edge_density": {
+      "top": 0.0615,
+      "bottom": 0.1172,
+      "left": 0.1325,
+      "right": 0.3362
+    },
+    "edge_leakage": {
+      "top": 0.014,
+      "bottom": 0.0,
+      "left": 0.128,
+      "right": 0.3269
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.25,
+        "strong_edges": [
+          "right"
+        ],
+        "edge_density": {
+          "top": 0.0615,
+          "bottom": 0.1172,
+          "left": 0.1325,
+          "right": 0.3362
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.1325,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0615,
+          "bottom": 0.1172,
+          "left": 0.1325,
+          "right": 0.3362
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.3362,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0615,
+          "bottom": 0.1172,
+          "left": 0.1325,
+          "right": 0.3362
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": true,
+  "rejection_reason": ""
+}

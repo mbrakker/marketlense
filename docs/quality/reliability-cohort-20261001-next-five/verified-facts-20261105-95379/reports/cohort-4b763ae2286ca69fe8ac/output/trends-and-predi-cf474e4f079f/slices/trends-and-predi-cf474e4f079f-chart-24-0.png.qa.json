@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-24-0",
+  "candidate_type": "chart",
+  "page": 24,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    46.857,
+    189.372,
+    522.143,
+    484.628
+  ],
+  "final_bbox": [
+    38.857,
+    181.372,
+    530.143,
+    485.703
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 0,
+    "bottom": 41,
+    "left": 47,
+    "right": 110
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": false,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.2925,
+    "margin_balance": 0.5891,
+    "neighbor_contamination": 0.393,
+    "readability": 1.0,
+    "visual_crispness": 0.6815,
+    "total_score": 0.6932,
+    "defect_labels": [
+      "edge_clipped_content"
+    ],
+    "edge_density": {
+      "top": 0.3986,
+      "bottom": 0.1542,
+      "left": 0.2808,
+      "right": 0.4473
+    },
+    "edge_leakage": {
+      "top": 0.393,
+      "bottom": 0.0,
+      "left": 0.0,
+      "right": 0.0
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.75,
+        "strong_edges": [
+          "top",
+          "left",
+          "right"
+        ],
+        "edge_density": {
+          "top": 0.3986,
+          "bottom": 0.1542,
+          "left": 0.2808,
+          "right": 0.4473
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.2808,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.3986,
+          "bottom": 0.1542,
+          "left": 0.2808,
+          "right": 0.4473
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.4473,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.3986,
+          "bottom": 0.1542,
+          "left": 0.2808,
+          "right": 0.4473
+        }
+      }
+    }
+  },
+  "repair_actions": [
+    "content_aware_trim:1"
+  ],
+  "accepted": false,
+  "rejection_reason": "edge_clipped_content"
+}

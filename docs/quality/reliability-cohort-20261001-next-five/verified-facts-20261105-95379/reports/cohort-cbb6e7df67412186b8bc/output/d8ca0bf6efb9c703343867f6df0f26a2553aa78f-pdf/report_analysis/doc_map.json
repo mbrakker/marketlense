@@ -1,0 +1,227 @@
+{
+  "schema_version": "doc_map_v1",
+  "doc_id": "cohort-cbb6e7df67412186b8bc",
+  "title": "Activate’s Tech and Media Outlook 2018",
+  "summary": "Activate’s third annual Tech and Media Outlook examines consumer trends, technology innovations, and industry dynamics expected to shape technology and media businesses in 2018. It presents forecasts and analysis on revenues, consumer media use, smart speakers, reality computing, web video, premium video, sports, news, eCommerce, and podcasting, drawing on proprietary research and large-scale U.S. surveys.",
+  "publisher": "Activate",
+  "provenance_roles": {
+    "schema_version": "1.0",
+    "publication_name": "",
+    "publisher_name": "",
+    "author_names": [],
+    "author_kind": "unknown",
+    "data_provider_names": [],
+    "source_organization_names": [],
+    "report_owner_name": "",
+    "status": "unknown",
+    "resolution_method": "",
+    "issues": [],
+    "evidence": []
+  },
+  "sections": [
+    {
+      "id": "section-01",
+      "title": "$300 Billion in Tech and Media Growth Dollars",
+      "summary": "The opening analysis forecasts global consumer Internet and media revenue growth for 2017E–2021E, comparing it with GDP growth and breaking out growth by revenue segment. It emphasizes Internet access as the fastest-growing of the three segments.",
+      "key_points": [
+        "Consumer Internet and Media Revenues, Global, 2017E–2021E: the forecast rises from $1.7T in 2017E to $2.0T in 2021E, with $302B in growth dollars and a 4.1% CAGR; global GDP CAGR is approximately 3% (p. 4).",
+        "Consumer Internet and Media Revenue Growth by Segment, Global, 2017E–2021E: Internet access contributes $128B of growth at 5.7% CAGR; paid content contributes $108B at 4.7%; advertising contributes $66B at 2.3% (p. 5)."
+      ],
+      "pages": [
+        3,
+        4,
+        5
+      ],
+      "references": []
+    },
+    {
+      "id": "section-02",
+      "title": "There are 31 Hours in a Day",
+      "summary": "This section considers how consumers divide time across technology and media and forecasts further growth in daily engagement. Its forecast describes an increase in average daily time spent with technology and media by 2021.",
+      "key_points": [
+        "Daily Hours Spent per Adult (Age 18+), U.S., 2017E–2021E: average daily time with tech and media is forecast to rise from 12:28 in 2017E to 12:46 in 2021E (p. 10).",
+        "The report identifies smart speakers as a driver of audio listening and, for devices with screens, video consumption; self-driving cars are identified as enabling more multitasking (p. 10)."
+      ],
+      "pages": [
+        7,
+        10
+      ],
+      "references": []
+    },
+    {
+      "id": "section-03",
+      "title": "Super Users: A Lot More Time, a Lot More Money",
+      "summary": "The section distinguishes high-engagement video users from other users and compares their share of video time with their share of consumer spending. It presents these “Super Users” as a disproportionately valuable audience.",
+      "key_points": [
+        "Video Time and Spend Relative to Share of Users, U.S., 2017: the top 25% of users, defined as those with 4.5+ hours of daily video attention, account for 61% of time spent and 66% of consumer spend (p. 14)."
+      ],
+      "pages": [
+        12,
+        14
+      ],
+      "references": []
+    },
+    {
+      "id": "section-04",
+      "title": "Smart Speaker Battles are about the Great Digital Assistant Wars",
+      "summary": "This section frames smart speakers as an entry point in a wider contest to own digital assistants and their conversational interfaces. It forecasts rapid adoption but also argues that standalone speaker sales will face limits as assistants spread across devices. fileciteturn4file10turn4file17turn4file19",
+      "key_points": [
+        "Share of Smart Speaker Owners, U.S., 2017: 17% of consumers own a smart speaker; Amazon Echo and Echo Dot are the largest displayed device categories (p. 27).",
+        "Smart Speaker Unit Sales, U.S., 2016–2021E: forecast sales rise from 8M units in 2016 to a peak of 41M in 2019E, then decline to 31M in 2021E (p. 21).",
+        "The report describes dedicated speakers as a “trojan horse” for bringing AI into the home and forecasts that digital assistants will become ubiquitous across a broader set of devices (p. 22)."
+      ],
+      "pages": [
+        18,
+        20,
+        21,
+        22,
+        24,
+        26,
+        27
+      ],
+      "references": []
+    },
+    {
+      "id": "section-05",
+      "title": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform",
+      "summary": "The section distinguishes today’s virtual- and augmented-reality experiences from a future platform integrating digital and physical environments. It traces AR’s progression toward more sophisticated consumer and enterprise uses, enabled by technologies including spatial mapping, IoT data, 5G, and AI. fileciteturn1file9turn1file11turn1file12",
+      "key_points": [
+        "The report characterizes VR and AR today as media, entertainment, and information experiences, while the future platform is described as integrating digital and physical worlds and contextualized AI or machine learning (p. 35).",
+        "Reality Computing Today/Tomorrow: examples of future uses include collaboration, testing and repairs, “everywhere screens,” and virtual assistants, supported by spatial mapping, IoT data, 5G, and AI (p. 36).",
+        "Addressable AR Market by Sector, Global, 2021E: the report estimates $5–7B for oil and gas, $7–9B for healthcare, and $1–2B for higher education (p. 46).",
+        "The AR roadmap describes stages from proof of concept and entertainment to enterprise “super workers” and a sophisticated computing platform, with applications such as hands-free enterprise work and consumer navigation or communication (p. 44)."
+      ],
+      "pages": [
+        33,
+        35,
+        36,
+        38,
+        39,
+        43,
+        44,
+        46,
+        48
+      ],
+      "references": []
+    },
+    {
+      "id": "section-06",
+      "title": "Big Influencers and Media Brands will Rule Web Video",
+      "summary": "This section examines who attracts views on major web-video platforms and how platforms are competing across formats. It highlights the concentration of YouTube views among a small creator group and the importance of both influencers and media companies. fileciteturn2file6turn2file8turn2file0",
+      "key_points": [
+        "Share of YouTube Creators vs. Share of Views, Global, Q1 2016: the top 1% of creators account for 94% of views, while the bottom 99% account for 6% (p. 51).",
+        "Share of Views from Top Creators by Platform, Global, Q2 2017: among top creators, YouTube views are split 17% media companies and 83% influencers; Facebook views are split 48% media companies and 52% influencers (p. 53).",
+        "The report says web-video platforms are moving into one another’s territories to attract creators and attention, across formats including long- and short-form, live, recorded, linear, on-demand, social, and creator-driven video (p. 59)."
+      ],
+      "pages": [
+        49,
+        51,
+        53,
+        55,
+        56,
+        58,
+        59
+      ],
+      "references": []
+    },
+    {
+      "id": "section-07",
+      "title": "Premium Video: The Chase for Television Viewers and Television Dollars",
+      "summary": "The section compares traditional and digital video revenues and surveys the increasingly fragmented premium-video market. It identifies high churn and rising programming costs as challenges for Virtual Pay TV providers. fileciteturn2file17turn2file18turn2file5",
+      "key_points": [
+        "Video Revenues, U.S., 2018E: traditional television includes $98.1B in Pay TV subscriptions and $72.3B in TV advertising; digital video includes $15.4B ad-supported, $9.1B subscription, and $5.0B paid downloads (p. 63).",
+        "Average Annual Churn Rates by Service, U.S., 2017: Virtual Pay TV is 50%, SVOD is 19%, and Pay TV is less than 1% (p. 68).",
+        "Monthly Programming Costs per Subscriber for a Standard Bundle, U.S., 2017E–2021E: forecast costs rise from $43.9 in 2017E to $56.8 in 2021E, against an average Virtual Pay TV monthly fee of approximately $35–45 (p. 68).",
+        "Projected Virtual Pay TV Households, U.S., 2021E: the displayed forecast cases are 12.7M high, 9.6M intermediate, and 7.6M low (p. 71)."
+      ],
+      "pages": [
+        62,
+        63,
+        65,
+        68,
+        71
+      ],
+      "references": []
+    },
+    {
+      "id": "section-08",
+      "title": "Sports is the Ultimate Moat",
+      "summary": "The section argues that established sports audiences will remain strong while soccer and eSports add to viewership. It also examines younger viewers’ platform habits and the competition for sports rights. fileciteturn2file2turn2file4turn2file16turn2file13",
+      "key_points": [
+        "Sports Viewers Age 18–34 by Sport, U.S., 2017: the chart highlights eSports, basketball, and soccer as having younger audiences; it reports that 30% of traditional sports viewers are ages 18–34 (p. 89).",
+        "Share of Sports Viewers Watching Sports on Each Platform by Age, U.S., 2017: TV viewing is high across age groups, while smartphone and desktop/laptop viewing is more prevalent among younger viewers (p. 90).",
+        "The report describes the coming years as a period of intense competition among media companies and digital-platform entrants for sports rights (p. 92)."
+      ],
+      "pages": [
+        80,
+        82,
+        89,
+        90,
+        91,
+        92
+      ],
+      "references": []
+    },
+    {
+      "id": "section-09",
+      "title": "News Brands will Beat Fake News (Spread by Fake Friends)",
+      "summary": "This section considers news discovery through social media, direct visits, and other channels, while emphasizing the continued role of news brands. It also examines how platforms and publishers can respond to concerns about news credibility. fileciteturn3file11turn0file1",
+      "key_points": [
+        "Sources of News Discovery, U.S., 2017: social media is reported by 40% of adults and direct visits by 38%; among active news readers searching for news, direct visits lead at 49%, compared with 33% for social media (p. 97).",
+        "The report’s platform discussion describes Facebook’s use of “related articles” to test whether an article has been corroborated by outside sources (p. 102).",
+        "The section also compares top news-site audience levels and changes across the selected digital news properties (pp. 95–96)."
+      ],
+      "pages": [
+        93,
+        95,
+        96,
+        97,
+        98,
+        102
+      ],
+      "references": []
+    },
+    {
+      "id": "section-10",
+      "title": "eCommerce: More than Two Trillion Dollars To Go",
+      "summary": "The section surveys remaining eCommerce opportunity and differences among product categories. Its category analysis relates adoption patterns to consumer preferences and whether a product’s qualities are difficult to assess without firsthand experience. fileciteturn3file8turn3file7",
+      "key_points": [
+        "The category analysis identifies firsthand experience—such as assessing food freshness or a used car’s condition—as a factor associated with delayed eCommerce adoption (p. 118).",
+        "The report maps product categories by their share of eCommerce sales and projected speed of adoption, including categories such as toys and games, home and kitchen, books, and music and video (p. 119)."
+      ],
+      "pages": [
+        111,
+        118,
+        119
+      ],
+      "references": []
+    },
+    {
+      "id": "section-11",
+      "title": "In an Era of Voice Control, Look to Podcasting to Engage Users",
+      "summary": "The final major section considers podcast listening, distribution, and commercial opportunities in a voice-controlled environment. It highlights smart speakers and connected cars as potential drivers of listening and outlines strategic roles for brands, publishers, and podcast companies. fileciteturn4file18turn2file10",
+      "key_points": [
+        "Location of Podcast Listening, U.S., 2017: 46% of listeners report listening in a car; at home, the displayed locations include bedroom at 38%, living room at 29%, and kitchen at 25% (p. 126).",
+        "The report states that smart-speaker owners are about 1.6 times more likely to listen to podcasts than non-owners and describes curated short-form audio as a potential use (p. 126).",
+        "The section discusses podcast strategies including extending a podcast’s reach to digital platforms, developing a talent pipeline, building a lifestyle brand, promoting live events, and showcasing thought leadership (p. 130)."
+      ],
+      "pages": [
+        124,
+        125,
+        126,
+        130,
+        135
+      ],
+      "references": []
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "doc_map",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 1.0,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

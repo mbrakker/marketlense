@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\ml-frozen-five-live-95379-20261105\\frozen-reliability-oboqn82y\\members\\cohort-b638414df0b1fccea1cd\\ias-first-attempt-lfk42pmy\\output\\mobile-app-trends-2026-pdf\\report_analysis\\validation.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[family_confidence] Artifact family 'quotes' abstained at confidence=0.00 because quotes_missing.",
+      "severity": "warning",
+      "affected_section": "quotes",
+      "rule_id": "family_confidence",
+      "repair_target": "quotes",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.report_distinctness_and_limitations] Material findings are covered and the interpretations and recommendations are generally defensible. However, the public-content index repeats the same e-commerce and finance findings across summary, expert-comment, social-post, insight, claim-map, and ledger items, weakening distinctness across the complete batch. Also, the GenAI efficiency finding is presented as over 20% without noting that the source specifies no timeframe, geography, or denominator, omitting material boundaries on that reported outcome. The repetition is broad rather than repairable through one existing item target, so no report-level repair is requested. Dimensions: distinctness: The e-commerce and finance findings recur across multiple public artifacts, including summary, expert-comment, LinkedIn, insight, claim-map, and claim-ledger items; this cross-batch repetition makes the selected content materially less distinct.; limitations: The GenAI finding states a reported efficiency gain over 20% but omits the source's material limitation that no timeframe, geography, or denominator is specified.",
+      "severity": "error",
+      "affected_section": "public_items",
+      "rule_id": "public_editorial_quality.report_distinctness_and_limitations",
+      "violation_type": "report_editorial_acceptance",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": [
+        "verified-fact:insight-ecom-growth-divergence",
+        "verified-fact:insight-finance-growth-divergence",
+        "verified-fact:insight-genai-efficiency-qualified"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "report_id": "cohort-cbb6e7df67412186b8bc",
+  "title": "October 17, 2017",
+  "publisher": "",
+  "region": "Global and U.S.",
+  "time_period": "2017 to 2021 E forecasts, published 2018",
+  "overview": "Activate’s Tech and Media Outlook 2018 by Activate Activate’s third annual Tech and Media Outlook examines consumer trends, technology innovations, and industry dynamics expected to shape technology and media businesses in 2018. It presents forecasts and analysis on revenues, consumer media use, smart speakers, reality computing, web video, premium video, sports, news, eCommerce, and podcasting, drawing on proprietary research and large-scale U.S. surveys. A 2018 report on technology and media trends, including consumer internet and media revenues, digital assistants, VR/AR, web video, premium video, sports, news, eCommerce, and podcasting. It covers global and U.S. markets where specified, with forecasts including 2017–2021.",
+  "methods": [
+    "Activate-labeled forecasts estimate global consumer internet and media revenues for 2017E–2021E; cited inputs include eMarketer, GroupM, IBISWorld, IFPI, the International Monetary Fund, NewZoo, PricewaterhouseCoopers, RBC, the World Bank, and ZenithOptimedia.",
+    "The report cites the Activate 2017 Consumer Tech & Media Research Study, with chart-specific sample sizes including n=4,047, n=2,406, and n=996; platform-specific samples are also reported (Facebook n=2,641; Snapchat n=969; YouTube n=2,940).",
+    "Top news sites were selected from comScore’s Top 100 digital news properties; figures cover desktop and mobile sites only.",
+    "Virtual Pay TV churn covers the trailing twelve months beginning September 2017, while SVOD churn covers calendar year 2016. Programming-cost estimates average base Virtual Pay TV offerings from major services that include broadcast networks and/or sports; estimates account for a premium associated with reduced scal..."
+  ],
+  "key_findings": [
+    "Activate forecasts that global Internet access revenue will contribute $128B of consumer Internet and media revenue growth at a 5.7% CAGR over 2017E–2021E.",
+    "Activate forecasts that global paid-content revenue will contribute $108B of consumer Internet and media revenue growth at a 4.7% CAGR over 2017E–2021E.",
+    "Activate forecasts that global advertising revenue will contribute $66B of consumer Internet and media revenue growth at a 2.3% CAGR over 2017E–2021E.",
+    "For U.S. adults age 18+, average daily time spent with technology and media is forecast to increase from 12:28 in 2017E to 12:46 in 2021E.",
+    "The report identifies platform portability as a potential game changer: Google Assistant and Alexa are accessible to third-party developers and OEMs, who have integrated and distributed the assistants across a wide range of devices.",
+    "Activate forecasts global consumer and enterprise spending on VR/AR will reach $71B in 2021E."
+  ],
+  "limitations": [
+    "Top news sites are selected from comScore’s Top 100 digital news properties; figures cover desktop and mobile sites only.",
+    "Virtual Pay TV churn covers the trailing 12 months beginning September 2017, while SVOD churn covers calendar year 2016.",
+    "Virtual Pay TV programming-cost analysis averages base offerings across major services and includes only services offering broadcast networks and/or sports programming; estimates include a premium for reduced scale and its impact on per-channel costs.",
+    "The smart-speaker timeline uses either product announcement or launch date."
+  ],
+  "sections": [
+    {
+      "section_label": "$300 Billion in Tech and Media Growth Dollars",
+      "source_pack": "doc_map",
+      "summary": "The opening analysis forecasts global consumer Internet and media revenue growth for 2017E–2021E, comparing it with GDP growth and breaking out growth by revenue segment. It emphasizes Internet access as the fastest-growing of the three segments.",
+      "key_points": [
+        "Consumer Internet and Media Revenues, Global, 2017E–2021E: the forecast rises from $1.7T in 2017E to $2.0T in 2021E, with $302B in growth dollars and a 4.1% CAGR; global GDP CAGR is approximately 3...",
+        "Consumer Internet and Media Revenue Growth by Segment, Global, 2017E–2021E: Internet access contributes $128B of growth at 5.7% CAGR; paid content contributes $108B at 4.7%; advertising contributes..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "There are 31 Hours in a Day",
+      "source_pack": "doc_map",
+      "summary": "This section considers how consumers divide time across technology and media and forecasts further growth in daily engagement. Its forecast describes an increase in average daily time spent with technology and media by 2021.",
+      "key_points": [
+        "Daily Hours Spent per Adult (Age 18+), U.S., 2017E–2021E: average daily time with tech and media is forecast to rise from 12:28 in 2017E to 12:46 in 2021E (p. 10).",
+        "The report identifies smart speakers as a driver of audio listening and, for devices with screens, video consumption; self-driving cars are identified as enabling more multitasking (p. 10)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Super Users: A Lot More Time, a Lot More Money",
+      "source_pack": "doc_map",
+      "summary": "The section distinguishes high-engagement video users from other users and compares their share of video time with their share of consumer spending. It presents these “Super Users” as a disproportionately valuable audience.",
+      "key_points": [
+        "Video Time and Spend Relative to Share of Users, U.S., 2017: the top 25% of users, defined as those with 4.5+ hours of daily video attention, account for 61% of time spent and 66% of consumer spend..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Smart Speaker Battles are about the Great Digital Assistant Wars",
+      "source_pack": "doc_map",
+      "summary": "This section frames smart speakers as an entry point in a wider contest to own digital assistants and their conversational interfaces. It forecasts rapid adoption but also argues that standalone speaker sales will face limits as assistants spread across dev...",
+      "key_points": [
+        "Share of Smart Speaker Owners, U.S., 2017: 17% of consumers own a smart speaker; Amazon Echo and Echo Dot are the largest displayed device categories (p. 27).",
+        "Smart Speaker Unit Sales, U.S., 2016–2021E: forecast sales rise from 8M units in 2016 to a peak of 41M in 2019E, then decline to 31M in 2021E (p. 21).",
+        "The report describes dedicated speakers as a “trojan horse” for bringing AI into the home and forecasts that digital assistants will become ubiquitous across a broader set of devices (p. 22)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Reality Computing: VR/AR Move from Entertainment to the Next Big Computing Platform",
+      "source_pack": "doc_map",
+      "summary": "The section distinguishes today’s virtual- and augmented-reality experiences from a future platform integrating digital and physical environments. It traces AR’s progression toward more sophisticated consumer and enterprise uses, enabled by technologies inc...",
+      "key_points": [
+        "The report characterizes VR and AR today as media, entertainment, and information experiences, while the future platform is described as integrating digital and physical worlds and contextualized A...",
+        "Reality Computing Today/Tomorrow: examples of future uses include collaboration, testing and repairs, “everywhere screens,” and virtual assistants, supported by spatial mapping, IoT data, 5G, and A...",
+        "Addressable AR Market by Sector, Global, 2021E: the report estimates $5–7B for oil and gas, $7–9B for healthcare, and $1–2B for higher education (p. 46)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Big Influencers and Media Brands will Rule Web Video",
+      "source_pack": "doc_map",
+      "summary": "This section examines who attracts views on major web-video platforms and how platforms are competing across formats. It highlights the concentration of YouTube views among a small creator group and the importance of both influencers and media companies. f...",
+      "key_points": [
+        "Share of YouTube Creators vs. Share of Views, Global, Q1 2016: the top 1% of creators account for 94% of views, while the bottom 99% account for 6% (p. 51).",
+        "Share of Views from Top Creators by Platform, Global, Q2 2017: among top creators, YouTube views are split 17% media companies and 83% influencers; Facebook views are split 48% media companies and...",
+        "The report says web-video platforms are moving into one another’s territories to attract creators and attention, across formats including long- and short-form, live, recorded, linear, on-demand, so..."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

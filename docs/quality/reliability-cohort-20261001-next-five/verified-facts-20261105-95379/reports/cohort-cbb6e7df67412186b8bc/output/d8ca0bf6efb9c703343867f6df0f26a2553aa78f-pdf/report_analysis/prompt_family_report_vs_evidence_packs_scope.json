@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/scope",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "scope": "A 2018 report on technology and media trends, including consumer internet and media revenues, digital assistants, VR/AR, web video, premium video, sports, news, eCommerce, and podcasting. It covers global and U.S. markets where specified, with forecasts including 2017–2021.",
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "scope",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

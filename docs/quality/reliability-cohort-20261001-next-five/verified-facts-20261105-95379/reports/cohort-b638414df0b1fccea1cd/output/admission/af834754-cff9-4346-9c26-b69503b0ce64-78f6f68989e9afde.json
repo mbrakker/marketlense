@@ -1,0 +1,46 @@
+{
+  "configuration_hash": "03acd48fb8c2f9db4517c8a33c6ed99be5214f7996d97e64e392a94bc2a22abc",
+  "decision_set_hash": "78f6f68989e9afde2dc4e681d20dd13a7f16c3f30a0b33aee326f533819f6987",
+  "decisions": [
+    {
+      "budget_decision": "allow",
+      "configuration_hash": "03acd48fb8c2f9db4517c8a33c6ed99be5214f7996d97e64e392a94bc2a22abc",
+      "decision_hash": "92c459aa5f197866fe8a6fadb005999f32e0c392e143522e13968b49813f5575",
+      "duplicate_identity_match": "",
+      "estimated_cost_usd": 0.008265,
+      "estimated_provider_calls": 1,
+      "estimated_provider_tokens": 17115,
+      "evidence_potential": "sufficient",
+      "file_id": "cohort-b638414df0b1fccea1cd",
+      "media_type": "application/pdf",
+      "model_policy_covered": true,
+      "near_duplicate_title_match": "",
+      "outcome": "admitted",
+      "page_count": 41,
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "preflight_version": "2.0",
+      "publisher_id": "Adjust",
+      "report_title": "mobile-app-trends-2026",
+      "required_artifact_families": [
+        "doc_map"
+      ],
+      "runtime_dependencies_ready": true,
+      "runtime_dependency_status": "validated_pre_freeze",
+      "runtime_preflight_hash": "2f5adc07ceb76992d6a7c4cf6d7d2003e389079174b6f3cefb47f114025c04da",
+      "sample_char_count": 2924,
+      "sample_text_density": 974.666667,
+      "schema_version": "1.0",
+      "size_bytes": 3571623,
+      "source_artifact_exists": true,
+      "source_artifact_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.adjust.com\\b6b998e34a7c\\mobile-app-trends-2026.pdf",
+      "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235",
+      "source_url": "https://www.adjust.com/resources/ebooks/mobile-app-trends-2026",
+      "source_url_classification": "drive_artifact_nonpublic",
+      "structure_readable": true,
+      "title_key": "mobileapptrends2026"
+    }
+  ],
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "run_id": "af834754-cff9-4346-9c26-b69503b0ce64",
+  "schema_version": "1.0"
+}

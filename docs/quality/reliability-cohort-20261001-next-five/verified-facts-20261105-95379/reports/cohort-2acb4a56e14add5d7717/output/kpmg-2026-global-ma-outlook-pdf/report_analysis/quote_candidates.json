@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "quote_candidates": [
+    {
+      "id": "kpmg-2026-ma-01",
+      "text": "Execution capability has become the defining factor in M&A outcomes.",
+      "source": "kpmg-2026-global-ma-outlook.pdf",
+      "page": 2
+    },
+    {
+      "id": "kpmg-2026-ma-02",
+      "text": "Over successive deal cycles, evidence has shown that M&A outcomes are shaped as much by execution capability as by strategic intent.",
+      "source": "kpmg-2026-global-ma-outlook.pdf",
+      "page": 2
+    },
+    {
+      "id": "kpmg-2026-ma-03",
+      "text": "Portfolio separation activity, including carve-outs, divestitures and staged ownership structures, is no longer a byproduct of other strategic choices. It has become a structural mechanism for reshaping portfolios in response to a more dynamic and less durable external environment.",
+      "source": "kpmg-2026-global-ma-outlook.pdf",
+      "page": 2
+    },
+    {
+      "id": "kpmg-2026-ma-04",
+      "text": "While technology alone does not determine outcomes, its integration into decision-making and execution processes is altering the speed, depth and confidence with which dealmakers assess risk and opportunity.",
+      "source": "kpmg-2026-global-ma-outlook.pdf",
+      "page": 2
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "quote_candidates",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

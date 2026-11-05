@@ -1,0 +1,342 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.9,
+      "evidence": "Global e-commerce app installs fell 10% YoY in 2025, even as sessions increased 5%.",
+      "evidence_id": "ecom-global-growth",
+      "evidence_ids": [
+        "ecom-global-growth"
+      ],
+      "evidence_spans": [],
+      "id": "insight-ecom-growth-divergence",
+      "metric": {
+        "cohort": "Global e-commerce apps",
+        "confidence": "",
+        "denominator": "",
+        "geography": "Global",
+        "label": "Global e-commerce app session growth",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "E-commerce apps",
+        "subject": "E-commerce app sessions",
+        "timeframe": "2025 year over year",
+        "trend": "increased",
+        "unit": "percent",
+        "value": "5"
+      },
+      "metric_public_copy": "Global e-commerce app sessions increased 5% year over year in 2025.",
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.77,
+      "now_what": "",
+      "pages": [
+        27
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.91,
+      "so_what": "The reported install and session changes move in opposite directions.",
+      "text": "In 2025, global e-commerce app installs fell 10% year over year while sessions increased 5%."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.92,
+      "evidence": "Finance app installs dropped 4% YoY in 2025, while sessions rose 21%.",
+      "evidence_id": "finance-global-growth",
+      "evidence_ids": [
+        "finance-global-growth"
+      ],
+      "evidence_spans": [],
+      "id": "insight-finance-growth-divergence",
+      "metric": {
+        "cohort": "Global finance apps",
+        "confidence": "",
+        "denominator": "",
+        "geography": "Global",
+        "label": "Global finance-app session growth",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "Finance apps",
+        "subject": "Finance-app sessions",
+        "timeframe": "2025 year over year",
+        "trend": "increased",
+        "unit": "percent",
+        "value": "21"
+      },
+      "metric_public_copy": "Global finance-app sessions rose 21% year over year in 2025.",
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.84,
+      "now_what": "",
+      "pages": [
+        34
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.93,
+      "so_what": "The reported session increase coincided with an install decline.",
+      "text": "In 2025, global finance-app installs fell 4% year over year while sessions rose 21%."
+    },
+    {
+      "coverage_role": "market_context",
+      "decision_relevance_score": 0.9,
+      "evidence": "LATAM dominated regional growth with +76% install growth YoY and +57% for sessions. APAC combined 5% install growth with a huge 50% increase in sessions.",
+      "evidence_id": "finance-regional-growth",
+      "evidence_ids": [
+        "finance-regional-growth"
+      ],
+      "evidence_spans": [],
+      "id": "insight-finance-latam-growth",
+      "metric": {
+        "cohort": "LATAM finance apps",
+        "confidence": "",
+        "denominator": "",
+        "geography": "LATAM",
+        "label": "LATAM finance-app install growth",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "Finance apps",
+        "subject": "Finance-app installs",
+        "timeframe": "2025 year over year",
+        "trend": "increased",
+        "unit": "percent",
+        "value": "76"
+      },
+      "metric_public_copy": "LATAM finance-app installs grew 76% year over year in 2025.",
+      "metric_strength_score": 0.96,
+      "novelty_score": 0.83,
+      "now_what": "",
+      "pages": [
+        35
+      ],
+      "report_type_lens": "market_size",
+      "score": 0.89,
+      "so_what": "LATAM’s reported finance-app install growth was accompanied by session growth.",
+      "text": "In 2025, LATAM finance-app installs grew 76% year over year and sessions grew 57%."
+    },
+    {
+      "coverage_role": "behavior_shift",
+      "decision_relevance_score": 0.88,
+      "evidence": "Casino and slots both achieved strong install growth of 22% and 46%, but sessions decreased 5% in each category.",
+      "evidence_id": "gaming-casino-slots-growth",
+      "evidence_ids": [
+        "gaming-casino-slots-growth"
+      ],
+      "evidence_spans": [],
+      "id": "insight-gaming-subvertical-divergence",
+      "metric": {
+        "cohort": "Global casino games",
+        "confidence": "",
+        "denominator": "",
+        "geography": "Global",
+        "label": "Global casino-game install growth",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "Casino games",
+        "subject": "Casino-game installs",
+        "timeframe": "2025 year over year",
+        "trend": "increased",
+        "unit": "percent",
+        "value": "22"
+      },
+      "metric_public_copy": "Global casino installs grew 22% year over year in 2025.",
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.87,
+      "now_what": "",
+      "pages": [
+        19
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.9,
+      "so_what": "Install growth and session change differed in direction for both reported categories.",
+      "text": "In 2025, global casino installs grew 22% and slots installs grew 46%, while sessions declined 5% in both categories."
+    },
+    {
+      "coverage_role": "counter_signal",
+      "decision_relevance_score": 0.91,
+      "evidence": "Cost per install (CPI) for global e-commerce apps declined from $1 to $0.98 in 2025. Subvertical trends diverged as deal discovery CPI rose from $1.44 to $2.26, while marketplace and classifieds dropped from $0.99 to $0.88, and shopping decreased from $0.93 to $0.91.",
+      "evidence_id": "ecom-cpi",
+      "evidence_ids": [
+        "ecom-cpi"
+      ],
+      "evidence_spans": [],
+      "id": "insight-ecommerce-cpi-divergence",
+      "metric": {
+        "cohort": "Global deal-discovery apps",
+        "confidence": "",
+        "denominator": "Installs",
+        "geography": "Global",
+        "label": "Deal-discovery app CPI",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "Deal discovery",
+        "subject": "Cost per install",
+        "timeframe": "2024–2025",
+        "trend": "increased",
+        "unit": "per install",
+        "value": "$1.44 to $2.26"
+      },
+      "metric_public_copy": "Deal-discovery CPI rose from $1.44 to $2.26.",
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.86,
+      "now_what": "",
+      "pages": [
+        29
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.9,
+      "so_what": "The overall CPI decline coexisted with a CPI increase for deal-discovery apps.",
+      "text": "Global e-commerce CPI declined from $1 to $0.98, while deal-discovery CPI rose from $1.44 to $2.26 and marketplace-and-classifieds CPI fell from $0.99 to $0.88."
+    },
+    {
+      "coverage_role": "counter_signal",
+      "decision_relevance_score": 0.86,
+      "evidence": "Global finance app session lengths increased to 7.18 minutes in 2025, up 8%. North America led at 8.43 minutes. | Day 0 sessions per user for finance apps globally dipped YoY from 1.52 to 1.48.",
+      "evidence_id": "finance-session-length",
+      "evidence_ids": [
+        "finance-session-length",
+        "finance-sessions-per-user"
+      ],
+      "evidence_spans": [],
+      "id": "insight-finance-engagement-measures",
+      "metric": {
+        "cohort": "Global finance apps",
+        "confidence": "",
+        "denominator": "",
+        "geography": "Global",
+        "label": "Global finance-app session length",
+        "observation_status": "observed",
+        "sample_size": "",
+        "segment": "Finance apps",
+        "subject": "Finance-app session length",
+        "timeframe": "2025",
+        "trend": "increased 8%",
+        "unit": "minutes",
+        "value": "7.18"
+      },
+      "metric_public_copy": "Global finance-app session length increased 8% to 7.18 minutes in 2025.",
+      "metric_strength_score": 0.94,
+      "novelty_score": 0.82,
+      "now_what": "",
+      "pages": [
+        36
+      ],
+      "report_type_lens": "consumer_behavior",
+      "score": 0.88,
+      "so_what": "Session length and day-0 sessions per user moved in different directions in the reported period.",
+      "text": "Global finance-app session length increased 8% to 7.18 minutes in 2025, while day-0 sessions per user declined from 1.52 in 2024 to 1.48 in 2025."
+    },
+    {
+      "coverage_role": "strategic_risk",
+      "decision_relevance_score": 0.9,
+      "evidence": "Only around 31% of marketers report complete satisfaction with their ability to unify and read data across platforms.",
+      "evidence_id": "multiplatform-satisfaction",
+      "evidence_ids": [
+        "multiplatform-satisfaction"
+      ],
+      "evidence_spans": [],
+      "id": "insight-cross-platform-satisfaction",
+      "metric": {
+        "cohort": "Marketers",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "Marketers completely satisfied with cross-platform data",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Marketers",
+        "subject": "Complete satisfaction with ability to unify and read data across platforms",
+        "timeframe": "",
+        "trend": "",
+        "unit": "percent",
+        "value": "around 31"
+      },
+      "metric_public_copy": "Around 31% of marketers report complete satisfaction with cross-platform data unification and readability.",
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.77,
+      "now_what": "",
+      "pages": [
+        11
+      ],
+      "report_type_lens": "channel_strategy",
+      "score": 0.87,
+      "so_what": "The reported level of complete satisfaction is qualified as around 31%.",
+      "text": "Only around 31% of marketers report complete satisfaction with their ability to unify and read data across platforms."
+    },
+    {
+      "coverage_role": "investment_signal",
+      "decision_relevance_score": 0.86,
+      "evidence": "Most organizations report low or moderate GenAI maturity, while a small group with advanced deployment has reportedly achieved efficiency gains over 20%.",
+      "evidence_id": "ai-genai-maturity",
+      "evidence_ids": [
+        "ai-genai-maturity"
+      ],
+      "evidence_spans": [],
+      "id": "insight-genai-efficiency-qualified",
+      "metric": {
+        "cohort": "A small group with advanced deployment",
+        "confidence": "Reported",
+        "denominator": "",
+        "geography": "",
+        "label": "Reported efficiency gains among advanced GenAI deployers",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "Generative AI deployment",
+        "subject": "Efficiency gains",
+        "timeframe": "",
+        "trend": "efficiency gains",
+        "unit": "percent",
+        "value": "over 20"
+      },
+      "metric_public_copy": "A small group with advanced generative-AI deployment reportedly achieved efficiency gains over 20%.",
+      "metric_strength_score": 0.88,
+      "novelty_score": 0.81,
+      "now_what": "",
+      "pages": [
+        9
+      ],
+      "report_type_lens": "technology_shift",
+      "score": 0.85,
+      "so_what": "The report qualifies the result as reportedly achieved by a small group with advanced deployment.",
+      "text": "A small group with advanced generative-AI deployment has reportedly achieved efficiency gains over 20%."
+    },
+    {
+      "coverage_role": "operating_implication",
+      "decision_relevance_score": 0.88,
+      "evidence": "The next phase of growth is architectural, not because of any single tool, but because of how these capabilities work together.",
+      "evidence_id": "conclusion-architectural-growth",
+      "evidence_ids": [
+        "conclusion-architectural-growth"
+      ],
+      "evidence_spans": [],
+      "id": "insight-architectural-growth",
+      "metric": {
+        "cohort": "",
+        "confidence": "",
+        "denominator": "",
+        "geography": "",
+        "label": "",
+        "observation_status": "",
+        "sample_size": "",
+        "segment": "",
+        "subject": "",
+        "timeframe": "",
+        "trend": "",
+        "unit": "",
+        "value": ""
+      },
+      "metric_public_copy": "",
+      "metric_strength_score": 0,
+      "novelty_score": 0.76,
+      "now_what": "",
+      "pages": [
+        40
+      ],
+      "report_type_lens": "operations",
+      "score": 0.84,
+      "so_what": "The conclusion emphasizes capabilities working together rather than relying on one tool.",
+      "text": "The report’s conclusion frames the next phase of app growth as architectural, arising from capabilities working together rather than from any single tool."
+    }
+  ]
+}

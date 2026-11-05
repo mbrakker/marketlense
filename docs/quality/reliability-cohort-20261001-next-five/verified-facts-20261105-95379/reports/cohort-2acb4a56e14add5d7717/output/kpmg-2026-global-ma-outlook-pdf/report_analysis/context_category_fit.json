@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.0",
+  "selected_category_ids": [],
+  "category_fits": [
+    {
+      "category_id": "business_performance",
+      "label": "Business Performance & Growth",
+      "fit_score": 0.31,
+      "decision": "reject",
+      "why_fit": "The report covers deal pipeline expectations, deal plans, buyer confidence, and growth strategies, which touch on commercial decision-making.",
+      "why_not_fit": "Its central subject is global M&A activity and the 2026 deal outlook, not commercial performance measures or the growth, profitability, or productivity levers defined by this category.",
+      "evidence_sections": [
+        "Executive summary",
+        "2025 retrospective and 2026 outlook",
+        "Strategic focus in a fragmented world"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "Executive summary",
+        "2025 retrospective and 2026 outlook"
+      ],
+      "centrality_evidence_sections": [
+        "Executive summary",
+        "2025 retrospective and 2026 outlook"
+      ],
+      "remediation_signal": "topic_semantics_all_rejected_abstained"
+    },
+    {
+      "category_id": "macroeconomics",
+      "label": "Macroeconomics & Regional Outlooks",
+      "fit_score": 0.24,
+      "decision": "reject",
+      "why_fit": "The report notes regional differences and macroeconomic, regulatory, and geopolitical constraints affecting dealmakers.",
+      "why_not_fit": "These conditions provide context for the M&A outlook; the report does not primarily analyze economy-wide indicators, policy, or regional economies.",
+      "evidence_sections": [
+        "2025 retrospective and 2026 outlook",
+        "Strategic focus in a fragmented world"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "2025 retrospective and 2026 outlook",
+        "Strategic focus in a fragmented world"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_all_rejected_abstained"
+    },
+    {
+      "category_id": "ai_automation",
+      "label": "AI & Automation",
+      "fit_score": 0.14,
+      "decision": "reject",
+      "why_fit": "AI-driven deal execution is one theme in the framework shaping the 2026 M&A environment.",
+      "why_not_fit": "AI is a supporting theme in a report about global M&A, not its central subject.",
+      "evidence_sections": [
+        "5 drivers shaping the 2026 M&A environment"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "5 drivers shaping the 2026 M&A environment"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_all_rejected_abstained"
+    },
+    {
+      "category_id": "technology",
+      "label": "Technology & Innovation",
+      "fit_score": 0.08,
+      "decision": "reject",
+      "why_fit": "The report mentions AI-enabled deal execution as one M&A theme.",
+      "why_not_fit": "It does not analyze technology platforms, infrastructure, or innovation as its primary lens; AI is an enabler within the M&A discussion.",
+      "evidence_sections": [
+        "5 drivers shaping the 2026 M&A environment"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [
+        "Reject when technology is only a supporting capability inside a category-specific commerce, media, or healthcare report."
+      ],
+      "rejected_topic_rule_ids": [
+        "technology:exclude:bcb4675ddd1f92ce"
+      ],
+      "rule_evidence_sections": [
+        "5 drivers shaping the 2026 M&A environment"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_all_rejected_abstained"
+    },
+    {
+      "category_id": "online_crossborder",
+      "label": "Online Cross-Border Commerce",
+      "fit_score": 0.04,
+      "decision": "reject",
+      "why_fit": "The report discusses cross-border M&A as part of global dealmakers' growth strategies.",
+      "why_not_fit": "It concerns acquisitions across borders, not ecommerce operations such as localization, shipping, customs, or international merchant activity.",
+      "evidence_sections": [
+        "2025 retrospective and 2026 outlook"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "2025 retrospective and 2026 outlook"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_all_rejected_abstained"
+    }
+  ]
+}

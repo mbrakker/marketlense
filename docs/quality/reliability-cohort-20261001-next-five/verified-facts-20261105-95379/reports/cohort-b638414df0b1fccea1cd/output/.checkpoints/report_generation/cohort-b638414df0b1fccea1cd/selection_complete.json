@@ -1,0 +1,527 @@
+{
+  "artifact_refs": {
+    "analysis_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.adjust.com\\b6b998e34a7c\\mobile-app-trends-2026.pdf",
+    "contents_image": "mobile-app-t-a5407b768f97/assets/preview-contents-b5a5f6ae02b3.png",
+    "source_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.adjust.com\\b6b998e34a7c\\mobile-app-trends-2026.pdf"
+  },
+  "completed_at_utc": "2026-11-05T16:03:59.888481+00:00",
+  "file_id": "cohort-b638414df0b1fccea1cd",
+  "payload": {
+    "artifact_integrity": {
+      "files": {
+        "analysis_pdf": {
+          "md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.adjust.com\\b6b998e34a7c\\mobile-app-trends-2026.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 3571623
+        },
+        "source_pdf": {
+          "md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.adjust.com\\b6b998e34a7c\\mobile-app-trends-2026.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 3571623
+        }
+      },
+      "schema_version": "1.0"
+    },
+    "artifact_lineage": {
+      "analysis_pdf": "art_d87b06a99c7ddf5fa05b4daaad3ce41346823ffcd5b872ef4e5bf0a8a94bdb6a",
+      "contents_image": "art_824ae02132074e7b430d8befab47b0cfce92263445556b22aae4af5c136c9350",
+      "source_pdf": "art_4349bbe05f53f0372f86ab5eb33db4be41551a9f9ec59426580ad9cbe14ff0f3"
+    },
+    "artifact_registry": {
+      "refs": [
+        {
+          "artifact_id": "analysis_pdf",
+          "content_hash": "b638414df0b1fccea1cd8a93eaf8f5aa",
+          "created_at_utc": "2026-11-05T16:03:59.832741+00:00",
+          "kind": "analysis_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.adjust.com\\b6b998e34a7c\\mobile-app-trends-2026.pdf",
+          "producer_step": "selection_complete",
+          "required": true,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "contents_image",
+          "content_hash": "",
+          "created_at_utc": "2026-11-05T16:03:59.832741+00:00",
+          "kind": "contents_image",
+          "path": "mobile-app-t-a5407b768f97/assets/preview-contents-b5a5f6ae02b3.png",
+          "producer_step": "selection_complete",
+          "required": false,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "source_pdf",
+          "content_hash": "b638414df0b1fccea1cd8a93eaf8f5aa",
+          "created_at_utc": "2026-11-05T16:03:59.832741+00:00",
+          "kind": "source_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.adjust.com\\b6b998e34a7c\\mobile-app-trends-2026.pdf",
+          "producer_step": "selection_complete",
+          "required": true,
+          "schema_version": "1.0"
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    "prompt_family_materializations": {},
+    "schema_version": "1.0",
+    "selection": {
+      "candidate_count": 280,
+      "payload": {
+        "_contents_image": "mobile-app-t-a5407b768f97/assets/preview-contents-b5a5f6ae02b3.png",
+        "_evidence_packs": {},
+        "_figure_assets": [
+          {
+            "candidate_id": "chart-32-0",
+            "caption_source": "legacy",
+            "crop_dpi": 216,
+            "crop_image_sha256": "882e0842cd5202fb52891432f8f31a5a5dd090b2a901a35e4bc79b8984f65919",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.2743,
+              "table_boundary": 0.5,
+              "visual_card_boundary": 0.9828
+            },
+            "crop_qa_score": 0.7007,
+            "crop_qa_sidecar_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-32-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Top 10 finance apps by downloads, worldwide, 2025",
+            "display_caption": "Top 10 finance apps by downloads, worldwide, 2025",
+            "generated_caption": "",
+            "image_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-32-0.png",
+            "is_primary": true,
+            "kind": "chart",
+            "page": 32,
+            "preview_text": "Top 10 finance apps by downloads, worldwide, 2025",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-27-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "b4019420f82ef1259854f39be52908fbce1a5f0d3f9db2dc177fcd409f678342",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.1489,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.1705
+            },
+            "crop_qa_score": 0.82,
+            "crop_qa_sidecar_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-27-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "E-commerce sessions per user per day on day 0",
+            "display_caption": "Additional figure 2",
+            "generated_caption": "",
+            "image_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-27-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 27,
+            "preview_text": "E-commerce sessions per user per day on day 0",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-22-1",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "7c3a9853d6dfa6cab5a6af29a523f415a3a5b89258236277b68de61a405ea495",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.1507,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.1797
+            },
+            "crop_qa_score": 0.8315,
+            "crop_qa_sidecar_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-22-1.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Gaming partners per app 2024 - 2025 (Global)",
+            "display_caption": "Additional figure 3",
+            "generated_caption": "",
+            "image_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-22-1.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 22,
+            "preview_text": "Gaming partners per app 2024 - 2025 (Global)",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-21-1",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "b2a34ec29b32acef9f3b7a5ec4f3485e23bc4b8e9ff14e3864cc5988f9cb6cee",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0,
+              "table_boundary": 0.25,
+              "visual_card_boundary": 0.2016
+            },
+            "crop_qa_score": 0.845,
+            "crop_qa_sidecar_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-21-1.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Gaming app paid/organic ratio 2024 - 2025 (Global)",
+            "display_caption": "Additional figure 4",
+            "generated_caption": "",
+            "image_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-21-1.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 21,
+            "preview_text": "Gaming app paid/organic ratio 2024 - 2025 (Global)",
+            "schema_version": "1.0"
+          }
+        ],
+        "_figure_gallery": [
+          "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-32-0.png",
+          "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-27-0.png",
+          "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-22-1.png",
+          "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-21-1.png"
+        ],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-32-0.png",
+        "_text_char_count": 5025,
+        "_text_density": 1005.0,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "contents",
+        "contents_page_number": 2,
+        "figure": {
+          "evidence": "Top 10 finance apps by downloads, worldwide, 2025",
+          "schema_version": "1.0",
+          "title": "Top 10 finance apps by downloads, worldwide, 2025"
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "2026 edition REPORT",
+        "tldr": "Not available from text"
+      },
+      "rank_usage": {
+        "completion_tokens": 30922,
+        "prompt_tokens": 51975,
+        "total_tokens": 82897
+      },
+      "schema_version": "1.0"
+    },
+    "source": {
+      "analysis_pdf_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.adjust.com\\b6b998e34a7c\\mobile-app-trends-2026.pdf",
+      "contents_heading": "contents",
+      "contents_image": "mobile-app-t-a5407b768f97/assets/preview-contents-b5a5f6ae02b3.png",
+      "contents_page_number": 2,
+      "info_response": {
+        "metadata": {
+          "CreationDate": "D:20260312090054Z00'00'",
+          "Creator": "Adobe InDesign 21.2 (Macintosh)",
+          "ModDate": "D:20260312090054Z00'00'",
+          "Producer": "GPL Ghostscript 10.05.1"
+        },
+        "page_count": 41,
+        "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.adjust.com\\b6b998e34a7c\\mobile-app-trends-2026.pdf",
+        "schema_version": "1.0"
+      },
+      "ocr_fallback_used": false,
+      "ocr_pdf_path": "",
+      "payload": {
+        "_contents_image": "mobile-app-t-a5407b768f97/assets/preview-contents-b5a5f6ae02b3.png",
+        "_evidence_packs": {},
+        "_figure_assets": [
+          {
+            "candidate_id": "chart-32-0",
+            "caption_source": "legacy",
+            "crop_dpi": 216,
+            "crop_image_sha256": "882e0842cd5202fb52891432f8f31a5a5dd090b2a901a35e4bc79b8984f65919",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.2743,
+              "table_boundary": 0.5,
+              "visual_card_boundary": 0.9828
+            },
+            "crop_qa_score": 0.7007,
+            "crop_qa_sidecar_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-32-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Top 10 finance apps by downloads, worldwide, 2025",
+            "display_caption": "Top 10 finance apps by downloads, worldwide, 2025",
+            "generated_caption": "",
+            "image_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-32-0.png",
+            "is_primary": true,
+            "kind": "chart",
+            "page": 32,
+            "preview_text": "Top 10 finance apps by downloads, worldwide, 2025",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-27-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "b4019420f82ef1259854f39be52908fbce1a5f0d3f9db2dc177fcd409f678342",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.1489,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.1705
+            },
+            "crop_qa_score": 0.82,
+            "crop_qa_sidecar_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-27-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "E-commerce sessions per user per day on day 0",
+            "display_caption": "Additional figure 2",
+            "generated_caption": "",
+            "image_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-27-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 27,
+            "preview_text": "E-commerce sessions per user per day on day 0",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-22-1",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "7c3a9853d6dfa6cab5a6af29a523f415a3a5b89258236277b68de61a405ea495",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.1507,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.1797
+            },
+            "crop_qa_score": 0.8315,
+            "crop_qa_sidecar_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-22-1.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Gaming partners per app 2024 - 2025 (Global)",
+            "display_caption": "Additional figure 3",
+            "generated_caption": "",
+            "image_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-22-1.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 22,
+            "preview_text": "Gaming partners per app 2024 - 2025 (Global)",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-21-1",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "b2a34ec29b32acef9f3b7a5ec4f3485e23bc4b8e9ff14e3864cc5988f9cb6cee",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0,
+              "table_boundary": 0.25,
+              "visual_card_boundary": 0.2016
+            },
+            "crop_qa_score": 0.845,
+            "crop_qa_sidecar_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-21-1.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Gaming app paid/organic ratio 2024 - 2025 (Global)",
+            "display_caption": "Additional figure 4",
+            "generated_caption": "",
+            "image_path": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-21-1.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 21,
+            "preview_text": "Gaming app paid/organic ratio 2024 - 2025 (Global)",
+            "schema_version": "1.0"
+          }
+        ],
+        "_figure_gallery": [
+          "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-32-0.png",
+          "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-27-0.png",
+          "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-22-1.png",
+          "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-21-1.png"
+        ],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "mobile-app-trends-2026-pdf/slices/mobile-app-trends-2026-pdf-chart-32-0.png",
+        "_text_char_count": 5025,
+        "_text_density": 1005.0,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "contents",
+        "contents_page_number": 2,
+        "figure": {
+          "evidence": "Top 10 finance apps by downloads, worldwide, 2025",
+          "schema_version": "1.0",
+          "title": "Top 10 finance apps by downloads, worldwide, 2025"
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "2026 edition REPORT",
+        "tldr": "Not available from text"
+      },
+      "schema_version": "1.0",
+      "text_response": {
+        "char_count": 5025,
+        "pages": [
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 1,
+            "text": "Mobile app trends: \n2026 edition \nREPORT\nA global benchmark of  \napp performance\nWith contributions from:\n"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 2,
+            "text": "Mobile app trends: 2026 edition\n2\nContents\nIntroduction: Evolution and opportunity in  \nthe mobile app industry ...................................................................................3\n \nAI transforms from strategic tool to core infrastructure in 2026 .......9\n \nMobile-first approach evolves into multi-platform strategy ............... 11\nKey takeaways & methodology ....................................................................13\nGaming apps .....................................................................................................15\n \nFinding and keeping users .............................................................................17\nE-commerce/shopping ................................................................................. 25\n \nFinding and keeping users ............................................................................27\nFinance apps .................................................................................................... 32\n \nFinding and keeping users ........................................................................... 34\nConclusion: An exciting future for the mobile app industry ................41\n"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 3,
+            "text": "Mobile app trends: 2026 edition\n3\nMobile app trends 2026 is here and we\u2019re happy to report that \nthe growth opportunities are as big as ever. In 2025, there were \nmore than 112.1 billion app downloads, an estimated 5\ufffd8 billion \nunique smartphone users globally, and consumer spending \nrose 10\ufffd6% YoY to $167 billion. The app economy\u2019s long-term \noutlook also remains strong, with the global market projected \nto exceed $1\ufffd23 trillion by 2035 and mobile technologies and \nservices set to generate 8.4% of global GDP by 2030.  \nFor mobile marketing and UA teams, 2025 was a critical period \nfor experimentation with AI technologies, new automation \nsolutions, and channel diversification. Teams continue to seek \nthe latest and most effective growth channels, and setups have \nbecome increasingly customized, complex, and fragmented \n\u2014 making reliable and actionable data more paramount to \ncampaign optimization and ROI than ever. In this responsive, \nuser-led industry, 2026 is set to be another exciting and \ntransformative year for mobile apps. \nToday is possibly the most data-rich time we\u2019ve experienced \nso far in the marketing industry. With billions of data points \nto navigate and gain insights from, what serves us now? \nAdvertisers need the ability to cut through the noise and \nsurface data that is decision-ready. Success depends on \ndynamic and customizable dashboards to gain the big  \npicture without losing transparency, alongside attribution  \nthat\u2019s laser sharp.\nINTRODUCTION \nEvolution and opportunity in  \nthe mobile app industry\nUser behavior, new tech, and better data are fueling mobile growth in 2026"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 4,
+            "text": "Key to the fragmentation we\u2019re experiencing is that we have \nmore platforms and channels than ever before. Target users \nare across devices, across apps, and their behaviour changes \nfast. Macro-economic changes, mono versus microculture, \nstreaming popularity\u2014it all impacts our marketing strategy. The \nsolution? Cross-channel attribution and linking infrastructure \nthat keeps campaigns effective and user experiences seamless. \nAdd to this AI, which continues to increase its presence as \na foundation in workflows across all industries and verticals, \nrather than an add-on. 2025 developments have taken AI from \nan enhancement to native architecture. ChatGPT, Gemini, \nand Anthropic all launched new models last year, and as many \nas 88% of businesses now report using AI in their daily work. \nThat\u2019s 13% up from previous year and 76% since ChatGPT\u2019s \nlaunch in November 2022. Nearly two-thirds of organizations \nreport, however, that they\u2019re still in the experimentation or \npiloting phase, leaving a lot of room for AI solutions to make a \nreal impact. \nAs always, the mobile app trends report: 2026 edition \nequips you with data from thousands of apps across \nthe gaming, e-commerce, and finance verticals to help \nbenchmark performance and forecast goals\ufffd We cover  \nthe critical data and provide contextual analysis of what  \nwe\u2019ve seen in the market last year, and apply it to now. \nWhatever your growth goals this year\u2014adapting to regional \ndynamics, strengthening post-install uptake, customer \nprofiles\u2014benchmarking your data with market trends is  \nkey for sustainable results. \n4 Mobile app trends: 2026 edition"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 5,
+            "text": "Deep Shah\nGlobal Head of AdTech \nPartnerships - Measurement, \nData, Retail Media\nMobile app trends: 2026 edition\n5\n\u201c As we head into 2026, mobile discovery will be driven less \nby linear funnels and more by participation. With users \ndiscovering, engaging, and converting through culture-led \ncontent across platforms, brands that design for community-\ndriven experiences, rather than interruptions, will be better \npositioned to drive impact across the full journey.\u201d\n"
+          }
+        ],
+        "pages_extracted": 5,
+        "schema_version": "1.0",
+        "text": "Mobile app trends: \n2026 edition \nREPORT\nA global benchmark of  \napp performance\nWith contributions from:\n\n\nMobile app trends: 2026 edition\n2\nContents\nIntroduction: Evolution and opportunity in  \nthe mobile app industry ...................................................................................3\n \nAI transforms from strategic tool to core infrastructure in 2026 .......9\n \nMobile-first approach evolves into multi-platform strategy ............... 11\nKey takeaways & methodology ....................................................................13\nGaming apps .....................................................................................................15\n \nFinding and keeping users .............................................................................17\nE-commerce/shopping ................................................................................. 25\n \nFinding and keeping users ............................................................................27\nFinance apps .................................................................................................... 32\n \nFinding and keeping users ........................................................................... 34\nConclusion: An exciting future for the mobile app industry ................41\n\n\nMobile app trends: 2026 edition\n3\nMobile app trends 2026 is here and we\u2019re happy to report that \nthe growth opportunities are as big as ever. In 2025, there were \nmore than 112.1 billion app downloads, an estimated 5\ufffd8 billion \nunique smartphone users globally, and consumer spending \nrose 10\ufffd6% YoY to $167 billion. The app economy\u2019s long-term \noutlook also remains strong, with the global market projected \nto exceed $1\ufffd23 trillion by 2035 and mobile technologies and \nservices set to generate 8.4% of global GDP by 2030.  \nFor mobile marketing and UA teams, 2025 was a critical period \nfor experimentation with AI technologies, new automation \nsolutions, and channel diversification. Teams continue to seek \nthe latest and most effective growth channels, and setups have \nbecome increasingly customized, complex, and fragmented \n\u2014 making reliable and actionable data more paramount to \ncampaign optimization and ROI than ever. In this responsive, \nuser-led industry, 2026 is set to be another exciting and \ntransformative year for mobile apps. \nToday is possibly the most data-rich time we\u2019ve experienced \nso far in the marketing industry. With billions of data points \nto navigate and gain insights from, what serves us now? \nAdvertisers need the ability to cut through the noise and \nsurface data that is decision-ready. Success depends on \ndynamic and customizable dashboards to gain the big  \npicture without losing transparency, alongside attribution  \nthat\u2019s laser sharp.\nINTRODUCTION \nEvolution and opportunity in  \nthe mobile app industry\nUser behavior, new tech, and better data are fueling mobile growth in 2026\n\nKey to the fragmentation we\u2019re experiencing is that we have \nmore platforms and channels than ever before. Target users \nare across devices, across apps, and their behaviour changes \nfast. Macro-economic changes, mono versus microculture, \nstreaming popularity\u2014it all impacts our marketing strategy. The \nsolution? Cross-channel attribution and linking infrastructure \nthat keeps campaigns effective and user experiences seamless. \nAdd to this AI, which continues to increase its presence as \na foundation in workflows across all industries and verticals, \nrather than an add-on. 2025 developments have taken AI from \nan enhancement to native architecture. ChatGPT, Gemini, \nand Anthropic all launched new models last year, and as many \nas 88% of businesses now report using AI in their daily work. \nThat\u2019s 13% up from previous year and 76% since ChatGPT\u2019s \nlaunch in November 2022. Nearly two-thirds of organizations \nreport, however, that they\u2019re still in the experimentation or \npiloting phase, leaving a lot of room for AI solutions to make a \nreal impact. \nAs always, the mobile app trends report: 2026 edition \nequips you with data from thousands of apps across \nthe gaming, e-commerce, and finance verticals to help \nbenchmark performance and forecast goals\ufffd We cover  \nthe critical data and provide contextual analysis of what  \nwe\u2019ve seen in the market last year, and apply it to now. \nWhatever your growth goals this year\u2014adapting to regional \ndynamics, strengthening post-install uptake, customer \nprofiles\u2014benchmarking your data with market trends is  \nkey for sustainable results. \n4 Mobile app trends: 2026 edition\n\nDeep Shah\nGlobal Head of AdTech \nPartnerships - Measurement, \nData, Retail Media\nMobile app trends: 2026 edition\n5\n\u201c As we head into 2026, mobile discovery will be driven less \nby linear funnels and more by participation. With users \ndiscovering, engaging, and converting through culture-led \ncontent across platforms, brands that design for community-\ndriven experiences, rather than interruptions, will be better \npositioned to drive impact across the full journey.\u201d\n",
+        "text_density": 1005.0
+      },
+      "text_status": {
+        "char_count": 5025,
+        "density_threshold": 250.0,
+        "low_confidence_pages": [],
+        "native_confidence_score": 0.987,
+        "native_confidence_threshold": 0.55,
+        "native_density_confidence_score": 1.0,
+        "native_page_confidence_threshold": 0.35,
+        "native_sample_confidence_score": 0.983,
+        "native_text_density": 1005.0,
+        "native_text_not_available": false,
+        "not_available": false,
+        "ocr_policy": "native_first_selective",
+        "ocr_recommendation_reason": "",
+        "ocr_recommended": false,
+        "pages_sampled": 5,
+        "reason": "",
+        "schema_version": "1.0",
+        "text_density": 1005.0
+      },
+      "text_validation_pages": [
+        2,
+        3,
+        20
+      ],
+      "text_validation_reason": "",
+      "text_validation_status": "pass",
+      "title_resolution": {
+        "candidate_source": "cover_title_page",
+        "candidates": [
+          {
+            "evidence": "page:1",
+            "page_number": 1,
+            "schema_version": "1.0",
+            "score": 1288.0,
+            "source": "cover_title_page",
+            "value": "2026 edition REPORT"
+          },
+          {
+            "evidence": "filename",
+            "page_number": 0,
+            "schema_version": "1.0",
+            "score": 445.0,
+            "source": "filename",
+            "value": "mobile app trends 2026"
+          }
+        ],
+        "confidence": "high",
+        "edition": "2026",
+        "evidence": [
+          "page:1"
+        ],
+        "explicit_source_title": "2026 edition REPORT",
+        "issues": [],
+        "publisher_candidate": "Adjust",
+        "schema_version": "1.0",
+        "title": "2026 edition REPORT"
+      }
+    },
+    "vector_indexing": {
+      "indexed_at_utc": null,
+      "last_error": null,
+      "openai_file_id": "file-QgdxXVe824cXjh49dieN59",
+      "schema_version": "1.0",
+      "vector_store_id": "vs_6aeca701b9ec8191a032c9dd218cfd8e",
+      "vector_store_status": "indexing"
+    }
+  },
+  "pipeline_name": "report_generation",
+  "report_slug": "mobile-app-trends-2026-pdf",
+  "schema_version": "1.0",
+  "source_run_id": "e586f333-1d56-4b5a-98fa-8aef3b8ff172",
+  "source_task_id": "workflow_job:a514e6d6-e107-401b-8eb5-1c7277f06dd3",
+  "stage_name": "selection_complete",
+  "stage_status": "completed"
+}

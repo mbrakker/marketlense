@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "_cache": {
+    "schema_version": "1.0",
+    "key": "856d331d270518fe495e1f4015cf0d99a9cd51ffc0dcafa6b08ff91324a7cd25",
+    "md5": "4b763ae2286ca69fe8acb63b17508dfb",
+    "model": "gpt-6-luna",
+    "temperature": null,
+    "reasoning_effort": "low",
+    "seed": null,
+    "mode": "adaptive",
+    "prompt_system_sha256": "e44deabb4806c9edb05abd9327c83928adf3430f5894a2d52b7ecd356f64a410",
+    "prompt_user_sha256": "b7270ca58326e41ede53a92c23768f2f517a2dfbfcb03de5547e2d1c1a1ef280"
+  },
+  "results": [
+    {
+      "entry_key": "02ec74ca21fa9749d907da85bdbb24c6a56fd2e9941ec8150c72da0a984daa49",
+      "candidate_id": "chart-14-1",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        55.0,
+        101.0,
+        493.0,
+        239.0
+      ],
+      "reason": "model_accepted",
+      "page": 14
+    },
+    {
+      "entry_key": "253e2142a1d092f967f046f74595e61558f3c0e2f48724315bc2da5024c30975",
+      "candidate_id": "table-37-0",
+      "is_valid_candidate": false,
+      "refined_bbox": [
+        60.48,
+        346.3,
+        549.11,
+        578.27
+      ],
+      "reason": "model_rejected",
+      "page": 37
+    },
+    {
+      "entry_key": "41ae305cf86a11e7a773ca5c0c3f7b72c2d8a81063c122449e1d52296a581f9a",
+      "candidate_id": "chart-37-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        68.0,
+        346.0,
+        542.0,
+        604.0
+      ],
+      "reason": "model_accepted",
+      "page": 37
+    },
+    {
+      "entry_key": "5627304df444c8f712cb64003741363f1012f56eaa1031b1066d2e6d82619f68",
+      "candidate_id": "chart-31-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        70.0,
+        304.0,
+        539.0,
+        610.0
+      ],
+      "reason": "model_accepted",
+      "page": 31
+    },
+    {
+      "entry_key": "9b22be84136fa82473bc1e65a00d9de28119f8579406f1452ff67c6aff4bec22",
+      "candidate_id": "chart-39-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        68.0,
+        57.0,
+        530.0,
+        400.0
+      ],
+      "reason": "model_accepted",
+      "page": 39
+    },
+    {
+      "entry_key": "cfe9ca6210de2bc51179baa5fb9f53ca0d619797395aa6b2267d5aec9cf168e3",
+      "candidate_id": "chart-24-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        54.0,
+        202.0,
+        515.0,
+        472.0
+      ],
+      "reason": "model_accepted",
+      "page": 24
+    }
+  ]
+}

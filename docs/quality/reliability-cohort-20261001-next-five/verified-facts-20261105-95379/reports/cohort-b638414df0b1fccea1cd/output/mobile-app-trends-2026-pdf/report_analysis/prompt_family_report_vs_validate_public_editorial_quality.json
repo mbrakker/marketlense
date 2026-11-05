@@ -1,0 +1,612 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/validate/public_editorial_quality",
+  "family_schema_version": "3.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "verdicts": [
+      {
+        "item_id": "soft_copy:summary:947693f2242c975a",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The global 2025 year-over-year install decline and session increase are accurately reported; the divergence characterization follows from their opposite directions.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:e781c623998f6041",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately states the global e-commerce install and session changes for 2025 year over year.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:5e130b6360091160",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The CPI metric, USD-per-install unit, global scope, years, categories, and values match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:insight-ecommerce-cpi-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:7742f404ca2c8a87",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately reports the global finance-app install and session changes in the 2025 year-over-year comparison.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:f8537f29dac54c27",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The global finance-app session-length value, increase, unit, and year are supported by the linked fact.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-engagement-measures"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:summary:9aa79b03723d0568",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Correctly preserves the day-0 sessions-per-user metric and its 2024-to-2025 decline.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-engagement-measures"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:dacc4db342f3d77b",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Both verticals' global 2025 year-over-year install and session changes are accurately matched to their respective linked facts.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence",
+          "verified-fact:insight-finance-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:1f3143c7020e54b7",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The global 2024–2025 casino and slots install and session changes are accurately stated with the correct category mapping.",
+        "evidence_ids": [
+          "verified-fact:insight-gaming-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:f6d080533284447e",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked e-commerce, finance, and gaming findings show differing directional relationships between installs and sessions, supporting this synthesis without claiming a causal relationship.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence",
+          "verified-fact:insight-finance-growth-divergence",
+          "verified-fact:insight-gaming-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:expert_comment:52b06e43046a01a9",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "This is clearly attributed to MarketLense and recommends separating measures in the verticals and subverticals where the linked findings show divergent movements.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence",
+          "verified-fact:insight-finance-growth-divergence",
+          "verified-fact:insight-gaming-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:b54fede281fe55d1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The global scope, 2025 timeframe, year-over-year comparison, metrics, and directions match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:26c9c6b7183f5525",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked e-commerce finding shows installs declining while sessions rose, supporting the concise directional comparison.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "soft_copy:linkedin_post:4e7e6eae1ff2f3f9",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The recommendation is explicitly framed as MarketLense's approach and is a reasonable implication of the linked divergence; it does not attribute the advice to the source.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-ecom-growth-divergence:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The install and session changes and all reported CPI values, units, categories, geographies, and periods match the two linked facts.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence",
+          "verified-fact:insight-ecommerce-cpi-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-ecom-growth-divergence:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked findings show opposite install/session directions overall and different CPI directions across the named categories, supporting this concise interpretation.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence",
+          "verified-fact:insight-ecommerce-cpi-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-ecom-growth-divergence:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The recommendation to review measures by category follows from the linked overall-versus-category divergence and makes no unsupported empirical assertion.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence",
+          "verified-fact:insight-ecommerce-cpi-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-finance-growth-divergence:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The global finance-app install and session changes, session-length result, and day-0 per-user values and periods match the linked facts.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-growth-divergence",
+          "verified-fact:insight-finance-engagement-measures"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-finance-growth-divergence:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked facts show differing movements across installs, sessions, session length, and day-0 sessions per user, so describing the signals as divergent is supported.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-engagement-measures",
+          "verified-fact:insight-finance-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-finance-growth-divergence:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Separating acquisition and engagement measures is a relevant recommendation, and the wording correctly retains the day-0 per-user basis.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-engagement-measures",
+          "verified-fact:insight-finance-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-finance-latam-growth:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The regional lead, LATAM values, year-over-year period, and explicit absence of underlying counts or denominators match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-latam-growth"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-finance-latam-growth:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Both reported measures increased, while the linked chart does not provide underlying counts or denominators; the wording accurately preserves that boundary.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-latam-growth"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-finance-latam-growth:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Validating absolute volumes before making allocation decisions is a relevant recommendation given the linked fact's missing underlying counts and denominators.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-latam-growth"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-gaming-subvertical-divergence:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The global comparison, period, category mapping, and all four install/session percentages match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:insight-gaming-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-gaming-subvertical-divergence:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Both casino and slots show install growth alongside session declines in the linked global comparison.",
+        "evidence_ids": [
+          "verified-fact:insight-gaming-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-gaming-subvertical-divergence:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Reviewing installs and sessions separately by the two named subverticals follows directly from their linked divergence.",
+        "evidence_ids": [
+          "verified-fact:insight-gaming-subvertical-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-genai-efficiency-qualified:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The wording preserves the source's distinction between most organizations' reported low/moderate maturity and the reportedly achieved gains of a small advanced-deployment group; it adds no unstated scope or causal claim.",
+        "evidence_ids": [
+          "verified-fact:insight-genai-efficiency-qualified"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-genai-efficiency-qualified:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The linked fact supports distinguishing the small advanced-deployment group's reported outcome from the broader maturity reports.",
+        "evidence_ids": [
+          "verified-fact:insight-genai-efficiency-qualified"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:insight-genai-efficiency-qualified:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The recommendation to distinguish the two reported groups is a defensible implication and does not inflate the reported outcome.",
+        "evidence_ids": [
+          "verified-fact:insight-genai-efficiency-qualified"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:gaming-retention:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The wording accurately reports the global all-game population, minimal year-to-year change, and the four retention rates at the specified post-install days.",
+        "evidence_ids": [
+          "verified-fact:gaming-retention"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:gaming-retention:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The reported all-game rates decline across the stated post-install checkpoints, and the linked fact describes minimal change between years.",
+        "evidence_ids": [
+          "verified-fact:gaming-retention"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:gaming-retention:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Benchmarking at the same post-install intervals is a relevant recommendation that does not assert unsupported retention performance.",
+        "evidence_ids": [
+          "verified-fact:gaming-retention"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:intro-downloads:text",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The 2025 figure is reported as more than 112.1 billion and the text correctly notes that its geography is unspecified.",
+        "evidence_ids": [
+          "verified-fact:intro-downloads"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:intro-downloads:so_what",
+        "status": "pass",
+        "classification": "analyst_interpretation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The figure provides download-scale context, and the wording accurately retains the source's unspecified geography.",
+        "evidence_ids": [
+          "verified-fact:intro-downloads"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "insight:intro-downloads:now_what",
+        "status": "pass",
+        "classification": "prescriptive_recommendation",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Requiring aligned geographic scope when comparing the figure is appropriate given that the source does not specify its geography.",
+        "evidence_ids": [
+          "verified-fact:intro-downloads"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:1:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The global e-commerce session increase and install decline correspond to the linked 2025-versus-2024 changes.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:2:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "All CPI values, category mappings, years, global scope, and USD-per-install unit match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:insight-ecommerce-cpi-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "summary:summary:claim_evidence_map:3:claim",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately states the linked global finance-app install and session changes for 2025 year over year.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "metric_spine:metric_spine:insight-genai-efficiency-qualified",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The small-group qualifier, advanced-deployment cohort, reported status, and over-20% result match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:insight-genai-efficiency-qualified"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "executive_advisory:decision_brief:strategic_context",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The strategic-context sentence accurately states the global e-commerce install and session changes and their divergent directions.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:1",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The sentence accurately states the linked global e-commerce session increase and install decline in the 2025 year-over-year comparison.",
+        "evidence_ids": [
+          "verified-fact:insight-ecom-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:2",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The CPI values, named categories, years, geography, and USD-per-install metric match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:insight-ecommerce-cpi-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:3",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "Accurately states the linked global finance-app install and session changes for 2025 year over year.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-growth-divergence"
+        ],
+        "repair_target": ""
+      },
+      {
+        "item_id": "claim_ledgers:claim:4",
+        "status": "pass",
+        "classification": "factual_claim",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The global session-length increase, 7.18-minute value, and 2025 timeframe match the linked fact.",
+        "evidence_ids": [
+          "verified-fact:insight-finance-engagement-measures"
+        ],
+        "repair_target": ""
+      }
+    ],
+    "report_verdict": {
+      "status": "fail",
+      "severity": "error",
+      "rule_id": "public_editorial_quality.report_distinctness_and_limitations",
+      "hard_fail_class": "",
+      "reason": "Material findings are covered and the interpretations and recommendations are generally defensible. However, the public-content index repeats the same e-commerce and finance findings across summary, expert-comment, social-post, insight, claim-map, and ledger items, weakening distinctness across the complete batch. Also, the GenAI efficiency finding is presented as over 20% without noting that the source specifies no timeframe, geography, or denominator, omitting material boundaries on that reported outcome. The repetition is broad rather than repairable through one existing item target, so no report-level repair is requested.",
+      "evidence_ids": [
+        "verified-fact:insight-ecom-growth-divergence",
+        "verified-fact:insight-finance-growth-divergence",
+        "verified-fact:insight-genai-efficiency-qualified"
+      ],
+      "repair_target": "",
+      "affected_item_id": "",
+      "dimensions": {
+        "material_coverage": {
+          "status": "pass",
+          "reason": "The public content includes each of the seven prioritized themes in the editorial plan, including the regional, retention, GenAI, and download findings."
+        },
+        "analytical_depth": {
+          "status": "pass",
+          "reason": "The content adds defensible interpretations and metric-specific actions, including separating measures, validating volumes before allocation decisions, and benchmarking retention at aligned intervals."
+        },
+        "distinctness": {
+          "status": "fail",
+          "reason": "The e-commerce and finance findings recur across multiple public artifacts, including summary, expert-comment, LinkedIn, insight, claim-map, and claim-ledger items; this cross-batch repetition makes the selected content materially less distinct."
+        },
+        "limitations": {
+          "status": "fail",
+          "reason": "The GenAI finding states a reported efficiency gain over 20% but omits the source's material limitation that no timeframe, geography, or denominator is specified."
+        }
+      }
+    }
+  }
+}

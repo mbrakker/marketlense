@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/quote_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "quote_candidates": [
+      {
+        "id": "quote-001",
+        "text": "We forecast that over the next four years, global Internet and media revenues will grow by approximately $300 billion, continuing to outpace GDP growth",
+        "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "page": 5
+      },
+      {
+        "id": "quote-002",
+        "text": "Access will lead revenue growth for tech and media companies",
+        "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "page": 6
+      },
+      {
+        "id": "quote-003",
+        "text": "Reality Computing enables rich, immersive experiences that will lead to the next big computing platform",
+        "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "page": 36
+      },
+      {
+        "id": "quote-004",
+        "text": "The winners in Reality Computing are far from decided — players will emerge to fill new opportunities",
+        "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "page": 49
+      },
+      {
+        "id": "quote-005",
+        "text": "The future winners in television and video streaming will look quite familiar to consumers",
+        "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "page": 65
+      },
+      {
+        "id": "quote-006",
+        "text": "Smaller SVOD services will face extreme consumer acquisition challenges if not acquired or distributed by established players",
+        "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "page": 80
+      },
+      {
+        "id": "quote-007",
+        "text": "Overall, consumers will dramatically increase their time spent watching digital video",
+        "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "page": 51
+      },
+      {
+        "id": "quote-008",
+        "text": "The recent spike in news subscriptions mirrors a broader industry shift away from advertising and toward cultivating dedicated paying audiences",
+        "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "page": 107
+      },
+      {
+        "id": "quote-009",
+        "text": "These 15 players are largely marketplace platforms — where tens of millions of sellers will continue to fuel growth",
+        "source": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "page": 115
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "quote_candidates",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

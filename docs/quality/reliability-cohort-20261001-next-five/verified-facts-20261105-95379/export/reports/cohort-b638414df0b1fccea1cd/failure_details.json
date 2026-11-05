@@ -1,0 +1,22 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "public_items",
+      "claim_or_entity_id": "verified-fact:insight-ecom-growth-divergence",
+      "error_context": {
+        "affected_section": "public_items",
+        "evidence_id": "verified-fact:insight-ecom-growth-divergence"
+      },
+      "failure_code": "validation_terminal_outcome_missing",
+      "inner_error_class": "",
+      "outer_code": "validation_terminal_outcome_missing",
+      "repair_attempt": 0,
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "stage": "semantic_validation",
+      "terminal_outcome": "missing",
+      "terminal_stage": "",
+      "validator_rule": "public_editorial_quality.report_distinctness_and_limitations"
+    }
+  ],
+  "validation_run_id": "validation:f1cd6dfe03c3473d10c05ad34e361cd48ea3f4d0f3c0eb433a0dd484ec4f3c0c"
+}

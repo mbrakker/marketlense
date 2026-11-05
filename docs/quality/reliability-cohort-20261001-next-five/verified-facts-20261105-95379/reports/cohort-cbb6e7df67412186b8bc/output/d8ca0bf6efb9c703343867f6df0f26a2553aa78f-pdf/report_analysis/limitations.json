@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "limitations": [
+    "Top news sites are selected from comScore’s Top 100 digital news properties; figures cover desktop and mobile sites only.",
+    "Virtual Pay TV churn covers the trailing 12 months beginning September 2017, while SVOD churn covers calendar year 2016.",
+    "Virtual Pay TV programming-cost analysis averages base offerings across major services and includes only services offering broadcast networks and/or sports programming; estimates include a premium for reduced scale and its impact on per-channel costs.",
+    "The smart-speaker timeline uses either product announcement or launch date.",
+    "The eCommerce adoption index is based on measured consumer preferences.",
+    "The YouTube creator analysis treats each channel as a unique creator.",
+    "The influencer analysis defines top influencers using Forbes’ Top 10 list, generated with Traackr and Captiv8 using measures including reach, virality, engagement, earnings per post, outside endorsements, and reputation."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "limitations",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

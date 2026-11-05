@@ -1,0 +1,545 @@
+{
+  "artifact_refs": {
+    "analysis_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\kpmg.com\\d2cdf31f6df8\\kpmg-2026-global-ma-outlook.pdf",
+    "contents_image": "kpmg-2026-gl-55902486e798/assets/preview-contents-668cc2229d6f.png",
+    "source_pdf": "C:\\Programing\\Market lense\\out\\browser_downloads\\kpmg.com\\d2cdf31f6df8\\kpmg-2026-global-ma-outlook.pdf"
+  },
+  "completed_at_utc": "2026-11-05T15:16:00.252410+00:00",
+  "file_id": "cohort-2acb4a56e14add5d7717",
+  "payload": {
+    "artifact_integrity": {
+      "files": {
+        "analysis_pdf": {
+          "md5": "2acb4a56e14add5d7717f34c378f9091",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\kpmg.com\\d2cdf31f6df8\\kpmg-2026-global-ma-outlook.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 3358281
+        },
+        "source_pdf": {
+          "md5": "2acb4a56e14add5d7717f34c378f9091",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\kpmg.com\\d2cdf31f6df8\\kpmg-2026-global-ma-outlook.pdf",
+          "schema_version": "1.0",
+          "size_bytes": 3358281
+        }
+      },
+      "schema_version": "1.0"
+    },
+    "artifact_lineage": {
+      "analysis_pdf": "art_ac82e0060817b09da08896baa5b790b55c819c8dc90cb9b427633e45fb057818",
+      "contents_image": "art_528617c11dc652c3e6d8c6e0fb7444866b46e69d1bc6356d7dfc353d4369e423",
+      "source_pdf": "art_1412331e0837c7226e9965d5ffb7339088bbae4bf2d29287f90e386bcfbbd495"
+    },
+    "artifact_registry": {
+      "refs": [
+        {
+          "artifact_id": "analysis_pdf",
+          "content_hash": "2acb4a56e14add5d7717f34c378f9091",
+          "created_at_utc": "2026-11-05T15:16:00.192119+00:00",
+          "kind": "analysis_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\kpmg.com\\d2cdf31f6df8\\kpmg-2026-global-ma-outlook.pdf",
+          "producer_step": "selection_complete",
+          "required": true,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "contents_image",
+          "content_hash": "",
+          "created_at_utc": "2026-11-05T15:16:00.192119+00:00",
+          "kind": "contents_image",
+          "path": "kpmg-2026-gl-55902486e798/assets/preview-contents-668cc2229d6f.png",
+          "producer_step": "selection_complete",
+          "required": false,
+          "schema_version": "1.0"
+        },
+        {
+          "artifact_id": "source_pdf",
+          "content_hash": "2acb4a56e14add5d7717f34c378f9091",
+          "created_at_utc": "2026-11-05T15:16:00.192119+00:00",
+          "kind": "source_pdf",
+          "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\kpmg.com\\d2cdf31f6df8\\kpmg-2026-global-ma-outlook.pdf",
+          "producer_step": "selection_complete",
+          "required": true,
+          "schema_version": "1.0"
+        }
+      ],
+      "schema_version": "1.0"
+    },
+    "prompt_family_materializations": {},
+    "schema_version": "1.0",
+    "selection": {
+      "candidate_count": 136,
+      "payload": {
+        "_contents_image": "kpmg-2026-gl-55902486e798/assets/preview-contents-668cc2229d6f.png",
+        "_evidence_packs": {},
+        "_figure_assets": [
+          {
+            "candidate_id": "chart-16-0",
+            "caption_source": "legacy",
+            "crop_dpi": 216,
+            "crop_image_sha256": "410e16a256f8144e97fd863afbde207a1717de535d33da790d0645f6c39ab832",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0166,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0166
+            },
+            "crop_qa_score": 0.9036,
+            "crop_qa_sidecar_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-16-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Types of deals under consideration \u2014 corporate vs. private equity",
+            "display_caption": "Types of deals under consideration \u2014 corporate vs. private equity",
+            "generated_caption": "",
+            "image_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-16-0.png",
+            "is_primary": true,
+            "kind": "chart",
+            "page": 16,
+            "preview_text": "Types of deals under consideration \u2014 corporate vs. private equity",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-26-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "9e676383e58ee89787c4406dfd25be1f2fe1c8cca591a0eab8780eca3b0d4426",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.2105,
+              "table_boundary": 0.25,
+              "visual_card_boundary": 0.2105
+            },
+            "crop_qa_score": 0.8604,
+            "crop_qa_sidecar_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-26-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Where organizations are deploying agentic AI across M&A processes",
+            "display_caption": "Additional figure 2",
+            "generated_caption": "",
+            "image_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-26-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 26,
+            "preview_text": "Where organizations are deploying agentic AI across M&A processes",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-11-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "f79dfe39f5ec8f823e0db5e2755705945d4ea4e257889abc8465ed04c2d4cfe0",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0244,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0244
+            },
+            "crop_qa_score": 0.899,
+            "crop_qa_sidecar_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-11-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Organization\u2019s current approach to portfolio separation \u2014 corporate vs. private equity",
+            "display_caption": "Additional figure 3",
+            "generated_caption": "",
+            "image_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-11-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 11,
+            "preview_text": "Organization\u2019s current approach to portfolio separation \u2014 corporate vs. private equity",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-10-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "a0adfd631bac65b419a50286d386a6d40f0e2331722d7f9ab2a65eec737c9d4f",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0129,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0129
+            },
+            "crop_qa_score": 0.8999,
+            "crop_qa_sidecar_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-10-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Expected change in M&A deal pipeline volume 2026 vs. 2025 \u2014 by region",
+            "display_caption": "Additional figure 4",
+            "generated_caption": "",
+            "image_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-10-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 10,
+            "preview_text": "Expected change in M&A deal pipeline volume 2026 vs. 2025 \u2014 by region",
+            "schema_version": "1.0"
+          }
+        ],
+        "_figure_gallery": [
+          "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-16-0.png",
+          "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-26-0.png",
+          "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-11-0.png",
+          "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-10-0.png"
+        ],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-16-0.png",
+        "_text_char_count": 9932,
+        "_text_density": 1986.4,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "table of contents",
+        "contents_page_number": 3,
+        "figure": {
+          "evidence": "Types of deals under consideration \u2014 corporate vs. private equity",
+          "schema_version": "1.0",
+          "title": "Types of deals under consideration \u2014 corporate vs. private equity"
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "2026 Global",
+        "tldr": "Not available from text"
+      },
+      "rank_usage": {
+        "completion_tokens": 15151,
+        "prompt_tokens": 27656,
+        "total_tokens": 42807
+      },
+      "schema_version": "1.0"
+    },
+    "source": {
+      "analysis_pdf_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\kpmg.com\\d2cdf31f6df8\\kpmg-2026-global-ma-outlook.pdf",
+      "contents_heading": "table of contents",
+      "contents_image": "kpmg-2026-gl-55902486e798/assets/preview-contents-668cc2229d6f.png",
+      "contents_page_number": 3,
+      "info_response": {
+        "metadata": {
+          "Author": "KPMG International",
+          "CreationDate": "D:20260316194259+05'30'",
+          "Keywords": "Global M&A Outlook; carve-out; Execution capability; Geographic distribution; Executive summary",
+          "ModDate": "D:20260317164741+05'30'",
+          "Subject": "The year of the carve-out",
+          "Title": "2026 Global M&A Outlook"
+        },
+        "page_count": 42,
+        "path": "C:\\Programing\\Market lense\\out\\browser_downloads\\kpmg.com\\d2cdf31f6df8\\kpmg-2026-global-ma-outlook.pdf",
+        "schema_version": "1.0"
+      },
+      "ocr_fallback_used": false,
+      "ocr_pdf_path": "",
+      "payload": {
+        "_contents_image": "kpmg-2026-gl-55902486e798/assets/preview-contents-668cc2229d6f.png",
+        "_evidence_packs": {},
+        "_figure_assets": [
+          {
+            "candidate_id": "chart-16-0",
+            "caption_source": "legacy",
+            "crop_dpi": 216,
+            "crop_image_sha256": "410e16a256f8144e97fd863afbde207a1717de535d33da790d0645f6c39ab832",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0166,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0166
+            },
+            "crop_qa_score": 0.9036,
+            "crop_qa_sidecar_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-16-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Types of deals under consideration \u2014 corporate vs. private equity",
+            "display_caption": "Types of deals under consideration \u2014 corporate vs. private equity",
+            "generated_caption": "",
+            "image_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-16-0.png",
+            "is_primary": true,
+            "kind": "chart",
+            "page": 16,
+            "preview_text": "Types of deals under consideration \u2014 corporate vs. private equity",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-26-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "9e676383e58ee89787c4406dfd25be1f2fe1c8cca591a0eab8780eca3b0d4426",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.2105,
+              "table_boundary": 0.25,
+              "visual_card_boundary": 0.2105
+            },
+            "crop_qa_score": 0.8604,
+            "crop_qa_sidecar_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-26-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Where organizations are deploying agentic AI across M&A processes",
+            "display_caption": "Additional figure 2",
+            "generated_caption": "",
+            "image_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-26-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 26,
+            "preview_text": "Where organizations are deploying agentic AI across M&A processes",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-11-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "f79dfe39f5ec8f823e0db5e2755705945d4ea4e257889abc8465ed04c2d4cfe0",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0244,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0244
+            },
+            "crop_qa_score": 0.899,
+            "crop_qa_sidecar_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-11-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Organization\u2019s current approach to portfolio separation \u2014 corporate vs. private equity",
+            "display_caption": "Additional figure 3",
+            "generated_caption": "",
+            "image_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-11-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 11,
+            "preview_text": "Organization\u2019s current approach to portfolio separation \u2014 corporate vs. private equity",
+            "schema_version": "1.0"
+          },
+          {
+            "candidate_id": "chart-10-0",
+            "caption_source": "placeholder",
+            "crop_dpi": 216,
+            "crop_image_sha256": "a0adfd631bac65b419a50286d386a6d40f0e2331722d7f9ab2a65eec737c9d4f",
+            "crop_qa_accepted": true,
+            "crop_qa_defects": [],
+            "crop_qa_detector_summary": {
+              "chart_completeness": 0.0129,
+              "table_boundary": 0.0,
+              "visual_card_boundary": 0.0129
+            },
+            "crop_qa_score": 0.8999,
+            "crop_qa_sidecar_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-10-0.png.qa.json",
+            "crop_quality_profile": "publication_strict",
+            "crop_rejection_reason": "",
+            "detected_caption": "Expected change in M&A deal pipeline volume 2026 vs. 2025 \u2014 by region",
+            "display_caption": "Additional figure 4",
+            "generated_caption": "",
+            "image_path": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-10-0.png",
+            "is_primary": false,
+            "kind": "chart",
+            "page": 10,
+            "preview_text": "Expected change in M&A deal pipeline volume 2026 vs. 2025 \u2014 by region",
+            "schema_version": "1.0"
+          }
+        ],
+        "_figure_gallery": [
+          "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-16-0.png",
+          "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-26-0.png",
+          "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-11-0.png",
+          "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-10-0.png"
+        ],
+        "_figure_image": "",
+        "_figure_section_enabled": true,
+        "_figure_top": "kpmg-2026-global-55902486e798/slices/kpmg-2026-global-55902486e798-chart-16-0.png",
+        "_text_char_count": 9932,
+        "_text_density": 1986.4,
+        "_text_not_available": false,
+        "_text_pages_sampled": 5,
+        "_vector_store_id": "",
+        "categories": [],
+        "commentary": "",
+        "contents_heading": "table of contents",
+        "contents_page_number": 3,
+        "figure": {
+          "evidence": "Types of deals under consideration \u2014 corporate vs. private equity",
+          "schema_version": "1.0",
+          "title": "Types of deals under consideration \u2014 corporate vs. private equity"
+        },
+        "insights": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "publisher": "",
+        "quote": {
+          "author": "Unknown",
+          "schema_version": "1.0",
+          "text": ""
+        },
+        "region": "",
+        "schema_version": "1.1",
+        "source": "",
+        "taxonomy": [],
+        "time_period": "",
+        "title": "2026 Global",
+        "tldr": "Not available from text"
+      },
+      "schema_version": "1.0",
+      "text_response": {
+        "char_count": 9932,
+        "pages": [
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 1,
+            "text": "KPMG. Make the Difference. March 2026\n2026 Global \nM&A Outlook\nThe year of the carve-out"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 2,
+            "text": "2\u00a9 2026 Copyright owned by one or more of the KPMG International entities. KPMG International entities provide no services to clients. All rights reserved.\nForeword\nForeword\nAbout the research\nAbout the \nresearch\nExecutive summary\nExecutive \nsummary\n2025 retrospective and 2026 outlook\n2025 retrospective \nand 2026 outlook\n 5 drivers shaping the 2026 MA environment\n5 drivers shaping \nthe 2026 M&A \nenvironment\nStrategic focus in a fragmented world\nStrategic focus in a \nfragmented world\nDiverging risk appetites between buyers\nDiverging risk \nappetites between \nbuyers\nPortfolio simplification as a value creation strategy\nPortfolio simplification \nas a value creation \nstrategy\nAI-driven transformation of deal execution\nAI-driven \ntransformation of \ndeal execution\nExecution discipline as a decisive source of advantage\nExecution discipline \nas a decisive source \nof advantage\nIndustry-specific dynamics\nIndustry-specific \ndynamics\nImplications for dealmakers\nImplications for \ndealmakers\nExecution capability has become the \ndefining factor in M&A outcomes.\nOver successive deal cycles, evidence has shown that M&A \noutcomes are shaped as much by execution capability as by \nstrategic intent. The conditions confronting dealmakers today \nsuggest that this relationship is becoming even more \npronounced.\nThe 2026 M&A environment is accelerating this reality. \nDealmakers are operating amid geopolitical fragmentation, \nlegislative and regulatory volatility, accelerating technological \nchange, and intensifying pressure to focus capital and \nleadership attention where advantage can be sustained. \nPortfolio separation activity, including carve-outs, divestitures \nand staged ownership structures, is no longer a byproduct of \nother strategic choices. It has become a structural \nmechanism for reshaping portfolios in response to a more \ndynamic and less durable external environment.\nWhat distinguishes the current environment is not that \ntransactions are more complex than in prior cycles \u2014 \ncomplexity has always been present \u2014 but that the drivers of \ncarve-out activity are increasingly structural. Rising risk \nconcentration in non-core portfolio \u201ctails,\u201d shifting trade and \ntax regimes and accelerating capability reconfiguration are \nprompting boards to act more decisively and more \npersistently.\nAt the same time, advances in analytics and artificial \nintelligence are reshaping how deals are sourced, evaluated \nand executed. While technology alone does not determine \noutcomes, its integration into decision-making and execution \nprocesses is altering the speed, depth and confidence with \nwhich dealmakers assess risk and opportunity. In a \nlandscape where regulatory and economic assumptions can \nchange rapidly, modeling capability and execution readiness \nare becoming central to sustained performance.\nThis Global M&A Outlook examines how these forces are \nconverging. Drawing on global survey data and practitioner \ninsight, it shows how the sources of advantage in M&A are \nevolving \u2014 and why execution capability is emerging as a \ndurable institutional asset in an increasingly complex deal \nenvironment.\nForeword\nProfessor Scott Moeller\nFounder, M&A Research Centre\nBayes Business School\nCity St George\u2019s, University of London\nForeword\nForeword"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 3,
+            "text": "\u00a9 2026 Copyright owned by one or more of the KPMG International entities. KPMG International entities provide no services to clients. All rights reserved. 3\nTable of contents\n02\nForeword\n04\nAbout the research\n05\nExecutive \nsummary\n07\n2025 retrospective \nand 2026 outlook\n09\n5 drivers shaping \nthe 2026 M&A \nenvironment\n10\nStrategic focus in a \nfragmented world\n14\nDiverging risk \nappetites between \nbuyers\n18\nPortfolio simplification \nas a value creation \nstrategy\n23\nAI-driven \ntransformation of \ndeal execution\n30\nExecution discipline \nas a decisive source \nof advantage\n34\nIndustry-specific \ndynamics\n37\nImplications for \ndealmakers"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 4,
+            "text": "Foreword\nForeword\nAbout the research\nAbout the \nresearch\nExecutive summary\nExecutive \nsummary\n2025 retrospective and 2026 outlook\n2025 retrospective \nand 2026 outlook\n 5 drivers shaping the 2026 MA environment\n5 drivers shaping \nthe 2026 M&A \nenvironment\nStrategic focus in a fragmented world\nStrategic focus in a \nfragmented world\nDiverging risk appetites between buyers\nDiverging risk \nappetites between \nbuyers\nPortfolio simplification as a value creation strategy\nPortfolio simplification \nas a value creation \nstrategy\nAI-driven transformation of deal execution\nAI-driven \ntransformation of \ndeal execution\nExecution discipline as a decisive source of advantage\nExecution discipline \nas a decisive source \nof advantage\nIndustry-specific dynamics\nIndustry-specific \ndynamics\nImplications for dealmakers\nImplications for \ndealmakers\n4\u00a9 2026 Copyright owned by one or more of the KPMG International entities. KPMG International entities provide no services to clients. All rights reserved.\nAbout the \nresearch\nThe findings in this report are based on a global survey of \n700 M&A dealmakers across 20 countries and jurisdictions, \nfielded between 19 December 2025 and 27 January 2026. \nRespondents are senior executives across 10 sectors with \nresponsibility for, or involvement in, M&A decision-making.\n519\nCorporate respondents\n181\nRespondents from \nprivate equity firms\nIn addition to the global survey, the analysis incorporates \nqualitative interpretation from senior transaction advisors \nto contextualize how these trends are shaping deal \nexecution.\nFirm type\n26% Private equity firm\n26% Privately held company\n36% Publicly traded company\n11% PE-owned company\n1% Other\nAbout the research\nAbout the \nresearch\nGeographic distribution\n55% Americas\n31% EMEA\n13% APAC\nCompany revenue \u2014 \ncorporate respondents\n17% US$100M \u2013 $999M\n35% US$1B \u2013 US$4.9B\n17% US$5B \u2013 US$9.9B \n11% US$10B \u2013 US$19.9B\n20% US$20B or more\nDeal involvement\n75% Deal strategy\n65% Diligence\n82% Deal structuring\n62% Negotiation\n49% Deal closing and Day-1 \nplanning/execution\n43% Post-close strategy and design\n38% Post-close value creation\nIndustry sector \u2014 corporate respondents\n21% Industrial manufacturing\n17% Technology\n15% Energy, natural resources and chemical\n13% Asset management\n11% Consumer and retail\n11% Healthcare\n9% Life sciences\n9% Insurance\n6% Banking\n1% Media and telecommunication\n4% Other\nIndustries in which private equity funds invest\n55% Technology\n55% Healthcare\n50% Industrial manufacturing\n44% Consumer and retail\n32% Banking\n22% Energy, natural resources and chemical\n20% Insurance\n17% Media and telecommunications\n13% Asset management\n11% Life sciences\n3% Other"
+          },
+          {
+            "chart_identity_evidence": null,
+            "chart_identity_status": "not_applicable",
+            "layout_analysis_complete": false,
+            "layout_evidence": [],
+            "page_number": 5,
+            "text": "5\u00a9 2026 Copyright owned by one or more of the KPMG International entities. KPMG International entities provide no services to clients. All rights reserved.\nForeword\nForeword\nAbout the research\nAbout the \nresearch\nExecutive summary\nExecutive \nsummary\n2025 retrospective and 2026 outlook\n2025 retrospective \nand 2026 outlook\n 5 drivers shaping the 2026 MA environment\n5 drivers shaping \nthe 2026 M&A \nenvironment\nStrategic focus in a fragmented world\nStrategic focus in a \nfragmented world\nDiverging risk appetites between buyers\nDiverging risk \nappetites between \nbuyers\nPortfolio simplification as a value creation strategy\nPortfolio simplification \nas a value creation \nstrategy\nAI-driven transformation of deal execution\nAI-driven \ntransformation of \ndeal execution\nExecution discipline as a decisive source of advantage\nExecution discipline \nas a decisive source \nof advantage\nIndustry-specific dynamics\nIndustry-specific \ndynamics\nImplications for dealmakers\nImplications for \ndealmakers\nExecutive summary\nDeal activity regained momentum through 2025 and survey \nfindings indicate that many organizations expect pipelines to \nexpand further in 2026. Yet this recovery is unfolding in a \nstructurally more complex environment. Legislative and \nregulatory volatility, evolving trade regimes and \ntransformational changes in global tax frameworks are \nreshaping forward-looking cost structures and return profiles.\nIn this context, valuation discussions are increasingly defined \nnot by headline multiples alone, but by alignment of buyer and \nseller expectations amid shifting assumptions. When effective \ntax rates, supply chain economics and regulatory thresholds \nare moving targets, pricing certainty becomes harder to \nestablish \u2014 and execution readiness becomes more \nimportant.\nAgainst this backdrop, carve-outs are emerging as a central \nmechanism for portfolio reshaping, positioning 2026 as the \nyear of the carve-out.\nA multi-speed global market, led by the US\nDeal momentum is strengthening globally, but unevenly. US-\nbased organizations report higher confidence, stronger \npipelines and greater readiness to transact. Outside the US \ndealmakers face a more complex mix of macroeconomic, \nregulatory and geopolitical conditions.\nRather than dampening activity, this divergence is sharpening \ncompetitive dynamics. Organizations are prioritizing \ntransactions that reinforce strategic coherence and can be \nexecuted with discipline in a volatile environment.\nDiverging risk appetites reshaping competition \nfor assets\nPrivate equity firms and corporate acquirers are approaching \n2026 with different mandates and execution infrastructure. \nPrivate equity firms report higher expectations for pipeline \ngrowth, supported by capital deployment imperatives, \nimproving financing conditions and the gradual reopening of \nexit markets. Corporate portfolio reshaping is also bringing \nadditional assets to market through separations. Corporates, \nwhile active, are balancing M&A against broader enterprise \ntransformation priorities and integration capacity.\nGlobal M&A momentum is rebuilding, but the foundations of the market have shifted in ways that will likely reshape how deals are executed and where \nvalue is created\nExecutive summary\nExecutive \nsummary"
+          }
+        ],
+        "pages_extracted": 5,
+        "schema_version": "1.0",
+        "text": "KPMG. Make the Difference. March 2026\n2026 Global \nM&A Outlook\nThe year of the carve-out\n\n2\u00a9 2026 Copyright owned by one or more of the KPMG International entities. KPMG International entities provide no services to clients. All rights reserved.\nForeword\nForeword\nAbout the research\nAbout the \nresearch\nExecutive summary\nExecutive \nsummary\n2025 retrospective and 2026 outlook\n2025 retrospective \nand 2026 outlook\n 5 drivers shaping the 2026 MA environment\n5 drivers shaping \nthe 2026 M&A \nenvironment\nStrategic focus in a fragmented world\nStrategic focus in a \nfragmented world\nDiverging risk appetites between buyers\nDiverging risk \nappetites between \nbuyers\nPortfolio simplification as a value creation strategy\nPortfolio simplification \nas a value creation \nstrategy\nAI-driven transformation of deal execution\nAI-driven \ntransformation of \ndeal execution\nExecution discipline as a decisive source of advantage\nExecution discipline \nas a decisive source \nof advantage\nIndustry-specific dynamics\nIndustry-specific \ndynamics\nImplications for dealmakers\nImplications for \ndealmakers\nExecution capability has become the \ndefining factor in M&A outcomes.\nOver successive deal cycles, evidence has shown that M&A \noutcomes are shaped as much by execution capability as by \nstrategic intent. The conditions confronting dealmakers today \nsuggest that this relationship is becoming even more \npronounced.\nThe 2026 M&A environment is accelerating this reality. \nDealmakers are operating amid geopolitical fragmentation, \nlegislative and regulatory volatility, accelerating technological \nchange, and intensifying pressure to focus capital and \nleadership attention where advantage can be sustained. \nPortfolio separation activity, including carve-outs, divestitures \nand staged ownership structures, is no longer a byproduct of \nother strategic choices. It has become a structural \nmechanism for reshaping portfolios in response to a more \ndynamic and less durable external environment.\nWhat distinguishes the current environment is not that \ntransactions are more complex than in prior cycles \u2014 \ncomplexity has always been present \u2014 but that the drivers of \ncarve-out activity are increasingly structural. Rising risk \nconcentration in non-core portfolio \u201ctails,\u201d shifting trade and \ntax regimes and accelerating capability reconfiguration are \nprompting boards to act more decisively and more \npersistently.\nAt the same time, advances in analytics and artificial \nintelligence are reshaping how deals are sourced, evaluated \nand executed. While technology alone does not determine \noutcomes, its integration into decision-making and execution \nprocesses is altering the speed, depth and confidence with \nwhich dealmakers assess risk and opportunity. In a \nlandscape where regulatory and economic assumptions can \nchange rapidly, modeling capability and execution readiness \nare becoming central to sustained performance.\nThis Global M&A Outlook examines how these forces are \nconverging. Drawing on global survey data and practitioner \ninsight, it shows how the sources of advantage in M&A are \nevolving \u2014 and why execution capability is emerging as a \ndurable institutional asset in an increasingly complex deal \nenvironment.\nForeword\nProfessor Scott Moeller\nFounder, M&A Research Centre\nBayes Business School\nCity St George\u2019s, University of London\nForeword\nForeword\n\n\u00a9 2026 Copyright owned by one or more of the KPMG International entities. KPMG International entities provide no services to clients. All rights reserved. 3\nTable of contents\n02\nForeword\n04\nAbout the research\n05\nExecutive \nsummary\n07\n2025 retrospective \nand 2026 outlook\n09\n5 drivers shaping \nthe 2026 M&A \nenvironment\n10\nStrategic focus in a \nfragmented world\n14\nDiverging risk \nappetites between \nbuyers\n18\nPortfolio simplification \nas a value creation \nstrategy\n23\nAI-driven \ntransformation of \ndeal execution\n30\nExecution discipline \nas a decisive source \nof advantage\n34\nIndustry-specific \ndynamics\n37\nImplications for \ndealmakers\n\nForeword\nForeword\nAbout the research\nAbout the \nresearch\nExecutive summary\nExecutive \nsummary\n2025 retrospective and 2026 outlook\n2025 retrospective \nand 2026 outlook\n 5 drivers shaping the 2026 MA environment\n5 drivers shaping \nthe 2026 M&A \nenvironment\nStrategic focus in a fragmented world\nStrategic focus in a \nfragmented world\nDiverging risk appetites between buyers\nDiverging risk \nappetites between \nbuyers\nPortfolio simplification as a value creation strategy\nPortfolio simplification \nas a value creation \nstrategy\nAI-driven transformation of deal execution\nAI-driven \ntransformation of \ndeal execution\nExecution discipline as a decisive source of advantage\nExecution discipline \nas a decisive source \nof advantage\nIndustry-specific dynamics\nIndustry-specific \ndynamics\nImplications for dealmakers\nImplications for \ndealmakers\n4\u00a9 2026 Copyright owned by one or more of the KPMG International entities. KPMG International entities provide no services to clients. All rights reserved.\nAbout the \nresearch\nThe findings in this report are based on a global survey of \n700 M&A dealmakers across 20 countries and jurisdictions, \nfielded between 19 December 2025 and 27 January 2026. \nRespondents are senior executives across 10 sectors with \nresponsibility for, or involvement in, M&A decision-making.\n519\nCorporate respondents\n181\nRespondents from \nprivate equity firms\nIn addition to the global survey, the analysis incorporates \nqualitative interpretation from senior transaction advisors \nto contextualize how these trends are shaping deal \nexecution.\nFirm type\n26% Private equity firm\n26% Privately held company\n36% Publicly traded company\n11% PE-owned company\n1% Other\nAbout the research\nAbout the \nresearch\nGeographic distribution\n55% Americas\n31% EMEA\n13% APAC\nCompany revenue \u2014 \ncorporate respondents\n17% US$100M \u2013 $999M\n35% US$1B \u2013 US$4.9B\n17% US$5B \u2013 US$9.9B \n11% US$10B \u2013 US$19.9B\n20% US$20B or more\nDeal involvement\n75% Deal strategy\n65% Diligence\n82% Deal structuring\n62% Negotiation\n49% Deal closing and Day-1 \nplanning/execution\n43% Post-close strategy and design\n38% Post-close value creation\nIndustry sector \u2014 corporate respondents\n21% Industrial manufacturing\n17% Technology\n15% Energy, natural resources and chemical\n13% Asset management\n11% Consumer and retail\n11% Healthcare\n9% Life sciences\n9% Insurance\n6% Banking\n1% Media and telecommunication\n4% Other\nIndustries in which private equity funds invest\n55% Technology\n55% Healthcare\n50% Industrial manufacturing\n44% Consumer and retail\n32% Banking\n22% Energy, natural resources and chemical\n20% Insurance\n17% Media and telecommunications\n13% Asset management\n11% Life sciences\n3% Other\n\n5\u00a9 2026 Copyright owned by one or more of the KPMG International entities. KPMG International entities provide no services to clients. All rights reserved.\nForeword\nForeword\nAbout the research\nAbout the \nresearch\nExecutive summary\nExecutive \nsummary\n2025 retrospective and 2026 outlook\n2025 retrospective \nand 2026 outlook\n 5 drivers shaping the 2026 MA environment\n5 drivers shaping \nthe 2026 M&A \nenvironment\nStrategic focus in a fragmented world\nStrategic focus in a \nfragmented world\nDiverging risk appetites between buyers\nDiverging risk \nappetites between \nbuyers\nPortfolio simplification as a value creation strategy\nPortfolio simplification \nas a value creation \nstrategy\nAI-driven transformation of deal execution\nAI-driven \ntransformation of \ndeal execution\nExecution discipline as a decisive source of advantage\nExecution discipline \nas a decisive source \nof advantage\nIndustry-specific dynamics\nIndustry-specific \ndynamics\nImplications for dealmakers\nImplications for \ndealmakers\nExecutive summary\nDeal activity regained momentum through 2025 and survey \nfindings indicate that many organizations expect pipelines to \nexpand further in 2026. Yet this recovery is unfolding in a \nstructurally more complex environment. Legislative and \nregulatory volatility, evolving trade regimes and \ntransformational changes in global tax frameworks are \nreshaping forward-looking cost structures and return profiles.\nIn this context, valuation discussions are increasingly defined \nnot by headline multiples alone, but by alignment of buyer and \nseller expectations amid shifting assumptions. When effective \ntax rates, supply chain economics and regulatory thresholds \nare moving targets, pricing certainty becomes harder to \nestablish \u2014 and execution readiness becomes more \nimportant.\nAgainst this backdrop, carve-outs are emerging as a central \nmechanism for portfolio reshaping, positioning 2026 as the \nyear of the carve-out.\nA multi-speed global market, led by the US\nDeal momentum is strengthening globally, but unevenly. US-\nbased organizations report higher confidence, stronger \npipelines and greater readiness to transact. Outside the US \ndealmakers face a more complex mix of macroeconomic, \nregulatory and geopolitical conditions.\nRather than dampening activity, this divergence is sharpening \ncompetitive dynamics. Organizations are prioritizing \ntransactions that reinforce strategic coherence and can be \nexecuted with discipline in a volatile environment.\nDiverging risk appetites reshaping competition \nfor assets\nPrivate equity firms and corporate acquirers are approaching \n2026 with different mandates and execution infrastructure. \nPrivate equity firms report higher expectations for pipeline \ngrowth, supported by capital deployment imperatives, \nimproving financing conditions and the gradual reopening of \nexit markets. Corporate portfolio reshaping is also bringing \nadditional assets to market through separations. Corporates, \nwhile active, are balancing M&A against broader enterprise \ntransformation priorities and integration capacity.\nGlobal M&A momentum is rebuilding, but the foundations of the market have shifted in ways that will likely reshape how deals are executed and where \nvalue is created\nExecutive summary\nExecutive \nsummary",
+        "text_density": 1986.4
+      },
+      "text_status": {
+        "char_count": 9932,
+        "density_threshold": 250.0,
+        "low_confidence_pages": [],
+        "native_confidence_score": 1.0,
+        "native_confidence_threshold": 0.55,
+        "native_density_confidence_score": 1.0,
+        "native_page_confidence_threshold": 0.35,
+        "native_sample_confidence_score": 1.0,
+        "native_text_density": 1986.4,
+        "native_text_not_available": false,
+        "not_available": false,
+        "ocr_policy": "native_first_selective",
+        "ocr_recommendation_reason": "",
+        "ocr_recommended": false,
+        "pages_sampled": 5,
+        "reason": "",
+        "schema_version": "1.0",
+        "text_density": 1986.4
+      },
+      "text_validation_pages": [
+        33,
+        35,
+        37
+      ],
+      "text_validation_reason": "",
+      "text_validation_status": "pass",
+      "title_resolution": {
+        "candidate_source": "cover_title_page",
+        "candidates": [
+          {
+            "evidence": "page:1",
+            "page_number": 1,
+            "schema_version": "1.0",
+            "score": 1127.0,
+            "source": "cover_title_page",
+            "value": "2026 Global"
+          },
+          {
+            "evidence": "page:2",
+            "page_number": 2,
+            "schema_version": "1.0",
+            "score": 815.0,
+            "source": "source_content",
+            "value": "This Global M&A Outlook 2026"
+          },
+          {
+            "evidence": "filename",
+            "page_number": 0,
+            "schema_version": "1.0",
+            "score": 585.0,
+            "source": "filename",
+            "value": "kpmg 2026 global ma outlook"
+          },
+          {
+            "evidence": "document_metadata",
+            "page_number": 0,
+            "schema_version": "1.0",
+            "score": 315.0,
+            "source": "document_metadata",
+            "value": "2026 Global M&A Outlook"
+          }
+        ],
+        "confidence": "high",
+        "edition": "2026",
+        "evidence": [
+          "page:1"
+        ],
+        "explicit_source_title": "2026 Global",
+        "issues": [],
+        "publisher_candidate": "KPMG",
+        "schema_version": "1.0",
+        "title": "2026 Global"
+      }
+    },
+    "vector_indexing": {
+      "indexed_at_utc": null,
+      "last_error": null,
+      "openai_file_id": "file-NWDKEeVjvyLoLadLfyKCNK",
+      "schema_version": "1.0",
+      "vector_store_id": "vs_6aec9cd81b7881919d7dffb4053d0c89",
+      "vector_store_status": "indexing"
+    }
+  },
+  "pipeline_name": "report_generation",
+  "report_slug": "kpmg-2026-global-ma-outlook-pdf",
+  "schema_version": "1.0",
+  "source_run_id": "debc4602-3c7f-49e0-81a5-4159f2bd3278",
+  "source_task_id": "workflow_job:11b1d590-bfbc-4455-b952-1c3a9075a856",
+  "stage_name": "selection_complete",
+  "stage_status": "completed"
+}

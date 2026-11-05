@@ -1,0 +1,374 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/findings",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "findings": [
+      {
+        "id": "deal-search-trend",
+        "text": "In October 2025, 62% of consumers said they were spending more time searching online for deals and discounts, compared with 64% in November 2024.",
+        "evidence": "Consumers continue to spend more time searching online for the best deals (62% in October 2025, comparable to 64% in November 2024)",
+        "confidence": "high",
+        "pages": [
+          9
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "nonessential-cuts",
+        "text": "In October 2025, 62% of consumers said they were cutting back on non-essential items.",
+        "evidence": "Consumers continue to spend more time searching online for the best deals (62% in October 2025, comparable to 64% in November 2024) and cutting back on non-essential items (62% in October 2025; see Figure 1).",
+        "confidence": "high",
+        "pages": [
+          9
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "smaller-pack-sizes",
+        "text": "Almost half of consumers (49%) were buying smaller pack sizes.",
+        "evidence": "As consumers remain discerning, they are prioritizing transparency, efficiency, and value. Almost half (49%) are buying smaller pack sizes.",
+        "confidence": "high",
+        "pages": [
+          10
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "switch-competitor-price",
+        "text": "Most consumers (74%) will switch brands if competitors offer lower regular prices.",
+        "evidence": "Most consumers will switch brands if competitors offer lower regular prices (74%)",
+        "confidence": "high",
+        "pages": [
+          10
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "switch-reduced-pack-quality",
+        "text": "Most consumers (71%) will switch brands if their current brand reduces pack size or product quality without clear communication rationalizing the change.",
+        "evidence": "or their current brand reduces pack size/product quality without clear communication rationalizing this (71%) (see Figure 2).",
+        "confidence": "high",
+        "pages": [
+          10
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "retail-channel-trust-factors",
+        "text": "Consumers assess the retail channel’s reliability, transparency, and ethical standards, including secure payments, data privacy, product authenticity, fulfilment speeds, and fair return policies, when evaluating trust.",
+        "evidence": "Consumers are increasingly assessing more than just product quality and price. They scrutinize the reliability, transparency, and ethical standards of the retail channel itself. Aspects such as secure payment systems, data privacy, product authenticity probability, fulfilment speeds and fair return policies strongly influence trust.",
+        "confidence": "high",
+        "pages": [
+          12
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "quick-commerce-spending-interview",
+        "text": "Priyanka Bhargav of Flipkart said that 25% of quick-commerce spending comes from mid- to low-affluent consumers in Tier 2 and Tier 3 towns in India; she added that these customers are willing to pay extra for faster delivery.",
+        "evidence": "Priyanka Bhargav, Head of Insights and Brand Strategy at Flipkart, concludes, \"Quick commerce is no longer a metro phenomenon, it’s democratizing speed across India. Today, 25% of quick commerce spending comes from mid to low-affluent consumers in Tier 2 and Tier 3 towns. These customers are willing to pay a little extra for faster delivery, signaling that convenience and immediacy are becoming universal expectations.\"",
+        "confidence": "high",
+        "pages": [
+          12
+        ],
+        "section_id": "value-redefined",
+        "section_title": "Value redefined: where fairness and quality intersect"
+      },
+      {
+        "id": "small-indulgences-financial-stress",
+        "text": "In October 2025, 71% on average said small indulgences help them cope with financial stress; the figures were 73% for Gen Z, 75% for Millennials, 70% for Gen X, and 66% for Boomers.",
+        "evidence": "Figure 11.\nSeven in ten consumers opt for treats and small indulgences to cope with financial stress\n\nTo what extent do you believe these statements describe you?\n\n71%\nSmall indulgences help me cope with financial stress\n73%\n75%\n70%\n66%\n\nAverage Gen Z Millennials Gen X Boomers\n\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000 consumers.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "careful-spending",
+        "section_title": "Careful spending meets intentional indulgence"
+      },
+      {
+        "id": "treats-feeling-rewarded",
+        "text": "In October 2025, 71% on average said purchasing treats makes them feel rewarded for their efforts to save elsewhere; the figures were 71% for Gen Z, 73% for Millennials, 72% for Gen X, and 68% for Boomers.",
+        "evidence": "Figure 11.\nSeven in ten consumers opt for treats and small indulgences to cope with financial stress\n\nTo what extent do you believe these statements describe you?\n\n71%\nPurchasing treats make me feel rewarded for my efforts to save elsewhere\n71%\n73%\n72%\n68%\n\nAverage Gen Z Millennials Gen X Boomers\n\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000 consumers.",
+        "confidence": "high",
+        "pages": [
+          27
+        ],
+        "section_id": "careful-spending",
+        "section_title": "Careful spending meets intentional indulgence"
+      },
+      {
+        "id": "postpurchase-followups",
+        "text": "More than three in five consumers (61%) had encountered post-purchase personalized follow-ups.",
+        "evidence": "More than three in five (61%) of consumers have encountered post-purchase personalized follow-ups",
+        "confidence": "high",
+        "pages": [
+          33
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "postpurchase-email-satisfaction",
+        "text": "More than half of consumers (54%) were satisfied with hyper-personalized post-purchase emails featuring usage tips, care instructions, and tailored recommendations.",
+        "evidence": "more than half (54%) are satisfied with these hyper-personalized emails that feature usage tips, care instructions to extend product life, and tailored recommendations for complementary products or accessories",
+        "confidence": "high",
+        "pages": [
+          33
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "weekly-virtual-assistant-use",
+        "text": "Almost half of consumers (52%) use virtual assistants at least once a week to automate reordering or meal planning.",
+        "evidence": "Almost half of consumers (52%) use virtual assistants that automate re-ordering or meal planning at least once a week.",
+        "confidence": "high",
+        "pages": [
+          33
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "virtual-assistant-satisfaction",
+        "text": "Among consumers who use virtual assistants to automate reordering or meal planning at least once a week, less than half (46%) are satisfied with the experience.",
+        "evidence": "Almost half of consumers (52%) use virtual assistants that automate re-ordering or meal planning at least once a week. Among these, less than half (46%) are satisfied with the experience",
+        "confidence": "high",
+        "pages": [
+          33
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "meal-planning-food-waste",
+        "text": "The report says automated meal planning can reduce household food waste by helping consumers optimize grocery purchases and use existing ingredients before they spoil.",
+        "evidence": "Automated meal planning offers the added advantage of significantly reducing food waste by providing consumers with data-driven insights, optimizing grocery purchases, and ensuring existing ingredients are used before they spoil.",
+        "confidence": "medium",
+        "pages": [
+          33
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "assistant-boundaries",
+        "text": "In October 2025, 76% of consumers said they liked having the ability to set strict boundaries, such as spending limits or product categories, for a digital assistant before it acts on their behalf.",
+        "evidence": "Figure 15.\nThree in four consumers like to set strict boundaries for a digital assistant\n\n% of consumers who agree with the following statements\n\nI like having the ability to set strict boundaries (e.g., spending limits, product categories) for a digital assistant before it acts on my behalf\n76%\n\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000 consumers.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "assistant-explained-suggestions",
+        "text": "In October 2025, 69% of consumers said they trusted a digital assistant to suggest new products or deals for them if it explained why it made those choices.",
+        "evidence": "Figure 15.\nThree in four consumers like to set strict boundaries for a digital assistant\n\n% of consumers who agree with the following statements\n\nI trust a digital assistant to suggest new products or deals for me if it explains why it made those choices\n69%\n\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000 consumers.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "assistant-clear-explanations",
+        "text": "In October 2025, 66% of consumers said they trusted a digital assistant more when it provided clear explanations for its recommendations and actions.",
+        "evidence": "Figure 15.\nThree in four consumers like to set strict boundaries for a digital assistant\n\n% of consumers who agree with the following statements\n\nI trust a digital assistant more when it provides clear explanations for its recommendations and actions\n66%\n\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000 consumers.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "social-commerce-purchase-trend",
+        "text": "The share of consumers who said they had bought a product via a social media platform was 24% in November 2023, 32% in November 2024, and 35% in October 2025.",
+        "evidence": "Figure 17.\n35% of consumers purchased a product via a social media platform in 2025\n% of consumers who said 'yes' to the question: Have you bought a product via a social media platform?\nNovember 2023\nNovember 2024\nOctober 2025\n35%\n32%\n24%\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000, What matters to today’s consumer 2025, November 2024, N = 12,000, What matters to today’s consumer 2024, November 2023, N = 12,000.",
+        "confidence": "high",
+        "pages": [
+          37
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "social-commerce-fair-pricing-trust",
+        "text": "The report says social platforms remain popular for shopping even though they score lower on trust regarding fair pricing.",
+        "evidence": "As a result, these platforms remain popular even though they score lower on trust when it comes to fair pricing.",
+        "confidence": "high",
+        "pages": [
+          37
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "genai-personalized-recommendations",
+        "text": "Consumers wanting Gen AI to provide hyper-personalized content and product or service recommendations based on individual preferences were 58% in November 2024 and 63% in October 2025.",
+        "evidence": "Figure 20.\n63% of consumers want Gen AI to provide hyper-personalized content\n\n% of consumers who agree with the following statements\n\nI want Gen AI to provide hyper-personalized content and product/service recommendations based on my individual preferences\n58%\n63%\n\nNovember 2024 October 2025\n\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000 consumers; What matters to today’s consumer 2025, October 2024, N = 12,000 consumers.",
+        "confidence": "high",
+        "pages": [
+          41
+        ],
+        "section_id": "reliable-tech-loyalty",
+        "section_title": "Reliable tech builds loyalty – but with boundaries"
+      },
+      {
+        "id": "shopping-history-sharing",
+        "text": "More than half of consumers (56%) said they were comfortable sharing their shopping history and preferences with a digital assistant to receive personalized recommendations.",
+        "evidence": "Consumers want this. A notable 63% of consumers want Gen AI to share hyper-personalized content and over half (56%) are comfortable sharing their shopping history and preferences.",
+        "confidence": "high",
+        "pages": [
+          41
+        ],
+        "section_id": "reliable-tech-loyalty",
+        "section_title": "Reliable tech builds loyalty – but with boundaries"
+      },
+      {
+        "id": "in-store-attributes",
+        "text": "While shopping in physical stores, 76% of consumers value shelf-scanning apps to highlight relevant products based on purchase history, 73% cite immediate product availability, and 70% cite easy returns as attributes they look for most keenly.",
+        "evidence": "While shopping in physical stores, 76% of consumers value shelf-scanning apps to quickly highlight relevant products based on purchase history; 73% cite immediate product availability; and 70% state easy returns as the attributes they look for most keenly.",
+        "confidence": "high",
+        "pages": [
+          44
+        ],
+        "section_id": "reliable-tech-loyalty",
+        "section_title": "Reliable tech builds loyalty – but with boundaries"
+      },
+      {
+        "id": "engagement-loyalty-program-preference",
+        "text": "In October 2025, consumers who agreed that they preferred loyalty programs rewarding engagement with meaningful experiences and cost savings included 62% in consumer electronics, 62% in personal care products, 62% in household necessities, 57% in dry groceries and food supplies, and 56% in luxury products.",
+        "evidence": "Figure 22.\nMost consumers across categories prefer loyalty programs that reward engagement\n% of consumers who agree with the following statement for each category:\nI prefer loyalty programs that reward engagement with meaningful experiences and cost savings\nConsumer electronics 62%\nPersonal care products 62%\nHousehold necessities 62%\nDry groceries and food supplies 57%\nLuxury products 56%\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025",
+        "confidence": "high",
+        "pages": [
+          44
+        ],
+        "section_id": "reliable-tech-loyalty",
+        "section_title": "Reliable tech builds loyalty – but with boundaries"
+      },
+      {
+        "id": "human-support-loyalty-trend",
+        "text": "Consumers saying human interaction during automated in-store customer support enhances their loyalty were 54% in November 2024 and 74% in October 2025.",
+        "evidence": "Figure 23.\nMore than seven in ten consumers value human interaction during in-store shopping\n% of consumers who said human interaction increases loyalty in the following stages of in-store shopping\nCustomer support\n54%\n74%\nNovember 2024\nOctober 2025\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000 consumers; What matters to today’s consumer 2025, November 2024, N = 12,000 consumers.",
+        "confidence": "high",
+        "pages": [
+          45
+        ],
+        "section_id": "reliable-tech-loyalty",
+        "section_title": "Reliable tech builds loyalty – but with boundaries"
+      },
+      {
+        "id": "purchase-stage-human-loyalty",
+        "text": "Consumers saying human interaction during the in-store purchase stage increases loyalty were 40% in November 2024 and 66% in October 2025.",
+        "evidence": "Figure 23.\nMore than seven in ten consumers value human interaction during in-store shopping\n% of consumers who said human interaction increases loyalty in the following stages of in-store shopping\nPurchase stage\n40%\n66%\nNovember 2024\nOctober 2025\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000 consumers; What matters to today’s consumer 2025, November 2024, N = 12,000 consumers.",
+        "confidence": "high",
+        "pages": [
+          45
+        ],
+        "section_id": "reliable-tech-loyalty",
+        "section_title": "Reliable tech builds loyalty – but with boundaries"
+      },
+      {
+        "id": "human-touch-instore-shopping",
+        "text": "The report says digital tools can enhance retail but should not replace the emotional and sensory richness of in-store shopping.",
+        "evidence": "While digital tools can enhance retail, they should not replace the emotional and sensory richness of in-store shopping.",
+        "confidence": "high",
+        "pages": [
+          44
+        ],
+        "section_id": "reliable-tech-loyalty",
+        "section_title": "Reliable tech builds loyalty – but with boundaries"
+      },
+      {
+        "id": "ai-social-commerce-purchases",
+        "text": "The share of consumers who said they had bought a product via social media was 24% in November 2023, 32% in November 2024, and 35% in October 2025.",
+        "evidence": "Figure 17. 35% of consumers purchased a product via a social media platform in 2025\n% of consumers who said 'yes' to the question:\nHave you bought a product via a social media platform?\nNovember 2023\nNovember 2024\nOctober 2025\n35%\n32%\n24%",
+        "confidence": "high",
+        "pages": [
+          37
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "ai-assistant-boundaries",
+        "text": "76% of consumers want the ability to set strict boundaries for a digital assistant before it acts on their behalf.",
+        "evidence": "Figure 15.\nThree in four consumers like to set strict boundaries for a digital assistant\n% of consumers who agree with the following statements\nI like having the ability to set strict boundaries (e.g., spending limits, product categories) for a digital assistant before it acts on my behalf\n76%\nSource: Capgemini Research Institute, What matters to today’s consumer 2026, October 2025, N = 12,000 consumers.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "conversational-ai-and-trust",
+        "text": "Google AI Mode lets users describe what they need conversationally and receive structured results, while the report identifies transparency and user control as fundamental to trust in AI-powered commerce.",
+        "evidence": "Google has added an AI Mode to its Search tab, enabling users to describe what they need in a conversational format and receive clear, structured results.\n\nIn today’s AI-powered commerce, earning consumer trust has become essential. Transparency and user control are fundamental to building and sustaining that trust.",
+        "confidence": "high",
+        "pages": [
+          33,
+          35
+        ],
+        "section_id": "ai-consumer-guide",
+        "section_title": "AI – The consumer’s trusted guide"
+      },
+      {
+        "id": "adapt-decision-journeys",
+        "text": "CPR organizations should adapt decision journeys to shoppers’ differing preferences for autonomy or guidance rather than push a single pathway for all customers.",
+        "evidence": "Some want full control and rely on search, comparison, and reviews, while others welcome curated options that reduce cognitive load. CPR organizations must prepare adaptive offerings for these different mindsets rather than pushing a single pathway for all customers.",
+        "confidence": "high",
+        "pages": [
+          48
+        ],
+        "section_id": "what-organizations-should-do",
+        "section_title": "What should CPR organizations do differently?"
+      },
+      {
+        "id": "ai-operations-feedback-loops",
+        "text": "Retailers should systematically feed insights from AI-agent interactions into operational systems to optimize inventory planning, product availability, freshness management, and substitution logic.",
+        "evidence": "When these insights are systematically fed into operational systems, they can inform and optimize critical functions such as inventory planning, product availability, freshness management, and substitution logic.",
+        "confidence": "high",
+        "pages": [
+          55
+        ],
+        "section_id": "what-organizations-should-do",
+        "section_title": "What should CPR organizations do differently?"
+      },
+      {
+        "id": "consistent-pricing-guardrails",
+        "text": "Organizations should establish consistent pricing guardrails across channels and explain price differences when parity is not possible, such as courier surcharges or store markdowns.",
+        "evidence": "Establish consistent pricing guardrails across all channels. When price parity isn’t possible, provide clear context, such as courier surcharges or store markdowns, and highlight the option with the lowest overall cost for the day.",
+        "confidence": "high",
+        "pages": [
+          60
+        ],
+        "section_id": "what-organizations-should-do",
+        "section_title": "What should CPR organizations do differently?"
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "findings",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

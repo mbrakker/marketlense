@@ -1,0 +1,46 @@
+{
+  "configuration_hash": "1c2d67bd4a7e41b5057ed9ddd57d4ab234880c3675d93be5d999ae1e3ef75a50",
+  "decision_set_hash": "d60227bd40c69a7103cc6095c4aca3345763a63fa3813c246f8bbb4f042635a0",
+  "decisions": [
+    {
+      "budget_decision": "allow",
+      "configuration_hash": "1c2d67bd4a7e41b5057ed9ddd57d4ab234880c3675d93be5d999ae1e3ef75a50",
+      "decision_hash": "47a8a27356b6b2fc21712d02c086989c362024bc1debddb8576ca8c35c651be6",
+      "duplicate_identity_match": "",
+      "estimated_cost_usd": 0.008274,
+      "estimated_provider_calls": 1,
+      "estimated_provider_tokens": 17202,
+      "evidence_potential": "sufficient",
+      "file_id": "cohort-81af3890cd84ece81ef1",
+      "media_type": "application/pdf",
+      "model_policy_covered": true,
+      "near_duplicate_title_match": "",
+      "outcome": "admitted",
+      "page_count": 82,
+      "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+      "preflight_version": "2.0",
+      "publisher_id": "Capgemini Research Institute",
+      "report_title": "Final-Web-Version-Report-Consumer-Trends-2026",
+      "required_artifact_families": [
+        "doc_map"
+      ],
+      "runtime_dependencies_ready": true,
+      "runtime_dependency_status": "validated_pre_freeze",
+      "runtime_preflight_hash": "2f5adc07ceb76992d6a7c4cf6d7d2003e389079174b6f3cefb47f114025c04da",
+      "sample_char_count": 3275,
+      "sample_text_density": 1091.666667,
+      "schema_version": "1.0",
+      "size_bytes": 5811818,
+      "source_artifact_exists": true,
+      "source_artifact_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+      "source_identity_id": "source:f584854bc13cdca0b0d86327c85f71ff",
+      "source_url": "https://www.capgemini.com/us-en/insights/research-library/what-matters-to-todays-consumer-2026/",
+      "source_url_classification": "drive_artifact_nonpublic",
+      "structure_readable": true,
+      "title_key": "finalwebversionreportconsumertrends2026"
+    }
+  ],
+  "policy_hash": "d83571324b14ecc2b6b1ac8f0a90713489e79564ac027944d1e79a83c8d92489",
+  "run_id": "b1931c15-d0b5-4ea5-8013-07b20b515f96",
+  "schema_version": "1.0"
+}

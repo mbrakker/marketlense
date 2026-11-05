@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "methods": [
+    "The report presents a global benchmark comparing app performance metrics, including installs, sessions, retention, and cost per install, across 2024 and 2025; one chart tracks installs and sessions from January 2024 to December 2025."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "methods",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

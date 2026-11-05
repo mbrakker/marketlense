@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "internet_and_media",
+      "tech_trends",
+      "generative_ai",
+      "web_traffic",
+      "creator_economy_and_creator_led_content",
+      "social_media"
+    ],
+    "primary_tags": [
+      "internet_and_media",
+      "tech_trends",
+      "generative_ai",
+      "web_traffic"
+    ],
+    "secondary_tags": [
+      "creator_economy_and_creator_led_content",
+      "social_media"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "internet_and_media",
+        "tier": "primary",
+        "section_label": "Executive Summary",
+        "evidence": "Examines journalism’s prospects, publishers’ strategies, audience relationships, and changing news business models."
+      },
+      {
+        "tag": "tech_trends",
+        "tier": "primary",
+        "section_label": "9. What’s Next in Technology?",
+        "evidence": "Covers emerging AI browsers, agentic apps, automation, and new interfaces affecting publishers."
+      },
+      {
+        "tag": "generative_ai",
+        "tier": "primary",
+        "section_label": "7. Latest Tales of AI in the Newsroom",
+        "evidence": "Reports on newsroom AI use in automation, newsgathering, coding, product development, and content distribution."
+      },
+      {
+        "tag": "web_traffic",
+        "tier": "primary",
+        "section_label": "2. Answer Engines and the Implications for Traffic",
+        "evidence": "Publishers expect search-engine traffic to fall by more than 40% over the next three years as search becomes AI-driven."
+      },
+      {
+        "tag": "creator_economy_and_creator_led_content",
+        "tier": "secondary",
+        "section_label": "5. Responding to the Creator Wave",
+        "evidence": "Discusses competition from news creators and publishers’ plans to partner with, hire, or emulate creators."
+      },
+      {
+        "tag": "social_media",
+        "tier": "secondary",
+        "section_label": "4. Social Media’s Mid-Life Crisis and the Video-fication of Everything",
+        "evidence": "Examines social platforms’ changing role in news distribution and publishers’ shifting platform priorities."
+      }
+    ],
+    "region": "Global",
+    "time_period": "2026",
+    "not_found_reason": ""
+  }
+}

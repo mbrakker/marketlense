@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/context_category_fit",
+  "family_schema_version": "2.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "selected_category_ids": [
+      "social_video_creator",
+      "search_performance"
+    ],
+    "category_fits": [
+      {
+        "category_id": "social_video_creator",
+        "label": "Social, Short Video & Creator",
+        "fit_score": 0.82,
+        "decision": "primary",
+        "why_fit": "The report gives sustained attention to creators, social platforms, and short-form video. Publishers plan to shift effort toward YouTube and TikTok, expand vertical-video formats, and respond to creators attracting audience attention.",
+        "why_not_fit": "This is not the entire report: it also examines answer engines, newsroom AI, and broader pressures on journalism.",
+        "evidence_sections": [
+          "Executive Summary"
+        ],
+        "semantic_rule_status": "supported",
+        "supported_topic_rules": [
+          "Evidence repeatedly focuses on creators, creator economics, short-form video, social platform behavior, or community-driven content strategy."
+        ],
+        "supported_topic_rule_ids": [
+          "social_video_creator:include:9ca9691a0681b78c",
+          "social_video_creator:include:bda1f7e5ffa523d0"
+        ],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [
+          "Executive Summary"
+        ],
+        "centrality_evidence_sections": [
+          "Executive Summary"
+        ],
+        "remediation_signal": ""
+      },
+      {
+        "category_id": "search_performance",
+        "label": "Search & Performance Marketing",
+        "fit_score": 0.68,
+        "decision": "secondary",
+        "why_fit": "A dedicated section examines answer engines and implications for publisher traffic, including expected search-referral losses, observed declines in Google organic search traffic, and possible publisher responses.",
+        "why_not_fit": "Search is one major chapter in a broader report about journalism and technology, rather than its exclusive strategic lens; the report also covers creator platforms and newsroom AI.",
+        "evidence_sections": [
+          "2. Answer Engines and the Implications for Traffic"
+        ],
+        "semantic_rule_status": "supported",
+        "supported_topic_rules": [
+          "Evidence repeatedly covers paid search, SEO, GEO, search demand capture, or performance optimization tied to search behavior."
+        ],
+        "supported_topic_rule_ids": [
+          "search_performance:include:add2286ae2dd6eba"
+        ],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [
+          "2. Answer Engines and the Implications for Traffic"
+        ],
+        "centrality_evidence_sections": [
+          "2. Answer Engines and the Implications for Traffic"
+        ],
+        "remediation_signal": ""
+      },
+      {
+        "category_id": "ai_automation",
+        "label": "AI & Automation",
+        "fit_score": 0.57,
+        "decision": "reject",
+        "why_fit": "Generative AI, answer engines, and newsroom AI recur in the report, including their effects on publisher traffic and production strategies.",
+        "why_not_fit": "AI is discussed as a force reshaping journalism and publishing, rather than as a general capability across tasks or teams. The report is fundamentally about the media sector, matching the profile's exclusion for AI as an enabler inside a broader vertical report.",
+        "evidence_sections": [
+          "Executive Summary",
+          "2. Answer Engines and the Implications for Traffic",
+          "3. Content Strategies Shift towards Distinctiveness"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Reject when AI is only one enabler inside a broader media, technology, or vertical-market report."
+        ],
+        "rejected_topic_rule_ids": [
+          "ai_automation:exclude:1e73dca27527e17c"
+        ],
+        "rule_evidence_sections": [
+          "Executive Summary",
+          "3. Content Strategies Shift towards Distinctiveness"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": ""
+      },
+      {
+        "category_id": "technology",
+        "label": "Technology & Innovation",
+        "fit_score": 0.34,
+        "decision": "reject",
+        "why_fit": "The report considers developments such as generative AI and answer engines and how they affect publishers.",
+        "why_not_fit": "Technology is framed through its effects on journalism, content, and distribution; the report is not primarily about technology platforms or infrastructure. Its AI focus also falls within the profile's specific AI-systems exclusion.",
+        "evidence_sections": [
+          "Executive Summary",
+          "2. Answer Engines and the Implications for Traffic",
+          "3. Content Strategies Shift towards Distinctiveness"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Reject when technology is only a supporting capability inside a category-specific commerce, media, or healthcare report.",
+          "Reject when the report is specifically about AI systems and automation rather than broader technology change."
+        ],
+        "rejected_topic_rule_ids": [
+          "technology:exclude:bcb4675ddd1f92ce",
+          "technology:exclude:ff7be43a3ccd1ef0"
+        ],
+        "rule_evidence_sections": [
+          "Executive Summary",
+          "3. Content Strategies Shift towards Distinctiveness"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": ""
+      },
+      {
+        "category_id": "advertising_media",
+        "label": "Advertising Strategy & Media",
+        "fit_score": 0.25,
+        "decision": "reject",
+        "why_fit": "The report discusses publisher channel priorities and shifts in referrals from social platforms and search.",
+        "why_not_fit": "Those findings concern news distribution and publishing strategy, not advertising investment, media buying, ad effectiveness, or marketer guidance.",
+        "evidence_sections": [
+          "Executive Summary",
+          "2. Answer Engines and the Implications for Traffic"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [],
+        "rejected_topic_rule_ids": [],
+        "rule_evidence_sections": [],
+        "centrality_evidence_sections": [],
+        "remediation_signal": ""
+      },
+      {
+        "category_id": "consumer_behavior",
+        "label": "Consumer Behavior & Insights",
+        "fit_score": 0.22,
+        "decision": "reject",
+        "why_fit": "The report includes audience attention findings, including publishers' concern that creators take audience time and attention.",
+        "why_not_fit": "Audience behavior is supporting evidence for a report focused on publisher strategy and journalism trends, rather than the report's central subject.",
+        "evidence_sections": [
+          "Executive Summary",
+          "1. Pressures on Journalism Mount"
+        ],
+        "semantic_rule_status": "rejected",
+        "supported_topic_rules": [],
+        "supported_topic_rule_ids": [],
+        "rejected_topic_rules": [
+          "Reject when consumer metrics are just supporting evidence inside a brand, media, or financial performance report."
+        ],
+        "rejected_topic_rule_ids": [
+          "consumer_behavior:exclude:3668f596f212b7b5"
+        ],
+        "rule_evidence_sections": [
+          "Executive Summary",
+          "1. Pressures on Journalism Mount"
+        ],
+        "centrality_evidence_sections": [],
+        "remediation_signal": ""
+      }
+    ]
+  }
+}

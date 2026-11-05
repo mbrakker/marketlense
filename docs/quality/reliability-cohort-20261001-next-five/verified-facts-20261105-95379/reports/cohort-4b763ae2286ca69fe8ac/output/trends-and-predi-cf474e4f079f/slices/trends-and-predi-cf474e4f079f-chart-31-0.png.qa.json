@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-31-0",
+  "candidate_type": "chart",
+  "page": 31,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    62.857,
+    291.372,
+    546.143,
+    622.628
+  ],
+  "final_bbox": [
+    54.857,
+    278.715,
+    554.143,
+    621.618
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 0,
+    "bottom": 41,
+    "left": 40,
+    "right": 94
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": true,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.7378,
+    "margin_balance": 0.5779,
+    "neighbor_contamination": 0.1457,
+    "readability": 1.0,
+    "visual_crispness": 0.5969,
+    "total_score": 0.7896,
+    "defect_labels": [],
+    "edge_density": {
+      "top": 0.2495,
+      "bottom": 0.0189,
+      "left": 0.2095,
+      "right": 0.018
+    },
+    "edge_leakage": {
+      "top": 0.1457,
+      "bottom": 0.0,
+      "left": 0.0,
+      "right": 0.0
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.5,
+        "strong_edges": [
+          "top",
+          "left"
+        ],
+        "edge_density": {
+          "top": 0.2495,
+          "bottom": 0.0189,
+          "left": 0.2095,
+          "right": 0.018
+        }
+      },
+      "chart_completeness": {
+        "accepted": true,
+        "confidence": 0.2095,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.2495,
+          "bottom": 0.0189,
+          "left": 0.2095,
+          "right": 0.018
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.2495,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.2495,
+          "bottom": 0.0189,
+          "left": 0.2095,
+          "right": 0.018
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": true,
+  "rejection_reason": ""
+}

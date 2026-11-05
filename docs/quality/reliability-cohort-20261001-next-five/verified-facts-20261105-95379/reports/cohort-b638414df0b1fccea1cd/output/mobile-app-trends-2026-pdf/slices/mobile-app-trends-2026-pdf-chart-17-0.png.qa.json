@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "chart-17-0",
+  "candidate_type": "chart",
+  "page": 17,
+  "mode": "publication_strict",
+  "effective_mode": "chart_strict",
+  "original_bbox": [
+    413.841,
+    82.765,
+    1275.724,
+    676.559
+  ],
+  "final_bbox": [
+    405.841,
+    74.765,
+    1280.0,
+    684.559
+  ],
+  "render_dpi": 216,
+  "render_scale": 3.0,
+  "trims": {
+    "top": 118,
+    "bottom": 118,
+    "left": 173,
+    "right": 89
+  },
+  "qa": {
+    "schema_version": "1.0",
+    "accepted": false,
+    "crop_type": "chart",
+    "content_completeness": 1.0,
+    "edge_integrity": 0.9013,
+    "margin_balance": 0.0,
+    "neighbor_contamination": 0.0548,
+    "readability": 1.0,
+    "visual_crispness": 0.35,
+    "total_score": 0.6778,
+    "defect_labels": [
+      "chart_axis_or_label_clipped"
+    ],
+    "edge_density": {
+      "top": 0.0035,
+      "bottom": 0.9488,
+      "left": 0.8498,
+      "right": 0.0697
+    },
+    "edge_leakage": {
+      "top": 0.0,
+      "bottom": 0.0,
+      "left": 0.0,
+      "right": 0.0548
+    },
+    "detectors": {
+      "schema_version": "1.0",
+      "table_boundary": {
+        "accepted": true,
+        "confidence": 0.5,
+        "strong_edges": [
+          "bottom",
+          "left"
+        ],
+        "edge_density": {
+          "top": 0.0035,
+          "bottom": 0.9488,
+          "left": 0.8498,
+          "right": 0.0697
+        }
+      },
+      "chart_completeness": {
+        "accepted": false,
+        "confidence": 0.9488,
+        "clipped_edges": [
+          "left",
+          "bottom"
+        ],
+        "edge_density": {
+          "top": 0.0035,
+          "bottom": 0.9488,
+          "left": 0.8498,
+          "right": 0.0697
+        }
+      },
+      "visual_card_boundary": {
+        "accepted": true,
+        "confidence": 0.9488,
+        "clipped_edges": [],
+        "edge_density": {
+          "top": 0.0035,
+          "bottom": 0.9488,
+          "left": 0.8498,
+          "right": 0.0697
+        }
+      }
+    }
+  },
+  "repair_actions": [],
+  "accepted": false,
+  "rejection_reason": "chart_axis_or_label_clipped"
+}

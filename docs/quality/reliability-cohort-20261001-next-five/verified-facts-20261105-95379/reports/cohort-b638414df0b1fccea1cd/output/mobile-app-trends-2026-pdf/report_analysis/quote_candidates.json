@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "quote_candidates": [
+    {
+      "id": "quote-001",
+      "text": "In 2026, sustainable app growth will depend on capturing user journeys across web, app, and other connected environments. It’s no longer sufficient to view users in device silos when we know that conversion is influenced by multiple touchpoints. Uncovering what those touchpoints are, the amount of influence they hold, and how you can seamlessly guide users between them will empower effective budget allocation, better ROI, and real business impact from marketing efforts.",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 14
+    },
+    {
+      "id": "quote-002",
+      "text": "As paid media becomes more competitive, brands need to strategically invest in channels that help them reach new customers. App advertisers activating full-funnel campaigns, alongside unified, privacy-safe measurement, can better understand which channels are performing and where to invest.",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 8
+    },
+    {
+      "id": "quote-003",
+      "text": "In 2026, the playbook of chasing one channel at a time or pursuing isolated metrics doesn't work anymore. With users jumping between devices and apps faster than ever, growth now depends on seeing the whole picture. In this environment, strategic clarity, grounded in how touchpoints contribute to long-term value, has become essential.",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 40
+    },
+    {
+      "id": "quote-004",
+      "text": "The next phase of growth is architectural, not because of any single tool, but because of how these capabilities work together. Teams that build this kind of foundation—integrated, adaptable, and accountable—will be best positioned to navigate the complexity of 2026 and help define what success looks like in a multi-platform world.",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 40
+    },
+    {
+      "id": "quote-005",
+      "text": "Data is still the foundation, but the bar for quality has been raised.",
+      "source": "mobile-app-trends-2026.pdf",
+      "page": 40
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "quote_candidates",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

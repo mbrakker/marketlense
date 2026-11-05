@@ -1,0 +1,296 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/findings",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v3",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "findings": [
+      {
+        "id": "regional-pipeline-outlook",
+        "text": "On the chart titled “Expected change in M&A deal pipeline volume 2026 vs. 2025 — by region,” the combined “Much/slightly higher” expectation was 62% for the Americas, 43% for EMEA, and 58% for APAC.",
+        "evidence": "Expected change in M&A deal pipeline volume 2026 vs. 2025 — by region\n14%7%12%\n48%\n36%\n46%\n31%\n43%\n30%\n7%13%11%\nAmericasEMEAAPAC\n62%\nMuch/slightly \nhigher 43%\nMuch/slightly \nhigher\n58%\nMuch/slightly \nhigher\nMuch higher Slightly higher About the same Slightly/much lower",
+        "confidence": "high",
+        "pages": [
+          11
+        ],
+        "section_id": "strategic-focus-in-a-fragmented-world",
+        "section_title": "Strategic focus in a fragmented world"
+      },
+      {
+        "id": "regional-strategic-conditions",
+        "text": "The report says US-based organizations are moving forward with greater confidence and deal readiness, while many outside the US face macroeconomic, regulatory, and geopolitical constraints affecting how quickly and aggressively they can pursue growth strategies.",
+        "evidence": "US-based organizations are moving forward with greater confidence and deal readiness, while many organizations outside the US face a more complex mix of macroeconomic, regulatory and geopolitical constraints shaping how quickly and aggressively growth strategies can be pursued.",
+        "confidence": "high",
+        "pages": [
+          11
+        ],
+        "section_id": "strategic-focus-in-a-fragmented-world",
+        "section_title": "Strategic focus in a fragmented world"
+      },
+      {
+        "id": "cross-border-approach-2026",
+        "text": "For their approach to cross-border M&A in 2026, the chart reports 20% actively pursuing it as a major focus, 36% open to it selectively, 21% neutral or with no specific emphasis, 17% focused on domestic deals, 3% avoiding cross-border acquisitions entirely, and 3% not sure or with no specific policy.",
+        "evidence": "Approach to cross-border \nM&A in 2026\n20% Actively pursuing cross- \nborder deals as a major focus\n36% Open to cross-border deals \nselectively\n21% Neutral or no specific \nemphasis\n17% Focused on domestic deals\n3% Avoiding cross-border \nacquisitions entirely\n3% Not sure/no specific policy \non cross-border M&A",
+        "confidence": "high",
+        "pages": [
+          13
+        ],
+        "section_id": "strategic-focus-in-a-fragmented-world",
+        "section_title": "Strategic focus in a fragmented world"
+      },
+      {
+        "id": "cross-border-selectivity",
+        "text": "The report describes cross-border M&A as still critical to growth strategies, but says dealmakers are approaching it with greater selectivity; changing tax frameworks and trade volatility increase the complexity of cross-border modeling.",
+        "evidence": "Cross-border M&A remains a critical component of growth strategies, but dealmakers are approaching it with greater selectivity. However, evolving global tax frameworks, minimum tax regimes and trade volatility are increasing the complexity of cross-border modeling.",
+        "confidence": "high",
+        "pages": [
+          13
+        ],
+        "section_id": "strategic-focus-in-a-fragmented-world",
+        "section_title": "Strategic focus in a fragmented world"
+      },
+      {
+        "id": "pe-corporate-confidence",
+        "text": "As deal activity rebuilds in 2026, private equity firms are signaling greater confidence in deal volume and deal quality than corporate counterparts; private equity dealmakers are significantly more likely to expect an increase in M&A pipeline activity relative to 2025.",
+        "evidence": "As deal activity rebuilds in 2026, private equity firms are signaling greater confidence in both deal volume and deal quality than their corporate counterparts. Survey results show private equity dealmakers are significantly more likely to expect an increase in M&A pipeline activity relative to 2025.",
+        "confidence": "high",
+        "pages": [
+          15
+        ],
+        "section_id": "diverging-risk-appetites-between-buyers",
+        "section_title": "Diverging risk appetites between buyers"
+      },
+      {
+        "id": "planned-deal-count-means",
+        "text": "The chart “Planned number of M&A deals in 2026 — corporate vs. private equity” reports a mean of 5.2 for corporate respondents and 7.3 for private equity respondents.",
+        "evidence": "Planned number of M&A deals in 2026 — \ncorporate vs. private equity\n5.2 Mean 7.3 Mean\n6%\n5%\n1%\n42%\n21%\n13%\n31%\n7% 6%\nCorporate Private Equity",
+        "confidence": "high",
+        "pages": [
+          15
+        ],
+        "section_id": "diverging-risk-appetites-between-buyers",
+        "section_title": "Diverging risk appetites between buyers"
+      },
+      {
+        "id": "deal-size-outlook",
+        "text": "The report says the majority of anticipated transactions fall below the US$1B threshold, describing the rebound as led by mid-sized, execution-intensive deals rather than megadeals.",
+        "evidence": "Survey results indicate that the majority of anticipated transactions fall below the US$1B threshold, pointing to a rebound led by mid-sized, execution-intensive deals rather than megadeals.",
+        "confidence": "high",
+        "pages": [
+          16
+        ],
+        "section_id": "diverging-risk-appetites-between-buyers",
+        "section_title": "Diverging risk appetites between buyers"
+      },
+      {
+        "id": "next-deal-value-by-buyer",
+        "text": "For estimated total value of the next M&A transaction, the chart reports corporate respondents at 20% for <US$250M, 32% for US$250m to <US$500M, 29% for US$500M to <US$1B, 13% for US$1B to <US$5B, 3% for US$5B to <US$10B, and 1% for US$10B and over; private equity respondents are 11%, 50%, 33%, 4%, 1%, and 0% for those same respective value categories.",
+        "evidence": "Estimated total deal value of next M&A \ntransaction — corporate vs. private equity\nCorporate Private equity\n<US$250M\nUS$250m \nto \n<US$500M\nUS$500M \nto <US$1B\nUS$1B to \n<US$5B\nUS$5B to \n<US$10B\nUS$10B \nand over\n20%\n32%\n29%\n13%\n3%\n1%\n11%\n50%\n33%\n4%\n1%\n0%",
+        "confidence": "medium",
+        "pages": [
+          16
+        ],
+        "section_id": "diverging-risk-appetites-between-buyers",
+        "section_title": "Diverging risk appetites between buyers"
+      },
+      {
+        "id": "buyer-carveout-interest",
+        "text": "For deals under consideration, 21% of corporate respondents and 55% of private equity respondents selected carve-out acquisitions.",
+        "evidence": "Types of deals under consideration — corporate vs. private equity\n\nCorporate        Private equity\n\nCarve-out acquisitions                         21%              55%      +34 pts",
+        "confidence": "high",
+        "pages": [
+          17
+        ],
+        "section_id": "diverging-risk-appetites-between-buyers",
+        "section_title": "Diverging risk appetites between buyers"
+      },
+      {
+        "id": "buyer-minority-majority-interest",
+        "text": "For deals under consideration, 18% of corporate respondents and 50% of private equity respondents selected minority-to-majority investment.",
+        "evidence": "Types of deals under consideration — corporate vs. private equity\n\nCorporate        Private equity\n\nMinority-to-majority investment                   18%              50%      +32 pts",
+        "confidence": "high",
+        "pages": [
+          17
+        ],
+        "section_id": "diverging-risk-appetites-between-buyers",
+        "section_title": "Diverging risk appetites between buyers"
+      },
+      {
+        "id": "ai-exposure-diligence",
+        "text": "The report says private equity firms and strategic acquirers are increasingly incorporating AI exposure assessments into investment committee materials, covering revenue-model vulnerability, moat durability under AI, and whether AI expands or compresses addressable demand.",
+        "evidence": "Private equity firms and strategic acquirers are increasingly incorporating AI exposure assessment into investment committee materials. These assessments evaluate:\n• Revenue model vulnerability\n• Moat durability under AI\n• Whether AI expands or compresses addressable demand",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "ai-driven-transformation-of-deal-execution",
+        "section_title": "AI-driven transformation of deal execution"
+      },
+      {
+        "id": "ai-execution-risk",
+        "text": "The report says AI expands analytical capacity and reshapes asset attractiveness, but does not eliminate execution risk; instead, it raises the bar for governance, integration readiness, and institutional discipline.",
+        "evidence": "AI is expanding analytical capacity and reshaping asset attractiveness, but it does not eliminate execution risk. Rather, it raises the bar for governance, integration readiness and institutional discipline.",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "ai-driven-transformation-of-deal-execution",
+        "section_title": "AI-driven transformation of deal execution"
+      },
+      {
+        "id": "ai-market-repricing",
+        "text": "The report states that in early 2026, software and knowledge-services stocks experienced a significant sector-specific repricing, with nearly $1 trillion in market value declining over a matter of weeks; it says the shift was not driven by collapsing revenues.",
+        "evidence": "In early 2026, software and knowledge-services stocks experienced one of the most significant sector-specific repricings in recent years. Nearly $1 trillion in market value declined over a matter of weeks. This shift was not driven by collapsing revenues.",
+        "confidence": "high",
+        "pages": [
+          28
+        ],
+        "section_id": "ai-driven-transformation-of-deal-execution",
+        "section_title": "AI-driven transformation of deal execution"
+      },
+      {
+        "id": "consumer-retail-portfolio-and-risk",
+        "text": "Consumer and retail organizations are reshaping portfolios in response to margin pressure, changing demand patterns, and the need for greater operational focus; the report says execution risk centers on brand continuity, customer-experience disruption, and frontline-talent retention.",
+        "evidence": "Consumer and retail organizations are pursuing portfolio reshaping to respond to margin pressure, changing demand patterns and the need for greater operational focus. Carve-outs commonly involve separating non-core brands, geographies or channels to improve performance transparency and sharpen management attention.\nExecution risk centers on brand continuity, customer experience disruption and frontline talent retention, particularly where separation activity affects customer-facing operations and supply chains.",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "industry-specific-dynamics",
+        "section_title": "Industry-specific dynamics"
+      },
+      {
+        "id": "banking-insurance-portfolio-and-risk",
+        "text": "In banking and insurance, portfolio change is described as emphasizing selective divestments and capability-driven acquisitions; execution risk is concentrated in regulatory approvals, data migration, and platform integration.",
+        "evidence": "In banking and insurance, portfolio change is shaped less by large-scale asset separation and more by selective divestments and capability-driven acquisitions.\nExecution risk is concentrated in regulatory approvals, data migration and platform integration rather than physical or operational disentanglement.",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "industry-specific-dynamics",
+        "section_title": "Industry-specific dynamics"
+      },
+      {
+        "id": "energy-resources-carveouts-and-risk",
+        "text": "In energy, natural resources, and chemicals, the report says carve-outs are frequently used to manage exposure, release capital, and rebalance asset mixes; execution risk is amplified by asset specificity, regulatory continuity requirements, and longer transaction timelines.",
+        "evidence": "In energy, natural resources and chemicals, separation activity is driven by capital discipline, regulatory pressure and exposure to evolving trade and transition policy environments. Carve-outs are frequently used to manage exposure, release capital and rebalance asset mixes.\nExecution risk is amplified by asset specificity, regulatory continuity requirements and longer transaction timelines.",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "industry-specific-dynamics",
+        "section_title": "Industry-specific dynamics"
+      },
+      {
+        "id": "technology-carveouts-and-risk",
+        "text": "In technology, carve-outs are used to isolate non-core products, legacy platforms, or adjacent capabilities that no longer fit long-term priorities; execution risk centers on talent retention, IP separation, and systems integration.",
+        "evidence": "In technology, M&A activity continues to be shaped by rapid capability reconfiguration, platform focus and compressed product lifecycles. Reconfiguration is often driven by strategic clarity rather than financial distress, with carve-outs used to isolate non-core products, legacy platforms or adjacent capabilities that no longer fit long-term priorities.\nExecution risk is concentrated around talent retention, IP separation and systems integration.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "industry-specific-dynamics",
+        "section_title": "Industry-specific dynamics"
+      },
+      {
+        "id": "healthcare-separation-and-risk",
+        "text": "Healthcare organizations use separation activity to sharpen focus across therapeutics, services, and technology-enabled care delivery; execution risk centers on regulatory approvals, data and systems integration, and continuity of highly specialized talent.",
+        "evidence": "Healthcare organizations are navigating strategic reconfiguration amid regulatory complexity, shifting care models and sustained pressure to improve operational efficiency. Separation activity is frequently used to sharpen focus across therapeutics, services and technology-enabled care delivery.\nExecution risk centers on regulatory approvals, data and systems integration, and continuity of highly specialized talent.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "industry-specific-dynamics",
+        "section_title": "Industry-specific dynamics"
+      },
+      {
+        "id": "industrial-manufacturing-carveouts",
+        "text": "Industrial manufacturers are increasingly using carve-outs to reduce organizational complexity in response to geopolitical fragmentation, supply-chain reconfiguration, and uneven end-market demand; the report says execution complexity is elevated by shared-services disentanglement, operational separation, and legacy IT environments.",
+        "evidence": "Industrial manufacturers are increasingly using carve-outs to reduce organizational complexity in response to geopolitical fragmentation, supply-chain reconfiguration and uneven end-market demand. Separation activity often targets capital-intensive or lower-growth assets, enabling reinvestment into higher-margin or more resilient platforms.\nExecution complexity is elevated, driven by shared services disentanglement, operational separation and deeply embedded legacy IT environments.",
+        "confidence": "high",
+        "pages": [
+          35
+        ],
+        "section_id": "industry-specific-dynamics",
+        "section_title": "Industry-specific dynamics"
+      },
+      {
+        "id": "industry-consumer-retail-portfolio-reshaping",
+        "text": "Consumer and retail organizations are reshaping portfolios in response to margin pressure, changing demand patterns, and the need for greater operational focus; execution risks center on brand continuity, customer-experience disruption, and frontline talent retention.",
+        "evidence": "Consumer and retail organizations are pursuing portfolio reshaping to respond to margin pressure, changing demand patterns and the need for greater operational focus. ... Execution risk centers on brand continuity, customer experience disruption and frontline talent retention",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "industry-specific-dynamics",
+        "section_title": "Industry-specific dynamics"
+      },
+      {
+        "id": "industry-banking-insurance-activity",
+        "text": "Banking and insurance portfolio change emphasizes selective divestments and capability-driven acquisitions, with execution risks concentrated in regulatory approvals, data migration, and platform integration.",
+        "evidence": "In banking and insurance, portfolio change is shaped less by large-scale asset separation and more by selective divestments and capability-driven acquisitions. ... Execution risk is concentrated in regulatory approvals, data migration and platform integration",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "industry-specific-dynamics",
+        "section_title": "Industry-specific dynamics"
+      },
+      {
+        "id": "industry-natural-resources-carveouts",
+        "text": "In energy, natural resources, and chemicals, carve-outs are used to manage exposure and release capital, while asset specificity, regulatory continuity requirements, and longer transaction timelines amplify execution risk.",
+        "evidence": "In energy, natural resources and chemicals, separation activity is driven by capital discipline, regulatory pressure and exposure to evolving trade and transition policy environments. Carve-outs are frequently used to manage exposure, release capital and rebalance asset mixes. Execution risk is amplified by asset specificity, regulatory continuity requirements and longer transaction timelines.",
+        "confidence": "high",
+        "pages": [
+          36
+        ],
+        "section_id": "industry-specific-dynamics",
+        "section_title": "Industry-specific dynamics"
+      },
+      {
+        "id": "ai-expands-analysis-and-reshapes-asset-attractiveness",
+        "text": "AI expands analytical capacity and reshapes asset attractiveness.",
+        "evidence": "AI is expanding analytical capacity and reshaping asset attractiveness",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "ai-driven-transformation-of-deal-execution",
+        "section_title": "AI-driven transformation of deal execution"
+      },
+      {
+        "id": "ai-raises-execution-discipline-bar",
+        "text": "AI raises the bar for governance, integration readiness, and institutional discipline.",
+        "evidence": "Rather, it raises the bar for governance, integration readiness and institutional discipline.",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "ai-driven-transformation-of-deal-execution",
+        "section_title": "AI-driven transformation of deal execution"
+      },
+      {
+        "id": "ai-does-not-eliminate-execution-risk",
+        "text": "AI does not eliminate execution risk.",
+        "evidence": "AI is expanding analytical capacity and reshaping asset attractiveness, but it does not eliminate execution risk.",
+        "confidence": "high",
+        "pages": [
+          29
+        ],
+        "section_id": "ai-driven-transformation-of-deal-execution",
+        "section_title": "AI-driven transformation of deal execution"
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "findings",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

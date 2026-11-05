@@ -1,0 +1,239 @@
+{
+  "schema_version": "doc_map_v1",
+  "doc_id": "cohort-2acb4a56e14add5d7717",
+  "title": "2026 Global M&A Outlook",
+  "summary": "The report reviews the recovery and changing character of global M&A, using survey findings to frame the 2026 outlook. It examines buyer differences and the effects of market fragmentation, portfolio simplification, AI-enabled deal execution, and execution discipline, followed by industry-specific perspectives and implications for dealmakers.",
+  "publisher": "",
+  "provenance_roles": {
+    "schema_version": "1.0",
+    "publication_name": "",
+    "publisher_name": "",
+    "author_names": [],
+    "author_kind": "unknown",
+    "data_provider_names": [],
+    "source_organization_names": [],
+    "report_owner_name": "Copyright owned by one or more of the KPMG International entities. KPMG International entities p",
+    "status": "ambiguous",
+    "resolution_method": "deterministic_source_visible_evidence",
+    "issues": [
+      "publisher_missing"
+    ],
+    "evidence": [
+      {
+        "schema_version": "1.0",
+        "role": "report_owner",
+        "name": "Copyright owned by one or more of the KPMG International entities. KPMG International entities p",
+        "evidence_kind": "copyright",
+        "evidence_locator": "document_pack:line:6",
+        "evidence_hash": "65c09ef65192b6f10a7c6cb18ea58cc513d34e92aad163ba5030e5afcd2f4d33"
+      },
+      {
+        "schema_version": "1.0",
+        "role": "report_owner",
+        "name": "Copyright owned by one or more of the KPMG International entities. KPMG International entities p",
+        "evidence_kind": "copyright",
+        "evidence_locator": "document_pack:line:95",
+        "evidence_hash": "67108dc2761c11b6bc7e53e8a0374217d58674f0f4143c5f881b69ad625cbb0b"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "foreword",
+      "title": "Foreword",
+      "summary": "Opening remarks introduce the report’s outlook on global M&A.",
+      "key_points": [],
+      "pages": [
+        2
+      ],
+      "references": []
+    },
+    {
+      "id": "about-the-research",
+      "title": "About the research",
+      "summary": "Describes the survey basis for the report and the composition of its respondents.",
+      "key_points": [
+        "The findings are based on a global survey of corporate respondents.",
+        "The report presents respondent composition by geography and corporate industry."
+      ],
+      "pages": [
+        4
+      ],
+      "references": []
+    },
+    {
+      "id": "executive-summary",
+      "title": "Executive summary",
+      "summary": "Summarizes a recovering M&A market whose foundations have shifted, with consequences for deal execution and value creation.",
+      "key_points": [
+        "Global M&A momentum is rebuilding, but the market’s foundations have changed.",
+        "Deal activity regained momentum through 2025.",
+        "The report characterizes the global market as multi-speed."
+      ],
+      "pages": [
+        5
+      ],
+      "references": []
+    },
+    {
+      "id": "2025-retrospective-and-2026-outlook",
+      "title": "2025 retrospective and 2026 outlook",
+      "summary": "Reviews the return of M&A momentum and the varying conditions facing dealmakers in the United States and elsewhere.",
+      "key_points": [
+        "Momentum has returned with greater selectivity.",
+        "US dealmakers are described as setting the pace in a multi-speed market.",
+        "Dealmakers outside the US face a more complex mix of conditions."
+      ],
+      "pages": [
+        6,
+        7,
+        8
+      ],
+      "references": []
+    },
+    {
+      "id": "five-drivers-shaping-the-2026-ma-environment",
+      "title": "5 drivers shaping the 2026 M&A environment",
+      "summary": "Introduces the report’s five-driver framework for the 2026 M&A environment and leads into the following thematic sections.",
+      "key_points": [
+        "The framework includes strategic focus in a fragmented world.",
+        "The following themes address buyer risk appetites, portfolio simplification, AI-driven deal execution, and execution discipline."
+      ],
+      "pages": [
+        9
+      ],
+      "references": []
+    },
+    {
+      "id": "strategic-focus-in-a-fragmented-world",
+      "title": "Strategic focus in a fragmented world",
+      "summary": "Explores strategic focus amid fragmentation and presents regional differences in M&A outlook.",
+      "key_points": [
+        "The section presents outlook categories ranging from much higher to slightly or much lower.",
+        "It compares regional views for APAC, EMEA, and the Americas."
+      ],
+      "pages": [
+        10,
+        11,
+        12,
+        13
+      ],
+      "references": []
+    },
+    {
+      "id": "diverging-risk-appetites-between-buyers",
+      "title": "Diverging risk appetites between buyers",
+      "summary": "Examines differences in risk appetite across buyer groups, including corporate and private equity respondents.",
+      "key_points": [
+        "Buyer risk appetite is treated as a source of divergence in the M&A environment.",
+        "The section includes comparisons between corporate and private equity respondents."
+      ],
+      "pages": [
+        14,
+        15,
+        16,
+        17
+      ],
+      "references": []
+    },
+    {
+      "id": "portfolio-simplification-as-a-value-creation-strategy",
+      "title": "Portfolio simplification as a value creation strategy",
+      "summary": "Considers portfolio simplification as a route to value creation through changes to the composition of businesses and assets.",
+      "key_points": [
+        "Portfolio simplification is framed as a value creation strategy."
+      ],
+      "pages": [
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "references": []
+    },
+    {
+      "id": "ai-driven-transformation-of-deal-execution",
+      "title": "AI-driven transformation of deal execution",
+      "summary": "Discusses how AI is changing deal execution and analytical capacity while emphasizing that execution risks remain.",
+      "key_points": [
+        "AI expands analytical capacity and reshapes asset attractiveness.",
+        "AI does not eliminate execution risk.",
+        "The report says AI raises the bar for governance, integration readiness, and institutional discipline."
+      ],
+      "pages": [
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "references": []
+    },
+    {
+      "id": "execution-discipline-as-a-decisive-source-of-advantage",
+      "title": "Execution discipline as a decisive source of advantage",
+      "summary": "Frames disciplined execution as a source of advantage in M&A.",
+      "key_points": [
+        "Execution discipline is presented as a decisive source of advantage."
+      ],
+      "pages": [
+        30,
+        31,
+        32,
+        33
+      ],
+      "references": []
+    },
+    {
+      "id": "industry-specific-dynamics",
+      "title": "Industry-specific dynamics",
+      "summary": "Compares portfolio and execution considerations across industries, including consumer and retail, banking and insurance, and natural resources, energy, and chemicals.",
+      "key_points": [
+        "Consumer and retail portfolio reshaping responds to margin pressure, changing demand, and the need for greater operational focus; execution risks include customer experience and frontline talent.",
+        "Banking and insurance activity emphasizes selective divestments and capability-driven acquisitions, with execution risks around regulatory approvals, data migration, and platform integration.",
+        "In natural resources, energy, and chemicals, carve-outs can manage exposure and release capital; asset specificity, regulatory continuity, and longer timelines amplify execution risk."
+      ],
+      "pages": [
+        34,
+        35,
+        36
+      ],
+      "references": []
+    },
+    {
+      "id": "implications-for-dealmakers",
+      "title": "Implications for dealmakers",
+      "summary": "The closing section addresses what the report’s outlook and themes mean for dealmakers.",
+      "key_points": [],
+      "pages": [
+        37,
+        38,
+        39,
+        40
+      ],
+      "references": []
+    },
+    {
+      "id": "contributors",
+      "title": "Contributors",
+      "summary": "Lists report contributors and KPMG leaders.",
+      "key_points": [],
+      "pages": [
+        41
+      ],
+      "references": []
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "doc_map",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 1.0,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

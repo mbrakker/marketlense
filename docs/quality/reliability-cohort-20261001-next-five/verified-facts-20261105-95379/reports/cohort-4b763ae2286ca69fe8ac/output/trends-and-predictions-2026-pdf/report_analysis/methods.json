@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "methods": [
+    "Industry survey using a strategic sample of 280 digital leaders from 51 countries and territories; the report describes respondents as editors, CEOs, and digital executives.",
+    "Traffic data sourced from Chartbeat, including aggregated Google-search referrals to news sites; a report footnote says the referral data aggregate over 2,000 news websites and apps in the Chartbeat network.",
+    "Additional report input gathered through background conversations, interviews, and emails with publishers, academics, and industry experts."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "methods",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

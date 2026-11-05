@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/validate/semantic",
+  "family_schema_version": "1.0",
+  "processing_version": "semantic_validation_v2",
+  "output": {
+    "metrics": [
+      {
+        "id": "evidence:quote_candidates:kpmg-2026-ma-01",
+        "supported": true,
+        "confidence": 1.0,
+        "reason": "The statement appears verbatim in the evidence."
+      },
+      {
+        "id": "evidence:quote_candidates:kpmg-2026-ma-02",
+        "supported": true,
+        "confidence": 1.0,
+        "reason": "The statement appears verbatim in the evidence."
+      },
+      {
+        "id": "evidence:quote_candidates:kpmg-2026-ma-03",
+        "supported": true,
+        "confidence": 1.0,
+        "reason": "The statement appears verbatim in the evidence."
+      },
+      {
+        "id": "evidence:quote_candidates:kpmg-2026-ma-04",
+        "supported": true,
+        "confidence": 1.0,
+        "reason": "The statement appears verbatim in the evidence."
+      }
+    ],
+    "quotes": []
+  }
+}

@@ -10284,3 +10284,114 @@ coverage call cannot be separated completely from the prompt correction by
 this single run. E18 remains **Active/PARTIAL** and Step 3 remains
 **unstarted/not ready**. No Step 3 implementation or publication write was
 performed.
+
+## Frozen five-report E2E acceptance and full artifact retention — 2026-11-05
+
+The exact authoritative frozen cohort
+docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json was
+executed once at fixed producer SHA
+95379a8decc5d4f1ca814170619e832c8bacf95f using a fresh isolated run root,
+--verified-facts-architecture, no shared batch and no publication flag. The
+run identity is frozen-reliability-oboqn82y and the retained evidence package
+is
+docs/quality/reliability-cohort-20261001-next-five/verified-facts-20261105-95379.
+The provider-backed command was:
+
+    python -u scripts/quality/run_frozen_reliability_cohort.py \
+      --sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json \
+      --runs-root C:\ml-frozen-five-live-95379-20261105 \
+      --sources-root C:\Programing\Market lense \
+      --max-duration 7200 \
+      --verified-facts-architecture
+
+No production code, prompt or validator was changed during this experiment.
+No report was restarted after a terminal failure, and there were zero
+publication attempts or WordPress writes.
+
+### Aggregate result
+
+| Measure | Frozen-five result |
+| --- | ---: |
+| Reports admitted | 5 / 5 |
+| Terminal complete | 0 / 5 |
+| Terminal failed | 5 / 5 |
+| Final HTML artifacts | 0 |
+| Provider calls | 914 |
+| Input tokens | 4,168,035 |
+| Output tokens | 840,654 |
+| Estimated cost | $0.937278 |
+| Wall-clock | 9,202.773 s |
+| Automatic repairs | 0 |
+| Workflow retries | 0 |
+| Operator interventions | 0 |
+| Publication attempts / writes | 0 / 0 |
+
+The terminal outcomes are mutually exclusive and are taken from the
+machine-readable cohort result: four
+artifact_final_insight_coverage_invalid failures and one
+validation_failed failure. The frozen-five verdict is FAIL / NO-GO. This
+run does not support a Step 3 start.
+
+### Per-report outcome and failure reasons
+
+| Report | Calls | Cost | Duration | Terminal result | Reason / retained output |
+| --- | ---: | ---: | ---: | --- | --- |
+| Capgemini | 95 | $0.124882 | 1,291.421 s | artifact_final_insight_coverage_invalid | Final insight coverage validation stopped artifact generation; no final artifact or HTML. Findings/evidence-fidelity records were retained for diagnosis only. |
+| Activate | 470 | $0.270949 | 3,585.285 s | artifact_final_insight_coverage_invalid | Final insight coverage validation stopped artifact generation; evidence fidelity also recorded one unsupported result. No final artifact or HTML. |
+| KPMG | 95 | $0.144853 | 1,165.343 s | artifact_final_insight_coverage_invalid | Final insight coverage validation stopped artifact generation; no final artifact or HTML. Findings/evidence-fidelity records were retained for diagnosis only. |
+| Reuters Institute | 94 | $0.165084 | 1,431.846 s | artifact_final_insight_coverage_invalid | Final insight coverage validation stopped artifact generation; no final artifact or HTML. Findings/evidence-fidelity records were retained for diagnosis only. |
+| Adjust | 160 | $0.231510 | 1,728.878 s | validation_failed | Verified-fact admission and source hash passed, but public editorial quality rejected repeated e-commerce/finance output and a GenAI limitation omission. Artifact exists; no HTML or readiness. |
+
+The exporter retained the same Pareto counts (4 coverage failures, 1
+validation failure). The four coverage failures expose no detailed inner
+validator diagnostic in the terminal contract, so their exact omitted-theme
+sets are not inferred here. That missing diagnostic is itself a remaining
+operational limitation, not evidence that the reports were factually correct.
+
+### Independent source and editorial review
+
+The exact Adjust PDF SHA was
+ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3; it has
+41 physical pages. Pages 3, 9, 19, 21, 27, 29, 34, 35 and 36 were inspected
+against the seven retained Adjust insights. The numeric relationships,
+populations and qualifications in those retained insights are supported by
+the corresponding source pages, including the page-9 restriction that
+efficiency gains over 20% apply to a small group with advanced deployment.
+Page 35 does not provide counts or denominators, and none were invented.
+This is not a publication pass: the run failed public editorial distinctness
+and limitation completeness before HTML.
+
+Capgemini, Activate, KPMG and Reuters had no final public output to inspect.
+Their retained findings and evidence-fidelity artifacts are diagnostic
+evidence only. Consequently, the run confirms zero independently confirmed
+unsupported material claims marked verified, but cannot claim zero factual
+errors in final public output for four reports because no such output existed.
+
+### Artifact retention and exclusions
+
+The evidence package contains the cohort result and manifests, provider-free
+preflight, per-report source/cohort records, checkpoints, findings,
+verification/validation/export projections, reuse records, safe derived
+images and visual-canary fingerprints. artifact_manifest.json inventories
+all 2,470 runtime files and 874 retained package files with runtime-relative
+paths, repository-relative paths, sizes, SHA-256 hashes and committed/excluded
+status. Raw state, caches, databases, raw provider/usage ledgers and local
+runtime configuration are listed as excluded with reasons and hashes. Source
+PDF bytes are not committed; source_identity_manifest.json records the
+frozen MD5 values, actual SHA-256 values, physical page counts and retrieval
+references. The initial dirty-worktree setup block and the environment
+preflight block are recorded in run_invocation_failures.json.
+
+The package link after the evidence commit is:
+https://github.com/mbrakker/marketlense/tree/codex/fix-retained-insight-evidence-validation/docs/quality/reliability-cohort-20261001-next-five/verified-facts-20261105-95379.
+
+### Verdict
+
+Frozen-five E2E acceptance: FAIL / NO-GO. The run was complete as an
+experiment and all safe evidence was retained, but zero reports reached final
+HTML/readiness. This is not a live selection-quality improvement claim. E18
+remains Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
+unstarted/not ready. The next bounded work is to diagnose the general
+final-insight coverage failure and the Adjust public-distinctness failure,
+then rerun only affected reports under the normal recovery policy; those fixes
+were deliberately not made in this acceptance run.

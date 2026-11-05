@@ -1,0 +1,300 @@
+{
+  "schema_version": "1.0",
+  "doc_id": "cohort-81af3890cd84ece81ef1",
+  "title": "What matters to today’s consumer 2026",
+  "summary": "Capgemini Research Institute’s annual consumer research report examines how fairness, quality, careful spending, AI, and human interaction shape consumer decisions. Based on a survey of 12,000 consumers in 12 countries and interviews with consumer products and retail experts, it presents findings and recommendations for organizations navigating changing expectations around value, trust, and technology.",
+  "publisher": "Capgemini Research Institute",
+  "provenance_roles": {
+    "schema_version": "1.0",
+    "publication_name": "",
+    "publisher_name": "",
+    "author_names": [],
+    "author_kind": "unknown",
+    "data_provider_names": [],
+    "source_organization_names": [],
+    "report_owner_name": "",
+    "status": "unknown",
+    "resolution_method": "",
+    "issues": [],
+    "evidence": []
+  },
+  "sections": [
+    {
+      "id": "executive-summary",
+      "title": "Executive summary",
+      "summary": "Summarizes how consumer expectations around fair value, quality, AI-enabled shopping, and human assistance are changing. It previews the report’s findings and implications for consumer products and retail organizations.",
+      "key_points": [
+        "Transparent prices, consistent policies, and clear communication are presented alongside quality as drivers of perceived value.",
+        "Consumers balance budget-conscious choices with occasional indulgence; the summary reports that 54% are making fewer impulse purchases, down from 71% the previous year (p. 6).",
+        "AI assistants are entering routine shopping tasks, while consumers continue to expect control over when assistants act (pp. 5–6).",
+        "The report emphasizes that digital convenience and human support should work together to build loyalty (p. 6)."
+      ],
+      "pages": [
+        4,
+        5,
+        6
+      ],
+      "references": []
+    },
+    {
+      "id": "who-should-read",
+      "title": "Who should read this report and why?",
+      "summary": "Identifies consumer products and retail leaders and teams who can use the report’s findings. It explains the report’s relevance to decisions about value, technology, trust, personalization, and consumer behavior.",
+      "key_points": [
+        "Intended readers include marketing, digital and ecommerce, loyalty, consumer insights, product, and category leaders.",
+        "Strategy, pricing, innovation, technology, and data teams can use the findings to understand switching behavior, loyalty, and consumer-grade AI.",
+        "The report draws on a global survey of 12,000 adults in 12 countries and interviews with consumer products and retail executives."
+      ],
+      "pages": [
+        7
+      ],
+      "references": []
+    },
+    {
+      "id": "value-redefined",
+      "title": "Value redefined: where fairness and quality intersect",
+      "summary": "Examines how consumers define value through fairness, product quality, trust, and the shopping channel, rather than price alone. It discusses inflation fatigue, pricing practices, and the differing roles of price and brand across product categories.",
+      "key_points": [
+        "In October 2025, 62% of consumers said they were spending more time searching online for deals, compared with 64% in November 2024; 62% said they were cutting back on non-essential items (p. 9).",
+        "The report distinguishes categories where price takes precedence, such as fresh produce and household necessities, from categories where brand takes precedence, including luxury products and baby care (p. 13).",
+        "Figure 4 reports that 64% of consumers consider shrinkflation unfair (p. 15).",
+        "Consumers assess retail-channel reliability and transparency as well as product attributes when deciding whether a purchase represents value (p. 12)."
+      ],
+      "pages": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "references": [
+        "Figure 1 (p. 9)",
+        "Figure 3 (p. 13)",
+        "Figure 4 (p. 15)"
+      ]
+    },
+    {
+      "id": "careful-spending",
+      "title": "Careful spending meets intentional indulgence",
+      "summary": "Explores how consumers manage constrained budgets while preserving room for treats and emotionally rewarding purchases. It considers deal-seeking, alternative channels, and the varying importance of small indulgences across age groups.",
+      "key_points": [
+        "Figure 11 reports that 71% on average say small indulgences help them cope with financial stress; the figure is 75% among Millennials and 66% among Boomers (p. 27).",
+        "The report frames small treats as an emotional reward that can coexist with saving and careful spending (p. 27).",
+        "It describes consumer trust in discount and secondhand formats, while noting that consumers also weigh product reliability and quality (p. 27)."
+      ],
+      "pages": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "references": [
+        "Figure 11 (p. 27)"
+      ]
+    },
+    {
+      "id": "ai-consumer-guide",
+      "title": "AI – The consumer’s trusted guide",
+      "summary": "Describes the growing role of AI and digital assistants in discovery, shopping, service, and routine purchasing tasks. It also addresses consumer control, trust, and social commerce.",
+      "key_points": [
+        "The report says 52% of consumers use virtual assistants at least weekly to automate tasks such as reordering or meal planning, while only one in five is willing to pay for such a service (p. 5).",
+        "Consumers want boundaries on assistant actions: 76% want the ability to set clear rules for when an assistant acts (p. 6).",
+        "Figure 17 shows the share who had purchased via social media rising from 24% in November 2023 to 32% in November 2024 and 35% in October 2025 (p. 37).",
+        "The section presents conversational discovery and AI guidance as emerging parts of shopping, while emphasizing that trust and control remain important."
+      ],
+      "pages": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39
+      ],
+      "references": [
+        "Figure 17 (p. 37)"
+      ]
+    },
+    {
+      "id": "reliable-tech-loyalty",
+      "title": "Reliable tech builds loyalty – but with boundaries",
+      "summary": "Considers how personalization and technology can improve shopping experiences while maintaining privacy, trust, and human connection. It covers consumers’ interest in tailored recommendations and the loyalty value of human interaction in stores.",
+      "key_points": [
+        "Figure 20 reports that, in October 2025, 63% wanted Gen AI to provide hyper-personalized content and recommendations, compared with 58% in November 2024; 56% were comfortable sharing shopping history and preferences with a digital assistant (p. 41).",
+        "In Figure 23, the share saying human interaction during in-store customer support increases loyalty rose from 54% in November 2024 to 74% in October 2025; for the purchase stage, it rose from 40% to 66% (p. 45).",
+        "The section argues that digital tools can enhance physical retail, but should not displace the emotional and sensory value of in-store experiences (pp. 44–45)."
+      ],
+      "pages": [
+        40,
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "references": [
+        "Figure 20 (p. 41)",
+        "Figure 23 (p. 45)"
+      ]
+    },
+    {
+      "id": "what-organizations-should-do",
+      "title": "What should CPR organizations do differently?",
+      "summary": "Sets out actions for consumer products and retail organizations to respond to changing consumer expectations. Recommendations cover intelligent engagement, AI-enabled operations, transparent and fair pricing, responsible technology, sustainability, and loyalty.",
+      "key_points": [
+        "Position digital assistants as engagement channels across discovery, evaluation, and purchase, and adapt interactions to shoppers’ preferences for autonomy or guidance.",
+        "Design promotions for the different behaviors and strengths of mobile, online, and in-store channels; test anticipatory commerce while protecting consumer control.",
+        "Improve AI-supported operations through clear communication, feedback between AI systems and operations, and fairness, transparency, and consistency in pricing.",
+        "Make value delivery legible and build long-term trust through responsible AI, sustainability, transparent pricing practices, and loyalty relationships that offer both financial and emotional returns."
+      ],
+      "pages": [
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62
+      ],
+      "references": [
+        "“What should CPR organizations do differently?” (p. 46)"
+      ]
+    },
+    {
+      "id": "conclusion",
+      "title": "Conclusion",
+      "summary": "Concludes the report by bringing its consumer findings together for consumer products and retail organizations. The report’s concluding guidance emphasizes fair value and dependable experiences that combine digital convenience with human support.",
+      "key_points": [
+        "The report’s overall guidance is to make value delivery clear and dependable.",
+        "It highlights the need to balance technology-enabled convenience with human interaction."
+      ],
+      "pages": [
+        63
+      ],
+      "references": []
+    },
+    {
+      "id": "research-methodology",
+      "title": "Research methodology",
+      "summary": "Describes the consumer survey and expert interviews underpinning the report, and presents demographic characteristics of the respondents. It notes that the online questionnaire findings are directional and that interviewees’ views are their own.",
+      "key_points": [
+        "The study surveyed 12,000 consumers aged 18 and over in 12 countries in October 2025 (p. 64).",
+        "The survey was supplemented by interviews with more than ten experts from the consumer products and retail industries (p. 64).",
+        "The report presents respondent profiles by age, gender, residential area, education, employment, income, and country of residence (pp. 64–70).",
+        "The findings reflect the online questionnaire respondents’ views and are intended to provide directional guidance (p. 64)."
+      ],
+      "pages": [
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72
+      ],
+      "references": []
+    },
+    {
+      "id": "authors-and-experts",
+      "title": "Authors: Meet the experts and the Capgemini Research Institute",
+      "summary": "Profiles Capgemini experts and the research team associated with the report. The section also acknowledges executives and other contributors who participated in or supported the research.",
+      "key_points": [
+        "Profiles experts from Capgemini’s consumer products, retail, digital commerce, and supply-chain teams.",
+        "Identifies the Capgemini Research Institute team as authors of the research.",
+        "Acknowledges industry executives and additional contributors to the research."
+      ],
+      "pages": [
+        73,
+        74,
+        75,
+        76,
+        77
+      ],
+      "references": []
+    },
+    {
+      "id": "why-partner",
+      "title": "Why partner with Capgemini",
+      "summary": "Presents Capgemini’s consumer products and retail transformation capabilities, including AI-enabled engagement, operations, and resilient transformation. It positions Capgemini as a partner for turning strategy into business outcomes.",
+      "key_points": [
+        "Describes support for intelligent engagement, operational transformation, and responsible, resilient change.",
+        "Highlights the combination of strategy, technology, and execution across consumer products and retail."
+      ],
+      "pages": [
+        78
+      ],
+      "references": []
+    },
+    {
+      "id": "contact",
+      "title": "For more information, please contact",
+      "summary": "Lists global and regional Capgemini contacts for readers seeking further information about the report.",
+      "key_points": [
+        "Provides a global contact and named contacts for several country and regional markets."
+      ],
+      "pages": [
+        79
+      ],
+      "references": []
+    },
+    {
+      "id": "more-publications",
+      "title": "More Capgemini Research Institute publications",
+      "summary": "Displays other Capgemini Research Institute publications, including earlier reports in the consumer series and reports on AI and customer experience.",
+      "key_points": [
+        "Features prior editions of What matters to today’s consumer and other Capgemini Research Institute titles."
+      ],
+      "pages": [
+        80
+      ],
+      "references": []
+    },
+    {
+      "id": "about-capgemini",
+      "title": "About Capgemini",
+      "summary": "Provides a corporate profile of Capgemini, describing its business and technology transformation work and its services across strategy, technology, design, engineering, and operations.",
+      "key_points": [
+        "Describes Capgemini as a global business and technology transformation partner."
+      ],
+      "pages": [],
+      "references": []
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "doc_map",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 1.0,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

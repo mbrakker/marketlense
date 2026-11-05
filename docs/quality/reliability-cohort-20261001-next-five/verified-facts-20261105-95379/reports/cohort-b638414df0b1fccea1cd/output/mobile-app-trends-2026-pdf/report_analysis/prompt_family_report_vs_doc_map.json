@@ -1,0 +1,203 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/doc_map",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "doc_map_v1",
+    "doc_id": "cohort-b638414df0b1fccea1cd",
+    "title": "Mobile app trends: 2026 edition",
+    "summary": "A global benchmark of mobile app performance, covering the gaming, e-commerce/shopping, and finance verticals. It combines app performance data and methodology with analysis of AI, multi-platform measurement, user acquisition, retention, and growth strategy.",
+    "publisher": "",
+    "provenance_roles": {
+      "publication_name": "Mobile app trends: 2026 edition",
+      "publisher_name": "",
+      "author_names": [],
+      "author_kind": "unknown",
+      "data_provider_names": [
+        "Adjust"
+      ],
+      "source_organization_names": [],
+      "report_owner_name": "",
+      "evidence": [
+        {
+          "role": "publication_name",
+          "name": "Mobile app trends: 2026 edition",
+          "source_excerpt": "Mobile app trends: 2026 edition"
+        },
+        {
+          "role": "data_provider_names",
+          "name": "Adjust",
+          "source_excerpt": "Unless otherwise noted, all figures in this report come from Adjust data."
+        }
+      ]
+    },
+    "sections": [
+      {
+        "id": "introduction",
+        "title": "Introduction: Evolution and opportunity in the mobile app industry",
+        "summary": "The introduction frames mobile app growth in 2026 around expanding app use, increasingly complex marketing environments, and the need for actionable data. It presents cross-channel measurement and AI as important foundations for app growth.",
+        "key_points": [
+          "The report describes 2025 as a year of experimentation with AI, automation, and channel diversification, making reliable, actionable data increasingly important to campaign optimization and ROI.",
+          "The introduction cites more than 112.1 billion app downloads and an estimated 5.8 billion unique smartphone users globally in 2025, and says consumer spending rose 10.6% year over year to $167 billion.",
+          "The report says the global app market is projected to exceed $1.23 trillion by 2035 and that mobile technologies and services are set to generate 8.4% of global GDP by 2030."
+        ],
+        "pages": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "references": []
+      },
+      {
+        "id": "ai-infrastructure",
+        "title": "AI transforms from strategic tool to core infrastructure in 2026",
+        "summary": "This section describes ways AI can be integrated into marketing and measurement workflows, including data analysis assistance, predictive audience segmentation, and generative AI applications. It contrasts broad experimentation with more advanced operational use.",
+        "key_points": [
+          "AI assistants can let marketers query multi-channel data in natural language and surface analyses, reports, and visualizations.",
+          "The section describes audience segmentation shifting from static lists toward dynamic, predictive groups informed by first-party data, behavior, intent, and likelihood to convert.",
+          "Generative AI is presented as being judged by outcomes such as testing creative variants, modeling user journeys, and tailoring in-app messaging; the section says a small group with advanced deployment reportedly achieved efficiency gains over 20%."
+        ],
+        "pages": [
+          9,
+          10
+        ],
+        "references": []
+      },
+      {
+        "id": "multiplatform-strategy",
+        "title": "Mobile-first approach evolves into multi-platform strategy",
+        "summary": "This section argues that user journeys now cross mobile web, desktop, apps, and other channels, creating measurement blind spots and potential drop-off. It presents cross-platform measurement and deep linking as ways to connect those touchpoints and improve user journeys.",
+        "key_points": [
+          "The section says only around 31% of marketers report complete satisfaction with their ability to unify and read data across platforms.",
+          "Cross-platform measurement is described as connecting interactions such as a mobile web session to an in-app conversion, or an email click to an app download.",
+          "It recommends integrated measurement, high-quality deep linking, audience segmentation, retargeting, and web-to-app solutions to support coordinated journeys."
+        ],
+        "pages": [
+          11,
+          12
+        ],
+        "references": []
+      },
+      {
+        "id": "key-takeaways-methodology",
+        "title": "Key takeaways & methodology",
+        "summary": "This section summarizes selected findings across the three app verticals and explains the report’s coverage and data basis. It identifies the regions, app sample, and date range used for the benchmarks.",
+        "key_points": [
+          "The takeaways highlight global e-commerce session growth, casual-game install and session growth, LATAM finance-app growth, and global finance session-length growth.",
+          "The report covers e-commerce/shopping, finance/fintech, and gaming across Global, APAC, Europe, LATAM, MENA, and North America.",
+          "The dataset combines Adjust’s top 5,000 apps with its total tracked-app dataset, drawing on country lists of 45 and approximately 250 countries; the stated date range is January 2024–January 2026.",
+          "The methodology describes the data as aggregated and anonymized and cautions that it may not reflect the entire global app market."
+        ],
+        "pages": [
+          13,
+          14
+        ],
+        "references": []
+      },
+      {
+        "id": "gaming-apps",
+        "title": "Gaming apps",
+        "summary": "The gaming chapter benchmarks acquisition, engagement, retention, and partner strategies, with “Finding and keeping users” beginning on page 17. Its findings show divergent performance across game subverticals, including cases where session growth outpaced install growth and where installs rose while sessions fell.",
+        "key_points": [
+          "On “Gaming app install and session growth percentages by subvertical YoY 2024–2025 (Global)” (p. 19), casual games grew 19% in installs and 37% in sessions; hyper casual grew 4% in installs and 31% in sessions.",
+          "On the same chart (p. 19), strategy games had flat install growth and 57% session growth; casino installs grew 22% while sessions fell 5%, and slots installs grew 46% while sessions fell 5%.",
+          "“Gaming app retention rates 2024–2025 (Global)” (p. 21) reports all-game day 1, day 7, day 14, and day 30 retention of 27%, 13%, 8%, and 5%, respectively. The section also reports that global gaming CPI rose 30% to $0.56 in 2025.",
+          "“Gaming partners per app 2024–2025 (Global)” (p. 23) reports an average of 5.3 partners per app in 2025, down from 6 in 2024; hybrid casual, idle RPG, and simulation increased to 9.8, 6.7, and 6.8 partners, respectively."
+        ],
+        "pages": [
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ],
+        "references": []
+      },
+      {
+        "id": "ecommerce-shopping",
+        "title": "E-commerce/shopping",
+        "summary": "The e-commerce/shopping chapter examines acquisition and post-install performance, with “Finding and keeping users” beginning on page 27. It reports an overall install decline alongside session growth and describes variation across regions and shopping subverticals.",
+        "key_points": [
+          "For global e-commerce apps in 2025, installs fell 10% year over year while sessions increased 5% (“E-commerce app install and session growth,” p. 27). LATAM had 17% install growth and 30% session growth; Europe had a 22% install decline while sessions increased 6%.",
+          "“E-commerce app session lengths 2024–2025” (p. 28) reports global average session length falling from 10.04 minutes in 2024 to 9.6 minutes in 2025. “E-commerce sessions per user per day on day 0 2024–2025 (Global)” reports a decline from 1.37 to 1.36.",
+          "“E-commerce app retention rates 2024–2025 (Global)” (p. 29) reports day 1 retention decreasing from 13.2% to 12.6%, day 7 from 6.3% to 6%, day 14 near 4.4%, and day 30 unchanged at 3%.",
+          "“E-commerce app CPI 2024–2025 (Global)” (p. 29) reports overall CPI declining from $1.00 to $0.98; deal discovery CPI increased from $1.44 to $2.26, while marketplace and classifieds declined from $0.99 to $0.88."
+        ],
+        "pages": [
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31
+        ],
+        "references": []
+      },
+      {
+        "id": "finance-apps",
+        "title": "Finance apps",
+        "summary": "The finance chapter benchmarks acquisition and engagement across finance-app subcategories and regions, with “Finding and keeping users” beginning on page 34. It highlights strong session growth relative to installs and substantial regional differences in growth and paid acquisition.",
+        "key_points": [
+          "For global finance apps in 2025, installs fell 4% year over year while sessions rose 21% (“Finance app install and session growth,” p. 34). The section associates the session increase with banking and payments apps becoming part of daily life.",
+          "“Finance app install and session growth percentages YoY 2024–2025” (p. 35) reports LATAM growth of 76% in installs and 57% in sessions; APAC had 5% install growth and 50% session growth.",
+          "“Finance app session lengths 2024–2025” (p. 36) reports global session length increasing 8% to 7.18 minutes in 2025; North America led at 8.43 minutes. “Finance app session per user per day on day 0 2024–2025” reports the global measure declining from 1.52 to 1.48.",
+          "“Finance app paid/organic ratio 2024–2025” (p. 38) reports the global ratio rising to 1.13 in 2025, with LATAM reaching 3.26; stock trading apps rose from 0.34 to 0.63 and crypto apps from 0.51 to 0.72."
+        ],
+        "pages": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "references": []
+      },
+      {
+        "id": "conclusion",
+        "title": "Conclusion: An exciting future for the mobile app industry",
+        "summary": "The conclusion argues that app growth requires a view of the full user journey rather than isolated channels or metrics. It recommends an integrated, adaptable foundation combining cross-channel attribution, AI insights, and optimization based on aggregated data.",
+        "key_points": [
+          "The conclusion characterizes the next phase of growth as architectural: capabilities must work together rather than rely on a single tool.",
+          "It connects vertical-specific trends—embedded finance features, AI personalization and agents in e-commerce, and gaming’s balance of user acquisition with retention—to a shared need for integrated measurement and optimization."
+        ],
+        "pages": [
+          40
+        ],
+        "references": []
+      },
+      {
+        "id": "about-adjust",
+        "title": "About Adjust",
+        "summary": "The closing section describes Adjust’s app measurement and analytics work and provides a report data disclaimer.",
+        "key_points": [
+          "It identifies Adjust as an AppLovin company and describes its work measuring and growing apps across platforms, including mobile and CTV.",
+          "The disclaimer says the report uses aggregated and anonymized data from apps tracked by Adjust between January 2024 and January 2026, and notes that results may vary by vertical, region, and business model."
+        ],
+        "pages": [],
+        "references": []
+      }
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "doc_map",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 1.0,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}
