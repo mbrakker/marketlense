@@ -288,8 +288,19 @@ def _build_render_view(
     verified_mode = verified_facts_mode(artifacts)
     summary = _coerce_dict(artifacts.get("summary"))
     source_status = _coerce_dict(artifacts.get("source_status"))
-    evidence_packs = _coerce_dict(data.get("evidence_packs"))
-    doc_map = _unwrap_doc_map(evidence_packs.get("doc_map"))
+    discovery_evidence_packs = _coerce_dict(data.get("evidence_packs"))
+    authoritative_evidence_packs = _coerce_dict(
+        data.get("authoritative_evidence_packs")
+    )
+    # In verified mode the retained authority projection is the only source
+    # for factual editorial cards. Keep discovery data for navigation and
+    # source metadata without promoting its findings or scope by default.
+    evidence_packs = (
+        authoritative_evidence_packs
+        if verified_mode
+        else discovery_evidence_packs
+    )
+    doc_map = _unwrap_doc_map(discovery_evidence_packs.get("doc_map"))
     report_title = _normalize_public_title(
         _pick_first_text(data.get("title"), doc_map.get("title"))
     )
@@ -317,7 +328,7 @@ def _build_render_view(
     focus_year = _extract_focus_year(
         time_period, doc_map.get("year"), doc_map.get("publicationDate"), report_title
     )
-    methodology_items = _coerce_methodology(doc_map, evidence_packs)
+    methodology_items = _coerce_methodology(doc_map, discovery_evidence_packs)
     fieldwork_dates = _extract_fieldwork_dates(
         *methodology_items,
         time_period,
@@ -453,7 +464,10 @@ def _build_render_view(
         },
         {
             "label": "Coverage",
-            "items": _coerce_coverage(doc_map, evidence_packs),
+            "items": _coerce_coverage(
+                {} if verified_mode else doc_map,
+                evidence_packs,
+            ),
             "empty": "No coverage notes were extracted.",
         },
         {
@@ -468,7 +482,7 @@ def _build_render_view(
         },
         {
             "label": "Contacts",
-            "items": _coerce_contacts(doc_map, evidence_packs),
+            "items": _coerce_contacts(doc_map, discovery_evidence_packs),
             "empty": "No contact details were extracted.",
         },
     ]

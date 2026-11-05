@@ -555,6 +555,78 @@ def test_normal_render_does_not_require_verified_authority(tmp_path) -> None:
         )
 
 
+def test_verified_render_uses_authoritative_packs_for_factual_editorial_cards() -> None:
+    artifacts = _authority_artifacts()
+    authoritative = deepcopy(
+        artifacts["_cache"]["visual_authority_canary"]["verified_evidence_packs"]
+    )
+    authoritative["findings"]["findings"][0]["statement"] = (
+        "CANONICAL VERIFIED FINDING"
+    )
+    discovery = {
+        "findings": {
+                "findings": [
+                    {
+                        "id": "discovery-finding",
+                        "statement": "CONTRADICTORY DISCOVERY FINDING",
+                    }
+                ]
+        },
+        "doc_map": {"title": "Discovery navigation title"},
+    }
+
+    view = _build_render_view(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Verified render authority",
+                "artifacts": artifacts,
+                "evidence_packs": discovery,
+                "authoritative_evidence_packs": authoritative,
+            },
+            doc_name="verified-render-authority.pdf",
+            file_id="verified-render-authority",
+            out_dir="",
+        ),
+        _ctx(),
+    )
+
+    findings = next(
+        card["items"] for card in view["editorial_cards"] if card["label"] == "Findings"
+    )
+    rendered = " ".join(findings)
+    assert "CANONICAL VERIFIED FINDING" in rendered
+    assert "CONTRADICTORY DISCOVERY FINDING" not in rendered
+
+
+def test_report_scope_labels_surface_roles_for_intentional_evidence_reuse() -> None:
+    artifacts = _authority_artifacts()
+    artifacts["summary"] = {
+        "claim_evidence_map": [
+            {
+                "claim": "The same fact is oriented in the summary.",
+                "evidence_id": "verified-fact:fact-1",
+            }
+        ]
+    }
+    artifacts["expert_comment"] = "The same fact is interpreted for decision-makers."
+    artifacts["linkedin_post"] = "The same fact is distributed to a wider audience."
+    items = public_editorial_semantic_review_items(artifacts)
+    scope = public_editorial_report_review_scope(artifacts, items)
+
+    roles = {
+        entry["artifact"]: entry["surface_role"]
+        for entry in scope["public_content"]
+        if entry["artifact"]
+        in {"summary", "insights_final", "expert_comment", "linkedin_post"}
+    }
+    assert roles["summary"] == "summary_or_orientation"
+    assert roles["insights_final"] == "primary_analysis"
+    assert roles["expert_comment"] == "expert_synthesis"
+    assert roles["linkedin_post"] == "distribution_copy"
+    assert scope["reuse_guidance"]
+
+
 def test_verified_render_accepts_matching_canonical_authority_projection(
     tmp_path,
 ) -> None:

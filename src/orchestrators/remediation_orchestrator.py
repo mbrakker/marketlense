@@ -75,10 +75,58 @@ _FAILURE_CONTEXT_KEYS = {
     "source_path",
     "stage",
     "task",
+    "coverage_diagnostics",
 }
 _SAFE_FAILURE_CONTEXT_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
 )
+_COVERAGE_DIAGNOSTIC_SCALAR_KEYS = frozenset(
+    {
+        "stage",
+        "failure_class",
+        "repair_stage",
+        "disposition",
+        "terminal_classification",
+    }
+)
+_COVERAGE_DIAGNOSTIC_LIST_KEYS = frozenset(
+    {
+        "planned_theme_ids",
+        "omitted_theme_ids",
+        "selected_candidate_ids",
+        "eligible_candidate_ids",
+    }
+)
+
+
+def _bounded_coverage_diagnostics(value: object) -> dict[str, object]:
+    """Project coverage failure lineage without retaining theme prose."""
+
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, object] = {}
+    for raw_key, raw_value in value.items():
+        key = str(raw_key)
+        if key in _COVERAGE_DIAGNOSTIC_SCALAR_KEYS:
+            token = str(raw_value or "").strip()
+            if (
+                token
+                and len(token) <= 128
+                and set(token) <= _SAFE_FAILURE_CONTEXT_CHARS
+            ):
+                result[key] = token
+            continue
+        if key in _COVERAGE_DIAGNOSTIC_LIST_KEYS and isinstance(raw_value, list):
+            identifiers = [
+                token
+                for item in raw_value
+                if (token := str(item or "").strip())
+                and len(token) <= 128
+                and set(token) <= _SAFE_FAILURE_CONTEXT_CHARS
+            ]
+            if identifiers:
+                result[key] = list(dict.fromkeys(identifiers))[:32]
+    return result
 
 # This is intentionally narrow.  Adding an action requires an explicit
 # workflow/error pair and still does not enable execution without the reaper
@@ -342,6 +390,11 @@ def _bounded_failure_context(context: object) -> dict[str, object]:
         if key == "missing_claim_count":
             if isinstance(value, int) and not isinstance(value, bool):
                 result[key] = max(0, min(999, value))
+            continue
+        if key == "coverage_diagnostics":
+            bounded = _bounded_coverage_diagnostics(value)
+            if bounded:
+                result[key] = bounded
             continue
         if key in {
             "missing_claim_ids",

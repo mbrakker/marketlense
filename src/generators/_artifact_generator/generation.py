@@ -2188,6 +2188,7 @@ def generate_artifacts(
         assessment: Any = None,
         stage: str,
         terminal_classification: str,
+        failure_class: str = "",
         roster_change: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         """Build bounded, ID-only diagnostics for a coverage terminal outcome."""
@@ -2237,6 +2238,14 @@ def generate_artifacts(
             }
             for binding in editorial_plan_theme_bindings(editorial_plan)
         ]
+        planned_theme_ids = sorted(
+            {
+                fact_id
+                for theme in planned_themes
+                for fact_id in theme["fact_ids"]
+                if fact_id
+            }
+        )
         model_assessments = []
         raw_assessments = (
             assessment.get("theme_coverage") if isinstance(assessment, dict) else []
@@ -2262,11 +2271,41 @@ def generate_artifacts(
             candidate_insights=insights_candidates,
             editorial_plan=editorial_plan,
         )
+        theme_fact_ids = {
+            theme["theme"]: set(theme["fact_ids"])
+            for theme in planned_themes
+            if theme["theme"]
+        }
+        omitted_theme_names = {
+            _s(theme).strip()
+            for theme in selection["omitted_themes"]
+            if _s(theme).strip()
+        }
+        omitted_theme_names.update(
+            item["theme"]
+            for item in model_assessments
+            if item["theme"] and item["status"].lower() != "covered"
+        )
+        omitted_theme_ids = sorted(
+            {
+                fact_id
+                for theme in omitted_theme_names
+                for fact_id in theme_fact_ids.get(_s(theme).strip(), set())
+                if fact_id
+            }
+        )
         return {
             "stage": stage,
             "terminal_classification": terminal_classification,
+            "failure_class": failure_class or terminal_classification,
+            "repair_stage": stage,
+            "disposition": terminal_classification,
             "target_count": final_insight_target_count,
             "planned_themes": planned_themes,
+            "planned_theme_ids": planned_theme_ids,
+            "omitted_theme_ids": omitted_theme_ids,
+            "selected_candidate_ids": [item["id"] for item in roster],
+            "eligible_candidate_ids": sorted(eligible_by_id),
             "final_roster_count": len(roster),
             "final_roster": roster,
             "theme_verdicts": model_assessments,
@@ -2314,6 +2353,7 @@ def generate_artifacts(
                 assessment=semantic_theme_coverage_result,
                 stage="initial_selection",
                 terminal_classification="semantic_theme_repair_requested",
+                failure_class=error.code,
             )
             omitted_themes = error.context.get("omitted_themes")
             if not isinstance(omitted_themes, list) or not omitted_themes:
@@ -2445,6 +2485,7 @@ def generate_artifacts(
                         assessment=semantic_theme_coverage_result,
                         stage="semantic_repair",
                         terminal_classification=("semantic_theme_repair_exhausted"),
+                        failure_class=coverage_error.code,
                         roster_change=semantic_theme_repair.get("roster_change"),
                     )
                 )
@@ -2468,6 +2509,7 @@ def generate_artifacts(
                 assessment=semantic_theme_coverage,
                 stage="final_selection",
                 terminal_classification="final_editorial_coverage_invalid",
+                failure_class=error.code,
                 roster_change=semantic_theme_repair.get("roster_change"),
             )
             raise

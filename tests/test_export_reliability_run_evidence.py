@@ -722,7 +722,25 @@ def test_frozen_outcome_export_retains_bounded_actionable_failure_diagnostics(
                             "artifact_family": "summary",
                             "claim_or_entity_id": "",
                             "repair_attempt": 2,
-                            "error_context": {"schema_name": "artifacts"},
+                            "error_context": {
+                                "schema_name": "artifacts",
+                                "coverage_diagnostics": {
+                                    "stage": "initial_selection",
+                                    "failure_class": (
+                                        "artifact_final_insight_coverage_invalid"
+                                    ),
+                                    "repair_stage": "semantic_coverage_repair",
+                                    "disposition": "failed",
+                                    "planned_theme_ids": ["fact:1", "fact:2"],
+                                    "omitted_theme_ids": ["fact:2"],
+                                    "selected_candidate_ids": ["insight:1"],
+                                    "eligible_candidate_ids": [
+                                        "insight:1",
+                                        "insight:2",
+                                    ],
+                                    "raw_reason": "do not export source prose",
+                                },
+                            },
                         },
                     },
                     {
@@ -803,5 +821,15 @@ def test_frozen_outcome_export_retains_bounded_actionable_failure_diagnostics(
     assert by_report["similarweb"]["claim_or_entity_id"] == "limitations:0"
     assert by_report["reference"]["claim_or_entity_id"] == "finding:42"
     assert by_report["cover"]["error_context"] == {"field": "selection_reason"}
+    assert by_report["contentstack"]["error_context"]["coverage_diagnostics"] == {
+        "disposition": "failed",
+        "eligible_candidate_ids": ["insight:1", "insight:2"],
+        "failure_class": "artifact_final_insight_coverage_invalid",
+        "omitted_theme_ids": ["fact:2"],
+        "planned_theme_ids": ["fact:1", "fact:2"],
+        "repair_stage": "semantic_coverage_repair",
+        "selected_candidate_ids": ["insight:1"],
+        "stage": "initial_selection",
+    }
     assert "raw prompt" not in json.dumps(failures).lower()
     assert "provider response" not in json.dumps(failures).lower()

@@ -1868,6 +1868,17 @@ def public_editorial_report_review_scope(
 
     evidence_context: dict[str, dict[str, Any]] = {}
     public_content: list[dict[str, Any]] = []
+    surface_roles = {
+        "summary": "summary_or_orientation",
+        "insights_final": "primary_analysis",
+        "expert_comment": "expert_synthesis",
+        "linkedin_post": "distribution_copy",
+    }
+    reuse_guidance = (
+        "The same bound fact may recur for orientation, distribution, or provenance; "
+        "treat it as a distinctness failure only when the same substantive analysis "
+        "is repeated as primary content without a new role or purpose."
+    )
     for item in items:
         item_id = str(item.get("public_item_id") or "").strip()
         if not item_id:
@@ -1887,6 +1898,10 @@ def public_editorial_report_review_scope(
                 "artifact": str(item.get("artifact") or ""),
                 "field": str(item.get("field") or ""),
                 "evidence_ids": evidence_ids,
+                "surface_role": surface_roles.get(
+                    str(item.get("artifact") or "").strip(),
+                    "supporting_projection",
+                ),
             }
         )
 
@@ -1905,6 +1920,7 @@ def public_editorial_report_review_scope(
         else {},
         "evidence_context": list(evidence_context.values()),
         "public_content": public_content,
+        "reuse_guidance": reuse_guidance,
     }
 
 

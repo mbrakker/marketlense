@@ -3,7 +3,9 @@ text: |
   evidence_text values and any complete verified_facts objects are retained
   source context for the listed evidence_ids; do not borrow evidence or
   metric fields between items. Use report_scope only to assess the report as
-  a whole, while preserving each item's own source bindings.
+  a whole, while preserving each item's own source bindings. Use the
+  public_content surface_role and reuse_guidance fields to distinguish
+  intentional cross-surface reuse from repeated primary analysis.
 
   {{ public_items_json }}
 

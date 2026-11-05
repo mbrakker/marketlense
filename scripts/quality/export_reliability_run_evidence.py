@@ -12,6 +12,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable, Literal
 
+from src.orchestrators.remediation_orchestrator import _bounded_failure_context
+
 _FAILURE_DIAGNOSTIC_FIELDS = (
     "stage",
     "outer_code",
@@ -247,16 +249,21 @@ def _failure_diagnostic(raw: object, *, failure_code: str) -> dict[str, Any]:
     )
     diagnostic["repair_attempt"] = max(0, min(9, diagnostic["repair_attempt"]))
     context = raw.get("error_context")
-    diagnostic["error_context"] = (
-        {
-            key: token
-            for key, value in sorted(context.items())
+    if isinstance(context, dict):
+        bounded_context = _bounded_failure_context(context)
+        diagnostic["error_context"] = {
+            key: (
+                value
+                if isinstance(value, dict)
+                else _bounded_diagnostic_token(value)
+            )
+            for key, value in sorted(bounded_context.items())
             if key in _FAILURE_CONTEXT_FIELDS
-            if (token := _bounded_diagnostic_token(value))
+            or key == "coverage_diagnostics"
+            if isinstance(value, dict) or _bounded_diagnostic_token(value)
         }
-        if isinstance(context, dict)
-        else {}
-    )
+    else:
+        diagnostic["error_context"] = {}
     diagnostic["outer_code"] = _bounded_diagnostic_token(
         diagnostic["outer_code"] or failure_code
     )

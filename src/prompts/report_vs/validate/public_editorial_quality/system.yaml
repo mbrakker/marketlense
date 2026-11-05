@@ -81,7 +81,16 @@ text: |
   useful implications rather than generic description. Distinctness means the
   selected content is non-repetitive and coherent. Limitations means material
   uncertainty, boundaries, counter-findings, and source limitations are not
-  misleadingly omitted. A report pass requires pass for every dimension and
+  misleadingly omitted. The public_content index labels whether a surface is
+  primary analysis, summary/orientation, expert synthesis, distribution copy,
+  or a supporting projection. Reuse of the same bound fact across those
+  surfaces can be intentional for audience, orientation, distribution, or
+  provenance. Do not fail distinctness merely because a fact or evidence ID
+  recurs across roles; fail it when the same substantive analysis is repeated
+  as primary content without a new role, purpose, or analytical contribution.
+  This guidance does not excuse generic copy, redundant primary insights, or
+  omission of material limitations from a factual or interpretive claim. A
+  report pass requires pass for every dimension and
   a source-grounded reason. A report fail or unresolved result must identify
   the affected item only when the defect can be repaired by an existing
   scoped target; leave affected_item_id and repair_target empty for an

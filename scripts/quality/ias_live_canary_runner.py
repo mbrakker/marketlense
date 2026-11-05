@@ -55,6 +55,7 @@ from src.orchestrators.ingest_orchestrator import (
     submit_preselected_frozen_validation_cohort,
 )
 from src.orchestrators.pipeline_preflight_orchestrator import preflight_report_pipeline
+from src.orchestrators.remediation_orchestrator import _bounded_failure_context
 from src.orchestrators.workflow_supervisor_orchestrator import run_supervisor_once
 from src.services._config_service.yaml_mapping import deep_merge_mappings
 from src.services.analytics_store_service import (
@@ -3106,6 +3107,18 @@ def _read_remediation_failure_diagnostic(
     context = context if isinstance(context, dict) else {}
     artifact_family = _diagnostic_token(context.get("artifact_family"))
     claim_or_entity_id = _first_diagnostic_identifier(context)
+    bounded_context = _bounded_failure_context(context)
+    projected_context = {
+        key: (
+            _diagnostic_token(value)
+            if isinstance(value, str)
+            else value
+        )
+        for key, value in sorted(bounded_context.items())
+        if isinstance(value, dict) or (
+            isinstance(value, str) and _diagnostic_token(value)
+        )
+    }
     return {
         "stage": _failure_stage(
             stage=_diagnostic_token(stage),
@@ -3118,12 +3131,7 @@ def _read_remediation_failure_diagnostic(
         "artifact_family": artifact_family,
         "claim_or_entity_id": claim_or_entity_id,
         "repair_attempt": _repair_attempt(context.get("repair_attempt")),
-        "error_context": {
-            key: token
-            for key, value in sorted(context.items())
-            if isinstance(value, str)
-            if (token := _diagnostic_token(value))
-        },
+        "error_context": projected_context,
     }
 
 

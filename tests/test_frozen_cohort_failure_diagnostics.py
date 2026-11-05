@@ -6,10 +6,11 @@ import sqlite3
 from pathlib import Path
 
 from scripts.quality.ias_live_canary_runner import (
-    _ValidationReuseEventCapture,
     _read_failure_diagnostic,
     _validation_reuse_telemetry_summary,
+    _ValidationReuseEventCapture,
 )
+from src.orchestrators.remediation_orchestrator import _bounded_failure_context
 from src.utils.logging import log_event, new_run_context
 
 
@@ -153,6 +154,93 @@ def test_failure_diagnostic_uses_retained_validation_finding_without_source_text
             "evidence_id": "finding:42",
         },
     }
+
+
+def test_coverage_failure_diagnostics_retain_bounded_roster_lineage() -> None:
+    context = {
+        "coverage_diagnostics": {
+            "stage": "semantic_repair",
+            "failure_class": "artifact_final_insight_coverage_invalid",
+            "repair_stage": "semantic_repair",
+            "disposition": "semantic_theme_repair_exhausted",
+            "planned_theme_ids": ["fact-1", "fact-2"],
+            "omitted_theme_ids": ["fact-2"],
+            "selected_candidate_ids": ["insight-1"],
+            "eligible_candidate_ids": ["insight-1", "insight-2"],
+            "raw_reason": "source paragraph must not be retained",
+        }
+    }
+
+    bounded = _bounded_failure_context(context)
+
+    assert bounded == {
+        "coverage_diagnostics": {
+            "stage": "semantic_repair",
+            "failure_class": "artifact_final_insight_coverage_invalid",
+            "repair_stage": "semantic_repair",
+            "disposition": "semantic_theme_repair_exhausted",
+            "planned_theme_ids": ["fact-1", "fact-2"],
+            "omitted_theme_ids": ["fact-2"],
+            "selected_candidate_ids": ["insight-1"],
+            "eligible_candidate_ids": ["insight-1", "insight-2"],
+        }
+    }
+
+
+def test_remediation_failure_reader_preserves_coverage_lineage(tmp_path: Path) -> None:
+    state_db = tmp_path / "workflow.sqlite"
+    with sqlite3.connect(state_db) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE remediation_records (
+              report_id TEXT, run_id TEXT, error_code TEXT, failed_stage TEXT,
+              diagnostics_json TEXT, updated_at_utc TEXT
+            );
+            """
+        )
+        conn.execute(
+            "INSERT INTO remediation_records VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                "report-coverage",
+                "workflow-coverage",
+                "artifact_final_insight_coverage_invalid",
+                "report_analysis",
+                json.dumps(
+                    {
+                        "error_context": {
+                            "coverage_diagnostics": {
+                                "stage": "semantic_repair",
+                                "failure_class": (
+                                    "artifact_final_insight_coverage_invalid"
+                                ),
+                                "repair_stage": "semantic_repair",
+                                "disposition": "semantic_theme_repair_exhausted",
+                                "planned_theme_ids": ["fact-1", "fact-2"],
+                                "omitted_theme_ids": ["fact-2"],
+                                "selected_candidate_ids": ["insight-1"],
+                                "eligible_candidate_ids": ["insight-1", "insight-2"],
+                            }
+                        }
+                    }
+                ),
+                "2026-11-05T00:00:00Z",
+            ),
+        )
+
+    diagnostic = _read_failure_diagnostic(
+        state_db=state_db,
+        reports_db=tmp_path / "reports.sqlite",
+        report_id="report-coverage",
+        validation_run_id="validation-coverage",
+        root_workflow_id="workflow-coverage",
+        outer_code="artifact_final_insight_coverage_invalid",
+    )
+
+    assert diagnostic["stage"] == "report_analysis"
+    assert diagnostic["error_context"]["coverage_diagnostics"][
+        "omitted_theme_ids"
+    ] == ["fact-2"]
+    assert "reason" not in json.dumps(diagnostic)
 
 
 def test_failure_diagnostic_projects_structured_reference_and_cover_terminal_causes(
