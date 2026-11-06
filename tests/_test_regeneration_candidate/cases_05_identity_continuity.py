@@ -5,8 +5,7 @@ from ._shared import *  # noqa: F401,F403
 from .cases_02_candidate_lineage import validate_regeneration_candidate
 
 
-def test_candidate_allows_a_unique_same_family_evidence_continuity_when_id_changes(
-) -> None:
+def test_candidate_allows_unique_evidence_continuity_when_id_changes() -> None:
     current, evidence_packs = _retained_artifact_and_evidence()
     candidate = deepcopy(current)
     original = current["insights_candidates"][0]
@@ -27,8 +26,7 @@ def test_candidate_allows_a_unique_same_family_evidence_continuity_when_id_chang
     )
 
 
-def test_candidate_keeps_identifier_continuity_blocked_when_evidence_match_is_ambiguous(
-) -> None:
+def test_candidate_blocks_ambiguous_identifier_continuity() -> None:
     current, evidence_packs = _retained_artifact_and_evidence()
     candidate = deepcopy(current)
     original = current["insights_candidates"][0]
