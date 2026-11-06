@@ -2032,3 +2032,14 @@ processing after resource growth; it is not acceptance evidence. No HTML or
 publication write was made. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Do not close
 this outcome or begin Step 3.
+
+**Evidence update — 2026-11-06 (hosted CI for transactional handover):** The
+first CI run after relocating the multi-fact lineage regression failed only
+the repository formatter on that test module. Commit `9d110738` applied the
+required formatting correction without production changes. Hosted run
+`42222882729` then passed `ci_start`, 8,495 tests with 1 skip and all coverage
+gates, both mutation partitions, and `release_evidence` with zero manifest
+issues. This restores green CI but does not change the failed Activate
+public-quality replay or the incomplete frozen-five replay. E18 remains
+Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
+unstarted/not ready.

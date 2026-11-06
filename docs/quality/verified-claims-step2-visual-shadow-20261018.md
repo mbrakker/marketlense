@@ -10618,3 +10618,30 @@ earlier Reuters exporter terminal-row discrepancy remains an operational
 limitation and was not changed speculatively. E18 remains **Active/PARTIAL**;
 Step 2 is not closed and Step 3 remains **unstarted/not ready**. No
 publication write or WordPress mutation was performed.
+
+### Hosted CI verification after handover test relocation
+
+The first hosted run on `f23032bd` exposed only a CI-owned formatting failure:
+the newly relocated multi-fact regression made
+`tests/_test_regeneration_candidate/cases_05_identity_continuity.py` fail the
+repository format gate. No production failure was reported. The regression
+was kept in the existing identity-continuity module, and commit `9d110738`
+applied the repository formatter and shortened only the two affected test
+names. The protected `Wordpress/dist/marketlense.zip` change remained
+unstaged throughout.
+
+Hosted run `42222882729` on `9d110738` passed all jobs: `ci_start`, the full
+tests job, mutation partitions 0 and 1, and `release_evidence`. The tests job
+reported 8,495 passed and 1 skipped in 508.89 seconds; coverage was 85.50%
+globally, 97.98% for contracts, 87.27% for generators, 86.10% for
+orchestrators, 84.26% for services and 90.60% for control-plane code. Both
+mutation partitions merged 17 targets with no gate failure. The release
+evidence manifest and review passed with zero issues, and the retained
+release-evidence bundle is available from
+<https://github.com/mbrakker/marketlense/actions/runs/42222882729/artifacts/13505096533>.
+
+This CI result confirms repository and regression-gate integrity only. It does
+not convert the provider-backed Activate replay into a publication-quality
+pass or complete the interrupted frozen-five replay. The verdict therefore
+remains **PARTIAL / NO-GO** for Step 2 completion; E18 remains
+**Active/PARTIAL**, and Step 3 remains **unstarted/not ready**.
