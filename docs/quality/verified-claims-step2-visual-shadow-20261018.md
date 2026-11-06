@@ -10788,3 +10788,10 @@ skipped by configuration. The retained release bundle is
 [`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42302456690/artifacts/13545151927).
 This closes the repository CI gate for the correction commit, but does not
 change the provider-backed frozen-five result above or the Step 2 verdict.
+
+The final documentation tip `111bdfacfbc0254c82500bab50f7643f6021fa0c` was
+also verified by hosted run
+[`42303832188`](https://github.com/mbrakker/marketlense/actions/runs/42303832188):
+tests/coverage, both mutation partitions, and `release_evidence` passed, with
+the optional WordPress staging REST gate skipped by configuration. Its release
+bundle is [retained here](https://github.com/mbrakker/marketlense/actions/runs/42303832188/artifacts/13545018973).

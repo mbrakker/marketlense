@@ -303,6 +303,8 @@ E18 remains Active.
 
 **Hosted CI completion — 2026-11-06:** Run [42302456690](https://github.com/mbrakker/marketlense/actions/runs/42302456690) for `d0fa4ac6` passed `ci_start`, tests/coverage, both mutation partitions, and `release_evidence`; the optional WordPress staging REST gate was skipped by configuration. The release bundle is [retained here](https://github.com/mbrakker/marketlense/actions/runs/42302456690/artifacts/13545151927). This verifies the repository gates only; E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready** because the fresh provider-backed frozen-five run was incomplete.
 
+**Final documentation-tip CI — 2026-11-06:** The follow-up ledger commit `111bdfac` passed hosted run [42303832188](https://github.com/mbrakker/marketlense/actions/runs/42303832188), including tests/coverage, both mutation partitions, and `release_evidence`; the optional WordPress staging REST gate was skipped by configuration. The release bundle is [retained here](https://github.com/mbrakker/marketlense/actions/runs/42303832188/artifacts/13545018973). This does not change the incomplete provider-backed frozen-five result or E18's **Active/PARTIAL** status.
+
 #### R1. Publish release-evidence reviews where reviewers work
 
 [Full R1 specification](docs/backlog/R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work).
