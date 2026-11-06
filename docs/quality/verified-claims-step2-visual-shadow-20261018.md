@@ -10776,3 +10776,15 @@ authority, and scoped-regeneration corrections are implemented and regression-
 covered. E18 remains **Active/PARTIAL**; Step 2 remains **PARTIAL/NO-GO**; and
 Step 3 remains **unstarted/not ready** pending a complete current-SHA
 frozen-five run and independent editorial-quality acceptance.
+
+### Hosted CI completion — 2026-11-06
+
+After this evidence entry was written, hosted run
+[`42302456690`](https://github.com/mbrakker/marketlense/actions/runs/42302456690)
+completed successfully for `d0fa4ac680ddbf0419515c16b675d1637086f77f`.
+`ci_start`, the tests/coverage job, both mutation partitions, and
+`release_evidence` all passed; the optional WordPress staging REST gate was
+skipped by configuration. The retained release bundle is
+[`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42302456690/artifacts/13545151927).
+This closes the repository CI gate for the correction commit, but does not
+change the provider-backed frozen-five result above or the Step 2 verdict.
