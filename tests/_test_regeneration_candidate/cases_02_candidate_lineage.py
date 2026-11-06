@@ -200,6 +200,70 @@ def test_candidate_preflight_leaves_ambiguous_claim_for_shared_grounding() -> No
     assert not candidate_preflight
 
 
+def test_candidate_allows_multi_fact_pages_per_evidence_span() -> None:
+    current, evidence_packs = _retained_artifact_and_evidence()
+    candidate = deepcopy(current)
+    evidence_entries = evidence_packs["findings"]["findings"]
+    evidence_entries.extend(
+        [
+            {
+                "id": "multi-a",
+                "text": "Canonical evidence on page five.",
+                "evidence": "Canonical evidence on page five.",
+                "pages": [5],
+            },
+            {
+                "id": "multi-b",
+                "text": "Canonical evidence on page seven.",
+                "evidence": "Canonical evidence on page seven.",
+                "pages": [7],
+            },
+        ]
+    )
+    for artifacts in (current, candidate):
+        insight = next(
+            item for item in artifacts["insights_final"] if isinstance(item, dict)
+        )
+        insight.update(
+            {
+                "evidence": "Canonical evidence on pages five and seven.",
+                "evidence_id": "multi-a",
+                "evidence_ids": ["multi-a", "multi-b"],
+                "evidence_spans": [
+                    {
+                        "evidence_id": "multi-a",
+                        "source_pack": "findings",
+                        "page": 5,
+                        "text": "Canonical evidence on page five.",
+                    },
+                    {
+                        "evidence_id": "multi-b",
+                        "source_pack": "findings",
+                        "page": 7,
+                        "text": "Canonical evidence on page seven.",
+                    },
+                ],
+                "pages": [5, 7],
+            }
+        )
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    target_id = next(
+        item["id"] for item in candidate["insights_final"] if isinstance(item, dict)
+    )
+    assert not any(
+        item.rule_id == "regeneration_source_page"
+        and item.affected_section == f"insights_final:{target_id}"
+        for item in result.issues
+    )
+
+
 def test_interpretive_numeric_repair_still_requires_repair_lineage() -> None:
     current, candidate, evidence_packs = _soft_copy_artifacts()
     candidate["expert_comment"] = "Adjust could reach 1016.8 million."
@@ -346,7 +410,7 @@ def test_candidate_allows_repaired_factual_claim_with_explicit_new_lineage(
 
 
 @pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
-def test_candidate_blocks_repaired_factual_claim_with_missing_or_corrupt_selection_lineage(
+def test_candidate_blocks_repaired_factual_claim_with_corrupt_selection_lineage(
     family: str,
 ) -> None:
     current, candidate, evidence_packs = _soft_copy_artifacts()

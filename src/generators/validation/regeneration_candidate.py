@@ -60,6 +60,7 @@ class _EvidenceRecord:
     evidence_ids: tuple[str, ...]
     source_pages: tuple[int, ...]
     material: bool
+    evidence_source_pages: tuple[tuple[str, tuple[int, ...]], ...] = ()
 
     @property
     def key(self) -> tuple[str, str]:
@@ -227,7 +228,10 @@ def validate_regeneration_candidate(
                 # The service check above supplies the authoritative unknown-ID
                 # issue.  Avoid a duplicate that obscures the useful diagnosis.
                 continue
-            if expected_pages and not record.source_pages:
+            record_pages = dict(record.evidence_source_pages).get(
+                evidence_id.casefold(), ()
+            )
+            if expected_pages and not record_pages:
                 issues.append(
                     _source_page_issue(
                         record,
@@ -235,13 +239,25 @@ def validate_regeneration_candidate(
                     )
                 )
                 continue
-            if expected_pages and not set(record.source_pages).issubset(expected_pages):
+            if expected_pages and not set(record_pages).issubset(expected_pages):
                 issues.append(
                     _source_page_issue(
                         record,
                         "Candidate source pages do not match the referenced evidence.",
                     )
                 )
+        bound_pages = {
+            page
+            for _, pages in record.evidence_source_pages
+            for page in pages
+        }
+        if set(record.source_pages).difference(bound_pages):
+            issues.append(
+                _source_page_issue(
+                    record,
+                    "Candidate source pages do not match the referenced evidence.",
+                )
+            )
 
     abstained_families = _abstained_families(candidate_artifacts)
     for key, original in current_by_key.items():
@@ -1107,30 +1123,46 @@ def _record(
     material: bool,
 ) -> _EvidenceRecord:
     evidence_spans = item.get("evidence_spans")
-    span_ids = [
-        span.get("evidence_id")
-        for span in evidence_spans or []
-        if isinstance(span, dict)
-    ]
+    spans = [span for span in evidence_spans or [] if isinstance(span, dict)]
+    raw_evidence_ids = item.get("evidence_ids")
+    declared_ids = (
+        list(raw_evidence_ids) if isinstance(raw_evidence_ids, list) else []
+    )
+    span_ids = [span.get("evidence_id") for span in spans]
     ids = _string_values(
         [
             item.get("evidence_id"),
+            *declared_ids,
             *span_ids,
         ]
     )
     raw_pages = item.get("pages")
     page_values: list[object] = list(raw_pages) if isinstance(raw_pages, list) else []
     page_values.append(item.get("page"))
-    page_values.extend(
-        span.get("page") for span in evidence_spans or [] if isinstance(span, dict)
-    )
+    page_values.extend(span.get("page") for span in spans)
     pages = _positive_ints(page_values)
+    item_pages = tuple(_positive_ints(page_values))
+    pages_by_evidence: dict[str, list[int]] = {}
+    for span in spans:
+        evidence_id = s(span.get("evidence_id")).strip().casefold()
+        if not evidence_id:
+            continue
+        pages_by_evidence.setdefault(evidence_id, []).extend(
+            _positive_ints([span.get("page")])
+        )
+    if len(ids) == 1 and not pages_by_evidence.get(ids[0].casefold()):
+        pages_by_evidence[ids[0].casefold()] = list(item_pages)
+    evidence_source_pages = tuple(
+        (evidence_id, tuple(dict.fromkeys(pages_by_evidence.get(evidence_id, []))))
+        for evidence_id in ids
+    )
     return _EvidenceRecord(
         entity_kind=entity_kind,
         entity_id=entity_id,
         evidence_ids=tuple(ids),
         source_pages=tuple(pages),
         material=material,
+        evidence_source_pages=evidence_source_pages,
     )
 
 
