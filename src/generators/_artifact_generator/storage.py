@@ -2390,11 +2390,15 @@ def finalize_regeneration_candidate_artifacts(
         def changed_items_for_binding(
             items: List[Dict[str, Any]], baseline_items: Any
         ) -> List[Dict[str, Any]]:
-            baseline_by_id = {
-                _s(item.get("id")).strip(): item
-                for item in baseline_items
-                if isinstance(item, dict) and _s(item.get("id")).strip()
-            } if isinstance(baseline_items, list) else {}
+            baseline_by_id = (
+                {
+                    _s(item.get("id")).strip(): item
+                    for item in baseline_items
+                    if isinstance(item, dict) and _s(item.get("id")).strip()
+                }
+                if isinstance(baseline_items, list)
+                else {}
+            )
             changed: List[Dict[str, Any]] = []
             for item in items:
                 if not isinstance(item, dict):
@@ -2404,18 +2408,30 @@ def finalize_regeneration_candidate_artifacts(
                     changed.append(item)
             return changed
 
-        verified_insights_candidates = changed_items_for_binding(
-            verified_insights_candidates,
-            promoted_baseline.get("insights_candidates"),
-        ) if "insights_candidates" in patch_roots else []
-        verified_insights_final = changed_items_for_binding(
-            verified_insights_final,
-            promoted_baseline.get("insights_final"),
-        ) if "insights_final" in patch_roots else []
-        verified_quotes_final = changed_items_for_binding(
-            verified_quotes_final,
-            promoted_baseline.get("quotes_final"),
-        ) if "quotes_final" in patch_roots else []
+        verified_insights_candidates = (
+            changed_items_for_binding(
+                verified_insights_candidates,
+                promoted_baseline.get("insights_candidates"),
+            )
+            if "insights_candidates" in patch_roots
+            else []
+        )
+        verified_insights_final = (
+            changed_items_for_binding(
+                verified_insights_final,
+                promoted_baseline.get("insights_final"),
+            )
+            if "insights_final" in patch_roots
+            else []
+        )
+        verified_quotes_final = (
+            changed_items_for_binding(
+                verified_quotes_final,
+                promoted_baseline.get("quotes_final"),
+            )
+            if "quotes_final" in patch_roots
+            else []
+        )
         bind_artifact_evidence_spans(
             summary=verified_summary,
             insights_candidates=verified_insights_candidates,
@@ -2935,6 +2951,36 @@ def _unique_advisory_texts(values: List[str], *, limit: int = 3) -> List[str]:
     return texts
 
 
+def _advisory_evidence_bindings(
+    values: List[str], sources: List[tuple[str, List[str]]]
+) -> List[Dict[str, Any]]:
+    """Keep only uniquely source-bound advisory sentences."""
+
+    bindings: List[Dict[str, Any]] = []
+    for value in values:
+        text = _s(value).strip()
+        normalized = " ".join(text.split()).casefold()
+        if not normalized:
+            continue
+        matches = [
+            tuple(dict.fromkeys(evidence_ids))
+            for source_text, evidence_ids in sources
+            if " ".join(_s(source_text).split()).casefold() == normalized
+        ]
+        unique_matches = set(matches)
+        if len(unique_matches) != 1:
+            continue
+        evidence_ids = next(iter(unique_matches))
+        if evidence_ids:
+            bindings.append(
+                {
+                    "text": text,
+                    "evidence_ids": list(evidence_ids),
+                }
+            )
+    return bindings
+
+
 def _has_advisory_evidence(item: Dict[str, Any]) -> bool:
     return bool(_artifact_evidence_ids(item) or item.get("evidence_spans"))
 
@@ -2990,9 +3036,7 @@ def build_executive_advisory_artifacts(
             limitations = [
                 {
                     "text": _s(qualifier).strip(),
-                    "evidence_id": (
-                        f"verified-fact:{_s(fact.get('fact_id')).strip()}"
-                    ),
+                    "evidence_id": (f"verified-fact:{_s(fact.get('fact_id')).strip()}"),
                 }
                 for fact in verified_facts
                 if isinstance(fact, dict)
@@ -3061,6 +3105,67 @@ def build_executive_advisory_artifacts(
             *_limitation_texts(limitations),
         ]
     )
+    limitation_sources = [
+        (
+            _s(item)
+            if isinstance(item, str)
+            else _s(
+                item.get("description")
+                or item.get("limitation")
+                or item.get("text")
+                or item.get("summary")
+            ),
+            _artifact_evidence_ids(item),
+        )
+        for item in limitations
+        if isinstance(item, (str, dict))
+    ]
+    evidence_links_by_item = {
+        "strategic_context": _advisory_evidence_bindings(
+            [_decision_brief_context(summary)],
+            [
+                (
+                    _s(item.get("claim")),
+                    _artifact_evidence_ids(item),
+                )
+                for item in summary.get("claim_evidence_map") or []
+                if isinstance(item, dict)
+            ],
+        ),
+        "decision_implications": _advisory_evidence_bindings(
+            decision_implications,
+            [
+                (_s(item.get("so_what")), _artifact_evidence_ids(item))
+                for item in supported_insights
+            ],
+        ),
+        "priority_moves": _advisory_evidence_bindings(
+            priority_moves,
+            [
+                (_s(item.get("now_what")), _artifact_evidence_ids(item))
+                for item in supported_insights
+            ]
+            + [
+                (
+                    _s(item.get("recommendation")),
+                    _artifact_evidence_ids(item),
+                )
+                for item in grounded_recommendations
+            ],
+        ),
+        "watchouts": _advisory_evidence_bindings(
+            watchouts,
+            [
+                (_s(item.get("text")), _artifact_evidence_ids(item))
+                for item in supported_insights
+            ]
+            + [
+                (_s(item.get("risk")), _artifact_evidence_ids(item))
+                for item in grounded_risks
+            ]
+            + limitation_sources,
+        ),
+    }
     return {
         "schema_version": "1.0",
         "decision_brief": {
@@ -3085,6 +3190,7 @@ def build_executive_advisory_artifacts(
                     for evidence_id in _artifact_evidence_ids(item)
                 }
             ),
+            "evidence_links_by_item": evidence_links_by_item,
             # Availability is metadata, not a source-backed confidence
             # assessment.  Keep the optional field for schema compatibility,
             # but do not expose deterministic boilerplate as public advice.

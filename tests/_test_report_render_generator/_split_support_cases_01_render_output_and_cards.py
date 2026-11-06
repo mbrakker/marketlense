@@ -77,6 +77,10 @@ from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.publication_projection import publication_projection_hash
 from src.utils.verified_facts import build_verified_authority_context
+from tests.test_verified_facts_validation_authority import (
+    SOURCE_IDENTITY,
+    _authority_artifacts,
+)
 
 
 def _template_bundle_sha(template_contents: dict[str, str]) -> str:
@@ -341,6 +345,101 @@ def _cover_assets(runtime: ReportRuntimeState) -> CardCoverAssetSet:
     return _card_cover_assets(
         Path(runtime.settings.output_dir) / runtime.report_name / "assets"
     )
+
+
+def _verified_analysis(
+    runtime: ReportRuntimeState,
+    source: ReportSourceState,
+    selection: ReportSelectionState,
+    *,
+    data_artifacts: dict | None = None,
+) -> ReportAnalysisState:
+    artifacts = _authority_artifacts()
+    authority = build_verified_authority_context(
+        artifacts, expected_source_identity=SOURCE_IDENTITY
+    )
+    base = _analysis(runtime, source, selection)
+    data = {
+        **base.data_dict,
+        "authoritative_evidence_packs": authority.evidence_packs,
+        "artifacts": data_artifacts if data_artifacts is not None else artifacts,
+    }
+    return replace(
+        base,
+        data_dict=data,
+        authoritative_evidence_packs=authority.evidence_packs,
+        verified_authority_context=authority,
+        artifacts_payload=artifacts,
+    )
+
+
+def test_verified_render_rejects_divergent_data_dictionary_artifacts(tmp_path) -> None:
+    runtime_base = _runtime(tmp_path, md5="md5")
+    runtime = replace(
+        runtime_base,
+        ctx=replace(runtime_base.ctx, source_identity_id=SOURCE_IDENTITY),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _verified_analysis(
+        runtime,
+        source,
+        selection,
+        data_artifacts={"summary": {"tldr": "tampered"}},
+    )
+
+    with pytest.raises(AppError) as raised:
+        render_report_output(
+            runtime,
+            source,
+            selection,
+            analysis,
+            _deps(),
+            preview_resp=SimpleNamespace(image_path="preview.png"),
+        )
+
+    assert raised.value.code == "verified_artifact_projection_mismatch"
+
+
+def test_verified_render_replaces_missing_data_dictionary_artifacts_with_snapshot(
+    tmp_path,
+) -> None:
+    runtime_base = _runtime(tmp_path, md5="md5")
+    runtime = replace(
+        runtime_base,
+        ctx=replace(runtime_base.ctx, source_identity_id=SOURCE_IDENTITY),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _verified_analysis(runtime, source, selection)
+    analysis = replace(
+        analysis,
+        data_dict={
+            key: value
+            for key, value in analysis.data_dict.items()
+            if key != "artifacts"
+        },
+    )
+    captured: list[dict] = []
+    html_path = Path(tmp_path) / "rendered.html"
+
+    def render(request, _ctx):
+        captured.append(request.data)
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        _deps(render_report=render),
+        preview_resp=SimpleNamespace(image_path="preview.png"),
+    )
+
+    assert captured
+    assert captured[0]["artifacts"] == analysis.artifacts_payload
+    assert outcome.status == "error"
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]

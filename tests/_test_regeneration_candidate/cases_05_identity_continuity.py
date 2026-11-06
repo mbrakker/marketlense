@@ -139,6 +139,26 @@ def test_candidate_allows_multi_fact_pages_per_evidence_span() -> None:
     )
 
 
+def test_record_uses_casefolded_evidence_page_lookup_keys() -> None:
+    record = _record(
+        "insights_final",
+        "insight-1",
+        {
+            "evidence_id": "FINDING-1",
+            "evidence_spans": [
+                {
+                    "evidence_id": "FINDING-1",
+                    "page": 8,
+                }
+            ],
+            "pages": [8],
+        },
+        material=True,
+    )
+
+    assert dict(record.evidence_source_pages) == {"finding-1": (8,)}
+
+
 def test_new_material_claim_rejects_evidence_id_only_source_span() -> None:
     canonical = [
         {

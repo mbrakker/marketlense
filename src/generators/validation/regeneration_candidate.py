@@ -247,9 +247,7 @@ def validate_regeneration_candidate(
                     )
                 )
         bound_pages = {
-            page
-            for _, pages in record.evidence_source_pages
-            for page in pages
+            page for _, pages in record.evidence_source_pages for page in pages
         }
         if set(record.source_pages).difference(bound_pages):
             issues.append(
@@ -1125,9 +1123,7 @@ def _record(
     evidence_spans = item.get("evidence_spans")
     spans = [span for span in evidence_spans or [] if isinstance(span, dict)]
     raw_evidence_ids = item.get("evidence_ids")
-    declared_ids = (
-        list(raw_evidence_ids) if isinstance(raw_evidence_ids, list) else []
-    )
+    declared_ids = list(raw_evidence_ids) if isinstance(raw_evidence_ids, list) else []
     span_ids = [span.get("evidence_id") for span in spans]
     ids = _string_values(
         [
@@ -1153,7 +1149,10 @@ def _record(
     if len(ids) == 1 and not pages_by_evidence.get(ids[0].casefold()):
         pages_by_evidence[ids[0].casefold()] = list(item_pages)
     evidence_source_pages = tuple(
-        (evidence_id, tuple(dict.fromkeys(pages_by_evidence.get(evidence_id, []))))
+        (
+            evidence_id.casefold(),
+            tuple(dict.fromkeys(pages_by_evidence.get(evidence_id.casefold(), []))),
+        )
         for evidence_id in ids
     )
     return _EvidenceRecord(

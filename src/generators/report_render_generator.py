@@ -917,6 +917,17 @@ def _verified_render_authority(
             retryable=False,
             context={"file_id": runtime.file.file_id},
         )
+    data_artifacts = analysis.data_dict.get("artifacts")
+    if data_artifacts is not None and data_artifacts != artifacts:
+        raise AppError(
+            code="verified_artifact_projection_mismatch",
+            message=(
+                "The serialized artifacts projection does not match the verified "
+                "authority snapshot"
+            ),
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
     data_context = analysis.data_dict.get("verified_authority_context")
     if data_context is not None and data_context != asdict(canonical):
         raise AppError(
@@ -1017,7 +1028,7 @@ def render_report_output(
             ocr_fallback_used=source.ocr_fallback_used,
             ocr_pdf_path=source.ocr_pdf_path or None,
         )
-    _verified_render_authority(runtime, analysis)
+    verified_authority = _verified_render_authority(runtime, analysis)
     title_identity_error = _title_identity_error(runtime, source, analysis)
     if title_identity_error:
         logger.info(
@@ -1068,6 +1079,11 @@ def render_report_output(
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:render_metadata"),
     )
     render_data_dict = deepcopy(analysis.data_dict)
+    if verified_authority is not None:
+        # The authority check above validates the retained snapshot.  Render
+        # the same snapshot rather than trusting a separately serialized
+        # legacy projection in data_dict.
+        render_data_dict["artifacts"] = deepcopy(analysis.artifacts_payload or {})
     build_provenance = _render_build_provenance(runtime, analysis)
     public_publication_date = _publication_date(runtime)
     existing_title = str(render_data_dict.get("title") or "").strip()

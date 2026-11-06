@@ -40,7 +40,10 @@ def test_verified_render_does_not_promote_discovery_methodology_or_chapter_copy(
     ]
     discovery_packs = {
         "doc_map": {
-            "methodology": "UNTRUSTED discovery methodology.",
+            "methodology": (
+                "UNTRUSTED discovery methodology. Fieldwork: January 1, 2020 - "
+                "January 2, 2020."
+            ),
             "sections": [
                 {
                     "title": "Discovery-only chapter",
@@ -72,6 +75,7 @@ def test_verified_render_does_not_promote_discovery_methodology_or_chapter_copy(
 
     rendered_text = str(view["editorial_cards"]) + str(view["chapters"])
     assert "UNTRUSTED" not in rendered_text
+    assert view["fieldwork_dates"] == ""
     assert view["chapters"][0]["title"] == "Verified chapter"
     assert view["chapters"][0]["summary"] == ""
     limitations_card = next(
@@ -124,6 +128,27 @@ def test_verified_expert_context_falls_back_to_fact_qualifiers() -> None:
             "text": "The measure is observed, not a forecast.",
         },
     ]
+
+
+def test_verified_expert_context_keeps_late_material_qualifiers() -> None:
+    qualifiers = [f"Qualifier {index}" for index in range(1, 9)]
+    context = build_expert_synthesis_context(
+        editorial_plan={"report_thesis": "A source-backed thesis.", "themes": []},
+        insights_final=[],
+        doc_map={},
+        evidence_packs={
+            "verified_facts": {
+                "verified_facts": [
+                    {
+                        "fact_id": "fact-qualifier",
+                        "qualifiers": qualifiers,
+                    }
+                ]
+            }
+        },
+    )
+
+    assert [item["text"] for item in context["limitations"]] == qualifiers
 
 
 def _public_contract_artifacts() -> dict:
@@ -387,6 +412,53 @@ def test_public_advisory_implications_route_to_unique_insight_leaves() -> None:
         and item["text"] == "Buyer adoption is commercially material."
         for item in items
     )
+
+
+def test_verified_advisory_items_keep_exact_per_statement_evidence_bindings() -> None:
+    artifacts = _public_contract_artifacts()
+    first_fact = deepcopy(artifacts["verified_facts"][0])
+    second_fact = deepcopy(first_fact)
+    second_fact["fact_id"] = "fact-2"
+    second_fact["statement"] = "Adoption reached 58% among enterprise buyers in 2026."
+    second_fact["metric"] = deepcopy(second_fact["metric"])
+    second_fact["metric"]["value"] = "58%"
+    artifacts["verified_facts"] = [first_fact, second_fact]
+    first_evidence_id = "verified-fact:fact-1"
+    second_evidence_id = "verified-fact:fact-2"
+    decision = artifacts["executive_advisory"]["decision_brief"]
+    decision.update(
+        {
+            "decision_implications": [
+                "First fact requires a focused margin response.",
+                "Second fact requires an enterprise adoption response.",
+            ],
+            "evidence_links": [first_evidence_id, second_evidence_id],
+            "evidence_links_by_item": {
+                "decision_implications": [
+                    {
+                        "text": "First fact requires a focused margin response.",
+                        "evidence_ids": [first_evidence_id],
+                    },
+                    {
+                        "text": "Second fact requires an enterprise adoption response.",
+                        "evidence_ids": [second_evidence_id],
+                    },
+                ]
+            },
+        }
+    )
+
+    items = public_editorial_semantic_review_items(artifacts)
+    by_text = {
+        item["text"]: item for item in items if item["artifact"] == "executive_advisory"
+    }
+
+    assert by_text["First fact requires a focused margin response."][
+        "evidence_ids"
+    ] == [first_evidence_id]
+    assert by_text["Second fact requires an enterprise adoption response."][
+        "evidence_ids"
+    ] == [second_evidence_id]
 
 
 def test_unsupported_derived_public_target_fails_closed_without_planner_crash() -> None:

@@ -296,9 +296,7 @@ def _build_render_view(
     # for factual editorial cards. Keep discovery data for navigation and
     # source metadata without promoting its findings or scope by default.
     evidence_packs = (
-        authoritative_evidence_packs
-        if verified_mode
-        else discovery_evidence_packs
+        authoritative_evidence_packs if verified_mode else discovery_evidence_packs
     )
     doc_map = _unwrap_doc_map(discovery_evidence_packs.get("doc_map"))
     report_title = _normalize_public_title(
@@ -332,12 +330,15 @@ def _build_render_view(
         {} if verified_mode else doc_map,
         evidence_packs,
     )
-    fieldwork_dates = _extract_fieldwork_dates(
-        *methodology_items,
-        time_period,
-        _s(doc_map.get("methodology")),
-        _s(summary.get("executive_summary")),
-    )
+    if verified_mode:
+        fieldwork_dates = _extract_fieldwork_dates(*methodology_items, time_period)
+    else:
+        fieldwork_dates = _extract_fieldwork_dates(
+            *methodology_items,
+            time_period,
+            _s(doc_map.get("methodology")),
+            _s(summary.get("executive_summary")),
+        )
     public_dates = _public_report_dates(
         report_title=report_title,
         time_period=time_period,

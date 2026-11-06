@@ -36,6 +36,7 @@ from src.generators.validation.metrics import validate_insight_metrics
 from src.generators.validation.numbers import validate_new_numbers
 from src.generators.validation.regeneration_candidate import (
     CandidateIntegrityResult,
+    _record,
     _source_span_is_compatible,
     _verify_derived_artifact_roots,
     retained_claim_repair_issues,
@@ -91,7 +92,9 @@ def _soft_copy_claim(
     return {
         "schema_version": "1.0",
         "artifact_family": family,
-        "claim_id": f"soft_copy:{family}:{hashlib.sha256(normalized.encode()).hexdigest()[:16]}",
+        "claim_id": (
+            f"soft_copy:{family}:{hashlib.sha256(normalized.encode()).hexdigest()[:16]}"
+        ),
         "text_hash": hashlib.sha256(normalized.encode()).hexdigest(),
         "classification": "factual",
         "evidence_ids": [evidence_id],

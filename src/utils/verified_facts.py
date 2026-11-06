@@ -17,6 +17,7 @@ from typing import Any
 from src.contracts.report_generation import VerifiedAuthorityContext
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
+from src.utils.text_normalization import normalize_for_lookup
 
 VERIFIED_FACT_EVIDENCE_PREFIX = "verified-fact:"
 VERIFIED_FACTS_MODES = frozenset(
@@ -668,3 +669,103 @@ def fact_for_evidence_id(
     if not value.startswith(VERIFIED_FACT_EVIDENCE_PREFIX):
         return None
     return facts.get(value.removeprefix(VERIFIED_FACT_EVIDENCE_PREFIX))
+
+
+def verified_advisory_evidence_ids(
+    artifacts: object, field: str, text: object
+) -> list[str]:
+    """Resolve one verified advisory sentence to its exact fact bindings.
+
+    The report-wide ``decision_brief.evidence_links`` list is an availability
+    signal, not provenance for every sentence.  Prefer the producer's
+    per-item map and otherwise use exact retained source text.  Multiple
+    distinct bindings are intentionally ambiguous and return no IDs.
+    """
+
+    if not isinstance(artifacts, Mapping):
+        return []
+    normalized_text = normalize_for_lookup(text)
+    if not normalized_text:
+        return []
+    try:
+        facts = validated_verified_facts(artifacts)
+    except AppError:
+        return []
+    allowed_ids = {f"{VERIFIED_FACT_EVIDENCE_PREFIX}{fact_id}" for fact_id in facts}
+
+    def bound_ids(value: object) -> tuple[str, ...]:
+        if not isinstance(value, Mapping):
+            return ()
+        raw_values: list[object] = []
+        primary = value.get("evidence_id")
+        if primary:
+            raw_values.append(primary)
+        raw_values.extend(value.get("evidence_ids") or [])
+        ids = tuple(dict.fromkeys(str(item).strip() for item in raw_values if item))
+        if not ids or any(item not in allowed_ids for item in ids):
+            return ()
+        return ids
+
+    def resolve(candidates: list[tuple[str, ...]]) -> list[str]:
+        if not candidates:
+            return []
+        unique = set(candidates)
+        if len(unique) != 1:
+            return []
+        result = next(iter(unique))
+        return list(result) if result else []
+
+    decision = artifacts.get("executive_advisory")
+    decision = decision if isinstance(decision, Mapping) else {}
+    decision_brief = decision.get("decision_brief")
+    decision_brief = decision_brief if isinstance(decision_brief, Mapping) else {}
+    mapped = decision_brief.get("evidence_links_by_item")
+    mapped_entries = mapped.get(field) if isinstance(mapped, Mapping) else None
+    if isinstance(mapped_entries, Mapping):
+        mapped_entries = [mapped_entries]
+    if isinstance(mapped_entries, list):
+        mapped_matches = [
+            bound_ids(entry)
+            for entry in mapped_entries
+            if isinstance(entry, Mapping)
+            and normalize_for_lookup(entry.get("text")) == normalized_text
+        ]
+        if mapped_matches:
+            return resolve(mapped_matches)
+
+    candidates: list[tuple[str, ...]] = []
+
+    def add_records(records: object, fields: tuple[str, ...]) -> None:
+        if not isinstance(records, list):
+            return
+        for record in records:
+            if not isinstance(record, Mapping):
+                continue
+            if any(
+                normalize_for_lookup(record.get(source_field)) == normalized_text
+                for source_field in fields
+            ):
+                candidates.append(bound_ids(record))
+
+    insight_fields = {
+        "decision_implications": ("so_what",),
+        "priority_moves": ("now_what",),
+        "watchouts": ("text",),
+    }.get(field, ("text", "so_what", "now_what", "metric_public_copy"))
+    add_records(artifacts.get("insights_final"), insight_fields)
+
+    summary = artifacts.get("summary")
+    if isinstance(summary, Mapping):
+        add_records(summary.get("claim_evidence_map"), ("claim",))
+    add_records(artifacts.get("quotes_final"), ("text",))
+
+    if field == "watchouts":
+        for fact_id, fact in facts.items():
+            qualifiers = fact.get("qualifiers")
+            if not isinstance(qualifiers, list):
+                continue
+            for qualifier in qualifiers:
+                if normalize_for_lookup(qualifier) == normalized_text:
+                    candidates.append((f"{VERIFIED_FACT_EVIDENCE_PREFIX}{fact_id}",))
+
+    return resolve(candidates)

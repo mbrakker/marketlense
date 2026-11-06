@@ -2043,3 +2043,21 @@ issues. This restores green CI but does not change the failed Activate
 public-quality replay or the incomplete frozen-five replay. E18 remains
 Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
 unstarted/not ready.
+
+**Evidence update — 2026-11-06 (verified-mode handover correction):** The
+verified render path now consumes the exact validated artifact snapshot,
+rejects divergent serialized projections, and prevents discovery methodology
+from entering verified fieldwork output. Exact per-advisory evidence bindings,
+all chart evidence IDs, mixed-case page lookup, and complete source-backed
+limitations are regression-covered; the selection cache identity advanced to
+`evidence_backed_shortlisting:30`. The affected suite passed 76 tests with 7
+deselected, the type gate reported 0 tracked errors, and the local default
+suite passed 8,496 tests with 2 skips and 48 deselected. One unrelated local
+wheelhouse test requires CPython 3.12 and cannot run on the available CPython
+3.14.2 interpreter. Provider-free replay against retained local artifacts
+confirmed 5/5 source hashes, 29/29 selected insights, 29/29 theme slots, and
+15/39 Step 0 cases/variants with zero calls; it is not fresh live selection or
+editorial-quality evidence. Retained Capgemini evidence supports a semantic
+theme-coverage terminal failure, not a resource-stall diagnosis. E18 remains
+Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
+unstarted/not ready. No canonical, publication, or WordPress write occurred.

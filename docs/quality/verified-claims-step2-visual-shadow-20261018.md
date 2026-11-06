@@ -10645,3 +10645,65 @@ not convert the provider-backed Activate replay into a publication-quality
 pass or complete the interrupted frozen-five replay. The verdict therefore
 remains **PARTIAL / NO-GO** for Step 2 completion; E18 remains
 **Active/PARTIAL**, and Step 3 remains **unstarted/not ready**.
+
+## Verified-mode handover and repair correction — 2026-11-06
+
+The remaining verified-mode handover defects were corrected with the smallest
+cross-stage changes. Verified rendering now checks the serialized
+`data_dict["artifacts"]` projection against the independently validated
+`analysis.artifacts_payload` snapshot, fails closed on a divergent projection,
+and fills a missing projection from that same snapshot before rendering. The
+verified render view no longer derives fieldwork dates from discovery DocMap
+methodology or summary prose; normal-mode extraction is unchanged.
+
+Public verified advisory statements no longer inherit the report-wide
+`decision_brief.evidence_links` union. The artifact producer records optional
+exact per-item bindings, the quality review resolves only one unambiguous
+binding, and the renderer omits an unbound optional advisory item. Chart review
+retains every evidence ID. Existing transactional regeneration and per-fact
+page validation remain the authority for candidate changes; mixed-case IDs are
+normalized only for internal page lookup, while original evidence IDs are
+preserved in outputs. Verified limitations are no longer truncated to the
+first seven source-backed items. Artifact selection cache identity advanced
+from `evidence_backed_shortlisting:29` to `:30` so stale projections cannot
+bypass the change.
+
+Focused regressions cover divergent and missing artifact projections, discovery
+fieldwork leakage, exact per-advisory bindings, mixed-case evidence-page
+lookup, late source limitations, and the existing transactional/regeneration
+contracts. The affected suite passed **76 tests with 7 deselected**. Ruff,
+formatting, diff checks, and the canonical type gate passed; the type gate
+reported **0 tracked mypy errors across 786 source files**. The default local
+suite passed **8,496 tests with 2 skipped and 48 deselected**. It has one
+environment-only failure in
+`test_build_hash_locked_wheelhouse.py::test_existing_wheelhouse_reports_missing_active_artifact`:
+the test requires native CPython 3.12, while this runner is CPython 3.14.2.
+No changed module is involved in that failure.
+
+The provider-free exact frozen-five replay used retained artifacts and the
+local hash-pinned PDFs without publication or provider calls. It confirmed
+**5/5** source SHA-256 matches (Capgemini 82 pages, Activate 140, KPMG 42,
+Reuters Institute 47, Adjust 41), **29/29** retained selected insights,
+**29/29** editorial-plan theme slots, and the independent Step 0 corpus of
+**15 cases / 39 variants**. The generated replay record is
+`out/verified_claims_step2_handover_20261106/provider_free_replay_retained_frozen_five.json`.
+This is continuity/provenance evidence only; it does not claim fresh live
+selection or editorial-quality improvement.
+
+The retained Capgemini partial run was also reclassified from a presumed
+resource stall to the terminal evidence actually present: the member reached
+`artifact_final_insight_coverage_invalid` after
+`semantic_theme_repair_exhausted` (98 provider events, 603,690 input tokens,
+112,737 output tokens, 1,196 cached input tokens, `$0.126631`, four
+file-search calls, and one structured-output repair). Its two-second terminal
+telemetry is incomplete and cannot establish resource exhaustion. No worker or
+concurrency change is justified. The existing fresh Activate replay remains a
+public-editorial-quality failure with no HTML, and no new provider run was
+claimed for this bounded handover correction.
+
+**Current verdict: PARTIAL / NO-GO.** The handover and provenance corrections
+are implemented and regression-covered, but Step 2 is not closed: the fresh
+editorial-quality failure, live selection effectiveness, and the CPython 3.12
+wheelhouse check remain unresolved. E18 remains **Active/PARTIAL** and Step 3
+remains **unstarted/not ready**. No canonical artifact, readiness, publication,
+or WordPress write occurred.

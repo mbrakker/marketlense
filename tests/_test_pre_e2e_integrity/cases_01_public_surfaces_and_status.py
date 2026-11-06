@@ -285,6 +285,26 @@ def test_semantic_review_projection_matches_rendered_material_surfaces() -> None
                     "priority_moves": ["Protect the adoption funnel."],
                     "watchouts": ["Do not generalize beyond buyers."],
                     "evidence_links": [evidence_id],
+                    "evidence_links_by_item": {
+                        "decision_implications": [
+                            {
+                                "text": "Plan around buyer adoption.",
+                                "evidence_ids": [evidence_id],
+                            }
+                        ],
+                        "priority_moves": [
+                            {
+                                "text": "Protect the adoption funnel.",
+                                "evidence_ids": [evidence_id],
+                            }
+                        ],
+                        "watchouts": [
+                            {
+                                "text": "Do not generalize beyond buyers.",
+                                "evidence_ids": [evidence_id],
+                            }
+                        ],
+                    },
                 }
             },
             "claim_ledgers": [

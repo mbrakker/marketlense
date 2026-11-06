@@ -31,7 +31,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:3.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:29"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:30"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 METRIC_FIELDS = (
@@ -2754,14 +2754,13 @@ def _verified_or_pack_limitations(
         evidence_packs.get("limitations"),
         item_key="limitations",
         text_keys=("description", "limitation", "text", "summary"),
+        limit=None,
     )
     if limitations:
         return limitations
     verified_pack = evidence_packs.get("verified_facts")
     facts = (
-        verified_pack.get("verified_facts")
-        if isinstance(verified_pack, dict)
-        else []
+        verified_pack.get("verified_facts") if isinstance(verified_pack, dict) else []
     )
     if not isinstance(facts, list):
         return []
@@ -2781,8 +2780,6 @@ def _verified_or_pack_limitations(
                         "text": text,
                     }
                 )
-                if len(verified_limitations) == 7:
-                    return verified_limitations
     return verified_limitations
 
 
@@ -2956,6 +2953,7 @@ def _expert_context_items(
     item_key: str,
     text_keys: tuple[str, ...],
     existing: List[Dict[str, str]] | None = None,
+    limit: int | None = 7,
 ) -> List[Dict[str, str]]:
     items = pack.get(item_key) if isinstance(pack, dict) else []
     if not isinstance(items, list):
@@ -2985,7 +2983,7 @@ def _expert_context_items(
             continue
         seen.add(key)
         context_items.append({"evidence_id": evidence_id, "text": text})
-        if len(context_items) == 7:
+        if limit is not None and len(context_items) == limit:
             break
     return context_items
 

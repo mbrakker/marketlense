@@ -13,6 +13,7 @@ from src.utils.coercion import stripped_string_value as _s
 from src.utils.public_metric_display import normalize_public_metric_display
 from src.utils.verified_facts import (
     VERIFIED_FACT_EVIDENCE_PREFIX,
+    verified_advisory_evidence_ids,
     verified_facts_mode,
 )
 
@@ -820,26 +821,54 @@ def _coerce_public_advisory(artifacts: dict[str, Any]) -> dict[str, Any]:
         "evidence-linked insights available",
     }:
         confidence_note = ""
+    if (
+        verified_mode
+        and confidence_note
+        and not verified_advisory_evidence_ids(
+            artifacts, "confidence_note", confidence_note
+        )
+    ):
+        confidence_note = ""
+
+    def advisory_texts(field: str, value: object) -> list[str]:
+        texts = _coerce_text_items(value, limit=4)
+        if not verified_mode:
+            return texts
+        return [
+            text
+            for text in texts
+            if verified_advisory_evidence_ids(artifacts, field, text)
+        ]
+
+    strategic_context = _sanitize_public_prose(decision_brief.get("strategic_context"))
+    if (
+        verified_mode
+        and strategic_context
+        and not verified_advisory_evidence_ids(
+            artifacts, "strategic_context", strategic_context
+        )
+    ):
+        strategic_context = ""
     decision = {
         "available": status == "generated" and decision_supported,
-        "strategic_context": _sanitize_public_prose(
-            decision_brief.get("strategic_context")
-        )
-        if decision_supported
-        else "",
-        "decision_implications": _coerce_text_items(
-            decision_brief.get("decision_implications"), limit=4
-        )
-        if decision_supported
-        else [],
-        "priority_moves": _coerce_text_items(
-            decision_brief.get("priority_moves"), limit=4
-        )
-        if decision_supported
-        else [],
-        "watchouts": _coerce_text_items(decision_brief.get("watchouts"), limit=4)
-        if decision_supported
-        else [],
+        "strategic_context": strategic_context if decision_supported else "",
+        "decision_implications": (
+            advisory_texts(
+                "decision_implications", decision_brief.get("decision_implications")
+            )
+            if decision_supported
+            else []
+        ),
+        "priority_moves": (
+            advisory_texts("priority_moves", decision_brief.get("priority_moves"))
+            if decision_supported
+            else []
+        ),
+        "watchouts": (
+            advisory_texts("watchouts", decision_brief.get("watchouts"))
+            if decision_supported
+            else []
+        ),
         "confidence_note": confidence_note if decision_supported else "",
     }
     recommendations = _coerce_advisory_items(

@@ -55,6 +55,7 @@ from src.utils.quantity import (
     extract_quantities,
     quantities_match,
 )
+from src.utils.verified_facts import verified_advisory_evidence_ids
 
 BLOCKING_RULE_IDS = {
     "public_editorial_quality.unsupported_numeric_claim",
@@ -998,8 +999,6 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
         summary_evidence = _verified_evidence_items(
             artifacts, [evidence_id for evidence_id, _ in summary_evidence]
         )
-        if not summary_evidence and len(_verified_fact_index(artifacts)) == 1:
-            summary_evidence = _verified_evidence_items(artifacts)
     for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
         value = _sanitize_public_prose(summary.get(field_name))
         if value:
@@ -1014,7 +1013,7 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 for item in claim_items:
                     _annotate_verified_item(item, artifacts)
                     yield item
-            elif summary_evidence:
+            elif summary_evidence and not verified_mode:
                 item = _item(
                     "summary",
                     field_name,
@@ -1037,8 +1036,6 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
         downstream_evidence = _verified_evidence_items(
             artifacts, [evidence_id for evidence_id, _ in downstream_evidence]
         )
-        if not downstream_evidence and len(_verified_fact_index(artifacts)) == 1:
-            downstream_evidence = _verified_evidence_items(artifacts)
     for field_name in ("expert_comment", "linkedin_post"):
         value = _sanitize_public_prose(artifacts.get(field_name))
         if value:
@@ -1053,7 +1050,7 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 for item in claim_items:
                     _annotate_verified_item(item, artifacts)
                     yield item
-            elif downstream_evidence:
+            elif downstream_evidence and not verified_mode:
                 item = _item(
                     field_name,
                     field_name,
@@ -1708,7 +1705,7 @@ def _verified_public_semantic_review_items(
                     card.get("now_what"),
                     card.get("limitation"),
                 ),
-                [str(card.get("evidence_id") or "").strip()],
+                _public_evidence_ids(card),
                 target,
                 repair_field=repair_field,
             )
@@ -1748,6 +1745,9 @@ def _verified_public_semantic_review_items(
                 value = ""
             if not value:
                 continue
+            item_evidence_ids = verified_advisory_evidence_ids(artifacts, field, value)
+            if not item_evidence_ids:
+                continue
             source = advisory_source(value, field)
             target, repair_field = source or ("", "")
             add(
@@ -1755,7 +1755,7 @@ def _verified_public_semantic_review_items(
                     "executive_advisory",
                     f"decision_brief.{field}",
                     value,
-                    decision_evidence_ids,
+                    item_evidence_ids,
                     target,
                     evidence_text=str(
                         decision.get("evidence") or decision.get("source_excerpt") or ""
@@ -1776,6 +1776,11 @@ def _verified_public_semantic_review_items(
                     or (field == "priority_moves" and normalized in insight_now_what)
                 ):
                     continue
+                item_evidence_ids = verified_advisory_evidence_ids(
+                    artifacts, field, value
+                )
+                if not item_evidence_ids:
+                    continue
                 source = advisory_source(value, field)
                 target, repair_field = source or ("", "")
                 add(
@@ -1783,7 +1788,7 @@ def _verified_public_semantic_review_items(
                         "executive_advisory",
                         f"decision_brief.{field}:{index}",
                         value,
-                        decision_evidence_ids,
+                        item_evidence_ids,
                         target,
                         repair_field=repair_field,
                     )
