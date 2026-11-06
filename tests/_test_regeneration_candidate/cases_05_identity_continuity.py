@@ -5,9 +5,8 @@ from ._shared import *  # noqa: F401,F403
 from .cases_02_candidate_lineage import validate_regeneration_candidate
 
 
-def test_candidate_allows_a_unique_same_family_evidence_continuity_when_id_changes() -> (
-    None
-):
+def test_candidate_allows_a_unique_same_family_evidence_continuity_when_id_changes(
+) -> None:
     current, evidence_packs = _retained_artifact_and_evidence()
     candidate = deepcopy(current)
     original = current["insights_candidates"][0]
@@ -28,9 +27,8 @@ def test_candidate_allows_a_unique_same_family_evidence_continuity_when_id_chang
     )
 
 
-def test_candidate_keeps_identifier_continuity_blocked_when_evidence_match_is_ambiguous() -> (
-    None
-):
+def test_candidate_keeps_identifier_continuity_blocked_when_evidence_match_is_ambiguous(
+) -> None:
     current, evidence_packs = _retained_artifact_and_evidence()
     candidate = deepcopy(current)
     original = current["insights_candidates"][0]
@@ -76,6 +74,70 @@ def test_candidate_keeps_identifier_continuity_blocked_without_source_pages() ->
         issue.entity_id == original["id"]
         and "lost the original material evidence" in issue.message
         for issue in result.issues
+    )
+
+
+def test_candidate_allows_multi_fact_pages_per_evidence_span() -> None:
+    current, evidence_packs = _retained_artifact_and_evidence()
+    candidate = deepcopy(current)
+    evidence_entries = evidence_packs["findings"]["findings"]
+    evidence_entries.extend(
+        [
+            {
+                "id": "multi-a",
+                "text": "Canonical evidence on page five.",
+                "evidence": "Canonical evidence on page five.",
+                "pages": [5],
+            },
+            {
+                "id": "multi-b",
+                "text": "Canonical evidence on page seven.",
+                "evidence": "Canonical evidence on page seven.",
+                "pages": [7],
+            },
+        ]
+    )
+    for artifacts in (current, candidate):
+        insight = next(
+            item for item in artifacts["insights_final"] if isinstance(item, dict)
+        )
+        insight.update(
+            {
+                "evidence": "Canonical evidence on pages five and seven.",
+                "evidence_id": "multi-a",
+                "evidence_ids": ["multi-a", "multi-b"],
+                "evidence_spans": [
+                    {
+                        "evidence_id": "multi-a",
+                        "source_pack": "findings",
+                        "page": 5,
+                        "text": "Canonical evidence on page five.",
+                    },
+                    {
+                        "evidence_id": "multi-b",
+                        "source_pack": "findings",
+                        "page": 7,
+                        "text": "Canonical evidence on page seven.",
+                    },
+                ],
+                "pages": [5, 7],
+            }
+        )
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    target_id = next(
+        item["id"] for item in candidate["insights_final"] if isinstance(item, dict)
+    )
+    assert not any(
+        item.rule_id == "regeneration_source_page"
+        and item.affected_section == f"insights_final:{target_id}"
+        for item in result.issues
     )
 
 
