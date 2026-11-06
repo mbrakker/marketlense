@@ -2016,3 +2016,19 @@ This is **FAIL/NO-GO** evidence, not a live selection-effectiveness claim.
 E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready**. Do not close this outcome or begin Step 3 from
 this run.
+
+**Evidence update — 2026-11-06 (transactional handover and multi-fact
+provenance):** Commits `893baf1d` and `fb38ee04` add scoped transactional
+regeneration, complete verified qualifier/evidence handover, verified render
+authority, and per-evidence page validation for multi-fact claims. The
+affected suite passed 450 tests plus 75 candidate-lineage tests; Ruff, changed
+module mypy and the prompt-fixture gate passed. A fresh Activate replay
+admitted 10/10 verified facts and reached zero unsupported/unresolved retained
+claims, with the prior multi-fact source-page errors absent, but failed final
+public-editorial quality after two rolled-back provider candidates and one
+rolled-back safe-removal candidate (497 calls, `$0.433481`, 4,118.580 s).
+The exact frozen-five replay was started but stopped during partial Capgemini
+processing after resource growth; it is not acceptance evidence. No HTML or
+publication write was made. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Do not close
+this outcome or begin Step 3.

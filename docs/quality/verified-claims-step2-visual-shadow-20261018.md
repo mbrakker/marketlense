@@ -10495,3 +10495,126 @@ E18 remains **Active/PARTIAL**, and Step 3 remains **unstarted/not ready**.
 The remaining blockers are the four report-specific terminal validation
 failures plus the exporter terminal-row retention gap; no production repair was
 made during this acceptance run.
+
+## Transactional editorial handovers and multi-fact regeneration — 2026-11-06
+
+The targeted implementation is recorded in commits `893baf1d` and
+`fb38ee04`. The first commit adds transactional verified regeneration,
+authoritative-fact and qualifier handover, verified render authority, bounded
+grounding diagnostics, and typed theme diagnostics. The second commit fixes a
+specific multi-fact source-page validation error: a candidate with evidence
+IDs bound to different pages is now checked against the page set for each
+evidence ID, rather than against the union of all pages. This preserves
+legitimate multi-page claims while rejecting an unrelated page for a single
+fact.
+
+The regeneration path now snapshots the exact promoted artifact for each
+attempt, restricts provider changes to planner-authorized item paths, restores
+complete verified protected fields only for changed items, leaves removed or
+unselected families absent, and revalidates before promotion. An `ABSTAIN`
+or failed candidate is a no-op. Verified rendering uses authoritative fact
+packs for methodology and retains full multi-fact evidence IDs, pages and
+spans; discovery DocMap prose is not used as verified public methodology.
+Summary/expert/advisory handover includes admitted qualifiers and limitations.
+
+### Focused verification
+
+The focused handover, regeneration, rendering, grounding and editorial
+quality suite passed **450 tests**. The direct candidate-lineage regression
+passed **75 tests**. Ruff passed on all changed source and test files; mypy
+passed for the changed modules. The prompt fixture gate passed with the
+existing thresholds and baseline: total tokens **116,412 vs 115,513**
+(+899), estimated cost **$0.025294 vs $0.025204** (+$0.000090); publishing
+**47,304 vs 46,703** (+601, +$0.000060); validation **12,330 vs 12,134**
+(+196, +$0.000020). No prompt or schema contract was weakened.
+
+The full repository mypy command still reports the pre-existing unrelated
+error in `src/services/mailbox_acquisition_service.py:2028`
+(`anchor.parent` may be `None`); that file is unchanged by this work. The
+wheelhouse test also remains environment-dependent on CPython 3.12 while the
+available interpreter is CPython 3.14. These are reported limitations, not
+silently suppressed failures.
+
+### Corrected Activate replay
+
+One fresh isolated provider-backed Activate run used the retained PDF and
+source identity
+`source:4d84943bbcfdef81ad8c08f29f6f6b0b|pdf-sha256:5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`.
+The run directory is
+`C:\ml-activate-handover-20261106\frozen-reliability-k5kgl0m5\members\cohort-cbb6e7df67412186b8bc\ias-first-attempt-gaw_rybd`.
+
+| Measure | Result |
+| --- | ---: |
+| Verified-fact admission | 10 / 10; 0 quarantined |
+| Provider calls | 497 |
+| Input / output / cached input tokens | 2,048,713 / 424,849 / 42,381 |
+| Estimated cost | `$0.433481` |
+| Wall-clock | 4,118.580 s |
+| File-search calls | 8 |
+| Bounded repair actions | 3 (two provider regeneration attempts and one safe-removal candidate) |
+| Workflow retries / operator intervention | 0 / 0 |
+| Unsupported / unresolved retained factual claims | 0 / 0 |
+| HTML / WordPress writes | 0 / 0 |
+
+The first and second provider candidates were rolled back with empty
+`changed_paths`; the third safe-removal candidate passed its narrow candidate
+validation but was rolled back by final public-quality checks for missing
+expert-comment evidence, incomplete public coverage and a generic watchout.
+All three audits retain identical evidence IDs and physical pages between the
+original and candidate artifacts. In particular, the previous multi-fact
+`regeneration_source_page` errors are absent from audits 1 and 2, and no
+candidate was selected using a page union. This demonstrates the provenance
+fix and transactional rollback behavior, but not a publication-quality pass.
+
+The terminal validation artifact is
+`...\output\d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf\report_analysis\validation.json`.
+It reports four remaining public-editorial defects: two generic watchouts and
+the omission of the source limitation that the creator-share percentages have
+no sample size or uncertainty estimate. The final state is `validation_failed`
+with no HTML. Because no public HTML was produced, no independent claim of
+final-page editorial quality is made for this run. The source/evidence lineage
+checks did pass, and no unsupported retained factual claim was marked
+verified.
+
+Compared with the retained d028 Activate result (486 calls, `$0.423778`,
+3,918.371 s, 36 unresolved grounding claims), the corrected run reached
+grounding with zero unresolved retained claims and exposed the remaining
+editorial defects. The difference is observational: provider/model and
+workflow variability prevent attributing the whole change to the page-bound
+fix alone.
+
+### Frozen-five replay attempt
+
+The exact five-report command was started from clean commit `fb38ee04` with
+the authoritative frozen cohort and no publication flags. Its run root is
+`C:\ml-frozen-five-handover-20261106\frozen-reliability-pq3hizmk`.
+The process reached only the Capgemini member before it was stopped cleanly
+after a resource-growth stall, so this is **not** a cohort result and must not
+be compared as a completed five-report acceptance. At interruption, the
+Capgemini member had completed admission, source validation, taxonomy,
+evidence generation and category fit; the partial ledger contained 98
+completed provider events, 603,690 input tokens, 112,737 output tokens,
+1,196 cached input tokens, `$0.126631`, four file-search calls and one
+structured-output repair. No final HTML or publication write existed.
+
+The runner's working set grew from approximately 0.7 GB to 1.52 GB without
+new report artifacts or provider events after category-fit materialization.
+The process was terminated before an uncontrolled resource failure. No
+terminal outcome is counted for this partial run, and the remaining four
+reports were not executed in this attempt. The partial Capgemini diagnostic
+records a final-insight coverage-repair exhaustion, but because the run was
+interrupted before a terminal cohort result, it is retained as diagnostic
+only.
+
+### Verdict and remaining blockers
+
+The implementation is **PARTIAL / NO-GO** for Step 2 completion. The
+multi-fact source-page defect is corrected and covered by a focused regression;
+transactional rollback, evidence immutability, qualifier handover and
+verified-render authority are covered by the affected suite. The fresh
+Activate report still fails public editorial quality, and the exact frozen-five
+acceptance remains incomplete because of the runner resource stall. The
+earlier Reuters exporter terminal-row discrepancy remains an operational
+limitation and was not changed speculatively. E18 remains **Active/PARTIAL**;
+Step 2 is not closed and Step 3 remains **unstarted/not ready**. No
+publication write or WordPress mutation was performed.
