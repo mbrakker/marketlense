@@ -1236,6 +1236,7 @@ def run_report_analysis(
                 if verified_authority_context is not None
                 else ""
             ),
+            evidence_packs=factual_evidence_packs,
             semantic_review_capture=semantic_review_capture,
         )
     )
@@ -1390,6 +1391,7 @@ def run_report_analysis(
                 if verified_authority_context is not None
                 else ""
             ),
+            evidence_packs=factual_evidence_packs,
             semantic_review_reuse=(
                 semantic_review_capture[0] if semantic_review_capture else None
             ),

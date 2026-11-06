@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 
 from src.contracts.prompts import PromptLoadRequest
-from src.generators._artifact_generator.generation import generate_artifacts
+from src.generators._artifact_generator.generation import (
+    _semantic_theme_coverage_insights_json,
+    generate_artifacts,
+)
 from src.services.prompt_service import load_prompt_set
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
@@ -166,3 +170,36 @@ def test_verified_ten_fact_roster_can_retain_seven_material_planned_themes(tmp_p
     coverage = payload["_cache"]["candidate_generation"]["editorial_plan_coverage"]
     assert coverage["final_selected_theme_coverage"]["omitted_themes"] == []
     assert len(coverage["final_selected_theme_coverage"]["theme_coverage"]) == 7
+
+
+def test_verified_theme_coverage_receives_all_facts_bound_to_one_insight(tmp_path):
+    facts = [
+        {
+            "fact_id": "fact-1",
+            "statement": "The first population increased.",
+            "metric": {"label": "First", "value": "42", "unit": "%"},
+        },
+        {
+            "fact_id": "fact-2",
+            "statement": "The second population declined.",
+            "metric": {"label": "Second", "value": "18", "unit": "%"},
+        },
+    ]
+    rendered = json.loads(
+        _semantic_theme_coverage_insights_json(
+            [
+                {
+                    "id": "insight-1",
+                    "text": "The combined signal changes planning.",
+                    "evidence_id": "verified-fact:fact-1",
+                    "evidence_ids": ["verified-fact:fact-2"],
+                }
+            ],
+            authoritative_facts=facts,
+        )
+    )
+    first = rendered[0]
+    assert first["verified_fact_ids"] == ["fact-1", "fact-2"]
+    assert [fact["fact_id"] for fact in first["verified_facts"]] == ["fact-1", "fact-2"]
+    assert first["verified_facts"][1]["metric"]["value"] == "18"
+    assert "metric" not in first

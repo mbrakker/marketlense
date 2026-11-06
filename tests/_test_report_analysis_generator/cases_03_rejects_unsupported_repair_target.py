@@ -42,6 +42,64 @@ def test_load_retained_claim_candidate_binds_to_promoted_artifacts(tmp_path):
     )
 
 
+@pytest.mark.parametrize("source_id", ["source:canonical", "source:stale"])
+def test_load_retained_claim_candidate_checks_execution_identity(
+    tmp_path, source_id: str
+):
+    runtime = _runtime(tmp_path)
+    candidate_artifacts = {"summary": {"tldr": "Promoted copy."}}
+    artifact_hash = sha256_json(candidate_artifacts)
+    candidate_package = {
+        "schema_version": "1.4",
+        "artifact_hash": artifact_hash,
+        "package_hash": "promoted-package-hash",
+        "validation_identity": {
+            "report_id": runtime.file.file_id,
+            "source_id": source_id,
+            "source_md5": runtime.md5,
+            "configuration_hash": runtime.ctx.configuration_hash,
+            "policy_hash": runtime.ctx.policy_hash,
+        },
+    }
+
+    def _analysis_pack_path(request, _ctx):
+        return SimpleNamespace(output_path=f"candidate/{request.pack_name}.json")
+
+    def _read_json(request, _ctx):
+        del request
+        return SimpleNamespace(payload=candidate_package)
+
+    dependencies = _deps(
+        analysis_pack_path=_analysis_pack_path,
+        read_json=_read_json,
+    )
+
+    if source_id == "source:canonical":
+        loaded = _load_candidate_claim_validation_for_promotion(
+            runtime=runtime,
+            dependencies=dependencies,
+            candidate_validation_pack_name="validation_regen_candidate_2",
+            expected_artifact_hash=artifact_hash,
+            expected_source_id="source:canonical",
+            expected_source_md5=runtime.md5,
+            require_execution_identity=True,
+            ctx=runtime.ctx,
+        )
+        assert loaded == candidate_package
+    else:
+        with pytest.raises(AppError, match="stale execution identity"):
+            _load_candidate_claim_validation_for_promotion(
+                runtime=runtime,
+                dependencies=dependencies,
+                candidate_validation_pack_name="validation_regen_candidate_2",
+                expected_artifact_hash=artifact_hash,
+                expected_source_id="source:canonical",
+                expected_source_md5=runtime.md5,
+                require_execution_identity=True,
+                ctx=runtime.ctx,
+            )
+
+
 def test_store_promoted_retained_claim_candidate_to_report_scoped_pack(tmp_path):
     runtime = _runtime(tmp_path)
     stored_requests = []

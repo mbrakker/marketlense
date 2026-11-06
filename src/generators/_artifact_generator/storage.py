@@ -641,6 +641,8 @@ def assemble_artifacts_payload(
         quotes_final=quotes_final,
         metric_spine=metric_spine,
         evidence_packs=evidence_packs,
+        soft_copy_claim_provenance=artifacts_payload["soft_copy_claim_provenance"],
+        verified_facts=verified_facts,
     )
     artifacts_payload["claim_ledgers"] = build_universal_claim_ledger(
         report_id=report_id,
@@ -2739,6 +2741,8 @@ def build_canonical_regeneration_derived_artifacts(
             quotes_final=quotes,
             metric_spine=canonical["metric_spine"],
             evidence_packs=evidence_packs,
+            soft_copy_claim_provenance=artifacts.get("soft_copy_claim_provenance"),
+            verified_facts=artifacts.get("verified_facts") or [],
         )
     if "claim_ledgers" in builder_roots:
         claim_ledger = artifacts.get("claim_ledgers") or []
@@ -3011,6 +3015,33 @@ def _limitation_texts(limitations: List[Any]) -> List[str]:
     ]
 
 
+def _retained_summary_context_sources(
+    *, summary: Dict[str, Any], soft_copy_claim_provenance: Optional[Dict[str, Any]]
+) -> List[tuple[str, List[str]]]:
+    """Bind decision context only through retained sentence-level provenance."""
+
+    context = _decision_brief_context(summary)
+    if not context or not isinstance(soft_copy_claim_provenance, dict):
+        return []
+    try:
+        claims = soft_copy_claim_provenance_from_payload(soft_copy_claim_provenance)
+    except AppError:
+        return []
+    by_hash: Dict[str, List[SoftCopyClaimProvenance]] = {}
+    for claim in claims:
+        if claim.artifact_family != "summary":
+            continue
+        by_hash.setdefault(claim.text_hash, []).append(claim)
+    sources: List[tuple[str, List[str]]] = []
+    for sentence in soft_copy_material_sentences(context):
+        sentence_hash = hashlib.sha256(sentence.encode("utf-8")).hexdigest()
+        matches = by_hash.get(sentence_hash, [])
+        if len(matches) != 1 or not matches[0].evidence_ids:
+            return []
+        sources.append((sentence, list(dict.fromkeys(matches[0].evidence_ids))))
+    return sources
+
+
 def build_executive_advisory_artifacts(
     *,
     summary: Dict[str, Any],
@@ -3018,6 +3049,8 @@ def build_executive_advisory_artifacts(
     quotes_final: List[Dict[str, Any]],
     metric_spine: List[Dict[str, Any]],
     evidence_packs: Dict[str, Any],
+    soft_copy_claim_provenance: Optional[Dict[str, Any]] = None,
+    verified_facts: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     limitations_pack = evidence_packs.get("limitations", {})
     limitations = (
@@ -3027,18 +3060,23 @@ def build_executive_advisory_artifacts(
     )
     if not limitations:
         verified_facts_pack = evidence_packs.get("verified_facts", {})
-        verified_facts = (
+        pack_facts = (
             verified_facts_pack.get("verified_facts")
             if isinstance(verified_facts_pack, dict)
             else []
         )
-        if isinstance(verified_facts, list):
+        fallback_facts = (
+            pack_facts
+            if isinstance(pack_facts, list)
+            else (verified_facts if isinstance(verified_facts, list) else [])
+        )
+        if isinstance(fallback_facts, list):
             limitations = [
                 {
                     "text": _s(qualifier).strip(),
                     "evidence_id": (f"verified-fact:{_s(fact.get('fact_id')).strip()}"),
                 }
-                for fact in verified_facts
+                for fact in fallback_facts
                 if isinstance(fact, dict)
                 for qualifier in fact.get("qualifiers") or []
                 if _s(qualifier).strip() and _s(fact.get("fact_id")).strip()
@@ -3105,6 +3143,14 @@ def build_executive_advisory_artifacts(
             *_limitation_texts(limitations),
         ]
     )
+    summary_context = _decision_brief_context(summary)
+    retained_context_sources = _retained_summary_context_sources(
+        summary=summary,
+        soft_copy_claim_provenance=soft_copy_claim_provenance,
+    )
+    is_verified = bool(evidence_packs.get("verified_facts")) or bool(verified_facts)
+    if is_verified and not retained_context_sources:
+        summary_context = ""
     limitation_sources = [
         (
             _s(item)
@@ -3122,14 +3168,16 @@ def build_executive_advisory_artifacts(
     ]
     evidence_links_by_item = {
         "strategic_context": _advisory_evidence_bindings(
-            [_decision_brief_context(summary)],
-            [
+            [summary_context],
+            retained_context_sources
+            if retained_context_sources
+            else [
                 (
                     _s(item.get("claim")),
                     _artifact_evidence_ids(item),
                 )
                 for item in summary.get("claim_evidence_map") or []
-                if isinstance(item, dict)
+                if isinstance(item, dict) and not is_verified
             ],
         ),
         "decision_implications": _advisory_evidence_bindings(
@@ -3173,7 +3221,7 @@ def build_executive_advisory_artifacts(
             "status": "generated"
             if supported_insights or metric_spine
             else "not_found",
-            "strategic_context": _decision_brief_context(summary),
+            "strategic_context": summary_context,
             "decision_implications": decision_implications,
             "priority_moves": priority_moves,
             "watchouts": watchouts,

@@ -466,6 +466,77 @@ def _summary_prioritized_evidence_json(
     )
 
 
+def _semantic_theme_coverage_insights_json(
+    final_insights: List[Dict[str, Any]],
+    *,
+    authoritative_facts: Sequence[Dict[str, Any]] | None = None,
+) -> str:
+    """Expose final copy with its complete authoritative fact relationship."""
+
+    fact_by_evidence_id = {
+        f"verified-fact:{_s(fact.get('fact_id')).strip()}": fact
+        for fact in authoritative_facts or []
+        if isinstance(fact, dict) and _s(fact.get("fact_id")).strip()
+    }
+    verified_mode = authoritative_facts is not None
+    rendered_insights = []
+    for insight in final_insights:
+        item = {
+            key: insight[key]
+            for key in (
+                "id",
+                "text",
+                "so_what",
+                "now_what",
+                "evidence_id",
+                "evidence_ids",
+                "metric",
+                "metric_public_copy",
+                "coverage_role",
+                "report_type_lens",
+            )
+            if key in insight
+        }
+        raw_evidence_ids = insight.get("evidence_ids")
+        additional_evidence_ids = (
+            raw_evidence_ids if isinstance(raw_evidence_ids, list) else []
+        )
+        evidence_ids = [
+            _s(insight.get("evidence_id")).strip(),
+            *[
+                _s(value).strip()
+                for value in additional_evidence_ids
+                if _s(value).strip()
+            ],
+        ]
+        authorities = [
+            fact_by_evidence_id[evidence_id]
+            for evidence_id in dict.fromkeys(evidence_ids)
+            if evidence_id in fact_by_evidence_id
+        ]
+        if authorities:
+            item["verified_fact_ids"] = [
+                _s(authority.get("fact_id")).strip() for authority in authorities
+            ]
+            item["verified_facts"] = deepcopy(authorities)
+            if len(authorities) == 1:
+                authority = authorities[0]
+                item["metric"] = deepcopy(authority.get("metric") or {})
+                item["verified_fact_id"] = _s(authority.get("fact_id")).strip()
+                item["verified_proposition"] = _s(
+                    authority.get("statement")
+                ).strip()
+            else:
+                item.pop("metric", None)
+                item.pop("verified_fact_id", None)
+                item.pop("verified_proposition", None)
+        elif verified_mode:
+            item.pop("metric", None)
+        rendered_insights.append(item)
+
+    return _dump_json(rendered_insights)
+
+
 def generate_artifacts(
     report_id: str,
     doc_map: Dict[str, Any],
@@ -678,61 +749,10 @@ def generate_artifacts(
         *,
         authoritative_facts: Sequence[Dict[str, Any]] | None = None,
     ) -> str:
-        """Expose final copy with the authoritative metric to coverage."""
-
-        fact_by_evidence_id = {
-            f"verified-fact:{_s(fact.get('fact_id')).strip()}": fact
-            for fact in authoritative_facts or []
-            if isinstance(fact, dict) and _s(fact.get("fact_id")).strip()
-        }
-        verified_mode = authoritative_facts is not None
-        rendered_insights = []
-        for insight in final_insights:
-            item = {
-                key: insight[key]
-                for key in (
-                    "id",
-                    "text",
-                    "so_what",
-                    "now_what",
-                    "evidence_id",
-                    "evidence_ids",
-                    "metric",
-                    "metric_public_copy",
-                    "coverage_role",
-                    "report_type_lens",
-                )
-                if key in insight
-            }
-            raw_evidence_ids = insight.get("evidence_ids")
-            additional_evidence_ids = (
-                raw_evidence_ids if isinstance(raw_evidence_ids, list) else []
-            )
-            evidence_ids = [
-                _s(insight.get("evidence_id")).strip(),
-                *[
-                    _s(value).strip()
-                    for value in additional_evidence_ids
-                    if _s(value).strip()
-                ],
-            ]
-            authority = next(
-                (
-                    fact_by_evidence_id[evidence_id]
-                    for evidence_id in dict.fromkeys(evidence_ids)
-                    if evidence_id in fact_by_evidence_id
-                ),
-                None,
-            )
-            if authority is not None:
-                item["metric"] = deepcopy(authority.get("metric") or {})
-                item["verified_fact_id"] = _s(authority.get("fact_id")).strip()
-                item["verified_proposition"] = _s(authority.get("statement")).strip()
-            elif verified_mode:
-                item.pop("metric", None)
-            rendered_insights.append(item)
-
-        return _dump_json(rendered_insights)
+        return _semantic_theme_coverage_insights_json(
+            final_insights,
+            authoritative_facts=authoritative_facts,
+        )
 
     def update_family_reuse(namespace: str, **fields: object) -> None:
         with family_state_lock:

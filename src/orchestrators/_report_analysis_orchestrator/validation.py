@@ -127,6 +127,7 @@ __all__ = [
     "_run_validation_with_fallback",
     "_store_validation_snapshot",
     "_promote_regeneration_candidate",
+    "_promote_validated_regeneration_candidate",
     "_store_regeneration_candidate_audit",
 ]
 
@@ -161,7 +162,7 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v23"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v24"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.0"
 _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v3"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
@@ -716,6 +717,7 @@ def _public_editorial_semantic_review(
     openai_client: Any,
     verified_source_identity: str = "",
     verified_fact_digest: str = "",
+    evidence_packs: Dict[str, Any] | None = None,
     semantic_review_reuse: _PublicEditorialReviewReuse | None = None,
     semantic_review_capture: list[_PublicEditorialReviewReuse] | None = None,
 ) -> list[PublicEditorialQualityIssue]:
@@ -756,6 +758,7 @@ def _public_editorial_semantic_review(
         items,
         source_identity=source_id,
         verified_fact_digest=verified_fact_digest,
+        evidence_packs=evidence_packs,
     )
     review_items: list[dict[str, Any]] = []
     for item in items:
@@ -1123,6 +1126,7 @@ def _evaluate_and_store_public_editorial_quality(
     openai_client=None,
     verified_source_identity: str = "",
     verified_fact_digest: str = "",
+    evidence_packs: Dict[str, Any] | None = None,
     semantic_review_reuse: _PublicEditorialReviewReuse | None = None,
     semantic_review_capture: list[_PublicEditorialReviewReuse] | None = None,
 ) -> tuple[ValidationReport | None, str]:
@@ -1161,6 +1165,7 @@ def _evaluate_and_store_public_editorial_quality(
         openai_client=openai_client,
         verified_source_identity=canonical_source_identity,
         verified_fact_digest=canonical_fact_digest,
+        evidence_packs=evidence_packs,
         semantic_review_reuse=semantic_review_reuse,
         semantic_review_capture=semantic_review_capture,
     )
@@ -2035,6 +2040,7 @@ def _scope_validation_report(
     doc_map: Dict[str, Any] | None = None,
     evidence_packs: Dict[str, Any] | None = None,
     repair_decisions: Sequence[RepairDecision] = (),
+    declared_family_roots: frozenset[str] = frozenset(),
 ) -> ValidationReport:
     allowed_paths = {
         path.strip()
@@ -2052,6 +2058,7 @@ def _scope_validation_report(
         repair_decisions=repair_decisions,
     )
     allowed_paths.update(verified_mutation_paths)
+    allowed_paths.update(declared_family_roots)
     changed_paths = _artifact_diff_paths(before, after)
     allowed_paths.update(
         path
@@ -2073,7 +2080,7 @@ def _scope_validation_report(
     violations = sorted(
         path
         for path in changed_paths
-        if not _path_is_declared(path, allowed_paths)
+        if not _path_is_declared(path, allowed_paths, declared_family_roots)
         and not _is_allowed_derived_artifact_change(
             path=path,
             dependent_roots=dependent_roots,
@@ -2511,7 +2518,11 @@ def _path_root(path: str) -> str:
     return re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
 
 
-def _path_is_declared(path: str, allowed_paths: set[str]) -> bool:
+def _path_is_declared(
+    path: str,
+    allowed_paths: set[str],
+    declared_family_roots: frozenset[str] = frozenset(),
+) -> bool:
     deterministic_family_roots = {
         "toc_entries",
         "toc_topics",
@@ -2521,6 +2532,10 @@ def _path_is_declared(path: str, allowed_paths: set[str]) -> bool:
         path == allowed
         or (
             allowed in deterministic_family_roots
+            and (path.startswith(f"{allowed}.") or path.startswith(f"{allowed}["))
+        )
+        or (
+            allowed in declared_family_roots
             and (path.startswith(f"{allowed}.") or path.startswith(f"{allowed}["))
         )
         for allowed in allowed_paths
@@ -2808,6 +2823,9 @@ def _load_candidate_claim_validation_for_promotion(
     dependencies: ReportAnalysisDependencies,
     candidate_validation_pack_name: str,
     expected_artifact_hash: str,
+    expected_source_id: str = "",
+    expected_source_md5: str = "",
+    require_execution_identity: bool = False,
     ctx,
 ) -> Dict[str, Any]:
     """Load candidate grounding only when it matches the artifacts being promoted."""
@@ -2853,6 +2871,37 @@ def _load_candidate_claim_validation_for_promotion(
             retryable=False,
             context={"pack_name": pack_name},
         )
+    identity = payload.get("validation_identity")
+    if require_execution_identity and not isinstance(identity, dict):
+        raise AppError(
+            code="retained_claim_candidate_execution_identity_missing",
+            message="Validated candidate grounding package has no execution identity",
+            retryable=False,
+            context={"pack_name": pack_name},
+        )
+    if isinstance(identity, dict):
+        expected_identity = {
+            "report_id": str(runtime.file.file_id),
+            "source_id": str(expected_source_id or "").strip(),
+            "source_md5": str(expected_source_md5 or "").strip(),
+            "configuration_hash": str(runtime.ctx.configuration_hash or ""),
+            "policy_hash": str(runtime.ctx.policy_hash or ""),
+        }
+        mismatches = {
+            field: {"expected": expected, "actual": identity.get(field)}
+            for field, expected in expected_identity.items()
+            if identity.get(field) != expected
+        }
+        if mismatches:
+            raise AppError(
+                code="retained_claim_candidate_execution_identity_mismatch",
+                message=(
+                    "Validated candidate grounding package has a stale execution "
+                    "identity"
+                ),
+                retryable=False,
+                context={"pack_name": pack_name, "mismatches": mismatches},
+            )
     return payload
 
 
@@ -3025,6 +3074,7 @@ def _validate_regeneration_baseline(
         openai_client=validation_openai_client,
         verified_source_identity=verified_source_identity,
         verified_fact_digest=verified_fact_digest,
+        evidence_packs=evidence_packs,
     )
     validation = _merge_public_editorial_quality(validation, editorial_validation)
     return _with_retained_claim_repair_diagnostics(
@@ -3843,6 +3893,7 @@ def _run_validation_regeneration_loop(
                     openai_client=validation_openai_client,
                     verified_source_identity=verified_source_identity,
                     verified_fact_digest=verified_fact_digest,
+                    evidence_packs=evidence_packs,
                 )
             )
             candidate_validation_report = _merge_public_editorial_quality(
@@ -3969,78 +4020,30 @@ def _run_validation_regeneration_loop(
         artifacts_path = regeneration_response.artifacts_path
         if candidate_enforced:
             if candidate_validation_report.status == "pass":
-                canonical_promotion_attempted = False
-                canonical_validation_attempted = False
-                retained_claim_candidate = None
-                retained_claim_candidate_path = ""
-                canonical_validation_path = ""
                 try:
-                    retained_claim_candidate = (
-                        _load_candidate_claim_validation_for_promotion(
-                            runtime=runtime,
-                            dependencies=dependencies,
-                            candidate_validation_pack_name=validation_pack_name,
-                            expected_artifact_hash=sha256_json(candidate_artifacts),
-                            ctx=attempt_ctx,
-                        )
-                    )
-                    # The canonical store is atomic, but a dependency may
-                    # raise after its replace has completed. Mark the
-                    # operation before calling it so rollback is attempted in
-                    # both cases.
-                    canonical_promotion_attempted = True
-                    artifacts_path = _promote_regeneration_candidate(
+                    (
+                        artifacts_path,
+                        canonical_validation_path,
+                        retained_claim_candidate_path,
+                        retained_claim_candidate,
+                    ) = _promote_validated_regeneration_candidate(
                         runtime=runtime,
                         dependencies=dependencies,
                         candidate_artifacts=candidate_artifacts,
+                        candidate_validation_report=candidate_validation_report,
+                        candidate_validation_pack_name=validation_pack_name,
+                        promoted_artifacts=promoted_artifacts,
+                        promoted_validation_report=promoted_validation_report,
+                        promoted_claim_validation_package=(
+                            promoted_claim_validation_package
+                        ),
+                        current_artifacts_path=current_artifacts_path,
+                        expected_source_id=validation_source_identity,
+                        expected_source_md5=str(runtime.md5 or ""),
+                        require_execution_identity=verified_mode,
                         ctx=attempt_ctx,
                     )
-                    retained_claim_candidate_path = (
-                        _store_promoted_candidate_claim_validation(
-                            runtime=runtime,
-                            dependencies=dependencies,
-                            candidate_package=retained_claim_candidate,
-                            ctx=attempt_ctx,
-                        )
-                    )
-                    canonical_validation_attempted = True
-                    canonical_validation_path = _store_validation_snapshot(
-                        runtime=runtime,
-                        dependencies=dependencies,
-                        report=candidate_validation_report,
-                        pack_name="validation",
-                        ctx=attempt_ctx,
-                    )
-                except Exception as promotion_error:
-                    rollback_error = None
-                    if canonical_promotion_attempted:
-                        try:
-                            _promote_regeneration_candidate(
-                                runtime=runtime,
-                                dependencies=dependencies,
-                                candidate_artifacts=promoted_artifacts,
-                                ctx=attempt_ctx,
-                            )
-                            artifacts_path = current_artifacts_path
-                            if promoted_claim_validation_package is not None:
-                                _store_promoted_candidate_claim_validation(
-                                    runtime=runtime,
-                                    dependencies=dependencies,
-                                    candidate_package=(
-                                        promoted_claim_validation_package
-                                    ),
-                                    ctx=attempt_ctx,
-                                )
-                            if canonical_validation_attempted:
-                                _store_validation_snapshot(
-                                    runtime=runtime,
-                                    dependencies=dependencies,
-                                    report=promoted_validation_report,
-                                    pack_name="validation",
-                                    ctx=attempt_ctx,
-                                )
-                        except Exception as restore_error:
-                            rollback_error = restore_error
+                except Exception:
                     try:
                         _store_regeneration_candidate_audit(
                             runtime=runtime,
@@ -4079,22 +4082,6 @@ def _run_validation_regeneration_loop(
                                 fields={"cause_code": type(audit_error).__name__},
                             )
                         )
-                    if rollback_error is not None:
-                        raise AppError(
-                            code="regeneration_promotion_inconsistent",
-                            message=(
-                                "A promoted regeneration could not be rolled back "
-                                "after a related artifact persistence failure."
-                            ),
-                            retryable=False,
-                            context={
-                                "report_id": runtime.file.file_id,
-                                "attempt_index": attempt_index,
-                                "promotion_error": type(promotion_error).__name__,
-                                "rollback_error": type(rollback_error).__name__,
-                            },
-                            cause=rollback_error,
-                        ) from rollback_error
                     raise
                 promotion_state = (
                     candidate_artifacts,
@@ -4399,3 +4386,117 @@ def _store_validation_snapshot(
         ctx,
     )
     return output_path
+
+
+def _promote_validated_regeneration_candidate(
+    *,
+    runtime: ReportRuntimeState,
+    dependencies: ReportAnalysisDependencies,
+    candidate_artifacts: Dict[str, Any],
+    candidate_validation_report: ValidationReport,
+    candidate_validation_pack_name: str,
+    promoted_artifacts: Dict[str, Any],
+    promoted_validation_report: ValidationReport,
+    promoted_claim_validation_package: Dict[str, Any] | None,
+    current_artifacts_path: str,
+    expected_source_id: str = "",
+    expected_source_md5: str = "",
+    require_execution_identity: bool = False,
+    ctx,
+) -> tuple[str, str, str, Dict[str, Any]]:
+    """Promote artifacts, retained grounding, and validation as one contract.
+
+    Every write is marked before invocation because the canonical file service
+    may raise after replacing a file.  A failed later write therefore restores
+    every earlier canonical root that this transaction could have changed.
+    """
+
+    retained_claim_candidate = _load_candidate_claim_validation_for_promotion(
+        runtime=runtime,
+        dependencies=dependencies,
+        candidate_validation_pack_name=candidate_validation_pack_name,
+        expected_artifact_hash=sha256_json(candidate_artifacts),
+        expected_source_id=expected_source_id,
+        expected_source_md5=expected_source_md5,
+        require_execution_identity=require_execution_identity,
+        ctx=ctx,
+    )
+    artifact_attempted = False
+    claim_attempted = False
+    validation_attempted = False
+    artifacts_path = current_artifacts_path
+    retained_claim_path = ""
+    validation_path = ""
+    try:
+        artifact_attempted = True
+        artifacts_path = _promote_regeneration_candidate(
+            runtime=runtime,
+            dependencies=dependencies,
+            candidate_artifacts=candidate_artifacts,
+            ctx=ctx,
+        )
+        claim_attempted = True
+        retained_claim_path = _store_promoted_candidate_claim_validation(
+            runtime=runtime,
+            dependencies=dependencies,
+            candidate_package=retained_claim_candidate,
+            ctx=ctx,
+        )
+        validation_attempted = True
+        validation_path = _store_validation_snapshot(
+            runtime=runtime,
+            dependencies=dependencies,
+            report=candidate_validation_report,
+            pack_name="validation",
+            ctx=ctx,
+        )
+    except Exception as promotion_error:
+        rollback_error = None
+        try:
+            if artifact_attempted:
+                _promote_regeneration_candidate(
+                    runtime=runtime,
+                    dependencies=dependencies,
+                    candidate_artifacts=promoted_artifacts,
+                    ctx=ctx,
+                )
+                artifacts_path = current_artifacts_path
+            if claim_attempted and promoted_claim_validation_package is not None:
+                _store_promoted_candidate_claim_validation(
+                    runtime=runtime,
+                    dependencies=dependencies,
+                    candidate_package=promoted_claim_validation_package,
+                    ctx=ctx,
+                )
+            if validation_attempted:
+                _store_validation_snapshot(
+                    runtime=runtime,
+                    dependencies=dependencies,
+                    report=promoted_validation_report,
+                    pack_name="validation",
+                    ctx=ctx,
+                )
+        except Exception as restore_error:
+            rollback_error = restore_error
+        if rollback_error is not None:
+            raise AppError(
+                code="regeneration_promotion_inconsistent",
+                message=(
+                    "A promoted regeneration could not be rolled back after a "
+                    "related artifact persistence failure."
+                ),
+                retryable=False,
+                context={
+                    "report_id": runtime.file.file_id,
+                    "promotion_error": type(promotion_error).__name__,
+                    "rollback_error": type(rollback_error).__name__,
+                },
+                cause=rollback_error,
+            ) from rollback_error
+        raise
+    return (
+        artifacts_path,
+        validation_path,
+        retained_claim_path,
+        retained_claim_candidate,
+    )

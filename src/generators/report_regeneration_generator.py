@@ -257,6 +257,9 @@ def regenerate_artifacts(
     active_doc_map = safe_doc_map
     active_evidence = safe_evidence
     quote_candidates = artifact_quote_candidates(safe_evidence)
+    topics_authorized = any(
+        target.target_section == "topics" for target in request.plan.targets
+    )
     if state.visual_authority_digest:
         if (
             not state.visual_authority_facts
@@ -278,14 +281,17 @@ def regenerate_artifacts(
             state.editorial_plan,
             state.visual_authority_facts,
         )
-        fallback_toc_bundle = build_toc_artifacts(doc_map=active_doc_map)
-        state.toc_entries = normalize_artifact_toc_entries(
-            fallback_toc_bundle.get("toc_entries")
-        )
-        state.toc_topics = normalize_artifact_topics(
-            fallback_toc_bundle.get("toc_topics")
-        )
-        state.topic_briefs = _copy_list(fallback_toc_bundle.get("toc_topics_expanded"))
+        if topics_authorized:
+            fallback_toc_bundle = build_toc_artifacts(doc_map=active_doc_map)
+            state.toc_entries = normalize_artifact_toc_entries(
+                fallback_toc_bundle.get("toc_entries")
+            )
+            state.toc_topics = normalize_artifact_topics(
+                fallback_toc_bundle.get("toc_topics")
+            )
+            state.topic_briefs = _copy_list(
+                fallback_toc_bundle.get("toc_topics_expanded")
+            )
     base_vars = artifact_base_variables(active_doc_map, active_evidence)
     base_vars.pop("canonical_evidence_ids_json", None)
     _apply_visual_authority_pool(state)
@@ -522,10 +528,9 @@ def regenerate_artifacts(
         for root in sorted(authorized_source_roots)
         if root in updated_artifacts
     }
-    if state.visual_authority_digest:
-        # Verified mode owns the structural TOC snapshot even when the repair
-        # target is a different family; never restore discovery-era TOC prose
-        # from the promoted baseline.
+    if state.visual_authority_digest and topics_authorized:
+        # A verified TOC is rebuilt only for an explicitly scoped topics repair.
+        # Other verified repairs must preserve the promoted baseline roots.
         for root in ("toc_entries", "toc_topics", "toc_topics_expanded"):
             if root in updated_artifacts:
                 atomic_source_patch[root] = deepcopy(updated_artifacts[root])

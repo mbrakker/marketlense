@@ -1706,32 +1706,96 @@ def _coerce_findings(evidence_packs: dict[str, Any]) -> list[str]:
     return findings[:5]
 
 
-def _coerce_limitations(
-    evidence_packs: dict[str, Any], *, verified_mode: bool = False
-) -> list[str]:
+def _coerce_limitation_items(
+    evidence_packs: dict[str, Any],
+    *,
+    verified_mode: bool = False,
+    artifacts: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Return the exact source-backed limitation rows used by the renderer."""
+
     limitations_pack = _coerce_dict(evidence_packs.get("limitations"))
-    limitations: list[str] = []
+    limitations: list[dict[str, Any]] = []
     for raw_item in _coerce_list(limitations_pack.get("limitations")):
         item = _coerce_dict(raw_item)
         message = _pick_first_text(
             item.get("message"),
             item.get("description"),
+            item.get("text"),
+            item.get("summary"),
             item.get("mitigation"),
         )
         if message:
-            limitations.append(message)
+            evidence_ids = [
+                _s(item.get("evidence_id")),
+                *[_s(value) for value in _coerce_list(item.get("evidence_ids"))],
+            ]
+            limitations.append(
+                {
+                    "text": message,
+                    "evidence_ids": list(
+                        dict.fromkeys(value for value in evidence_ids if value)
+                    ),
+                }
+            )
     if limitations or not verified_mode:
         return limitations[:5]
     verified_pack = _coerce_dict(evidence_packs.get("verified_facts"))
-    for raw_fact in _coerce_list(verified_pack.get("verified_facts")):
+    raw_facts = _coerce_list(verified_pack.get("verified_facts"))
+    if not raw_facts and isinstance(evidence_packs.get("verified_facts"), list):
+        raw_facts = _coerce_list(evidence_packs.get("verified_facts"))
+    selected_evidence_ids: set[str] = set()
+    for raw_insight in _coerce_list((artifacts or {}).get("insights_final")):
+        insight = _coerce_dict(raw_insight)
+        selected_evidence_ids.update(
+            value
+            for value in [
+                _s(insight.get("evidence_id")),
+                *[_s(item) for item in _coerce_list(insight.get("evidence_ids"))],
+            ]
+            if value
+        )
+    fact_rows: list[dict[str, Any]] = []
+    for raw_fact in raw_facts:
         fact = _coerce_dict(raw_fact)
+        fact_id = _s(fact.get("fact_id"))
+        evidence_id = f"{VERIFIED_FACT_EVIDENCE_PREFIX}{fact_id}" if fact_id else ""
         for raw_qualifier in _coerce_list(fact.get("qualifiers")):
             qualifier = _s(raw_qualifier)
-            if qualifier and qualifier not in limitations:
-                limitations.append(qualifier)
-            if len(limitations) >= 5:
-                return limitations
-    return limitations[:5]
+            if qualifier:
+                fact_rows.append(
+                    {
+                        "text": qualifier,
+                        "evidence_ids": [evidence_id] if evidence_id else [],
+                        "_selected": evidence_id in selected_evidence_ids,
+                    }
+                )
+    fact_rows.sort(key=lambda row: not bool(row.pop("_selected", False)))
+    seen_texts = {item["text"] for item in limitations}
+    for row in fact_rows:
+        if row["text"] in seen_texts:
+            continue
+        limitations.append(row)
+        seen_texts.add(row["text"])
+        if len(limitations) >= 5:
+            break
+    return limitations
+
+
+def _coerce_limitations(
+    evidence_packs: dict[str, Any],
+    *,
+    verified_mode: bool = False,
+    artifacts: dict[str, Any] | None = None,
+) -> list[str]:
+    return [
+        item["text"]
+        for item in _coerce_limitation_items(
+            evidence_packs,
+            verified_mode=verified_mode,
+            artifacts=artifacts,
+        )
+    ]
 
 
 def _coerce_contacts(

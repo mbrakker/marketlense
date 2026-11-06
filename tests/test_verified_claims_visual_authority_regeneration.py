@@ -260,7 +260,7 @@ def test_enabled_visual_cache_without_fact_snapshot_fails_closed(tmp_path):
         )
 
 
-def test_verified_regeneration_replaces_stale_toc_with_structural_context(tmp_path):
+def test_verified_regeneration_preserves_unrelated_toc_during_insight_repair(tmp_path):
     current = _current_artifacts()
     admitted = deepcopy(current["insights_final"][:2])
     visual_admission = _verified_admission(admitted, digest="f" * 64)
@@ -305,8 +305,9 @@ def test_verified_regeneration_replaces_stale_toc_with_structural_context(tmp_pa
         prompt_client=_FakePromptClient(),
     )
 
-    assert "Raw discovery title" not in response.updated_artifacts["toc_topics"]
-    assert all(
-        "Raw discovery summary" not in str(item)
-        for item in response.updated_artifacts["toc_topics_expanded"]
+    assert response.updated_artifacts["toc_entries"] == current["toc_entries"]
+    assert response.updated_artifacts["toc_topics"] == current["toc_topics"]
+    assert (
+        response.updated_artifacts["toc_topics_expanded"]
+        == current["toc_topics_expanded"]
     )

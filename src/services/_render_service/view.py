@@ -481,7 +481,11 @@ def _build_render_view(
         },
         {
             "label": "Limitations",
-            "items": _coerce_limitations(evidence_packs, verified_mode=verified_mode),
+            "items": _coerce_limitations(
+                evidence_packs,
+                verified_mode=verified_mode,
+                artifacts=artifacts,
+            ),
             "empty": "No explicit limitations were extracted.",
         },
         {

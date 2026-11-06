@@ -84,10 +84,12 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
     _candidate_audit,
     _candidate_validation_report,
     _evaluate_and_store_public_editorial_quality,
+    _load_promoted_claim_validation_for_reuse,
     _merge_public_editorial_quality,
-    _promote_regeneration_candidate,
+    _promote_validated_regeneration_candidate,
     _retained_claim_severity_by_fingerprint,
     _run_validation_with_fallback,
+    _scope_validation_report,
     _store_regeneration_candidate_audit,
     _store_validation_snapshot,
 )
@@ -100,6 +102,7 @@ from src.services.file_service import (
     read_text,
 )
 from src.services.report_store_service import check_artifact_reuse
+from src.utils.cache_utils import sha256_json
 from src.utils.clock import utc_now_iso as _utc_now_iso
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
@@ -1305,6 +1308,29 @@ _PROMPT_FAMILY_REPAIR_TARGETS = {
     "report_vs/artifacts/expert_comment": "expert_comment",
     "report_vs/artifacts/linkedin_post": "linkedin_post",
 }
+_PROMPT_FAMILY_REPAIR_NAMESPACES = {
+    "report_vs/artifacts/summary": (
+        "report_vs/artifacts/regenerate/summary",
+    ),
+    "report_vs/artifacts/insights_candidates": (
+        "report_vs/artifacts/regenerate/insights_candidates",
+        "report_vs/artifacts/regenerate/insights_final",
+    ),
+    "report_vs/artifacts/insights_final": (
+        "report_vs/artifacts/regenerate/insights_candidates",
+        "report_vs/artifacts/regenerate/insights_final",
+    ),
+    "report_vs/artifacts/quotes": ("report_vs/artifacts/regenerate/quotes",),
+    "report_vs/artifacts/cover_semantics": (
+        "report_vs/artifacts/cover_semantics",
+    ),
+    "report_vs/artifacts/expert_comment": (
+        "report_vs/artifacts/regenerate/expert_comment",
+    ),
+    "report_vs/artifacts/linkedin_post": (
+        "report_vs/artifacts/regenerate/linkedin_post",
+    ),
+}
 _PROMPT_FAMILY_REPAIR_ORDER = (
     "summary",
     "insights_bundle",
@@ -1356,7 +1382,16 @@ def _resume_prompt_family_repair(
         RegenerationTarget(
             target_section=target,
             regenerate_steps=[],
-            prompt_namespaces=[],
+            prompt_namespaces=list(
+                dict.fromkeys(
+                    namespace
+                    for family in requested
+                    if _PROMPT_FAMILY_REPAIR_TARGETS.get(family) == target
+                    for namespace in _PROMPT_FAMILY_REPAIR_NAMESPACES.get(
+                        family, ()
+                    )
+                )
+            ),
             issues=[],
         )
         for target in _PROMPT_FAMILY_REPAIR_ORDER
@@ -1439,18 +1474,19 @@ def _resume_prompt_family_repair(
         if regeneration_openai_client is not None
         else {}
     )
+    regeneration_plan = RegenerationPlan(
+        schema_version="1.0",
+        mode="targeted",
+        targets=targets,
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
     regeneration = dependencies.analysis.regenerate_artifacts(
         ArtifactRegenerationRequest(
             report_id=ReportId(runtime.file.file_id),
             report_name=runtime.report_name,
             attempt_index=1,
-            plan=RegenerationPlan(
-                schema_version="1.0",
-                mode="targeted",
-                targets=targets,
-                unmappable_issues=[],
-                broad_retry_allowed=False,
-            ),
+            plan=regeneration_plan,
             current_artifacts=current_artifacts,
             doc_map=analysis.evidence_packs.get("doc_map", {}),
             evidence_packs=factual_evidence_packs,
@@ -1489,6 +1525,16 @@ def _resume_prompt_family_repair(
     candidate_artifacts_path = _candidate_artifacts_path(regeneration)
     candidate_enforced = bool(candidate_artifacts_path)
     current_artifacts_path = str(analysis.evidence_paths.get("artifacts") or "")
+    declared_family_roots = frozenset(
+        root
+        for target in targets
+        for root in (
+            {"insights_bundle": {"insights_candidates", "insights_final"}}.get(
+                target.target_section,
+                {target.target_section},
+            )
+        )
+    )
     candidate_result = (
         validate_regeneration_candidate(
             current_artifacts=current_artifacts,
@@ -1500,10 +1546,27 @@ def _resume_prompt_family_repair(
                 if analysis.validation_report is not None
                 else {}
             ),
+            planned_prompt_namespaces=tuple(
+                namespace
+                for target in targets
+                for namespace in target.prompt_namespaces
+            ),
+            actual_prompt_namespaces=tuple(regeneration.prompt_namespaces),
             verified_facts_only=authority_context is not None,
         )
         if candidate_enforced
         else CandidateIntegrityResult(issues=[], evidence_lineage=[])
+    )
+    scope_validation = _scope_validation_report(
+        before=current_artifacts,
+        after=candidate_artifacts,
+        plan=regeneration_plan,
+        verified_derived_roots=candidate_result.verified_derived_roots,
+        deterministic_mutation_paths=regeneration.deterministic_mutation_paths,
+        doc_map=analysis.evidence_packs.get("doc_map", {}),
+        evidence_packs=factual_evidence_packs,
+        repair_decisions=regeneration.repair_decisions,
+        declared_family_roots=declared_family_roots,
     )
     candidate_audit_path = ""
     if candidate_enforced:
@@ -1555,7 +1618,9 @@ def _resume_prompt_family_repair(
             validation_mode=(
                 "verified_facts" if authority_context is not None else "full"
             ),
-            deterministic_grounding_passed=candidate_result.passed,
+            deterministic_grounding_passed=(
+                candidate_result.passed and scope_validation.status == "pass"
+            ),
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
@@ -1563,9 +1628,14 @@ def _resume_prompt_family_repair(
             source_pages=source.text_response.pages,
         ),
         pack_name=validation_pack_name,
-        openai_client=validation_openai_client,
+        openai_client=(
+            validation_openai_client
+            if candidate_result.passed and scope_validation.status == "pass"
+            else None
+        ),
     )
     validation = _candidate_validation_report(validation, candidate_result)
+    validation = _merge_public_editorial_quality(validation, scope_validation)
     editorial_validation, editorial_path = _evaluate_and_store_public_editorial_quality(
         runtime=runtime,
         dependencies=dependencies.analysis,
@@ -1581,6 +1651,7 @@ def _resume_prompt_family_repair(
             if authority_context is not None
             else ""
         ),
+        evidence_packs=factual_evidence_packs,
     )
     validation = _merge_public_editorial_quality(validation, editorial_validation)
     candidate_validation_path = _store_validation_snapshot(
@@ -1618,11 +1689,42 @@ def _resume_prompt_family_repair(
         )
     artifacts_path = regeneration.artifacts_path
     if candidate_enforced:
+        promoted_claim_validation_package = _load_promoted_claim_validation_for_reuse(
+            runtime=runtime,
+            dependencies=dependencies.analysis,
+            expected_artifact_hash=sha256_json(current_artifacts),
+            ctx=repair_ctx,
+        )
+        promoted_validation_report = analysis.validation_report
+        if promoted_validation_report is None:
+            raise AppError(
+                code="minimal_execution_prompt_family_validation_baseline_missing",
+                message=(
+                    "Prompt-family promotion requires the retained promoted "
+                    "validation report for rollback"
+                ),
+                retryable=False,
+                context={"file_id": runtime.file.file_id},
+            )
         try:
-            artifacts_path = _promote_regeneration_candidate(
+            (
+                artifacts_path,
+                validation_path,
+                retained_claim_path,
+                _retained_claim_candidate,
+            ) = _promote_validated_regeneration_candidate(
                 runtime=runtime,
                 dependencies=dependencies.analysis,
                 candidate_artifacts=candidate_artifacts,
+                candidate_validation_report=validation,
+                candidate_validation_pack_name=validation_pack_name,
+                promoted_artifacts=current_artifacts,
+                promoted_validation_report=promoted_validation_report,
+                promoted_claim_validation_package=promoted_claim_validation_package,
+                current_artifacts_path=current_artifacts_path,
+                expected_source_id=factual_source_identity,
+                expected_source_md5=str(runtime.md5 or ""),
+                require_execution_identity=authority_context is not None,
                 ctx=repair_ctx,
             )
         except Exception:
@@ -1644,13 +1746,6 @@ def _resume_prompt_family_repair(
                 ctx=repair_ctx,
             )
             raise
-        validation_path = _store_validation_snapshot(
-            runtime=runtime,
-            dependencies=dependencies.analysis,
-            report=validation,
-            pack_name="validation",
-            ctx=repair_ctx,
-        )
         validation = replace(validation, source_path=validation_path)
         candidate_audit_path = _store_regeneration_candidate_audit(
             runtime=runtime,
@@ -1679,6 +1774,10 @@ def _resume_prompt_family_repair(
         evidence_paths["regeneration_candidate_audit_1"] = candidate_audit_path
     if validation.source_path:
         evidence_paths["validation"] = validation.source_path
+    if candidate_enforced and retained_claim_path:
+        evidence_paths["validation_retained_claim_validation_candidate"] = (
+            retained_claim_path
+        )
     if editorial_path:
         evidence_paths["public_editorial_quality_prompt_repair"] = editorial_path
     data_dict = regenerated_payload.to_dict()

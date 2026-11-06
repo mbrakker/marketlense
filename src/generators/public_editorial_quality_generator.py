@@ -39,6 +39,7 @@ from src.generators.validation.verified_facts import (
 )
 from src.services.render_service import (
     _build_signal_cards,
+    _coerce_limitation_items,
     _coerce_public_advisory,
     _coerce_public_chart_insight_cards,
     _coerce_public_topics_covered,
@@ -1840,6 +1841,7 @@ def public_editorial_report_review_scope(
     *,
     source_identity: str = "",
     verified_fact_digest: str = "",
+    evidence_packs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the report-level context for the existing semantic review call.
 
@@ -1911,6 +1913,16 @@ def public_editorial_report_review_scope(
         )
 
     editorial_plan = safe_artifacts.get("editorial_plan")
+    render_evidence_packs: dict[str, Any] = {}
+    if isinstance(evidence_packs, dict):
+        render_evidence_packs = evidence_packs
+    elif isinstance(safe_artifacts.get("evidence_packs"), dict):
+        render_evidence_packs = safe_artifacts["evidence_packs"]
+    rendered_limitations = _coerce_limitation_items(
+        render_evidence_packs,
+        verified_mode=verified_facts_mode(safe_artifacts),
+        artifacts=safe_artifacts,
+    )
     return {
         "authority": "canonical_verified_facts" if facts else "retained_evidence",
         "source_identity": resolved_source_identity,
@@ -1925,6 +1937,7 @@ def public_editorial_report_review_scope(
         else {},
         "evidence_context": list(evidence_context.values()),
         "public_content": public_content,
+        "rendered_limitations": rendered_limitations,
         "reuse_guidance": reuse_guidance,
     }
 
