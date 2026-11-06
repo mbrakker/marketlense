@@ -10714,3 +10714,65 @@ editorial-quality failure, live selection effectiveness, and the CPython 3.12
 wheelhouse check remain unresolved. E18 remains **Active/PARTIAL** and Step 3
 remains **unstarted/not ready**. No canonical artifact, readiness, publication,
 or WordPress write occurred.
+
+## Verified editorial handover and scoped regeneration replay — 2026-11-06
+
+Commit `a731f007a38f52d04e82906407f73b40c59ef4b1` closes the remaining
+cross-stage contract gaps without adding a validator, model call, or
+publication path. Normal validation and prompt-family repair now use the same
+validated-candidate promotion helper with atomic artifact/retained-claim/
+validation persistence and rollback on partial failure. Verified promotion
+requires the current report/source/configuration/policy execution identity.
+Prompt-family repairs declare their actual regeneration roots, so unrelated
+TOC and sibling roots are not promoted. The renderer and public-quality review
+now share the same exact source-backed limitation projection; verified
+strategic context is omitted when it has no unambiguous retained provenance.
+Multi-fact theme coverage carries every bound canonical fact and its
+relationships instead of allowing a first fact to become accidental authority.
+
+Provider-free regressions passed **384 tests**. Scoped Ruff passed; the
+canonical type gate reported **0 tracked mypy errors across 786 source files**;
+`git diff --check` passed. The full local suite passed **8,502 tests, 2
+skipped, 48 deselected, and 24 subtests**, with one unchanged
+`test_build_hash_locked_wheelhouse.py::test_existing_wheelhouse_reports_missing_active_artifact`
+failure because this host runs CPython 3.14.2 while that test requires native
+CPython 3.12. No changed module is involved. A repository-wide Ruff run still
+reports pre-existing violations outside this slice; the changed-file Ruff gate
+is the result claimed here. Hosted CI for `a731f007` was not yet available at
+the time of this report.
+
+The exact provider-backed frozen-five command was started from clean commit
+`a731f007` with no publication flags:
+
+```text
+python -u scripts/quality/run_frozen_reliability_cohort.py --sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json --runs-root C:\ml-p0p1-frozen-five-20261106 --sources-root "C:\Programing\Market lense" --max-duration 7200 --verified-facts-architecture
+```
+
+Run root: `C:\ml-p0p1-frozen-five-20261106\frozen-reliability-rfc7a4tw`.
+Capgemini reached terminal `artifact_final_insight_coverage_invalid` after
+`semantic_theme_repair_exhausted`: **90 provider calls**, **626,940 input /
+96,888 output tokens**, **1,196 cached input tokens**, and **$0.136031**.
+The repair had ten eligible IDs and selected six, but the semantic coverage
+validator still rejected the result. Activate reached the same terminal
+failure after selecting seven of ten eligible IDs, with **470 calls**,
+**974,622 input / 277,129 output tokens**, **1,196 cached input tokens**, and
+**$0.258425**. Both responses were structurally valid; the rejection was the
+existing semantic coverage gate, not malformed output or an unsupported
+evidence promotion.
+
+The runner then remained in post-terminal draining without new provider
+events, and was stopped cleanly; no `cohort_result.json` was produced. KPMG,
+Reuters Institute, and Adjust were not executed in this fresh attempt, so this
+is **not** a frozen-five result. No report produced final HTML, no canonical or
+retained claim was promoted, and no WordPress/publication write occurred. The
+provider-free retained replay still confirms **5/5** source hashes, **29/29**
+selected IDs, and **29/29** editorial-plan theme slots, but that is continuity
+evidence only and does not prove fresh selection effectiveness. The live
+semantic-coverage blocker therefore remains genuine and unresolved; no live
+quality improvement is claimed.
+
+**Current verdict: PARTIAL / NO-GO.** The handover, provenance, multi-fact
+authority, and scoped-regeneration corrections are implemented and regression-
+covered. E18 remains **Active/PARTIAL**; Step 2 remains **PARTIAL/NO-GO**; and
+Step 3 remains **unstarted/not ready** pending a complete current-SHA
+frozen-five run and independent editorial-quality acceptance.
