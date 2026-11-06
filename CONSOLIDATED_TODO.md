@@ -2061,3 +2061,8 @@ editorial-quality evidence. Retained Capgemini evidence supports a semantic
 theme-coverage terminal failure, not a resource-stall diagnosis. E18 remains
 Active/PARTIAL, Step 2 remains PARTIAL/NO-GO, and Step 3 remains
 unstarted/not ready. No canonical, publication, or WordPress write occurred.
+
+Hosted CI run `42267015274` for correction commit `47c0613e` passed
+`ci_start`, the 8,498-test job (1 skip, 85.50% global coverage), both mutation
+partitions, and `release_evidence`; the release bundle is retained at
+https://github.com/mbrakker/marketlense/actions/runs/42267015274/artifacts/13527946780.

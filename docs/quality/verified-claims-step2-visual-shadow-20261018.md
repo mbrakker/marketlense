@@ -10680,6 +10680,13 @@ environment-only failure in
 the test requires native CPython 3.12, while this runner is CPython 3.14.2.
 No changed module is involved in that failure.
 
+Hosted CI run `42267015274` for commit `47c0613e` passed all required jobs:
+`ci_start`, tests, both mutation partitions, and `release_evidence`. The hosted
+tests job ran **8,498 tests with 1 skipped**, reported **85.50%** global
+coverage, and retained the unchanged coverage and mutation thresholds. The
+release-evidence bundle is available at
+<https://github.com/mbrakker/marketlense/actions/runs/42267015274/artifacts/13527946780>.
+
 The provider-free exact frozen-five replay used retained artifacts and the
 local hash-pinned PDFs without publication or provider calls. It confirmed
 **5/5** source SHA-256 matches (Capgemini 82 pages, Activate 140, KPMG 42,
