@@ -14,6 +14,10 @@ from src.generators._artifact_generator.storage import (
     derive_metric_spine_from_insights,
     finalize_regeneration_candidate_artifacts,
 )
+from src.generators.report_regeneration_generator import (
+    _apply_visual_authority_pool,
+    _RegenerationState,
+)
 from src.generators.soft_copy_claim_provenance import (
     build_soft_copy_claim_provenance,
 )
@@ -178,6 +182,8 @@ def test_verified_finalization_rebinds_canonical_fact_spans() -> None:
         ),
     }
     candidate = deepcopy(baseline)
+    candidate["insights_candidates"][0]["text"] = "Repaired editorial wording."
+    candidate["insights_final"][0]["text"] = "Repaired editorial wording."
 
     finalize_regeneration_candidate_artifacts(
         promoted_baseline=baseline,
@@ -450,6 +456,8 @@ def test_verified_finalization_clears_legacy_text_when_span_is_missing() -> None
         "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload([]),
     }
     candidate = deepcopy(baseline)
+    candidate["insights_candidates"][0]["text"] = "Repaired claim."
+    candidate["insights_final"][0]["text"] = "Repaired claim."
 
     finalize_regeneration_candidate_artifacts(
         promoted_baseline=baseline,
@@ -922,3 +930,70 @@ def test_byte_identical_expert_and_linkedin_text_reuses_canonical_provenance() -
             hashlib.sha256(sentence.encode("utf-8")).hexdigest()
             for sentence in sentences
         ]
+
+
+def test_verified_regeneration_does_not_repopulate_unselected_authority_candidates(
+) -> None:
+    authority_a = {
+        "id": "fact-a",
+        "text": "Retained candidate A.",
+        "evidence_id": "verified-fact:fact-a",
+        "evidence": "Page 4 supports candidate A.",
+        "pages": [4],
+        "metric": {
+            "label": "Adoption",
+            "value": "42",
+            "unit": "%",
+            "observations": [{"label": "Buyers", "value": "42", "unit": "%"}],
+            "report_specific_method": {"qualifier": "weighted survey"},
+        },
+    }
+    authority_b = {
+        "id": "fact-b",
+        "text": "Retained candidate B.",
+        "evidence_id": "verified-fact:fact-b",
+        "evidence": "Page 5 supports candidate B.",
+        "pages": [5],
+        "metric": {"label": "Retention", "value": "18", "unit": "%"},
+    }
+    state = _RegenerationState(
+        toc_entries=[],
+        toc_topics=[],
+        topic_briefs=[],
+        editorial_plan={},
+        summary={},
+        insights_candidates=[
+            {
+                **deepcopy(authority_a),
+                "text": "Final editorial wording for A.",
+                "metric": {"label": "Adoption", "value": "999", "unit": "%"},
+            }
+        ],
+        insights_final=[
+            {
+                **deepcopy(authority_a),
+                "text": "Final editorial wording for A.",
+                "metric": {"label": "Adoption", "value": "999", "unit": "%"},
+            }
+        ],
+        quotes_final=[],
+        cover_semantics={},
+        expert_comment="",
+        linkedin_post="",
+        source_status={},
+        visual_authority_candidates=[authority_a, authority_b],
+        visual_authority_digest="digest",
+    )
+
+    _apply_visual_authority_pool(state, restore_insight_ids={"fact-a"})
+
+    assert [item["id"] for item in state.insights_candidates] == ["fact-a"]
+    assert [item["id"] for item in state.insights_final] == ["fact-a"]
+    assert state.insights_final[0]["text"] == "Final editorial wording for A."
+    assert state.insights_final[0]["metric"]["value"] == "42"
+    assert state.insights_final[0]["metric"]["observations"] == [
+        {"label": "Buyers", "value": "42", "unit": "%"}
+    ]
+    assert state.insights_final[0]["metric"]["report_specific_method"] == {
+        "qualifier": "weighted survey"
+    }

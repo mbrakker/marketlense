@@ -328,7 +328,10 @@ def _build_render_view(
     focus_year = _extract_focus_year(
         time_period, doc_map.get("year"), doc_map.get("publicationDate"), report_title
     )
-    methodology_items = _coerce_methodology(doc_map, discovery_evidence_packs)
+    methodology_items = _coerce_methodology(
+        {} if verified_mode else doc_map,
+        evidence_packs,
+    )
     fieldwork_dates = _extract_fieldwork_dates(
         *methodology_items,
         time_period,
@@ -477,7 +480,7 @@ def _build_render_view(
         },
         {
             "label": "Limitations",
-            "items": _coerce_limitations(evidence_packs),
+            "items": _coerce_limitations(evidence_packs, verified_mode=verified_mode),
             "empty": "No explicit limitations were extracted.",
         },
         {
@@ -486,7 +489,7 @@ def _build_render_view(
             "empty": "No contact details were extracted.",
         },
     ]
-    chapters = _coerce_chapters(artifacts, doc_map)
+    chapters = _coerce_chapters(artifacts, doc_map, verified_mode=verified_mode)
     return {
         "report_title": report_title,
         "publisher": publisher,

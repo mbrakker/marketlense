@@ -1461,6 +1461,33 @@ def run_grounding_check(
         failure_message = f"Grounding check failed ({exc.code})."
         if inner_error_class:
             failure_message += f" (cause: {inner_error_class})"
+        diagnostic_parts: list[str] = []
+        coverage_category = s(error_context.get("coverage_failure_category"))
+        if coverage_category:
+            diagnostic_parts.append(f"coverage={coverage_category}")
+        batch_index_value: object = error_context.get("batch_index")
+        if isinstance(batch_index_value, int) and not isinstance(
+            batch_index_value, bool
+        ):
+            diagnostic_parts.append(f"batch={batch_index_value}")
+        for key in (
+            "missing_claim_ids",
+            "missing_or_ambiguous_public_item_ids",
+            "unknown_item_ids",
+            "duplicate_item_ids",
+            "incomplete_verdict_ids",
+        ):
+            values = error_context.get(key)
+            if not isinstance(values, list):
+                continue
+            bounded_ids = [s(value).strip() for value in values if s(value).strip()]
+            if bounded_ids:
+                diagnostic_parts.append(
+                    f"{key}={','.join(bounded_ids[:8])}"
+                    + (",..." if len(bounded_ids) > 8 else "")
+                )
+        if diagnostic_parts:
+            failure_message += " [" + "; ".join(diagnostic_parts) + "]"
         failure_item_ids = {
             s(item_id)
             for key in (

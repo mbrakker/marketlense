@@ -45,7 +45,7 @@ text: |
   - Classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim.
   - Never round exact source values or replace explicit periods with relative
     timeframes. DocMap and the plan guide context, not evidence.
-  - Include no more than one caveat, and only when the evidence explicitly supports it.
+  - Include at most one concise caveat or limitations disclosure; it may consolidate multiple materially relevant, source-supported limitations, but omit immaterial or unsupported caveats.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
   - Target 20-30 words for `tldr` (hard limit: 45). Use one simple complete sentence and exactly one terminal punctuation mark; never use an ellipsis or attach a second topic to fill space.
   - The compact TLDR must be a complete direct source-backed claim of 18 words or fewer and must also appear as a claim_evidence_map claim. Include its direct supporting evidence in that map entry. If the source does not support a short complete claim, do not shorten or invent one; allow deterministic summary abstention.

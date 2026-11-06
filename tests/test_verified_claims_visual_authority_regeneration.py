@@ -123,6 +123,15 @@ def test_scoped_regeneration_preserves_visual_authority_pool(tmp_path):
     }
     assert final_ids <= {item["id"] for item in admitted}
     assert candidate_ids <= {item["id"] for item in admitted}
+    untouched_before = next(
+        item for item in admitted if item["id"] == "insight-2"
+    )
+    untouched_after = next(
+        item
+        for item in response.updated_artifacts["insights_final"]
+        if item["id"] == "insight-2"
+    )
+    assert untouched_after == untouched_before
     assert (
         response.updated_artifacts["_cache"]["visual_authority_canary"]["digest"]
         == "e" * 64

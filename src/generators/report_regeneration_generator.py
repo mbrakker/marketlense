@@ -473,8 +473,26 @@ def regenerate_artifacts(
         additional_paths=state.deterministic_mutation_paths,
     )
     if state.visual_authority_candidates:
-        updated_artifacts["insights_candidates"] = deepcopy(state.insights_candidates)
-        updated_artifacts["insights_final"] = deepcopy(state.insights_final)
+        # Verified authority constrains the roster, but the scope-merged
+        # family remains the source for item content.  Copying ``state`` here
+        # would reintroduce provider changes to untouched admitted siblings.
+        admitted_ids = {
+            _s(item.get("id")).strip()
+            for item in state.visual_authority_candidates
+            if isinstance(item, dict) and _s(item.get("id")).strip()
+        }
+        for root in ("insights_candidates", "insights_final"):
+            items = updated_artifacts.get(root)
+            if not isinstance(items, list):
+                continue
+            updated_artifacts[root] = [
+                deepcopy(item)
+                for item in items
+                if isinstance(item, dict)
+                and _s(item.get("id")).strip() in admitted_ids
+                and _s(item.get("id")).strip()
+                not in state.removed_insight_ids
+            ]
     authorized_source_roots = {
         re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
         for target in request.plan.targets
@@ -2024,6 +2042,7 @@ def _restore_missing_final_insight_roster(
     selected_insights: List[Dict[str, Any]],
     prior_final_insights: List[Dict[str, Any]],
     eligible_candidate_insights: List[Dict[str, Any]],
+    preserve_unknown_metric_fields: bool = False,
 ) -> List[Dict[str, Any]]:
     """Restore only prior IDs that remain in the eligible candidate pool.
 
@@ -2065,7 +2084,9 @@ def _restore_missing_final_insight_roster(
     ]
     for index, insight_id in zip(replace_indexes, missing_ids, strict=False):
         selected[index] = restore_artifact_insight_factual_fields(
-            prior_by_id[insight_id], eligible_candidate_insights
+            prior_by_id[insight_id],
+            eligible_candidate_insights,
+            preserve_unknown_metric_fields=preserve_unknown_metric_fields,
         )
     return selected
 
@@ -2235,7 +2256,9 @@ def _build_regeneration_state(
     )
 
 
-def _apply_visual_authority_pool(state: _RegenerationState) -> None:
+def _apply_visual_authority_pool(
+    state: _RegenerationState, *, restore_insight_ids: set[str] | None = None
+) -> None:
     """Keep canary regeneration on the admitted stable-ID candidate pool."""
 
     if not state.visual_authority_candidates:
@@ -2252,9 +2275,7 @@ def _apply_visual_authority_pool(state: _RegenerationState) -> None:
             retryable=False,
         )
 
-    def constrain(
-        items: List[Dict[str, Any]], *, fill_missing: bool
-    ) -> List[Dict[str, Any]]:
+    def constrain(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         constrained: List[Dict[str, Any]] = []
         seen: set[str] = set()
         for item in items:
@@ -2266,21 +2287,43 @@ def _apply_visual_authority_pool(state: _RegenerationState) -> None:
             retained = authoritative.get(insight_id)
             if retained is None or insight_id in seen:
                 continue
-            constrained.append(
-                restore_artifact_insight_factual_fields(deepcopy(item), [retained])
-            )
+            current = deepcopy(item)
+            if restore_insight_ids is not None and insight_id in restore_insight_ids:
+                current = restore_artifact_insight_factual_fields(
+                    current,
+                    [retained],
+                    preserve_unknown_metric_fields=bool(
+                        state.visual_authority_digest
+                    ),
+                )
+            constrained.append(current)
             seen.add(insight_id)
-        if fill_missing:
-            constrained.extend(
-                deepcopy(retained)
-                for insight_id, retained in authoritative.items()
-                if insight_id not in seen
-                and insight_id not in state.removed_insight_ids
-            )
         return constrained
 
-    state.insights_candidates = constrain(state.insights_candidates, fill_missing=True)
-    state.insights_final = constrain(state.insights_final, fill_missing=False)
+    # The admitted pool is a source-of-truth constraint for items that the
+    # attempt already contains.  It is not permission to reconstruct omitted
+    # or unselected candidates, which would turn a scoped repair into a roster
+    # mutation and make untouched paths fail the transactional scope check.
+    state.insights_candidates = constrain(state.insights_candidates)
+    state.insights_final = constrain(state.insights_final)
+
+
+def _target_insight_ids(target: RegenerationTarget, root: str) -> set[str]:
+    """Return stable insight IDs explicitly writable by one repair target."""
+
+    prefix = f"{root}[item="
+    ids = {
+        path.removeprefix(prefix).split("]", 1)[0].strip()
+        for path in target.allowed_paths
+        if path.startswith(prefix) and "]" in path
+    }
+    ids.discard("")
+    ids.update(
+        failed_insight_id(issue.entity_id, issue.affected_section)
+        for issue in target.issues
+        if failed_insight_id(issue.entity_id, issue.affected_section)
+    )
+    return ids
 
 
 def _retained_soft_copy_evidence_selections(value: object) -> Dict[str, Dict[str, Any]]:
@@ -5403,7 +5446,12 @@ def _handle_insights_bundle_regeneration(
         regenerated_insights=regenerated_candidates,
         append_new=not bool(execution.state.visual_authority_candidates),
     )
-    _apply_visual_authority_pool(execution.state)
+    _apply_visual_authority_pool(
+        execution.state,
+        restore_insight_ids=_target_insight_ids(
+            execution.target, "insights_candidates"
+        ),
+    )
     execution.state.insights_candidates = select_artifact_insights(
         final_insights=execution.state.insights_candidates,
         candidate_insights=(
@@ -5426,7 +5474,12 @@ def _handle_insights_bundle_regeneration(
         editorial_plan=execution.state.editorial_plan,
         verified_mode=bool(execution.state.visual_authority_digest),
     )
-    _apply_visual_authority_pool(execution.state)
+    _apply_visual_authority_pool(
+        execution.state,
+        restore_insight_ids=_target_insight_ids(
+            execution.target, "insights_candidates"
+        ),
+    )
     eligible_candidate_insights = eligible_final_insight_candidates(
         execution.state.insights_candidates
     )
@@ -5478,8 +5531,12 @@ def _handle_insights_bundle_regeneration(
         ),
         prior_final_insights=prior_final_insights,
         eligible_candidate_insights=eligible_candidate_insights,
+        preserve_unknown_metric_fields=bool(execution.state.visual_authority_digest),
     )
-    _apply_visual_authority_pool(execution.state)
+    _apply_visual_authority_pool(
+        execution.state,
+        restore_insight_ids=_target_insight_ids(execution.target, "insights_final"),
+    )
     execution.state.regenerated_sections.extend(
         ["insights_candidates", "insights_final"]
     )
@@ -5799,7 +5856,13 @@ def _regenerate_one_final_insight(
                 retryable=False,
                 context={"report_id": execution.runtime.request.report_id},
             )
-        repaired = restore_artifact_insight_factual_fields(repaired, [authoritative])
+        repaired = restore_artifact_insight_factual_fields(
+            repaired,
+            [authoritative],
+            preserve_unknown_metric_fields=bool(
+                execution.state.visual_authority_digest
+            ),
+        )
     if not any(
         _insight_path_value(repaired, field_path)
         != _insight_path_value(original, field_path)

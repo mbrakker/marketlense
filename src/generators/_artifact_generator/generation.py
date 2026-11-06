@@ -135,6 +135,19 @@ class PromptFamilyReuseTelemetry(TypedDict):
     family_usage: dict[str, PromptFamilyUsageTelemetry]
 
 
+class _ThemeCoverageDiagnostic(TypedDict):
+    theme: str
+    priority: Any
+    fact_ids: List[str]
+
+
+class _ModelThemeAssessment(TypedDict):
+    theme: str
+    status: str
+    supporting_insight_ids: List[str]
+    reason: str
+
+
 _ARTIFACT_FAMILY_ROOTS = {
     "report_vs/artifacts/editorial_plan": "editorial_plan",
     "report_vs/artifacts/summary": "summary",
@@ -2226,7 +2239,7 @@ def generate_artifacts(
                 }
             )
 
-        planned_themes = [
+        planned_themes: List[_ThemeCoverageDiagnostic] = [
             {
                 "theme": _s(binding.get("theme")).strip(),
                 "priority": binding.get("priority"),
@@ -2246,7 +2259,7 @@ def generate_artifacts(
                 if fact_id
             }
         )
-        model_assessments = []
+        model_assessments: List[_ModelThemeAssessment] = []
         raw_assessments = (
             assessment.get("theme_coverage") if isinstance(assessment, dict) else []
         )

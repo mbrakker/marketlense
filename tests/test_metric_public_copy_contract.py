@@ -11,6 +11,7 @@ from src.contracts.report_assets import RenderRequest
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue
 from src.generators._artifact_generator.storage import (
+    build_executive_advisory_artifacts,
     build_key_figures,
     build_universal_claim_ledger,
     derive_metric_spine_from_insights,
@@ -226,6 +227,81 @@ def test_metric_copy_public_surfaces_use_copy_and_not_diagnostic_claim_text() ->
     assert claim["claim"] == "42% of surveyed buyers"
     assert "label=" not in claim["claim"]
     assert "value=" not in claim["claim"]
+
+
+def test_verified_public_metric_surfaces_retain_all_canonical_evidence_ids() -> None:
+    artifacts = _artifacts_with_metric_copy()
+    second_fact = deepcopy(artifacts["verified_facts"][0])
+    second_fact["fact_id"] = "fact-2"
+    second_fact["statement"] = "The comparison fact is also source-backed."
+    second_fact["supporting_physical_pages"] = [5]
+    second_fact["provenance"]["inspected_physical_pages"] = [5]
+    second_fact["provenance"]["source_truth_notes_by_page"] = {
+        "5": "Page 5 reports the comparison fact."
+    }
+    artifacts["verified_facts"].append(second_fact)
+    secondary_id = "verified-fact:fact-2"
+    artifacts["insights_final"][0]["evidence_ids"] = [
+        "verified-fact:fact-1",
+        secondary_id,
+    ]
+    artifacts["metric_spine"][0]["evidence_ids"] = [
+        "verified-fact:fact-1",
+        secondary_id,
+    ]
+    artifacts["key_figures"][0]["evidence_ids"] = [
+        "verified-fact:fact-1",
+        secondary_id,
+    ]
+
+    metric = _coerce_public_metric_spine(artifacts, limit=1)[0]
+    figure = _coerce_public_key_figures(artifacts, limit=1)[0]
+
+    assert metric["evidence_id"] == "verified-fact:fact-1"
+    assert metric["evidence_ids"] == ["verified-fact:fact-1", secondary_id]
+    assert figure["evidence_id"] == "verified-fact:fact-1"
+    assert figure["evidence_ids"] == ["verified-fact:fact-1", secondary_id]
+
+
+def test_verified_advisory_retains_multi_fact_links() -> None:
+    artifacts = _artifacts_with_metric_copy()
+    second_id = "verified-fact:fact-2"
+    insights = deepcopy(artifacts["insights_final"])
+    insights[0]["evidence_ids"] = ["verified-fact:fact-1", second_id]
+    insights[0]["now_what"] = "Plan around the retained comparison."
+
+    advisory = build_executive_advisory_artifacts(
+        summary=artifacts["summary"],
+        insights_final=insights,
+        quotes_final=[],
+        metric_spine=artifacts["metric_spine"],
+        evidence_packs={},
+    )
+
+    recommendation = advisory["recommendations"]["items"][0]
+    assert recommendation["evidence_id"] == "verified-fact:fact-1"
+    assert recommendation["evidence_ids"] == ["verified-fact:fact-1", second_id]
+    assert advisory["decision_brief"]["evidence_links"] == [
+        "verified-fact:fact-1",
+        second_id,
+    ]
+    ledger = build_universal_claim_ledger(
+        report_id="report",
+        summary={},
+        insights_final=insights,
+        quotes_final=[],
+        metric_spine=artifacts["metric_spine"],
+        executive_advisory=advisory,
+    )
+    recommendation_claim = next(
+        item
+        for item in ledger
+        if item["artifact_section"] == "executive_advisory.recommendations"
+    )
+    assert recommendation_claim["evidence_ids"] == [
+        "verified-fact:fact-1",
+        second_id,
+    ]
 
 
 def test_metric_copy_quality_failure_routes_to_exact_final_leaf() -> None:

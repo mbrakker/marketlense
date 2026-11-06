@@ -4,12 +4,14 @@ from copy import deepcopy
 
 import pytest
 
+from src.contracts.report_assets import RenderRequest
 from src.contracts.validation import ValidationIssue
 from src.generators._artifact_generator.storage import (
     build_executive_advisory_artifacts,
     build_key_figures,
     build_universal_claim_ledger,
 )
+from src.generators.artifact_normalization import build_expert_synthesis_context
 from src.generators.public_editorial_quality_generator import (
     public_editorial_semantic_review_items,
 )
@@ -20,8 +22,108 @@ from src.services._render_service.normalization import (
     _coerce_public_key_figures,
     _coerce_public_metric_spine,
 )
+from src.services._render_service.view import _build_render_view
 from src.utils.errors import AppError
 from tests.test_verified_facts_validation_authority import _authority_artifacts
+
+
+def test_verified_render_does_not_promote_discovery_methodology_or_chapter_copy(
+    tmp_path,
+) -> None:
+    artifacts = _authority_artifacts()
+    artifacts["toc_entries"] = [
+        {
+            "display_title": "Verified chapter",
+            "summary": "UNTRUSTED discovery chapter summary.",
+            "pages": [4],
+        }
+    ]
+    discovery_packs = {
+        "doc_map": {
+            "methodology": "UNTRUSTED discovery methodology.",
+            "sections": [
+                {
+                    "title": "Discovery-only chapter",
+                    "summary": "UNTRUSTED section summary.",
+                }
+            ],
+        },
+        "methods": {"methods": [{"description": "UNTRUSTED method pack."}]},
+    }
+    authoritative_packs = deepcopy(
+        artifacts["_cache"]["visual_authority_canary"]["verified_evidence_packs"]
+    )
+
+    view = _build_render_view(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Verified authority",
+                "artifacts": artifacts,
+                "evidence_packs": discovery_packs,
+                "authoritative_evidence_packs": authoritative_packs,
+            },
+            doc_name="verified-authority.pdf",
+            file_id="verified-authority",
+            out_dir=str(tmp_path),
+        ),
+        {},
+    )
+
+    rendered_text = str(view["editorial_cards"]) + str(view["chapters"])
+    assert "UNTRUSTED" not in rendered_text
+    assert view["chapters"][0]["title"] == "Verified chapter"
+    assert view["chapters"][0]["summary"] == ""
+    limitations_card = next(
+        card for card in view["editorial_cards"] if card["label"] == "Limitations"
+    )
+    assert "among buyers" in limitations_card["items"]
+
+
+def test_verified_expert_context_falls_back_to_fact_qualifiers() -> None:
+    context = build_expert_synthesis_context(
+        editorial_plan={
+            "report_thesis": "The report compares source-backed buyer behavior.",
+            "themes": [
+                {
+                    "theme": "Buyer scope",
+                    "priority": 1,
+                    "evidence_ids": ["verified-fact:fact-qualifier"],
+                },
+                {
+                    "theme": "Measurement status",
+                    "priority": 2,
+                    "evidence_ids": ["verified-fact:fact-qualifier-2"],
+                },
+            ],
+        },
+        insights_final=[],
+        doc_map={},
+        evidence_packs={
+            "verified_facts": {
+                "verified_facts": [
+                    {
+                        "fact_id": "fact-qualifier",
+                        "qualifiers": [
+                            "Results cover surveyed buyers only.",
+                            "The measure is observed, not a forecast.",
+                        ],
+                    }
+                ]
+            }
+        },
+    )
+
+    assert context["limitations"] == [
+        {
+            "evidence_id": "verified-fact:fact-qualifier",
+            "text": "Results cover surveyed buyers only.",
+        },
+        {
+            "evidence_id": "verified-fact:fact-qualifier",
+            "text": "The measure is observed, not a forecast.",
+        },
+    ]
 
 
 def _public_contract_artifacts() -> dict:

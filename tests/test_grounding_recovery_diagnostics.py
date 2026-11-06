@@ -192,6 +192,48 @@ def test_verified_grounding_failure_preserves_inner_contract_cause(tmp_path):
     assert "schema_missing_required" in issues[0].message
 
 
+def test_verified_grounding_coverage_failure_retains_bounded_batch_diagnostics(
+    tmp_path,
+):
+    fact = _fact()
+    artifacts = _verified_artifacts(fact=fact)
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-recovery-coverage-diagnostic",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=_packs(fact),
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            grounding_payload={"checks": [], "unsupported": []},
+            complete_grounding_contract=False,
+        ),
+        ctx=_ctx(),
+        source_id=SOURCE_IDENTITY,
+        prompt_family_reuse_reader=lambda *_args: SimpleNamespace(
+            reusable=False,
+            output_payload=None,
+            reason="test_coverage_diagnostics",
+        ),
+    )
+
+    assert len(issues) == 1
+    assert "coverage=" in issues[0].message
+    assert "batch=" in issues[0].message
+    assert "missing_claim_ids=" in issues[0].message
+    assert "retained_claim:" in issues[0].message
+
+
 def test_grounding_issue_retains_public_verified_evidence_for_repair(tmp_path):
     fact = _fact()
     insight = {

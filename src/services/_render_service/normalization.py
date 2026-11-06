@@ -128,6 +128,21 @@ def _verified_bound_evidence_ids(artifacts: dict[str, Any]) -> set[str]:
     }
 
 
+def _public_evidence_ids(item: object, *, verified_mode: bool = False) -> list[str]:
+    """Return the retained primary-first bindings for one public row."""
+
+    payload = _coerce_dict(item)
+    primary = _s(payload.get("evidence_id"))
+    if not verified_mode:
+        return [primary] if primary else []
+    values: list[str] = [primary] if primary else []
+    for value in _coerce_list(payload.get("evidence_ids")):
+        normalized = _s(value)
+        if normalized:
+            values.append(normalized)
+    return list(dict.fromkeys(values))
+
+
 def _is_public_chart_insight_card(item: object) -> bool:
     """Match the renderer's accepted chart-card projection predicate."""
 
@@ -658,8 +673,11 @@ def _coerce_public_metric_spine(
     allowed_evidence_ids = _verified_bound_evidence_ids(artifacts)
     for raw_item in _coerce_list(artifacts.get("metric_spine")):
         item = _coerce_dict(raw_item)
-        evidence_id = _s(item.get("evidence_id"))
-        if verified_mode and evidence_id not in allowed_evidence_ids:
+        evidence_ids = _public_evidence_ids(item, verified_mode=verified_mode)
+        evidence_id = evidence_ids[0] if evidence_ids else ""
+        if verified_mode and (
+            not evidence_ids or not set(evidence_ids).issubset(allowed_evidence_ids)
+        ):
             continue
         public_copy = _sanitize_public_prose(item.get("metric_public_copy"))
         if verified_mode and not public_copy:
@@ -702,7 +720,7 @@ def _coerce_public_metric_spine(
                 "public_copy": public_copy,
                 "context": context,
                 "evidence_id": evidence_id,
-                "evidence_ids": [evidence_id] if evidence_id else [],
+                "evidence_ids": evidence_ids,
                 "confidence_label": _public_label_from_token(item.get("confidence"))
                 or "Source-backed",
             }
@@ -1003,8 +1021,11 @@ def _coerce_public_key_figures(
     )
     for raw_item in raw_figures:
         item = _coerce_dict(raw_item)
-        evidence_id = _s(item.get("evidence_id"))
-        if verified_mode and evidence_id not in allowed_evidence_ids:
+        evidence_ids = _public_evidence_ids(item, verified_mode=verified_mode)
+        evidence_id = evidence_ids[0] if evidence_ids else ""
+        if verified_mode and (
+            not evidence_ids or not set(evidence_ids).issubset(allowed_evidence_ids)
+        ):
             continue
         public_copy = _sanitize_public_prose(item.get("metric_public_copy"))
         if verified_mode and not public_copy:
@@ -1052,7 +1073,7 @@ def _coerce_public_key_figures(
                 or _s(item.get("id")),
                 "metric_id": _s(item.get("metric_id")) or _s(item.get("insight_id")),
                 "evidence_id": evidence_id,
-                "evidence_ids": [evidence_id] if evidence_id else [],
+                "evidence_ids": evidence_ids,
                 "confidence_label": _public_label_from_token(item.get("confidence"))
                 or "Source-backed",
             }
@@ -1075,8 +1096,11 @@ def _coerce_public_chart_insight_cards(
         if not _is_public_chart_insight_card(item):
             continue
         candidate_id = _s(item.get("candidate_id"))
-        evidence_id = _s(item.get("evidence_id"))
-        if verified_mode and evidence_id not in allowed_evidence_ids:
+        evidence_ids = _public_evidence_ids(item, verified_mode=verified_mode)
+        evidence_id = evidence_ids[0] if evidence_ids else ""
+        if verified_mode and (
+            not evidence_ids or not set(evidence_ids).issubset(allowed_evidence_ids)
+        ):
             continue
         source_page = _s(item.get("source_page"))
         insight_id = _s(item.get("insight_id"))
@@ -1109,19 +1133,20 @@ def _coerce_public_chart_insight_cards(
         )
         if not title:
             continue
-        cards.append(
-            {
-                "candidate_id": candidate_id,
-                "insight_id": insight_id,
-                "evidence_id": evidence_id,
-                "title": title,
-                "insight": takeaway,
-                "so_what": _sanitize_public_prose(item.get("so_what")),
-                "now_what": _sanitize_public_prose(item.get("now_what")),
-                "status_label": "Chart-backed",
-                "limitation": limitation,
-            }
-        )
+        card: dict[str, Any] = {
+            "candidate_id": candidate_id,
+            "insight_id": insight_id,
+            "evidence_id": evidence_id,
+            "title": title,
+            "insight": takeaway,
+            "so_what": _sanitize_public_prose(item.get("so_what")),
+            "now_what": _sanitize_public_prose(item.get("now_what")),
+            "status_label": "Chart-backed",
+            "limitation": limitation,
+        }
+        if verified_mode:
+            card["evidence_ids"] = evidence_ids
+        cards.append(card)
         if len(cards) >= limit:
             break
     return cards
@@ -1413,7 +1438,10 @@ def _coerce_topic_briefs(artifacts: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _coerce_chapters(
-    artifacts: dict[str, Any], doc_map: dict[str, Any]
+    artifacts: dict[str, Any],
+    doc_map: dict[str, Any],
+    *,
+    verified_mode: bool = False,
 ) -> list[dict[str, Any]]:
     chapters: list[dict[str, Any]] = []
     for raw_item in _coerce_list(artifacts.get("toc_entries")):
@@ -1428,11 +1456,13 @@ def _coerce_chapters(
             {
                 "order": int(item.get("order") or len(chapters) + 1),
                 "title": title,
-                "summary": _s(item.get("summary")),
+                "summary": "" if verified_mode else _s(item.get("summary")),
                 "pages": toc_pages,
             }
         )
     if chapters:
+        return chapters
+    if verified_mode:
         return chapters
     for index, raw_section in enumerate(_coerce_list(doc_map.get("sections")), start=1):
         section = _coerce_dict(raw_section)
@@ -1647,7 +1677,9 @@ def _coerce_findings(evidence_packs: dict[str, Any]) -> list[str]:
     return findings[:5]
 
 
-def _coerce_limitations(evidence_packs: dict[str, Any]) -> list[str]:
+def _coerce_limitations(
+    evidence_packs: dict[str, Any], *, verified_mode: bool = False
+) -> list[str]:
     limitations_pack = _coerce_dict(evidence_packs.get("limitations"))
     limitations: list[str] = []
     for raw_item in _coerce_list(limitations_pack.get("limitations")):
@@ -1659,6 +1691,17 @@ def _coerce_limitations(evidence_packs: dict[str, Any]) -> list[str]:
         )
         if message:
             limitations.append(message)
+    if limitations or not verified_mode:
+        return limitations[:5]
+    verified_pack = _coerce_dict(evidence_packs.get("verified_facts"))
+    for raw_fact in _coerce_list(verified_pack.get("verified_facts")):
+        fact = _coerce_dict(raw_fact)
+        for raw_qualifier in _coerce_list(fact.get("qualifiers")):
+            qualifier = _s(raw_qualifier)
+            if qualifier and qualifier not in limitations:
+                limitations.append(qualifier)
+            if len(limitations) >= 5:
+                return limitations
     return limitations[:5]
 
 

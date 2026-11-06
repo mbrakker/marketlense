@@ -1990,14 +1990,21 @@ def eligible_final_insight_candidates(
 
 
 def restore_artifact_insight_factual_fields(
-    insight: Dict[str, Any], candidate_insights: List[Dict[str, Any]]
+    insight: Dict[str, Any],
+    candidate_insights: List[Dict[str, Any]],
+    *,
+    preserve_unknown_metric_fields: bool = False,
 ) -> Dict[str, Any]:
     """Restore a final insight from the authoritative candidate fact index."""
 
-    candidate_facts = _candidate_factual_fields(candidate_insights)
+    candidate_facts = _candidate_factual_fields(
+        candidate_insights,
+        preserve_unknown_metric_fields=preserve_unknown_metric_fields,
+    )
     return _restore_candidate_factual_fields(
         insight,
         candidate_facts,
+        preserve_unknown_metric_fields=preserve_unknown_metric_fields,
         allowed_evidence_ids={
             evidence_id
             for fact in candidate_facts.values()
@@ -2733,13 +2740,50 @@ def build_expert_synthesis_context(
         "schema_version": "1.0",
         "themes": themes,
         "insight_implications": implications,
-        "limitations": _expert_context_items(
-            evidence_packs.get("limitations"),
-            item_key="limitations",
-            text_keys=("description", "limitation", "text", "summary"),
-        ),
+        "limitations": _verified_or_pack_limitations(evidence_packs),
         "counter_signals": _expert_counter_signals(insights_final, evidence_packs),
     }
+
+
+def _verified_or_pack_limitations(
+    evidence_packs: Dict[str, Any],
+) -> List[Dict[str, str]]:
+    """Expose exact source qualifiers when verified facts replace pack limits."""
+
+    limitations = _expert_context_items(
+        evidence_packs.get("limitations"),
+        item_key="limitations",
+        text_keys=("description", "limitation", "text", "summary"),
+    )
+    if limitations:
+        return limitations
+    verified_pack = evidence_packs.get("verified_facts")
+    facts = (
+        verified_pack.get("verified_facts")
+        if isinstance(verified_pack, dict)
+        else []
+    )
+    if not isinstance(facts, list):
+        return []
+    verified_limitations: List[Dict[str, str]] = []
+    for fact in facts:
+        if not isinstance(fact, dict):
+            continue
+        fact_id = _s(fact.get("fact_id")).strip()
+        if not fact_id:
+            continue
+        for qualifier in fact.get("qualifiers") or []:
+            text = _s(qualifier).strip()
+            if text:
+                verified_limitations.append(
+                    {
+                        "evidence_id": f"verified-fact:{fact_id}",
+                        "text": text,
+                    }
+                )
+                if len(verified_limitations) == 7:
+                    return verified_limitations
+    return verified_limitations
 
 
 def _expert_insight_implications(
