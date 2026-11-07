@@ -95,6 +95,63 @@ def test_shared_semantic_disposition_distinguishes_facts_and_editorial_copy() ->
         )
         == "unresolved"
     )
+    assert (
+        semantic_claim_disposition(
+            classification="factual_claim",
+            outcome="contradicted",
+            protected_facts=compatible,
+        )
+        == "unsupported"
+    )
+    incomplete_proposition = ProtectedFactComparison.from_payload(
+        _compatible_protected_facts(), proposition_status="unknown"
+    )
+    assert (
+        semantic_claim_disposition(
+            classification="factual_claim",
+            outcome="entailed",
+            protected_facts=incomplete_proposition,
+        )
+        == "unresolved"
+    )
+    incompatible = ProtectedFactComparison.from_payload(
+        _compatible_protected_facts(), proposition_status="incompatible"
+    )
+    assert (
+        semantic_claim_disposition(
+            classification="factual_claim",
+            outcome="entailed",
+            protected_facts=incompatible,
+        )
+        == "unsupported"
+    )
+    incomplete = ProtectedFactComparison.from_payload(
+        {
+            **_compatible_protected_facts(),
+            "value": {
+                "claim_value": "42%",
+                "evidence_value": None,
+                "status": "unknown",
+            },
+        },
+        proposition_status="compatible",
+    )
+    assert (
+        semantic_claim_disposition(
+            classification="factual_claim",
+            outcome="entailed",
+            protected_facts=incomplete,
+        )
+        == "unresolved"
+    )
+    assert (
+        semantic_claim_disposition(
+            classification="analyst_interpretation",
+            outcome="not_established",
+            violation_type="source_silent",
+        )
+        == "unresolved"
+    )
 
 
 def test_retained_grounding_result_preserves_model_classification_and_violation() -> (
