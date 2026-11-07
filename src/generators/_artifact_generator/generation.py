@@ -43,6 +43,7 @@ from src.generators._artifact_generator.toc import build_toc_artifacts
 from src.generators.artifact_normalization import (
     EDITORIAL_PLAN_TRANSFORM_VERSION,
     MIN_FINAL_ARTIFACT_INSIGHTS,
+    adaptive_final_insight_target_count,
     artifact_base_variables,
     artifact_quote_candidates,
     artifact_retrieval_mode,
@@ -144,6 +145,8 @@ class _ThemeCoverageDiagnostic(TypedDict):
 class _ModelThemeAssessment(TypedDict):
     theme: str
     status: str
+    resolution: str
+    importance: str
     supporting_insight_ids: List[str]
     reason: str
 
@@ -523,9 +526,7 @@ def _semantic_theme_coverage_insights_json(
                 authority = authorities[0]
                 item["metric"] = deepcopy(authority.get("metric") or {})
                 item["verified_fact_id"] = _s(authority.get("fact_id")).strip()
-                item["verified_proposition"] = _s(
-                    authority.get("statement")
-                ).strip()
+                item["verified_proposition"] = _s(authority.get("statement")).strip()
             else:
                 item.pop("metric", None)
                 item.pop("verified_fact_id", None)
@@ -1817,7 +1818,8 @@ def generate_artifacts(
             and _s(insight.get("id")).strip()
             and _s(insight.get("text")).strip()
         }
-        if len(selected_ids) >= REQUIRED_REPORT_PAYLOAD_INSIGHTS:
+        required_count = adaptive_final_insight_target_count(editorial_plan)
+        if len(selected_ids) >= required_count:
             return
         raise AppError(
             code="visual_authority_coverage_insufficient",
@@ -1828,7 +1830,7 @@ def generate_artifacts(
             retryable=False,
             context={
                 "report_id": report_id,
-                "required_count": REQUIRED_REPORT_PAYLOAD_INSIGHTS,
+                "required_count": required_count,
                 "selected_count": len(selected_ids),
                 "admitted_count": len(final_insight_allowed_candidate_ids),
                 "coverage_reason": "verified_final_insights_below_minimum",
@@ -1929,6 +1931,14 @@ def generate_artifacts(
                     "discovery_editorial_plan_json": _dump_json(
                         discovery_editorial_plan
                     ),
+                    "admitted_candidate_ids_json": _dump_json(
+                        [
+                            _s(candidate.get("id")).strip()
+                            for candidate in visual_authority_admitted_candidates
+                            if isinstance(candidate, dict)
+                            and _s(candidate.get("id")).strip()
+                        ]
+                    ),
                     "editorial_plan_phase": "verified_facts",
                 },
                 ctx=verified_plan_ctx,
@@ -1948,6 +1958,7 @@ def generate_artifacts(
             raise
         raw_editorial_plan = verified_plan_result.get("editorial_plan")
         editorial_plan = normalize_artifact_editorial_plan(raw_editorial_plan)
+        original_verified_editorial_plan = deepcopy(editorial_plan)
         editorial_plan_coverage.update(
             {
                 "planned_themes": [
@@ -1973,9 +1984,7 @@ def generate_artifacts(
         # roster.  Discovery determines only how many independent alternatives
         # we retain for admission; it must not freeze the final target before
         # the verified plan has been accepted.
-        final_insight_target_count = max(
-            REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(editorial_plan["themes"])
-        )
+        final_insight_target_count = adaptive_final_insight_target_count(editorial_plan)
         base_vars = artifact_base_variables(active_doc_map, active_evidence)
         base_vars.pop("canonical_evidence_ids_json", None)
         base_vars.pop("candidate_allowed_evidence_ids_json", None)
@@ -2017,6 +2026,116 @@ def generate_artifacts(
             "_editorial_plan_dependency_hash": editorial_plan_dependency_hash,
             "_visual_authority_digest": visual_authority_digest,
         }
+
+        def refresh_verified_editorial_plan_dependencies(
+            raw_plan: Any,
+            normalized_plan: Dict[str, Any],
+            *,
+            phase: str,
+        ) -> None:
+            """Rebind plan-dependent families after the one allowed replan."""
+
+            nonlocal editorial_plan_json
+            nonlocal editorial_plan_dependency_hash
+            nonlocal editorial_plan_dependency_vars
+            nonlocal editorial_plan_identity
+            nonlocal editorial_plan_transform_identity
+            editorial_plan_json = _dump_json(normalized_plan)
+            editorial_plan_identity = family_reuse["report_vs/artifacts/editorial_plan"]
+            editorial_plan_transform_identity = {
+                "transform": "normalize_and_stabilize_editorial_plan_verified_facts",
+                "version": EDITORIAL_PLAN_TRANSFORM_VERSION,
+                "phase": phase,
+                "input_hash": sha256_json(raw_plan),
+                "output_hash": sha256_json(normalized_plan),
+                "verified_fact_digest": visual_authority_digest,
+            }
+            editorial_plan_dependency_hash = sha256_json(
+                {
+                    "family_id": "report_vs/artifacts/editorial_plan",
+                    "producing_identity": {
+                        key: editorial_plan_identity.get(key)
+                        for key in (
+                            "family_schema_version",
+                            "processing_version",
+                            "prompt_content_hash",
+                            "execution_identity",
+                            "model_provider",
+                            "model_name",
+                            "model_policy_namespace",
+                            "routing_policy_version",
+                            "validator_version",
+                            "relevant_input_hash",
+                            "configuration_policy_hash",
+                        )
+                    },
+                    "transform": editorial_plan_transform_identity,
+                }
+            )
+            editorial_plan_dependency_vars = {
+                "_editorial_plan_dependency_hash": editorial_plan_dependency_hash,
+                "_visual_authority_digest": visual_authority_digest,
+            }
+
+        def validate_verified_plan_revision(
+            revised_plan: Dict[str, Any],
+        ) -> None:
+            """Keep the one conditional replan inside the admitted fact roster."""
+
+            validate_editorial_plan_evidence_ids(
+                revised_plan,
+                {normalize_text(value) for value in canonical_evidence_ids},
+            )
+            admitted_ids = {
+                _s(candidate.get("id")).strip()
+                for candidate in visual_authority_admitted_candidates
+                if isinstance(candidate, dict) and _s(candidate.get("id")).strip()
+            }
+            for theme in revised_plan["themes"]:
+                unknown_candidate_ids = (
+                    set(theme.get("feasible_candidate_ids") or []) - admitted_ids
+                )
+                if unknown_candidate_ids:
+                    raise AppError(
+                        code="editorial_plan_invalid",
+                        message=(
+                            "Editorial plan names non-admitted feasible candidate IDs"
+                        ),
+                        retryable=False,
+                        context={
+                            "theme": theme["theme"],
+                            "unknown_candidate_ids": sorted(unknown_candidate_ids),
+                        },
+                    )
+            revised_bindings = editorial_plan_theme_bindings(revised_plan)
+            for original_binding in editorial_plan_theme_bindings(
+                original_verified_editorial_plan
+            ):
+                if original_binding["importance"] != "essential":
+                    continue
+                original_keys = set(original_binding["coverage_keys"])
+                preserved = any(
+                    revised_binding["importance"] == "essential"
+                    and (
+                        normalize_text(revised_binding["theme"])
+                        == normalize_text(original_binding["theme"])
+                        or original_keys.intersection(revised_binding["coverage_keys"])
+                    )
+                    for revised_binding in revised_bindings
+                )
+                if not preserved:
+                    raise AppError(
+                        code="editorial_plan_invalid",
+                        message=(
+                            "Verified editorial replanning cannot drop or downgrade "
+                            f"essential theme: {original_binding['theme']}"
+                        ),
+                        retryable=False,
+                        context={"theme": original_binding["theme"]},
+                    )
+
+        validate_verified_plan_revision(editorial_plan)
+
         quote_candidates = []
         quotes_final = []
         quote_model_required = False
@@ -2060,7 +2179,10 @@ def generate_artifacts(
             for candidate in eligible_candidates
             if _s(candidate.get("id")).strip()
         ]
-        if len(final_insight_allowed_candidate_ids) < REQUIRED_REPORT_PAYLOAD_INSIGHTS:
+        required_verified_insight_count = adaptive_final_insight_target_count(
+            editorial_plan
+        )
+        if len(final_insight_allowed_candidate_ids) < required_verified_insight_count:
             raise AppError(
                 code="visual_authority_coverage_insufficient",
                 message=(
@@ -2070,7 +2192,7 @@ def generate_artifacts(
                 retryable=False,
                 context={
                     "report_id": report_id,
-                    "required_count": REQUIRED_REPORT_PAYLOAD_INSIGHTS,
+                    "required_count": required_verified_insight_count,
                     "admitted_count": len(final_insight_allowed_candidate_ids),
                     "coverage_reason": "verified_facts_below_minimum_insight_count",
                 },
@@ -2291,6 +2413,8 @@ def generate_artifacts(
                     {
                         "theme": _s(item.get("theme")).strip(),
                         "status": _s(item.get("status")).strip(),
+                        "resolution": _s(item.get("resolution")).strip(),
+                        "importance": _s(item.get("importance")).strip(),
                         "supporting_insight_ids": [
                             _s(value).strip()
                             for value in item.get("supporting_insight_ids", [])
@@ -2342,6 +2466,21 @@ def generate_artifacts(
             "final_roster_count": len(roster),
             "final_roster": roster,
             "theme_verdicts": model_assessments,
+            "report_completeness": (
+                _s(assessment.get("report_completeness")).strip()
+                if isinstance(assessment, dict)
+                else ""
+            ),
+            "diagnosis": (
+                _s(assessment.get("diagnosis")).strip()
+                if isinstance(assessment, dict)
+                else ""
+            ),
+            "recovery_action": (
+                _s(assessment.get("recovery_action")).strip()
+                if isinstance(assessment, dict)
+                else ""
+            ),
             "missing_themes": selection["omitted_themes"],
             "substitutions": deepcopy(roster_change or {}),
         }
@@ -2371,7 +2510,7 @@ def generate_artifacts(
                 task_id=f"{ctx.task_id}:editorial_theme_coverage",
             ),
             response_contract_name="editorial_theme_coverage_output",
-            response_contract_identity_version="v1",
+            response_contract_identity_version="v2",
         )
         try:
             semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
@@ -2498,7 +2637,7 @@ def generate_artifacts(
                     task_id=f"{ctx.task_id}:semantic_repair:editorial_theme_coverage",
                 ),
                 response_contract_name="editorial_theme_coverage_output",
-                response_contract_identity_version="v1",
+                response_contract_identity_version="v2",
             )
             try:
                 semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
@@ -2508,24 +2647,270 @@ def generate_artifacts(
                     candidate_insights=insights_candidates,
                 )
             except AppError as coverage_error:
-                semantic_theme_repair["status"] = "blocked_incomplete_roster"
-                semantic_theme_repair["terminal_classification"] = (
-                    "semantic_theme_repair_exhausted"
+                recovery_action = (
+                    _s(semantic_theme_coverage_result.get("recovery_action"))
+                    .strip()
+                    .casefold()
                 )
-                coverage_error.context["coverage_diagnostics"] = (
-                    semantic_coverage_diagnostics(
-                        insights_final,
-                        assessment=semantic_theme_coverage_result,
-                        stage="semantic_repair",
-                        terminal_classification=("semantic_theme_repair_exhausted"),
-                        failure_class=coverage_error.code,
-                        roster_change=semantic_theme_repair.get("roster_change"),
+                diagnosis = (
+                    _s(semantic_theme_coverage_result.get("diagnosis"))
+                    .strip()
+                    .casefold()
+                )
+                should_replan = recovery_action == "replan" or diagnosis in {
+                    "redundant_optional_theme",
+                    "infeasible_plan",
+                }
+                replan_succeeded = False
+                if should_replan:
+                    semantic_theme_repair["replan"] = {
+                        "attempted": True,
+                        "status": "in_progress",
+                        "trigger": {
+                            "diagnosis": diagnosis,
+                            "recovery_action": recovery_action,
+                        },
+                    }
+                    replan_feedback = {
+                        "failure": {
+                            "code": coverage_error.code,
+                            "message": coverage_error.message,
+                            "diagnosis": diagnosis,
+                            "recovery_action": recovery_action,
+                        },
+                        "independent_assessment": semantic_theme_coverage_result,
+                        "original_editorial_plan": original_verified_editorial_plan,
+                        "immutable_admitted_candidate_ids": (
+                            final_insight_allowed_candidate_ids
+                        ),
+                    }
+                    try:
+                        revised_plan_result = resolve_or_render_family(
+                            namespace="report_vs/artifacts/editorial_plan",
+                            variables={
+                                **base_vars,
+                                "doc_map_json": _dump_json(active_doc_map),
+                                "evidence_json": _dump_json(active_evidence),
+                                "canonical_evidence_ids_json": _dump_json(
+                                    verified_fact_evidence_ids
+                                ),
+                                "verified_facts_json": _dump_json(
+                                    visual_authority_verified_facts
+                                ),
+                                "discovery_editorial_plan_json": _dump_json(
+                                    discovery_editorial_plan
+                                ),
+                                "admitted_candidate_ids_json": _dump_json(
+                                    final_insight_allowed_candidate_ids
+                                ),
+                                "immutable_admitted_candidate_ids_json": _dump_json(
+                                    final_insight_allowed_candidate_ids
+                                ),
+                                "original_editorial_plan_json": _dump_json(
+                                    original_verified_editorial_plan
+                                ),
+                                "coverage_failure_assessment_json": _dump_json(
+                                    replan_feedback
+                                ),
+                                "editorial_plan_phase": "verified_replan",
+                            },
+                            ctx=child_context(
+                                ctx,
+                                task_id=f"{ctx.task_id}:semantic_repair:editorial_plan",
+                            ),
+                            payload_validator=lambda payload: validate_editorial_plan(
+                                payload,
+                                child_context(
+                                    ctx,
+                                    task_id=f"{ctx.task_id}:semantic_repair:editorial_plan:validation",
+                                ),
+                            ),
+                        )
+                        revised_raw_plan = revised_plan_result.get("editorial_plan")
+                        revised_plan = normalize_artifact_editorial_plan(
+                            revised_raw_plan
+                        )
+                        validate_verified_plan_revision(revised_plan)
+                    except AppError as replan_error:
+                        semantic_theme_repair["replan"]["status"] = "failed"
+                        semantic_theme_repair["status"] = "blocked_incomplete_roster"
+                        semantic_theme_repair["terminal_classification"] = (
+                            "semantic_theme_repair_exhausted"
+                        )
+                        replan_error.context["semantic_theme_repair"] = deepcopy(
+                            semantic_theme_repair
+                        )
+                        raise
+
+                    editorial_plan = revised_plan
+                    refresh_verified_editorial_plan_dependencies(
+                        revised_raw_plan,
+                        editorial_plan,
+                        phase="verified_replan",
                     )
-                )
-                coverage_error.context["semantic_theme_repair"] = deepcopy(
-                    semantic_theme_repair
-                )
-                raise coverage_error
+                    final_insight_target_count = adaptive_final_insight_target_count(
+                        editorial_plan
+                    )
+                    if final_insight_target_count > len(
+                        final_insight_allowed_candidate_ids
+                    ):
+                        raise AppError(
+                            code="visual_authority_coverage_insufficient",
+                            message=(
+                                "Verified editorial replanning requires more distinct "
+                                "insights than the admitted candidate roster supports"
+                            ),
+                            retryable=False,
+                            context={
+                                "required_count": final_insight_target_count,
+                                "admitted_count": len(
+                                    final_insight_allowed_candidate_ids
+                                ),
+                                "coverage_reason": (
+                                    "verified_replan_candidate_shortfall"
+                                ),
+                            },
+                        ) from coverage_error
+                    insights_final_vars.update(
+                        editorial_plan_dependency_vars,
+                        editorial_plan_json=editorial_plan_json,
+                        final_insight_target_count=final_insight_target_count,
+                    )
+                    summary_evidence_json = _summary_prioritized_evidence_json(
+                        active_evidence, editorial_plan
+                    )
+                    editorial_plan_coverage.update(
+                        {
+                            "planned_themes": [
+                                theme["theme"] for theme in editorial_plan["themes"]
+                            ],
+                            "planned_theme_bindings": deepcopy(
+                                editorial_plan["themes"]
+                            ),
+                            "supported_theme_count": len(editorial_plan["themes"]),
+                            "replanned": True,
+                        }
+                    )
+                    visual_authority_audit["editorial_plan_coverage"] = deepcopy(
+                        editorial_plan_coverage
+                    )
+                    candidate_generation_audit["editorial_plan_coverage"] = deepcopy(
+                        editorial_plan_coverage
+                    )
+                    replanned_result = resolve_or_render_family(
+                        namespace="report_vs/artifacts/insights_final",
+                        variables={
+                            **insights_final_vars,
+                            "current_insights_final_json": _dump_json(insights_final),
+                            "semantic_theme_coverage_feedback_json": _dump_json(
+                                replan_feedback
+                            ),
+                        },
+                        ctx=child_context(
+                            ctx,
+                            task_id=f"{ctx.task_id}:semantic_repair:replanned_insights_final",
+                        ),
+                        payload_validator=validate_final_insight_references,
+                    )
+                    replanned_insights = normalize_artifact_insights(
+                        replanned_result.get("insights_final"),
+                        prefix="insight",
+                        verified_mode=True,
+                    )
+                    before_replan_ids = {
+                        _s(insight.get("id")).strip()
+                        for insight in insights_final
+                        if isinstance(insight, dict) and _s(insight.get("id")).strip()
+                    }
+                    after_replan_ids = {
+                        _s(insight.get("id")).strip()
+                        for insight in replanned_insights
+                        if isinstance(insight, dict) and _s(insight.get("id")).strip()
+                    }
+                    semantic_theme_repair["replan"]["roster_change"] = {
+                        "before_count": len(insights_final),
+                        "after_count": len(replanned_insights),
+                        "added_ids": sorted(after_replan_ids - before_replan_ids),
+                        "displaced_ids": sorted(before_replan_ids - after_replan_ids),
+                    }
+                    insights_final = final_insights_for_coverage(replanned_insights)
+                    validate_verified_final_insight_count(
+                        insights_final, stage="semantic_replan"
+                    )
+                    theme_bindings = editorial_plan_theme_bindings(editorial_plan)
+                    theme_coverage_variables = {
+                        "editorial_plan_json": editorial_plan_json,
+                        "insights_final_json": semantic_theme_coverage_insights_json(
+                            insights_final,
+                            authoritative_facts=visual_authority_verified_facts,
+                        ),
+                        "verified_facts_json": _dump_json(relevant_verified_facts),
+                    }
+                    semantic_theme_coverage_result = resolve_or_render_family(
+                        namespace="report_vs/artifacts/editorial_theme_coverage",
+                        variables=theme_coverage_variables,
+                        ctx=child_context(
+                            ctx,
+                            task_id=f"{ctx.task_id}:semantic_repair:replanned_editorial_theme_coverage",
+                        ),
+                        response_contract_name="editorial_theme_coverage_output",
+                        response_contract_identity_version="v2",
+                    )
+                    try:
+                        semantic_theme_coverage = (
+                            validate_substantive_editorial_theme_coverage(
+                                payload=semantic_theme_coverage_result,
+                                editorial_plan=editorial_plan,
+                                final_insights=insights_final,
+                                candidate_insights=insights_candidates,
+                            )
+                        )
+                    except AppError as replan_coverage_error:
+                        semantic_theme_repair["replan"]["status"] = "failed"
+                        semantic_theme_repair["status"] = "blocked_incomplete_roster"
+                        semantic_theme_repair["terminal_classification"] = (
+                            "semantic_theme_repair_exhausted"
+                        )
+                        replan_coverage_error.context["coverage_diagnostics"] = (
+                            semantic_coverage_diagnostics(
+                                insights_final,
+                                assessment=semantic_theme_coverage_result,
+                                stage="semantic_replan",
+                                terminal_classification=(
+                                    "semantic_theme_repair_exhausted"
+                                ),
+                                failure_class=replan_coverage_error.code,
+                                roster_change=semantic_theme_repair.get(
+                                    "replan", {}
+                                ).get("roster_change"),
+                            )
+                        )
+                        replan_coverage_error.context["semantic_theme_repair"] = (
+                            deepcopy(semantic_theme_repair)
+                        )
+                        raise
+                    semantic_theme_repair["replan"]["status"] = "succeeded"
+                    replan_succeeded = True
+
+                if not replan_succeeded:
+                    semantic_theme_repair["status"] = "blocked_incomplete_roster"
+                    semantic_theme_repair["terminal_classification"] = (
+                        "semantic_theme_repair_exhausted"
+                    )
+                    coverage_error.context["coverage_diagnostics"] = (
+                        semantic_coverage_diagnostics(
+                            insights_final,
+                            assessment=semantic_theme_coverage_result,
+                            stage="semantic_repair",
+                            terminal_classification=("semantic_theme_repair_exhausted"),
+                            failure_class=coverage_error.code,
+                            roster_change=semantic_theme_repair.get("roster_change"),
+                        )
+                    )
+                    coverage_error.context["semantic_theme_repair"] = deepcopy(
+                        semantic_theme_repair
+                    )
+                    raise coverage_error
             semantic_theme_repair["status"] = "succeeded"
     if visual_authority_admitter is not None:
         final_selection_coverage.clear()

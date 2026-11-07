@@ -19,6 +19,177 @@ from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
 from tests.test_verified_claims_visual_authority_canary import _verified_admission
 
 
+def test_verified_semantic_recovery_allows_one_immutable_plan_revision(tmp_path):
+    candidates = [
+        _insight("f1", score=0.99),
+        _insight("f2", score=0.98),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
+    ]
+    discovery_plan = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])[
+        "editorial_plan"
+    ]
+    verified_plan = {
+        "editorial_plan": {
+            "report_thesis": "Two essential signals define the report.",
+            "themes": [
+                {
+                    "theme": "Primary signal",
+                    "priority": 1,
+                    "importance": "essential",
+                    "coverage_obligation": "Develop the primary signal.",
+                    "evidence_ids": ["verified-fact:insight-f1-0.99"],
+                },
+                {
+                    "theme": "Counter-signal",
+                    "priority": 2,
+                    "importance": "essential",
+                    "coverage_obligation": "Preserve the counter-signal.",
+                    "evidence_ids": ["verified-fact:insight-f2-0.98"],
+                },
+                {
+                    "theme": "Optional context",
+                    "priority": 3,
+                    "importance": "optional",
+                    "coverage_obligation": "Add context only if distinct.",
+                    "evidence_ids": ["verified-fact:insight-f3-0.97"],
+                },
+            ],
+        }
+    }
+    revised_plan = {
+        "editorial_plan": {
+            "report_thesis": "Two essential signals define the report.",
+            "themes": [
+                {
+                    "theme": "Primary signal",
+                    "priority": 1,
+                    "importance": "essential",
+                    "coverage_obligation": "Develop the primary signal.",
+                    "evidence_ids": ["verified-fact:insight-f1-0.99"],
+                },
+                {
+                    "theme": "Counter-signal",
+                    "priority": 2,
+                    "importance": "essential",
+                    "coverage_obligation": "Preserve the counter-signal.",
+                    "evidence_ids": ["verified-fact:insight-f2-0.98"],
+                },
+            ],
+        }
+    }
+    final_candidates = [
+        {
+            **deepcopy(candidate),
+            "evidence_id": f"verified-fact:{candidate['id']}",
+            "evidence_spans": [],
+        }
+        for candidate in candidates[:2]
+    ]
+    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+    responses["editorial_plan"] = [discovery_plan, verified_plan, revised_plan]
+    responses["insights_final"] = [
+        {"insights_final": final_candidates},
+        {"insights_final": final_candidates},
+    ]
+    responses["replanned_insights_final"] = {"insights_final": final_candidates}
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        "verified-fact:insight-f1-0.99"
+    )
+    failed_coverage = {
+        "theme_coverage": [
+            {
+                "theme": "Primary signal",
+                "status": "covered",
+                "resolution": "retained",
+                "supporting_insight_ids": ["insight-f1-0.99"],
+                "explanation": "The primary signal is developed.",
+            },
+            {
+                "theme": "Counter-signal",
+                "status": "uncovered",
+                "resolution": "omitted",
+                "supporting_insight_ids": [],
+                "explanation": (
+                    "The initial roster does not develop the counter-signal."
+                ),
+            },
+            {
+                "theme": "Optional context",
+                "status": "uncovered",
+                "resolution": "omitted",
+                "supporting_insight_ids": [],
+                "explanation": "The context is redundant with the primary signal.",
+            },
+        ],
+        "report_completeness": "complete",
+        "diagnosis": "infeasible_plan",
+        "recovery_action": "replan",
+    }
+    responses["editorial_theme_coverage"] = [
+        failed_coverage,
+        failed_coverage,
+    ]
+    responses["replanned_editorial_theme_coverage"] = {
+        "theme_coverage": [
+            {
+                "theme": "Primary signal",
+                "status": "covered",
+                "resolution": "retained",
+                "supporting_insight_ids": ["insight-f1-0.99"],
+                "explanation": "The revised article develops the primary signal.",
+            },
+            {
+                "theme": "Counter-signal",
+                "status": "covered",
+                "resolution": "retained",
+                "supporting_insight_ids": ["insight-f2-0.98"],
+                "explanation": "The revised article preserves the counter-signal.",
+            },
+        ],
+        "report_completeness": "complete",
+        "diagnosis": "planned_theme_execution",
+        "recovery_action": "none",
+    }
+    prompt_client = CapturingPromptClient()
+
+    payload = generate_artifacts(
+        report_id="verified-semantic-one-plan-revision",
+        report_name="Verified semantic one plan revision",
+        doc_map=_doc_map(5),
+        evidence_packs=_generation_evidence(5),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=lambda shortlisted: _verified_admission(
+            shortlisted, digest="r" * 64
+        ),
+    )
+
+    plan_calls = [
+        call
+        for call in prompt_client.render_calls
+        if call["path"] == "report_vs/artifacts/editorial_plan/system"
+    ]
+    assert [call["variables"].get("editorial_plan_phase") for call in plan_calls] == [
+        None,
+        "verified_facts",
+        "verified_replan",
+    ]
+    assert (
+        payload["editorial_plan"]["themes"] == revised_plan["editorial_plan"]["themes"]
+    )
+    assert (
+        payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
+            "final_selected_theme_coverage"
+        ]["semantic_repair"]["replan"]["status"]
+        == "succeeded"
+    )
+
+
 def test_verified_semantic_recovery_replaces_selected_fact_with_admitted_alternative(
     tmp_path,
 ):

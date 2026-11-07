@@ -643,6 +643,7 @@ def assemble_artifacts_payload(
         evidence_packs=evidence_packs,
         soft_copy_claim_provenance=artifacts_payload["soft_copy_claim_provenance"],
         verified_facts=verified_facts,
+        editorial_plan=editorial_plan,
     )
     artifacts_payload["claim_ledgers"] = build_universal_claim_ledger(
         report_id=report_id,
@@ -2743,6 +2744,7 @@ def build_canonical_regeneration_derived_artifacts(
             evidence_packs=evidence_packs,
             soft_copy_claim_provenance=artifacts.get("soft_copy_claim_provenance"),
             verified_facts=artifacts.get("verified_facts") or [],
+            editorial_plan=editorial_plan,
         )
     if "claim_ledgers" in builder_roots:
         claim_ledger = artifacts.get("claim_ledgers") or []
@@ -3051,13 +3053,31 @@ def build_executive_advisory_artifacts(
     evidence_packs: Dict[str, Any],
     soft_copy_claim_provenance: Optional[Dict[str, Any]] = None,
     verified_facts: Optional[List[Dict[str, Any]]] = None,
+    editorial_plan: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    selected_limitation_ids = {
+        _s(evidence_id).strip().casefold()
+        for evidence_id in (editorial_plan or {}).get(
+            "material_limitation_evidence_ids", []
+        )
+        if _s(evidence_id).strip()
+    }
     limitations_pack = evidence_packs.get("limitations", {})
     limitations = (
         limitations_pack.get("limitations")
         if isinstance(limitations_pack, dict)
         else []
     )
+    if selected_limitation_ids and isinstance(limitations, list):
+        limitations = [
+            item
+            for item in limitations
+            if {
+                evidence_id.strip().casefold()
+                for evidence_id in _artifact_evidence_ids(item)
+                if evidence_id.strip()
+            }.intersection(selected_limitation_ids)
+        ]
     if not limitations:
         verified_facts_pack = evidence_packs.get("verified_facts", {})
         pack_facts = (
@@ -3079,7 +3099,13 @@ def build_executive_advisory_artifacts(
                 for fact in fallback_facts
                 if isinstance(fact, dict)
                 for qualifier in fact.get("qualifiers") or []
-                if _s(qualifier).strip() and _s(fact.get("fact_id")).strip()
+                if _s(qualifier).strip()
+                and _s(fact.get("fact_id")).strip()
+                and (
+                    not selected_limitation_ids
+                    or f"verified-fact:{_s(fact.get('fact_id')).strip()}".casefold()
+                    in selected_limitation_ids
+                )
             ]
     if not isinstance(limitations, list):
         limitations = []

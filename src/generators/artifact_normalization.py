@@ -30,9 +30,12 @@ from src.utils.quantity import (
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
-EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:3.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:30"
+EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.0"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:31"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
+
+EDITORIAL_PLAN_IMPORTANCE_VALUES = {"essential", "optional"}
+EDITORIAL_PLAN_RESOLUTION_VALUES = {"retained", "merged", "omitted", "quarantined"}
 
 METRIC_FIELDS = (
     "label",
@@ -397,6 +400,11 @@ def remap_editorial_plan_to_verified_facts(
         for theme in plan["themes"]
         if theme["theme"] in unmapped_themes and theme["priority"] == central_priority
     ]
+    lost_essential_themes = [
+        theme["theme"]
+        for theme in plan["themes"]
+        if theme["theme"] in unmapped_themes and _theme_importance(theme) == "essential"
+    ]
     if coverage_diagnostics is not None:
         coverage_diagnostics.clear()
         coverage_diagnostics.update(
@@ -407,10 +415,26 @@ def remap_editorial_plan_to_verified_facts(
                 "supported_theme_bindings": deepcopy(themes),
                 "lost_themes": list(unmapped_themes),
                 "lost_central_themes": list(lost_central_themes),
+                "lost_essential_themes": list(lost_essential_themes),
                 "planned_theme_count": len(plan["themes"]),
                 "supported_theme_count": len(themes),
                 "lost_theme_count": len(unmapped_themes),
             }
+        )
+    if lost_essential_themes and _plan_uses_adaptive_fields(plan):
+        raise AppError(
+            code="verified_fact_editorial_coverage_insufficient",
+            message=(
+                "Verified-fact editorial coverage lost an essential planned theme: "
+                + ", ".join(lost_essential_themes)
+            ),
+            retryable=False,
+            context={
+                "verified_fact_count": len(fact_evidence_ids),
+                "mapped_theme_count": len(themes),
+                "unmapped_themes": unmapped_themes,
+                "lost_essential_themes": lost_essential_themes,
+            },
         )
     if lost_central_themes:
         raise AppError(
@@ -441,7 +465,15 @@ def remap_editorial_plan_to_verified_facts(
                 "unmapped_themes": unmapped_themes,
             },
         )
-    return {"report_thesis": plan["report_thesis"], "themes": themes}
+    remapped_plan: Dict[str, Any] = {
+        "report_thesis": plan["report_thesis"],
+        "themes": themes,
+    }
+    if "material_limitation_evidence_ids" in plan:
+        remapped_plan["material_limitation_evidence_ids"] = list(
+            plan["material_limitation_evidence_ids"]
+        )
+    return remapped_plan
 
 
 def normalize_artifact_editorial_plan(value: Any) -> Dict[str, Any]:
@@ -461,6 +493,20 @@ def normalize_artifact_editorial_plan(value: Any) -> Dict[str, Any]:
             message="Editorial plan must contain no more than seven themes",
             retryable=False,
         )
+    raw_limitation_ids = data.get("material_limitation_evidence_ids")
+    if raw_limitation_ids is not None and not isinstance(raw_limitation_ids, list):
+        raise AppError(
+            code="editorial_plan_invalid",
+            message="Material limitation evidence IDs must be an array",
+            retryable=False,
+        )
+    material_limitation_evidence_ids = list(
+        dict.fromkeys(
+            _s(evidence_id).strip()
+            for evidence_id in (raw_limitation_ids or [])
+            if _s(evidence_id).strip()
+        )
+    )
     themes: List[Dict[str, Any]] = []
     seen_themes: set[str] = set()
     seen_priorities: set[int] = set()
@@ -506,13 +552,72 @@ def normalize_artifact_editorial_plan(value: Any) -> Dict[str, Any]:
             )
         seen_themes.add(theme_key)
         seen_priorities.add(priority)
-        themes.append(
-            {"theme": theme, "priority": priority, "evidence_ids": evidence_ids}
-        )
-    return {
+        normalized_theme: Dict[str, Any] = {
+            "theme": theme,
+            "priority": priority,
+            "evidence_ids": evidence_ids,
+        }
+        if "importance" in raw_theme:
+            importance = _s(raw_theme.get("importance")).strip().casefold()
+            if importance not in EDITORIAL_PLAN_IMPORTANCE_VALUES:
+                raise AppError(
+                    code="editorial_plan_invalid",
+                    message=(
+                        "Editorial plan theme importance must be essential or optional"
+                    ),
+                    retryable=False,
+                    context={"theme": theme, "importance": importance},
+                )
+            normalized_theme["importance"] = importance
+        if "coverage_obligation" in raw_theme:
+            obligation = _s(raw_theme.get("coverage_obligation")).strip()
+            if not obligation:
+                raise AppError(
+                    code="editorial_plan_invalid",
+                    message="Editorial plan coverage obligations must be non-empty",
+                    retryable=False,
+                    context={"theme": theme},
+                )
+            normalized_theme["coverage_obligation"] = obligation
+        if "feasible_candidate_ids" in raw_theme:
+            raw_candidate_ids = raw_theme.get("feasible_candidate_ids")
+            if not isinstance(raw_candidate_ids, list):
+                raise AppError(
+                    code="editorial_plan_invalid",
+                    message="Feasible candidate IDs must be an array",
+                    retryable=False,
+                    context={"theme": theme},
+                )
+            normalized_theme["feasible_candidate_ids"] = list(
+                dict.fromkeys(
+                    _s(candidate_id).strip()
+                    for candidate_id in raw_candidate_ids
+                    if _s(candidate_id).strip()
+                )
+            )
+            if len(normalized_theme["feasible_candidate_ids"]) != len(
+                raw_candidate_ids
+            ):
+                raise AppError(
+                    code="editorial_plan_invalid",
+                    message="Feasible candidate IDs must be non-empty and unique",
+                    retryable=False,
+                    context={"theme": theme},
+                )
+        if "merge_group" in raw_theme:
+            merge_group = _s(raw_theme.get("merge_group")).strip()
+            if merge_group:
+                normalized_theme["merge_group"] = merge_group
+        themes.append(normalized_theme)
+    normalized_plan: Dict[str, Any] = {
         "report_thesis": report_thesis,
         "themes": sorted(themes, key=lambda item: item["priority"]),
     }
+    if raw_limitation_ids is not None:
+        normalized_plan["material_limitation_evidence_ids"] = (
+            material_limitation_evidence_ids
+        )
+    return normalized_plan
 
 
 def validate_editorial_plan_evidence_ids(
@@ -535,6 +640,11 @@ def validate_editorial_plan_evidence_ids(
             if normalize_for_lookup(evidence_id) not in allowed
         },
         key=str.casefold,
+    )
+    unknown.extend(
+        evidence_id
+        for evidence_id in plan.get("material_limitation_evidence_ids", [])
+        if normalize_for_lookup(evidence_id) not in allowed
     )
     if unknown:
         raise AppError(
@@ -591,13 +701,18 @@ def stabilize_broad_artifact_editorial_plan(
     ][:desired_count]
     if len(combined) != desired_count:
         return plan
-    return {
+    stabilized_plan: Dict[str, Any] = {
         "report_thesis": plan["report_thesis"],
         "themes": [
             {**theme, "priority": index}
             for index, theme in enumerate(combined, start=1)
         ],
     }
+    if "material_limitation_evidence_ids" in plan:
+        stabilized_plan["material_limitation_evidence_ids"] = list(
+            plan["material_limitation_evidence_ids"]
+        )
+    return stabilized_plan
 
 
 def _material_doc_map_sections(doc_map: Dict[str, Any]) -> List[Dict[str, str]]:
@@ -1556,6 +1671,8 @@ def select_artifact_insights(
         [] if require_final_candidate_lineage and verified_mode else candidate_insights,
     )
     required_count = max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
+    if verified_mode:
+        required_count = adaptive_final_insight_target_count(plan)
     selected: List[Dict[str, Any]] = []
     selected_keys: set[str] = set()
     theme_bindings = editorial_plan_theme_bindings(
@@ -1600,6 +1717,29 @@ def select_artifact_insights(
     return selected
 
 
+def adaptive_final_insight_target_count(editorial_plan: Dict[str, Any]) -> int:
+    """Return the verified-mode target implied by the executable plan.
+
+    Legacy plans retain their existing target of at least five insights and no
+    fewer than their planned themes.  New verified plans declare which themes
+    are essential and which may share a final insight; the plan therefore
+    determines the target without treating every theme as a slot.
+    """
+
+    plan = normalize_artifact_editorial_plan(editorial_plan)
+    if not _plan_uses_adaptive_fields(plan):
+        return max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
+    units: set[str] = set()
+    for theme in plan["themes"]:
+        if _theme_importance(theme) == "optional":
+            # Optional themes are still eligible, but they do not create a
+            # mandatory final-insight slot by themselves.
+            continue
+        merge_group = _s(theme.get("merge_group")).strip()
+        units.add(f"merge:{merge_group}" if merge_group else f"theme:{theme['theme']}")
+    return max(MIN_FINAL_ARTIFACT_INSIGHTS, len(units))
+
+
 def validate_final_insight_candidate_lineage(
     *,
     final_insights: List[Dict[str, Any]],
@@ -1634,7 +1774,44 @@ def validate_final_insight_candidate_lineage(
     invalid_ids = sorted(
         {insight_id for insight_id in final_ids if insight_id not in candidate_facts}
     )
-    if not invalid_ids and not duplicate_ids and not missing_id:
+    allowed_evidence_keys = {
+        normalize_for_lookup(evidence_id)
+        for fact in candidate_facts.values()
+        for evidence_id in _ordered_item_evidence_ids(fact)
+        if normalize_for_lookup(evidence_id)
+    }
+    unauthorized_evidence: Dict[str, List[str]] = {}
+    mismatched_primary: set[str] = set()
+    for insight in final_insights:
+        if not isinstance(insight, dict):
+            continue
+        insight_id = _s(insight.get("id")).strip()
+        candidate = candidate_facts.get(insight_id)
+        if candidate is None:
+            continue
+        final_evidence_ids = _ordered_item_evidence_ids(insight)
+        candidate_evidence_ids = _ordered_item_evidence_ids(candidate)
+        if (
+            final_evidence_ids
+            and candidate_evidence_ids
+            and normalize_for_lookup(final_evidence_ids[0])
+            != normalize_for_lookup(candidate_evidence_ids[0])
+        ):
+            mismatched_primary.add(insight_id)
+        invalid_evidence = [
+            evidence_id
+            for evidence_id in final_evidence_ids
+            if normalize_for_lookup(evidence_id) not in allowed_evidence_keys
+        ]
+        if invalid_evidence:
+            unauthorized_evidence[insight_id] = invalid_evidence
+    if (
+        not invalid_ids
+        and not duplicate_ids
+        and not missing_id
+        and not unauthorized_evidence
+        and not mismatched_primary
+    ):
         return
     context: Dict[str, Any] = {}
     if invalid_ids:
@@ -1643,10 +1820,15 @@ def validate_final_insight_candidate_lineage(
         context["duplicate_insight_ids"] = sorted(duplicate_ids)
     if missing_id:
         context["missing_insight_id"] = True
+    if unauthorized_evidence:
+        context["unauthorized_evidence_ids"] = unauthorized_evidence
+    if mismatched_primary:
+        context["mismatched_primary_evidence_ids"] = sorted(mismatched_primary)
     raise AppError(
         code="artifact_final_insight_lineage_invalid",
         message=(
-            "Final insight identities must resolve to unique, evidence-bound candidates"
+            "Final insight identities and evidence bindings must resolve to unique, "
+            "evidence-bound candidates"
         ),
         retryable=False,
         context=context,
@@ -1662,15 +1844,35 @@ def final_insight_editorial_coverage(
     """Report which planned themes are represented by final candidate facts."""
 
     candidate_facts = _candidate_factual_fields(candidate_insights)
+    authorized_evidence_keys = {
+        _fallback_evidence_key(evidence_id)
+        for fact in candidate_facts.values()
+        for evidence_id in _ordered_item_evidence_ids(fact)
+        if _fallback_evidence_key(evidence_id)
+    }
     selected_evidence_keys: set[str] = set()
     for insight in final_insights:
         if not isinstance(insight, dict):
             continue
         candidate_fact = candidate_facts.get(_s(insight.get("id")).strip())
+        final_evidence_ids = _ordered_item_evidence_ids(insight)
+        candidate_evidence_ids = _ordered_item_evidence_ids(candidate_fact)
+        final_is_authorized = bool(
+            final_evidence_ids
+            and candidate_evidence_ids
+            and _fallback_evidence_key(final_evidence_ids[0])
+            == _fallback_evidence_key(candidate_evidence_ids[0])
+            and all(
+                _fallback_evidence_key(evidence_id) in authorized_evidence_keys
+                for evidence_id in final_evidence_ids
+            )
+        )
         evidence_ids = (
-            _ordered_item_evidence_ids(candidate_fact)
+            final_evidence_ids
+            if final_is_authorized
+            else candidate_evidence_ids
             if candidate_fact is not None
-            else _ordered_item_evidence_ids(insight)
+            else final_evidence_ids
         )
         selected_evidence_keys.update(
             _fallback_evidence_key(evidence_id) for evidence_id in evidence_ids
@@ -1685,6 +1887,9 @@ def final_insight_editorial_coverage(
                 "theme": binding["theme"],
                 "priority": binding["priority"],
                 "selected": bool(coverage_keys & selected_evidence_keys),
+                "importance": binding["importance"],
+                "coverage_obligation": binding["coverage_obligation"],
+                "merge_group": binding["merge_group"],
                 "evidence_keys": sorted(coverage_keys),
             }
         )
@@ -1700,6 +1905,11 @@ def final_insight_editorial_coverage(
         for item in theme_coverage
         if not item["selected"] and item["priority"] == central_priority
     ]
+    omitted_essential_themes = [
+        item["theme"]
+        for item in theme_coverage
+        if not item["selected"] and item["importance"] == "essential"
+    ]
     return {
         "planned_theme_count": len(theme_coverage),
         "selected_theme_count": sum(1 for item in theme_coverage if item["selected"]),
@@ -1708,6 +1918,7 @@ def final_insight_editorial_coverage(
         ],
         "omitted_themes": omitted_themes,
         "omitted_central_themes": omitted_central_themes,
+        "omitted_essential_themes": omitted_essential_themes,
         "selected_evidence_keys": sorted(selected_evidence_keys),
         "theme_coverage": theme_coverage,
     }
@@ -1745,6 +1956,23 @@ def validate_substantive_editorial_theme_coverage(
     raw_assessments = (
         payload.get("theme_coverage") if isinstance(payload, dict) else None
     )
+    report_completeness = (
+        _s(payload.get("report_completeness")).strip().casefold()
+        if isinstance(payload, dict)
+        else ""
+    )
+    if report_completeness and report_completeness not in {
+        "complete",
+        "incomplete",
+        "uncertain",
+    }:
+        raise AppError(
+            code="artifact_final_insight_coverage_invalid",
+            message=(
+                "Semantic theme coverage has an invalid report completeness assessment"
+            ),
+            retryable=False,
+        )
     bindings = editorial_plan_theme_bindings(editorial_plan)
     expected_themes = [binding["theme"] for binding in bindings]
     expected_by_key = {
@@ -1759,15 +1987,40 @@ def validate_substantive_editorial_theme_coverage(
         for insight in final_insights
         if isinstance(insight, dict) and _s(insight.get("id")).strip()
     }
-    final_facts = {
-        _s(insight.get("id")).strip(): (
-            candidate_facts.get(_s(insight.get("id")).strip())
-            if candidate_insights is not None
-            else insight
-        )
-        for insight in final_insights
-        if isinstance(insight, dict) and _s(insight.get("id")).strip()
+    final_facts: Dict[str, Dict[str, Any]] = {}
+    authorized_evidence_keys = {
+        _fallback_evidence_key(evidence_id)
+        for fact in candidate_facts.values()
+        for evidence_id in _ordered_item_evidence_ids(fact)
+        if _fallback_evidence_key(evidence_id)
     }
+    for insight in final_insights:
+        if not isinstance(insight, dict):
+            continue
+        insight_id = _s(insight.get("id")).strip()
+        if not insight_id:
+            continue
+        if candidate_insights is None:
+            final_facts[insight_id] = insight
+            continue
+        candidate_fact = candidate_facts.get(insight_id)
+        if candidate_fact is None:
+            continue
+        final_fact = deepcopy(candidate_fact)
+        final_evidence_ids = _ordered_item_evidence_ids(insight)
+        candidate_evidence_ids = _ordered_item_evidence_ids(candidate_fact)
+        if (
+            final_evidence_ids
+            and candidate_evidence_ids
+            and _fallback_evidence_key(final_evidence_ids[0])
+            == _fallback_evidence_key(candidate_evidence_ids[0])
+            and all(
+                _fallback_evidence_key(evidence_id) in authorized_evidence_keys
+                for evidence_id in final_evidence_ids
+            )
+        ):
+            final_fact["evidence_ids"] = final_evidence_ids
+        final_facts[insight_id] = final_fact
     if not isinstance(raw_assessments, list):
         raise AppError(
             code="artifact_final_insight_coverage_invalid",
@@ -1786,6 +2039,14 @@ def validate_substantive_editorial_theme_coverage(
         theme = _s(raw_assessment.get("theme")).strip()
         theme_key = normalize_for_lookup(theme)
         status = _s(raw_assessment.get("status")).strip()
+        raw_resolution = raw_assessment.get("resolution")
+        resolution = (
+            _s(raw_resolution).strip().casefold()
+            if raw_resolution is not None
+            else "retained"
+            if status == "covered"
+            else "unresolved"
+        )
         explanation = _s(raw_assessment.get("explanation")).strip()
         raw_supporting_ids = raw_assessment.get("supporting_insight_ids")
         if (
@@ -1793,6 +2054,10 @@ def validate_substantive_editorial_theme_coverage(
             or theme_key not in expected_by_key
             or theme_key in assessments
             or status not in {"covered", "partial", "uncovered"}
+            or (
+                raw_resolution is not None
+                and resolution not in EDITORIAL_PLAN_RESOLUTION_VALUES
+            )
             or not explanation
             or not isinstance(raw_supporting_ids, list)
         ):
@@ -1818,19 +2083,77 @@ def validate_substantive_editorial_theme_coverage(
                 retryable=False,
                 context={"theme": theme},
             )
-        if status in {"covered", "partial"} and not supporting_ids:
+        if (
+            status in {"covered", "partial"}
+            and not supporting_ids
+            and status == "partial"
+            and resolution == "merged"
+        ):
             raise AppError(
                 code="artifact_final_insight_coverage_invalid",
-                message="Covered semantic themes require supporting final insights",
+                message=(
+                    "Merged or covered semantic themes require supporting final "
+                    "insights"
+                ),
                 retryable=False,
                 context={"theme": theme},
             )
-        if status in {"covered", "partial"}:
-            theme_binding = next(
-                binding
-                for binding in bindings
-                if normalize_for_lookup(binding["theme"]) == theme_key
+        if status == "covered" and resolution not in {"retained", "merged"}:
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message=(
+                    "Covered semantic themes require a retained or merged resolution"
+                ),
+                retryable=False,
+                context={"theme": theme, "resolution": resolution},
             )
+        if resolution == "quarantined":
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message=(
+                    "Quarantined semantic themes cannot be accepted as final coverage"
+                ),
+                retryable=False,
+                context={"theme": theme},
+            )
+        theme_binding = next(
+            binding
+            for binding in bindings
+            if normalize_for_lookup(binding["theme"]) == theme_key
+        )
+        if resolution == "omitted":
+            if theme_binding["importance"] != "optional":
+                raise AppError(
+                    code="artifact_final_insight_coverage_invalid",
+                    message=(
+                        "Only optional semantic themes may be omitted; essential "
+                        "themes must fail closed"
+                    ),
+                    retryable=False,
+                    context={
+                        "theme": theme,
+                        "importance": theme_binding["importance"],
+                        "omitted_themes": [theme],
+                        "omitted_essential_themes": [theme],
+                    },
+                )
+            if (
+                _plan_uses_adaptive_fields(editorial_plan)
+                and report_completeness != "complete"
+            ):
+                raise AppError(
+                    code="artifact_final_insight_coverage_invalid",
+                    message=(
+                        "Optional semantic-theme omission requires a complete report "
+                        "assessment"
+                    ),
+                    retryable=False,
+                    context={
+                        "theme": theme,
+                        "report_completeness": report_completeness or "missing",
+                    },
+                )
+        if status in {"covered", "partial"}:
             theme_evidence_keys = {
                 _fallback_evidence_key(evidence_id)
                 for evidence_id in theme_binding["coverage_keys"]
@@ -1869,6 +2192,8 @@ def validate_substantive_editorial_theme_coverage(
         assessments[theme_key] = {
             "theme": expected_by_key[theme_key],
             "status": status,
+            "resolution": resolution,
+            "importance": theme_binding["importance"],
             "supporting_insight_ids": supporting_ids,
             "explanation": explanation,
         }
@@ -1892,20 +2217,71 @@ def validate_substantive_editorial_theme_coverage(
         if isinstance(binding.get("priority"), int)
     ]
     central_priority = min(priorities) if priorities else None
+    adaptive = _plan_uses_adaptive_fields(editorial_plan)
     omitted_themes = [
         theme
         for theme in expected_themes
+        if assessments[normalize_for_lookup(theme)]["resolution"] == "omitted"
+        or (
+            not adaptive
+            and assessments[normalize_for_lookup(theme)]["status"] != "covered"
+        )
+    ]
+    unresolved_themes = [
+        theme
+        for theme in expected_themes
         if assessments[normalize_for_lookup(theme)]["status"] != "covered"
+        and assessments[normalize_for_lookup(theme)]["resolution"]
+        not in {"merged", "omitted"}
+    ]
+    omitted_essential_themes = [
+        theme
+        for theme in expected_themes
+        if _theme_importance(
+            next(binding for binding in bindings if binding["theme"] == theme)
+        )
+        == "essential"
+        and (
+            assessments[normalize_for_lookup(theme)]["status"] != "covered"
+            or assessments[normalize_for_lookup(theme)]["resolution"]
+            not in {"retained", "merged"}
+        )
     ]
     omitted_central_themes: list[str] = []
     for binding in bindings:
         if binding.get("priority") != central_priority:
             continue
         assessment = assessments[normalize_for_lookup(binding["theme"])]
-        if assessment["status"] != "covered":
+        if assessment["status"] != "covered" and assessment["resolution"] not in {
+            "merged"
+        }:
             omitted_central_themes.append(assessment["theme"])
-    if omitted_themes:
-        if omitted_central_themes:
+    if adaptive and report_completeness != "complete":
+        raise AppError(
+            code="artifact_final_insight_coverage_invalid",
+            message=(
+                "Verified semantic coverage omitted an essential theme and requires "
+                "a complete material-report assessment"
+                if omitted_essential_themes
+                else (
+                    "Verified semantic coverage requires a complete material-report "
+                    "assessment"
+                )
+            ),
+            retryable=False,
+            context={
+                "report_completeness": report_completeness or "missing",
+                "omitted_themes": omitted_themes,
+            },
+        )
+    if omitted_essential_themes or unresolved_themes:
+        if adaptive:
+            message = (
+                "Semantic theme coverage omitted an essential theme"
+                if omitted_essential_themes
+                else "Semantic theme coverage has an unresolved planned theme"
+            )
+        elif omitted_central_themes:
             message = "Semantic theme coverage omitted a supported central theme"
         else:
             message = "Semantic theme coverage omitted planned themes"
@@ -1916,6 +2292,15 @@ def validate_substantive_editorial_theme_coverage(
             context={
                 "omitted_themes": omitted_themes,
                 "omitted_central_themes": omitted_central_themes,
+                "omitted_essential_themes": omitted_essential_themes,
+                "unresolved_themes": unresolved_themes,
+                "report_completeness": report_completeness,
+                "diagnosis": _s(payload.get("diagnosis")).strip()
+                if isinstance(payload, dict)
+                else "",
+                "recovery_action": _s(payload.get("recovery_action")).strip()
+                if isinstance(payload, dict)
+                else "",
             },
         )
     return {
@@ -1923,8 +2308,15 @@ def validate_substantive_editorial_theme_coverage(
         "theme_assessments": [
             assessments[normalize_for_lookup(theme)] for theme in expected_themes
         ],
-        "omitted_themes": [],
+        "omitted_themes": omitted_themes,
         "omitted_central_themes": [],
+        "report_completeness": report_completeness or "unknown",
+        "diagnosis": _s(payload.get("diagnosis")).strip()
+        if isinstance(payload, dict)
+        else "",
+        "recovery_action": _s(payload.get("recovery_action")).strip()
+        if isinstance(payload, dict)
+        else "",
     }
 
 
@@ -1945,13 +2337,19 @@ def validate_final_insight_editorial_coverage(
     if coverage_diagnostics is not None:
         coverage_diagnostics.clear()
         coverage_diagnostics.update(coverage)
-    if not coverage["omitted_central_themes"]:
+    if not coverage["omitted_essential_themes"]:
         return
+    message = "Final insight selection omitted an essential editorial theme"
+    if not _plan_uses_adaptive_fields(editorial_plan):
+        message = "Final insight selection omitted a supported central editorial theme"
     raise AppError(
         code="artifact_final_insight_coverage_invalid",
-        message=("Final insight selection omitted a supported central editorial theme"),
+        message=message,
         retryable=False,
-        context={"omitted_central_themes": coverage["omitted_central_themes"]},
+        context={
+            "omitted_central_themes": coverage["omitted_central_themes"],
+            "omitted_essential_themes": coverage["omitted_essential_themes"],
+        },
     )
 
 
@@ -2740,13 +3138,23 @@ def build_expert_synthesis_context(
         "schema_version": "1.0",
         "themes": themes,
         "insight_implications": implications,
-        "limitations": _verified_or_pack_limitations(evidence_packs),
+        "limitations": _verified_or_pack_limitations(
+            evidence_packs,
+            selected_evidence_ids={
+                _fallback_evidence_key(evidence_id)
+                for evidence_id in plan.get("material_limitation_evidence_ids", [])
+                if _fallback_evidence_key(evidence_id)
+            }
+            or None,
+        ),
         "counter_signals": _expert_counter_signals(insights_final, evidence_packs),
     }
 
 
 def _verified_or_pack_limitations(
     evidence_packs: Dict[str, Any],
+    *,
+    selected_evidence_ids: set[str] | None = None,
 ) -> List[Dict[str, str]]:
     """Expose exact source qualifiers when verified facts replace pack limits."""
 
@@ -2757,7 +3165,15 @@ def _verified_or_pack_limitations(
         limit=None,
     )
     if limitations:
-        return limitations
+        if selected_evidence_ids is None:
+            return limitations
+        selected_limitations = [
+            item
+            for item in limitations
+            if _fallback_evidence_key(item.get("evidence_id")) in selected_evidence_ids
+        ]
+        if selected_limitations:
+            return selected_limitations
     verified_pack = evidence_packs.get("verified_facts")
     facts = (
         verified_pack.get("verified_facts") if isinstance(verified_pack, dict) else []
@@ -2773,10 +3189,14 @@ def _verified_or_pack_limitations(
             continue
         for qualifier in fact.get("qualifiers") or []:
             text = _s(qualifier).strip()
-            if text:
+            evidence_id = f"verified-fact:{fact_id}"
+            if text and (
+                selected_evidence_ids is None
+                or _fallback_evidence_key(evidence_id) in selected_evidence_ids
+            ):
                 verified_limitations.append(
                     {
-                        "evidence_id": f"verified-fact:{fact_id}",
+                        "evidence_id": evidence_id,
                         "text": text,
                     }
                 )
@@ -3307,6 +3727,37 @@ def _finding_section_ids(source_findings: Any) -> dict[str, set[str]]:
     return finding_sections
 
 
+def _plan_uses_adaptive_fields(editorial_plan: Dict[str, Any] | None) -> bool:
+    """Return whether a plan opted into the adaptive verified contract."""
+
+    if not isinstance(editorial_plan, dict):
+        return False
+    if "material_limitation_evidence_ids" in editorial_plan:
+        return True
+    return any(
+        isinstance(theme, dict)
+        and any(
+            field_name in theme
+            for field_name in (
+                "importance",
+                "coverage_obligation",
+                "feasible_candidate_ids",
+                "merge_group",
+            )
+        )
+        for theme in editorial_plan.get("themes") or []
+    )
+
+
+def _theme_importance(theme: Dict[str, Any]) -> str:
+    importance = _s(theme.get("importance")).strip().casefold()
+    return importance if importance in EDITORIAL_PLAN_IMPORTANCE_VALUES else "essential"
+
+
+def _theme_coverage_obligation(theme: Dict[str, Any]) -> str:
+    return _s(theme.get("coverage_obligation") or theme.get("theme")).strip()
+
+
 def editorial_plan_theme_bindings(
     editorial_plan: Dict[str, Any] | None,
     *,
@@ -3361,6 +3812,14 @@ def editorial_plan_theme_bindings(
             {
                 "theme": _s(theme.get("theme")).strip(),
                 "priority": theme.get("priority"),
+                "importance": _theme_importance(theme),
+                "coverage_obligation": _theme_coverage_obligation(theme),
+                "feasible_candidate_ids": [
+                    _s(candidate_id).strip()
+                    for candidate_id in theme.get("feasible_candidate_ids") or []
+                    if _s(candidate_id).strip()
+                ],
+                "merge_group": _s(theme.get("merge_group")).strip(),
                 "reference_keys": reference_keys,
                 "direct_finding_ids": direct_finding_ids,
                 "section_finding_ids": section_finding_ids,
@@ -4036,6 +4495,11 @@ def normalize_artifact_evidence_ids(
                 if not isinstance(evidence_ids, list):
                     continue
                 theme["evidence_ids"] = _normalize_evidence_ids(evidence_ids)
+        limitation_ids = editorial_plan.get("material_limitation_evidence_ids")
+        if isinstance(limitation_ids, list):
+            editorial_plan["material_limitation_evidence_ids"] = (
+                _normalize_evidence_ids(limitation_ids)
+            )
     if isinstance(soft_copy_claim_provenance, dict):
         claims = soft_copy_claim_provenance.get("claims")
         if isinstance(claims, list):

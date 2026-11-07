@@ -10,17 +10,21 @@ text: |
 
   Return exactly this JSON object:
   {
+    "report_completeness": "complete|incomplete|uncertain",
+    "diagnosis": "planned_theme_execution|material_report_completeness|redundant_optional_theme|infeasible_plan|insufficient_evidence",
+    "recovery_action": "none|targeted_rewrite|replan|quarantine",
     "theme_coverage": [
       {
         "theme": "<exact planned theme name>",
         "status": "covered|partial|uncovered",
+        "resolution": "retained|merged|omitted|quarantined",
         "supporting_insight_ids": ["<exact final insight id>"],
         "explanation": "<concise explanation grounded in the intended proposition and actual final wording>"
       }
     ]
   }
 
-  Include every planned theme exactly once. Use only exact final insight IDs.
+  Include every planned theme exactly once. Use only exact final insight IDs. Set resolution to retained when the theme is developed directly, merged when one final insight genuinely develops multiple planned themes, omitted only for an optional redundant theme, and quarantined when an essential proposition cannot be represented. Use `report_completeness` to assess the whole article independently of the plan organization. Choose `targeted_rewrite` when supported evidence is available but the prose is incomplete, `replan` only when the plan is redundant or infeasible, and `quarantine` when material verified evidence is insufficient.
   `covered` means the final prose develops the theme's intended proposition;
   `partial` means it is materially related but incomplete; `uncovered` means
   the final roster does not substantively address it. A shared fact or source

@@ -17,9 +17,19 @@
             "type": "array",
             "items": {"type": "string"}
           },
-          "explanation": {"type": "string", "minLength": 1}
+          "explanation": {"type": "string", "minLength": 1},
+          "resolution": {
+            "type": "string",
+            "enum": ["retained", "merged", "omitted", "quarantined"]
+          }
         }
       }
-    }
+    },
+    "report_completeness": {
+      "type": "string",
+      "enum": ["complete", "incomplete", "uncertain"]
+    },
+    "diagnosis": {"type": "string"},
+    "recovery_action": {"type": "string"}
   }
 }

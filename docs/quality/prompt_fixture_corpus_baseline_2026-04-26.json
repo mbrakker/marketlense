@@ -53,17 +53,17 @@
       "total_tokens": 1589
     },
     "publishing": {
-      "estimated_cost_usd": 0.009029,
+      "estimated_cost_usd": 0.009159,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 10900,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 35803,
+      "input_tokens": 37100,
       "namespace_count": 16,
       "runtime_ms": 15.2927,
       "schema_version": "1.0",
-      "total_tokens": 46703
+      "total_tokens": 48000
     },
     "ranking": {
       "estimated_cost_usd": 0.0003,
@@ -79,30 +79,30 @@
       "total_tokens": 1234
     },
     "report": {
-      "estimated_cost_usd": 0.008628,
+      "estimated_cost_usd": 0.008638,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 1,
       "expected_output_tokens": 15716,
       "expected_tool_calls": 0,
       "family": "report",
-      "input_tokens": 7713,
+      "input_tokens": 7815,
       "namespace_count": 16,
       "runtime_ms": 16.0468,
       "schema_version": "1.0",
-      "total_tokens": 23429
+      "total_tokens": 23531
     },
     "validation": {
-      "estimated_cost_usd": 0.002126,
+      "estimated_cost_usd": 0.002146,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 2280,
       "expected_tool_calls": 0,
       "family": "validation",
-      "input_tokens": 9854,
+      "input_tokens": 10050,
       "namespace_count": 6,
       "runtime_ms": 5.2064,
       "schema_version": "1.0",
-      "total_tokens": 12134
+      "total_tokens": 12330
     }
   },
   "fixture_count": 51,
@@ -349,32 +349,32 @@
       "total_tokens": 1277
     },
     "report_vs/artifacts/editorial_plan": {
-      "estimated_cost_usd": 0.000576,
+      "estimated_cost_usd": 0.00063,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 700,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 2261,
+      "input_tokens": 2801,
       "model": "gpt-6-luna",
       "namespace": "report_vs/artifacts/editorial_plan",
       "runtime_ms": 1.0768,
       "schema_version": "1.0",
-      "total_tokens": 2961
+      "total_tokens": 3501
     },
     "report_vs/artifacts/editorial_theme_coverage": {
-      "estimated_cost_usd": 0.000402,
+      "estimated_cost_usd": 0.000451,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 700,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 525,
+      "input_tokens": 1006,
       "model": "gpt-6-luna",
       "namespace": "report_vs/artifacts/editorial_theme_coverage",
       "runtime_ms": 1.09,
       "schema_version": "1.0",
-      "total_tokens": 1225
+      "total_tokens": 1706
     },
     "report_vs/artifacts/expert_comment": {
       "estimated_cost_usd": 0.000642,
@@ -405,32 +405,32 @@
       "total_tokens": 3890
     },
     "report_vs/artifacts/insights_final": {
-      "estimated_cost_usd": 0.000677,
+      "estimated_cost_usd": 0.000694,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 700,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 3271,
+      "input_tokens": 3444,
       "model": "gpt-6-luna",
       "namespace": "report_vs/artifacts/insights_final",
       "runtime_ms": 1.0052,
       "schema_version": "1.0",
-      "total_tokens": 3971
+      "total_tokens": 4144
     },
     "report_vs/artifacts/linkedin_post": {
-      "estimated_cost_usd": 0.000681,
+      "estimated_cost_usd": 0.000688,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 700,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 3307,
+      "input_tokens": 3385,
       "model": "gpt-6-luna",
       "namespace": "report_vs/artifacts/linkedin_post",
       "runtime_ms": 1.0091,
       "schema_version": "1.0",
-      "total_tokens": 4007
+      "total_tokens": 4085
     },
     "report_vs/artifacts/quotes": {
       "estimated_cost_usd": 0.00052,
@@ -531,18 +531,18 @@
       "total_tokens": 3769
     },
     "report_vs/artifacts/summary": {
-      "estimated_cost_usd": 0.00064,
+      "estimated_cost_usd": 0.000643,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 700,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 2903,
+      "input_tokens": 2928,
       "model": "gpt-6-luna",
       "namespace": "report_vs/artifacts/summary",
       "runtime_ms": 0.9502,
       "schema_version": "1.0",
-      "total_tokens": 3603
+      "total_tokens": 3628
     },
     "report_vs/context_category_fit": {
       "estimated_cost_usd": 0.000205,
@@ -587,18 +587,18 @@
       "total_tokens": 1804
     },
     "report_vs/evidence_packs/findings": {
-      "estimated_cost_usd": 0.00067,
+      "estimated_cost_usd": 0.00068,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 1100,
       "expected_tool_calls": 0,
       "family": "report",
-      "input_tokens": 1195,
+      "input_tokens": 1297,
       "model": "gpt-6-luna",
       "namespace": "report_vs/evidence_packs/findings",
       "runtime_ms": 1.0844,
       "schema_version": "1.0",
-      "total_tokens": 2295
+      "total_tokens": 2397
     },
     "report_vs/evidence_packs/limitations": {
       "estimated_cost_usd": 0.000577,
@@ -769,18 +769,18 @@
       "total_tokens": 2352
     },
     "report_vs/validate/public_editorial_quality": {
-      "estimated_cost_usd": 0.000398,
+      "estimated_cost_usd": 0.000418,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 380,
       "expected_tool_calls": 0,
       "family": "validation",
-      "input_tokens": 2079,
+      "input_tokens": 2275,
       "model": "gpt-6-luna",
       "namespace": "report_vs/validate/public_editorial_quality",
       "runtime_ms": 1.4261,
       "schema_version": "1.0",
-      "total_tokens": 2459
+      "total_tokens": 2655
     },
     "report_vs/validate/semantic": {
       "estimated_cost_usd": 0.000244,
@@ -827,16 +827,16 @@
   },
   "schema_version": "1.0",
   "totals": {
-    "estimated_cost_usd": 0.025204,
+    "estimated_cost_usd": 0.025364,
     "expected_browser_attempts": 7,
     "expected_ocr_calls": 1,
     "expected_output_tokens": 34136,
     "expected_tool_calls": 0,
     "family": "totals",
-    "input_tokens": 81377,
+    "input_tokens": 82972,
     "namespace_count": 51,
     "runtime_ms": 50.5913,
     "schema_version": "1.0",
-    "total_tokens": 115513
+    "total_tokens": 117108
   }
 }

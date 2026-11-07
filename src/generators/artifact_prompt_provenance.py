@@ -19,7 +19,7 @@ from src.utils.model_resolver import (
 )
 
 ARTIFACT_PROMPT_IDENTITY_SCHEMA_VERSION = "1.0"
-ARTIFACT_PROMPT_VALIDATOR_VERSION = "artifacts_schema:3.1"
+ARTIFACT_PROMPT_VALIDATOR_VERSION = "artifacts_schema:3.2"
 
 
 def _prompt_contract_for_namespace(namespace: str) -> tuple[str, str]:
@@ -28,8 +28,8 @@ def _prompt_contract_for_namespace(namespace: str) -> tuple[str, str]:
     normalized_namespace = str(namespace or "").replace("/regenerate/", "/", 1)
     if normalized_namespace == "report_vs/artifacts/editorial_theme_coverage":
         return (
-            "editorial_theme_coverage_output:1.0",
-            "editorial_theme_coverage_output:v1",
+            "editorial_theme_coverage_output:1.1",
+            "editorial_theme_coverage_output:v2",
         )
     return "artifact_json:1.0", ARTIFACT_PROMPT_VALIDATOR_VERSION
 

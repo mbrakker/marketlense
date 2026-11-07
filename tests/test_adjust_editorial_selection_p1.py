@@ -3,12 +3,17 @@ from __future__ import annotations
 import pytest
 
 from src.generators.artifact_normalization import (
+    adaptive_final_insight_target_count,
     fallback_artifact_insights_from_findings,
+    final_insight_editorial_coverage,
+    normalize_artifact_editorial_plan,
     remap_editorial_plan_to_verified_facts,
     select_artifact_insights,
     validate_editorial_plan_evidence_ids,
+    validate_final_insight_candidate_lineage,
     validate_substantive_editorial_theme_coverage,
 )
+from src.services._render_service.normalization import _coerce_limitation_items
 from src.utils.errors import AppError
 
 
@@ -316,6 +321,341 @@ def test_semantic_theme_coverage_accepts_supporting_insight_with_matching_fact()
     )
 
     assert result["theme_assessments"][0]["supporting_insight_ids"] == ["insight-1"]
+
+
+def test_verified_editorial_plan_preserves_adaptive_theme_contract() -> None:
+    plan = normalize_artifact_editorial_plan(
+        {
+            "report_thesis": "The report shows a concentrated commercial shift.",
+            "material_limitation_evidence_ids": ["verified-fact:limitation"],
+            "themes": [
+                {
+                    "theme": "Core shift",
+                    "priority": 1,
+                    "importance": "essential",
+                    "coverage_obligation": (
+                        "Develop the directional change and its qualifier."
+                    ),
+                    "evidence_ids": ["verified-fact:fact-1"],
+                    "feasible_candidate_ids": ["candidate-1"],
+                    "merge_group": "core",
+                },
+                {
+                    "theme": "Redundant context",
+                    "priority": 2,
+                    "importance": "optional",
+                    "coverage_obligation": "Add context only if it is not redundant.",
+                    "evidence_ids": ["verified-fact:fact-2"],
+                    "feasible_candidate_ids": ["candidate-2"],
+                    "merge_group": "core",
+                },
+            ],
+        }
+    )
+
+    assert plan["material_limitation_evidence_ids"] == ["verified-fact:limitation"]
+    assert plan["themes"][0]["importance"] == "essential"
+    assert plan["themes"][0]["coverage_obligation"].startswith("Develop")
+    assert plan["themes"][1]["importance"] == "optional"
+    assert plan["themes"][1]["feasible_candidate_ids"] == ["candidate-2"]
+    assert plan["themes"][1]["merge_group"] == "core"
+
+
+def test_verified_adaptive_target_counts_essential_merge_units_with_floor() -> None:
+    assert (
+        adaptive_final_insight_target_count(
+            {
+                "report_thesis": "The report has two related material signals.",
+                "themes": [
+                    {
+                        "theme": "Signal one",
+                        "priority": 1,
+                        "importance": "essential",
+                        "merge_group": "shared",
+                        "evidence_ids": ["f1"],
+                    },
+                    {
+                        "theme": "Signal two",
+                        "priority": 2,
+                        "importance": "essential",
+                        "merge_group": "shared",
+                        "evidence_ids": ["f2"],
+                    },
+                ],
+            }
+        )
+        == 2
+    )
+    assert (
+        adaptive_final_insight_target_count(
+            {
+                "report_thesis": "The report has two distinct material signals.",
+                "themes": [
+                    {
+                        "theme": "Signal one",
+                        "priority": 1,
+                        "importance": "essential",
+                        "evidence_ids": ["f1"],
+                    },
+                    {
+                        "theme": "Signal two",
+                        "priority": 2,
+                        "importance": "essential",
+                        "evidence_ids": ["f2"],
+                    },
+                    {
+                        "theme": "Optional context",
+                        "priority": 3,
+                        "importance": "optional",
+                        "evidence_ids": ["f3"],
+                    },
+                ],
+            }
+        )
+        == 2
+    )
+
+
+def test_verified_plan_limitation_bindings_drive_rendered_projection() -> None:
+    rows = _coerce_limitation_items(
+        {
+            "limitations": {
+                "limitations": [
+                    {"text": "A selected qualification.", "evidence_id": "f2"},
+                    {"text": "An unrelated qualification.", "evidence_id": "f3"},
+                ]
+            },
+            "verified_facts": {
+                "verified_facts": [
+                    {"fact_id": "f2", "qualifiers": ["A selected qualification."]},
+                    {"fact_id": "f3", "qualifiers": ["An unrelated qualification."]},
+                ]
+            },
+        },
+        verified_mode=True,
+        artifacts={
+            "editorial_plan": {
+                "material_limitation_evidence_ids": ["f2"],
+            },
+            "insights_final": [],
+        },
+    )
+
+    assert rows == [{"text": "A selected qualification.", "evidence_ids": ["f2"]}]
+
+
+def test_optional_uncovered_theme_is_accepted_only_with_explicit_grounded_resolution():
+    plan = {
+        "report_thesis": "The report defines one central decision.",
+        "themes": [
+            {
+                "theme": "Central signal",
+                "priority": 1,
+                "importance": "essential",
+                "coverage_obligation": "Develop the central signal.",
+                "evidence_ids": ["f1"],
+            },
+            {
+                "theme": "Redundant context",
+                "priority": 2,
+                "importance": "optional",
+                "coverage_obligation": "Use only if it adds a distinct implication.",
+                "evidence_ids": ["f2"],
+            },
+        ],
+    }
+
+    result = validate_substantive_editorial_theme_coverage(
+        payload={
+            "theme_coverage": [
+                {
+                    "theme": "Central signal",
+                    "status": "covered",
+                    "resolution": "retained",
+                    "supporting_insight_ids": ["insight-1"],
+                    "explanation": "The final insight develops the central signal.",
+                },
+                {
+                    "theme": "Redundant context",
+                    "status": "uncovered",
+                    "resolution": "omitted",
+                    "supporting_insight_ids": [],
+                    "explanation": (
+                        "Omitted because its context is redundant with the retained "
+                        "central signal and adds no distinct decision implication."
+                    ),
+                },
+            ],
+            "report_completeness": "complete",
+        },
+        editorial_plan=plan,
+        final_insights=[
+            {
+                "id": "insight-1",
+                "text": "The central signal matters.",
+                "evidence_id": "f1",
+            }
+        ],
+    )
+
+    assert result["omitted_themes"] == ["Redundant context"]
+    assert result["theme_assessments"][1]["resolution"] == "omitted"
+
+
+def test_essential_uncovered_theme_still_fails_closed_with_adaptive_plan():
+    plan = {
+        "report_thesis": "The report defines two distinct decisions.",
+        "themes": [
+            {
+                "theme": "Central signal",
+                "priority": 1,
+                "importance": "essential",
+                "coverage_obligation": "Develop the central signal.",
+                "evidence_ids": ["f1"],
+            },
+            {
+                "theme": "Required counter-signal",
+                "priority": 2,
+                "importance": "essential",
+                "coverage_obligation": "Preserve the counter-signal.",
+                "evidence_ids": ["f2"],
+            },
+        ],
+    }
+
+    with pytest.raises(AppError, match="essential"):
+        validate_substantive_editorial_theme_coverage(
+            payload={
+                "theme_coverage": [
+                    {
+                        "theme": "Central signal",
+                        "status": "covered",
+                        "resolution": "retained",
+                        "supporting_insight_ids": ["insight-1"],
+                        "explanation": "The central signal is developed.",
+                    },
+                    {
+                        "theme": "Required counter-signal",
+                        "status": "uncovered",
+                        "resolution": "omitted",
+                        "supporting_insight_ids": [],
+                        "explanation": (
+                            "The final roster does not develop the counter-signal."
+                        ),
+                    },
+                ]
+            },
+            editorial_plan=plan,
+            final_insights=[
+                {
+                    "id": "insight-1",
+                    "text": "The central signal.",
+                    "evidence_id": "f1",
+                }
+            ],
+        )
+
+
+def test_secondary_authorized_fact_drives_mechanical_theme_coverage():
+    plan = {
+        "report_thesis": "The combined finding is decision relevant.",
+        "themes": [
+            {"theme": "Primary", "priority": 1, "evidence_ids": ["f1"]},
+            {"theme": "Secondary", "priority": 2, "evidence_ids": ["f2"]},
+        ],
+    }
+    candidates = [
+        {"id": "insight-1", "text": "Primary", "evidence_id": "f1"},
+        {"id": "insight-2", "text": "Secondary", "evidence_id": "f2"},
+    ]
+    final = [
+        {
+            "id": "insight-1",
+            "text": "The primary and secondary findings belong together.",
+            "evidence_id": "f1",
+            "evidence_ids": ["f2"],
+        }
+    ]
+
+    coverage = final_insight_editorial_coverage(
+        final_insights=final,
+        candidate_insights=candidates,
+        editorial_plan=plan,
+    )
+
+    assert coverage["selected_themes"] == ["Primary", "Secondary"]
+    validate_final_insight_candidate_lineage(
+        final_insights=final,
+        candidate_insights=candidates,
+    )
+
+
+def test_secondary_authorized_fact_drives_semantic_theme_coverage():
+    plan = {
+        "report_thesis": "The combined finding is decision relevant.",
+        "themes": [
+            {"theme": "Primary", "priority": 1, "evidence_ids": ["f1"]},
+            {"theme": "Secondary", "priority": 2, "evidence_ids": ["f2"]},
+        ],
+    }
+    candidates = [
+        {"id": "insight-1", "text": "Primary", "evidence_id": "f1"},
+        {"id": "insight-2", "text": "Secondary", "evidence_id": "f2"},
+    ]
+
+    result = validate_substantive_editorial_theme_coverage(
+        payload={
+            "theme_coverage": [
+                {
+                    "theme": "Primary",
+                    "status": "covered",
+                    "supporting_insight_ids": ["insight-1"],
+                    "explanation": "The combined wording develops the primary fact.",
+                },
+                {
+                    "theme": "Secondary",
+                    "status": "covered",
+                    "supporting_insight_ids": ["insight-1"],
+                    "explanation": (
+                        "The same wording develops the authorized secondary fact."
+                    ),
+                },
+            ]
+        },
+        editorial_plan=plan,
+        final_insights=[
+            {
+                "id": "insight-1",
+                "text": "The primary and secondary findings belong together.",
+                "evidence_id": "f1",
+                "evidence_ids": ["f2"],
+            }
+        ],
+        candidate_insights=candidates,
+    )
+
+    assert [item["status"] for item in result["theme_assessments"]] == [
+        "covered",
+        "covered",
+    ]
+
+
+def test_secondary_unauthorized_fact_is_rejected_before_coverage():
+    candidates = [
+        {"id": "insight-1", "text": "Primary", "evidence_id": "f1"},
+    ]
+    with pytest.raises(AppError, match="evidence"):
+        validate_final_insight_candidate_lineage(
+            final_insights=[
+                {
+                    "id": "insight-1",
+                    "text": "Primary plus an unsupported fact.",
+                    "evidence_id": "f1",
+                    "evidence_ids": ["f2"],
+                }
+            ],
+            candidate_insights=candidates,
+        )
 
 
 def test_verified_plan_maps_section_refs_only_through_original_findings():

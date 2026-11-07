@@ -1716,6 +1716,15 @@ def _coerce_limitation_items(
 
     limitations_pack = _coerce_dict(evidence_packs.get("limitations"))
     limitations: list[dict[str, Any]] = []
+    planned_limitation_ids = {
+        _s(evidence_id).strip().casefold()
+        for evidence_id in _coerce_list(
+            _coerce_dict((artifacts or {}).get("editorial_plan")).get(
+                "material_limitation_evidence_ids"
+            )
+        )
+        if _s(evidence_id).strip()
+    }
     for raw_item in _coerce_list(limitations_pack.get("limitations")):
         item = _coerce_dict(raw_item)
         message = _pick_first_text(
@@ -1738,6 +1747,16 @@ def _coerce_limitation_items(
                     ),
                 }
             )
+    if limitations and planned_limitation_ids:
+        limitations = [
+            item
+            for item in limitations
+            if {
+                evidence_id.strip().casefold()
+                for evidence_id in item.get("evidence_ids", [])
+                if evidence_id.strip()
+            }.intersection(planned_limitation_ids)
+        ]
     if limitations or not verified_mode:
         return limitations[:5]
     verified_pack = _coerce_dict(evidence_packs.get("verified_facts"))
@@ -1762,7 +1781,10 @@ def _coerce_limitation_items(
         evidence_id = f"{VERIFIED_FACT_EVIDENCE_PREFIX}{fact_id}" if fact_id else ""
         for raw_qualifier in _coerce_list(fact.get("qualifiers")):
             qualifier = _s(raw_qualifier)
-            if qualifier:
+            if qualifier and (
+                not planned_limitation_ids
+                or evidence_id.casefold() in planned_limitation_ids
+            ):
                 fact_rows.append(
                     {
                         "text": qualifier,
