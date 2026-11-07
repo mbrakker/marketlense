@@ -10795,3 +10795,81 @@ also verified by hosted run
 tests/coverage, both mutation partitions, and `release_evidence` passed, with
 the optional WordPress staging REST gate skipped by configuration. Its release
 bundle is [retained here](https://github.com/mbrakker/marketlense/actions/runs/42303832188/artifacts/13545018973).
+
+### Adaptive verified editorial planning — 2026-11-07
+
+Commit `002ee8143c4ca746ee6373e35832188f3fccec38` implements the adaptive
+verified-facts editorial slice. The existing verified editorial-plan family now
+retains `essential`/`optional` importance, substantive coverage obligations,
+feasible admitted candidate IDs, merge groups, and exact material-limitation
+fact IDs. Verified final insight count is derived from essential merge units
+with the existing two-insight floor; legacy/normal plans retain the existing
+five-insight behavior. Final secondary `evidence_ids` are accepted only when
+primary-first, admitted, and source-bound, so mechanical coverage sees the
+complete authorized fact set without changing the authoritative metric binding.
+The existing final-writer and semantic-coverage families provide the bounded
+targeted rewrite and at most one immutable-fact/original-plan replan path.
+Selected limitation IDs are filtered through the existing render and expert
+projections. Selection and prompt-family identities were advanced (`31`,
+`normalize_editorial_plan:4.0`, and the existing prompt-validator identity) so
+older cached candidates cannot bypass the new behavior.
+
+Focused verification on the current implementation passed **170 tests**. The
+changed-file Ruff check and format check passed; the full-repository type gate
+reported **0 tracked mypy errors across 786 source files**. The prompt-fixture
+baseline was regenerated with the repository tool and the unchanged regression
+gate passed: **117,108 tokens / `$0.025364`**, with report **23,531 / `$0.008638`**,
+publishing **48,000 / `$0.009159`**, and validation **12,330 / `$0.002146`**.
+These are the intentional current baselines; the gate thresholds and prompt
+contracts were not weakened.
+
+The repository-wide local run completed with **8,510 passed, 2 skipped, 48
+deselected, 24 subtests, and 22 warnings** after the cache-version expectation
+was advanced to `evidence_backed_shortlisting:31`. The only remaining local
+failure is the unchanged wheelhouse-audit test, which requires native CPython
+3.12 while this host is CPython 3.14.2; no adaptive-planning module is involved.
+
+The exact current-SHA provider-backed Capgemini run used clean SHA
+`002ee8143c4ca746ee6373e35832188f3fccec38`, isolated root
+`C:\ml-adaptive-step2-20261107\frozen-reliability-5ywodi9g`, and no publication
+flags. It matched the retained source identity, admitted **10** eligible
+candidates, selected **7**, made **92** provider calls, used **634,653 input /
+99,467 output tokens**, cost **`$0.133074`**, and took **1,086.959 seconds**.
+There were **8** file-search calls, **3** structured-output recovery calls, and
+no automatic repair or operator intervention. The workflow failed closed at
+`artifact_final_insight_coverage_invalid` during initial semantic coverage:
+the terminal diagnostic retained the seven selected IDs but could not prove
+`deal-search-and-cutbacks`, `promotion-effectiveness-comparison`,
+`small-indulgences-financial-stress`, `genai-shopping-tools-use-and-plans`,
+`assistant-control-and-action-guidance`, `human-interaction-and-loyalty`, and
+`structured-product-data-for-ai`, but could not prove the essential planned
+roster was represented. No final artifact, HTML,
+canonical promotion, readiness pass, or WordPress write occurred. This is not
+a live selection-quality improvement over the prior Capgemini failure; it is a
+current-SHA failure record.
+
+The requested isolated Activate attempt used run root
+`C:\ml-adaptive-step2-20261107-activate\frozen-reliability-3i0ia94x` and was
+stopped after **32m46s** because `report_selection.v1` had no heartbeat or
+control observation after start. It reached no editorial stage. Its retained
+ledger records **376 provider events**, **285,305 input / 148,997 output
+tokens**, and **`$0.103033`** in figure-ranking/report-selection work, with no
+adaptive-plan, HTML, readiness, or publication result. This is a pre-selection
+stall, not a verified editorial verdict, and the post-terminal drain behavior
+remains an operational limitation.
+
+The provider-free replay helper was also invoked from this isolated worktree;
+the retained frozen-five PDFs and final artifacts are not present there, so it
+reported the existing `provider_free_replay` limitation and no source-hash or
+selection result. The earlier retained provider-free frozen-five continuity
+record remains the only evidence for **5/5 hashes, 29/29 selected IDs, and
+29/29 theme slots**; it does not establish current-SHA live selection quality.
+No KPMG, Reuters Institute, or Adjust current-SHA live result is claimed.
+
+**Verdict: PARTIAL / NO-GO.** Adaptive planning, authorized secondary-fact
+coverage, limitation projection, bounded recovery, and cache invalidation are
+implemented and regression-covered. The current live Capgemini semantic
+coverage failure and Activate pre-selection stall leave Step 2 open; E18
+remains **Active/PARTIAL**, and Step 3 remains **unstarted/not ready**. No
+canonical artifact, publication-readiness approval, or WordPress write was
+performed.
