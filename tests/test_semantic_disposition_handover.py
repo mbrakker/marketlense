@@ -22,11 +22,18 @@ from src.generators.public_editorial_quality_generator import (
 from src.generators.validation.grounding import (
     _retained_claim_semantic_results,
     grounding_payload,
+    run_grounding_check,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _public_editorial_review_issue,
 )
-from tests._test_validation_generator._shared import _report
+from tests._test_validation_generator._shared import (
+    FakeOpenAI,
+    FakePromptClient,
+    _ctx,
+    _report,
+    _settings,
+)
 
 
 def _compatible_protected_facts() -> dict[str, dict[str, str]]:
@@ -349,7 +356,9 @@ def test_retained_grounding_merges_editorial_failure_subtype_without_losing_fact
     )
 
 
-def test_verified_grounding_exposes_missing_atomic_provenance_as_typed_item() -> None:
+def test_verified_grounding_exposes_missing_atomic_provenance_as_typed_item(
+    tmp_path,
+) -> None:
     source_identity = "frozen-report|pdf-sha256:" + "b" * 64
     fact = {
         "schema_version": "1.0",
@@ -402,6 +411,29 @@ def test_verified_grounding_exposes_missing_atomic_provenance_as_typed_item() ->
     )
     assert item["evidence_ids"] == []
     assert item["provenance_error"] == "grounding_public_claim_provenance_invalid"
+
+    issues = run_grounding_check(
+        request=ValidationRequest(
+            schema_version="1.0",
+            report_id="grounding-provenance-defect",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs=canonical_verified_evidence_packs({"finding-1": fact}),
+            vector_store_id=None,
+            source_id=source_identity,
+            validation_mode="verified_facts",
+        ),
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(),
+        ctx=_ctx(),
+        source_id=source_identity,
+    )
+    assert len(issues) == 1
+    assert issues[0].violation_type == "missing_material_evidence"
 
 
 def test_editorial_review_allows_bounded_unbound_wording_repair_only() -> None:
