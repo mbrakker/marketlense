@@ -497,6 +497,7 @@ def valid_soft_copy_evidence_selection(
             "typed_compatibility_fallback",
             "lexical_fallback",
             "abstain",
+            "editorial_only",
         }
         or not isinstance(value.get("package_sha256"), str)
         or not re.fullmatch(r"[0-9a-f]{64}", value["package_sha256"])

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 PUBLIC_EDITORIAL_QUALITY_SCHEMA_VERSION = "1.0"
-PUBLIC_EDITORIAL_VALIDATOR_VERSION = "public-editorial-quality:v17"
+PUBLIC_EDITORIAL_VALIDATOR_VERSION = "public-editorial-quality:v18"
 
 
 @dataclass(frozen=True)
@@ -51,6 +51,14 @@ class PublicEditorialQualityIssue:
             "doc": (
                 "Unwaivable source-fidelity failure class, or empty for "
                 "quality-only findings."
+            )
+        },
+    )
+    classification: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Canonical semantic classification supplied by the independent review."
             )
         },
     )

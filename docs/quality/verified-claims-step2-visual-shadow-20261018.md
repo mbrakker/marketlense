@@ -11049,3 +11049,66 @@ effectiveness.
 handover correction and release gates are verified; real-report Step 2
 quality remains unproven. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+### Verified-grounding and atomic editorial-repair correction — 2026-11-07
+
+This correction closes the confirmed cross-stage contract defects without
+adding a validator, model stage, service, or publication path. One canonical
+classification normalizer now maps persisted `factual` / `interpretive` /
+`recommendation` labels to the model-owned semantic vocabulary and rejects
+unknown labels. The verified candidate contract carries the existing
+deterministic authorization for an explicitly unbound editorial sentence;
+validator identities advanced to `retained_claim_validation:v12`,
+`grounding_validation_output:2.3`, and the public-review identities advanced
+to `public-editorial-quality:v18` / `v26`, so legacy semantic results cannot
+bypass the revised handover.
+
+The verified grounding boundary now rejects stale or fabricated no-evidence
+semantic inputs while accepting only the current retained authorization. A
+factual assertion mislabeled by its producer as interpretive still reaches the
+independent model review and remains evidence-required. The shared protected-
+fact disposition is used by retained validation, direct public grounding,
+reuse, and readiness. Validation issue classification and violation type now
+survive the public-review → validation → regeneration plan → repair boundary.
+
+The claim-level repair path now has one explicit `editorial_only` selection.
+It is available only for a unique, hash-matched interpretive or recommendation
+sentence, an independently classified generic-copy issue, and one exact
+allowed path. It carries no arbitrary evidence IDs, preserves immutable
+factual/provenance fields, and still re-enters ordinary candidate validation,
+grounding, and readiness. Factual and provenance repairs retain their existing
+direct/parent/typed evidence requirements. The repair prompt contract records
+the same fail-closed rule for the provider.
+
+Focused cross-stage verification passed **335 tests** across classification,
+grounding, retained validation, public review, regeneration, promotion,
+readiness, cache/reuse, and finalization. The full local default run passed
+**8,591 tests, 2 skipped, 48 deselected, and 24 subtests**; its only failure
+was the pre-existing native wheelhouse audit, which requires CPython 3.12
+(the host is CPython 3.14.2). Full-repository mypy, formatting, Ruff-F,
+architecture, I/O, service-boundary, patching, logging, and contract-schema
+gates passed. The prompt fixture regression passed after the baseline was
+regenerated with the existing tool and unchanged comparator thresholds:
+
+| Family | Previous baseline | Updated baseline | Difference |
+| --- | ---: | ---: | ---: |
+| Publishing tokens / cost | 48,000 / `$0.009159` | 48,827 / `$0.009244` | +827 / +`$0.000085` |
+| Validation tokens / cost | 12,330 / `$0.002146` | 12,655 / `$0.002178` | +325 / +`$0.000032` |
+| Total tokens / cost | 117,108 / `$0.025364` | 118,260 / `$0.025481` | +1,152 / +`$0.000117` |
+
+The publishing increase is the bounded editorial-only repair instruction
+added to the shared repair contract. The validation increase was already
+present in the approved grounding/editorial prompt set at this reviewed HEAD;
+regenerating the stale baseline records it rather than weakening the gate.
+Other token counts and expected OCR/browser counts are unchanged. No provider-
+backed report run or retained-PDF replay was available in this worktree, so no
+live editorial-quality improvement is claimed. The retained Capgemini
+semantic-coverage failure and Activate pre-editorial stall remain the latest
+live evidence; no canonical promotion, readiness approval, publication, or
+WordPress write occurred.
+
+**Verdict: PARTIAL / NO-GO.** The code-level factual/editorial handover,
+stale-input rejection, and atomic unbound-repair safeguards are implemented
+and regression-covered. Current live selection/editorial effectiveness and
+fresh source-PDF acceptance remain unverified; E18 remains **Active/PARTIAL**,
+Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

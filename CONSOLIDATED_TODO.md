@@ -2147,3 +2147,34 @@ No provider-backed report run, retained-PDF replay, canonical promotion,
 readiness approval, publication, or WordPress write was performed. E18
 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready**.
+
+**Evidence update — 2026-11-07 (verified-grounding and atomic editorial-repair
+contract correction):** The shared classification normalizer now maps retained
+`factual`/`interpretive`/`recommendation` labels to canonical semantic classes
+and rejects unknown labels. Verified grounding accepts an unbound semantic
+input only when the current retained candidate carries the deterministic
+editorial authorization; a stale precomputed no-evidence input fails closed.
+Classification, violation type, identity, allowed path, and evidence metadata
+now survive public review → validation → regeneration → candidate validation →
+readiness. The existing shared protected-fact disposition is applied across
+retained, direct, reused, and readiness paths. Atomic editorial-only repair is
+available only for a unique, hash-matched interpretive/recommendation wording
+issue with an exact path; it preserves empty evidence and cannot authorize
+factual or provenance changes. Factual repairs retain their existing evidence
+requirements. Validator identities advanced to `retained_claim_validation:v12`,
+`grounding_validation_output:2.3`, and public-review `v18`/`v26`.
+
+Focused cross-stage tests passed **335**. The full local pytest run passed
+**8,591 tests, 2 skipped, 48 deselected, and 24 subtests**; the only failure
+was the existing CPython-3.12-only native wheelhouse audit on CPython 3.14.2.
+Ruff-F, formatting, mypy, architecture/I-O, service-boundary, patching,
+logging, and contract-schema gates passed. The prompt baseline was regenerated
+through repository tooling for the intentional prompt contract: publishing
+changed **48,000 → 48,827 tokens** (`+$0.000085`), validation changed
+**12,330 → 12,655** (`+$0.000032`), and total changed **117,108 → 118,260**
+tokens (`+$0.000117`); comparator thresholds and allowlist limits were not
+changed. No fresh provider-backed run or retained-PDF replay was available,
+so no live editorial-quality improvement is claimed. Existing Capgemini and
+Activate live limitations remain; no canonical, readiness, publication, or
+WordPress write occurred. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

@@ -262,6 +262,13 @@ def _validation_report_from_dict(raw_report: object) -> Optional[ValidationRepor
                 rule_id=str(raw_issue.get("rule_id") or ""),
                 repair_target=str(raw_issue.get("repair_target") or ""),
                 entity_id=str(raw_issue.get("entity_id") or ""),
+                violation_type=str(raw_issue.get("violation_type") or ""),
+                evidence_ids=[
+                    str(value)
+                    for value in raw_issue.get("evidence_ids", [])
+                    if isinstance(value, str)
+                ],
+                classification=str(raw_issue.get("classification") or ""),
                 schema_version=str(raw_issue.get("schema_version") or "1.0"),
             )
         )

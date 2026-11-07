@@ -16,6 +16,8 @@ from src.contracts.claim_validation import (
     ClaimSemanticOutcome,
     ClaimSemanticValidationIdentity,
     ClaimValidationPackage,
+    normalize_claim_classification,
+    semantic_claim_disposition,
 )
 from src.contracts.pdf_text import PdfTextPage
 from src.contracts.prompt_family_materialization import (
@@ -1380,6 +1382,7 @@ def run_grounding_check(
                                 text,
                                 public_item_ids,
                             ),
+                            classification=classification,
                         )
                     )
                     failed_check_keys.add((s(entry.get("section")), text))
@@ -1389,12 +1392,20 @@ def run_grounding_check(
                     and s(entry.get("item_id")) in unsupported_item_ids
                 ):
                     continue
+                model_violation_type = normalize_violation_type(
+                    s(entry.get("violation_type") or entry.get("failure_type"))
+                )
+                disposition = semantic_claim_disposition(
+                    classification=classification,
+                    outcome=outcome,
+                    violation_type=model_violation_type,
+                    protected_facts=comparison,
+                )
                 incompatible_dimensions = comparison.incompatible_dimensions
-                if (
-                    outcome == "entailed"
-                    and comparison.proposition_status == "compatible"
-                    and not incompatible_dimensions
-                ):
+                if outcome == "entailed" and disposition in {
+                    "supported",
+                    "not_applicable",
+                }:
                     continue
                 text = s(entry.get("text"))
                 section = s(entry.get("section") or "grounding")
@@ -1406,6 +1417,8 @@ def run_grounding_check(
                 violation_type = (
                     "not_established"
                     if unresolved
+                    else model_violation_type
+                    if model_violation_type
                     else "contradicted"
                     if incompatible_dimensions or outcome == "contradicted"
                     else "unsupported_factual_claim"
@@ -1435,6 +1448,7 @@ def run_grounding_check(
                         violation_type=violation_type,
                         entity_id=entity_id,
                         evidence_ids=public_item_evidence_ids.get(entity_id, ()),
+                        classification=classification,
                     )
                 )
                 failed_check_keys.add((section, text))
@@ -1512,6 +1526,7 @@ def run_grounding_check(
                             violation_type=violation_type,
                             entity_id=entity_id,
                             evidence_ids=public_item_evidence_ids.get(entity_id, ()),
+                            classification=classification,
                         )
                     )
     except AppError as exc:
@@ -1697,9 +1712,8 @@ def _validate_verified_semantic_inputs(
     expected_inputs: list[tuple[Any, tuple[str, ...], str, str]] = []
     for result in package.results:
         candidate = result.candidate
-        if (
-            result.deterministic_status != "unresolved"
-            or not candidate.evidence_references
+        if result.deterministic_status != "unresolved" or (
+            not candidate.evidence_references and not candidate.allow_unbound_evidence
         ):
             continue
         evidence_texts = tuple(
@@ -1756,7 +1770,10 @@ def _validate_verified_semantic_inputs(
         if (
             semantic_input.evidence_hash != expected_evidence_hash
             or tuple(semantic_input.evidence_texts) != expected_evidence_texts
-            or not all(expected_evidence_texts)
+            or (
+                not candidate.allow_unbound_evidence
+                and not all(expected_evidence_texts)
+            )
         ):
             raise AppError(
                 code="grounding_verified_semantic_input_invalid",
@@ -2139,13 +2156,16 @@ def _validate_grounding_check_coverage(
                 check.get("protected_facts"),
                 proposition_status=s(check.get("proposition_status")),
             )
+            disposition = semantic_claim_disposition(
+                classification=classification,
+                outcome=outcome,
+                violation_type=normalize_violation_type(
+                    s(check.get("violation_type") or check.get("failure_type"))
+                ),
+                protected_facts=comparison,
+            )
             if outcome == "entailed" and (
-                (
-                    classification == "factual_claim"
-                    and comparison.proposition_status != "compatible"
-                )
-                or comparison.proposition_status == "incompatible"
-                or comparison.incompatible_dimensions
+                disposition not in {"supported", "not_applicable"}
             ):
                 public_coverage_errors.append(item_id)
         elif matching_unsupported:
@@ -2731,8 +2751,21 @@ def _public_factual_items(
                 normalized_evidence_ids = [
                     s(evidence_id) for evidence_id in evidence_ids if s(evidence_id)
                 ]
-                unbound_editorial_copy = (
+                normalized_classification = normalize_claim_classification(
                     declared_classification
+                )
+                if declared_classification and not normalized_classification:
+                    raise AppError(
+                        code="grounding_public_item_classification_invalid",
+                        message=(
+                            "Verified public grounding items require a known claim "
+                            "classification"
+                        ),
+                        retryable=False,
+                        context={"item_id": item_id},
+                    )
+                unbound_editorial_copy = (
+                    normalized_classification
                     in {"analyst_interpretation", "prescriptive_recommendation"}
                     and not normalized_evidence_ids
                 )
@@ -2762,8 +2795,18 @@ def _public_factual_items(
                 "evidence_ids": [value for value in evidence_ids if value],
                 "retained_evidence": s(evidence_text),
             }
-            if declared_classification:
-                item["declared_classification"] = declared_classification
+            normalized_classification = normalize_claim_classification(
+                declared_classification
+            )
+            if declared_classification and not normalized_classification:
+                raise AppError(
+                    code="grounding_public_item_classification_invalid",
+                    message="Public grounding item has an unknown claim classification",
+                    retryable=False,
+                    context={"item_id": item_id},
+                )
+            if normalized_classification:
+                item["declared_classification"] = normalized_classification
             if source_identity:
                 item["source_identity"] = source_identity
             if any(
@@ -3103,17 +3146,6 @@ def _public_item_id_for_failure(
         if item_text == s(text)
     }
     return next(iter(text_matches)) if len(text_matches) == 1 else ""
-
-
-def normalize_claim_classification(value: str) -> str:
-    normalized = value.strip().lower()
-    if normalized in {"factual", "fact", "factual_claim", "claim"}:
-        return "factual_claim"
-    if normalized in {"analyst_interpretation", "interpretation", "analysis"}:
-        return "analyst_interpretation"
-    if normalized in {"prescriptive_recommendation", "recommendation", "prescriptive"}:
-        return "prescriptive_recommendation"
-    return ""
 
 
 def normalize_entailment_outcome(value: str) -> str:

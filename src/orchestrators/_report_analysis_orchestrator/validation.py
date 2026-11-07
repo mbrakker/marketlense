@@ -16,6 +16,7 @@ from dataclasses import asdict, dataclass, replace
 from time import perf_counter
 from typing import Any, Dict, List, Optional, Sequence
 
+from src.contracts.claim_validation import normalize_claim_classification
 from src.contracts.files import ReadJsonRequest
 from src.contracts.pdf_text import PdfTextPage
 from src.contracts.prompt_family_materialization import (
@@ -162,7 +163,7 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v25"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v26"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.0"
 _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v3"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
@@ -311,7 +312,7 @@ def _public_editorial_review_issue(
     has_bound_evidence = bool(
         retained_evidence_ids and str(safe_item.get("evidence_text") or "").strip()
     )
-    editorial_classification = str(classification or "").strip()
+    editorial_classification = normalize_claim_classification(classification)
     evidence_absent = (
         rule_id in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS
         or hard_fail_class in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES
@@ -343,6 +344,7 @@ def _public_editorial_review_issue(
         repair_target=str(repair_target) if eligible else "",
         public_item_id=str(safe_item.get("public_item_id") or ""),
         hard_fail_class=str(hard_fail_class or ""),
+        classification=editorial_classification,
     )
 
 

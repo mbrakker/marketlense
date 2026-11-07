@@ -15019,6 +15019,9 @@
         "affected_section": {
           "type": "string"
         },
+        "allow_unbound_evidence": {
+          "type": "boolean"
+        },
         "claim_id": {
           "type": "string"
         },
@@ -32449,6 +32452,9 @@
         "affected_field": {
           "type": "string"
         },
+        "classification": {
+          "type": "string"
+        },
         "evidence_ids": {
           "items": {
             "type": "string"
@@ -34205,6 +34211,9 @@
         "affected_section": {
           "type": "string"
         },
+        "classification": {
+          "type": "string"
+        },
         "entity_id": {
           "type": "string"
         },
@@ -34242,6 +34251,9 @@
           "type": "string"
         },
         "severity": {
+          "type": "string"
+        },
+        "violation_type": {
           "type": "string"
         }
       },
@@ -45952,6 +45964,9 @@
       "additionalProperties": false,
       "properties": {
         "affected_section": {
+          "type": "string"
+        },
+        "classification": {
           "type": "string"
         },
         "entity_id": {

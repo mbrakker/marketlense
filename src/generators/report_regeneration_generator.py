@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass, field, replace
 from difflib import SequenceMatcher
 from typing import Any, Callable, Dict, List, Sequence
 
+from src.contracts.claim_validation import normalize_claim_classification
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     ArtifactRegenerationResponse,
@@ -983,6 +984,42 @@ def retained_soft_copy_claim_grounding_for_target(
 
 MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES = 4
 
+_EDITORIAL_ONLY_REPAIR_RULES = frozenset(
+    {"public_editorial_quality.semantic_generic_copy"}
+)
+_EDITORIAL_ONLY_CLASSIFICATIONS = frozenset(
+    {"analyst_interpretation", "prescriptive_recommendation"}
+)
+
+
+def _editorial_only_repair_authorized(
+    *, claim: SoftCopyClaimProvenance, issue: RegenerationIssue, claim_text: str
+) -> bool:
+    """Allow an unbound repair only for one independently approved copy issue."""
+
+    return bool(
+        claim.classification in {"interpretive", "recommendation"}
+        and normalize_claim_classification(issue.classification)
+        in _EDITORIAL_ONLY_CLASSIFICATIONS
+        and str(issue.rule_id or "").strip().casefold() in _EDITORIAL_ONLY_REPAIR_RULES
+        and str(issue.violation_type or "").strip().casefold()
+        not in {
+            "missing_evidence",
+            "insufficient_evidence",
+            "evidence_unavailable",
+            "unsupported_factual_claim",
+            "unsupported_number",
+            "unsupported_causal_outcome",
+            "provenance",
+            "lineage",
+        }
+        and str(issue.entity_id or "").strip() == claim.claim_id
+        and not claim.evidence_ids
+        and not issue.evidence_ids
+        and bool(claim_text.strip())
+        and soft_copy_sentence_hash(claim_text) == claim.text_hash
+    )
+
 
 def _build_soft_copy_claim_evidence_package(
     *,
@@ -1006,6 +1043,29 @@ def _build_soft_copy_claim_evidence_package(
     parent_ids = _soft_copy_parent_evidence_ids(
         claim=claim, artifacts=artifacts, claim_text=claim_text
     )
+
+    editorial_only_repair = _editorial_only_repair_authorized(
+        claim=claim, issue=issue, claim_text=claim_text
+    )
+
+    if editorial_only_repair:
+        provenance: dict[str, Any] = {
+            "schema_version": "1.0",
+            "claim_id": claim.claim_id,
+            "strategy": "editorial_only",
+            "direct_evidence_ids": [],
+            "parent_evidence_ids": [],
+            "quarantined_evidence_ids": sorted(quarantined),
+            "selected_evidence_ids": [],
+            "selected_evidence_entries": [],
+        }
+        provenance["package_sha256"] = _canonical_evidence_hash(provenance)
+        return {
+            "relevant_evidence": [],
+            "evidence_ids": [],
+            "evidence_selection": provenance,
+            "editorial_only_repair": True,
+        }
 
     def resolved(ids: List[str]) -> List[Dict[str, Any]]:
         selected: List[Dict[str, Any]] = []
@@ -1052,6 +1112,7 @@ def _build_soft_copy_claim_evidence_package(
         "relevant_evidence": selected,
         "evidence_ids": evidence_ids,
         "evidence_selection": provenance,
+        "editorial_only_repair": False,
     }
 
 
@@ -2644,6 +2705,9 @@ def _render_regeneration_model(
         "_repair_decision": decision,
         "_claim_repair_action": claim_action,
         "_claim_repair_replacement_text": claim_replacement_text,
+        "_editorial_only_repair": bool(
+            decision_grounding.get("editorial_only_repair") is True
+        ),
     }
 
 
@@ -3080,8 +3144,15 @@ def _validated_claim_repair_proposal(
             evidence_ids_used=[],
             schema_version=schema_version.strip(),
         )
-    if not replacement_text.strip() or not normalized_evidence_ids:
+    editorial_only_repair = grounding_package.get("editorial_only_repair") is True
+    if not replacement_text.strip() or (
+        not normalized_evidence_ids and not editorial_only_repair
+    ):
         raise _repair_decision_error(execution, "claim_proposal_replacement_missing")
+    if editorial_only_repair and normalized_evidence_ids:
+        raise _repair_decision_error(
+            execution, "editorial_only_repair_must_remain_unbound"
+        )
     package_ids = {
         value.strip()
         for value in grounding_package.get("evidence_ids", [])
@@ -3625,6 +3696,7 @@ def _record_soft_copy_claim_bindings(
                 text=repaired_text,
                 classification=repaired_claim.claim.classification,
                 evidence_ids=decision.evidence_ids_used,
+                allow_unbound_editorial=(result.get("_editorial_only_repair") is True),
             )
             or []
         )
@@ -3770,39 +3842,62 @@ def _normalized_soft_copy_text(value: object) -> str:
 
 
 def _valid_claim_replacement(
-    *, classification: str, text: str, evidence_ids: Sequence[str]
+    *,
+    classification: str,
+    text: str,
+    evidence_ids: Sequence[str],
+    allow_unbound_editorial: bool = False,
 ) -> bool:
     """Accept only one newly bound sentence for a claim-scoped model reply."""
 
     return (
         _repair_claim_bindings(
-            text=text, classification=classification, evidence_ids=evidence_ids
+            text=text,
+            classification=classification,
+            evidence_ids=evidence_ids,
+            allow_unbound_editorial=allow_unbound_editorial,
         )
         is not None
     )
 
 
 def _repair_claim_bindings(
-    *, classification: str, text: str, evidence_ids: Sequence[str]
+    *,
+    classification: str,
+    text: str,
+    evidence_ids: Sequence[str],
+    allow_unbound_editorial: bool = False,
 ) -> List[Dict[str, Any]] | None:
     """Build one semantic binding from retained identity and selected IDs."""
 
     normalized_text = _normalized_soft_copy_text(text)
     sentences = soft_copy_material_sentences(normalized_text)
+    normalized_classification = normalize_claim_classification(classification)
+    persisted_classification = {
+        "factual_claim": "factual",
+        "analyst_interpretation": "interpretive",
+        "prescriptive_recommendation": "recommendation",
+    }.get(normalized_classification, "")
     if (
         not normalized_text
         or len(sentences) != 1
         or sentences[0] != normalized_text
-        or classification not in {"factual", "interpretive", "recommendation"}
+        or not persisted_classification
     ):
         return None
     selected_ids = _unique_strings(evidence_ids)
-    if classification == "factual" and not selected_ids:
+    if normalized_classification == "factual_claim" and not selected_ids:
+        return None
+    if (
+        normalized_classification in _EDITORIAL_ONLY_CLASSIFICATIONS
+        and not selected_ids
+        and not allow_unbound_editorial
+    ):
         return None
     return [
         {
             "claim": sentences[0],
-            "classification": classification,
+            "classification": persisted_classification,
             "evidence_ids": selected_ids,
         }
     ]
@@ -3862,8 +3957,17 @@ def _rebuild_soft_copy_repair_selection(
         raise _repair_decision_error(execution, "repair_selection_missing_or_invalid")
     assert isinstance(selection, dict)
     selected_ids = _unique_strings(selected_evidence_ids)
+    editorial_only_selection = selection.get("strategy") == "editorial_only"
     if original_claim.classification == "factual" and not selected_ids:
         raise _repair_decision_error(execution, "factual_repair_evidence_missing")
+    if (
+        original_claim.classification in {"interpretive", "recommendation"}
+        and not selected_ids
+        and not editorial_only_selection
+    ):
+        raise _repair_decision_error(
+            execution, "editorial_repair_evidence_selection_invalid"
+        )
     entries_by_id: Dict[str, List[Dict[str, Any]]] = {}
     for entry in selection.get("selected_evidence_entries", []):
         if not isinstance(entry, dict):
@@ -4099,7 +4203,10 @@ def _claim_has_repair_support(
 ) -> bool:
     """A scoped repair proceeds only with its selected retained support."""
 
-    return bool(grounding_package.get("relevant_evidence"))
+    return bool(
+        grounding_package.get("relevant_evidence")
+        or grounding_package.get("editorial_only_repair") is True
+    )
 
 
 def _uses_safe_removal(execution: _RegenerationHandlerExecution) -> bool:
@@ -4613,6 +4720,7 @@ def _regenerate_summary_claim_map_items(
             classification=_s(claim.get("classification") or "factual"),
             text=repaired_text,
             evidence_ids=decision.evidence_ids_used,
+            allow_unbound_editorial=(result.get("_editorial_only_repair") is True),
         ):
             _replace_rejected_claim_decision(
                 execution,
@@ -4832,6 +4940,9 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     classification=repair.claim.classification,
                     text=repaired_text,
                     evidence_ids=decision.evidence_ids_used,
+                    allow_unbound_editorial=(
+                        result.get("_editorial_only_repair") is True
+                    ),
                 ):
                     _replace_rejected_claim_decision(
                         execution,
@@ -6579,6 +6690,9 @@ def _handle_expert_comment_regeneration(
                     classification=repair.claim.classification,
                     text=repaired_text,
                     evidence_ids=decision.evidence_ids_used,
+                    allow_unbound_editorial=(
+                        result.get("_editorial_only_repair") is True
+                    ),
                 ):
                     _replace_rejected_claim_decision(
                         execution,
@@ -6831,6 +6945,7 @@ def _handle_linkedin_post_regeneration(
                 classification=repair.claim.classification,
                 text=repaired_text,
                 evidence_ids=decision.evidence_ids_used,
+                allow_unbound_editorial=(result.get("_editorial_only_repair") is True),
             ):
                 _replace_rejected_claim_decision(
                     execution,

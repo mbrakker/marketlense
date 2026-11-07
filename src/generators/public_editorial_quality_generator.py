@@ -19,6 +19,7 @@ from typing import Any, Iterable
 
 from bs4 import BeautifulSoup
 
+from src.contracts.claim_validation import normalize_claim_classification
 from src.contracts.public_editorial_quality import (
     PublicEditorialQualityIssue,
     PublicEditorialQualityItem,
@@ -366,6 +367,7 @@ def validation_issues_from_public_editorial_quality(
             repair_target=issue.repair_target if issue.repair_eligible else "",
             entity_id=issue.public_item_id,
             evidence_ids=list(issue.evidence_ids),
+            classification=issue.classification,
         )
         for issue in report.issues
         if issue.severity == "error"
@@ -2018,11 +2020,9 @@ def _retained_soft_copy_sentence_items(
             ),
         )
         item["public_item_id"] = claim.claim_id
-        item["declared_classification"] = {
-            "factual": "factual_claim",
-            "interpretive": "analyst_interpretation",
-            "recommendation": "prescriptive_recommendation",
-        }.get(claim.classification, "")
+        item["declared_classification"] = normalize_claim_classification(
+            claim.classification
+        )
         items.append(item)
     return items
 

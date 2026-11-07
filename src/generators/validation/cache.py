@@ -249,6 +249,12 @@ def validation_report_from_payload(payload: dict, path: str) -> ValidationReport
                 violation_type=str(entry.get("violation_type") or ""),
                 repair_target=str(entry.get("repair_target") or ""),
                 entity_id=str(entry.get("entity_id") or ""),
+                evidence_ids=[
+                    str(value)
+                    for value in entry.get("evidence_ids", [])
+                    if isinstance(value, str)
+                ],
+                classification=str(entry.get("classification") or ""),
             )
         )
     return ValidationReport(

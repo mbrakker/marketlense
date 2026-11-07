@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.contracts.claim_validation import normalize_claim_classification
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     align_soft_copy_claim_bindings_to_text,
@@ -96,7 +97,14 @@ def build_soft_copy_claim_provenance(
     seen_claim_ids: set[str] = set()
     for binding in resolved_bindings:
         claim_text = _normalized_text(binding.get("claim"))
-        classification = str(binding.get("classification") or "").strip()
+        semantic_classification = normalize_claim_classification(
+            binding.get("classification")
+        )
+        classification = {
+            "factual_claim": "factual",
+            "analyst_interpretation": "interpretive",
+            "prescriptive_recommendation": "recommendation",
+        }.get(semantic_classification, "")
         evidence_ids = _unique_strings(binding.get("evidence_ids"))
         if classification not in _CLASSIFICATIONS:
             raise AppError(

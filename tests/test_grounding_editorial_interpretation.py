@@ -486,8 +486,8 @@ def test_grounding_inventory_preserves_initialism_claims_and_recommendation_type
     ]
 
     assert [(item["item_id"], item["declared_classification"]) for item in audited] == [
-        (claims[0].claim_id, "factual"),
-        (claims[1].claim_id, "recommendation"),
+        (claims[0].claim_id, "factual_claim"),
+        (claims[1].claim_id, "prescriptive_recommendation"),
     ]
 
 

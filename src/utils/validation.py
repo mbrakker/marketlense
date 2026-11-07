@@ -115,6 +115,12 @@ def parse_validation_report_payload(
                     violation_type=str(item.get("violation_type", "")),
                     repair_target=str(item.get("repair_target", "")),
                     entity_id=str(item.get("entity_id", "")),
+                    evidence_ids=[
+                        str(value)
+                        for value in item.get("evidence_ids", [])
+                        if isinstance(value, str)
+                    ],
+                    classification=str(item.get("classification", "")),
                 )
             )
     status = str(data.get("status") or "fail")

@@ -11,8 +11,8 @@ from src.contracts.protected_facts import ProtectedFactComparison
 # target branch; validator identities advance so old semantic caches cannot be
 # reused under the revised policy.
 CLAIM_VALIDATION_SCHEMA_VERSION = "1.4"
-CLAIM_VALIDATION_VALIDATOR_VERSION = "retained_claim_validation:v11"
-CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:2.2"
+CLAIM_VALIDATION_VALIDATOR_VERSION = "retained_claim_validation:v12"
+CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:2.3"
 ClaimKind = Literal["numeric", "quotation", "descriptive", "causal", "interpretive"]
 ClaimSemanticOutcome = Literal["entailed", "contradicted", "not_established"]
 ClaimValidationStatus = Literal[
@@ -46,6 +46,31 @@ _BLOCKING_EDITORIAL_VIOLATIONS = {
 }
 
 
+def normalize_claim_classification(value: object) -> str:
+    """Normalize producer labels to the canonical semantic vocabulary.
+
+    Retained soft-copy provenance intentionally uses its historical compact
+    labels, while model verdicts use the semantic labels below.  This helper
+    is the single boundary between those representations; unknown labels stay
+    invalid instead of being treated as editorial copy.
+    """
+
+    normalized = str(value or "").strip().casefold()
+    return {
+        "factual": "factual_claim",
+        "fact": "factual_claim",
+        "claim": "factual_claim",
+        "factual_claim": "factual_claim",
+        "interpretive": "analyst_interpretation",
+        "interpretation": "analyst_interpretation",
+        "analysis": "analyst_interpretation",
+        "analyst_interpretation": "analyst_interpretation",
+        "recommendation": "prescriptive_recommendation",
+        "prescriptive": "prescriptive_recommendation",
+        "prescriptive_recommendation": "prescriptive_recommendation",
+    }.get(normalized, "")
+
+
 def semantic_claim_disposition(
     *,
     classification: str,
@@ -60,15 +85,7 @@ def semantic_claim_disposition(
     malformed or incomplete verdicts remain unresolved.
     """
 
-    classification = str(classification or "").strip().casefold()
-    classification = {
-        "factual": "factual_claim",
-        "fact": "factual_claim",
-        "interpretation": "analyst_interpretation",
-        "analysis": "analyst_interpretation",
-        "recommendation": "prescriptive_recommendation",
-        "prescriptive": "prescriptive_recommendation",
-    }.get(classification, classification)
+    classification = normalize_claim_classification(classification)
     outcome = str(outcome or "").strip().casefold()
     violation_type = str(violation_type or "").strip().casefold()
     if classification not in _SEMANTIC_CLASSIFICATIONS:
@@ -86,22 +103,21 @@ def semantic_claim_disposition(
     if incompatible:
         return "unsupported"
 
+    # An editorial label does not make an empirical assertion safe.  If the
+    # claim carries a value for a dimension the evidence must resolve that
+    # dimension too.  Pure normative recommendations with no protected fact
+    # values remain eligible for the existing editorial path.
+    if protected_facts is not None and any(
+        dimension.status == "unknown"
+        and (dimension.claim_value is not None or dimension.evidence_value is not None)
+        for dimension in protected_facts.dimensions.values()
+    ):
+        return "unresolved"
+
     if classification == "factual_claim":
         if outcome != "entailed" or protected_facts is None:
             return "unresolved"
         if protected_facts.proposition_status != "compatible":
-            return "unresolved"
-        # Unknown dimensions with an explicit value are incomplete support;
-        # unknown dimensions with no values are simply not applicable to this
-        # proposition.
-        if any(
-            dimension.status == "unknown"
-            and (
-                dimension.claim_value is not None
-                or dimension.evidence_value is not None
-            )
-            for dimension in protected_facts.dimensions.values()
-        ):
             return "unresolved"
         return "supported"
 
@@ -156,6 +172,15 @@ class ClaimCandidate:
         default="",
         metadata={
             "doc": "Hash of retained source-span and evidence-provenance metadata."
+        },
+    )
+    allow_unbound_evidence: bool = field(
+        default=False,
+        metadata={
+            "doc": (
+                "Whether retained provenance explicitly permits semantic review "
+                "without a claim-specific evidence reference."
+            )
         },
     )
 

@@ -51,6 +51,12 @@ class ValidationIssue:
             "doc": "Retained evidence identifiers implicated by the validation finding."
         },
     )
+    classification: str = field(
+        default="",
+        metadata={
+            "doc": "Canonical semantic classification retained for downstream repair authorization."
+        },
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Validation issue schema version."}
     )
@@ -98,6 +104,11 @@ class ValidationReport:
                     "repair_target": issue.repair_target,
                     "entity_id": issue.entity_id,
                     "evidence_ids": issue.evidence_ids,
+                    **(
+                        {"classification": issue.classification}
+                        if issue.classification
+                        else {}
+                    ),
                 }
                 for issue in self.issues
             ],

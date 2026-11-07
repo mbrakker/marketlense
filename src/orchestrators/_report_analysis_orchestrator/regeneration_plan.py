@@ -416,6 +416,8 @@ def _normalize_regeneration_issue(
         excluded_evidence_ids=excluded_evidence_ids,
         pages=pages,
         failure_fingerprint=fingerprint.key,
+        violation_type=str(issue.violation_type or ""),
+        classification=str(issue.classification or ""),
     )
 
 

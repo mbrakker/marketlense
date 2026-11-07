@@ -26,6 +26,7 @@ from src.contracts.claim_validation import (
     ClaimValidationPackage,
     ClaimValidationResult,
     ClaimValidationStatus,
+    normalize_claim_classification,
     semantic_claim_disposition,
 )
 from src.contracts.pdf_text import PdfTextPage
@@ -487,6 +488,7 @@ def _candidates(
             affected_section=affected_section,
             entity_id=entity_id,
             provenance_hash=_claim_provenance_hash(raw),
+            allow_unbound_evidence=allow_unbound_evidence,
         )
         output.append(
             _ClaimValidationInput(
@@ -543,7 +545,8 @@ def _candidates(
             ),
             allow_unbound_evidence=(
                 not provenance.evidence_ids
-                and provenance.classification in {"interpretive", "recommendation"}
+                and normalize_claim_classification(provenance.classification)
+                in {"analyst_interpretation", "prescriptive_recommendation"}
             ),
         )
 
@@ -1238,7 +1241,9 @@ def _semantic_inputs(
     seen_semantic_identities: set[tuple[object, ...]] = set()
     for result in results:
         candidate = result.candidate
-        if result.deterministic_status != "unresolved":
+        if result.deterministic_status != "unresolved" or (
+            not candidate.evidence_references and not candidate.allow_unbound_evidence
+        ):
             continue
         refs = candidate.evidence_references
         if any(ref.evidence_id not in source_evidence for ref in refs):

@@ -222,6 +222,21 @@ class RegenerationIssue:
     failure_fingerprint: str = field(
         default="", metadata={"doc": "Stable fingerprint key for retry memory."}
     )
+    violation_type: str = field(
+        default="",
+        metadata={
+            "doc": "Original validator subtype retained for repair authorization."
+        },
+    )
+    classification: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Canonical semantic classification retained for scoped repair "
+                "authorization."
+            )
+        },
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Regeneration issue schema version."}
     )
