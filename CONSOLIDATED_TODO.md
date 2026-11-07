@@ -2133,3 +2133,17 @@ provider run, retained-PDF replay, canonical promotion, readiness approval,
 publication, or WordPress write was performed. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+**Evidence update — 2026-11-07 (hosted CI final verification):** Hosted run
+`42405248919` passed tests and both mutation partitions but exposed the actual
+quality-gate regression: `src/generators` coverage was 87.1719% versus the
+unchanged 87.1763% baseline. The targeted verified-provenance regression was
+then added and pushed in `5ce486aa`. Hosted run `42408146131` for that SHA
+passed `ci_start`, 8,608 tests (pytest exit 0), both mutation partitions, and
+`release_evidence`; `src/generators` coverage rose to 87.1875% and the other
+coverage slices also passed. The release bundle is retained at
+https://github.com/mbrakker/marketlense/actions/runs/42408146131/artifacts/13588298901.
+No provider-backed report run, retained-PDF replay, canonical promotion,
+readiness approval, publication, or WordPress write was performed. E18
+remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**.

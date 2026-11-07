@@ -11017,3 +11017,35 @@ essential-fact protection are implemented and regression-covered. Live
 selection/editorial effectiveness remains unverified; E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+### Hosted CI final verification — 2026-11-07
+
+The first hosted run for commit `85ef4439` passed tests and both mutation
+partitions but correctly stopped at `release_evidence`: `src/generators`
+coverage was **87.1719%**, just below the unchanged **87.1763%** quality
+baseline. A semantic-disposition-only follow-up (`90aee0a6`) did not cover
+the generator-side provenance branch, so the final targeted regression
+(`5ce486aa`) exercised verified `run_grounding_check` rejection of missing
+atomic provenance. No threshold, baseline, or production behavior was
+changed to force the gate.
+
+Hosted run
+[`42408146131`](https://github.com/mbrakker/marketlense/actions/runs/42408146131)
+for `5ce486aa` then passed `ci_start`, the full tests job (**8,608 tests,
+pytest exit 0**), both mutation partitions, and `release_evidence`. The final
+quality metrics were global **85.4948%**, `src/generators` **87.1875%**,
+`src/orchestrators` **86.0826%**, and `src/services` **84.2709%**; all were at
+or above their committed baselines. The retained release bundle is
+[`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42408146131/artifacts/13588298901).
+
+This is engineering and contract evidence only. No fresh provider-backed
+report, retained-PDF replay, canonical promotion, publication-readiness
+approval, or WordPress write was performed. The existing retained Capgemini
+semantic-coverage failure and Activate pre-editorial stall remain unresolved
+live evidence, so the implementation does not claim improved live editorial
+effectiveness.
+
+**Final verdict: PARTIAL / NO-GO.** The code-level factual/editorial
+handover correction and release gates are verified; real-report Step 2
+quality remains unproven. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
