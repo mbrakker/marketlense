@@ -2178,3 +2178,15 @@ so no live editorial-quality improvement is claimed. Existing Capgemini and
 Activate live limitations remain; no canonical, readiness, publication, or
 WordPress write occurred. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+**Evidence update — 2026-11-07 (final hosted verification):** Commit
+`58ba253ef17394748f23820cecd89d8d52f8f9f5` passed hosted run
+`42420228773`: `ci_start`, the full tests job, both mutation partitions, and
+`release_evidence` were successful. The existing WordPress staging REST step
+and the inapplicable mutation-partition PDF candidate benchmark step were
+skipped; no release gate or threshold was weakened. This verifies the
+cross-stage contract correction and release-gate compatibility only. No fresh
+provider-backed report, retained-PDF replay, canonical promotion, readiness
+approval, publication, or WordPress write was performed. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.

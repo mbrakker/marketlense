@@ -11112,3 +11112,27 @@ stale-input rejection, and atomic unbound-repair safeguards are implemented
 and regression-covered. Current live selection/editorial effectiveness and
 fresh source-PDF acceptance remain unverified; E18 remains **Active/PARTIAL**,
 Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+### Hosted CI verification for the final correction — 2026-11-07
+
+Commit `58ba253ef17394748f23820cecd89d8d52f8f9f5` was verified by hosted run
+[`42420228773`](https://github.com/mbrakker/marketlense/actions/runs/42420228773).
+The run completed successfully in about 9 minutes 13 seconds: `ci_start`, the
+full `tests` job, both mutation partitions, and `release_evidence` all passed.
+The existing WordPress staging REST step was skipped because this correction
+does not authorize a staging write; the PDF candidate benchmark step in
+mutation partition 1 was also skipped by its existing applicability rule.
+No hosted gate, threshold, baseline, or pricing assumption was changed.
+
+The hosted run exercised the updated contract schema, validator/cache
+identities, prompt-fixture baseline, stale semantic-input rejection,
+classification handover, and atomic editorial-only repair tests. It confirms
+release-gate compatibility, not live editorial quality: no provider-backed
+report run, retained-PDF replay, canonical promotion, readiness approval,
+publication, or WordPress write was performed. The retained Capgemini
+semantic-coverage failure and Activate pre-editorial stall therefore remain
+the latest live limitations.
+
+**Final hosted verdict: PASS for engineering/release gates; PARTIAL / NO-GO
+for live Step 2 quality.** E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
