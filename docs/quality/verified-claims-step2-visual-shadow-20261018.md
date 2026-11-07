@@ -10957,3 +10957,63 @@ approval, publication, or WordPress write occurred.
 recovery safeguards are implemented and regression-covered; current live
 effectiveness remains unverified. E18 is **Active/PARTIAL**, Step 2 is
 **PARTIAL/NO-GO**, and Step 3 is **unstarted/not ready**.
+
+### Factual/editorial disposition and recovery correction — 2026-11-07
+
+The semantic handover correction keeps the grounding model's classification
+and applicable violation type through retained-claim materialization,
+checkpoint reuse, candidate validation, regeneration, and publication
+readiness. A single shared disposition policy now distinguishes factual
+entailment from defensible analyst interpretation and conditional
+MarketLense recommendations. Unsupported empirical premises, protected-fact
+contradictions, invented quantities, false attribution, and unsupported
+causal or operational outcomes remain blocking. Missing or contradictory
+semantic classifications remain unresolved and fail closed.
+
+The public-review and grounding boundaries now use the same rule for unbound
+editorial sentences: a purely interpretive or prescriptive sentence may be
+accepted without a direct evidence ID only after independent semantic review;
+unbound factual assertions still require verified evidence. Atomic soft-copy
+sentence identity and hashing now use the canonical contract across grounding,
+public review, retained validation, and regeneration. Verified grounding no
+longer substitutes pooled whole-artifact evidence when atomic provenance is
+missing; the defect is typed and remains eligible only for an exact, approved
+repair target. Completeness-only semantic failures can enter the existing
+targeted rewrite path, while replanning requires the complete original
+essential evidence union. Validator identities were advanced so stale
+semantic results cannot bypass the policy; normal/legacy behavior remains
+covered by the existing compatibility paths.
+
+The focused affected cross-stage suite passed **305 tests**. The prompt
+contract regression and long-test-file ownership regression both pass after
+the final correction. Ruff, formatting, full-repository mypy, schema and
+prompt-fixture gates passed; the unchanged prompt fixture gate measured
+**117,623 tokens / `$0.025415`** versus **117,108 / `$0.025364`** baseline
+(+515 tokens / +`$0.000051`), with validation **12,655 / `$0.002178`** versus
+**12,330 / `$0.002146`** (+325 / +`$0.000032`). The increase is the measured
+semantic-classification, editorial-disposition and complete-verdict wording;
+thresholds and factual checks were not weakened.
+
+The repository-wide `pytest -q` run completed with **8,579 passed, 2 skipped,
+48 deselected, 24 subtests, and 3 failures**. The failures are outside the
+changed path: the native wheelhouse test requires CPython 3.12 (host:
+CPython 3.14.2); the browser runtime assertion was order/environment
+sensitive and passed in isolation; and the existing oversized-raster chart
+heuristic assertion fails at `bbox[0] == 251.58` versus its existing `290.0`
+threshold, with no PDF-service file changed by this correction. The exact
+prior prompt and file-ownership failures were rerun and passed. No changed
+semantic, grounding, regeneration, readiness, or publication-quality test
+failed.
+
+No new provider-backed run or retained-PDF replay was available in this
+worktree, so this correction makes no live editorial-quality claim. Existing
+retained evidence still records the Capgemini semantic-coverage failure and
+Activate pre-editorial stall; no canonical promotion, readiness approval,
+publication, or WordPress write occurred.
+
+**Verdict: PARTIAL / NO-GO.** The factual/editorial handover, atomic
+provenance, bounded editorial repair, completeness recovery, and original
+essential-fact protection are implemented and regression-covered. Live
+selection/editorial effectiveness remains unverified; E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.

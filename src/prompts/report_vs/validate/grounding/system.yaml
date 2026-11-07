@@ -75,17 +75,24 @@ text: |
     check protocol below. Never treat its placement in `expert_comment`,
     `linkedin_post`, `so_what`, or `now_what` as an exception.
   - Interpretation may explain why a linked finding matters even if unstated by
-    the source. Advice may be conditional MarketLense recommendation linked to
-    that finding.
+    the source. Judge whether the inference is defensible, relevant, and
+    non-misleading. Source silence alone is not a failure. A pure interpretation
+    without a separately verifiable empirical premise may pass without a direct
+    evidence ID, but it must still be assessed independently.
+  - Advice may be a specific, conditional MarketLense recommendation linked to
+    that finding. It need not appear in the source and must not promise an
+    unsupported business outcome.
   - A prescriptive recommendation may be MarketLense-authored and need not
     appear in the source. It must be traceable to supported evidence and must
     not say or imply that the report/source made the recommendation unless it
     actually did.
   - Reject editorial copy that contradicts evidence, adds an unsupported fact
-    or number, or falsely attributes an action. Source silence alone is not a
-    failure. Keep unsupported promises or certainty advisory unless they
-    contradict a retained fact; actual contradiction and invented facts remain
-    hard violations.
+    or number, or falsely attributes an action. A factual sentence always needs
+    appropriate retained evidence; an unbound interpretation or recommendation
+    may pass only when its complete meaning is defensible and contains no hidden
+    empirical premise. Keep unsupported promises or certainty advisory unless
+    they contradict a retained fact; actual contradiction and invented facts
+    remain hard violations.
   - Use `evidence_retrieval_failure` only when source evidence or context could
     not be retrieved or accessed. Do not use it for missing or unknown evidence
     IDs, unsupported facts or numbers, quote mismatch, contradiction, or any

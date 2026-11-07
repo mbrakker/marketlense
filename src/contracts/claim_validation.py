@@ -7,14 +7,112 @@ from typing import Literal
 
 from src.contracts.protected_facts import ProtectedFactComparison
 
+# The optional semantic disposition fields remain schema-compatible with the
+# target branch; validator identities advance so old semantic caches cannot be
+# reused under the revised policy.
 CLAIM_VALIDATION_SCHEMA_VERSION = "1.4"
-CLAIM_VALIDATION_VALIDATOR_VERSION = "retained_claim_validation:v10"
-CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:2.1"
+CLAIM_VALIDATION_VALIDATOR_VERSION = "retained_claim_validation:v11"
+CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:2.2"
 ClaimKind = Literal["numeric", "quotation", "descriptive", "causal", "interpretive"]
 ClaimSemanticOutcome = Literal["entailed", "contradicted", "not_established"]
 ClaimValidationStatus = Literal[
     "supported", "unsupported", "unresolved", "not_applicable"
 ]
+
+_SEMANTIC_CLASSIFICATIONS = {
+    "factual_claim",
+    "analyst_interpretation",
+    "prescriptive_recommendation",
+}
+_SEMANTIC_OUTCOMES = {"entailed", "contradicted", "not_established"}
+_EDITORIAL_CLASSIFICATIONS = {
+    "analyst_interpretation",
+    "prescriptive_recommendation",
+}
+_BLOCKING_EDITORIAL_VIOLATIONS = {
+    "contradicted",
+    "hallucinated_entity_or_event",
+    "hallucinated_evidence_id",
+    "invalid_comparison",
+    "misattributed_quote",
+    "missing_material_evidence",
+    "numerically_inconsistent",
+    "report_directive_misattribution",
+    "unsupported_causal_outcome",
+    "unsupported_number",
+    "unsupported_operational_or_financial_benefit",
+    "unsupported_factual_claim",
+    "unsupported_certainty",
+}
+
+
+def semantic_claim_disposition(
+    *,
+    classification: str,
+    outcome: str,
+    violation_type: str = "",
+    protected_facts: ProtectedFactComparison | None = None,
+) -> ClaimValidationStatus:
+    """Map one independent semantic verdict to the retained status contract.
+
+    This is intentionally the only deterministic interpretation of a semantic
+    grounding result.  Producer labels are inputs to the model, not authority;
+    malformed or incomplete verdicts remain unresolved.
+    """
+
+    classification = str(classification or "").strip().casefold()
+    classification = {
+        "factual": "factual_claim",
+        "fact": "factual_claim",
+        "interpretation": "analyst_interpretation",
+        "analysis": "analyst_interpretation",
+        "recommendation": "prescriptive_recommendation",
+        "prescriptive": "prescriptive_recommendation",
+    }.get(classification, classification)
+    outcome = str(outcome or "").strip().casefold()
+    violation_type = str(violation_type or "").strip().casefold()
+    if classification not in _SEMANTIC_CLASSIFICATIONS:
+        return "unresolved"
+    if outcome not in _SEMANTIC_OUTCOMES:
+        return "unresolved"
+    if violation_type in _BLOCKING_EDITORIAL_VIOLATIONS:
+        return "unsupported"
+    if outcome == "contradicted":
+        return "unsupported"
+
+    incompatible = (
+        protected_facts.incompatible_dimensions if protected_facts is not None else ()
+    )
+    if incompatible:
+        return "unsupported"
+
+    if classification == "factual_claim":
+        if outcome != "entailed" or protected_facts is None:
+            return "unresolved"
+        if protected_facts.proposition_status != "compatible":
+            return "unresolved"
+        # Unknown dimensions with an explicit value are incomplete support;
+        # unknown dimensions with no values are simply not applicable to this
+        # proposition.
+        if any(
+            dimension.status == "unknown"
+            and (
+                dimension.claim_value is not None
+                or dimension.evidence_value is not None
+            )
+            for dimension in protected_facts.dimensions.values()
+        ):
+            return "unresolved"
+        return "supported"
+
+    if outcome == "entailed":
+        return "supported"
+    if (
+        violation_type == "non_fatal_interpretation"
+        and classification in _EDITORIAL_CLASSIFICATIONS
+    ):
+        return "not_applicable"
+    return "unresolved"
 
 
 @dataclass(frozen=True)
@@ -129,6 +227,14 @@ class ClaimSemanticGroundingResult:
         default=None,
         metadata={"doc": "Semantic protected-dimension comparison for diagnostics."},
     )
+    classification: str = field(
+        default="",
+        metadata={"doc": "Independent model semantic classification."},
+    )
+    violation_type: str = field(
+        default="",
+        metadata={"doc": "Independent model violation subtype, if any."},
+    )
     disagreement: str = field(
         default="",
         metadata={"doc": "Explicit inconsistency within semantic output, if any."},
@@ -155,6 +261,8 @@ class ClaimValidationResult:
     reasons: list[str] = field(default_factory=list)
     protected_facts: ProtectedFactComparison | None = field(default=None)
     semantic_outcome: ClaimSemanticOutcome | None = field(default=None)
+    semantic_classification: str = field(default="")
+    semantic_violation_type: str = field(default="")
     semantic_reason: str = field(default="")
     semantic_protected_facts: ProtectedFactComparison | None = field(default=None)
     semantic_identity: ClaimSemanticValidationIdentity | None = field(default=None)

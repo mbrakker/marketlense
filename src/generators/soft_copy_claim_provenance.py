@@ -8,15 +8,15 @@ material sentences carry which classification and which retained evidence IDs.
 
 from __future__ import annotations
 
-import hashlib
 from typing import Any
 
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     align_soft_copy_claim_bindings_to_text,
+    soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
     soft_copy_public_text,
-    soft_copy_claim_provenance_from_payload,
+    soft_copy_sentence_hash,
 )
 from src.utils.errors import AppError
 
@@ -151,7 +151,7 @@ def _normalized_text(value: object) -> str:
 
 
 def _sha256(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+    return soft_copy_sentence_hash(value)
 
 
 def _unique_strings(value: object) -> list[str]:

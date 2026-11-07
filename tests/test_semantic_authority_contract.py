@@ -189,6 +189,8 @@ def _semantic_case(
             if protected_facts is not None
             else None
         ),
+        classification="factual_claim",
+        violation_type="contradicted" if outcome == "contradicted" else "",
     )
     return validation, semantic_input, model_result
 
@@ -391,14 +393,15 @@ def test_model_entailed_outcome_with_incompatible_protected_facts_fails_closed()
             },
             proposition_status="incompatible",
         ),
+        classification="factual_claim",
     )
 
     updated = _apply_semantic_results([result], [semantic_input], [model_result])
 
-    assert updated[0].status == "unresolved"
+    assert updated[0].status == "unsupported"
     assert updated[0].semantic_outcome == "entailed"
     assert updated[0].semantic_disagreement == (
-        "entailed_with_incompatible_protected_facts"
+        "entailed_with_incompatible_protected_dimensions"
     )
 
 
@@ -433,9 +436,9 @@ def test_model_entailed_outcome_with_any_incompatible_dimension_is_unresolved(
 
     updated = _apply_semantic_results([validation], [semantic_input], [model_result])
 
-    assert updated[0].status == "unresolved"
+    assert updated[0].status == "unsupported"
     assert updated[0].semantic_disagreement == (
-        "entailed_with_incompatible_protected_facts"
+        "entailed_with_incompatible_protected_dimensions"
     )
 
 

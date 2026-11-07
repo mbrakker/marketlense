@@ -1,8 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
-from __future__ import annotations
 import hashlib
+
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
     ClaimSemanticGroundingResult,
@@ -101,6 +101,8 @@ def _semantic_result(
         protected_facts=ProtectedFactComparison.from_payload(
             {}, proposition_status=proposition_status
         ),
+        classification="factual_claim",
+        violation_type="contradicted" if outcome == "contradicted" else "",
     )
 
 

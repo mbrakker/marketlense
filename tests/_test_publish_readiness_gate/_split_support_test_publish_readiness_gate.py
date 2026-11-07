@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -10,7 +11,9 @@ import json
 import re
 from copy import deepcopy
 from pathlib import Path
+
 import pytest
+
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
     CLAIM_VALIDATION_VALIDATOR_VERSION,
@@ -162,10 +165,18 @@ def _retained_claim_package(
             "reasons": [],
             "protected_facts": None,
             "semantic_outcome": "entailed" if semantic and index == 1 else None,
+            "semantic_classification": "factual_claim"
+            if semantic and index == 1
+            else "",
+            "semantic_violation_type": "",
             "semantic_reason": (
                 "entailed from linked evidence" if semantic and index == 1 else ""
             ),
-            "semantic_protected_facts": None,
+            "semantic_protected_facts": (
+                {"proposition_status": "compatible", "dimensions": {}}
+                if semantic and index == 1
+                else None
+            ),
             "semantic_identity": (
                 {
                     "schema_version": "1.0",

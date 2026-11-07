@@ -22,4 +22,10 @@ text: |
   allowed_repair_target for a localized repair; otherwise return an empty
   repair_target. A report-level repair must identify the affected item and use
   that item's allowed target, while a report-level evidence_ids value must stay
-  inside report_scope.
+  inside report_scope. A factual_claim must retain appropriate item evidence.
+  A purely interpretive or prescriptive item may pass without a direct item
+  evidence ID only when the reason makes clear that it is a specific,
+  commercially relevant, defensible and non-misleading editorial inference or
+  recommendation with no hidden empirical premise. Do not use that allowance
+  for a number, population, timeframe, attribution, causal or guaranteed
+  business assertion.

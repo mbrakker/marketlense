@@ -2799,7 +2799,7 @@ def generate_artifacts(
                 error.code != "artifact_final_insight_coverage_invalid"
                 or recovery_kind in {"fail_closed", "quarantine"}
                 or (
-                    recovery_kind != "replan"
+                    recovery_kind not in {"replan", "targeted_rewrite"}
                     and (not isinstance(omitted_themes, list) or not omitted_themes)
                 )
             ):

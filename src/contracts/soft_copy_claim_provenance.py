@@ -444,6 +444,13 @@ def soft_copy_material_sentences(text: object) -> list[str]:
     return sentences
 
 
+def soft_copy_sentence_hash(sentence: object) -> str:
+    """Return the canonical identity hash for one material public sentence."""
+
+    normalized = " ".join(str(sentence or "").split())
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
 def _is_prose_fragment(fragment: str) -> bool:
     without_hashtags = re.sub(r"#[A-Za-z0-9_]+", "", fragment)
     return bool(re.search(r"[A-Za-z0-9]", without_hashtags))
@@ -576,7 +583,9 @@ class SoftCopyClaimProvenance:
         if not str(self.artifact_family).strip() or not str(self.claim_id).strip():
             raise AppError(
                 code="soft_copy_claim_provenance_invalid",
-                message="Soft-copy claim provenance requires artifact family and claim ID",
+                message=(
+                    "Soft-copy claim provenance requires artifact family and claim ID"
+                ),
                 retryable=False,
             )
         if len(str(self.text_hash).strip()) != 64:

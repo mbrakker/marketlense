@@ -24,6 +24,7 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
     soft_copy_public_text,
+    soft_copy_sentence_hash,
     valid_soft_copy_evidence_selection,
 )
 from src.contracts.validation import ValidationRequest
@@ -496,8 +497,7 @@ def regenerate_artifacts(
                 for item in items
                 if isinstance(item, dict)
                 and _s(item.get("id")).strip() in admitted_ids
-                and _s(item.get("id")).strip()
-                not in state.removed_insight_ids
+                and _s(item.get("id")).strip() not in state.removed_insight_ids
             ]
     authorized_source_roots = {
         re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
@@ -948,9 +948,7 @@ def retained_soft_copy_claim_grounding_for_target(
         _soft_copy_sentence_spans(current_text)
     ):
         sentence_data.setdefault(
-            hashlib.sha256(
-                _normalized_soft_copy_text(sentence).encode("utf-8")
-            ).hexdigest(),
+            soft_copy_sentence_hash(sentence),
             [],
         ).append((index, sentence))
     for issue in target.issues:
@@ -2297,9 +2295,7 @@ def _apply_visual_authority_pool(
                 current = restore_artifact_insight_factual_fields(
                     current,
                     [retained],
-                    preserve_unknown_metric_fields=bool(
-                        state.visual_authority_digest
-                    ),
+                    preserve_unknown_metric_fields=bool(state.visual_authority_digest),
                 )
             constrained.append(current)
             seen.add(insight_id)
@@ -3638,7 +3634,7 @@ def _record_soft_copy_claim_bindings(
             )
         repaired_claim_id = (
             f"soft_copy:{artifact_family}:"
-            f"{hashlib.sha256(normalized_repaired.encode()).hexdigest()[:16]}"
+            f"{soft_copy_sentence_hash(normalized_repaired)[:16]}"
         )
         if repaired_claim_id == repaired_claim.claim.claim_id:
             return
@@ -3695,7 +3691,7 @@ def _record_soft_copy_claim_bindings(
                 execution, "family_claim_binding_not_deterministic"
             )
         public_hashes = {
-            hashlib.sha256(_normalized_soft_copy_text(sentence).encode()).hexdigest()
+            soft_copy_sentence_hash(sentence)
             for sentence in soft_copy_material_sentences(public_text)
         }
         retained_hashes = {
@@ -3704,10 +3700,7 @@ def _record_soft_copy_claim_bindings(
             if claim.text_hash in public_hashes
         }
         repaired_hashes = {
-            hashlib.sha256(
-                _normalized_soft_copy_text(binding["claim"]).encode()
-            ).hexdigest()
-            for binding in family_bindings
+            soft_copy_sentence_hash(binding["claim"]) for binding in family_bindings
         }
         if public_hashes != retained_hashes | repaired_hashes:
             raise _repair_decision_error(
@@ -3724,15 +3717,11 @@ def _record_soft_copy_claim_bindings(
         ).get_opcodes():
             if code == "equal" or old_end - old_start != 1 or new_end - new_start != 1:
                 continue
-            old_hash = hashlib.sha256(
-                _normalized_soft_copy_text(before_sentences[old_start]).encode()
-            ).hexdigest()
+            old_hash = soft_copy_sentence_hash(before_sentences[old_start])
             predecessors = [
                 claim for claim in family_claims if claim.text_hash == old_hash
             ]
-            new_hash = hashlib.sha256(
-                _normalized_soft_copy_text(after_sentences[new_start]).encode()
-            ).hexdigest()
+            new_hash = soft_copy_sentence_hash(after_sentences[new_start])
             if len(predecessors) == 1 and new_hash in repaired_hashes:
                 repaired_claim_id = f"soft_copy:{artifact_family}:{new_hash[:16]}"
                 execution.state.soft_copy_repair_lineage[
@@ -3835,9 +3824,7 @@ def _deterministic_family_soft_copy_bindings(
     bindings: List[Dict[str, Any]] = []
     seen_hashes: set[str] = set()
     for sentence in soft_copy_material_sentences(_normalized_soft_copy_text(text)):
-        text_hash = hashlib.sha256(
-            _normalized_soft_copy_text(sentence).encode()
-        ).hexdigest()
+        text_hash = soft_copy_sentence_hash(sentence)
         if text_hash in seen_hashes:
             continue
         seen_hashes.add(text_hash)
@@ -3910,30 +3897,19 @@ def _rebuild_soft_copy_repair_selection(
 
 def _soft_copy_sentence_spans(text: str) -> List[tuple[int, int, str]]:
     """Return byte-preserving spans on the canonical provenance sentence grid."""
-
-    fragments: List[tuple[int, int]] = []
-    start = 0
-    for separator in re.finditer(r"(?<=[.!?])\s+", text):
-        end = separator.start()
-        if _normalized_soft_copy_text(text[start:end]):
-            fragments.append((start, end))
-        start = separator.end()
-    if (tail := text[start:]) and _normalized_soft_copy_text(tail):
-        fragments.append((start, len(text)))
     sentences = soft_copy_material_sentences(text)
     spans: List[tuple[int, int, str]] = []
     cursor = 0
     for sentence in sentences:
-        for end_index in range(cursor, len(fragments)):
-            span_start = fragments[cursor][0]
-            span_end = fragments[end_index][1]
-            candidate = text[span_start:span_end]
-            if _normalized_soft_copy_text(candidate) == sentence:
-                spans.append((span_start, span_end, candidate))
-                cursor = end_index + 1
-                break
-        else:
+        pattern = r"\s+".join(re.escape(token) for token in sentence.split())
+        match = re.search(pattern, text[cursor:])
+        if match is None:
             return []
+        span_start = cursor + match.start()
+        span_end = cursor + match.end()
+        candidate = text[span_start:span_end]
+        spans.append((span_start, span_end, candidate))
+        cursor = span_end
     return spans
 
 
@@ -3971,11 +3947,7 @@ def _soft_copy_claim_repairs(
     candidates: List[_SoftCopyClaimRepair] = []
     sentence_spans = _soft_copy_sentence_spans(text)
     for start, end, sentence in sentence_spans:
-        matched_claims = claims_by_hash.get(
-            hashlib.sha256(
-                _normalized_soft_copy_text(sentence).encode("utf-8")
-            ).hexdigest()
-        )
+        matched_claims = claims_by_hash.get(soft_copy_sentence_hash(sentence))
         if matched_claims is None or len(matched_claims) != 1:
             if artifact_family != "summary" or not summary_claim_map_targets:
                 return None
@@ -4083,9 +4055,7 @@ def _soft_copy_claim_repairs(
                 ]
                 if mapped_text and len(matching_spans) == 1:
                     start, end, sentence = matching_spans[0]
-                    current_hash = hashlib.sha256(
-                        _normalized_soft_copy_text(sentence).encode("utf-8")
-                    ).hexdigest()
+                    current_hash = soft_copy_sentence_hash(sentence)
                     if stale_claims[0].text_hash != current_hash:
                         matched = _SoftCopyClaimRepair(
                             artifact_family=artifact_family,
@@ -4268,9 +4238,7 @@ def _summary_claim_repairs(
                 if index >= len(spans):
                     continue
                 start, end, sentence = spans[index]
-                sentence_hash = hashlib.sha256(
-                    _normalized_soft_copy_text(sentence).encode("utf-8")
-                ).hexdigest()
+                sentence_hash = soft_copy_sentence_hash(sentence)
                 if sentence_hash != claim.text_hash:
                     continue
                 resolved.setdefault(field, []).append(
@@ -4345,10 +4313,7 @@ def _expand_summary_repairs_to_duplicate_fields(
                 matching = [
                     (start, end, sentence)
                     for start, end, sentence in _soft_copy_sentence_spans(text)
-                    if hashlib.sha256(
-                        _normalized_soft_copy_text(sentence).encode("utf-8")
-                    ).hexdigest()
-                    == repair.claim.text_hash
+                    if soft_copy_sentence_hash(sentence) == repair.claim.text_hash
                 ]
                 if not matching:
                     continue
@@ -4424,7 +4389,7 @@ def _retained_summary_claim_replacement(
             or len(sentence.split()) > word_limit
         ):
             continue
-        text_hash = hashlib.sha256(sentence.encode("utf-8")).hexdigest()
+        text_hash = soft_copy_sentence_hash(sentence)
         matching = [
             retained
             for retained in provenance_by_hash.get(text_hash, [])
@@ -5032,10 +4997,7 @@ def _record_atomic_summary_claim_bindings(
     # Hashes in the retained contract are over normalized sentence text. Derive
     # the live hashes and retire only prior claims no longer present anywhere in
     # the public summary family.
-    public_hashes = {
-        hashlib.sha256(_normalized_soft_copy_text(sentence).encode("utf-8")).hexdigest()
-        for sentence in public_sentences
-    }
+    public_hashes = {soft_copy_sentence_hash(sentence) for sentence in public_sentences}
     retained_by_hash: Dict[str, List[SoftCopyClaimProvenance]] = {}
     for claim in retained_claims:
         if claim.artifact_family == "summary":
@@ -5055,9 +5017,7 @@ def _record_atomic_summary_claim_bindings(
             old_sentences = before_sentences[old_start:old_end]
             new_sentences = after_sentences[new_start:new_end]
             for new_text in new_sentences:
-                repaired_hash = hashlib.sha256(
-                    _normalized_soft_copy_text(new_text).encode("utf-8")
-                ).hexdigest()
+                repaired_hash = soft_copy_sentence_hash(new_text)
                 existing_matches = retained_by_hash.get(repaired_hash, [])
                 if len(existing_matches) == 1:
                     continue
@@ -5072,9 +5032,7 @@ def _record_atomic_summary_claim_bindings(
                     return False
                 repaired_bindings.extend(bindings)
                 if len(old_sentences) == 1 and len(new_sentences) == 1:
-                    old_hash = hashlib.sha256(
-                        _normalized_soft_copy_text(old_sentences[0]).encode("utf-8")
-                    ).hexdigest()
+                    old_hash = soft_copy_sentence_hash(old_sentences[0])
                     predecessors = retained_by_hash.get(old_hash, [])
                     if len(predecessors) == 1:
                         repaired_claim_id = f"soft_copy:summary:{repaired_hash[:16]}"
@@ -5100,10 +5058,7 @@ def _record_atomic_summary_claim_bindings(
         if claim.artifact_family == "summary" and claim.text_hash in public_hashes
     }
     repaired_hashes = {
-        hashlib.sha256(
-            _normalized_soft_copy_text(binding["claim"]).encode("utf-8")
-        ).hexdigest()
-        for binding in repaired_bindings
+        soft_copy_sentence_hash(binding["claim"]) for binding in repaired_bindings
     }
     if public_hashes != retained_hashes | repaired_hashes:
         return False
@@ -5185,7 +5140,7 @@ def _retire_removed_summary_claim_map_rows(
     ]
     public_text = soft_copy_public_text("summary", repaired_summary)
     public_hashes = {
-        hashlib.sha256(_normalized_soft_copy_text(sentence).encode("utf-8")).hexdigest()
+        soft_copy_sentence_hash(sentence)
         for sentence in soft_copy_material_sentences(public_text)
     }
     public_claims = [
@@ -5228,19 +5183,12 @@ def _retire_removed_summary_claim_map_rows(
             and raw == original_map[index]
             and isinstance(raw, dict)
             and _summary_claim_map_evidence_ids(raw) == evidence_ids
-            and hashlib.sha256(
-                _normalized_soft_copy_text(_s(raw.get("claim"))).encode("utf-8")
-            ).hexdigest()
-            not in public_hashes
+            and soft_copy_sentence_hash(_s(raw.get("claim"))) not in public_hashes
         ]
         if len(matching_indexes) != 1:
             continue
         map_index = matching_indexes[0]
-        map_claim_hash = hashlib.sha256(
-            _normalized_soft_copy_text(_s(summary_map[map_index].get("claim"))).encode(
-                "utf-8"
-            )
-        ).hexdigest()
+        map_claim_hash = soft_copy_sentence_hash(summary_map[map_index].get("claim"))
         if (
             any(
                 set(claim.evidence_ids) == evidence_ids

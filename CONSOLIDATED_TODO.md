@@ -2114,3 +2114,22 @@ approval, or publication write was performed. The retained Capgemini semantic
 coverage failure and Activate pre-editorial stall remain unresolved live
 evidence. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and
 Step 3 remains **unstarted/not ready**.
+
+**Evidence update — 2026-11-07 (factual/editorial handover correction):** The
+grounding classification and violation type now survive retained validation,
+checkpoint reuse, regeneration, and readiness through one shared disposition
+policy. Unbound pure editorial sentences receive independent semantic review;
+unbound factual assertions remain evidence-required. Canonical atomic
+sentence identity is shared across review and regeneration, verified grounding
+fails closed instead of pooling unrelated evidence, exact editorial repairs
+remain bounded, completeness-only failures can enter targeted rewrite, and
+replanning preserves the complete original essential fact union. The affected
+cross-stage suite passed 305 tests; Ruff, formatting, mypy, schemas and the
+prompt-fixture gate passed. The full local pytest run passed 8,579 tests with
+2 skips, 48 deselections and 24 subtests; unrelated host/environment failures
+remain in the CPython-3.12-only wheelhouse audit and an existing PDF chart
+geometry assertion (the browser runtime check passed in isolation). No fresh
+provider run, retained-PDF replay, canonical promotion, readiness approval,
+publication, or WordPress write was performed. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.

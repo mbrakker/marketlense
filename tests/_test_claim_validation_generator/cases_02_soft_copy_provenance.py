@@ -209,6 +209,7 @@ def test_retained_claim_validation_rejects_soft_copy_protected_fact_mismatch() -
                 schema_version="1.0",
                 outcome="entailed",
                 reason="contradictory_timeframe_verdict",
+                classification="factual_claim",
                 identity=_semantic_result(inputs[0]).identity,
                 protected_facts=ProtectedFactComparison.from_payload(
                     {
@@ -225,10 +226,10 @@ def test_retained_claim_validation_rejects_soft_copy_protected_fact_mismatch() -
     )
 
     assert package.readiness_status == "not_publishable"
-    assert package.results[0].status == "unresolved"
+    assert package.results[0].status == "unsupported"
     assert (
         package.results[0].semantic_disagreement
-        == "entailed_with_incompatible_protected_facts"
+        == "entailed_with_incompatible_protected_dimensions"
     )
     assert package.results[0].semantic_validator_used is True
 

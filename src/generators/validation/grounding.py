@@ -28,6 +28,7 @@ from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
+    soft_copy_sentence_hash,
 )
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
@@ -525,6 +526,28 @@ def run_grounding_check(
     public_item_evidence_ids = _public_item_evidence_ids(
         audit_payload.get("public_factual_items")
     )
+    provenance_defects = [
+        item
+        for item in audit_payload.get("public_factual_items") or []
+        if isinstance(item, dict) and item.get("provenance_error")
+    ]
+    if provenance_defects:
+        for item in provenance_defects:
+            issues.append(
+                issue(
+                    rule_id=RULE_ID,
+                    message=(
+                        "[public_claim|missing_material_evidence] "
+                        "Verified public copy has no unambiguous atomic provenance: "
+                        f"{s(item.get('text'))[:200]}"
+                    ),
+                    severity="error",
+                    section=s(item.get("section") or "grounding"),
+                    violation_type="missing_material_evidence",
+                    entity_id=s(item.get("item_id")),
+                )
+            )
+        return issues
     retained_item_ids = _retained_claim_grounding_item_ids(
         retained_claim_inputs,
         set(public_item_ids.values()),
@@ -1264,6 +1287,7 @@ def run_grounding_check(
         semantic_results = _retained_claim_semantic_results(
             {"checks": checks, "unsupported": unsupported},
             retained_claim_inputs,
+            unsupported=unsupported,
             retained_item_ids=retained_item_ids,
             source_identity=source_id or request.source_id,
             prompt_family=prompt_namespace,
@@ -1303,6 +1327,11 @@ def run_grounding_check(
             for entry in unsupported
             if isinstance(entry, dict) and s(entry.get("item_id"))
         }
+        public_items_by_id = {
+            s(item.get("item_id")): item
+            for item in audit_payload.get("public_factual_items") or []
+            if isinstance(item, dict) and s(item.get("item_id"))
+        }
         if isinstance(checks, list):
             for entry in checks:
                 if not isinstance(entry, dict):
@@ -1314,6 +1343,47 @@ def run_grounding_check(
                 outcome = normalize_entailment_outcome(
                     s(entry.get("entailment_outcome"))
                 )
+                classification = normalize_claim_classification(
+                    s(entry.get("classification"))
+                )
+                if not classification or not outcome:
+                    raise AppError(
+                        code="grounding_claim_verdict_incomplete",
+                        message=(
+                            "Grounding check lacks model-owned classification or "
+                            "entailment outcome"
+                        ),
+                        retryable=False,
+                        context={"item_id": s(entry.get("item_id"))},
+                    )
+                public_item = public_items_by_id.get(s(entry.get("item_id")))
+                if (
+                    verified_mode
+                    and public_item is not None
+                    and classification == "factual_claim"
+                    and not public_item.get("evidence_ids")
+                ):
+                    text = s(entry.get("text"))
+                    issues.append(
+                        issue(
+                            rule_id=RULE_ID,
+                            message=(
+                                "[factual_claim|missing_material_evidence] "
+                                "Factual public copy has no retained evidence ID: "
+                                f"{text[:200]}"
+                            ),
+                            severity="error",
+                            section=s(entry.get("section") or "grounding"),
+                            violation_type="missing_material_evidence",
+                            entity_id=_public_item_id_for_failure(
+                                s(entry.get("section") or "grounding"),
+                                text,
+                                public_item_ids,
+                            ),
+                        )
+                    )
+                    failed_check_keys.add((s(entry.get("section")), text))
+                    continue
                 if (
                     outcome != "entailed"
                     and s(entry.get("item_id")) in unsupported_item_ids
@@ -1357,9 +1427,7 @@ def run_grounding_check(
                         ),
                         severity=grounding_issue_severity(
                             section_policy_value=section_policy(section),
-                            classification=normalize_claim_classification(
-                                s(entry.get("classification"))
-                            ),
+                            classification=classification or "factual_claim",
                             violation_type=violation_type,
                             text=text,
                         ),
@@ -1383,6 +1451,11 @@ def run_grounding_check(
                 classification = normalize_claim_classification(
                     s(entry.get("classification"))
                 )
+                if not classification:
+                    # A provider omission is not a licence to infer a softer
+                    # editorial class from wording.  Treat it conservatively as
+                    # factual and fail closed below.
+                    classification = "factual_claim"
                 entailment_outcome = normalize_entailment_outcome(
                     s(entry.get("entailment_outcome"))
                 )
@@ -2116,6 +2189,7 @@ def _retained_claim_semantic_results(
     verdict_payload: object,
     semantic_inputs: Sequence[ClaimSemanticInput],
     *,
+    unsupported: object = None,
     retained_item_ids: Mapping[str, str],
     source_identity: str,
     prompt_family: str,
@@ -2138,15 +2212,22 @@ def _retained_claim_semantic_results(
         )
         entries = [*check_entries, *unsupported_entries]
     else:
-        check_entries = []
+        check_entries = verdict_payload if isinstance(verdict_payload, list) else []
         unsupported_entries = []
-        entries = verdict_payload if isinstance(verdict_payload, list) else []
+        entries = check_entries
+    unsupported_by_id: dict[str, list[dict[str, Any]]] = {}
     for entry in entries:
         if not isinstance(entry, dict):
             continue
         item_id = s(entry.get("item_id"))
         if item_id:
             verdicts_by_id.setdefault(item_id, []).append(entry)
+    for entry in unsupported_entries:
+        if not isinstance(entry, dict):
+            continue
+        item_id = s(entry.get("item_id"))
+        if item_id:
+            unsupported_by_id.setdefault(item_id, []).append(entry)
     semantic_results: list[ClaimSemanticGroundingResult] = []
     for semantic_input in semantic_inputs:
         candidate = semantic_input.candidate
@@ -2172,11 +2253,46 @@ def _retained_claim_semantic_results(
         if not matching:
             continue
         entry = matching_checks[0] if matching_checks else matching_unsupported[0]
+        if matching_checks and matching_unsupported:
+            # The accepted check carries the protected-fact tuple; the paired
+            # unsupported row carries the model's explicit editorial failure
+            # subtype.  Preserve both parts of the one semantic verdict.
+            entry = {
+                **matching_checks[0],
+                **{
+                    key: matching_unsupported[0][key]
+                    for key in (
+                        "classification",
+                        "entailment_outcome",
+                        "violation_type",
+                        "failure_type",
+                        "reason",
+                    )
+                    if key in matching_unsupported[0]
+                },
+            }
         outcome = normalize_entailment_outcome(s(entry.get("entailment_outcome")))
+        classification = normalize_claim_classification(s(entry.get("classification")))
+        if not classification:
+            rejected = unsupported_by_id.get(retained_item_id, [])
+            if len(rejected) == 1:
+                classification = normalize_claim_classification(
+                    s(rejected[0].get("classification"))
+                )
+                if not outcome:
+                    outcome = normalize_entailment_outcome(
+                        s(rejected[0].get("entailment_outcome"))
+                    )
+                entry = {**rejected[0], **entry}
+        violation_type = normalize_violation_type(
+            s(entry.get("violation_type") or entry.get("failure_type"))
+        )
+        if not violation_type and outcome == "not_established":
+            violation_type = "not_established"
         if (
             not outcome
+            or not classification
             or not _grounding_text_matches(candidate.text, s(entry.get("text")))
-            or not normalize_claim_classification(s(entry.get("classification")))
         ):
             continue
         identity = ClaimSemanticValidationIdentity(
@@ -2214,6 +2330,8 @@ def _retained_claim_semantic_results(
                 reason=s(entry.get("reason")),
                 identity=identity,
                 protected_facts=comparison,
+                classification=classification,
+                violation_type=violation_type,
                 disagreement=disagreement,
             )
         )
@@ -2384,6 +2502,7 @@ def grounding_payload(
         insights=insights,
         summary=summary_clean,
         verified_facts=verified_facts,
+        strict_atomic_provenance=verified_mode,
     )
     payload["public_factual_items"] = public_factual_items
     public_item_ids = {
@@ -2563,6 +2682,7 @@ def _public_factual_items(
     insights: Sequence[dict],
     summary: dict[str, Any],
     verified_facts: Mapping[str, Mapping[str, Any]] | None = None,
+    strict_atomic_provenance: bool = False,
 ) -> List[dict]:
     """Material public claims with their exact retained evidence payloads."""
     items: List[dict] = []
@@ -2611,12 +2731,13 @@ def _public_factual_items(
                 normalized_evidence_ids = [
                     s(evidence_id) for evidence_id in evidence_ids if s(evidence_id)
                 ]
-                unbound_normative_advice = (
-                    declared_classification == "prescriptive_recommendation"
+                unbound_editorial_copy = (
+                    declared_classification
+                    in {"analyst_interpretation", "prescriptive_recommendation"}
                     and not normalized_evidence_ids
                 )
-                if (not normalized_evidence_ids and not unbound_normative_advice) or (
-                    not unbound_normative_advice
+                if (not normalized_evidence_ids and not unbound_editorial_copy) or (
+                    not unbound_editorial_copy
                     and (
                         any(
                             evidence_id not in verified_evidence_by_id
@@ -2675,7 +2796,7 @@ def _public_factual_items(
                 claims_by_hash.setdefault(claim.text_hash, []).append(claim)
         matched = [
             claims_by_hash.get(
-                hashlib.sha256(" ".join(sentence.split()).encode("utf-8")).hexdigest(),
+                soft_copy_sentence_hash(sentence),
                 [],
             )
             for sentence in sentences
@@ -2710,6 +2831,27 @@ def _public_factual_items(
                         if evidence_id in evidence_by_id
                     ),
                     claim.classification,
+                )
+            return
+        if not sentences:
+            return
+        if strict_atomic_provenance:
+            provenance_error_text = sanitize_citation_tokens(s(text))
+            if provenance_error_text:
+                items.append(
+                    {
+                        "item_id": (
+                            f"{family}:{section}:provenance-error:"
+                            f"{soft_copy_sentence_hash(provenance_error_text)[:16]}"
+                        ),
+                        "section": section,
+                        "text": provenance_error_text,
+                        "evidence_ids": [],
+                        "retained_evidence": "",
+                        "provenance_error": (
+                            "grounding_public_claim_provenance_invalid"
+                        ),
+                    }
                 )
             return
         add(
@@ -3132,6 +3274,8 @@ def grounding_issue_severity(
             "report_directive_misattribution",
             "unsupported_factual_claim",
             "unsupported_number",
+            "unsupported_causal_outcome",
+            "unsupported_operational_or_financial_benefit",
         }
         if (
             editorial_classification

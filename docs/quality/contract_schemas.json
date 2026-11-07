@@ -15105,6 +15105,9 @@
     "src.contracts.claim_validation.ClaimSemanticGroundingResult": {
       "additionalProperties": false,
       "properties": {
+        "classification": {
+          "type": "string"
+        },
         "disagreement": {
           "type": "string"
         },
@@ -15132,6 +15135,9 @@
           "type": "string"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "violation_type": {
           "type": "string"
         }
       },
@@ -15478,6 +15484,9 @@
         "schema_version": {
           "type": "string"
         },
+        "semantic_classification": {
+          "type": "string"
+        },
         "semantic_disagreement": {
           "type": "string"
         },
@@ -15523,6 +15532,9 @@
         },
         "semantic_validator_used": {
           "type": "boolean"
+        },
+        "semantic_violation_type": {
+          "type": "string"
         },
         "status": {
           "enum": [

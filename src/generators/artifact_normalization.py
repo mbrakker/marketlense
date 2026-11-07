@@ -2405,15 +2405,20 @@ def validate_substantive_editorial_theme_coverage(
                     final_facts.get(insight_id, {})
                 )
             }
-            if not obligation_evidence_keys.intersection(supporting_evidence_keys):
+            if not obligation_evidence_keys.issubset(supporting_evidence_keys):
                 raise AppError(
                     code="artifact_final_insight_coverage_invalid",
                     message=(
-                        "Original essential obligation is not linked to its final "
-                        "supporting fact"
+                        "Original essential obligation is not fully linked to its "
+                        "final supporting facts"
                     ),
                     retryable=False,
-                    context={"theme": obligation_theme},
+                    context={
+                        "theme": obligation_theme,
+                        "missing_evidence_ids": sorted(
+                            obligation_evidence_keys - supporting_evidence_keys
+                        ),
+                    },
                 )
             seen_obligation_keys.add(obligation_key)
             original_obligation_assessments.append(

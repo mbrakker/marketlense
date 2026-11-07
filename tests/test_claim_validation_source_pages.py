@@ -122,6 +122,7 @@ def _page_grounded_semantic_result(semantic_input):
         protected_facts=ProtectedFactComparison.from_payload(
             {}, proposition_status="compatible"
         ),
+        classification="factual_claim",
     )
 
 

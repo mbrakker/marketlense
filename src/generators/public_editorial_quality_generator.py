@@ -7,7 +7,6 @@ regeneration orchestrator can route without rewriting passing artifacts.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 from collections import Counter
@@ -28,6 +27,8 @@ from src.contracts.public_editorial_quality import (
 )
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
+    soft_copy_material_sentences,
+    soft_copy_sentence_hash,
 )
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.validation.verified_facts import (
@@ -439,8 +440,26 @@ def _text_issues(
     issues: list[PublicEditorialQualityIssue] = []
     if not text.strip():
         return issues
-    if item.get("verified_facts_mode") and (
-        not item.get("evidence_ids") or not str(item.get("evidence_text") or "").strip()
+    if item.get("provenance_error"):
+        issues.append(
+            _issue(
+                report_id,
+                "public_editorial_quality.material_claim_evidence_missing",
+                item,
+                (
+                    "material soft-copy sentence lacks an unambiguous retained "
+                    "claim identity"
+                ),
+            )
+        )
+    elif (
+        verified_mode
+        and item.get("declared_classification")
+        not in {"analyst_interpretation", "prescriptive_recommendation"}
+        and (
+            not item.get("evidence_ids")
+            or not str(item.get("evidence_text") or "").strip()
+        )
     ):
         issues.append(
             _issue(
@@ -1952,26 +1971,35 @@ def _retained_soft_copy_sentence_items(
 ) -> list[dict[str, Any]]:
     """Expose sentence claims only when retained provenance proves each match."""
 
+    provenance_present = verified_facts_mode(artifacts) and (
+        "soft_copy_claim_provenance" in artifacts
+    )
+
     try:
         claims = soft_copy_claim_provenance_from_payload(
             artifacts.get("soft_copy_claim_provenance")
         )
-    except AppError:
+    except AppError as exc:
+        if provenance_present:
+            item = _item(artifact, field, text, [], artifact)
+            item["provenance_error"] = exc.code
+            return [item]
         return []
     by_hash: dict[str, list[Any]] = {}
     for claim in claims:
         if claim.artifact_family == artifact:
             by_hash.setdefault(claim.text_hash, []).append(claim)
-    sentences = [
-        " ".join(sentence.split())
-        for sentence in re.split(r"(?<=[.!?])\s+", text)
-        if " ".join(sentence.split())
-    ]
+    sentences = soft_copy_material_sentences(text)
     matched = [
-        by_hash.get(hashlib.sha256(sentence.encode("utf-8")).hexdigest(), [])
-        for sentence in sentences
+        by_hash.get(soft_copy_sentence_hash(sentence), []) for sentence in sentences
     ]
     if not sentences or any(len(items) != 1 for items in matched):
+        if provenance_present:
+            item = _item(artifact, field, text, [], artifact)
+            item["provenance_error"] = (
+                "soft_copy_claim_provenance_sentence_identity_ambiguous"
+            )
+            return [item]
         return []
     evidence_by_id = dict(evidence_items)
     items: list[dict[str, Any]] = []
@@ -1990,6 +2018,11 @@ def _retained_soft_copy_sentence_items(
             ),
         )
         item["public_item_id"] = claim.claim_id
+        item["declared_classification"] = {
+            "factual": "factual_claim",
+            "interpretive": "analyst_interpretation",
+            "recommendation": "prescriptive_recommendation",
+        }.get(claim.classification, "")
         items.append(item)
     return items
 

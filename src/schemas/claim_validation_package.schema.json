@@ -31,7 +31,9 @@
           "deterministic_status": {"type": "string", "enum": ["supported", "unsupported", "unresolved", "not_applicable"]},
           "semantic_validator_used": {"type": "boolean"},
           "semantic_execution_identity": {"type": "string"},
-          "semantic_identity": {"type": ["object", "null"]}
+          "semantic_identity": {"type": ["object", "null"]},
+          "semantic_classification": {"type": "string"},
+          "semantic_violation_type": {"type": "string"}
         },
         "additionalProperties": true
       }

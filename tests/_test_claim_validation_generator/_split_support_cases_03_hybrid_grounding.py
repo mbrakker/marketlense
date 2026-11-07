@@ -1,12 +1,15 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(_SplitPath(__file__).resolve().parent / "cases_03_hybrid_grounding.py")
 
 import hashlib
 from dataclasses import asdict, replace
+
 import pytest
+
 import src.generators.claim_validation_generator as claim_validation
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
@@ -76,6 +79,8 @@ def _semantic_result(claim_input, outcome: str) -> ClaimSemanticGroundingResult:
         protected_facts=ProtectedFactComparison.from_payload(
             {}, proposition_status="compatible"
         ),
+        classification="factual_claim",
+        violation_type="contradicted" if outcome == "contradicted" else "",
     )
 
 

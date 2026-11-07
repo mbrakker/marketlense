@@ -114,6 +114,8 @@ def _semantic_result(semantic_input, *, outcome: str = "entailed"):
         protected_facts=ProtectedFactComparison.from_payload(
             {}, proposition_status="compatible"
         ),
+        classification="factual_claim",
+        violation_type="contradicted" if outcome == "contradicted" else "",
     )
 
 

@@ -18,8 +18,10 @@ from src.contracts.claim_validation import (
     CLAIM_VALIDATION_SCHEMA_VERSION,
     CLAIM_VALIDATION_VALIDATOR_VERSION,
     ClaimValidationPackage,
+    semantic_claim_disposition,
 )
 from src.contracts.pdf_text import PdfTextPage
+from src.contracts.protected_facts import ProtectedFactComparison
 from src.contracts.public_editorial_quality import PublicEditorialQualityReport
 from src.contracts.publish_readiness import (
     PUBLISH_READINESS_SCHEMA_VERSION,
@@ -906,15 +908,22 @@ def _retained_claim_grounding_result(
             problems.add("semantic_claim_evidence_identity_mismatch")
         if identity.get("source_identity") != source_id:
             problems.add("semantic_source_identity_stale")
-        semantic_outcome = result.get("semantic_outcome")
-        expected_status = (
-            {
-                "entailed": "supported",
-                "contradicted": "unsupported",
-                "not_established": "unresolved",
-            }.get(semantic_outcome)
-            if isinstance(semantic_outcome, str)
+        raw_semantic_facts = result.get("semantic_protected_facts")
+        semantic_facts = (
+            ProtectedFactComparison.from_payload(
+                raw_semantic_facts.get("dimensions"),
+                proposition_status=str(
+                    raw_semantic_facts.get("proposition_status") or "unknown"
+                ),
+            )
+            if isinstance(raw_semantic_facts, Mapping)
             else None
+        )
+        expected_status = semantic_claim_disposition(
+            classification=str(result.get("semantic_classification") or ""),
+            outcome=str(result.get("semantic_outcome") or ""),
+            violation_type=str(result.get("semantic_violation_type") or ""),
+            protected_facts=semantic_facts,
         )
         if result.get(
             "deterministic_status"

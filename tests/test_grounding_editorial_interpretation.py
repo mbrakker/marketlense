@@ -4,12 +4,12 @@ import hashlib
 
 import pytest
 
+from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_to_payload,
 )
 from src.contracts.validation import ValidationRequest
-from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.generators.validation.grounding import (
     grounding_issue_severity,
     grounding_payload,
@@ -147,7 +147,8 @@ def _issues(tmp_path, *, section: str, entry: dict | None = None):
         evidence_windows=[],
         prompt_client=FakePromptClient(),
         openai_client=FakeOpenAI(
-            grounding_payload={"unsupported": unsupported, "checks": checks}
+            grounding_payload={"unsupported": unsupported, "checks": checks},
+            complete_grounding_contract=False,
         ),
         ctx=_ctx(),
     )
@@ -510,6 +511,27 @@ def test_grounding_failure_retains_atomic_public_item_id(tmp_path) -> None:
     assert issues[0].entity_id == "insight:insight-1:so_what"
 
 
+def test_grounding_check_fails_closed_when_a_check_omits_classification(
+    tmp_path,
+) -> None:
+    issues = _issues(
+        tmp_path,
+        section="expert_comment",
+        entry={
+            "section": "expert_comment",
+            "text": "Brands should reconsider wallet coverage.",
+            "classification": "",
+            "entailment_outcome": "entailed",
+            "reason": "The wording is supported.",
+        },
+    )
+
+    assert len(issues) == 1
+    assert issues[0].severity == "error"
+    assert issues[0].violation_type == "validation_grounding_invalid_json"
+    assert "schema_enum_mismatch" in issues[0].message
+
+
 @pytest.mark.parametrize(
     "section",
     (
@@ -533,14 +555,14 @@ def test_grounding_accepts_evidence_traceable_editorial_interpretation(
             "analyst_interpretation",
             "unsupported_causal_outcome",
             "Wallet coverage will cause conversion to rise.",
-            "info",
+            "error",
         ),
         (
             "linkedin_post",
             "prescriptive_recommendation",
             "unsupported_operational_or_financial_benefit",
             "Prioritising wallets will reduce CAC by 20%.",
-            "info",
+            "error",
         ),
         (
             "insights_final[0].so_what",

@@ -7,7 +7,7 @@ import json
 import re
 from copy import deepcopy
 from dataclasses import asdict, dataclass, replace
-from typing import Callable, Literal, Mapping, Sequence
+from typing import Callable, Literal, Mapping, Sequence, cast
 
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
@@ -25,6 +25,8 @@ from src.contracts.claim_validation import (
     ClaimValidationLineage,
     ClaimValidationPackage,
     ClaimValidationResult,
+    ClaimValidationStatus,
+    semantic_claim_disposition,
 )
 from src.contracts.pdf_text import PdfTextPage
 from src.contracts.protected_facts import (
@@ -36,6 +38,7 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
     soft_copy_public_text,
+    soft_copy_sentence_hash,
 )
 from src.generators.artifact_normalization import canonical_artifact_quote_id
 from src.utils.errors import AppError
@@ -749,7 +752,7 @@ def _soft_copy_claims_by_hash(
 
 
 def _soft_copy_text_hash(text: str) -> str:
-    return hashlib.sha256(" ".join(text.split()).encode("utf-8")).hexdigest()
+    return soft_copy_sentence_hash(text)
 
 
 def _checks(
@@ -1089,7 +1092,9 @@ def _validate_claims_against_sources(
         # Numeric, quotation, protected-dimension and chart comparisons are
         # diagnostics only.  They cannot certify or reject meaning before the
         # grounding model has classified and entailed the complete item.
-        status = "unsupported" if structural_failures else "unresolved"
+        status: ClaimValidationStatus = (
+            "unsupported" if structural_failures else "unresolved"
+        )
         failed = structural_failures
         deterministic_status = status
         semantic_used = False
@@ -1121,8 +1126,8 @@ def _validate_claims_against_sources(
                 schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
                 candidate=candidate,
                 checks=checks,
-                status=status,  # type: ignore[arg-type]
-                deterministic_status=deterministic_status,  # type: ignore[arg-type]
+                status=status,
+                deterministic_status=deterministic_status,
                 reasons=failed,
                 protected_facts=protected_facts,
                 semantic_outcome=semantic_outcome,
@@ -1506,36 +1511,45 @@ def _apply_semantic_results(
         # or contradictory structured response to become publishable.
         disagreement = semantic.disagreement
         outcome = semantic.outcome
-        comparison = semantic.protected_facts
+        incompatible_dimensions = (
+            semantic.protected_facts.incompatible_dimensions
+            if semantic.protected_facts is not None
+            else []
+        )
+        incompatible_proposition = bool(
+            semantic.protected_facts is not None
+            and semantic.protected_facts.proposition_status == "incompatible"
+        )
         if outcome == "entailed":
-            if comparison is None:
-                status = "unresolved"
-                disagreement = (
-                    disagreement or "entailed_with_incomplete_protected_facts"
+            if semantic.protected_facts is None:
+                disagreement = disagreement or (
+                    "entailed_with_incomplete_protected_facts"
                 )
-            elif comparison.incompatible_dimensions:
-                status = "unresolved"
-                disagreement = (
-                    disagreement or "entailed_with_incompatible_protected_facts"
+            elif incompatible_dimensions or incompatible_proposition:
+                disagreement = disagreement or (
+                    "entailed_with_incompatible_protected_dimensions"
+                    if incompatible_dimensions
+                    else "entailed_with_incompatible_proposition"
                 )
-            elif comparison.proposition_status != "compatible":
-                status = "unresolved"
-                disagreement = (
-                    disagreement or "entailed_with_incomplete_protected_facts"
-                )
-            else:
-                status = "supported"
-        elif outcome == "contradicted":
-            status = "unsupported"
-        else:
-            status = "unresolved"
-        reasons = [semantic.reason] if semantic.reason and status != "supported" else []
+        status = semantic_claim_disposition(
+            classification=semantic.classification,
+            outcome=outcome,
+            violation_type=semantic.violation_type,
+            protected_facts=semantic.protected_facts,
+        )
+        reasons = (
+            [semantic.reason]
+            if semantic.reason and status not in {"supported", "not_applicable"}
+            else []
+        )
         updated.append(
             replace(
                 result,
-                status=status,  # type: ignore[arg-type]
+                status=status,
                 reasons=reasons,
                 semantic_outcome=outcome,
+                semantic_classification=semantic.classification,
+                semantic_violation_type=semantic.violation_type,
                 semantic_reason=semantic.reason,
                 semantic_protected_facts=semantic.protected_facts,
                 semantic_identity=identity,
@@ -1674,6 +1688,8 @@ def materialize_retained_claim_package(
             "status",
             "reasons",
             "semantic_outcome",
+            "semantic_classification",
+            "semantic_violation_type",
             "semantic_reason",
             "semantic_protected_facts",
             "semantic_identity",
@@ -1880,6 +1896,23 @@ def _claim_validation_semantic_results_for_final_inputs(
         ]
         expected_evidence_hash = current_evidence_hash_by_candidate.get(candidate_hash)
         execution_identity = str(identity.get("execution_identity") or "")
+        raw_semantic_facts = result.get("semantic_protected_facts")
+        semantic_facts = (
+            ProtectedFactComparison.from_payload(
+                raw_semantic_facts.get("dimensions"),
+                proposition_status=str(
+                    raw_semantic_facts.get("proposition_status") or "unknown"
+                ),
+            )
+            if isinstance(raw_semantic_facts, Mapping)
+            else None
+        )
+        expected_disposition = semantic_claim_disposition(
+            classification=str(result.get("semantic_classification") or ""),
+            outcome=str(result.get("semantic_outcome") or ""),
+            violation_type=str(result.get("semantic_violation_type") or ""),
+            protected_facts=semantic_facts,
+        )
         if (
             identity.get("schema_version") not in {"1.0", "1.1"}
             or not execution_identity
@@ -1906,12 +1939,7 @@ def _claim_validation_semantic_results_for_final_inputs(
             or not expected_evidence_hash
             or identity.get("evidence_hash") != expected_evidence_hash
             or result.get("deterministic_status") != "unresolved"
-            or {
-                "entailed": "supported",
-                "contradicted": "unsupported",
-                "not_established": "unresolved",
-            }.get(result.get("semantic_outcome"))
-            != result.get("status")
+            or expected_disposition != result.get("status")
         ):
             # A package may contain a valid result for a claim that was
             # replaced during repair. That result is stale for the final
@@ -1942,6 +1970,8 @@ def _claim_validation_semantic_results_for_final_inputs(
             "deterministic_status",
             "reasons",
             "semantic_outcome",
+            "semantic_classification",
+            "semantic_violation_type",
             "semantic_reason",
             "semantic_protected_facts",
             "semantic_identity",
@@ -2196,9 +2226,11 @@ def reuse_retained_claim_semantic_results(
         ):
             reject("deterministic_validation_changed")
             continue
+        prior_status = str(prior_result.get("status") or "")
+        prior_outcome = str(prior_result.get("semantic_outcome") or "")
         if (
-            prior_result.get("status") != "supported"
-            or prior_result.get("semantic_outcome") != "entailed"
+            prior_status not in {"supported", "not_applicable"}
+            or prior_outcome not in {"entailed", "not_established"}
             or prior_result.get("semantic_validator_used") is not True
             or prior_result.get("semantic_disagreement")
         ):
@@ -2265,10 +2297,23 @@ def reuse_retained_claim_semantic_results(
                 raw_protected_facts.get("proposition_status") or "unknown"
             ),
         )
+        semantic_classification = str(prior_result.get("semantic_classification") or "")
+        semantic_violation_type = str(prior_result.get("semantic_violation_type") or "")
+        if (
+            semantic_claim_disposition(
+                classification=semantic_classification,
+                outcome=prior_outcome,
+                violation_type=semantic_violation_type,
+                protected_facts=protected_facts,
+            )
+            != prior_status
+        ):
+            reject("semantic_disposition_invalid")
+            continue
         reused_results.append(
             ClaimSemanticGroundingResult(
                 schema_version="1.0",
-                outcome="entailed",
+                outcome=cast(ClaimSemanticOutcome, prior_outcome),
                 reason=str(prior_result.get("semantic_reason") or ""),
                 identity=ClaimSemanticValidationIdentity(
                     schema_version="1.1",
@@ -2290,6 +2335,8 @@ def reuse_retained_claim_semantic_results(
                     retrieval_identity=str(identity["retrieval_identity"]),
                 ),
                 protected_facts=protected_facts,
+                classification=semantic_classification,
+                violation_type=semantic_violation_type,
                 disagreement="",
             )
         )

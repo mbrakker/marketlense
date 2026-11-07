@@ -162,7 +162,7 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v24"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v25"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.0"
 _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v3"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
@@ -300,6 +300,7 @@ def _public_editorial_review_issue(
     explanation: str,
     evidence_ids: list[str] | None = None,
     repair_target: str = "",
+    classification: str = "",
 ) -> PublicEditorialQualityIssue:
     safe_item = item or {}
     retained_evidence_ids = list(
@@ -307,10 +308,25 @@ def _public_editorial_review_issue(
         if evidence_ids is not None
         else safe_item.get("evidence_ids") or []
     )
+    has_bound_evidence = bool(
+        retained_evidence_ids and str(safe_item.get("evidence_text") or "").strip()
+    )
+    editorial_classification = str(classification or "").strip()
+    evidence_absent = (
+        rule_id in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS
+        or hard_fail_class in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES
+    )
     eligible = bool(
         repair_target
-        and retained_evidence_ids
-        and str(safe_item.get("evidence_text") or "").strip()
+        and str(safe_item.get("public_item_id") or "").strip()
+        and (
+            has_bound_evidence
+            or (
+                editorial_classification
+                in {"analyst_interpretation", "prescriptive_recommendation"}
+                and not evidence_absent
+            )
+        )
     )
     return PublicEditorialQualityIssue(
         report_id=str(report_id),
@@ -456,11 +472,7 @@ def _validate_public_editorial_review_payload(
                     "status_conflict_type": "item_failure_classification_missing",
                 },
             )
-        if (
-            status == "pass"
-            and classification != "prescriptive_recommendation"
-            and not evidence_ids
-        ):
+        if status == "pass" and classification == "factual_claim" and not evidence_ids:
             raise AppError(
                 code="public_editorial_quality_review_evidence_missing",
                 message=(
@@ -770,6 +782,7 @@ def _public_editorial_semantic_review(
             "evidence_ids": list(item.get("evidence_ids") or []),
             "evidence_text": str(item.get("evidence_text") or ""),
             "allowed_repair_target": str(item.get("repair_target") or "").strip(),
+            "repair_target": str(item.get("repair_target") or "").strip(),
         }
         verified_facts = item.get("verified_facts")
         if isinstance(verified_facts, dict) and verified_facts:
@@ -1066,6 +1079,7 @@ def _public_editorial_semantic_review(
                     if str(value).strip()
                 ],
                 repair_target=str(verdict.get("repair_target") or "").strip(),
+                classification=str(verdict.get("classification") or "").strip(),
             )
         )
     report_verdict = payload.get("report_verdict")

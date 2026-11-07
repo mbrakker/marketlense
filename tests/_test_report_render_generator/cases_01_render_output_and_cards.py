@@ -467,6 +467,7 @@ def test_verified_readiness_reuses_canonical_semantic_binding_without_raw_pdf_pa
         schema_version="1.0",
         outcome="entailed",
         reason="canonical_verified_fact_supports_interpretation",
+        classification="factual_claim",
         identity=ClaimSemanticValidationIdentity(
             schema_version="1.0",
             claim_id=semantic_input.candidate.claim_id,

@@ -34,16 +34,21 @@ text: |
   Each public item includes an allowed_repair_target. A verdict may request a
   repair only with that exact target; otherwise return repair_target="". Item
   evidence_ids must be a subset of that item's supplied bindings. An empty
-  evidence_ids list is permitted for a pass only for a purely prescriptive
-  recommendation, and for a fail or unresolved verdict only when the verdict
-  explicitly identifies missing or unavailable evidence. Report-level
+  evidence_ids list is permitted for a pass only for a purely interpretive or
+  prescriptive editorial item with no independently verifiable empirical
+  premise; a factual claim must retain its source binding. For a fail or
+  unresolved verdict, an empty evidence_ids list is permitted only when the
+  verdict explicitly identifies missing or unavailable evidence. Report-level
   evidence_ids must be within report_scope; a report-level repair must identify
   its affected item and use that item's allowed repair target. Do not invent,
   borrow, or broaden evidence IDs.
 
   Status-field contract is mandatory. For an item status=pass, severity must be
   info or warning and rule_id, hard_fail_class, and repair_target must all be
-  empty; factual_claim and analyst_interpretation passes must retain evidence.
+  empty; factual_claim passes must retain evidence, while an
+  analyst_interpretation may pass without a direct evidence ID only when its
+  reason establishes a defensible, relevant and non-misleading inference
+  without a hidden empirical premise.
   For an item status=fail or unresolved, severity must be error, reason must be
   substantive, and rule_id or hard_fail_class must identify the applicable
   failure classification. Use the missing-evidence classifications above only
