@@ -37,11 +37,17 @@ text: |
   evidence_ids list is permitted for a pass only for a purely interpretive or
   prescriptive editorial item with no independently verifiable empirical
   premise; a factual claim must retain its source binding. For a fail or
-  unresolved verdict, an empty evidence_ids list is permitted only when the
-  verdict explicitly identifies missing or unavailable evidence. Report-level
-  evidence_ids must be within report_scope; a report-level repair must identify
-  its affected item and use that item's allowed repair target. Do not invent,
-  borrow, or broaden evidence IDs.
+  unresolved verdict, an empty evidence_ids list is permitted for a purely
+  editorial-quality failure only when the item is independently classified as
+  analyst_interpretation or prescriptive_recommendation, the expected item has
+  no claim-specific evidence, rule_id is a public_editorial_quality.semantic_*
+  rule, hard_fail_class is editorial_quality, and the reason is substantive.
+  Factual, provenance, evidence, metric, or source-grounded failures remain
+  strict and must retain their bound evidence or use an explicit missing or
+  unavailable-evidence classification. Report-level evidence_ids must be within
+  report_scope; a report-level repair must identify its affected item and use
+  that item's allowed repair target. Do not invent, borrow, or broaden evidence
+  IDs.
 
   Status-field contract is mandatory. For an item status=pass, severity must be
   info or warning and rule_id, hard_fail_class, and repair_target must all be

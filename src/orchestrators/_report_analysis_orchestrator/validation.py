@@ -163,7 +163,7 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v26"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v27"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.0"
 _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v3"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
@@ -240,10 +240,33 @@ _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES = frozenset(
 _PUBLIC_EDITORIAL_SEMANTIC_RULE_ID = re.compile(
     r"^public_editorial_quality\.semantic_[a-z0-9_.-]+$"
 )
+_PUBLIC_EDITORIAL_ONLY_DIMENSIONS = frozenset({"analytical_depth", "distinctness"})
 
 
 def _substantive_public_review_reason(value: object) -> bool:
     return bool(str(value or "").strip())
+
+
+def _unbound_editorial_failure_allowed(
+    *,
+    classification: str,
+    rule_id: str,
+    hard_fail_class: str,
+    evidence_ids: Sequence[str],
+    expected_item: dict[str, Any],
+) -> bool:
+    """Allow only an independent, evidence-free editorial-quality failure."""
+
+    return bool(
+        not evidence_ids
+        and not expected_item.get("evidence_ids")
+        and not expected_item.get("verified_facts")
+        and not expected_item.get("verified_fact_ids")
+        and normalize_claim_classification(classification)
+        in {"analyst_interpretation", "prescriptive_recommendation"}
+        and _PUBLIC_EDITORIAL_SEMANTIC_RULE_ID.fullmatch(rule_id)
+        and str(hard_fail_class or "").strip().casefold() == "editorial_quality"
+    )
 
 
 def _public_editorial_review_failure_explanation(exc: AppError) -> str:
@@ -489,6 +512,13 @@ def _validate_public_editorial_review_payload(
             and not evidence_ids
             and rule_id not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS
             and hard_fail_class not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES
+            and not _unbound_editorial_failure_allowed(
+                classification=classification,
+                rule_id=rule_id,
+                hard_fail_class=hard_fail_class,
+                evidence_ids=evidence_ids,
+                expected_item=expected[item_id],
+            )
         ):
             raise AppError(
                 code="public_editorial_quality_review_evidence_missing",
@@ -604,20 +634,6 @@ def _validate_public_editorial_review_payload(
             message="Passing report-level review requires retained source evidence",
             retryable=False,
         )
-    if (
-        report_status in {"fail", "unresolved"}
-        and not report_evidence_ids
-        and report_rule_id not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS
-        and report_hard_fail_class not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES
-    ):
-        raise AppError(
-            code="public_editorial_quality_report_review_evidence_missing",
-            message=(
-                "Failing or unresolved report-level review requires retained "
-                "evidence unless the disposition is explicitly unavailable"
-            ),
-            retryable=False,
-        )
     dimensions = report_verdict.get("dimensions")
     if not isinstance(dimensions, dict) or set(dimensions) != set(
         _PUBLIC_EDITORIAL_REPORT_DIMENSIONS
@@ -653,6 +669,13 @@ def _validate_public_editorial_review_payload(
                 context={"dimension": dimension_name},
             )
         dimension_statuses.append(dimension_status)
+    failed_dimensions = {
+        dimension_name
+        for dimension_name, dimension_status in zip(
+            _PUBLIC_EDITORIAL_REPORT_DIMENSIONS, dimension_statuses, strict=True
+        )
+        if dimension_status != "pass"
+    }
     if report_status == "pass" and any(
         status != "pass" for status in dimension_statuses
     ):
@@ -670,6 +693,29 @@ def _validate_public_editorial_review_payload(
             message="A failed report verdict must identify a failed dimension",
             retryable=False,
             context={"status_conflict_type": "report_failure_has_no_failed_dimension"},
+        )
+    report_editorial_only = bool(
+        report_status in {"fail", "unresolved"}
+        and not report_evidence_ids
+        and report_rule_id.startswith("public_editorial_quality.report_")
+        and report_hard_fail_class.casefold() == "report_editorial_acceptance"
+        and failed_dimensions
+        and failed_dimensions <= _PUBLIC_EDITORIAL_ONLY_DIMENSIONS
+    )
+    if (
+        report_status in {"fail", "unresolved"}
+        and not report_evidence_ids
+        and report_rule_id not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_RULE_IDS
+        and report_hard_fail_class not in _PUBLIC_EDITORIAL_EVIDENCE_ABSENCE_CLASSES
+        and not report_editorial_only
+    ):
+        raise AppError(
+            code="public_editorial_quality_report_review_evidence_missing",
+            message=(
+                "Failing or unresolved report-level review requires retained "
+                "evidence unless the failed dimensions are purely editorial"
+            ),
+            retryable=False,
         )
     affected_item_id = str(report_verdict.get("affected_item_id") or "").strip()
     if affected_item_id and affected_item_id not in expected:
@@ -1122,6 +1168,9 @@ def _public_editorial_semantic_review(
                     if str(value).strip()
                 ],
                 repair_target=str(report_verdict.get("repair_target") or "").strip(),
+                classification=str(
+                    verdict_by_id.get(affected_item_id, {}).get("classification") or ""
+                ).strip(),
             )
         )
     _capture_public_editorial_review(

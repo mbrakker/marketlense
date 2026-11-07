@@ -46,6 +46,7 @@ from src.generators.validation.grounding import (
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _public_editorial_review_issue,
+    _validate_public_editorial_review_payload,
 )
 from src.utils.errors import AppError
 from tests._test_report_regeneration_generator._split_support_test_report_regeneration_generator import (  # noqa: E501
@@ -70,6 +71,31 @@ from tests._test_validation_generator._shared import (
 from tests._test_validation_generator._shared import (
     _settings as validation_settings,
 )
+
+
+def _passing_public_report_verdict() -> dict:
+    return {
+        "status": "pass",
+        "severity": "info",
+        "rule_id": "",
+        "hard_fail_class": "",
+        "reason": "The report remains coherent and within the retained review scope.",
+        "evidence_ids": [],
+        "repair_target": "",
+        "affected_item_id": "",
+        "dimensions": {
+            dimension: {
+                "status": "pass",
+                "reason": "The report satisfies this review dimension.",
+            }
+            for dimension in (
+                "material_coverage",
+                "analytical_depth",
+                "distinctness",
+                "limitations",
+            )
+        },
+    }
 
 
 def test_claim_classification_normalizer_covers_retained_and_canonical_vocabularies():
@@ -114,6 +140,194 @@ def test_editorial_disposition_fails_closed_for_incomplete_empirical_facts():
             protected_facts=comparison,
         )
         == "unresolved"
+    )
+
+
+def test_editorial_disposition_allows_source_only_unknown_value():
+    dimensions = {
+        dimension: {
+            "claim_value": None,
+            "evidence_value": None,
+            "status": "unknown",
+        }
+        for dimension in PROTECTED_FACT_DIMENSIONS
+    }
+    dimensions["value"] = {
+        "claim_value": None,
+        "evidence_value": "42%",
+        "status": "unknown",
+    }
+    comparison = ProtectedFactComparison.from_payload(
+        dimensions, proposition_status="compatible"
+    )
+
+    assert (
+        semantic_claim_disposition(
+            classification="analyst_interpretation",
+            outcome="entailed",
+            protected_facts=comparison,
+        )
+        == "supported"
+    )
+
+
+def test_unbound_editorial_quality_failure_is_valid_negative_verdict():
+    item = {
+        "public_item_id": "soft_copy:expert_comment:generic",
+        "artifact": "expert_comment",
+        "field": "expert_comment",
+        "evidence_ids": [],
+        "evidence_text": "",
+        "repair_target": "expert_comment",
+    }
+    payload = {
+        "verdicts": [
+            {
+                "item_id": item["public_item_id"],
+                "status": "fail",
+                "classification": "analyst_interpretation",
+                "severity": "error",
+                "rule_id": "public_editorial_quality.semantic_generic_copy",
+                "hard_fail_class": "editorial_quality",
+                "reason": (
+                    "The sentence repeats a generic implication without a specific "
+                    "commercial decision or conditional next step."
+                ),
+                "evidence_ids": [],
+                "repair_target": "expert_comment",
+            }
+        ],
+        "report_verdict": _passing_public_report_verdict(),
+    }
+
+    _validate_public_editorial_review_payload(payload, [item], validation_ctx())
+
+
+def test_unbound_factual_failure_still_requires_evidence():
+    item = {
+        "public_item_id": "soft_copy:expert_comment:factual",
+        "artifact": "expert_comment",
+        "field": "expert_comment",
+        "evidence_ids": [],
+        "evidence_text": "",
+        "repair_target": "expert_comment",
+    }
+    payload = {
+        "verdicts": [
+            {
+                "item_id": item["public_item_id"],
+                "status": "fail",
+                "classification": "factual_claim",
+                "severity": "error",
+                "rule_id": "public_editorial_quality.semantic_generic_copy",
+                "hard_fail_class": "editorial_quality",
+                "reason": "The sentence asserts an unsupported empirical result.",
+                "evidence_ids": [],
+                "repair_target": "expert_comment",
+            }
+        ],
+        "report_verdict": _passing_public_report_verdict(),
+    }
+
+    with pytest.raises(AppError) as caught:
+        _validate_public_editorial_review_payload(payload, [item], validation_ctx())
+
+    assert caught.value.code == "public_editorial_quality_review_evidence_missing"
+
+
+def test_editorial_failure_cannot_hide_item_verified_fact_context():
+    item = {
+        "public_item_id": "soft_copy:expert_comment:fact-context",
+        "artifact": "expert_comment",
+        "field": "expert_comment",
+        "evidence_ids": [],
+        "evidence_text": "",
+        "verified_facts": {"verified-fact:f1": {"fact_id": "f1"}},
+        "repair_target": "expert_comment",
+    }
+    payload = {
+        "verdicts": [
+            {
+                "item_id": item["public_item_id"],
+                "status": "fail",
+                "classification": "analyst_interpretation",
+                "severity": "error",
+                "rule_id": "public_editorial_quality.semantic_generic_copy",
+                "hard_fail_class": "editorial_quality",
+                "reason": "The item hides a source-backed factual premise.",
+                "evidence_ids": [],
+                "repair_target": "expert_comment",
+            }
+        ],
+        "report_verdict": _passing_public_report_verdict(),
+    }
+
+    with pytest.raises(AppError) as caught:
+        _validate_public_editorial_review_payload(payload, [item], validation_ctx())
+
+    assert caught.value.code == "public_editorial_quality_review_evidence_missing"
+
+
+def test_report_editorial_quality_failure_without_evidence_is_valid():
+    item = {
+        "public_item_id": "soft_copy:expert_comment:generic-report",
+        "artifact": "expert_comment",
+        "field": "expert_comment",
+        "evidence_ids": [],
+        "evidence_text": "",
+        "repair_target": "expert_comment",
+    }
+    payload = {
+        "verdicts": [
+            {
+                "item_id": item["public_item_id"],
+                "status": "pass",
+                "classification": "analyst_interpretation",
+                "severity": "info",
+                "rule_id": "",
+                "hard_fail_class": "",
+                "reason": "The item is factually harmless but needs stronger analysis.",
+                "evidence_ids": [],
+                "repair_target": "",
+            }
+        ],
+        "report_verdict": {
+            "status": "fail",
+            "severity": "error",
+            "rule_id": "public_editorial_quality.report_acceptance",
+            "hard_fail_class": "report_editorial_acceptance",
+            "reason": (
+                "The report remains factually covered but lacks analytical depth."
+            ),
+            "evidence_ids": [],
+            "repair_target": "expert_comment",
+            "affected_item_id": item["public_item_id"],
+            "dimensions": {
+                "material_coverage": {
+                    "status": "pass",
+                    "reason": "Material admitted findings remain represented.",
+                },
+                "analytical_depth": {
+                    "status": "fail",
+                    "reason": "The Expert View repeats the finding without analysis.",
+                },
+                "distinctness": {
+                    "status": "pass",
+                    "reason": "The selected items remain distinct.",
+                },
+                "limitations": {
+                    "status": "pass",
+                    "reason": "Material limitations remain represented.",
+                },
+            },
+        },
+    }
+
+    _validate_public_editorial_review_payload(
+        payload,
+        [item],
+        validation_ctx(),
+        {"evidence_context": [], "verified_facts": {}},
     )
 
 

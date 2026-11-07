@@ -14,6 +14,7 @@ from src.generators.public_editorial_quality_generator import (
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _evaluate_and_store_public_editorial_quality,
     _public_editorial_review_input_identity,
+    _public_editorial_semantic_review,
 )
 from tests._test_report_analysis_generator._shared import (
     _artifacts,
@@ -122,6 +123,121 @@ def test_public_editorial_review_declares_allowed_repair_targets_to_model(
     for item in items:
         sent = sent_by_id[str(item["public_item_id"])]
         assert sent["allowed_repair_target"] == str(item.get("repair_target") or "")
+
+
+def test_localized_report_failure_carries_independent_item_classification(tmp_path):
+    runtime = _runtime(tmp_path)
+    artifacts = _artifacts(
+        summary={"tldr": "", "executive_summary": "", "claim_evidence_map": []},
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+    )
+    items = public_editorial_semantic_review_items(artifacts)
+    target = next(item for item in items if item["artifact"] == "expert_comment")
+
+    class _LocalizedFailureClient:
+        def openai_chat_json(self, request, _ctx):
+            verdicts = []
+            for item in items:
+                item_id = str(item["public_item_id"])
+                evidence_ids = list(item.get("evidence_ids") or [])
+                if item_id == target["public_item_id"]:
+                    verdicts.append(
+                        {
+                            "item_id": item_id,
+                            "status": "fail",
+                            "classification": "analyst_interpretation",
+                            "severity": "error",
+                            "rule_id": "public_editorial_quality.semantic_generic_copy",
+                            "hard_fail_class": "editorial_quality",
+                            "reason": (
+                                "The Expert View repeats the finding without a "
+                                "specific commercial implication."
+                            ),
+                            "evidence_ids": [],
+                            "repair_target": "expert_comment",
+                        }
+                    )
+                else:
+                    verdicts.append(
+                        {
+                            "item_id": item_id,
+                            "status": "pass",
+                            "classification": (
+                                "factual_claim"
+                                if evidence_ids
+                                else "prescriptive_recommendation"
+                            ),
+                            "severity": "info",
+                            "rule_id": "",
+                            "hard_fail_class": "",
+                            "reason": (
+                                "The item remains valid within its retained scope."
+                            ),
+                            "evidence_ids": evidence_ids,
+                            "repair_target": "",
+                        }
+                    )
+            payload = {
+                "verdicts": verdicts,
+                "report_verdict": {
+                    "status": "fail",
+                    "severity": "error",
+                    "rule_id": "public_editorial_quality.report_acceptance",
+                    "hard_fail_class": "report_editorial_acceptance",
+                    "reason": "The report needs more analytical depth.",
+                    "evidence_ids": [],
+                    "repair_target": "expert_comment",
+                    "affected_item_id": target["public_item_id"],
+                    "dimensions": {
+                        "material_coverage": {
+                            "status": "pass",
+                            "reason": "Material findings remain represented.",
+                        },
+                        "analytical_depth": {
+                            "status": "fail",
+                            "reason": (
+                                "The report repeats the finding without analysis."
+                            ),
+                        },
+                        "distinctness": {
+                            "status": "pass",
+                            "reason": "The selected items remain distinct.",
+                        },
+                        "limitations": {
+                            "status": "pass",
+                            "reason": "The report retains its limitations.",
+                        },
+                    },
+                },
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                model=request.model,
+            )
+
+    issues = _public_editorial_semantic_review(
+        runtime=runtime,
+        artifacts=artifacts,
+        ctx=runtime.ctx,
+        openai_client=_LocalizedFailureClient(),
+    )
+
+    item_issue = next(
+        issue for issue in issues if issue.public_item_id == target["public_item_id"]
+    )
+    report_issue = next(
+        issue
+        for issue in issues
+        if issue.rule_id == "public_editorial_quality.report_acceptance"
+    )
+    assert item_issue.classification == "analyst_interpretation"
+    assert report_issue.classification == "analyst_interpretation"
+    assert report_issue.repair_eligible is True
+    assert report_issue.repair_target == "expert_comment"
 
 
 class _SemanticInvalidClient:

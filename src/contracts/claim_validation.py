@@ -105,11 +105,12 @@ def semantic_claim_disposition(
 
     # An editorial label does not make an empirical assertion safe.  If the
     # claim carries a value for a dimension the evidence must resolve that
-    # dimension too.  Pure normative recommendations with no protected fact
-    # values remain eligible for the existing editorial path.
+    # dimension too.  A value that exists only in source context is not an
+    # empirical premise of an otherwise qualitative interpretation.  Pure
+    # normative recommendations with no protected fact values remain eligible
+    # for the existing editorial path.
     if protected_facts is not None and any(
-        dimension.status == "unknown"
-        and (dimension.claim_value is not None or dimension.evidence_value is not None)
+        dimension.status == "unknown" and bool(str(dimension.claim_value or "").strip())
         for dimension in protected_facts.dimensions.values()
     ):
         return "unresolved"

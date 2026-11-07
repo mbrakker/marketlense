@@ -2190,3 +2190,24 @@ provider-backed report, retained-PDF replay, canonical promotion, readiness
 approval, publication, or WordPress write was performed. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+**Evidence update — 2026-11-08 (final review-to-regeneration contract correction):**
+The public-editorial validator now admits only independently classified,
+evidence-free pure editorial-quality failures for unbound interpretive or
+prescriptive items; factual, provenance, metric, and evidence failures remain
+strict. Report-level analytical-depth/distinctness failures may remain
+source-unbound, while material coverage and limitations remain evidence-strict;
+localized report issues carry the validated item classification into the
+existing targeted repair path. Source-only protected values no longer block an
+otherwise defensible qualitative interpretation, while claim-side unknown values
+remain unresolved. The review cache identity advanced to `v27` and the shared
+review prompts were aligned. Focused cross-stage tests passed **448**; the full
+local suite passed **8,596** tests with 2 skips, 48 deselections and 24
+subtests, with only the known CPython-3.12-only wheelhouse failure on CPython
+3.14.2. The prompt fixture gate passed after repository-tool regeneration:
+validation changed **12,655 → 12,864 tokens** (`+$0.000021`) and total changed
+**118,260 → 118,469 tokens** (`+$0.000021`); thresholds were unchanged. No
+fresh provider-backed report, retained-PDF replay, canonical promotion,
+readiness approval, publication, or WordPress write occurred. Existing retained
+Capgemini and Activate live limitations remain. E18 remains **Active/PARTIAL**,
+Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

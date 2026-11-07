@@ -26,6 +26,11 @@ text: |
   A purely interpretive or prescriptive item may pass without a direct item
   evidence ID only when the reason makes clear that it is a specific,
   commercially relevant, defensible and non-misleading editorial inference or
-  recommendation with no hidden empirical premise. Do not use that allowance
-  for a number, population, timeframe, attribution, causal or guaranteed
-  business assertion.
+  recommendation with no hidden empirical premise. A purely editorial-quality
+  fail or unresolved item with no claim-specific evidence may use
+  evidence_ids=[] only when the independently reviewed classification is
+  analyst_interpretation or prescriptive_recommendation, rule_id matches
+  public_editorial_quality.semantic_*, hard_fail_class is editorial_quality,
+  and the reason identifies a substantive analytical or commercial-quality
+  defect. Do not use that allowance for a factual, source-grounded, number,
+  population, timeframe, attribution, causal or guaranteed business assertion.

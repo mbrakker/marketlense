@@ -11136,3 +11136,67 @@ the latest live limitations.
 **Final hosted verdict: PASS for engineering/release gates; PARTIAL / NO-GO
 for live Step 2 quality.** E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+### Final review-to-regeneration contract alignment — 2026-11-08
+
+This correction was implemented against audited base `04826ecaf05718d86333027533e3b16ba9e7324e`.
+It closes the confirmed public-review contract gap without adding a validator,
+LLM stage, service, or recovery framework:
+
+- `_validate_public_editorial_review_payload()` now permits an empty evidence
+  list for a failed or unresolved item only when the independently reviewed
+  class is `analyst_interpretation` or `prescriptive_recommendation`, the
+  expected item has no direct evidence or verified-fact context, the rule is
+  `public_editorial_quality.semantic_*`, the hard-fail class is
+  `editorial_quality`, and the reason/status/target contract is valid. Factual,
+  provenance, metric, and evidence failures remain evidence-strict.
+- Report-level failures may be evidence-free only for a substantive failure in
+  `analytical_depth` or `distinctness`; material coverage and limitations remain
+  strict. Localized report failures now carry the already validated item's
+  independent classification into `_public_editorial_review_issue()`.
+- `semantic_claim_disposition()` no longer treats an evidence-only protected
+  value as an asserted claim value. Unknown claim-side values and incompatible
+  propositions remain blocking.
+- The existing public-editorial system/user prompts now describe the same
+  editorial-only negative-verdict boundary. The review identity advanced from
+  `public-editorial-quality:v26` to `v27`, so incompatible cached verdicts are
+  not reused.
+
+Focused cross-stage verification passed **448 tests**, including the actual
+schema-valid unbound `semantic_generic_copy` negative verdict, factual and
+verified-fact-context negatives, source-only protected-value handling,
+localized report classification handover, editorial-only repair provenance,
+grounding, regeneration, cache/reuse, candidate validation, promotion and
+readiness regressions. The full local run completed with **8,596 passed, 2
+skipped, 48 deselected, 24 subtests, and 1 failure**. The sole failure is the
+pre-existing native wheelhouse audit, which requires CPython 3.12 while this
+host is CPython 3.14.2; no changed test or production module failed.
+
+The prompt fixture baseline was regenerated with the repository tool and the
+unchanged regression gate passed. The only content delta is the public-review
+validation namespace:
+
+| Scope | Previous | Updated | Difference |
+| --- | ---: | ---: | ---: |
+| `report_vs/validate/public_editorial_quality` tokens / cost | 2,844 / `$0.000436` | 3,053 / `$0.000457` | +209 / +`$0.000021` |
+| Validation family tokens / cost | 12,655 / `$0.002178` | 12,864 / `$0.002199` | +209 / +`$0.000021` |
+| Total fixture corpus tokens / cost | 118,260 / `$0.025481` | 118,469 / `$0.025502` | +209 / +`$0.000021` |
+
+Publishing and all other fixture families are unchanged. No threshold, pricing,
+schema, or factual-validation requirement was weakened. Changed-file Ruff and
+formatting passed; changed-source mypy passed for the two production files.
+The repository type-check wrapper exited successfully with zero tracked
+baseline errors, while raw `python -m mypy src` also exposed the known
+environment/baseline issue at `src/services/mailbox_acquisition_service.py:2028`
+(`anchor.parent` may be `None`) and a CPython-3.14 mypy assertion; neither is
+in the changed path.
+
+No current-SHA provider-backed report run, retained-PDF replay, full
+review-to-promotion HTML run, canonical promotion, readiness approval,
+publication, or WordPress write was available in this worktree. Therefore this
+correction makes no live editorial-quality claim and does not resolve the
+retained Capgemini semantic-coverage failure or Activate pre-editorial stall.
+
+**Verdict: PASS for the corrected code-level contract and local focused gates;
+PARTIAL / NO-GO for live Step 2 acceptance.** E18 remains **Active/PARTIAL**,
+Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
