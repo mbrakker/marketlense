@@ -405,13 +405,17 @@ def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
             {
                 "theme": f"Theme {index}",
                 "status": "covered",
+                "resolution": "retained",
                 "supporting_insight_ids": [str(candidates[index - 1]["id"])],
                 "explanation": (
                     f"The retained final proposition develops Theme {index}."
                 ),
             }
             for index in range(1, 8)
-        ]
+        ],
+        "report_completeness": "complete",
+        "diagnosis": "planned_theme_execution",
+        "recovery_action": "none",
     }
     payload = generate_artifacts(
         report_id="visual-authority-full-roster",

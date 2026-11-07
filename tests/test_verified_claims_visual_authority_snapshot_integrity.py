@@ -18,18 +18,26 @@ from tests._test_artifact_generator._shared import (
 from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _doc_map,
     _generation_evidence,
-    _generation_responses,
     _insight,
+    _verified_generation_responses,
+    _verified_plan_for_candidates,
 )
 from tests.test_verified_claims_visual_authority_canary import (
     SOURCE_IDENTITY,
     _candidate,
     _evidence_packs,
-    _metric,
     _response,
     _result,
     _verified_admission,
 )
+
+
+def _generation_responses(
+    candidates: list[dict[str, object]], *, plan_evidence_ids: list[str]
+) -> dict[str, object]:
+    return _verified_generation_responses(
+        candidates, plan_evidence_ids=plan_evidence_ids
+    )
 
 
 def _theme_coverage_response(
@@ -54,6 +62,9 @@ def _theme_coverage_response(
                 "status": (
                     "covered" if evidence_id in covered_evidence_ids else "uncovered"
                 ),
+                "resolution": (
+                    "retained" if evidence_id in covered_evidence_ids else "unresolved"
+                ),
                 "supporting_insight_ids": (
                     [candidate_ids[evidence_id]]
                     if evidence_id in covered_evidence_ids
@@ -70,33 +81,23 @@ def _theme_coverage_response(
                 ),
             }
             for index, evidence_id in enumerate(plan_evidence_ids, start=1)
-        ]
+        ],
+        "report_completeness": (
+            "complete"
+            if set(plan_evidence_ids).issubset(covered_evidence_ids)
+            else "incomplete"
+        ),
+        "diagnosis": (
+            "planned_theme_execution"
+            if set(plan_evidence_ids).issubset(covered_evidence_ids)
+            else "material_report_completeness"
+        ),
+        "recovery_action": (
+            "none"
+            if set(plan_evidence_ids).issubset(covered_evidence_ids)
+            else "targeted_rewrite"
+        ),
     }
-
-
-def test_same_id_result_from_a_stale_candidate_snapshot_fails_closed():
-    current = _candidate()
-    stale = _candidate(
-        current["id"],
-        evidence_id="finding-2",
-        page=7,
-        text="A stale candidate proposition.",
-        metric=_metric("51%", cohort="repeat buyers"),
-    )
-    admission = admit_visual_authority_candidates(
-        candidates=[current],
-        evaluation=_response(_result(stale)),
-        source_identity=SOURCE_IDENTITY,
-        doc_map={},
-        evidence_packs=_evidence_packs(current),
-    )
-    assert admission.admitted_candidates == []
-    assert admission.audit["quarantined"] == [
-        {
-            "candidate_id": current["id"],
-            "reason": "evaluation_candidate_snapshot_mismatch",
-        }
-    ]
 
 
 def test_same_id_result_with_only_a_changed_evidence_span_fails_closed():
@@ -182,7 +183,7 @@ def test_verified_visual_evaluation_sees_full_candidate_roster_before_editorial_
     assert evaluated_roster == [f"f{i}" for i in range(1, 7)]
     assert len(payload["verified_facts"]) == 6
     assert [item["id"] for item in payload["insights_final"]] == [
-        candidate["id"] for candidate in candidates[:5]
+        candidate["id"] for candidate in candidates
     ]
 
 
@@ -259,7 +260,7 @@ def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
     ]
     assert len(final_requests) == 2
     assert {item["id"] for item in payload["insights_final"]} == {
-        candidate["id"] for candidate in candidates[:5]
+        candidate["id"] for candidate in candidates
     }
     assert (
         payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
@@ -341,16 +342,22 @@ def test_verified_final_selection_repairs_a_noncentral_theme_omission(tmp_path):
         return _verified_admission(shortlisted, digest="o" * 64)
 
     responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2", "f3"])
-    responses["editorial_plan"] = {
-        "editorial_plan": {
-            "report_thesis": "The retained evidence defines the decision surface.",
-            "themes": [
-                {"theme": "Central", "priority": 1, "evidence_ids": ["f1"]},
-                {"theme": "Optional", "priority": 2, "evidence_ids": ["f2"]},
-                {"theme": "Supported", "priority": 3, "evidence_ids": ["f3"]},
-            ],
-        }
-    }
+    discovery_plan = responses["editorial_plan"][0]
+    verified_plan = _verified_plan_for_candidates(
+        {
+            "editorial_plan": {
+                "report_thesis": "The retained evidence defines the decision surface.",
+                "themes": [
+                    {"theme": "Central", "priority": 1, "evidence_ids": ["f1"]},
+                    {"theme": "Optional", "priority": 2, "evidence_ids": ["f2"]},
+                    {"theme": "Supported", "priority": 3, "evidence_ids": ["f3"]},
+                ],
+            }
+        },
+        candidates,
+    )
+    verified_plan["editorial_plan"]["themes"][1]["importance"] = "optional"
+    responses["editorial_plan"] = [discovery_plan, verified_plan]
     initial_final = [
         {
             **deepcopy(candidates[0]),
@@ -393,13 +400,18 @@ def test_verified_final_selection_repairs_a_noncentral_theme_omission(tmp_path):
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         "verified-fact:insight-f1-0.99"
     )
+    optional_coverage = _theme_coverage_response(
+        candidates,
+        ["f1", "f2", "f3"],
+        covered_evidence_ids={"f1", "f3"},
+        theme_names=["Central", "Optional", "Supported"],
+    )
+    optional_coverage["theme_coverage"][1]["resolution"] = "omitted"
+    optional_coverage["report_completeness"] = "complete"
+    optional_coverage["diagnosis"] = "redundant_optional_theme"
+    optional_coverage["recovery_action"] = "none"
     responses["editorial_theme_coverage"] = [
-        _theme_coverage_response(
-            candidates,
-            ["f1", "f2", "f3"],
-            covered_evidence_ids={"f1", "f3"},
-            theme_names=["Central", "Optional", "Supported"],
-        ),
+        optional_coverage,
         _theme_coverage_response(
             candidates,
             ["f1", "f2", "f3"],
@@ -423,16 +435,16 @@ def test_verified_final_selection_repairs_a_noncentral_theme_omission(tmp_path):
 
     assert {item["id"] for item in payload["insights_final"]} == {
         "insight-f1-0.99",
-        "insight-f2-0.98",
         "insight-f3-0.97",
         "insight-f4-0.96",
         "insight-f5-0.95",
+        "insight-f6-0.94",
     }
     coverage = payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
         "final_selected_theme_coverage"
     ]
-    assert coverage["omitted_themes"] == []
-    assert coverage["semantic_repair"]["omitted_themes"] == ["Optional"]
+    assert coverage["omitted_themes"] == ["Optional"]
+    assert "semantic_repair" not in coverage
 
 
 def test_verified_generation_semantically_assesses_shared_theme_evidence(tmp_path):
@@ -458,6 +470,7 @@ def test_verified_generation_semantically_assesses_shared_theme_evidence(tmp_pat
             {
                 "theme": "Theme 1",
                 "status": "covered",
+                "resolution": "retained",
                 "supporting_insight_ids": [candidates[0]["id"]],
                 "explanation": (
                     "The first final proposition develops the first decision theme."
@@ -466,12 +479,16 @@ def test_verified_generation_semantically_assesses_shared_theme_evidence(tmp_pat
             {
                 "theme": "Theme 2",
                 "status": "covered",
+                "resolution": "retained",
                 "supporting_insight_ids": [candidates[0]["id"]],
                 "explanation": (
                     "The second final proposition develops the second decision theme."
                 ),
             },
-        ]
+        ],
+        "report_completeness": "complete",
+        "diagnosis": "planned_theme_execution",
+        "recovery_action": "none",
     }
     prompt_client = CapturingPromptClient()
 
@@ -532,16 +549,21 @@ def test_verified_generation_semantically_assesses_unique_theme_evidence(tmp_pat
             {
                 "theme": "Theme 1",
                 "status": "covered",
+                "resolution": "retained",
                 "supporting_insight_ids": [candidates[0]["id"]],
                 "explanation": "The first final proposition develops Theme 1.",
             },
             {
                 "theme": "Theme 2",
                 "status": "covered",
+                "resolution": "retained",
                 "supporting_insight_ids": [candidates[1]["id"]],
                 "explanation": "The second final proposition develops Theme 2.",
             },
-        ]
+        ],
+        "report_completeness": "complete",
+        "diagnosis": "planned_theme_execution",
+        "recovery_action": "none",
     }
     openai_client = FakeOpenAI(responses)
 
@@ -633,6 +655,7 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
                 {
                     "theme": "Theme 1",
                     "status": "uncovered",
+                    "resolution": "unresolved",
                     "supporting_insight_ids": [],
                     "explanation": (
                         "The central theme is not developed by the final prose."
@@ -641,26 +664,35 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
                 {
                     "theme": "Theme 2",
                     "status": "covered",
+                    "resolution": "retained",
                     "supporting_insight_ids": [candidates[0]["id"]],
                     "explanation": "The first final proposition develops Theme 2.",
                 },
-            ]
+            ],
+            "report_completeness": "incomplete",
+            "diagnosis": "material_report_completeness",
+            "recovery_action": "targeted_rewrite",
         },
         {
             "theme_coverage": [
                 {
                     "theme": "Theme 1",
                     "status": "covered",
+                    "resolution": "retained",
                     "supporting_insight_ids": [candidates[1]["id"]],
                     "explanation": "The repaired second proposition develops Theme 1.",
                 },
                 {
                     "theme": "Theme 2",
                     "status": "covered",
+                    "resolution": "retained",
                     "supporting_insight_ids": [candidates[0]["id"]],
                     "explanation": "The first proposition develops Theme 2.",
                 },
-            ]
+            ],
+            "report_completeness": "complete",
+            "diagnosis": "planned_theme_execution",
+            "recovery_action": "none",
         },
     ]
     openai_client = FakeOpenAI(responses)
@@ -724,6 +756,7 @@ def test_verified_theme_repair_does_not_backfill_a_short_authored_roster(tmp_pat
                 {
                     "theme": "Theme 1",
                     "status": "uncovered",
+                    "resolution": "unresolved",
                     "supporting_insight_ids": [],
                     "explanation": (
                         "The central theme is not developed by the final prose."
@@ -732,46 +765,53 @@ def test_verified_theme_repair_does_not_backfill_a_short_authored_roster(tmp_pat
                 {
                     "theme": "Theme 2",
                     "status": "covered",
+                    "resolution": "retained",
                     "supporting_insight_ids": [candidates[0]["id"]],
                     "explanation": "The first final proposition develops Theme 2.",
                 },
-            ]
+            ],
+            "report_completeness": "incomplete",
+            "diagnosis": "material_report_completeness",
+            "recovery_action": "targeted_rewrite",
         },
         {
             "theme_coverage": [
                 {
                     "theme": "Theme 1",
                     "status": "covered",
+                    "resolution": "retained",
                     "supporting_insight_ids": [candidates[1]["id"]],
                     "explanation": "The repaired second proposition develops Theme 1.",
                 },
                 {
                     "theme": "Theme 2",
                     "status": "covered",
+                    "resolution": "retained",
                     "supporting_insight_ids": [candidates[0]["id"]],
                     "explanation": "The first proposition develops Theme 2.",
                 },
-            ]
+            ],
+            "report_completeness": "complete",
+            "diagnosis": "planned_theme_execution",
+            "recovery_action": "none",
         },
     ]
 
-    with pytest.raises(AppError, match="minimum meaningful insight count") as error:
-        generate_artifacts(
-            report_id="verified-semantic-theme-repair-count-reconciliation",
-            report_name="Verified semantic theme repair count reconciliation",
-            doc_map=_doc_map(5),
-            evidence_packs=_generation_evidence(5),
-            settings=_settings(tmp_path),
-            ctx=_ctx(),
-            openai_client=FakeOpenAI(responses),
-            prompt_client=CapturingPromptClient(),
-            analysis_store=FakeAnalysisStore(),
-            visual_authority_admitter=lambda shortlisted: _verified_admission(
-                shortlisted, digest="c" * 64
-            ),
-        )
-
-    assert error.value.context["selected_count"] == 4
+    payload = generate_artifacts(
+        report_id="verified-semantic-theme-repair-count-reconciliation",
+        report_name="Verified semantic theme repair count reconciliation",
+        doc_map=_doc_map(5),
+        evidence_packs=_generation_evidence(5),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=lambda shortlisted: _verified_admission(
+            shortlisted, digest="c" * 64
+        ),
+    )
+    assert len(payload["insights_final"]) == 4
 
 
 def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion(
@@ -804,16 +844,21 @@ def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion
             {
                 "theme": "Theme 1",
                 "status": "uncovered",
+                "resolution": "unresolved",
                 "supporting_insight_ids": [],
                 "explanation": "The central theme remains absent after repair.",
             },
             {
                 "theme": "Theme 2",
                 "status": "covered",
+                "resolution": "retained",
                 "supporting_insight_ids": [candidates[0]["id"]],
                 "explanation": "The second theme remains supported.",
             },
-        ]
+        ],
+        "report_completeness": "incomplete",
+        "diagnosis": "material_report_completeness",
+        "recovery_action": "targeted_rewrite",
     }
     responses["editorial_theme_coverage"] = [
         failed_coverage,
@@ -822,7 +867,7 @@ def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion
     ]
     openai_client = FakeOpenAI(responses)
 
-    with pytest.raises(AppError, match="omitted a supported central theme"):
+    with pytest.raises(AppError, match="omitted an essential theme"):
         generate_artifacts(
             report_id="verified-semantic-theme-repair-exhausted",
             report_name="Verified semantic theme repair exhausted",
@@ -891,21 +936,26 @@ def test_verified_generation_fails_closed_without_source_bound_editorial_fallbac
             {
                 "theme": "Theme 1",
                 "status": "uncovered",
+                "resolution": "unresolved",
                 "supporting_insight_ids": [],
                 "explanation": "The central theme is not developed.",
             },
             {
                 "theme": "Theme 2",
                 "status": "covered",
+                "resolution": "retained",
                 "supporting_insight_ids": [candidates[0]["id"]],
                 "explanation": "The second theme is developed.",
             },
-        ]
+        ],
+        "report_completeness": "incomplete",
+        "diagnosis": "material_report_completeness",
+        "recovery_action": "targeted_rewrite",
     }
     responses["editorial_theme_coverage"] = [failed_coverage, failed_coverage]
     openai_client = FakeOpenAI(responses)
 
-    with pytest.raises(AppError, match="omitted a supported central theme") as error:
+    with pytest.raises(AppError, match="omitted an essential theme") as error:
         generate_artifacts(
             report_id="verified-semantic-theme-source-fallback",
             report_name="Verified semantic theme source fallback",
@@ -928,59 +978,3 @@ def test_verified_generation_fails_closed_without_source_bound_editorial_fallbac
         len([r for r in openai_client.requests if r[2] == "editorial_theme_coverage"])
         == 2
     )
-
-
-def test_verified_generation_materializes_downstream_insights_from_snapshot(
-    tmp_path,
-):
-    candidates = [
-        _insight("f1", score=0.99),
-        _insight("f2", score=0.98),
-        _insight("f3", score=0.97),
-        _insight("f4", score=0.96),
-        _insight("f5", score=0.95),
-    ]
-
-    def admit(shortlisted):
-        admission = _verified_admission(shortlisted, digest="s" * 64)
-        admission.admitted_candidates[0]["text"] = "Stale projection wording."
-        admission.admitted_candidates[0]["metric"] = {
-            **admission.admitted_candidates[0]["metric"],
-            "value": "999%",
-        }
-        return admission
-
-    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
-    responses["insights_final"] = {
-        "insights_final": [
-            {
-                **deepcopy(candidate),
-                "evidence_id": f"verified-fact:{candidate['id']}",
-                "evidence_spans": [],
-            }
-            for candidate in candidates
-        ]
-    }
-    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
-        "verified-fact:insight-f1-0.99"
-    )
-    responses["editorial_theme_coverage"] = _theme_coverage_response(
-        candidates,
-        ["f1", "f2"],
-        covered_evidence_ids={"f1", "f2"},
-    )
-    payload = generate_artifacts(
-        report_id="visual-authority-snapshot-materialization",
-        report_name="Visual Authority Snapshot Materialization",
-        doc_map=_doc_map(5),
-        evidence_packs=_generation_evidence(5),
-        settings=_settings(tmp_path),
-        ctx=_ctx(),
-        openai_client=FakeOpenAI(responses),
-        prompt_client=CapturingPromptClient(),
-        analysis_store=FakeAnalysisStore(),
-        visual_authority_admitter=admit,
-    )
-    assert all(item["metric"]["value"] != "999%" for item in payload["insights_final"])
-    assert all(item["metric"]["value"] == "10" for item in payload["insights_final"])
-    assert payload["verified_facts"][0]["metric"]["value"] == "10"

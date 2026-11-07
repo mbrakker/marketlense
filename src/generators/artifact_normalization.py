@@ -4,7 +4,7 @@ import re
 import unicodedata
 from copy import deepcopy
 from dataclasses import replace
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
@@ -30,12 +30,31 @@ from src.utils.quantity import (
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
-EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.0"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:31"
+EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.1"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:32"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 EDITORIAL_PLAN_IMPORTANCE_VALUES = {"essential", "optional"}
-EDITORIAL_PLAN_RESOLUTION_VALUES = {"retained", "merged", "omitted", "quarantined"}
+EDITORIAL_PLAN_RESOLUTION_VALUES = {
+    "retained",
+    "merged",
+    "omitted",
+    "unresolved",
+    "quarantined",
+}
+EDITORIAL_PLAN_DIAGNOSIS_VALUES = {
+    "planned_theme_execution",
+    "material_report_completeness",
+    "redundant_optional_theme",
+    "infeasible_plan",
+    "insufficient_evidence",
+}
+EDITORIAL_PLAN_RECOVERY_ACTION_VALUES = {
+    "none",
+    "targeted_rewrite",
+    "replan",
+    "quarantine",
+}
 
 METRIC_FIELDS = (
     "label",
@@ -654,6 +673,214 @@ def validate_editorial_plan_evidence_ids(
             context={
                 "unknown_evidence_ids": unknown,
                 "canonical_evidence_id_count": len(allowed),
+            },
+        )
+
+
+def validate_verified_editorial_plan(
+    value: Any,
+    *,
+    canonical_evidence_ids: set[str],
+    admitted_candidate_ids: set[str],
+    admitted_limitation_evidence_ids: set[str],
+    admitted_candidate_evidence_ids: Dict[str, set[str]] | None = None,
+) -> Dict[str, Any]:
+    """Validate the stricter executable plan used after verified-fact admission.
+
+    The shared JSON schema deliberately remains compatible with legacy plans.
+    This boundary applies the additional verified-mode contract without making
+    the legacy plan namespace conditional on fields it never emitted.
+    """
+
+    plan = normalize_artifact_editorial_plan(value)
+    validate_editorial_plan_evidence_ids(plan, canonical_evidence_ids)
+    admitted_keys = {
+        normalize_for_lookup(item)
+        for item in admitted_candidate_ids
+        if normalize_for_lookup(item)
+    }
+    limitation_keys = {
+        normalize_for_lookup(item)
+        for item in admitted_limitation_evidence_ids
+        if normalize_for_lookup(item)
+    }
+    raw_plan = value if isinstance(value, dict) else {}
+    if "material_limitation_evidence_ids" not in raw_plan or not isinstance(
+        raw_plan.get("material_limitation_evidence_ids"), list
+    ):
+        raise AppError(
+            code="editorial_plan_invalid",
+            message=(
+                "Verified editorial plans require an explicit material limitation "
+                "evidence ID array"
+            ),
+            retryable=False,
+            context={"planning_contract_failure": True},
+        )
+    if not any(_theme_importance(theme) == "essential" for theme in plan["themes"]):
+        raise AppError(
+            code="editorial_plan_invalid",
+            message="Verified editorial plans require at least one essential theme",
+            retryable=False,
+            context={"planning_contract_failure": True},
+        )
+
+    normalized_candidate_bindings = {
+        normalize_for_lookup(candidate_id): {
+            normalize_for_lookup(evidence_id)
+            for evidence_id in evidence_ids
+            if normalize_for_lookup(evidence_id)
+        }
+        for candidate_id, evidence_ids in (
+            admitted_candidate_evidence_ids or {}
+        ).items()
+    }
+    for theme in plan["themes"]:
+        theme_name = theme["theme"]
+        raw_theme = next(
+            raw
+            for raw in raw_plan.get("themes", [])
+            if isinstance(raw, dict)
+            and normalize_for_lookup(raw.get("theme"))
+            == normalize_for_lookup(theme_name)
+        )
+        required_fields = (
+            "importance",
+            "coverage_obligation",
+            "feasible_candidate_ids",
+        )
+        if any(field not in raw_theme for field in required_fields):
+            raise AppError(
+                code="editorial_plan_invalid",
+                message=(
+                    "Verified editorial themes require explicit importance, "
+                    "coverage obligation, and feasible candidate IDs"
+                ),
+                retryable=False,
+                context={"theme": theme_name, "planning_contract_failure": True},
+            )
+        theme_keys = {
+            normalize_for_lookup(evidence_id) for evidence_id in theme["evidence_ids"]
+        }
+        feasible_ids = {
+            normalize_for_lookup(candidate_id)
+            for candidate_id in theme.get("feasible_candidate_ids") or []
+            if normalize_for_lookup(candidate_id)
+        }
+        if not feasible_ids.issubset(admitted_keys):
+            raise AppError(
+                code="editorial_plan_invalid",
+                message="Verified editorial theme names non-admitted candidates",
+                retryable=False,
+                context={
+                    "theme": theme_name,
+                    "unknown_candidate_ids": sorted(feasible_ids - admitted_keys),
+                },
+            )
+        if _theme_importance(theme) == "essential":
+            anchors = feasible_ids & admitted_keys
+            if normalized_candidate_bindings:
+                anchors = {
+                    candidate_id
+                    for candidate_id in anchors
+                    if normalized_candidate_bindings.get(candidate_id, set())
+                    & theme_keys
+                }
+            if not anchors:
+                raise AppError(
+                    code="editorial_plan_invalid",
+                    message=(
+                        "Every essential verified theme requires a credible "
+                        "admitted candidate anchor"
+                    ),
+                    retryable=False,
+                    context={"theme": theme_name},
+                )
+    selected_limitations = {
+        normalize_for_lookup(evidence_id)
+        for evidence_id in plan.get("material_limitation_evidence_ids", [])
+        if normalize_for_lookup(evidence_id)
+    }
+    if not selected_limitations.issubset(limitation_keys):
+        raise AppError(
+            code="editorial_plan_invalid",
+            message=(
+                "Verified editorial plans may select only admitted source-backed "
+                "limitation evidence"
+            ),
+            retryable=False,
+            context={
+                "unknown_limitation_evidence_ids": sorted(
+                    selected_limitations - limitation_keys
+                )
+            },
+        )
+    return plan
+
+
+def validate_verified_editorial_plan_revision(
+    original_plan: Dict[str, Any],
+    revised_plan: Dict[str, Any],
+    *,
+    canonical_evidence_ids: set[str],
+    admitted_candidate_ids: set[str],
+    admitted_limitation_evidence_ids: set[str],
+    admitted_candidate_evidence_ids: Dict[str, set[str]] | None = None,
+) -> None:
+    """Ensure one verified replan preserves every essential source obligation."""
+
+    original = validate_verified_editorial_plan(
+        original_plan,
+        canonical_evidence_ids=canonical_evidence_ids,
+        admitted_candidate_ids=admitted_candidate_ids,
+        admitted_limitation_evidence_ids=admitted_limitation_evidence_ids,
+        admitted_candidate_evidence_ids=admitted_candidate_evidence_ids,
+    )
+    revised = validate_verified_editorial_plan(
+        revised_plan,
+        canonical_evidence_ids=canonical_evidence_ids,
+        admitted_candidate_ids=admitted_candidate_ids,
+        admitted_limitation_evidence_ids=admitted_limitation_evidence_ids,
+        admitted_candidate_evidence_ids=admitted_candidate_evidence_ids,
+    )
+    revised_bindings = editorial_plan_theme_bindings(revised)
+    revised_essential_keys = set().union(
+        *(
+            set(binding["coverage_keys"])
+            for binding in revised_bindings
+            if binding["importance"] == "essential"
+        )
+    )
+    for original_binding in editorial_plan_theme_bindings(original):
+        if original_binding["importance"] != "essential":
+            continue
+        original_keys = set(original_binding["coverage_keys"])
+        if not original_keys.issubset(revised_essential_keys):
+            raise AppError(
+                code="editorial_plan_invalid",
+                message=(
+                    "Verified editorial replanning cannot drop or downgrade "
+                    f"essential theme: {original_binding['theme']}"
+                ),
+                retryable=False,
+                context={
+                    "theme": original_binding["theme"],
+                    "missing_essential_evidence_ids": sorted(
+                        original_keys - revised_essential_keys
+                    ),
+                },
+            )
+    original_limitations = set(original.get("material_limitation_evidence_ids", []))
+    revised_limitations = set(revised.get("material_limitation_evidence_ids", []))
+    if not original_limitations.issubset(revised_limitations):
+        raise AppError(
+            code="editorial_plan_invalid",
+            message="Verified editorial replanning cannot drop material limitations",
+            retryable=False,
+            context={
+                "missing_limitation_evidence_ids": sorted(
+                    original_limitations - revised_limitations
+                )
             },
         )
 
@@ -1944,6 +2171,8 @@ def validate_substantive_editorial_theme_coverage(
     editorial_plan: Dict[str, Any],
     final_insights: List[Dict[str, Any]],
     candidate_insights: List[Dict[str, Any]] | None = None,
+    original_essential_obligations: Sequence[Dict[str, Any]] | None = None,
+    require_original_obligation_assessment: bool = False,
 ) -> Dict[str, Any]:
     """Validate the independent semantic assessment of final theme coverage.
 
@@ -1961,6 +2190,54 @@ def validate_substantive_editorial_theme_coverage(
         if isinstance(payload, dict)
         else ""
     )
+    adaptive = _plan_uses_adaptive_fields(editorial_plan)
+    verified_adaptive = isinstance(editorial_plan, dict) and (
+        "material_limitation_evidence_ids" in editorial_plan
+    )
+    diagnosis = (
+        _s(payload.get("diagnosis")).strip().casefold()
+        if isinstance(payload, dict)
+        else ""
+    )
+    recovery_action = (
+        _s(payload.get("recovery_action")).strip().casefold()
+        if isinstance(payload, dict)
+        else ""
+    )
+    if verified_adaptive:
+        if not isinstance(payload, dict) or any(
+            field not in payload
+            for field in ("report_completeness", "diagnosis", "recovery_action")
+        ):
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message=(
+                    "Verified semantic coverage requires report completeness, "
+                    "diagnosis, and recovery action"
+                ),
+                retryable=False,
+                context={"assessment_contract_failure": True},
+            )
+        if diagnosis not in EDITORIAL_PLAN_DIAGNOSIS_VALUES:
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Verified semantic coverage has an invalid diagnosis",
+                retryable=False,
+                context={
+                    "assessment_contract_failure": True,
+                    "diagnosis": diagnosis,
+                },
+            )
+        if recovery_action not in EDITORIAL_PLAN_RECOVERY_ACTION_VALUES:
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Verified semantic coverage has an invalid recovery action",
+                retryable=False,
+                context={
+                    "assessment_contract_failure": True,
+                    "recovery_action": recovery_action,
+                },
+            )
     if report_completeness and report_completeness not in {
         "complete",
         "incomplete",
@@ -1972,6 +2249,7 @@ def validate_substantive_editorial_theme_coverage(
                 "Semantic theme coverage has an invalid report completeness assessment"
             ),
             retryable=False,
+            context={"assessment_contract_failure": True},
         )
     bindings = editorial_plan_theme_bindings(editorial_plan)
     expected_themes = [binding["theme"] for binding in bindings]
@@ -2021,11 +2299,165 @@ def validate_substantive_editorial_theme_coverage(
         ):
             final_fact["evidence_ids"] = final_evidence_ids
         final_facts[insight_id] = final_fact
+    original_obligation_assessments: List[Dict[str, Any]] = []
+    if require_original_obligation_assessment:
+        raw_obligation_assessments = (
+            payload.get("original_essential_obligation_assessments")
+            if isinstance(payload, dict)
+            else None
+        )
+        if not isinstance(raw_obligation_assessments, list):
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message=(
+                    "Post-replan coverage must explicitly assess every original "
+                    "essential obligation"
+                ),
+                retryable=False,
+                context={"assessment_contract_failure": True},
+            )
+        expected_obligations = [
+            item
+            for item in (original_essential_obligations or [])
+            if isinstance(item, dict)
+        ]
+        expected_keys = {
+            (
+                normalize_for_lookup(item.get("theme")),
+                tuple(
+                    sorted(
+                        normalize_for_lookup(evidence_id)
+                        for evidence_id in item.get("evidence_ids", [])
+                        if normalize_for_lookup(evidence_id)
+                    )
+                ),
+            )
+            for item in expected_obligations
+        }
+        seen_obligation_keys: set[tuple[str, tuple[str, ...]]] = set()
+        for raw_obligation in raw_obligation_assessments:
+            if not isinstance(raw_obligation, dict):
+                raise AppError(
+                    code="artifact_final_insight_coverage_invalid",
+                    message="Original essential obligation assessment is malformed",
+                    retryable=False,
+                    context={"assessment_contract_failure": True},
+                )
+            obligation_theme = _s(raw_obligation.get("theme")).strip()
+            raw_obligation_ids = raw_obligation.get("evidence_ids")
+            obligation_ids = [
+                _s(evidence_id).strip()
+                for evidence_id in raw_obligation_ids or []
+                if _s(evidence_id).strip()
+            ]
+            obligation_key = (
+                normalize_for_lookup(obligation_theme),
+                tuple(sorted(normalize_for_lookup(item) for item in obligation_ids)),
+            )
+            status = _s(raw_obligation.get("status")).strip().casefold()
+            explanation = _s(raw_obligation.get("explanation")).strip()
+            supporting_ids = raw_obligation.get("supporting_insight_ids")
+            if (
+                obligation_key not in expected_keys
+                or obligation_key in seen_obligation_keys
+                or not isinstance(raw_obligation_ids, list)
+                or len(obligation_ids) != len(raw_obligation_ids)
+                or not isinstance(supporting_ids, list)
+                or not explanation
+                or status not in {"covered", "partial", "uncovered"}
+            ):
+                raise AppError(
+                    code="artifact_final_insight_coverage_invalid",
+                    message="Original essential obligation assessment is incomplete",
+                    retryable=False,
+                    context={
+                        "assessment_contract_failure": True,
+                        "theme": obligation_theme,
+                    },
+                )
+            normalized_supporting_ids = [
+                _s(insight_id).strip()
+                for insight_id in supporting_ids
+                if _s(insight_id).strip()
+            ]
+            if (
+                not normalized_supporting_ids
+                or len(normalized_supporting_ids) != len(supporting_ids)
+                or len(normalized_supporting_ids) != len(set(normalized_supporting_ids))
+                or not set(normalized_supporting_ids).issubset(final_ids)
+            ):
+                raise AppError(
+                    code="artifact_final_insight_coverage_invalid",
+                    message=(
+                        "Original essential obligation assessment names invalid "
+                        "final insight IDs"
+                    ),
+                    retryable=False,
+                    context={"theme": obligation_theme},
+                )
+            obligation_evidence_keys = {
+                _fallback_evidence_key(evidence_id) for evidence_id in obligation_ids
+            }
+            supporting_evidence_keys = {
+                _fallback_evidence_key(evidence_id)
+                for insight_id in normalized_supporting_ids
+                for evidence_id in _ordered_item_evidence_ids(
+                    final_facts.get(insight_id, {})
+                )
+            }
+            if not obligation_evidence_keys.intersection(supporting_evidence_keys):
+                raise AppError(
+                    code="artifact_final_insight_coverage_invalid",
+                    message=(
+                        "Original essential obligation is not linked to its final "
+                        "supporting fact"
+                    ),
+                    retryable=False,
+                    context={"theme": obligation_theme},
+                )
+            seen_obligation_keys.add(obligation_key)
+            original_obligation_assessments.append(
+                {
+                    "theme": obligation_theme,
+                    "evidence_ids": obligation_ids,
+                    "status": status,
+                    "supporting_insight_ids": normalized_supporting_ids,
+                    "explanation": explanation,
+                }
+            )
+            if status != "covered":
+                raise AppError(
+                    code="artifact_final_insight_coverage_invalid",
+                    message=(
+                        "Original essential obligation remains incomplete after "
+                        "verified replanning"
+                    ),
+                    retryable=False,
+                    context={
+                        "original_obligations_unresolved": True,
+                        "theme": obligation_theme,
+                        "status": status,
+                    },
+                )
+        if seen_obligation_keys != expected_keys:
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message=(
+                    "Post-replan coverage did not assess every original essential "
+                    "obligation"
+                ),
+                retryable=False,
+                context={
+                    "assessment_contract_failure": True,
+                    "missing_obligations": sorted(expected_keys - seen_obligation_keys),
+                },
+            )
     if not isinstance(raw_assessments, list):
         raise AppError(
             code="artifact_final_insight_coverage_invalid",
             message="Semantic theme coverage response is missing its assessment list",
             retryable=False,
+            context={"assessment_contract_failure": True},
         )
 
     assessments: Dict[str, Dict[str, Any]] = {}
@@ -2035,6 +2467,7 @@ def validate_substantive_editorial_theme_coverage(
                 code="artifact_final_insight_coverage_invalid",
                 message="Semantic theme coverage contains a malformed assessment",
                 retryable=False,
+                context={"assessment_contract_failure": True},
             )
         theme = _s(raw_assessment.get("theme")).strip()
         theme_key = normalize_for_lookup(theme)
@@ -2058,6 +2491,7 @@ def validate_substantive_editorial_theme_coverage(
                 raw_resolution is not None
                 and resolution not in EDITORIAL_PLAN_RESOLUTION_VALUES
             )
+            or (verified_adaptive and raw_resolution is None)
             or not explanation
             or not isinstance(raw_supporting_ids, list)
         ):
@@ -2065,7 +2499,10 @@ def validate_substantive_editorial_theme_coverage(
                 code="artifact_final_insight_coverage_invalid",
                 message="Semantic theme coverage is incomplete or ambiguous",
                 retryable=False,
-                context={"theme": theme},
+                context={
+                    "theme": theme,
+                    "assessment_contract_failure": True,
+                },
             )
         supporting_ids = [
             _s(insight_id).strip()
@@ -2081,22 +2518,20 @@ def validate_substantive_editorial_theme_coverage(
                 code="artifact_final_insight_coverage_invalid",
                 message="Semantic theme coverage contains unauthorized insight IDs",
                 retryable=False,
-                context={"theme": theme},
+                context={
+                    "theme": theme,
+                    "assessment_contract_failure": True,
+                },
             )
-        if (
-            status in {"covered", "partial"}
-            and not supporting_ids
-            and status == "partial"
-            and resolution == "merged"
-        ):
+        if status == "covered" and not supporting_ids:
             raise AppError(
                 code="artifact_final_insight_coverage_invalid",
-                message=(
-                    "Merged or covered semantic themes require supporting final "
-                    "insights"
-                ),
+                message=("Covered semantic themes require supporting final insights"),
                 retryable=False,
-                context={"theme": theme},
+                context={
+                    "theme": theme,
+                    "assessment_contract_failure": True,
+                },
             )
         if status == "covered" and resolution not in {"retained", "merged"}:
             raise AppError(
@@ -2107,6 +2542,32 @@ def validate_substantive_editorial_theme_coverage(
                 retryable=False,
                 context={"theme": theme, "resolution": resolution},
             )
+        if status == "partial" and resolution != "unresolved":
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message=("Partial semantic themes require an unresolved resolution"),
+                retryable=False,
+                context={
+                    "theme": theme,
+                    "resolution": resolution,
+                    "assessment_contract_failure": True,
+                },
+            )
+        if status == "uncovered" and resolution not in {
+            "omitted",
+            "unresolved",
+            "quarantined",
+        }:
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Uncovered semantic themes have an invalid resolution",
+                retryable=False,
+                context={
+                    "theme": theme,
+                    "resolution": resolution,
+                    "assessment_contract_failure": True,
+                },
+            )
         if resolution == "quarantined":
             raise AppError(
                 code="artifact_final_insight_coverage_invalid",
@@ -2114,7 +2575,7 @@ def validate_substantive_editorial_theme_coverage(
                     "Quarantined semantic themes cannot be accepted as final coverage"
                 ),
                 retryable=False,
-                context={"theme": theme},
+                context={"theme": theme, "evidence_insufficiency": True},
             )
         theme_binding = next(
             binding
@@ -2137,10 +2598,7 @@ def validate_substantive_editorial_theme_coverage(
                         "omitted_essential_themes": [theme],
                     },
                 )
-            if (
-                _plan_uses_adaptive_fields(editorial_plan)
-                and report_completeness != "complete"
-            ):
+            if verified_adaptive and report_completeness != "complete":
                 raise AppError(
                     code="artifact_final_insight_coverage_invalid",
                     message=(
@@ -2151,6 +2609,19 @@ def validate_substantive_editorial_theme_coverage(
                     context={
                         "theme": theme,
                         "report_completeness": report_completeness or "missing",
+                    },
+                )
+            if status != "uncovered" or supporting_ids:
+                raise AppError(
+                    code="artifact_final_insight_coverage_invalid",
+                    message=(
+                        "Omitted semantic themes must be uncovered and have no "
+                        "supporting insight IDs"
+                    ),
+                    retryable=False,
+                    context={
+                        "theme": theme,
+                        "assessment_contract_failure": True,
                     },
                 )
         if status in {"covered", "partial"}:
@@ -2187,7 +2658,10 @@ def validate_substantive_editorial_theme_coverage(
                 code="artifact_final_insight_coverage_invalid",
                 message="Uncovered semantic themes cannot name supporting insights",
                 retryable=False,
-                context={"theme": theme},
+                context={
+                    "theme": theme,
+                    "assessment_contract_failure": True,
+                },
             )
         assessments[theme_key] = {
             "theme": expected_by_key[theme_key],
@@ -2217,7 +2691,6 @@ def validate_substantive_editorial_theme_coverage(
         if isinstance(binding.get("priority"), int)
     ]
     central_priority = min(priorities) if priorities else None
-    adaptive = _plan_uses_adaptive_fields(editorial_plan)
     omitted_themes = [
         theme
         for theme in expected_themes
@@ -2256,7 +2729,11 @@ def validate_substantive_editorial_theme_coverage(
             "merged"
         }:
             omitted_central_themes.append(assessment["theme"])
-    if adaptive and report_completeness != "complete":
+    if (
+        verified_adaptive
+        and report_completeness != "complete"
+        and not unresolved_themes
+    ):
         raise AppError(
             code="artifact_final_insight_coverage_invalid",
             message=(
@@ -2272,6 +2749,10 @@ def validate_substantive_editorial_theme_coverage(
             context={
                 "report_completeness": report_completeness or "missing",
                 "omitted_themes": omitted_themes,
+                "omitted_essential_themes": omitted_essential_themes,
+                "diagnosis": diagnosis,
+                "recovery_action": recovery_action,
+                "assessment_contract_failure": False,
             },
         )
     if omitted_essential_themes or unresolved_themes:
@@ -2301,6 +2782,7 @@ def validate_substantive_editorial_theme_coverage(
                 "recovery_action": _s(payload.get("recovery_action")).strip()
                 if isinstance(payload, dict)
                 else "",
+                "assessment_contract_failure": False,
             },
         )
     return {
@@ -2317,6 +2799,7 @@ def validate_substantive_editorial_theme_coverage(
         "recovery_action": _s(payload.get("recovery_action")).strip()
         if isinstance(payload, dict)
         else "",
+        "original_essential_obligation_assessments": original_obligation_assessments,
     }
 
 
@@ -3140,12 +3623,15 @@ def build_expert_synthesis_context(
         "insight_implications": implications,
         "limitations": _verified_or_pack_limitations(
             evidence_packs,
-            selected_evidence_ids={
-                _fallback_evidence_key(evidence_id)
-                for evidence_id in plan.get("material_limitation_evidence_ids", [])
-                if _fallback_evidence_key(evidence_id)
-            }
-            or None,
+            selected_evidence_ids=(
+                [
+                    _fallback_evidence_key(evidence_id)
+                    for evidence_id in plan.get("material_limitation_evidence_ids", [])
+                    if _fallback_evidence_key(evidence_id)
+                ]
+                if "material_limitation_evidence_ids" in plan
+                else None
+            ),
         ),
         "counter_signals": _expert_counter_signals(insights_final, evidence_packs),
     }
@@ -3154,7 +3640,7 @@ def build_expert_synthesis_context(
 def _verified_or_pack_limitations(
     evidence_packs: Dict[str, Any],
     *,
-    selected_evidence_ids: set[str] | None = None,
+    selected_evidence_ids: Sequence[str] | None = None,
 ) -> List[Dict[str, str]]:
     """Expose exact source qualifiers when verified facts replace pack limits."""
 
@@ -3164,16 +3650,39 @@ def _verified_or_pack_limitations(
         text_keys=("description", "limitation", "text", "summary"),
         limit=None,
     )
-    if limitations:
-        if selected_evidence_ids is None:
+    selected_ids: set[str] | None
+    if selected_evidence_ids is None:
+        if limitations:
             return limitations
-        selected_limitations = [
-            item
-            for item in limitations
-            if _fallback_evidence_key(item.get("evidence_id")) in selected_evidence_ids
+        selected_order = []
+        selected_ids = None
+    else:
+        selected_order = [
+            _fallback_evidence_key(evidence_id)
+            for evidence_id in selected_evidence_ids
+            if _fallback_evidence_key(evidence_id)
         ]
-        if selected_limitations:
-            return selected_limitations
+        selected_ids = set(selected_order)
+        if not selected_ids:
+            return []
+        if limitations:
+            selected_limitations = [
+                item
+                for item in limitations
+                if _fallback_evidence_key(item.get("evidence_id")) in selected_ids
+            ]
+            if selected_limitations:
+                limitation_order = {
+                    evidence_id: index
+                    for index, evidence_id in enumerate(selected_order)
+                }
+                selected_limitations.sort(
+                    key=lambda item: limitation_order.get(
+                        _fallback_evidence_key(item.get("evidence_id")),
+                        len(limitation_order),
+                    )
+                )
+                return selected_limitations
     verified_pack = evidence_packs.get("verified_facts")
     facts = (
         verified_pack.get("verified_facts") if isinstance(verified_pack, dict) else []
@@ -3191,8 +3700,8 @@ def _verified_or_pack_limitations(
             text = _s(qualifier).strip()
             evidence_id = f"verified-fact:{fact_id}"
             if text and (
-                selected_evidence_ids is None
-                or _fallback_evidence_key(evidence_id) in selected_evidence_ids
+                selected_ids is None
+                or _fallback_evidence_key(evidence_id) in selected_ids
             ):
                 verified_limitations.append(
                     {

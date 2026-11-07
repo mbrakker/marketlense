@@ -9,10 +9,12 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from src.contracts.report_models import REQUIRED_REPORT_PAYLOAD_INSIGHTS
+from src.generators.artifact_normalization import adaptive_final_insight_target_count
 from src.orchestrators._report_analysis_orchestrator.shared import logger
 from src.utils.analysis_family import family_is_abstained
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.verified_facts import verified_facts_mode
 
 __all__ = [
     "REPORT_PAYLOAD_SENTINELS",
@@ -87,6 +89,7 @@ def _ensure_report_payload_complete(
 ) -> None:
     missing_fields: List[str] = []
     artifact_payload = artifacts if isinstance(artifacts, dict) else {}
+    verified_mode = verified_facts_mode(artifact_payload)
     summary_abstained = family_is_abstained(artifact_payload, "summary")
     insights_abstained = family_is_abstained(artifact_payload, "insights_bundle")
     quotes_abstained = family_is_abstained(artifact_payload, "quotes")
@@ -102,9 +105,38 @@ def _ensure_report_payload_complete(
     if not summary_abstained and _missing_text(payload.commentary):
         missing_fields.append("commentary")
     insights = list(payload.insights or [])
-    if not insights_abstained and len(insights) < REQUIRED_REPORT_PAYLOAD_INSIGHTS:
-        missing_fields.append("insights")
-    if not insights_abstained:
+    if verified_mode:
+        expected = artifact_payload.get("insights_final")
+        expected_texts = (
+            [
+                str(item.get("text") or "").strip()
+                for item in expected
+                if isinstance(item, dict)
+            ]
+            if isinstance(expected, list)
+            else []
+        )
+        try:
+            raw_editorial_plan = artifact_payload.get("editorial_plan")
+            editorial_plan: Dict[str, Any] = (
+                raw_editorial_plan if isinstance(raw_editorial_plan, dict) else {}
+            )
+            required_count = adaptive_final_insight_target_count(editorial_plan)
+        except AppError:
+            required_count = REQUIRED_REPORT_PAYLOAD_INSIGHTS
+        if (
+            insights_abstained
+            or len(insights) < required_count
+            or len(insights) != len(expected_texts)
+            or insights != expected_texts
+        ):
+            missing_fields.append("insights")
+        for index, insight in enumerate(insights):
+            if _missing_text(insight):
+                missing_fields.append(f"insights[{index}]")
+    elif not insights_abstained:
+        if len(insights) < REQUIRED_REPORT_PAYLOAD_INSIGHTS:
+            missing_fields.append("insights")
         for index in range(REQUIRED_REPORT_PAYLOAD_INSIGHTS):
             insight = insights[index] if index < len(insights) else ""
             if _missing_text(insight):

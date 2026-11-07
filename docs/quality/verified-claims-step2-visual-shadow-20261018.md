@@ -10873,3 +10873,87 @@ coverage failure and Activate pre-selection stall leave Step 2 open; E18
 remains **Active/PARTIAL**, and Step 3 remains **unstarted/not ready**. No
 canonical artifact, publication-readiness approval, or WordPress write was
 performed.
+### Final adaptive editorial and regeneration correction — 2026-11-07
+
+The verified editorial path now classifies semantic coverage failures from the
+validated model assessment: model/identity or malformed-contract failures fail
+closed, evidence insufficiency quarantines, editorial execution failures use
+one targeted rewrite, and an explicitly infeasible or redundant plan receives
+one bounded replan. The verified plan boundary requires essential themes,
+source-backed feasible admitted candidates, explicit material-limitation IDs,
+and a coherent coverage resolution matrix. A replan must retain the original
+essential evidence bindings and limitations and must explicitly assess every
+original essential obligation after the new roster is reviewed. Verified
+payload handover now preserves the exact accepted final roster and stable IDs;
+legacy plans retain their five-insight behavior. Explicit empty, absent, and
+non-empty limitation selections remain distinct through expert context,
+advisory storage, and rendering, with no fixed five-item truncation for an
+accepted verified limitation set. Cache identities were advanced to
+`evidence_backed_shortlisting:32` and `normalize_editorial_plan:4.1`.
+
+Focused verification on the correction passed **783 tests, 1 skipped, and 8
+deselected** across adaptive planning, visual authority, grounding,
+regeneration, evidence handover, and publication-readiness suites. The changed
+file Ruff lint gate, formatting gate, changed-source type gate (six source
+files, zero tracked errors), schema JSON validation, and diff checks passed.
+The prompt-fixture gate passed against the existing baseline without threshold
+changes: current **117,298 tokens / `$0.025383`** versus baseline **117,108 /
+`$0.025364`** (+190 tokens, +`$0.000019`); validation remained **12,330 /
+`$0.002146`** and all browser/OCR call counts were unchanged.
+The full default pytest run then passed **8,529 tests, 2 skipped, 48
+deselected, and 24 subtests**; the only failure was the unrelated native
+wheelhouse audit, which requires CPython 3.12 and was run on CPython 3.14.2.
+
+The retained Capgemini run at producer SHA `002ee814` remains useful failure
+evidence but is not a post-correction live result: it admitted ten candidates,
+selected seven, made 92 provider calls, used 634,653 input and 99,467 output
+tokens, cost `$0.133074`, and failed closed at initial semantic theme coverage.
+The retained Activate attempt made 376 ranking/crop-refinement provider
+events (285,305 input / 148,997 output tokens, `$0.103033`) and never left
+`report_selection.v1`; SQLite shows the job still `running` with no heartbeat
+or control observation after start. It was externally stopped before any
+editorial stage, so it does not demonstrate a verified-mode quality result and
+does not justify a selector change. KPMG, Reuters Institute, and Adjust were
+not run in that retained attempt. No fresh provider-backed run was performed
+on this correction, so no live quality improvement is claimed.
+
+No canonical artifact, readiness approval, publication, or WordPress write was
+performed. The provider-free retained replay remains continuity evidence only
+(5/5 source hashes, 29/29 selected IDs, and 29/29 theme slots); the current
+worktree does not contain the retained PDFs needed for a new source-hash replay.
+
+**Verdict: PARTIAL / NO-GO.** The adaptive planning, bounded recovery,
+exact-roster handover, obligation preservation, limitation projection, and
+cache invalidation corrections are regression-covered. Current live selection
+effectiveness and editorial quality remain unproven; E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.
+
+### Final local gate correction — 2026-11-07
+
+The final local correction added explicit regressions for bounded verified
+replanning failure, classifier quarantine/fail-closed outcomes, conservative
+legacy limitation fallback, adaptive payload rejection, and original
+limitation preservation. The adaptive/replan contract files pass **62 tests**;
+the broader affected cross-stage suite passes **364 tests**. The repository
+coverage run (excluding only the documented CPython-3.12-only wheelhouse audit
+on this CPython 3.14.2 host) passes **8,565 tests, 2 skipped, 49 deselected**;
+coverage is **85.52% global** and **87.19% `src/generators`**, above the
+unchanged **87.1763%** generator quality baseline. Coverage and quality
+regression gates pass. The final mutation gate passes with the pre-existing
+taxonomy partition at **75%**, matching its baseline; all other configured
+partitions are fully killed. Ruff, formatting, and full-repository mypy remain
+green with zero tracked errors.
+
+This is provider-free engineering evidence only. No new provider-backed run
+was performed after the correction, the retained PDFs needed for a new
+source-hash replay are absent from the worktree, and the retained Capgemini
+semantic-coverage failure plus Activate pre-editorial stall remain the only
+current-SHA live evidence. Therefore the correction does not claim improved
+live selection or editorial quality. No canonical promotion, readiness
+approval, publication, or WordPress write occurred.
+
+**Final verdict: PARTIAL / NO-GO.** The adaptive contracts and bounded
+recovery safeguards are implemented and regression-covered; current live
+effectiveness remains unverified. E18 is **Active/PARTIAL**, Step 2 is
+**PARTIAL/NO-GO**, and Step 3 is **unstarted/not ready**.

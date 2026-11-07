@@ -833,7 +833,7 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
         "report_vs/artifacts/insights_final"
     )
     assert final_vars["_visual_authority_digest"] == "d" * 64
-    assert final_vars["final_insight_target_count"] == 5
+    assert final_vars["final_insight_target_count"] == 2
     assert json.loads(final_vars["final_insight_allowed_candidate_ids_json"]) == [
         candidate["id"] for candidate in candidates
     ]

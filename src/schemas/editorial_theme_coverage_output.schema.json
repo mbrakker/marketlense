@@ -20,7 +20,7 @@
           "explanation": {"type": "string", "minLength": 1},
           "resolution": {
             "type": "string",
-            "enum": ["retained", "merged", "omitted", "quarantined"]
+            "enum": ["retained", "merged", "omitted", "unresolved", "quarantined"]
           }
         }
       }
@@ -30,6 +30,36 @@
       "enum": ["complete", "incomplete", "uncertain"]
     },
     "diagnosis": {"type": "string"},
-    "recovery_action": {"type": "string"}
+    "recovery_action": {"type": "string"},
+    "original_essential_obligation_assessments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "theme",
+          "evidence_ids",
+          "status",
+          "supporting_insight_ids",
+          "explanation"
+        ],
+        "properties": {
+          "theme": {"type": "string", "minLength": 1},
+          "evidence_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "status": {
+            "type": "string",
+            "enum": ["covered", "partial", "uncovered"]
+          },
+          "supporting_insight_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "explanation": {"type": "string", "minLength": 1}
+        }
+      }
+    }
   }
 }

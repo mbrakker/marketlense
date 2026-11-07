@@ -244,18 +244,47 @@ class FakeOpenAI:
             and candidate.get("evidence_id")
             and candidate.get("id")
         }
+        by_id = {
+            str(candidate.get("id")): str(candidate.get("id"))
+            for candidate in candidates or []
+            if isinstance(candidate, dict) and candidate.get("id")
+        }
         for theme in themes:
             if not isinstance(theme, dict):
                 continue
             evidence_ids = theme.get("evidence_ids")
             if not isinstance(evidence_ids, list):
                 continue
-            theme["evidence_ids"] = [
-                evidence_id
-                if str(evidence_id).startswith("verified-fact:")
-                else (f"verified-fact:{by_evidence.get(str(evidence_id), evidence_id)}")
+            verified_ids = [
+                (
+                    str(evidence_id)
+                    if str(evidence_id).startswith("verified-fact:")
+                    else (
+                        "verified-fact:"
+                        f"{by_evidence.get(str(evidence_id), evidence_id)}"
+                    )
+                )
                 for evidence_id in evidence_ids
             ]
+            theme["evidence_ids"] = verified_ids
+            theme.setdefault("importance", "essential")
+            theme.setdefault(
+                "coverage_obligation",
+                f"Develop the {theme.get('theme', 'planned')} proposition.",
+            )
+            theme.setdefault(
+                "feasible_candidate_ids",
+                [
+                    candidate_id
+                    for evidence_id in verified_ids
+                    if (
+                        candidate_id := by_id.get(
+                            str(evidence_id).removeprefix("verified-fact:")
+                        )
+                    )
+                ],
+            )
+        plan.setdefault("material_limitation_evidence_ids", [])
         return payload
 
     def _mark_started(self):

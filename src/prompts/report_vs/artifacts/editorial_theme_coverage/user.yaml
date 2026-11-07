@@ -8,16 +8,28 @@ text: |
   Complete canonical visually verified fact roster:
   {{ verified_facts_json }}
 
+  Original essential obligations that must remain substantively developed during a replan:
+  {{ original_essential_obligations_json|default("[]") }}
+
   Return exactly this JSON object:
   {
     "report_completeness": "complete|incomplete|uncertain",
     "diagnosis": "planned_theme_execution|material_report_completeness|redundant_optional_theme|infeasible_plan|insufficient_evidence",
     "recovery_action": "none|targeted_rewrite|replan|quarantine",
+    "original_essential_obligation_assessments": [
+      {
+        "theme": "<exact original essential obligation theme>",
+        "evidence_ids": ["<exact original canonical evidence IDs>"],
+        "status": "covered|partial|uncovered",
+        "supporting_insight_ids": ["<exact final insight IDs>"],
+        "explanation": "<whether the original material proposition remains substantively developed>"
+      }
+    ],
     "theme_coverage": [
       {
         "theme": "<exact planned theme name>",
         "status": "covered|partial|uncovered",
-        "resolution": "retained|merged|omitted|quarantined",
+        "resolution": "retained|merged|omitted|unresolved|quarantined",
         "supporting_insight_ids": ["<exact final insight id>"],
         "explanation": "<concise explanation grounded in the intended proposition and actual final wording>"
       }
@@ -37,5 +49,8 @@ text: |
   subrelationship from the admitted fact. Use the complete fact roster to
   notice material admitted propositions or subrelationships that are not
   substantively treated by any planned theme, and mark the nearest affected
-  theme partial or uncovered with a concise explanation. Do not rewrite the
-  insights or add evidence.
+  theme partial or uncovered with a concise explanation. For a replan, explicitly
+  assess every original essential obligation supplied above in
+  original_essential_obligation_assessments against the revised plan and final
+  wording; do not mark the report complete if any obligation is dropped or only
+  weakly implied. Do not rewrite the insights or add evidence.

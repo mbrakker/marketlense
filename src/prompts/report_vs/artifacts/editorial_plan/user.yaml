@@ -11,6 +11,7 @@ text: |
   {% if editorial_plan_phase|default("") == "verified_replan" %}
   - Original verified editorial plan (immutable reference): {{ original_editorial_plan_json|default("{}") }}
   - Independent coverage failure assessment: {{ coverage_failure_assessment_json|default("{}") }}
+  - Original essential obligations (each must remain in the revised essential bindings): {{ original_essential_obligations_json|default("[]") }}
   - Immutable admitted candidate IDs: {{ immutable_admitted_candidate_ids_json|default("[]") }}
   {% endif %}
   {% endif %}

@@ -19,8 +19,8 @@ from tests._test_artifact_generator._shared import (
 from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _doc_map,
     _generation_evidence,
-    _generation_responses,
     _insight,
+    _verified_generation_responses,
 )
 from tests.test_verified_claims_visual_authority_canary import _verified_admission
 from tests.test_verified_claims_visual_authority_snapshot_integrity import (
@@ -67,14 +67,14 @@ def test_editorial_prompts_require_complete_material_theme_coverage() -> None:
     )
     coverage_text = " ".join(coverage.user.text.split()).casefold()
     assert (
-        "single final insight may support more than one planned theme"
-        in coverage_text
+        "single final insight may support more than one planned theme" in coverage_text
     )
     assert "instead of demanding a redundant one-to-one insight" in coverage_text
 
 
-def test_editorial_plan_and_findings_prompts_require_representative_counterbalance(
-) -> None:
+def test_editorial_plan_and_findings_prompts_require_representative_counterbalance() -> (
+    None
+):
     editorial_plan = load_prompt_set(
         PromptLoadRequest(
             schema_version="1.0",
@@ -99,8 +99,7 @@ def test_editorial_plan_and_findings_prompts_require_representative_counterbalan
     assert "counterbalancing" in findings.user.text
     assert (
         "if retrieved body evidence supports a material key point, include it as a "
-        "finding"
-        in findings_text
+        "finding" in findings_text
     )
 
 
@@ -127,7 +126,7 @@ def test_verified_ten_fact_roster_can_retain_seven_material_planned_themes(tmp_p
         for i in range(1, 11)
     ]
     plan_ids = [f"f{i}" for i in range(1, 8)]
-    responses = _generation_responses(candidates, plan_evidence_ids=plan_ids)
+    responses = _verified_generation_responses(candidates, plan_evidence_ids=plan_ids)
     responses["insights_final"] = {
         "insights_final": [
             {

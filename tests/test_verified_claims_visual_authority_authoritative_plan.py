@@ -22,6 +22,7 @@ from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _generation_evidence,
     _generation_responses,
     _insight,
+    _verified_plan_for_candidates,
 )
 from tests.test_verified_claims_visual_authority_canary import _verified_admission
 
@@ -178,6 +179,7 @@ def test_verified_authoritative_plan_is_generated_from_admitted_facts(tmp_path):
             ],
         }
     }
+    verified_plan = _verified_plan_for_candidates(verified_plan, candidates)
     responses = _generation_responses(
         candidates,
         plan_evidence_ids=[f"f{i}" for i in range(1, 6)],
@@ -194,13 +196,17 @@ def test_verified_authoritative_plan_is_generated_from_admitted_facts(tmp_path):
             {
                 "theme": theme,
                 "status": "covered",
+                "resolution": "retained",
                 "supporting_insight_ids": [
                     candidates[0 if index == 1 else index]["id"]
                 ],
                 "explanation": "The final wording develops the verified proposition.",
             }
             for index, (theme, _evidence_ids) in enumerate(theme_specs)
-        ]
+        ],
+        "report_completeness": "complete",
+        "diagnosis": "planned_theme_execution",
+        "recovery_action": "none",
     }
     prompt_client = CapturingPromptClient()
 
@@ -291,26 +297,29 @@ def test_verified_final_target_count_uses_authoritative_plan(
     admission = _verified_admission(candidates, digest="t" * 64)
 
     def plan_response(theme_count: int) -> dict[str, object]:
-        return {
-            "editorial_plan": {
-                "report_thesis": "Verified findings define the report decisions.",
-                "themes": [
-                    {
-                        "theme": f"Verified proposition {i}",
-                        "priority": i,
-                        "evidence_ids": [f"f{i}"],
-                    }
-                    for i in range(1, theme_count + 1)
-                ],
-            }
-        }
+        return _verified_plan_for_candidates(
+            {
+                "editorial_plan": {
+                    "report_thesis": "Verified findings define the report decisions.",
+                    "themes": [
+                        {
+                            "theme": f"Verified proposition {i}",
+                            "priority": i,
+                            "evidence_ids": [f"f{i}"],
+                        }
+                        for i in range(1, theme_count + 1)
+                    ],
+                }
+            },
+            candidates,
+        )
 
     responses = _generation_responses(
         candidates,
         plan_evidence_ids=[f"f{i}" for i in range(1, discovery_theme_count + 1)],
     )
     responses["editorial_plan"] = [
-        plan_response(discovery_theme_count),
+        responses["editorial_plan"],
         plan_response(verified_theme_count),
     ]
     responses["insights_final"] = {
@@ -324,11 +333,15 @@ def test_verified_final_target_count_uses_authoritative_plan(
             {
                 "theme": f"Verified proposition {i}",
                 "status": "covered",
+                "resolution": "retained",
                 "supporting_insight_ids": [candidates[i - 1]["id"]],
                 "explanation": "The final wording develops the verified proposition.",
             }
             for i in range(1, verified_theme_count + 1)
-        ]
+        ],
+        "report_completeness": "complete",
+        "diagnosis": "planned_theme_execution",
+        "recovery_action": "none",
     }
     prompt_client = CapturingPromptClient()
 

@@ -2072,3 +2072,45 @@ Hosted CI run `42267015274` for correction commit `47c0613e` passed
 `ci_start`, the 8,498-test job (1 skip, 85.50% global coverage), both mutation
 partitions, and `release_evidence`; the release bundle is retained at
 https://github.com/mbrakker/marketlense/actions/runs/42267015274/artifacts/13527946780.
+**Evidence update — 2026-11-07 (final adaptive editorial and regeneration
+correction):** Verified semantic recovery now has an explicit fail-closed /
+quarantine / one-rewrite / one-replan classifier; verified editorial plans
+require admitted executable bindings and exact material-limit selections; a
+replan preserves every original essential evidence obligation and requires a
+post-replan assessment; verified payloads preserve the exact adaptive roster;
+and legacy five-insight behavior remains unchanged. Limitation projections
+preserve explicit absent/empty/non-empty semantics. Cache identities advanced
+to `evidence_backed_shortlisting:32` and `normalize_editorial_plan:4.1`.
+Focused verified, grounding, regeneration, and publication-readiness tests
+passed 783 with 1 skip and 8 deselections; changed-file Ruff, formatting,
+changed-source mypy, schema, and diff gates passed. The existing prompt-fixture
+gate passed without threshold changes at 117,298 tokens / `$0.025383` versus
+117,108 / `$0.025364` baseline (+190 tokens / `$0.000019`), with validation
+unchanged at 12,330 tokens / `$0.002146`. The corrected full default pytest
+run passed 8,529 tests with 2 skips, 48 deselections, and 24 subtests; its only
+failure was the unrelated CPython-3.12-only wheelhouse audit on CPython 3.14.2.
+
+Retained Capgemini evidence at producer SHA `002ee814` is an earlier live
+failure at semantic theme coverage (92 calls, 634,653 input / 99,467 output,
+`$0.133074`); it is not post-correction evidence. Retained Activate stopped
+before editorial generation while `report_selection.v1` remained running with
+no heartbeat; its 376 ranking/crop-refinement events (285,305 input / 148,997
+output, `$0.103033`) do not establish a verified editorial result and did not
+justify a selector change. No fresh provider-backed run was claimed, no
+publication write occurred, and the current worktree lacks the retained PDFs
+for a new provider-free source-hash replay. E18 remains **Active/PARTIAL**,
+Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+**Evidence update — 2026-11-07 (final local adaptive-correction gates):** The
+final adaptive/replan contract suite passed 62 tests and the affected
+cross-stage suite passed 364 tests. The repository coverage run passed 8,565
+tests with 2 skips and 49 deselections using the documented CPython-3.12-only
+wheelhouse exclusion; global coverage was 85.52% and `src/generators` was
+87.19%, above the unchanged 87.1763% quality baseline. Coverage, quality
+regression, mutation, Ruff, formatting, and full-repository mypy gates passed;
+the taxonomy mutation partition remained at its pre-existing 75% baseline.
+No fresh provider run, source-hash replay, canonical promotion, readiness
+approval, or publication write was performed. The retained Capgemini semantic
+coverage failure and Activate pre-editorial stall remain unresolved live
+evidence. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and
+Step 3 remains **unstarted/not ready**.

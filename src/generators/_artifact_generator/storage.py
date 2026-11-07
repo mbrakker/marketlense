@@ -2942,7 +2942,7 @@ def _business_implication(
     return context or _s(figure.get("label")).strip()
 
 
-def _unique_advisory_texts(values: List[str], *, limit: int = 3) -> List[str]:
+def _unique_advisory_texts(values: List[str], *, limit: int | None = 3) -> List[str]:
     texts: List[str] = []
     seen: set[str] = set()
     for value in values:
@@ -2952,7 +2952,7 @@ def _unique_advisory_texts(values: List[str], *, limit: int = 3) -> List[str]:
             continue
         seen.add(normalized)
         texts.append(text)
-        if len(texts) >= limit:
+        if limit is not None and len(texts) >= limit:
             break
     return texts
 
@@ -3055,20 +3055,24 @@ def build_executive_advisory_artifacts(
     verified_facts: Optional[List[Dict[str, Any]]] = None,
     editorial_plan: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    selected_limitation_ids = {
+    has_selected_limitation_contract = isinstance(editorial_plan, dict) and (
+        "material_limitation_evidence_ids" in editorial_plan
+    )
+    selected_limitation_order = [
         _s(evidence_id).strip().casefold()
         for evidence_id in (editorial_plan or {}).get(
             "material_limitation_evidence_ids", []
         )
         if _s(evidence_id).strip()
-    }
+    ]
+    selected_limitation_ids = set(selected_limitation_order)
     limitations_pack = evidence_packs.get("limitations", {})
     limitations = (
         limitations_pack.get("limitations")
         if isinstance(limitations_pack, dict)
         else []
     )
-    if selected_limitation_ids and isinstance(limitations, list):
+    if has_selected_limitation_contract and isinstance(limitations, list):
         limitations = [
             item
             for item in limitations
@@ -3078,35 +3082,59 @@ def build_executive_advisory_artifacts(
                 if evidence_id.strip()
             }.intersection(selected_limitation_ids)
         ]
-    if not limitations:
-        verified_facts_pack = evidence_packs.get("verified_facts", {})
-        pack_facts = (
-            verified_facts_pack.get("verified_facts")
-            if isinstance(verified_facts_pack, dict)
-            else []
-        )
-        fallback_facts = (
-            pack_facts
-            if isinstance(pack_facts, list)
-            else (verified_facts if isinstance(verified_facts, list) else [])
-        )
-        if isinstance(fallback_facts, list):
-            limitations = [
-                {
-                    "text": _s(qualifier).strip(),
-                    "evidence_id": (f"verified-fact:{_s(fact.get('fact_id')).strip()}"),
-                }
-                for fact in fallback_facts
-                if isinstance(fact, dict)
-                for qualifier in fact.get("qualifiers") or []
-                if _s(qualifier).strip()
-                and _s(fact.get("fact_id")).strip()
-                and (
-                    not selected_limitation_ids
-                    or f"verified-fact:{_s(fact.get('fact_id')).strip()}".casefold()
-                    in selected_limitation_ids
+        if selected_limitation_ids:
+            limitation_order = {
+                evidence_id: index
+                for index, evidence_id in enumerate(selected_limitation_order)
+            }
+            limitations.sort(
+                key=lambda item: min(
+                    (
+                        limitation_order.get(
+                            evidence_id.casefold(), len(limitation_order)
+                        )
+                        for evidence_id in _artifact_evidence_ids(item)
+                        if evidence_id.strip()
+                    ),
+                    default=len(limitation_order),
                 )
-            ]
+            )
+        else:
+            limitations = []
+    if not limitations:
+        if has_selected_limitation_contract and not selected_limitation_ids:
+            limitations = []
+        else:
+            verified_facts_pack = evidence_packs.get("verified_facts", {})
+            pack_facts = (
+                verified_facts_pack.get("verified_facts")
+                if isinstance(verified_facts_pack, dict)
+                else []
+            )
+            fallback_facts = (
+                pack_facts
+                if isinstance(pack_facts, list)
+                else (verified_facts if isinstance(verified_facts, list) else [])
+            )
+            if isinstance(fallback_facts, list):
+                limitations = [
+                    {
+                        "text": _s(qualifier).strip(),
+                        "evidence_id": (
+                            f"verified-fact:{_s(fact.get('fact_id')).strip()}"
+                        ),
+                    }
+                    for fact in fallback_facts
+                    if isinstance(fact, dict)
+                    for qualifier in fact.get("qualifiers") or []
+                    if _s(qualifier).strip()
+                    and _s(fact.get("fact_id")).strip()
+                    and (
+                        not selected_limitation_ids
+                        or f"verified-fact:{_s(fact.get('fact_id')).strip()}".casefold()
+                        in selected_limitation_ids
+                    )
+                ]
     if not isinstance(limitations, list):
         limitations = []
     supported_insights = [
@@ -3167,7 +3195,10 @@ def build_executive_advisory_artifacts(
             ],
             *[_s(item.get("risk")) for item in grounded_risks],
             *_limitation_texts(limitations),
-        ]
+        ],
+        limit=(
+            None if has_selected_limitation_contract and selected_limitation_ids else 3
+        ),
     )
     summary_context = _decision_brief_context(summary)
     retained_context_sources = _retained_summary_context_sources(

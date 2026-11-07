@@ -133,7 +133,21 @@ def test_verified_expert_context_falls_back_to_fact_qualifiers() -> None:
 def test_verified_expert_context_keeps_late_material_qualifiers() -> None:
     qualifiers = [f"Qualifier {index}" for index in range(1, 9)]
     context = build_expert_synthesis_context(
-        editorial_plan={"report_thesis": "A source-backed thesis.", "themes": []},
+        editorial_plan={
+            "report_thesis": "A source-backed thesis.",
+            "themes": [
+                {
+                    "theme": "Observed measure",
+                    "priority": 1,
+                    "evidence_ids": ["verified-fact:fact-qualifier"],
+                },
+                {
+                    "theme": "Scope and limitations",
+                    "priority": 2,
+                    "evidence_ids": ["verified-fact:fact-qualifier"],
+                },
+            ],
+        },
         insights_final=[],
         doc_map={},
         evidence_packs={

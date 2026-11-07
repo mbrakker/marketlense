@@ -15,6 +15,7 @@ from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _generation_evidence,
     _generation_responses,
     _insight,
+    _verified_plan_for_candidates,
 )
 from tests.test_verified_claims_visual_authority_canary import _verified_admission
 
@@ -79,6 +80,8 @@ def test_verified_semantic_recovery_allows_one_immutable_plan_revision(tmp_path)
             ],
         }
     }
+    verified_plan = _verified_plan_for_candidates(verified_plan, candidates)
+    revised_plan = _verified_plan_for_candidates(revised_plan, candidates)
     final_candidates = [
         {
             **deepcopy(candidate),
@@ -109,7 +112,7 @@ def test_verified_semantic_recovery_allows_one_immutable_plan_revision(tmp_path)
             {
                 "theme": "Counter-signal",
                 "status": "uncovered",
-                "resolution": "omitted",
+                "resolution": "unresolved",
                 "supporting_insight_ids": [],
                 "explanation": (
                     "The initial roster does not develop the counter-signal."
@@ -118,18 +121,54 @@ def test_verified_semantic_recovery_allows_one_immutable_plan_revision(tmp_path)
             {
                 "theme": "Optional context",
                 "status": "uncovered",
-                "resolution": "omitted",
+                "resolution": "unresolved",
                 "supporting_insight_ids": [],
                 "explanation": "The context is redundant with the primary signal.",
             },
         ],
-        "report_completeness": "complete",
+        "report_completeness": "incomplete",
         "diagnosis": "infeasible_plan",
         "recovery_action": "replan",
     }
     responses["editorial_theme_coverage"] = [
         failed_coverage,
-        failed_coverage,
+        {
+            "theme_coverage": [
+                {
+                    "theme": "Primary signal",
+                    "status": "covered",
+                    "resolution": "retained",
+                    "supporting_insight_ids": ["insight-f1-0.99"],
+                    "explanation": "The revised article develops the primary signal.",
+                },
+                {
+                    "theme": "Counter-signal",
+                    "status": "covered",
+                    "resolution": "retained",
+                    "supporting_insight_ids": ["insight-f2-0.98"],
+                    "explanation": "The revised article preserves the counter-signal.",
+                },
+            ],
+            "report_completeness": "complete",
+            "diagnosis": "planned_theme_execution",
+            "recovery_action": "none",
+            "original_essential_obligation_assessments": [
+                {
+                    "theme": "Primary signal",
+                    "evidence_ids": ["verified-fact:insight-f1-0.99"],
+                    "status": "covered",
+                    "supporting_insight_ids": ["insight-f1-0.99"],
+                    "explanation": "The original primary obligation remains explicit.",
+                },
+                {
+                    "theme": "Counter-signal",
+                    "evidence_ids": ["verified-fact:insight-f2-0.98"],
+                    "status": "covered",
+                    "supporting_insight_ids": ["insight-f2-0.98"],
+                    "explanation": "The original counter obligation remains explicit.",
+                },
+            ],
+        },
     ]
     responses["replanned_editorial_theme_coverage"] = {
         "theme_coverage": [
@@ -224,6 +263,7 @@ def test_verified_semantic_recovery_replaces_selected_fact_with_admitted_alterna
             ],
         }
     }
+    verified_plan = _verified_plan_for_candidates(verified_plan, candidates)
     narrow_final = [
         {
             **deepcopy(candidate),
@@ -252,16 +292,21 @@ def test_verified_semantic_recovery_replaces_selected_fact_with_admitted_alterna
             {
                 "theme": "Central signal",
                 "status": "uncovered",
+                "resolution": "unresolved",
                 "supporting_insight_ids": [],
                 "explanation": "The selected central wording is too narrow.",
             },
             {
                 "theme": "Secondary signal",
                 "status": "covered",
+                "resolution": "retained",
                 "supporting_insight_ids": ["insight-f1-0.99"],
                 "explanation": "The secondary signal is developed.",
             },
-        ]
+        ],
+        "report_completeness": "incomplete",
+        "diagnosis": "material_report_completeness",
+        "recovery_action": "targeted_rewrite",
     }
     responses["editorial_theme_coverage"] = [
         failed_coverage,
@@ -270,6 +315,7 @@ def test_verified_semantic_recovery_replaces_selected_fact_with_admitted_alterna
                 {
                     "theme": "Central signal",
                     "status": "covered",
+                    "resolution": "retained",
                     "supporting_insight_ids": ["insight-f6-0.94"],
                     "explanation": (
                         "The admitted alternative develops the central signal."
@@ -278,10 +324,14 @@ def test_verified_semantic_recovery_replaces_selected_fact_with_admitted_alterna
                 {
                     "theme": "Secondary signal",
                     "status": "covered",
+                    "resolution": "retained",
                     "supporting_insight_ids": ["insight-f1-0.99"],
                     "explanation": "The secondary signal is developed.",
                 },
-            ]
+            ],
+            "report_completeness": "complete",
+            "diagnosis": "planned_theme_execution",
+            "recovery_action": "none",
         },
     ]
 

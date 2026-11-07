@@ -586,28 +586,99 @@ def _verified_final_candidates(
     ]
 
 
-def _verified_generation_responses(
+def _verified_plan_for_candidates(
+    plan_response: dict[str, object],
     candidates: list[dict[str, object]],
 ) -> dict[str, object]:
-    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+    """Add the explicit verified-plan fields to a legacy-shaped test plan."""
+
+    source_to_candidate = {
+        str(candidate.get("evidence_id")): candidate
+        for candidate in candidates
+        if candidate.get("evidence_id") and candidate.get("id")
+    }
+    id_to_candidate = {
+        str(candidate.get("id")): candidate
+        for candidate in candidates
+        if candidate.get("id")
+    }
+    raw_plan = plan_response.get("editorial_plan")
+    raw_themes = raw_plan.get("themes") if isinstance(raw_plan, dict) else []
+    themes: list[dict[str, object]] = []
+    for raw_theme in raw_themes if isinstance(raw_themes, list) else []:
+        if not isinstance(raw_theme, dict):
+            continue
+        evidence_ids: list[str] = []
+        feasible_ids: list[str] = []
+        for evidence_id in raw_theme.get("evidence_ids") or []:
+            candidate = source_to_candidate.get(str(evidence_id))
+            if candidate is None and str(evidence_id).startswith("verified-fact:"):
+                candidate = id_to_candidate.get(
+                    str(evidence_id).removeprefix("verified-fact:")
+                )
+            if candidate is None:
+                continue
+            candidate_id = str(candidate["id"])
+            evidence_ids.append(f"verified-fact:{candidate_id}")
+            feasible_ids.append(candidate_id)
+        themes.append(
+            {
+                **raw_theme,
+                "importance": raw_theme.get("importance", "essential"),
+                "coverage_obligation": raw_theme.get(
+                    "coverage_obligation",
+                    f"Develop the {raw_theme.get('theme', 'planned')} proposition.",
+                ),
+                "feasible_candidate_ids": feasible_ids,
+                "evidence_ids": evidence_ids,
+            }
+        )
+    return {
+        "editorial_plan": {
+            "report_thesis": (
+                raw_plan.get("report_thesis", "") if isinstance(raw_plan, dict) else ""
+            ),
+            "themes": themes,
+            "material_limitation_evidence_ids": [],
+        }
+    }
+
+
+def _verified_generation_responses(
+    candidates: list[dict[str, object]],
+    *,
+    plan_evidence_ids: list[str] | None = None,
+) -> dict[str, object]:
+    selected_plan_ids = plan_evidence_ids or ["f1", "f2"]
+    responses = _generation_responses(candidates, plan_evidence_ids=selected_plan_ids)
+    responses["editorial_plan"] = [
+        responses["editorial_plan"],
+        _verified_plan_for_candidates(responses["editorial_plan"], candidates),
+    ]
     responses["insights_final"] = {
         "insights_final": _verified_final_candidates(candidates)
+    }
+    candidate_by_evidence = {
+        str(candidate.get("evidence_id")): candidate for candidate in candidates
     }
     responses["editorial_theme_coverage"] = {
         "theme_coverage": [
             {
-                "theme": "Theme 1",
+                "theme": f"Theme {index}",
                 "status": "covered",
-                "supporting_insight_ids": [str(candidates[0]["id"])],
-                "explanation": "The first final proposition develops Theme 1.",
-            },
-            {
-                "theme": "Theme 2",
-                "status": "covered",
-                "supporting_insight_ids": [str(candidates[1]["id"])],
-                "explanation": "The second final proposition develops Theme 2.",
-            },
-        ]
+                "resolution": "retained",
+                "supporting_insight_ids": [
+                    str(candidate_by_evidence[evidence_id]["id"])
+                ]
+                if evidence_id in candidate_by_evidence
+                else [],
+                "explanation": (f"The final proposition develops Theme {index}."),
+            }
+            for index, evidence_id in enumerate(selected_plan_ids, start=1)
+        ],
+        "report_completeness": "complete",
+        "diagnosis": "planned_theme_execution",
+        "recovery_action": "none",
     }
     return responses
 

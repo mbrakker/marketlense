@@ -1716,13 +1716,11 @@ def _coerce_limitation_items(
 
     limitations_pack = _coerce_dict(evidence_packs.get("limitations"))
     limitations: list[dict[str, Any]] = []
+    plan = _coerce_dict((artifacts or {}).get("editorial_plan"))
+    has_limitation_contract = "material_limitation_evidence_ids" in plan
     planned_limitation_ids = {
         _s(evidence_id).strip().casefold()
-        for evidence_id in _coerce_list(
-            _coerce_dict((artifacts or {}).get("editorial_plan")).get(
-                "material_limitation_evidence_ids"
-            )
-        )
+        for evidence_id in _coerce_list(plan.get("material_limitation_evidence_ids"))
         if _s(evidence_id).strip()
     }
     for raw_item in _coerce_list(limitations_pack.get("limitations")):
@@ -1747,7 +1745,7 @@ def _coerce_limitation_items(
                     ),
                 }
             )
-    if limitations and planned_limitation_ids:
+    if limitations and has_limitation_contract:
         limitations = [
             item
             for item in limitations
@@ -1757,8 +1755,41 @@ def _coerce_limitation_items(
                 if evidence_id.strip()
             }.intersection(planned_limitation_ids)
         ]
-    if limitations or not verified_mode:
-        return limitations[:5]
+        if planned_limitation_ids:
+            limitation_order = {
+                evidence_id: index
+                for index, evidence_id in enumerate(
+                    _s(value).strip().casefold()
+                    for value in _coerce_list(
+                        plan.get("material_limitation_evidence_ids")
+                    )
+                    if _s(value).strip()
+                )
+            }
+            limitations.sort(
+                key=lambda item: min(
+                    (
+                        limitation_order.get(
+                            evidence_id.casefold(), len(limitation_order)
+                        )
+                        for evidence_id in item.get("evidence_ids", [])
+                        if evidence_id.strip()
+                    ),
+                    default=len(limitation_order),
+                )
+            )
+        else:
+            limitations = []
+    if (
+        limitations
+        or not verified_mode
+        or (has_limitation_contract and not planned_limitation_ids)
+    ):
+        return (
+            limitations
+            if verified_mode and has_limitation_contract
+            else limitations[:5]
+        )
     verified_pack = _coerce_dict(evidence_packs.get("verified_facts"))
     raw_facts = _coerce_list(verified_pack.get("verified_facts"))
     if not raw_facts and isinstance(evidence_packs.get("verified_facts"), list):
@@ -1799,9 +1830,7 @@ def _coerce_limitation_items(
             continue
         limitations.append(row)
         seen_texts.add(row["text"])
-        if len(limitations) >= 5:
-            break
-    return limitations
+    return limitations if verified_mode and has_limitation_contract else limitations[:5]
 
 
 def _coerce_limitations(

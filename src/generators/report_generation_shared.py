@@ -21,12 +21,14 @@ from src.contracts.report_models import (
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.contracts.state import StateRecordRequest
+from src.generators.artifact_normalization import adaptive_final_insight_target_count
 from src.services import file_service
 from src.utils.analysis_family import family_is_abstained
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.slugify import slugify
+from src.utils.verified_facts import verified_facts_mode
 
 LOGGER_NAME = "market_lense.report_generator"
 logger = logging.getLogger(LOGGER_NAME)
@@ -301,7 +303,65 @@ def merge_artifacts_into_payload(
         if isinstance(artifacts.get("insights_final"), list)
         else []
     )
-    if insights_abstained:
+    if verified_facts_mode(artifacts):
+        if insights_abstained or not insights_final:
+            raise AppError(
+                code="verified_payload_insights_missing",
+                message=(
+                    "Verified artifacts cannot publish an absent or abstained "
+                    "insight roster"
+                ),
+                retryable=False,
+            )
+        plan = artifacts.get("editorial_plan")
+        required_count = adaptive_final_insight_target_count(
+            plan if isinstance(plan, dict) else {}
+        )
+        normalized: list[str] = []
+        stable_ids: list[str] = []
+        for item in insights_final:
+            if not isinstance(item, dict):
+                raise AppError(
+                    code="verified_payload_insights_invalid",
+                    message=(
+                        "Verified final insights must retain structured stable "
+                        "identities"
+                    ),
+                    retryable=False,
+                )
+            insight_id = str(item.get("id") or "").strip()
+            text = str(item.get("text") or "").strip()
+            if not insight_id:
+                raise AppError(
+                    code="verified_payload_insights_invalid",
+                    message="Verified final insights require stable candidate IDs",
+                    retryable=False,
+                )
+            if not text:
+                raise AppError(
+                    code="verified_payload_insights_invalid",
+                    message="Verified final insights require substantive text",
+                    retryable=False,
+                )
+            normalized.append(text)
+            stable_ids.append(insight_id.casefold())
+        if len(normalized) < required_count:
+            raise AppError(
+                code="verified_payload_insights_insufficient",
+                message=(
+                    "Verified final insight roster is below its adaptive minimum "
+                    f"({len(normalized)} < {required_count})"
+                ),
+                retryable=False,
+            )
+        if len(stable_ids) != len(set(stable_ids)):
+            raise AppError(
+                code="verified_payload_insights_invalid",
+                message="Verified final insights require distinct stable IDs",
+                retryable=False,
+            )
+        payload.insights = normalized
+    elif insights_abstained:
         payload.insights = [""] * REQUIRED_REPORT_PAYLOAD_INSIGHTS
     elif insights_final:
         normalized = []
