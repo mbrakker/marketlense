@@ -2211,3 +2211,14 @@ fresh provider-backed report, retained-PDF replay, canonical promotion,
 readiness approval, publication, or WordPress write occurred. Existing retained
 Capgemini and Activate live limitations remain. E18 remains **Active/PARTIAL**,
 Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+**Hosted verification — 2026-11-08:** Hosted run
+`42426506979` for `fbf884292256b86898a8f424bca672d178249951` passed `ci_start`,
+the full tests/coverage job, both mutation partitions, and `release_evidence`.
+The WordPress staging REST and inapplicable PDF candidate benchmark steps were
+skipped by existing policy. The release bundle is retained at
+https://github.com/mbrakker/marketlense/actions/runs/42426506979/artifacts/13596032353.
+This verifies engineering/release gates only; no provider-backed report,
+retained-PDF replay, canonical promotion, readiness approval, publication, or
+WordPress write occurred. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

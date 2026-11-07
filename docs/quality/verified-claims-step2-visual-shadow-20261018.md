@@ -11200,3 +11200,25 @@ retained Capgemini semantic-coverage failure or Activate pre-editorial stall.
 **Verdict: PASS for the corrected code-level contract and local focused gates;
 PARTIAL / NO-GO for live Step 2 acceptance.** E18 remains **Active/PARTIAL**,
 Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+### Hosted verification — 2026-11-08
+
+Hosted run [`42426506979`](https://github.com/mbrakker/marketlense/actions/runs/42426506979)
+for commit `fbf884292256b86898a8f424bca672d178249951` passed `ci_start`, the
+full tests/coverage job, both mutation partitions, and `release_evidence`.
+The tests job completed in 10m16s; mutation partitions completed in 7m52s and
+6m23s; release evidence completed in 1m19s. The WordPress staging REST step
+and the inapplicable PDF candidate benchmark step were skipped by their
+existing applicability/safety rules. No threshold, baseline, pricing, or
+publication gate changed. The retained release bundle is available as the
+[`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42426506979/artifacts/13596032353).
+
+This confirms the code-level contract correction and release-gate compatibility
+only. No provider-backed report, retained-PDF replay, canonical promotion,
+readiness approval, publication, or WordPress write was performed; the
+Capgemini semantic-coverage failure and Activate pre-editorial stall remain
+the latest live limitations.
+
+**Hosted verdict: PASS for engineering/release gates; PARTIAL / NO-GO for live
+Step 2 quality.** E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
