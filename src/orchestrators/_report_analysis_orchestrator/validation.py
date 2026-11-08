@@ -733,6 +733,20 @@ def _validate_public_editorial_review_payload(
             retryable=False,
         )
     if affected_item_id:
+        affected_verdict = actual[affected_item_id]
+        if repair_target and str(affected_verdict.get("status") or "").strip() not in {
+            "fail",
+            "unresolved",
+        }:
+            raise AppError(
+                code="public_editorial_quality_report_review_target_mismatch",
+                message=(
+                    "A targeted report-level repair must identify an item with "
+                    "a failing or unresolved item verdict"
+                ),
+                retryable=False,
+                context={"item_id": affected_item_id},
+            )
         expected_target = str(
             expected[affected_item_id].get("repair_target") or ""
         ).strip()
@@ -743,6 +757,35 @@ def _validate_public_editorial_review_payload(
                 retryable=False,
                 context={"item_id": affected_item_id},
             )
+        if repair_target:
+            item_repair_target = str(
+                affected_verdict.get("repair_target") or ""
+            ).strip()
+            if item_repair_target != repair_target:
+                raise AppError(
+                    code="public_editorial_quality_report_review_target_mismatch",
+                    message=(
+                        "A targeted report-level repair must match the affected "
+                        "item's authorized repair target"
+                    ),
+                    retryable=False,
+                    context={"item_id": affected_item_id},
+                )
+            localized_targets = {
+                item_id
+                for item_id, verdict in actual.items()
+                if str(verdict.get("repair_target") or "").strip()
+            }
+            if localized_targets != {affected_item_id}:
+                raise AppError(
+                    code="public_editorial_quality_report_review_target_mismatch",
+                    message=(
+                        "A report-level repair must have one unique localized "
+                        "item target"
+                    ),
+                    retryable=False,
+                    context={"item_id": affected_item_id},
+                )
         item_evidence_ids = {
             str(value).strip()
             for value in expected[affected_item_id].get("evidence_ids") or []
@@ -1044,6 +1087,8 @@ def _public_editorial_semantic_review(
             payload = reused_payload
         _validate_public_editorial_review_payload(payload, items, ctx, report_scope)
     except AppError as exc:
+        if exc.retryable:
+            raise
         unresolved_issues = [
             _public_editorial_review_issue(
                 report_id=report_id,
@@ -3880,10 +3925,12 @@ def _run_validation_regeneration_loop(
             )
             and payload_completeness_issue is None
         )
-        if abstained_noop_candidate:
-            # An abstained repair with no declared mutation is not a new
-            # candidate. Keep the failed promoted validation and advance the
-            # bounded repair ladder without spending another validation call.
+        if deterministic_candidate_rejection:
+            # A structurally inadmissible candidate is not eligible for either
+            # provider validation or independent editorial review. Preserve
+            # the baseline failure and merge the deterministic candidate
+            # diagnostics below so the attempt remains auditable without
+            # turning it into a misleading model/client failure.
             candidate_provider_validation = current_validation_report
         else:
             candidate_provider_validation = _run_validation_with_fallback(
@@ -3942,7 +3989,7 @@ def _run_validation_regeneration_loop(
             candidate_validation_report,
             scope_validation,
         )
-        if abstained_noop_candidate:
+        if deterministic_candidate_rejection:
             editorial_validation = None
             editorial_path = ""
         else:

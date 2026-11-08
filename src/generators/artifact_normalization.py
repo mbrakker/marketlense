@@ -30,7 +30,7 @@ from src.utils.quantity import (
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
-EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.1"
+EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.2"
 ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:32"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
@@ -348,6 +348,24 @@ def remap_editorial_plan_to_verified_facts(
             ),
             retryable=False,
         )
+    canonical_evidence_lookup = {
+        normalize_for_lookup(evidence_id) for evidence_id in fact_evidence_ids
+    }
+    plan_evidence_ids = [
+        evidence_id
+        for theme in plan["themes"]
+        for evidence_id in theme["evidence_ids"]
+    ]
+    plan_evidence_ids.extend(plan.get("material_limitation_evidence_ids", []))
+    if all(
+        normalize_for_lookup(evidence_id) in canonical_evidence_lookup
+        for evidence_id in plan_evidence_ids
+    ):
+        # A plan already bound to the canonical verified-fact vocabulary is a
+        # no-op reconstruction.  Preserve its validated contract metadata and
+        # exact identity instead of reducing it to the remapper's output
+        # projection.
+        return deepcopy(editorial_plan)
     aliases: dict[str, set[str]] = {}
     fact_discovery_ids: dict[str, set[str]] = {}
     for fact, evidence_id in zip(facts, fact_evidence_ids, strict=True):

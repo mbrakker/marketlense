@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -9,13 +10,16 @@ import pytest
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.report_analysis import AnalysisPackPathResponse
 from src.generators.public_editorial_quality_generator import (
+    public_editorial_report_review_scope,
     public_editorial_semantic_review_items,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _evaluate_and_store_public_editorial_quality,
     _public_editorial_review_input_identity,
     _public_editorial_semantic_review,
+    _validate_public_editorial_review_payload,
 )
+from src.utils.errors import AppError
 from tests._test_report_analysis_generator._shared import (
     _artifacts,
     _deps,
@@ -240,6 +244,53 @@ def test_localized_report_failure_carries_independent_item_classification(tmp_pa
     assert report_issue.repair_target == "expert_comment"
 
 
+def test_report_level_repair_cannot_target_a_passing_item(tmp_path):
+    runtime = _runtime(tmp_path)
+    artifacts = _artifacts()
+    items = public_editorial_semantic_review_items(artifacts)
+    payload = _SemanticPassClient(items).openai_chat_json(
+        SimpleNamespace(model="test"), runtime.ctx
+    ).parsed_json
+    target = next(item for item in items if item["artifact"] == "expert_comment")
+    payload["report_verdict"].update(
+        {
+            "status": "fail",
+            "severity": "error",
+            "rule_id": "public_editorial_quality.report_acceptance",
+            "hard_fail_class": "report_editorial_acceptance",
+            "reason": "The report requires a targeted analytical correction.",
+            "repair_target": "expert_comment",
+            "affected_item_id": target["public_item_id"],
+            "dimensions": {
+                "material_coverage": {
+                    "status": "pass",
+                    "reason": "Material findings remain represented.",
+                },
+                "analytical_depth": {
+                    "status": "fail",
+                    "reason": "The report lacks a targeted implication.",
+                },
+                "distinctness": {
+                    "status": "pass",
+                    "reason": "The selected items remain distinct.",
+                },
+                "limitations": {
+                    "status": "pass",
+                    "reason": "The report retains its limitations.",
+                },
+            },
+        }
+    )
+
+    with pytest.raises(AppError, match="failing or unresolved item verdict"):
+        _validate_public_editorial_review_payload(
+            payload,
+            items,
+            runtime.ctx,
+            public_editorial_report_review_scope(artifacts, items),
+        )
+
+
 class _SemanticInvalidClient:
     def __init__(self) -> None:
         self.calls = 0
@@ -252,6 +303,31 @@ class _SemanticInvalidClient:
             parsed_json={},
             model=request.model,
         )
+
+
+class _SemanticRetryableClient:
+    def openai_chat_json(self, _request, _ctx):
+        raise AppError(
+            code="provider_unavailable",
+            message="Temporary provider outage",
+            retryable=True,
+        )
+
+
+def test_retryable_public_editorial_provider_failure_propagates(tmp_path) -> None:
+    runtime = _runtime(tmp_path)
+    artifacts = _artifacts()
+
+    with pytest.raises(AppError) as exc_info:
+        _public_editorial_semantic_review(
+            runtime=runtime,
+            artifacts=artifacts,
+            ctx=runtime.ctx,
+            openai_client=_SemanticRetryableClient(),
+        )
+
+    assert exc_info.value.code == "provider_unavailable"
+    assert exc_info.value.retryable is True
 
 
 def _run_quality_review(

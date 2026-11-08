@@ -2054,6 +2054,11 @@ def generate_artifacts(
                 "planned_theme_bindings": deepcopy(editorial_plan["themes"]),
                 "supported_theme_count": len(editorial_plan["themes"]),
                 "unsupported_theme_count": 0,
+                "original_plan_identity": sha256_json(original_verified_editorial_plan),
+                "original_editorial_plan": deepcopy(original_verified_editorial_plan),
+                "original_essential_obligations": deepcopy(
+                    original_essential_obligations
+                ),
             }
         )
         editorial_plan_identity = family_reuse["report_vs/artifacts/editorial_plan"]
@@ -2743,15 +2748,16 @@ def generate_artifacts(
     relevant_verified_facts = [
         fact for fact in visual_authority_verified_facts if isinstance(fact, dict)
     ]
-    if (
-        visual_authority_admitter is not None
-        and theme_bindings
-        and relevant_verified_facts
-    ):
-        theme_coverage_variables = {
+
+    def build_theme_coverage_variables(
+        current_insights: List[Dict[str, Any]],
+    ) -> Dict[str, str]:
+        """Build coverage inputs from the currently accepted plan and roster."""
+
+        return {
             "editorial_plan_json": editorial_plan_json,
             "insights_final_json": semantic_theme_coverage_insights_json(
-                insights_final,
+                current_insights,
                 authoritative_facts=visual_authority_verified_facts,
             ),
             "verified_facts_json": _dump_json(relevant_verified_facts),
@@ -2759,6 +2765,13 @@ def generate_artifacts(
                 original_essential_obligations
             ),
         }
+
+    if (
+        visual_authority_admitter is not None
+        and theme_bindings
+        and relevant_verified_facts
+    ):
+        theme_coverage_variables = build_theme_coverage_variables(insights_final)
         semantic_theme_coverage_result = resolve_or_render_family(
             namespace="report_vs/artifacts/editorial_theme_coverage",
             variables=theme_coverage_variables,
@@ -2932,12 +2945,7 @@ def generate_artifacts(
             validate_verified_final_insight_count(
                 insights_final, stage="semantic_repair"
             )
-            theme_coverage_variables["insights_final_json"] = (
-                semantic_theme_coverage_insights_json(
-                    insights_final,
-                    authoritative_facts=visual_authority_verified_facts,
-                )
-            )
+            theme_coverage_variables = build_theme_coverage_variables(insights_final)
             semantic_theme_coverage_result = resolve_or_render_family(
                 namespace="report_vs/artifacts/editorial_theme_coverage",
                 variables=theme_coverage_variables,
@@ -3160,17 +3168,9 @@ def generate_artifacts(
                         insights_final, stage="semantic_replan"
                     )
                     theme_bindings = editorial_plan_theme_bindings(editorial_plan)
-                    theme_coverage_variables = {
-                        "editorial_plan_json": editorial_plan_json,
-                        "insights_final_json": semantic_theme_coverage_insights_json(
-                            insights_final,
-                            authoritative_facts=visual_authority_verified_facts,
-                        ),
-                        "verified_facts_json": _dump_json(relevant_verified_facts),
-                        "original_essential_obligations_json": _dump_json(
-                            original_essential_obligations
-                        ),
-                    }
+                    theme_coverage_variables = build_theme_coverage_variables(
+                        insights_final
+                    )
                     semantic_theme_coverage_result = resolve_or_render_family(
                         namespace="report_vs/artifacts/editorial_theme_coverage",
                         variables=theme_coverage_variables,

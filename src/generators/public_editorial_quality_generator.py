@@ -1934,6 +1934,21 @@ def public_editorial_report_review_scope(
         )
 
     editorial_plan = safe_artifacts.get("editorial_plan")
+    editorial_plan_coverage: dict[str, Any] = {}
+    if isinstance(canary, Mapping):
+        audit = canary.get("audit")
+        if isinstance(audit, Mapping):
+            coverage = audit.get("editorial_plan_coverage")
+            if isinstance(coverage, Mapping):
+                editorial_plan_coverage = {
+                    key: deepcopy(coverage[key])
+                    for key in (
+                        "original_plan_identity",
+                        "original_editorial_plan",
+                        "original_essential_obligations",
+                    )
+                    if key in coverage
+                }
     render_evidence_packs: dict[str, Any] = {}
     if isinstance(evidence_packs, dict):
         render_evidence_packs = evidence_packs
@@ -1944,7 +1959,7 @@ def public_editorial_report_review_scope(
         verified_mode=verified_facts_mode(safe_artifacts),
         artifacts=safe_artifacts,
     )
-    return {
+    scope = {
         "authority": "canonical_verified_facts" if facts else "retained_evidence",
         "source_identity": resolved_source_identity,
         "source_pdf_sha256": str(first_fact.get("source_pdf_sha256") or "").strip(),
@@ -1961,6 +1976,9 @@ def public_editorial_report_review_scope(
         "rendered_limitations": rendered_limitations,
         "reuse_guidance": reuse_guidance,
     }
+    if editorial_plan_coverage:
+        scope["original_editorial_plan_coverage"] = editorial_plan_coverage
+    return scope
 
 
 def _retained_soft_copy_sentence_items(

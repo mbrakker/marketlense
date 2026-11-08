@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from ._split_support_cases_02_allows_abstained_quote_family import *  # noqa: F401,F403
 
 
@@ -239,12 +240,8 @@ def test_scope_rejection_runs_deterministic_validation_without_provider_calls(
         deps,
     )
 
-    assert validation_calls == [
-        "validation",
-        "validation_regen_candidate_1",
-        "validation_regen_candidate_2",
-    ]
-    assert validation_modes == ["full", "inline_deterministic", "inline_deterministic"]
+    assert validation_calls == ["validation"]
+    assert validation_modes == ["full"]
     assert provider_spy.calls == []
     assert len(state.regeneration_attempts) == 2
     assert all(
@@ -268,14 +265,6 @@ def test_scope_rejection_runs_deterministic_validation_without_provider_calls(
         issue.rule_id == "regeneration_scope_violation"
         for issue in state.regeneration_attempts[0].repair_delta.introduced
     )
-    assert any(
-        issue.rule_id == "claim_support"
-        for issue in state.regeneration_attempts[0].repair_delta.introduced
-    )
-    assert any(
-        issue.rule_id == "grounding" and issue.affected_section == "executive_summary"
-        for issue in state.regeneration_attempts[0].repair_delta.resolved
-    )
     first_audit = json.loads(
         Path(state.regeneration_attempts[0].candidate_audit_path).read_text(
             encoding="utf-8"
@@ -286,32 +275,23 @@ def test_scope_rejection_runs_deterministic_validation_without_provider_calls(
         first_audit["repair_delta"]["semantic_grounding_validation_status"]
         == "not_evaluated_due_to_deterministic_failure"
     )
-    assert any(
-        key.startswith("deferred_grounding_required")
-        for key in first_audit["validation_issues"]
-    )
+    assert any(key.startswith("grounding") for key in first_audit["validation_issues"])
     validation_snapshot = json.loads(
         Path(state.regeneration_attempts[0].validation_snapshot_path).read_text(
             encoding="utf-8"
         )
     )
     assert any(
-        issue["rule_id"] == "deferred_grounding_required"
+        issue["rule_id"] == "grounding"
+        and issue["affected_section"] == "executive_summary"
         for issue in validation_snapshot["issues"]
     )
-    assert any(
-        item["rule_id"] == "claim_support"
-        for item in first_audit["repair_delta"]["introduced"]
-    )
-    assert "public_editorial_quality_regen_attempt_1" in state.evidence_paths
+    assert "public_editorial_quality_regen_attempt_1" not in state.evidence_paths
     assert retry_memories[0] == []
     assert retry_memories[1][0].mutation_scope_result == "fail"
     assert any(
         issue.rule_id == "regeneration_scope_violation"
         for issue in retry_memories[1][0].introduced
-    )
-    assert any(
-        issue.rule_id == "claim_support" for issue in retry_memories[1][0].introduced
     )
     assert all(
         issue.rule_id != "deferred_grounding_required"
@@ -333,10 +313,6 @@ def test_scope_rejection_runs_deterministic_validation_without_provider_calls(
     )
     assert any(
         item["rule_id"] == "report_payload_incomplete"
-        for item in second_audit["repair_delta"]["introduced"]
-    )
-    assert any(
-        item["rule_id"] == "claim_support"
         for item in second_audit["repair_delta"]["introduced"]
     )
 
@@ -651,7 +627,9 @@ def test_rolled_back_summary_candidate_advances_to_bounded_safe_removal(tmp_path
     _set_interpretive_summary_provenance(original)
     issue = ValidationIssue(
         schema_version="1.0",
-        message="[semantic] The cited evidence does not establish the claim relationship.",
+        message=(
+            "[semantic] The cited evidence does not establish the claim relationship."
+        ),
         severity="error",
         affected_section="summary.claim_evidence_map:claim-one.claim",
         rule_id="semantic",
@@ -773,7 +751,6 @@ def test_rolled_back_summary_candidate_advances_to_bounded_safe_removal(tmp_path
         request.plan.targets[0].repair_strategy for request in regeneration_requests
     ] == ["current_evidence", "safe_removal"]
     assert [name for name, _artifacts in validation_requests] == [
-        "validation_regen_candidate_1",
         "validation_regen_candidate_2",
     ]
     assert [attempt.promotion_outcome for attempt in attempts] == [
@@ -805,7 +782,10 @@ def test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration(
                 issues=[
                     ValidationIssue(
                         schema_version="1.0",
-                        message="[toc_integrity] TOC coverage is missing section 'Media brands'.",
+                        message=(
+                            "[toc_integrity] TOC coverage is missing section "
+                            "'Media brands'."
+                        ),
                         severity="error",
                         affected_section="toc_entries:section-1",
                         rule_id="toc_integrity",

@@ -22,7 +22,12 @@ from src.generators._artifact_generator.storage import (
     _preserve_unchanged_summary_status,
     build_canonical_regeneration_derived_artifacts,
 )
-from src.generators.artifact_normalization import artifact_evidence_span_index
+from src.generators.artifact_normalization import (
+    artifact_evidence_span_index,
+    normalize_artifact_editorial_plan,
+    validate_final_insight_editorial_coverage,
+    validate_verified_editorial_plan_revision,
+)
 from src.generators.claim_validation_generator import (
     _soft_copy_text_hash,
     validate_retained_claims,
@@ -35,7 +40,9 @@ from src.services.schema_validator_service import (
     validate_evidence_references,
     validate_schema,
 )
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
+from src.utils.text_normalization import normalize_for_lookup
 
 from .shared import issue, s
 
@@ -321,12 +328,238 @@ def validate_regeneration_candidate(
         actual_prompt_namespaces=actual_prompt_namespaces,
     ):
         verified_derived_roots = frozenset({*verified_derived_roots, "_cache"})
+    if verified_facts_only:
+        issues.extend(
+            _verified_editorial_obligation_issues(
+                current_artifacts=current_artifacts,
+                candidate_artifacts=candidate_artifacts,
+            )
+        )
     issues.extend(derived_issues)
     return CandidateIntegrityResult(
         issues=issues,
         evidence_lineage=lineage,
         verified_derived_roots=verified_derived_roots,
     )
+
+
+def _verified_editorial_obligation_issues(
+    *,
+    current_artifacts: dict[str, Any],
+    candidate_artifacts: dict[str, Any],
+) -> list[ValidationIssue]:
+    """Keep the immutable verified planning baseline through repair."""
+
+    current_coverage = _verified_editorial_plan_coverage(current_artifacts)
+    candidate_coverage = _verified_editorial_plan_coverage(candidate_artifacts)
+    required_fields = (
+        "original_plan_identity",
+        "original_editorial_plan",
+        "original_essential_obligations",
+    )
+    if not current_coverage or not candidate_coverage:
+        return [
+            issue(
+                rule_id="verified_editorial_obligations",
+                message=(
+                    "Verified regeneration candidate is missing the immutable "
+                    "original editorial-plan obligations."
+                ),
+                severity="error",
+                section="editorial_plan",
+            )
+        ]
+    missing = [
+        field
+        for field in required_fields
+        if field not in current_coverage or field not in candidate_coverage
+    ]
+    if missing:
+        return [
+            issue(
+                rule_id="verified_editorial_obligations",
+                message=(
+                    "Verified regeneration candidate has incomplete immutable "
+                    f"editorial-plan metadata: {', '.join(missing)}."
+                ),
+                severity="error",
+                section="editorial_plan",
+            )
+        ]
+
+    original_plan = current_coverage["original_editorial_plan"]
+    original_identity = str(current_coverage["original_plan_identity"] or "").strip()
+    candidate_identity = str(
+        candidate_coverage["original_plan_identity"] or ""
+    ).strip()
+    obligations = current_coverage["original_essential_obligations"]
+    if (
+        original_plan != candidate_coverage["original_editorial_plan"]
+        or original_identity != candidate_identity
+        or obligations != candidate_coverage["original_essential_obligations"]
+        or not original_identity
+        or sha256_json(original_plan) != original_identity
+    ):
+        return [
+            issue(
+                rule_id="verified_editorial_obligations",
+                message=(
+                    "Verified regeneration candidate changed or invalidated the "
+                    "immutable original editorial-plan identity."
+                ),
+                severity="error",
+                section="editorial_plan",
+            )
+        ]
+
+    try:
+        normalized_original_plan = normalize_artifact_editorial_plan(original_plan)
+    except AppError as exc:
+        return [
+            issue(
+                rule_id="verified_editorial_obligations",
+                message=(
+                    "Verified regeneration candidate has an invalid original "
+                    f"editorial plan: {exc.message}"
+                ),
+                severity="error",
+                section="editorial_plan",
+            )
+        ]
+    expected_obligations = [
+        {
+            "theme": theme["theme"],
+            "evidence_ids": list(theme["evidence_ids"]),
+            "importance": theme.get("importance", "essential"),
+            "coverage_obligation": theme.get("coverage_obligation", ""),
+        }
+        for theme in normalized_original_plan["themes"]
+        if theme.get("importance", "essential") == "essential"
+    ]
+    if obligations != expected_obligations:
+        return [
+            issue(
+                rule_id="verified_editorial_obligations",
+                message=(
+                    "Verified regeneration candidate has inconsistent original "
+                    "essential editorial obligations."
+                ),
+                severity="error",
+                section="editorial_plan",
+            )
+        ]
+
+    facts = _verified_facts(candidate_artifacts)
+    canonical_evidence_ids = {
+        f"verified-fact:{fact_id}"
+        for fact_id in facts
+        if fact_id
+    }
+    admitted_candidates = _visual_authority_canary(candidate_artifacts).get(
+        "admitted_candidates", []
+    )
+    admitted_candidate_ids: set[str] = set()
+    admitted_candidate_evidence_ids: dict[str, set[str]] = {}
+    for candidate in admitted_candidates:
+        if not isinstance(candidate, dict):
+            continue
+        candidate_id = str(candidate.get("id") or "").strip()
+        if not candidate_id:
+            continue
+        admitted_candidate_ids.add(candidate_id)
+        evidence_ids = {
+            str(candidate.get("evidence_id") or "").strip(),
+            *{
+                str(value).strip()
+                for value in candidate.get("evidence_ids") or []
+                if str(value).strip()
+            },
+        }
+        fact_id = str(candidate.get("verified_fact_id") or "").strip()
+        if fact_id:
+            evidence_ids.add(f"verified-fact:{fact_id}")
+        admitted_candidate_evidence_ids[candidate_id] = {
+            normalize_for_lookup(value) for value in evidence_ids if value
+        }
+    if not admitted_candidate_ids:
+        admitted_candidate_ids = {
+            str(insight.get("id") or "").strip()
+            for insight in candidate_artifacts.get("insights_candidates") or []
+            if isinstance(insight, dict) and str(insight.get("id") or "").strip()
+        }
+    admitted_limitation_evidence_ids = {
+        f"verified-fact:{fact_id}"
+        for fact_id, fact in facts.items()
+        if isinstance(fact.get("qualifiers"), list)
+        and any(str(value).strip() for value in fact["qualifiers"])
+    }
+    try:
+        validate_verified_editorial_plan_revision(
+            original_plan,
+            candidate_artifacts.get("editorial_plan"),
+            canonical_evidence_ids=canonical_evidence_ids,
+            admitted_candidate_ids=admitted_candidate_ids,
+            admitted_limitation_evidence_ids=admitted_limitation_evidence_ids,
+            admitted_candidate_evidence_ids=admitted_candidate_evidence_ids,
+        )
+        validate_final_insight_editorial_coverage(
+            final_insights=[
+                insight
+                for insight in candidate_artifacts.get("insights_final") or []
+                if isinstance(insight, dict)
+            ],
+            candidate_insights=[
+                insight
+                for insight in candidate_artifacts.get("insights_candidates") or []
+                if isinstance(insight, dict)
+            ],
+            editorial_plan=candidate_artifacts.get("editorial_plan"),
+        )
+    except AppError as exc:
+        return [
+            issue(
+                rule_id="verified_editorial_obligations",
+                message=(
+                    "Verified editorial obligations are not preserved: "
+                    f"{exc.message}"
+                ),
+                severity="error",
+                section="editorial_plan",
+            )
+        ]
+    return []
+
+
+def _visual_authority_canary(artifacts: dict[str, Any]) -> dict[str, Any]:
+    cache = artifacts.get("_cache")
+    if not isinstance(cache, dict):
+        return {}
+    canary = cache.get("visual_authority_canary")
+    return canary if isinstance(canary, dict) else {}
+
+
+def _verified_editorial_plan_coverage(
+    artifacts: dict[str, Any],
+) -> dict[str, Any]:
+    audit = _visual_authority_canary(artifacts).get("audit")
+    if not isinstance(audit, dict):
+        return {}
+    coverage = audit.get("editorial_plan_coverage")
+    return coverage if isinstance(coverage, dict) else {}
+
+
+def _verified_facts(artifacts: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    canary = _visual_authority_canary(artifacts)
+    raw_facts = canary.get("verified_facts")
+    if not isinstance(raw_facts, list):
+        raw_facts = artifacts.get("verified_facts")
+    if not isinstance(raw_facts, list):
+        return {}
+    return {
+        str(fact.get("fact_id") or "").strip(): fact
+        for fact in raw_facts
+        if isinstance(fact, dict) and str(fact.get("fact_id") or "").strip()
+    }
 
 
 def _verify_regenerated_prompt_metadata(

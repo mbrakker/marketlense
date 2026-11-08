@@ -133,3 +133,100 @@ def test_verified_replan_failure_is_bounded_and_fails_closed(tmp_path) -> None:
     assert [request[2] for request in openai_client.requests].count(
         "editorial_plan"
     ) >= 3
+
+
+def test_verified_replan_rebuilds_theme_coverage_with_the_accepted_plan(tmp_path):
+    candidates = [
+        _insight("f1", score=0.99),
+        _insight("f2", score=0.98),
+        _insight("f3", score=0.97),
+        _insight("f4", score=0.96),
+        _insight("f5", score=0.95),
+    ]
+    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+    verified_plan = deepcopy(responses["editorial_plan"][1])
+    verified_plan["editorial_plan"]["themes"][1]["importance"] = "optional"
+    revised_plan = deepcopy(verified_plan)
+    revised_plan["editorial_plan"]["themes"][0]["evidence_ids"] = [
+        f"verified-fact:{candidates[0]['id']}"
+    ]
+    revised_plan["editorial_plan"]["themes"][0]["feasible_candidate_ids"] = [
+        candidates[0]["id"]
+    ]
+    revised_plan["editorial_plan"]["themes"][1].update(
+        {
+            "theme": "Theme 3",
+            "evidence_ids": [f"verified-fact:{candidates[2]['id']}"],
+            "coverage_obligation": "Develop proposition 3.",
+            "feasible_candidate_ids": [candidates[2]["id"]],
+        }
+    )
+    responses["editorial_plan"] = [
+        responses["editorial_plan"][0],
+        verified_plan,
+        revised_plan,
+    ]
+    final_insights_response = deepcopy(responses["insights_final"])
+    responses["insights_final"] = [
+        final_insights_response,
+        deepcopy(final_insights_response),
+    ]
+    responses["replanned_insights_final"] = deepcopy(final_insights_response)
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        "verified-fact:insight-f1-0.99"
+    )
+    initial_coverage = _theme_coverage_response(
+        candidates, ["f1", "f2"], covered_evidence_ids={"f1"}
+    )
+    initial_coverage.update(
+        {
+            "report_completeness": "incomplete",
+            "diagnosis": "redundant_optional_theme",
+            "recovery_action": "replan",
+        }
+    )
+    revised_coverage = _theme_coverage_response(
+        candidates,
+        ["f1", "f3"],
+        covered_evidence_ids={"f1", "f3"},
+        theme_names=["Theme 1", "Theme 3"],
+    )
+    revised_coverage["original_essential_obligation_assessments"] = [
+        {
+            "theme": "Theme 1",
+            "evidence_ids": [f"verified-fact:{candidates[0]['id']}"],
+            "status": "covered",
+            "supporting_insight_ids": [candidates[0]["id"]],
+            "explanation": "The original essential proposition remains developed.",
+        }
+    ]
+    responses["editorial_theme_coverage"] = [initial_coverage, revised_coverage]
+    openai_client = FakeOpenAI(responses)
+    prompt_client = CapturingPromptClient()
+
+    payload = generate_artifacts(
+        report_id="verified-replan-current-plan",
+        report_name="Verified replan current plan",
+        doc_map=_doc_map(5),
+        evidence_packs=_generation_evidence(5),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=lambda shortlisted: _verified_admission(
+            shortlisted, digest="s" * 64
+        ),
+    )
+
+    coverage_variables = [
+        call["variables"]
+        for call in prompt_client.render_calls
+        if call["path"] == "report_vs/artifacts/editorial_theme_coverage/user"
+    ]
+    assert len(coverage_variables) == 2
+    accepted_plan = coverage_variables[-1]["editorial_plan_json"]
+    assert '"Theme 3"' in accepted_plan
+    assert '"verified-fact:insight-f3-0.97"' in accepted_plan
+    assert '"Theme 2"' not in accepted_plan
+    assert payload["editorial_plan"]["themes"][1]["theme"] == "Theme 3"
