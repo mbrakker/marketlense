@@ -2237,3 +2237,12 @@ unchanged evidence, not a fresh current-SHA provider run. No canonical
 promotion, publication, or WordPress write occurred. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+**Current hosted verification — 2026-11-08:** Run
+[42479560293](https://github.com/mbrakker/marketlense/actions/runs/42479560293)
+for `a5a762c2f22ba00d3d01346e5b9b112f7add51aa` passed `ci_start`, tests,
+coverage, both mutation partitions, and `release_evidence`; the configured
+WordPress staging REST check was skipped by policy. This validates the
+committed engineering/release gates only. It does not provide a fresh
+provider-backed current-SHA report run or change E18's **Active/PARTIAL**,
+Step 2's **PARTIAL/NO-GO**, or Step 3's **unstarted/not ready** status.

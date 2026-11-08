@@ -11359,3 +11359,11 @@ historical queue dead-letter was only proven in an isolated copied database.
 Therefore the implementation remains **PARTIAL / NO-GO** for broader Step 2
 acceptance; E18 remains **Active/PARTIAL**, and Step 3 remains
 **unstarted/not ready**. No canonical promotion or WordPress write occurred.
+
+The current commit’s hosted CI run
+[`42479560293`](https://github.com/mbrakker/marketlense/actions/runs/42479560293)
+for `a5a762c2f22ba00d3d01346e5b9b112f7add51aa` passed `ci_start`, the full
+tests/coverage job, both mutation partitions, and `release_evidence`. The
+configured WordPress staging REST check was skipped by policy. This confirms
+the committed engineering and release gates; it does not change the live
+provider/E2E limitations or the Step 2/Step 3 verdict above.
